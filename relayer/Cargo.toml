@@ -4,6 +4,33 @@ version = "0.1.0"
 authors = ["Shady Khalifa <shekohex@gmail.com>"]
 edition = "2018"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
+parking_lot = "^0.11"
+anyhow = "^1"
+async-trait = "^0.1"
+log = "^0.4"
+env_logger = "^0.8"
+url = "^2.2"
+futures = { version = "^0.3", default-features = false }
+serde = { version = "^1", default-features = false, features = ["derive"] }
+tokio = { version = "^1", features = ["full"] }
+subxt = { version = "0.15", package = "substrate-subxt" }
+config = { version = "0.11", default-features = false, features = ["toml", "json"] }
+
+runtime = { path = "../runtime", package = "webb-runtime" }
+
+
+[dependencies.jsonrpsee]
+package = "jsonrpsee-types"
+git = "https://github.com/paritytech/jsonrpsee"
+tag = "v0.2.0-alpha.3"
+version = "0.2.0-alpha.3"
+default-features = false
+
+
+[dependencies.ws]
+package = "jsonrpsee-ws-server"
+git = "https://github.com/paritytech/jsonrpsee"
+tag = "v0.2.0-alpha.3"
+version = "0.2.0-alpha.3"
+default-features = false
