@@ -8,6 +8,8 @@ use subxt::{sp_core, EventTypeRegistry};
 
 pub mod pallet;
 
+pub use subxt;
+
 /// an easy way to extract the balance type from `T`
 pub type BalanceOf<T> = <T as Balances>::Balance;
 

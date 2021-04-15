@@ -8,29 +8,21 @@ edition = "2018"
 parking_lot = "^0.11"
 anyhow = "^1"
 async-trait = "^0.1"
+async-stream = "^0.3"
 log = "^0.4"
 env_logger = "^0.8"
 url = "^2.2"
 futures = { version = "^0.3", default-features = false }
 serde = { version = "^1", default-features = false, features = ["derive"] }
 tokio = { version = "^1", features = ["full"] }
-subxt = { version = "0.15", package = "substrate-subxt" }
 config = { version = "0.11", default-features = false, features = ["toml", "json"] }
+serde_json = { version = "^1", default-features = false }
 
 runtime = { path = "../runtime", package = "webb-runtime" }
 
-
-[dependencies.jsonrpsee]
-package = "jsonrpsee-types"
-git = "https://github.com/paritytech/jsonrpsee"
-tag = "v0.2.0-alpha.3"
-version = "0.2.0-alpha.3"
+[dependencies.tungstenite]
+package = "async-tungstenite"
+version = "^0.13"
 default-features = false
+features = ["tokio-runtime", "tokio-rustls"]
 
-
-[dependencies.ws]
-package = "jsonrpsee-ws-server"
-git = "https://github.com/paritytech/jsonrpsee"
-tag = "v0.2.0-alpha.3"
-version = "0.2.0-alpha.3"
-default-features = false
