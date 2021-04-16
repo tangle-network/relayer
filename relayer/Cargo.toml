@@ -20,6 +20,10 @@ serde_json = { version = "^1", default-features = false }
 
 runtime = { path = "../runtime", package = "webb-runtime" }
 
+structopt = { version = "^0.3", features = ["paw"] }
+paw = "^1.0"
+directories-next = "^2.0"
+
 [dependencies.tungstenite]
 package = "async-tungstenite"
 version = "^0.13"
