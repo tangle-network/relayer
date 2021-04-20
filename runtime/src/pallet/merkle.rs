@@ -23,6 +23,19 @@ pub trait Merkle: System + Balances {
 // Storage ..
 
 #[derive(Clone, Debug, Eq, Encode, PartialEq, subxt::Store)]
+pub struct LeavesStore<T: Merkle> {
+    #[store(returns = ScalarData)]
+    tree_id: T::TreeId,
+    index: u32,
+}
+
+impl<T: Merkle> LeavesStore<T> {
+    pub fn try_get(tree_id: T::TreeId, index: u32) -> Self {
+        Self { tree_id, index }
+    }
+}
+
+#[derive(Clone, Debug, Eq, Encode, PartialEq, subxt::Store)]
 pub struct CachedRootsStore<T: Merkle> {
     #[store(returns = Vec<ScalarData>)]
     block_number: T::BlockNumber,
