@@ -1,3 +1,5 @@
+#![deny(unsafe_code)]
+
 use subxt::balances::*;
 use subxt::extrinsic::*;
 use subxt::sp_runtime::generic::Header;
