@@ -25,9 +25,9 @@ $ iwr https://git.io/get-webb-relayer.ps1 -useb | iex
 
 
 
-## Running and Configuring
+## Running and Configuring 🚀
 
-Webb Relayer is easy to run and config, to test it out first you have to create a config file
+Webb Relayer is easy to run and with flexible config 👌, to test it out first you have to create a config file
 
 Example:
 
@@ -81,24 +81,26 @@ Then Simply run
 $ webb-relayer -vvv -c config.toml
 ```
 
+> Hot Tip 🌶️: you could also use the json format for the config file if you prefer that, and it would work!
+
 * Using Environment Variables:
 
-You could override the values in the configuration file using environment variables
-Any config value could be prefixed with `WEBB_` .
+You could override the values in the configuration file using environment variables so that config value could be prefixed with `WEBB_`
 
 For example, use `WEBB_PORT` to override the port number, and `WEBB_SURI` to override the relayer account controller.
 
+Thats very useful, you could create an empty config file, with empty values so that you can use env for security reasons!
 
-## Using Docker
+## Using Docker 🐳
 
-// TODO
+> Soon! 🔜
 
-## Safety
+## Safety ⚡
 
 This crate uses `#![deny(unsafe_code)]` to ensure everything implemented in
 100% Safe Rust.
 
-## Contributing
+## Contributing 🧑‍🤝‍🧑
 
 Want to join us? take a look at some of these issues:
 
