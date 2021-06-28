@@ -10,12 +10,12 @@ use bulletproofs_gadgets::poseidon::{PoseidonBuilder, PoseidonSbox};
 use curve25519_dalek::scalar::Scalar;
 use futures::prelude::*;
 use merlin::Transcript;
-use runtime::pallet::merkle::*;
-use runtime::pallet::mixer::*;
-use runtime::pallet::*;
-use runtime::subxt::sp_runtime::AccountId32;
-use runtime::subxt::{Client, ClientBuilder, PairSigner};
-use runtime::WebbRuntime;
+use webb::pallet::merkle::*;
+use webb::pallet::mixer::*;
+use webb::pallet::*;
+use webb::substrate::subxt::sp_runtime::AccountId32;
+use webb::substrate::subxt::{Client, ClientBuilder, PairSigner};
+use webb::substrate::WebbRuntime;
 use sp_keyring::AccountKeyring;
 
 type CachedRoots = CachedRootsStore<WebbRuntime>;

@@ -4,10 +4,10 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use directories_next::ProjectDirs;
-use runtime::subxt::sp_core::crypto::Pair;
-use runtime::subxt::sp_core::sr25519;
-use runtime::subxt::{Client, ClientBuilder, PairSigner};
-use runtime::WebbRuntime;
+use webb::substrate::subxt::sp_core::crypto::Pair;
+use webb::substrate::subxt::sp_core::sr25519;
+use webb::substrate::subxt::{Client, ClientBuilder, PairSigner};
+use webb::substrate::WebbRuntime;
 use structopt::StructOpt;
 use tokio::net::TcpListener;
 
