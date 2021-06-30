@@ -35,6 +35,7 @@ jobs:
         platform: [linux-musl, apple-darwin]
 
   windows:
+    if: ${{ false }} # disable windows
     runs-on: windows-latest
     needs: install-cross
     strategy:

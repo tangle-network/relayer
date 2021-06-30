@@ -29,6 +29,7 @@ jobs:
         platform: [linux-musl, apple-darwin]
 
   windows:
+    if: ${{ false }} # disable windows
     runs-on: windows-latest
     # Windows technically doesn't need this, but if we don't block windows on it
     # some of the windows jobs could fill up the concurrent job queue before
