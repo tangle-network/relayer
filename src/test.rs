@@ -1,5 +1,4 @@
 use super::handler::*;
-use super::*;
 use bulletproofs::r1cs::Prover;
 use bulletproofs::{BulletproofGens, PedersenGens};
 use bulletproofs_gadgets::fixed_deposit_tree::builder::{
@@ -10,13 +9,13 @@ use bulletproofs_gadgets::poseidon::{PoseidonBuilder, PoseidonSbox};
 use curve25519_dalek::scalar::Scalar;
 use futures::prelude::*;
 use merlin::Transcript;
+use sp_keyring::AccountKeyring;
 use webb::pallet::merkle::*;
 use webb::pallet::mixer::*;
 use webb::pallet::*;
 use webb::substrate::subxt::sp_runtime::AccountId32;
 use webb::substrate::subxt::{Client, ClientBuilder, PairSigner};
 use webb::substrate::WebbRuntime;
-use sp_keyring::AccountKeyring;
 
 type CachedRoots = CachedRootsStore<WebbRuntime>;
 type Leaves = LeavesStore<WebbRuntime>;
@@ -47,7 +46,7 @@ fn generate_proof(
     root: [u8; 32],
     recipient: AccountId32,
     relayer: AccountId32,
-) -> RelayerWithdrawProof {
+) -> SubstrateRelayerWithdrawProof {
     let pc_gens = PedersenGens::default();
     let bp_gens = BulletproofGens::new(16400, 1);
     let mut prover_transcript = Transcript::new(b"zk_membership_proof");
@@ -145,12 +144,18 @@ async fn relay() {
         recipient,
         relayer,
     );
-    let ctx = RelayerContext {
-        client: client.clone(),
-        pair: PairSigner::new(AccountKeyring::Bob.pair()),
+    let config = crate::config::WebbRelayerConfig {
+        port: 9944,
+        suri: String::from("//Alice"),
     };
+    let ctx = crate::context::RelayerContext::new(config);
 
-    let event_stream = handle_cmd(ctx, Command::Withdraw(proof));
+    let event_stream = handle_cmd(
+        ctx,
+        Command::Substrate(SubstrateCommand::Webb(
+            SubstrateWebbCommand::RelayWithdrew(proof),
+        )),
+    );
     futures::pin_mut!(event_stream);
 
     let event = event_stream.next().await;

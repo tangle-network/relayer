@@ -4443,7 +4443,7 @@ dependencies = [
 [[package]]
 name = "webb"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/webb-rs.git#cbfcdd89aa845cac04e81242afb73ba33b039b62"
+source = "git+https://github.com/webb-tools/webb-rs.git#ed1cf720aac8a2870b40182dcb22045359535fbd"
 dependencies = [
  "async-trait",
  "ethereum-types",
@@ -4487,6 +4487,7 @@ dependencies = [
  "futures",
  "log",
  "merlin",
+ "once_cell",
  "parking_lot",
  "paw",
  "serde",

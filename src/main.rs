@@ -4,14 +4,12 @@ use std::path::PathBuf;
 
 use anyhow::Context;
 use directories_next::ProjectDirs;
-use webb::substrate::subxt::sp_core::crypto::Pair;
-use webb::substrate::subxt::sp_core::sr25519;
-use webb::substrate::subxt::{Client, ClientBuilder, PairSigner};
-use webb::substrate::WebbRuntime;
 use structopt::StructOpt;
 use tokio::net::TcpListener;
 
+mod chains;
 mod config;
+mod context;
 mod handler;
 
 #[cfg(all(test, feature = "integration-tests"))]
@@ -29,14 +27,6 @@ struct Opts {
     /// A level of verbosity, and can be used multiple times
     #[structopt(short, long, parse(from_occurrences))]
     verbose: i32,
-    /// Set the Node Url where we will connect to.
-    #[structopt(
-        long = "node-url",
-        default_value = "ws://127.0.0.1:9944",
-        env = "WEBB_NODE_URL",
-        parse(try_from_str = url::Url::parse)
-    )]
-    url: url::Url,
     /// File that contains configration.
     #[structopt(
         short = "c",
@@ -45,12 +35,6 @@ struct Opts {
         parse(from_os_str)
     )]
     config_filename: Option<PathBuf>,
-}
-
-#[derive(Clone)]
-pub struct RelayerContext {
-    pair: PairSigner<WebbRuntime, sr25519::Pair>,
-    client: Client<WebbRuntime>,
 }
 
 #[paw::main]
@@ -81,22 +65,9 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     log::trace!("Loaded Config ..");
     let config =
         config::load(config_path).context("failed to load the config file")?;
-    let signer = sr25519::Pair::from_string(&config.suri, None)
-        .ok()
-        .context("failed to load the singer from suri")?;
-    log::info!("using {} as an account", signer.public());
-    let pair = PairSigner::new(signer);
-    log::debug!("building the RPC client and connecting to the node...");
-    log::debug!("connecting to: {}", args.url);
-    let client = ClientBuilder::new()
-        .set_url(args.url.as_str())
-        .build()
-        .await
-        .context("failed to connect to the node")?;
 
-    log::debug!("Connected!");
-    let ctx = RelayerContext { pair, client };
     let addr = format!("0.0.0.0:{}", config.port);
+    let ctx = context::RelayerContext::new(config);
     log::debug!("Starting the server on {}", addr);
     let socket = TcpListener::bind(addr).await?;
     while let Ok((stream, _)) = socket.accept().await {
