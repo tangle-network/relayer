@@ -1,3 +1,5 @@
+use crate::config::{CommonSubstrateConfig, SubstrateConfig};
+
 use super::handler::*;
 use bulletproofs::r1cs::Prover;
 use bulletproofs::{BulletproofGens, PedersenGens};
@@ -146,7 +148,14 @@ async fn relay() {
     );
     let config = crate::config::WebbRelayerConfig {
         port: 9944,
-        suri: String::from("//Alice"),
+        substrate: SubstrateConfig {
+            webb: Some(CommonSubstrateConfig {
+                suri: String::from("//Alice"),
+                ..Default::default()
+            }),
+            ..Default::default()
+        },
+        ..Default::default()
     };
     let ctx = crate::context::RelayerContext::new(config);
 

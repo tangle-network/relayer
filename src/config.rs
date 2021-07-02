@@ -1,10 +1,11 @@
 use std::path::PathBuf;
 
 use serde::Deserialize;
+use webb::evm::ethereum_types::{Address, Secret, U256};
 
 const fn default_port() -> u16 { 9955 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct WebbRelayerConfig {
     /// WebSocket Server Port number
@@ -12,6 +13,13 @@ pub struct WebbRelayerConfig {
     /// default to 9955
     #[serde(default = "default_port")]
     pub port: u16,
+    pub substrate: SubstrateConfig,
+    pub evm: EvmConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct CommonSubstrateConfig {
     /// Interprets the string in order to generate a key Pair.
     ///
     /// - If `s` is a possibly `0x` prefixed 64-digit hex string, then it will
@@ -41,6 +49,35 @@ pub struct WebbRelayerConfig {
     /// Similarly an empty password (ending the SURI with `///`) is perfectly
     /// valid and will generally be equivalent to no password at all.
     pub suri: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct CommonEvmConfig {
+    pub private_key: Secret,
+    pub reward_account: Option<Address>,
+    pub withdrew_fee: U256,
+    pub withdrew_gaslimit: U256,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct SubstrateConfig {
+    pub webb: Option<CommonSubstrateConfig>,
+    pub edgeware: Option<CommonSubstrateConfig>,
+    pub hedgeware: Option<CommonSubstrateConfig>,
+    pub beresheet: Option<CommonSubstrateConfig>,
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct EvmConfig {
+    pub webb: Option<CommonEvmConfig>,
+    pub edgeware: Option<CommonEvmConfig>,
+    pub ganache: Option<CommonEvmConfig>,
+    pub hedgeware: Option<CommonEvmConfig>,
+    pub beresheet: Option<CommonEvmConfig>,
+    pub harmony: Option<CommonEvmConfig>,
 }
 
 pub fn load<P: Into<PathBuf>>(path: P) -> anyhow::Result<WebbRelayerConfig> {

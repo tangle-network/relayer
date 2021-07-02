@@ -1,4 +1,5 @@
 pub mod substrate {
+    #![allow(dead_code)]
     macro_rules! define_chain {
         ($name:ident => $endpoint:expr) => {
             #[derive(Debug, Clone, Copy, Eq, PartialEq)]
@@ -21,8 +22,18 @@ pub mod substrate {
 
 pub mod evm {
     use std::collections::HashMap;
+    /// All Supported Chains by Webb Realyer.
+    #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+    pub enum ChainName {
+        Edgeware,
+        Webb,
+        Ganache,
+        Beresheet,
+        Harmoney,
+    }
+
     pub trait EvmChain {
-        fn name() -> String;
+        fn name() -> ChainName;
         fn endpoint() -> &'static str;
         fn chain_id() -> u32;
         fn contracts() -> HashMap<&'static str, u128>;
@@ -42,13 +53,14 @@ pub mod evm {
             #[derive(Debug, Clone, Copy, Eq, PartialEq)]
             pub struct $name;
             impl EvmChain for $name {
-                fn name() -> String { stringify!($name).to_lowercase() }
+                fn name() -> ChainName { ChainName::$name }
 
                 fn endpoint() -> &'static str { $endpoint }
 
                 fn chain_id() -> u32 { $chain_id }
 
                 fn contracts() -> HashMap<&'static str, u128> {
+                    #[allow(unused_mut)]
                     let mut map = HashMap::new();
                     $(
                         map.insert($address, $size);
@@ -66,6 +78,15 @@ pub mod evm {
             contracts: [],
         }
     }
+
+    define_chain! {
+        Ganache => {
+            endpoint: "http://127.0.0.1:1998",
+            chain_id: 1337,
+            contracts: [],
+        }
+    }
+
     define_chain! {
         Beresheet => {
             endpoint: "http://beresheet1.edgewa.re:9933",
@@ -90,8 +111,17 @@ pub mod evm {
             ],
         }
     }
+
     define_chain! {
         Harmoney => {
+            endpoint: "",
+            chain_id: 0,
+            contracts: [],
+        }
+    }
+
+    define_chain! {
+        Webb => {
             endpoint: "",
             chain_id: 0,
             contracts: [],

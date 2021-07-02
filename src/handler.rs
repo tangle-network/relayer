@@ -11,8 +11,9 @@ use tungstenite::tokio::accept_async_with_config;
 use tungstenite::tungstenite::protocol::WebSocketConfig;
 use tungstenite::tungstenite::Message;
 use webb::contracts::anchor::AnchorContract;
-use webb::evm::ethereum_types::{Address, U256};
+use webb::evm::ethereum_types::{Address, H256, U256};
 use webb::evm::ethers::prelude::*;
+use webb::evm::ethers::types::Bytes;
 use webb::pallet::merkle::Merkle;
 use webb::pallet::mixer::{self, *};
 use webb::pallet::*;
@@ -28,7 +29,7 @@ pub async fn accept_connection(
 ) -> anyhow::Result<()> {
     let config = WebSocketConfig {
         max_send_queue: Some(5),
-        max_message_size: Some(2 << 20), // 2MB
+        max_message_size: Some(5 << 20), // 5MB
         ..Default::default()
     };
     let ws_stream = accept_async_with_config(stream, Some(config)).await?;
@@ -54,6 +55,7 @@ where
     TX: Sink<Message> + Unpin,
     TX::Error: Error + Send + Sync + 'static,
 {
+    log::trace!("Got Message: {:?}", v);
     match serde_json::from_str(&v) {
         Ok(cmd) => {
             handle_cmd(ctx.clone(), cmd)
@@ -64,6 +66,7 @@ where
                 .await?;
         },
         Err(e) => {
+            log::warn!("Got invalid payload: {:?}", e);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
             tx.send(Message::Text(value)).await?
@@ -183,6 +186,7 @@ pub enum EvmCommand {
     Edgeware(EvmEdgewareCommand),
     Harmony(EvmHarmonyCommand),
     Beresheet(EvmBeresheetCommand),
+    Ganache(EvmGanacheCommand),
     Hedgeware(EvmHedgewareCommand),
     Webb(EvmWebbCommand),
 }
@@ -237,6 +241,12 @@ pub enum EvmHedgewareCommand {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub enum EvmGanacheCommand {
+    RelayWithdrew(EvmRelayerWithdrawProof),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum EvmHarmonyCommand {
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
@@ -247,14 +257,32 @@ pub struct EvmRelayerWithdrawProof {
     /// The target contract.
     pub contract: Address,
     /// Proof bytes
-    pub proof: Vec<u8>,
+    pub proof: Bytes,
     /// Args...
-    pub root: [u8; 32],
-    pub nullifier_hash: [u8; 32],
+    pub root: H256,
+    pub nullifier_hash: H256,
     pub recipient: Address, // H160 ([u8; 20])
     pub relayer: Address,   // H160 (should be this realyer account)
     pub fee: U256,
     pub refund: U256,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum CommandResponse {
+    Pong(),
+    Network(NetworkStatus),
+    Withdraw(WithdrawStatus),
+    Error(String),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum NetworkStatus {
+    Connecting,
+    Connected,
+    Failed { reason: String },
+    Disconnected,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -265,15 +293,6 @@ pub enum WithdrawStatus {
     Finlized,
     Errored { reason: String },
 }
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum CommandResponse {
-    Pong(),
-    Withdraw(WithdrawStatus),
-    Error(String),
-}
-
 pub fn handle_cmd<'a>(
     ctx: RelayerContext,
     cmd: Command,
@@ -304,9 +323,10 @@ pub fn handle_evm<'a>(
     let s = match cmd {
         Edgeware(_) => todo!(),
         Harmony(_) => todo!(),
-        Beresheet(c) => match c {
-            EvmBeresheetCommand::RelayWithdrew(proof) => {
-                handle_evm_withdrew::<evm::Beresheet>(ctx, proof)
+        Beresheet(_) => todo!(),
+        Ganache(c) => match c {
+            EvmGanacheCommand::RelayWithdrew(proof) => {
+                handle_evm_withdrew::<evm::Ganache>(ctx, proof)
             },
         },
         Hedgeware(_) => todo!(),
@@ -319,37 +339,65 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
     ctx: RelayerContext,
     data: EvmRelayerWithdrawProof,
 ) -> BoxStream<'a, CommandResponse> {
+    use CommandResponse::*;
     let s = stream! {
-        let provider = ctx.evm_provider::<C>().await.unwrap();
-        let wallet = ctx.evm_wallet::<C>().await.unwrap();
+        yield Network(NetworkStatus::Connecting);
+        let provider = match ctx.evm_provider::<C>().await {
+            Ok(value) => {
+                yield Network(NetworkStatus::Connected);
+                value
+            },
+            Err(e) => {
+                let reason = e.to_string();
+                yield Network(NetworkStatus::Failed { reason });
+                yield Network(NetworkStatus::Disconnected);
+                return;
+            }
+        };
+        let wallet = match ctx.evm_wallet::<C>().await {
+            Ok(v) => v,
+            Err(e) => {
+                dbg!(e);
+                yield Error(format!("Misconfigured Network: {:?}", C::name()));
+                return;
+            }
+        };
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
         let contract = AnchorContract::new(data.contract, client);
         let call = contract.withdraw(
-                data.proof,
-                data.root,
-                data.nullifier_hash,
+                data.proof.to_vec(),
+                data.root.to_fixed_bytes(),
+                data.nullifier_hash.to_fixed_bytes(),
                 data.recipient,
                 data.relayer,
                 data.fee,
                 data.refund
             );
         let tx = match call.send().await {
-            Ok(pending) => pending.await,
+            Ok(pending) => {
+                yield Withdraw(WithdrawStatus::Sent);
+                let result = pending.await;
+                yield Withdraw(WithdrawStatus::Submitted);
+                result
+            },
             Err(e) => {
-                // Handle the errors.
+                let reason = e.to_string();
+                yield Withdraw(WithdrawStatus::Errored { reason });
                 return;
             }
         };
         match tx {
             Ok(receipt) => {
-
+                dbg!(receipt);
+                yield Withdraw(WithdrawStatus::Finlized);
             },
             Err(e) => {
-
+                let reason = e.to_string();
+                yield Withdraw(WithdrawStatus::Errored { reason });
+                return;
             }
         };
-        yield CommandResponse::Pong();
     };
     s.boxed()
 }
