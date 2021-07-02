@@ -99,13 +99,19 @@ jobs:
         # Only test on macOS platforms since we can't simulate the others.
       - run: ci/test.bash cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-apple-darwin'
+      - run: cargo build
+        if: matrix.target == 'x86_64-apple-darwin'
+        shell: bash
       - name: Use Node.js 14.x
+        if: matrix.target == 'x86_64-apple-darwin'
         uses: actions/setup-node@v1
         with:
           node-version: 14.x
       - name: Install NPM Packages.
+        if: matrix.target == 'x86_64-apple-darwin'
         run: cd tests && yarn
       - name: Webb Relayer Integration tests.
+        if: matrix.target == 'x86_64-apple-darwin'
         run: cd tests && yarn test
 
     strategy:
@@ -153,13 +159,19 @@ jobs:
           !contains(matrix.target, 'solaris') &&
           matrix.target != 'armv5te-unknown-linux-musleabi' &&
           matrix.target != 'sparc64-unknown-linux-gnu'
+      - run: cargo build
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        shell: bash
       - name: Use Node.js 14.x
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         uses: actions/setup-node@v1
         with:
           node-version: 14.x
       - name: Install NPM Packages.
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: cd tests && yarn
       - name: Webb Relayer Integration tests.
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: cd tests && yarn test
 
     strategy:
