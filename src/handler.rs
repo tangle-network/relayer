@@ -289,7 +289,7 @@ pub enum NetworkStatus {
 pub enum WithdrawStatus {
     Sent,
     Submitted,
-    Finlized,
+    Finlized { tx_hash: H256 },
     Errored { reason: String },
 }
 pub fn handle_cmd<'a>(
@@ -320,16 +320,32 @@ pub fn handle_evm<'a>(
 ) -> BoxStream<'a, CommandResponse> {
     use EvmCommand::*;
     let s = match cmd {
-        Edgeware(_) => todo!(),
-        Harmony(_) => todo!(),
-        Beresheet(_) => todo!(),
+        Edgeware(c) => match c {
+            EvmEdgewareCommand::RelayWithdrew(proof) => {
+                handle_evm_withdrew::<evm::Edgeware>(ctx, proof)
+            },
+        },
+        Harmony(c) => match c {
+            EvmHarmonyCommand::RelayWithdrew(proof) => {
+                handle_evm_withdrew::<evm::Harmoney>(ctx, proof)
+            },
+        },
+        Beresheet(c) => match c {
+            EvmBeresheetCommand::RelayWithdrew(proof) => {
+                handle_evm_withdrew::<evm::Beresheet>(ctx, proof)
+            },
+        },
         Ganache(c) => match c {
             EvmGanacheCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Ganache>(ctx, proof)
             },
         },
+        Webb(c) => match c {
+            EvmWebbCommand::RelayWithdrew(proof) => {
+                handle_evm_withdrew::<evm::Webb>(ctx, proof)
+            },
+        },
         Hedgeware(_) => todo!(),
-        Webb(_) => todo!(),
     };
     s.boxed()
 }
@@ -340,6 +356,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     let s = stream! {
+        log::debug!("Connecting to chain {:?} .. at {}", C::name(), C::endpoint());
         yield Network(NetworkStatus::Connecting);
         let provider = match ctx.evm_provider::<C>().await {
             Ok(value) => {
@@ -356,7 +373,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         let wallet = match ctx.evm_wallet::<C>().await {
             Ok(v) => v,
             Err(e) => {
-                dbg!(e);
+                log::error!("Misconfigured Network: {}", e);
                 yield Error(format!("Misconfigured Network: {:?}", C::name()));
                 return;
             }
@@ -373,15 +390,19 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 data.fee,
                 data.refund
             );
+        log::trace!("About to send Tx to {:?} Chain", C::name());
         let tx = match call.send().await {
             Ok(pending) => {
                 yield Withdraw(WithdrawStatus::Sent);
+                log::debug!("Tx is created! {}", *pending);
                 let result = pending.await;
+                log::debug!("Tx Submitted!");
                 yield Withdraw(WithdrawStatus::Submitted);
                 result
             },
             Err(e) => {
                 let reason = e.to_string();
+                log::error!("Error while sending Tx: {}", reason);
                 yield Withdraw(WithdrawStatus::Errored { reason });
                 return;
             }
@@ -389,10 +410,11 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         match tx {
             Ok(receipt) => {
                 log::debug!("Finlized Tx #{}", receipt.transaction_hash);
-                yield Withdraw(WithdrawStatus::Finlized);
+                yield Withdraw(WithdrawStatus::Finlized { tx_hash: receipt.transaction_hash });
             },
             Err(e) => {
                 let reason = e.to_string();
+                log::error!("Transaction Errored: {}", reason);
                 yield Withdraw(WithdrawStatus::Errored { reason });
                 return;
             }

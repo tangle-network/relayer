@@ -26,9 +26,22 @@ impl RelayerContext {
 
     pub async fn evm_wallet<C: EvmChain>(&self) -> anyhow::Result<LocalWallet> {
         let evm = &self.config.evm;
+        // TODO(@shekohex): find a better solution instead of copy/pasta here!
         match C::name() {
-            ChainName::Edgeware => todo!(),
-            ChainName::Webb => todo!(),
+            ChainName::Edgeware if evm.edgeware.is_some() => {
+                let c = evm.edgeware.clone().unwrap();
+                let pk = c.private_key;
+                let key = SecretKey::from_bytes(pk.as_bytes())?;
+                let wallet = LocalWallet::from(key);
+                Ok(wallet)
+            },
+            ChainName::Webb if evm.webb.is_some() => {
+                let c = evm.webb.clone().unwrap();
+                let pk = c.private_key;
+                let key = SecretKey::from_bytes(pk.as_bytes())?;
+                let wallet = LocalWallet::from(key);
+                Ok(wallet)
+            },
             ChainName::Ganache if evm.ganache.is_some() => {
                 let c = evm.ganache.clone().unwrap();
                 let pk = c.private_key;
@@ -36,9 +49,21 @@ impl RelayerContext {
                 let wallet = LocalWallet::from(key);
                 Ok(wallet)
             },
-            ChainName::Beresheet => todo!(),
-            ChainName::Harmoney => todo!(),
-            _ => todo!(),
+            ChainName::Beresheet if evm.beresheet.is_some() => {
+                let c = evm.beresheet.clone().unwrap();
+                let pk = c.private_key;
+                let key = SecretKey::from_bytes(pk.as_bytes())?;
+                let wallet = LocalWallet::from(key);
+                Ok(wallet)
+            },
+            ChainName::Harmoney if evm.harmony.is_some() => {
+                let c = evm.harmony.clone().unwrap();
+                let pk = c.private_key;
+                let key = SecretKey::from_bytes(pk.as_bytes())?;
+                let wallet = LocalWallet::from(key);
+                Ok(wallet)
+            },
+            _ => anyhow::bail!("Chain Not Configured!"),
         }
     }
 }

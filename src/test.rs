@@ -12,6 +12,7 @@ use curve25519_dalek::scalar::Scalar;
 use futures::prelude::*;
 use merlin::Transcript;
 use sp_keyring::AccountKeyring;
+use webb::evm::ethereum_types::H256;
 use webb::pallet::merkle::*;
 use webb::pallet::mixer::*;
 use webb::pallet::*;
@@ -182,6 +183,8 @@ async fn relay() {
     dbg!(&event);
     assert_eq!(
         event,
-        Some(CommandResponse::Withdraw(WithdrawStatus::Finlized))
+        Some(CommandResponse::Withdraw(WithdrawStatus::Finlized {
+            tx_hash: H256::default()
+        }))
     );
 }
