@@ -1,0 +1,8 @@
+port = 9955
+[substrate.webb]
+suri = "//Alice"
+
+[evm.ganache]
+private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
+withdrew-fee = "0x05"
+withdrew-gaslimit = "0x350000"
