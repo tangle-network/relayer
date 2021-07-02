@@ -22,6 +22,7 @@
     "ws": "^7.5.1"
   },
   "devDependencies": {
+    "@types/chai": "^4.2.19",
     "@types/node": "v14",
     "@types/ws": "^7.4.5",
     "bn-chai": "^1.0.1",

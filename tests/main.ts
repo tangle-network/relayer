@@ -2,6 +2,7 @@ import circomlib from 'circomlib';
 import crypto from 'crypto';
 import { ethers } from 'ethers';
 import fs from 'fs';
+import chai from 'chai';
 import WebSocket from 'ws';
 import ganache from 'ganache-cli';
 import snarkjs from 'snarkjs';
@@ -15,18 +16,22 @@ import { spawn } from 'child_process';
 
 const PRIVATE_KEY =
   '0x000000000000000000000000000000000000000000000000000000000000dead';
-const web3Provider = ganache.provider({
+const PORT = 1998;
+const ganacheServer = ganache.server({
   accounts: [
     {
       balance: ethers.utils.parseEther('1000').toHexString(),
       secretKey: PRIVATE_KEY,
     },
   ],
-  ws: false,
-  port: 1998,
+  port: PORT,
 });
 
-const provider = new ethers.providers.Web3Provider(web3Provider);
+ganacheServer.listen(PORT);
+const provider = new ethers.providers.JsonRpcProvider(
+  `http://127.0.0.1:${PORT}`
+);
+console.log(`Ganache Started on http://127.0.0.1:${PORT} ..`);
 const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 const toHex = (number: number | Buffer, length = 32) =>
   '0x' +
@@ -92,9 +97,9 @@ async function deployNativeAnchor() {
 }
 
 function createDeposit() {
-  const rbigint = (nbytes) =>
+  const rbigint = (nbytes: number) =>
     snarkjs.bigInt.leBuff2int(crypto.randomBytes(nbytes));
-  const pedersenHash = (data) =>
+  const pedersenHash = (data: any) =>
     circomlib.babyJub.unpackPoint(circomlib.pedersenHash.hash(data))[0];
   let deposit: any = { nullifier: rbigint(31), secret: rbigint(31) };
   deposit.preimage = Buffer.concat([
@@ -246,19 +251,60 @@ async function startWebbRelayer() {
   return proc;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+enum Result {
+  Continue,
+  CleanExit,
+  Errored,
+}
+
+async function handleMessage(data: any): Promise<Result> {
+  if (data.error) {
+    return Result.Errored;
+  } else if (data.withdraw === 'finlized') {
+    return Result.CleanExit;
+  } else {
+    return Result.Continue;
+  }
+}
+
 async function main() {
   const contractAddress = await deployNativeAnchor();
   const depositArgs = await deposit(contractAddress);
-  const myAddress = await wallet.getAddress();
+  const recipient = ethers.utils.getAddress(
+    '0x6e401d8f8058707b99ca54b8295a16f525070df9'
+  );
   const relayer = await startWebbRelayer();
+  await sleep(500); // just to wait for the relayer start-up
   const client = new WebSocket('ws://localhost:9955');
   await new Promise((resolve) => client.on('open', resolve));
   console.log('Connected to Relayer');
-  client.on('message', (data) => {
-    console.log(data);
+  client.on('message', async (data) => {
+    console.log('<==', data);
+    const msg = JSON.parse(data as string);
+    const result = await handleMessage(msg);
+    if (result === Result.Errored) {
+      relayer.kill('SIGTERM');
+      client.terminate();
+      process.exit(1);
+    } else if (result === Result.Continue) {
+      // all good.
+    } else if (result === Result.CleanExit) {
+      // check the recipient balance
+      const balance = await provider.getBalance(recipient);
+      // the balance should be 0.1 ETH
+      chai.assert(balance.eq(ethers.utils.parseEther('0.1')));
+      console.log('Clean Exit');
+      relayer.kill('SIGTERM');
+      client.close();
+      process.exit(0);
+    } else {
+      // ??
+    }
   });
   client.on('error', (err) => {
-    console.log(err);
+    console.log('[E]', err);
     relayer.kill('SIGTERM');
     client.terminate();
     process.exit(1);
@@ -266,7 +312,7 @@ async function main() {
 
   const { proof, args } = await generateSnarkProof(
     depositArgs,
-    myAddress,
+    recipient,
     contractAddress
   );
   const req = {
@@ -287,14 +333,16 @@ async function main() {
   };
   if (client.readyState === client.OPEN) {
     let data = JSON.stringify(req);
-    console.log(data);
+    console.log('=>', data);
     client.send(data, (err) => {
-      console.log('!!Error!!', err);
-      relayer.kill('SIGTERM');
-      client.terminate();
-      process.exit(1);
+      if (err !== undefined) {
+        console.log('!!Error!!', err);
+        relayer.kill('SIGTERM');
+        client.terminate();
+        process.exit(1);
+      }
     });
-    await new Promise((resolve) => setTimeout(resolve, 30_000));
+    await sleep(45_000);
   } else {
     console.error('Relayer Connection closed!');
     relayer.kill();

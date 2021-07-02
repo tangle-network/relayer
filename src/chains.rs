@@ -81,7 +81,7 @@ pub mod evm {
 
     define_chain! {
         Ganache => {
-            endpoint: "http://127.0.0.1:1998",
+            endpoint: "http://localhost:1998",
             chain_id: 1337,
             contracts: [],
         }

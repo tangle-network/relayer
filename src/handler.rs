@@ -29,7 +29,7 @@ pub async fn accept_connection(
 ) -> anyhow::Result<()> {
     let config = WebSocketConfig {
         max_send_queue: Some(5),
-        max_message_size: Some(5 << 20), // 5MB
+        max_message_size: Some(2 << 20), // 5MB
         ..Default::default()
     };
     let ws_stream = accept_async_with_config(stream, Some(config)).await?;
@@ -55,7 +55,6 @@ where
     TX: Sink<Message> + Unpin,
     TX::Error: Error + Send + Sync + 'static,
 {
-    log::trace!("Got Message: {:?}", v);
     match serde_json::from_str(&v) {
         Ok(cmd) => {
             handle_cmd(ctx.clone(), cmd)
@@ -389,7 +388,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         };
         match tx {
             Ok(receipt) => {
-                dbg!(receipt);
+                log::debug!("Finlized Tx #{}", receipt.transaction_hash);
                 yield Withdraw(WithdrawStatus::Finlized);
             },
             Err(e) => {
