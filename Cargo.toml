@@ -23,6 +23,10 @@ structopt = { version = "^0.3", features = ["paw"] }
 paw = "^1.0"
 directories-next = "^2.0"
 
+# just to make it compile on linux where the openssl is not available.
+# until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
+native-tls = { version = "^0.2", features = ["vendored"] }
+
 [dependencies.tungstenite]
 package = "async-tungstenite"
 version = "^0.13"
