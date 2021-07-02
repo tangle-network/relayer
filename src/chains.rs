@@ -83,7 +83,12 @@ pub mod evm {
         Ganache => {
             endpoint: "http://localhost:1998",
             chain_id: 1337,
-            contracts: [],
+            contracts: [
+                {
+                    size: 1,
+                    address: "0xF759e19b1142079b1963e1E323B07e4AC67aB899",
+                }
+            ],
         }
     }
 
@@ -114,9 +119,18 @@ pub mod evm {
 
     define_chain! {
         Harmoney => {
-            endpoint: "",
-            chain_id: 0,
-            contracts: [],
+            endpoint: "https://api.s1.b.hmny.io",
+            chain_id: 1666700001,
+            contracts: [
+                {
+                    size: 1,
+                    address: "0x59DCE3dcA8f47Da895aaC4Df997d8A2E29815B1B",
+                },
+                {
+                    size: 100,
+                    address: "0xF06fA633f6E801d9fF3D450Af8806489D4fa70a1",
+                }
+            ],
         }
     }
 

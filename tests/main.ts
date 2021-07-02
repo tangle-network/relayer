@@ -77,7 +77,7 @@ async function deployNativeAnchor() {
   let verifierInstance = await verifierFactory.deploy({ gasLimit: '0x5B8D80' });
   await verifierInstance.deployed();
 
-  const denomination = ethers.utils.parseEther('0.1');
+  const denomination = ethers.utils.parseEther('1');
   const merkleTreeHeight = 20;
   const nativeAnchorFactory = new ethers.ContractFactory(
     nativeAnchorContractRaw.abi,
@@ -262,7 +262,7 @@ enum Result {
 async function handleMessage(data: any): Promise<Result> {
   if (data.error) {
     return Result.Errored;
-  } else if (data.withdraw === 'finlized') {
+  } else if (data.withdraw?.finlized) {
     return Result.CleanExit;
   } else {
     return Result.Continue;
@@ -270,16 +270,21 @@ async function handleMessage(data: any): Promise<Result> {
 }
 
 async function main() {
+  console.log('Deploying the contract with 1 ETH');
   const contractAddress = await deployNativeAnchor();
+  console.log('Contract Deployed at ', contractAddress);
+  console.log('Sending Deposit Tx to the contract ..');
   const depositArgs = await deposit(contractAddress);
   const recipient = ethers.utils.getAddress(
     '0x6e401d8f8058707b99ca54b8295a16f525070df9'
   );
+  console.log('Deposit Done ..');
+  console.log('Starting the Relayer ..');
   const relayer = await startWebbRelayer();
   await sleep(500); // just to wait for the relayer start-up
   const client = new WebSocket('ws://localhost:9955');
   await new Promise((resolve) => client.on('open', resolve));
-  console.log('Connected to Relayer');
+  console.log('Connected to Relayer!');
   client.on('message', async (data) => {
     console.log('<==', data);
     const msg = JSON.parse(data as string);
@@ -291,10 +296,13 @@ async function main() {
     } else if (result === Result.Continue) {
       // all good.
     } else if (result === Result.CleanExit) {
+      console.log('Transaction Done and Relayed Successfully!');
+      console.log(`Checking balance of the recipient (${recipient})`);
       // check the recipient balance
       const balance = await provider.getBalance(recipient);
-      // the balance should be 0.1 ETH
-      chai.assert(balance.eq(ethers.utils.parseEther('0.1')));
+      // the balance should be 1 ETH
+      chai.assert(balance.eq(ethers.utils.parseEther('1')));
+      console.log(`Balance equal to ${ethers.utils.formatEther(balance)} ETH`);
       console.log('Clean Exit');
       relayer.kill('SIGTERM');
       client.close();
@@ -309,12 +317,13 @@ async function main() {
     client.terminate();
     process.exit(1);
   });
-
+  console.log('Generating zkProof to do a withdraw ..');
   const { proof, args } = await generateSnarkProof(
     depositArgs,
     recipient,
     contractAddress
   );
+  console.log('Proof Generated!');
   const req = {
     evm: {
       ganache: {
@@ -333,8 +342,10 @@ async function main() {
   };
   if (client.readyState === client.OPEN) {
     let data = JSON.stringify(req);
+    console.log('Sending Proof to the Relayer ..');
     console.log('=>', data);
     client.send(data, (err) => {
+      console.log('Proof Sent!');
       if (err !== undefined) {
         console.log('!!Error!!', err);
         relayer.kill('SIGTERM');
