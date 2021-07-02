@@ -87,7 +87,6 @@ jobs:
             ~/.cargo/bin
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
- 
       - uses: actions/download-artifact@v1
         with:
           name: cross-apple-darwin
@@ -100,6 +99,14 @@ jobs:
         # Only test on macOS platforms since we can't simulate the others.
       - run: ci/test.bash cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-apple-darwin'
+      - name: Use Node.js 14.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: Install NPM Packages.
+        run: cd tests && yarn
+      - name: Webb Relayer Integration tests.
+        run: cd tests && yarn test
 
     strategy:
       fail-fast: true
@@ -146,6 +153,14 @@ jobs:
           !contains(matrix.target, 'solaris') &&
           matrix.target != 'armv5te-unknown-linux-musleabi' &&
           matrix.target != 'sparc64-unknown-linux-gnu'
+      - name: Use Node.js 14.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: Install NPM Packages.
+        run: cd tests && yarn
+      - name: Webb Relayer Integration tests.
+        run: cd tests && yarn test
 
     strategy:
       fail-fast: true
@@ -166,8 +181,8 @@ jobs:
           # - armv7-unknown-linux-musleabihf
           # - i586-unknown-linux-gnu
           # - i586-unknown-linux-musl
-          - i686-unknown-linux-gnu
-          - i686-unknown-linux-musl
+          # - i686-unknown-linux-gnu
+          # - i686-unknown-linux-musl
           # - mips-unknown-linux-gnu
           # - mips-unknown-linux-musl
           # - mips64-unknown-linux-gnuabi64
