@@ -17,15 +17,16 @@ import { getSupportedChain, generateWithdrawRequest } from './testUtils';
 import fetch from 'node-fetch';
 
 type EvmLeavesResponse = {
-  leaves: [{commitment: string}]
+  leaves: [{ commitment: string }];
 };
 const PORT = 1998;
 
 const chainInput = process.argv[2] || 'ganache';
 const testedChain = getSupportedChain(chainInput);
 const isGanache = testedChain.name == 'ganache';
-const PRIVATE_KEY = isGanache ? '0x000000000000000000000000000000000000000000000000000000000000dead' :
-  '1749563947452850678456352849674537239203756595873523849581626549';
+const PRIVATE_KEY = isGanache
+  ? '0x000000000000000000000000000000000000000000000000000000000000dead'
+  : '1749563947452850678456352849674537239203756595873523849581626549';
 
 if (isGanache) startGanacheServer();
 
@@ -152,12 +153,14 @@ async function deposit(contractAddress: string) {
   const denomination = await nativeAnchorInstance.functions.denomination!();
 
   // Gas limit values required for beresheet
-  const depositTx = await nativeAnchorInstance.deposit(toFixedHex(deposit.commitment), {
-    value: denomination.toString(),
-    gasLimit: 6000000,
-  });
+  const depositTx = await nativeAnchorInstance.deposit(
+    toFixedHex(deposit.commitment),
+    {
+      value: denomination.toString(),
+      gasLimit: 6000000,
+    }
+  );
   await depositTx.wait();
-  
   return deposit;
 }
 
@@ -193,8 +196,12 @@ async function getDepositLeavesFromChain(contractAddress: string) {
   return leaves;
 }
 
-async function getDepositLeavesFromServer(contractAddress: string): Promise<string[]> {    
-  const serverResponse = await fetch(`http://nepoche.com:5050/evm-leaves/${contractAddress}`);
+async function getDepositLeavesFromServer(
+  contractAddress: string
+): Promise<string[]> {
+  const serverResponse = await fetch(
+    `http://nepoche.com:5050/evm-leaves/${contractAddress}`
+  );
   const jsonResponse: EvmLeavesResponse = await serverResponse.json();
   let leaves = jsonResponse.leaves.map((val) => val.commitment);
 
@@ -205,15 +212,13 @@ async function generateMerkleProof(deposit: any, contractAddress: string) {
   let leaves;
 
   if (isGanache) {
-    leaves = await getDepositLeavesFromChain(contractAddress)
+    leaves = await getDepositLeavesFromChain(contractAddress);
   } else {
     leaves = await getDepositLeavesFromServer(contractAddress);
   }
   const tree = new MerkleTree(20, leaves);
 
-  let leafIndex = leaves.findIndex(
-    (e) => e === toHex(deposit.commitment)
-  );
+  let leafIndex = leaves.findIndex((e) => e === toHex(deposit.commitment));
 
   const retVals = await tree.path(leafIndex);
 
@@ -316,14 +321,18 @@ async function handleMessage(data: any): Promise<Result> {
 async function main() {
   provider = new ethers.providers.JsonRpcProvider(testedChain.endpoint);
   wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-  
+
   let contractAddress = testedChain.contractAddress;
   const recipient = ethers.utils.getAddress(
     '0x6e401d8f8058707b99ca54b8295a16f525070df9'
   );
   let startingRecipientBalance = await provider.getBalance(recipient);
-  console.log(`Starting balance of recipient equal to ${ethers.utils.formatEther(startingRecipientBalance)} UNIT`);
-  
+  console.log(
+    `Starting balance of recipient equal to ${ethers.utils.formatEther(
+      startingRecipientBalance
+    )} UNIT`
+  );
+
   if (isGanache) {
     console.log('Deploying the contract with 1 ETH');
     contractAddress = await deployNativeAnchor();
@@ -360,8 +369,14 @@ async function main() {
       const endingRecipientBalance = await provider.getBalance(recipient);
       const changeInBalance = (await getAnchorDenomination(contractAddress))[0];
       // the balance should have increased by the denomination of the contract
-      chai.assert(endingRecipientBalance.eq(startingRecipientBalance.add(changeInBalance)));
-      console.log(`Balance equal to ${ethers.utils.formatEther(endingRecipientBalance)} UNIT`);
+      chai.assert(
+        endingRecipientBalance.eq(startingRecipientBalance.add(changeInBalance))
+      );
+      console.log(
+        `Balance equal to ${ethers.utils.formatEther(
+          endingRecipientBalance
+        )} UNIT`
+      );
       console.log('Clean Exit');
       relayer.kill('SIGTERM');
       client.close();
