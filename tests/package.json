@@ -17,6 +17,7 @@
     "ethers": "^5.4.0",
     "ganache-cli": "^6.12.2",
     "keccak": "^3.0.1",
+    "node-fetch": "^2.6.1",
     "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#869181cfaf7526fe8972073d31655493a04326d5",
     "websnark": "git+https://github.com/tornadocash/websnark.git",
     "ws": "^7.5.1"
