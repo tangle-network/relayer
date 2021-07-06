@@ -13,32 +13,46 @@ import nativeAnchorContract from './build/contracts/NativeAnchor.json';
 import verifierContract from './build/contracts/Verifier.json';
 import MerkleTree from './lib/MerkleTree';
 import { spawn } from 'child_process';
+import { getSupportedChain, generateWithdrawRequest } from './testUtils';
+import fetch from 'node-fetch';
 
-const PRIVATE_KEY =
-  '0x000000000000000000000000000000000000000000000000000000000000dead';
+type EvmLeavesResponse = {
+  leaves: [{ commitment: string }];
+};
 const PORT = 1998;
-const ganacheServer = ganache.server({
-  accounts: [
-    {
-      balance: ethers.utils.parseEther('1000').toHexString(),
-      secretKey: PRIVATE_KEY,
-    },
-  ],
-  port: PORT,
-});
 
-ganacheServer.listen(PORT);
-const provider = new ethers.providers.JsonRpcProvider(
-  `http://127.0.0.1:${PORT}`
-);
-console.log(`Ganache Started on http://127.0.0.1:${PORT} ..`);
-const wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+const chainInput = process.argv[2] || 'ganache';
+const testedChain = getSupportedChain(chainInput);
+const isGanache = testedChain.name == 'ganache';
+const PRIVATE_KEY = isGanache
+  ? '0x000000000000000000000000000000000000000000000000000000000000dead'
+  : '1749563947452850678456352849674537239203756595873523849581626549';
+
+if (isGanache) startGanacheServer();
+
+let provider, wallet;
+
 const toHex = (number: number | Buffer, length = 32) =>
   '0x' +
   (number instanceof Buffer
     ? number.toString('hex')
     : snarkjs.bigInt(number).toString(16)
   ).padStart(length * 2, '0');
+
+function startGanacheServer() {
+  const ganacheServer = ganache.server({
+    accounts: [
+      {
+        balance: ethers.utils.parseEther('1000').toHexString(),
+        secretKey: PRIVATE_KEY,
+      },
+    ],
+    port: PORT,
+  });
+
+  ganacheServer.listen(PORT);
+  console.log(`Ganache Started on http://127.0.0.1:${PORT} ..`);
+}
 
 async function deployNativeAnchor() {
   const genContract = require('circomlib/src/mimcsponge_gencontract.js');
@@ -96,6 +110,17 @@ async function deployNativeAnchor() {
   return nativeAnchorAddress.address;
 }
 
+async function getAnchorDenomination(contractAddress: string) {
+  const nativeAnchorInstance = new ethers.Contract(
+    contractAddress,
+    nativeAnchorContract.abi,
+    wallet
+  );
+
+  const denomination = await nativeAnchorInstance.functions.denomination!();
+  return denomination;
+}
+
 function createDeposit() {
   const rbigint = (nbytes: number) =>
     snarkjs.bigInt.leBuff2int(crypto.randomBytes(nbytes));
@@ -126,13 +151,20 @@ async function deposit(contractAddress: string) {
     ).padStart(length * 2, '0');
 
   const denomination = await nativeAnchorInstance.functions.denomination!();
-  await nativeAnchorInstance.deposit(toFixedHex(deposit.commitment), {
-    value: denomination.toString(),
-  });
+
+  // Gas limit values required for beresheet
+  const depositTx = await nativeAnchorInstance.deposit(
+    toFixedHex(deposit.commitment),
+    {
+      value: denomination.toString(),
+      gasLimit: 6000000,
+    }
+  );
+  await depositTx.wait();
   return deposit;
 }
 
-async function getDepositEvents(contractAddress: string) {
+async function getDepositLeavesFromChain(contractAddress: string) {
   // Query the blockchain for all deposits that have happened
   const anchorInterface = new ethers.utils.Interface(anchorContract.abi);
   const anchorInstance = new ethers.Contract(
@@ -156,20 +188,37 @@ async function getDepositEvents(contractAddress: string) {
     return anchorInterface.parseLog(log);
   });
 
-  return decodedEvents;
+  // format the decoded events into a sorted array of leaves.
+  const leaves = decodedEvents
+    .sort((a, b) => a.args.leafIndex - b.args.leafIndex) // Sort events in chronological order
+    .map((e) => e.args.commitment);
+
+  return leaves;
+}
+
+async function getDepositLeavesFromServer(
+  contractAddress: string
+): Promise<string[]> {
+  const serverResponse = await fetch(
+    `http://nepoche.com:5050/evm-leaves/${contractAddress}`
+  );
+  const jsonResponse: EvmLeavesResponse = await serverResponse.json();
+  let leaves = jsonResponse.leaves.map((val) => val.commitment);
+
+  return leaves;
 }
 
 async function generateMerkleProof(deposit: any, contractAddress: string) {
-  const events = await getDepositEvents(contractAddress);
-  const leaves = events
-    .sort((a, b) => a.args.leafIndex - b.args.leafIndex) // Sort events in chronological order
-    .map((e) => e.args.commitment);
+  let leaves;
+
+  if (isGanache) {
+    leaves = await getDepositLeavesFromChain(contractAddress);
+  } else {
+    leaves = await getDepositLeavesFromServer(contractAddress);
+  }
   const tree = new MerkleTree(20, leaves);
 
-  let depositEvent = events.find(
-    (e) => e.args.commitment === toHex(deposit.commitment)
-  );
-  let leafIndex = depositEvent ? depositEvent.args.leafIndex : -1;
+  let leafIndex = leaves.findIndex((e) => e === toHex(deposit.commitment));
 
   const retVals = await tree.path(leafIndex);
 
@@ -270,14 +319,32 @@ async function handleMessage(data: any): Promise<Result> {
 }
 
 async function main() {
-  console.log('Deploying the contract with 1 ETH');
-  const contractAddress = await deployNativeAnchor();
-  console.log('Contract Deployed at ', contractAddress);
+  provider = new ethers.providers.JsonRpcProvider(testedChain.endpoint);
+  wallet = new ethers.Wallet(PRIVATE_KEY, provider);
+
+  let contractAddress = testedChain.contractAddress;
+  const recipient = ethers.utils.getAddress(
+    '0xe8f999AC5DAa08e134735016FAcE0D6439baFF94'
+  );
+  let startingRecipientBalance = await provider.getBalance(recipient);
+  console.log(
+    `Starting balance of recipient equal to ${ethers.utils.formatEther(
+      startingRecipientBalance
+    )} UNIT`
+  );
+
+  if (isGanache) {
+    console.log('Deploying the contract with 1 ETH');
+    contractAddress = await deployNativeAnchor();
+    testedChain.contractAddress = contractAddress;
+    console.log('Contract Deployed at ', contractAddress);
+  }
+  wallet = new ethers.Wallet(PRIVATE_KEY, provider);
   console.log('Sending Deposit Tx to the contract ..');
   const depositArgs = await deposit(contractAddress);
-  const recipient = ethers.utils.getAddress(
-    '0x6e401d8f8058707b99ca54b8295a16f525070df9'
-  );
+  if (!isGanache) {
+    await sleep(5000); // give the server time to update leaves in database
+  }
   console.log('Deposit Done ..');
   console.log('Starting the Relayer ..');
   const relayer = await startWebbRelayer();
@@ -299,10 +366,17 @@ async function main() {
       console.log('Transaction Done and Relayed Successfully!');
       console.log(`Checking balance of the recipient (${recipient})`);
       // check the recipient balance
-      const balance = await provider.getBalance(recipient);
-      // the balance should be 1 ETH
-      chai.assert(balance.eq(ethers.utils.parseEther('1')));
-      console.log(`Balance equal to ${ethers.utils.formatEther(balance)} ETH`);
+      const endingRecipientBalance = await provider.getBalance(recipient);
+      const changeInBalance = (await getAnchorDenomination(contractAddress))[0];
+      // the balance should have increased by the denomination of the contract
+      chai.assert(
+        endingRecipientBalance.eq(startingRecipientBalance.add(changeInBalance))
+      );
+      console.log(
+        `Balance equal to ${ethers.utils.formatEther(
+          endingRecipientBalance
+        )} UNIT`
+      );
       console.log('Clean Exit');
       relayer.kill('SIGTERM');
       client.close();
@@ -324,22 +398,7 @@ async function main() {
     contractAddress
   );
   console.log('Proof Generated!');
-  const req = {
-    evm: {
-      ganache: {
-        relayWithdrew: {
-          contract: contractAddress,
-          proof,
-          root: args[0],
-          nullifierHash: args[1],
-          recipient: args[2],
-          relayer: args[3],
-          fee: args[4],
-          refund: args[5],
-        },
-      },
-    },
-  };
+  const req = generateWithdrawRequest(testedChain, proof, args);
   if (client.readyState === client.OPEN) {
     let data = JSON.stringify(req);
     console.log('Sending Proof to the Relayer ..');
