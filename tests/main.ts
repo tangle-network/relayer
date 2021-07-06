@@ -324,7 +324,7 @@ async function main() {
 
   let contractAddress = testedChain.contractAddress;
   const recipient = ethers.utils.getAddress(
-    '0x6e401d8f8058707b99ca54b8295a16f525070df9'
+    '0xe8f999AC5DAa08e134735016FAcE0D6439baFF94'
   );
   let startingRecipientBalance = await provider.getBalance(recipient);
   console.log(
