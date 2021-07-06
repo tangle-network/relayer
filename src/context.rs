@@ -32,35 +32,35 @@ impl RelayerContext {
                 let c = evm.edgeware.clone().unwrap();
                 let pk = c.private_key;
                 let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet = LocalWallet::from(key);
+                let wallet = LocalWallet::from(key).set_chain_id(C::chain_id());
                 Ok(wallet)
             },
             ChainName::Webb if evm.webb.is_some() => {
                 let c = evm.webb.clone().unwrap();
                 let pk = c.private_key;
                 let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet = LocalWallet::from(key);
+                let wallet = LocalWallet::from(key).set_chain_id(C::chain_id());
                 Ok(wallet)
             },
             ChainName::Ganache if evm.ganache.is_some() => {
                 let c = evm.ganache.clone().unwrap();
                 let pk = c.private_key;
                 let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet = LocalWallet::from(key);
+                let wallet = LocalWallet::from(key).set_chain_id(C::chain_id());
                 Ok(wallet)
             },
             ChainName::Beresheet if evm.beresheet.is_some() => {
                 let c = evm.beresheet.clone().unwrap();
                 let pk = c.private_key;
                 let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet = LocalWallet::from(key);
+                let wallet = LocalWallet::from(key).set_chain_id(C::chain_id());
                 Ok(wallet)
             },
             ChainName::Harmoney if evm.harmony.is_some() => {
                 let c = evm.harmony.clone().unwrap();
                 let pk = c.private_key;
                 let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet = LocalWallet::from(key);
+                let wallet = LocalWallet::from(key).set_chain_id(C::chain_id());
                 Ok(wallet)
             },
             _ => anyhow::bail!("Chain Not Configured!"),
