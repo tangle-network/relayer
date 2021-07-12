@@ -33,7 +33,7 @@ jobs:
           path: ${{ steps.cross.outputs.install_path }}
     strategy:
       matrix:
-        platform: [linux-musl, apple-darwin]
+        platform: [linux-musl]
 
   push:
     runs-on: ubuntu-latest
