@@ -54,11 +54,11 @@ const supportedChains: TestableChain[] = [
   {
     endpoint: 'http://beresheet3.edgewa.re:9933',
     name: 'beresheet',
-    contractAddress: '0x2ee2e51cab1561E4482cacc8Be8b46CE61E46991',
+    contractAddress: '0xc0d863EE313636F067dCF89e6ea904AD5f8DEC65',
   },
   {
     endpoint: 'https://api.s1.b.hmny.io',
     name: 'harmony',
-    contractAddress: '0x59DCE3dcA8f47Da895aaC4Df997d8A2E29815B1B',
+    contractAddress: '0x8a4D675dcC71A7387a3C4f27d7D78834369b9542',
   },
 ];
