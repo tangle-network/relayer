@@ -10,4 +10,4 @@ VOLUME [ "/config" ]
 
 EXPOSE ${WEBB_PORT}
 
-CMD ["webb-relayer", "-vvvv", "-c", "/config/config.toml"]
+CMD ["./webb-relayer", "-vvvv", "-c", "/config/config.toml"]

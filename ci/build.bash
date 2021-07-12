@@ -23,7 +23,7 @@ else
     $CROSS build --target $TARGET_TRIPLE --all-features --release
 fi
 
-if [-z "$RELEASE_DOCKER" ]; then
+if [ -z "$RELEASE_DOCKER" ]; then
     # Do nothing.
     true
 else
