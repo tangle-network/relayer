@@ -38,7 +38,7 @@ jobs:
   push:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-
+    needs: install-cross
     steps:
       - uses: actions/checkout@v2
       - name: Cache Cargo
