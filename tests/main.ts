@@ -308,7 +308,7 @@ enum Result {
 }
 
 async function handleMessage(data: any): Promise<Result> {
-  if (data.error) {
+  if (data.error || data.withdraw?.errored) {
     return Result.Errored;
   } else if (data.withdraw?.finlized) {
     return Result.CleanExit;
