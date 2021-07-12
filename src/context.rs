@@ -9,7 +9,7 @@ use crate::config;
 
 #[derive(Clone)]
 pub struct RelayerContext {
-    config: config::WebbRelayerConfig,
+    pub config: config::WebbRelayerConfig,
 }
 
 impl RelayerContext {
@@ -26,7 +26,6 @@ impl RelayerContext {
 
     pub async fn evm_wallet<C: EvmChain>(&self) -> anyhow::Result<LocalWallet> {
         let evm = &self.config.evm;
-        // TODO(@shekohex): find a better solution instead of copy/pasta here!
         match C::name() {
             ChainName::Edgeware if evm.edgeware.is_some() => {
                 let c = evm.edgeware.clone().unwrap();

@@ -13,9 +13,9 @@ use futures::prelude::*;
 use merlin::Transcript;
 use sp_keyring::AccountKeyring;
 use webb::evm::ethereum_types::H256;
-use webb::pallet::merkle::*;
-use webb::pallet::mixer::*;
-use webb::pallet::*;
+use webb::substrate::pallet::merkle::*;
+use webb::substrate::pallet::mixer::*;
+use webb::substrate::pallet::*;
 use webb::substrate::subxt::sp_runtime::AccountId32;
 use webb::substrate::subxt::{Client, ClientBuilder, PairSigner};
 use webb::substrate::WebbRuntime;
@@ -95,6 +95,7 @@ fn generate_proof(
     proof.into()
 }
 
+#[ignore = "substrate based networks are not supported yet"]
 #[tokio::test]
 async fn relay() {
     let mut tree = FixedDepositTreeBuilder::new()
@@ -152,7 +153,6 @@ async fn relay() {
         substrate: SubstrateConfig {
             webb: Some(CommonSubstrateConfig {
                 suri: String::from("//Alice"),
-                ..Default::default()
             }),
             ..Default::default()
         },

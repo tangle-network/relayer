@@ -1,3 +1,5 @@
+#![allow(clippy::large_enum_variant)]
+
 use std::error::Error;
 use std::sync::Arc;
 
@@ -10,13 +12,13 @@ use tokio::net::TcpStream;
 use tungstenite::tokio::accept_async_with_config;
 use tungstenite::tungstenite::protocol::WebSocketConfig;
 use tungstenite::tungstenite::Message;
-use webb::contracts::anchor::AnchorContract;
+use webb::evm::contract::anchor::AnchorContract;
 use webb::evm::ethereum_types::{Address, H256, U256};
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::types::Bytes;
-use webb::pallet::merkle::Merkle;
-use webb::pallet::mixer::{self, *};
-use webb::pallet::*;
+use webb::substrate::pallet::merkle::Merkle;
+use webb::substrate::pallet::mixer::{self, *};
+use webb::substrate::pallet::*;
 use webb::substrate::subxt::sp_runtime::AccountId32;
 
 use crate::chains;
@@ -32,6 +34,7 @@ pub async fn accept_connection(
         max_message_size: Some(2 << 20), // 5MB
         ..Default::default()
     };
+    let peer_addr = stream.peer_addr().unwrap();
     let ws_stream = accept_async_with_config(stream, Some(config)).await?;
     let (mut tx, mut rx) = ws_stream.split();
     while let Some(msg) = rx.try_next().await? {
@@ -43,6 +46,7 @@ pub async fn accept_connection(
             _ => continue,
         }
     }
+    log::debug!("Client disconnected: {}", peer_addr);
     Ok(())
 }
 
@@ -58,7 +62,9 @@ where
     match serde_json::from_str(&v) {
         Ok(cmd) => {
             handle_cmd(ctx.clone(), cmd)
+                .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
+                .inspect(|v| log::trace!("Sending: {}", v))
                 .map(Message::Text)
                 .map(Result::Ok)
                 .forward(tx)
@@ -199,6 +205,7 @@ pub enum SubstrateEdgewareCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmEdgewareCommand {
+    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -211,6 +218,7 @@ pub enum SubstrateBeresheetCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmBeresheetCommand {
+    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -223,6 +231,7 @@ pub enum SubstrateWebbCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmWebbCommand {
+    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -235,18 +244,21 @@ pub enum SubstrateHedgewareCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmHedgewareCommand {
+    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmGanacheCommand {
+    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmHarmonyCommand {
+    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -272,7 +284,9 @@ pub enum CommandResponse {
     Pong(),
     Network(NetworkStatus),
     Withdraw(WithdrawStatus),
+    EvmRelayerInformation(EvmRelayerInformation),
     Error(String),
+    Unimplemented(&'static str),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -289,29 +303,36 @@ pub enum NetworkStatus {
 pub enum WithdrawStatus {
     Sent,
     Submitted,
-    Finlized { tx_hash: H256 },
-    Errored { reason: String },
+    Finlized {
+        #[serde(rename = "txHash")]
+        tx_hash: H256,
+    },
+    Errored {
+        reason: String,
+    },
 }
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EvmRelayerInformation {
+    pub enabled: bool,
+    pub withdraw_fee: Option<U256>,
+    pub withdrew_gaslimit: Option<U256>,
+}
+
 pub fn handle_cmd<'a>(
     ctx: RelayerContext,
     cmd: Command,
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     match cmd {
-        Command::Substrate(sub) => handle_substrate(ctx, sub),
+        Command::Substrate(_) => stream::once(async {
+            Unimplemented("Substrate based networks are not implemented yet.")
+        })
+        .boxed(),
         Command::Evm(evm) => handle_evm(ctx, evm),
         Command::Ping() => stream::once(async { Pong() }).boxed(),
     }
-}
-
-pub fn handle_substrate<'a>(
-    ctx: RelayerContext,
-    cmd: SubstrateCommand,
-) -> BoxStream<'a, CommandResponse> {
-    let s = stream! {
-        yield CommandResponse::Pong();
-    };
-    s.boxed()
 }
 
 pub fn handle_evm<'a>(
@@ -324,28 +345,77 @@ pub fn handle_evm<'a>(
             EvmEdgewareCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Edgeware>(ctx, proof)
             },
+            EvmEdgewareCommand::Information() => {
+                handle_evm_info::<evm::Edgeware>(ctx)
+            },
         },
         Harmony(c) => match c {
             EvmHarmonyCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Harmoney>(ctx, proof)
+            },
+            EvmHarmonyCommand::Information() => {
+                handle_evm_info::<evm::Harmoney>(ctx)
             },
         },
         Beresheet(c) => match c {
             EvmBeresheetCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Beresheet>(ctx, proof)
             },
+            EvmBeresheetCommand::Information() => {
+                handle_evm_info::<evm::Beresheet>(ctx)
+            },
         },
         Ganache(c) => match c {
             EvmGanacheCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Ganache>(ctx, proof)
+            },
+            EvmGanacheCommand::Information() => {
+                handle_evm_info::<evm::Ganache>(ctx)
             },
         },
         Webb(c) => match c {
             EvmWebbCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Webb>(ctx, proof)
             },
+            EvmWebbCommand::Information() => handle_evm_info::<evm::Webb>(ctx),
         },
         Hedgeware(_) => todo!(),
+    };
+    s.boxed()
+}
+
+fn handle_evm_info<'a, C: evm::EvmChain>(
+    ctx: RelayerContext,
+) -> BoxStream<'a, CommandResponse> {
+    let evm = &ctx.config.evm;
+    let cfg = match C::name() {
+        evm::ChainName::Webb if evm.webb.is_some() => evm.webb.clone().unwrap(),
+        evm::ChainName::Edgeware if evm.edgeware.is_some() => {
+            evm.edgeware.clone().unwrap()
+        },
+        evm::ChainName::Ganache if evm.ganache.is_some() => {
+            evm.ganache.clone().unwrap()
+        },
+        evm::ChainName::Beresheet if evm.beresheet.is_some() => {
+            evm.beresheet.clone().unwrap()
+        },
+        evm::ChainName::Harmoney if evm.harmony.is_some() => {
+            evm.harmony.clone().unwrap()
+        },
+        _ => {
+            // return default value, means this network is not enabled.
+            let s = stream! {
+                yield CommandResponse::EvmRelayerInformation(Default::default())
+            };
+            return s.boxed();
+        },
+    };
+    let s = stream! {
+        yield CommandResponse::EvmRelayerInformation(EvmRelayerInformation {
+            enabled: true,
+            withdrew_gaslimit: Some(cfg.withdrew_gaslimit),
+            withdraw_fee: Some(cfg.withdrew_fee),
+        });
     };
     s.boxed()
 }
@@ -416,7 +486,6 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 let reason = e.to_string();
                 log::error!("Transaction Errored: {}", reason);
                 yield Withdraw(WithdrawStatus::Errored { reason });
-                return;
             }
         };
     };
