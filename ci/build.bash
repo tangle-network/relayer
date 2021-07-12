@@ -24,7 +24,8 @@ else
 fi
 
 if [-z "$RELEASE_DOCKER" ]; then
-    # Do nothing
+    # Do nothing.
+    true
 else
     # build for docker
     $CROSS build --target $TARGET_TRIPLE --all-features --release
