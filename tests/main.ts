@@ -401,15 +401,7 @@ async function main() {
   console.log('Proof Generated!');
   const req = generateWithdrawRequest(testedChain, proof, args);
   if (client.readyState === client.OPEN) {
-    //client.send(JSON.stringify(relayerInfo), (err) => {
-    //if (err !== undefined) {
-    //console.log('!!Error!!', err);
-    //relayer.kill('SIGTERM');
-    //client.terminate();
-    //process.exit(1);
-    //}
-    //});
-    let data = JSON.stringify(req);
+    const data = JSON.stringify(req);
     console.log('Sending Proof to the Relayer ..');
     console.log('=>', data);
     client.send(data, (err) => {
