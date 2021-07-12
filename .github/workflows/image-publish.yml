@@ -1,0 +1,89 @@
+name: Container Image Release
+
+on:
+  push:
+    # Publish `main` as Container `edge` image.
+    branches:
+      - main
+    # Publish `v1.2.3` tags as releases.
+    tags:
+      - v*
+
+jobs:
+  # This job downloads and stores `cross` as an artifact, so that it can be
+  # redownloaded across all of the jobs. Currently this copied pasted between
+  # `ci.yml` and `release.yml`. Make sure to update both places when making
+  # changes.
+  install-cross:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 50
+      - uses: XAMPPRocky/get-github-release@v1
+        id: cross
+        with:
+          owner: rust-embedded
+          repo: cross
+          matches: ${{ matrix.platform }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-artifact@v1
+        with:
+          name: cross-${{ matrix.platform }}
+          path: ${{ steps.cross.outputs.install_path }}
+    strategy:
+      matrix:
+        platform: [linux-musl, apple-darwin]
+
+  push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Cache Cargo
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-x86_64-unknown-linux-musl
+      - uses: actions/download-artifact@v1
+        with:
+          name: cross-linux-musl
+          path: /tmp/
+      - run: chmod +x /tmp/cross
+
+      - run: ci/set_rust_version.bash nightly x86_64-unknown-linux-musl
+      - run: ci/build.bash /tmp/cross x86_64-unknown-linux-musl RELEASE DOCKER
+
+      - name: Build Image
+        run: docker build . --tag image
+
+      - name: Log into registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+
+      - name: Push image
+        run: |
+          IMAGE_ID=docker.pkg.github.com/webb-tools/relayer/app
+
+          # Change all uppercase to lowercase
+          IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
+
+          # Strip git ref prefix from version
+          VERSION=$(echo "${{ github.ref }}" | sed -e 's,.*/\(.*\),\1,')
+
+          # Strip "v" prefix from tag name
+          [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
+
+          # Use Docker `edge` tag convention
+          [ "$VERSION" == "main" ] && VERSION=edge
+
+          echo IMAGE_ID=$IMAGE_ID
+          echo VERSION=$VERSION
+
+          docker tag image $IMAGE_ID:$VERSION
+          docker push $IMAGE_ID:$VERSION
+
