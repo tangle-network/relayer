@@ -25,6 +25,7 @@
   "devDependencies": {
     "@types/chai": "^4.2.19",
     "@types/node": "v14",
+    "@types/node-fetch": "^2.5.11",
     "@types/ws": "^7.4.5",
     "bn-chai": "^1.0.1",
     "chai": "^4.3.4",

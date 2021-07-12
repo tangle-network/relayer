@@ -1,78 +1,49 @@
-
 export type TestableChain = {
-  endpoint: string,
-  name: string,
-  contractAddress: string,
+  endpoint: string;
+  name: string;
+  contractAddress: string;
 };
 
 export const getSupportedChain = (chainName: string): TestableChain => {
   const chain = supportedChains.find((entry) => chainName == entry.name);
 
   if (!chain) {
-    throw new Error("Unsupported chain");
+    throw new Error('Unsupported chain');
   }
 
   return chain;
 };
 
-export const generateWithdrawRequest = (chain: TestableChain, proof: string, args: string[]) => {
-  let req;
+export const generateRelayerInformationRequest = (chain: TestableChain) => {
+  return {
+    evm: {
+      [chain.name]: {
+        information: [],
+      },
+    },
+  };
+};
 
-  if (chain.name == 'beresheet') {
-    req = {
-      evm: {
-        beresheet: {
-          relayWithdrew: {
-            contract: chain.contractAddress,
-            proof,
-            root: args[0],
-            nullifierHash: args[1],
-            recipient: args[2],
-            relayer: args[3],
-            fee: args[4],
-            refund: args[5],
-          },
-        },
+export const generateWithdrawRequest = (
+  chain: TestableChain,
+  proof: string,
+  args: string[]
+) => ({
+  evm: {
+    [chain.name]: {
+      relayWithdrew: {
+        contract: chain.contractAddress,
+        proof,
+        root: args[0],
+        nullifierHash: args[1],
+        recipient: args[2],
+        relayer: args[3],
+        fee: args[4],
+        refund: args[5],
       },
-    };
-  } else if (chain.name == 'harmony') {
-    req = {
-      evm: {
-        harmony: {
-          relayWithdrew: {
-            contract: chain.contractAddress,
-            proof,
-            root: args[0],
-            nullifierHash: args[1],
-            recipient: args[2],
-            relayer: args[3],
-            fee: args[4],
-            refund: args[5],
-          },
-        },
-      },
-    };
-  } else {
-    req = {
-      evm: {
-        ganache: {
-          relayWithdrew: {
-            contract: chain.contractAddress,
-            proof,
-            root: args[0],
-            nullifierHash: args[1],
-            recipient: args[2],
-            relayer: args[3],
-            fee: args[4],
-            refund: args[5],
-          },
-        },
-      },
-    };
-  }
-
-  return req;
-}
+    },
+  },
+});
 
 const supportedChains: TestableChain[] = [
   {

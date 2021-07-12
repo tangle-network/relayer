@@ -11,6 +11,7 @@ import buildGroth16 from 'websnark/src/groth16';
 import anchorContract from './build/contracts/Anchor.json';
 import nativeAnchorContract from './build/contracts/NativeAnchor.json';
 import verifierContract from './build/contracts/Verifier.json';
+import hasherContract from './build/Hasher.json';
 import MerkleTree from './lib/MerkleTree';
 import { spawn } from 'child_process';
 import { getSupportedChain, generateWithdrawRequest } from './testUtils';
@@ -55,12 +56,10 @@ function startGanacheServer() {
 }
 
 async function deployNativeAnchor() {
-  const genContract = require('circomlib/src/mimcsponge_gencontract.js');
-
   const hasherContractRaw = {
     contractName: 'Hasher',
-    abi: genContract.abi,
-    bytecode: genContract.createCode('mimcsponge', 220),
+    abi: hasherContract.abi,
+    bytecode: hasherContract.bytecode,
   };
 
   const verifierContractRaw = {
@@ -352,6 +351,7 @@ async function main() {
   const client = new WebSocket('ws://localhost:9955');
   await new Promise((resolve) => client.on('open', resolve));
   console.log('Connected to Relayer!');
+
   client.on('message', async (data) => {
     console.log('<==', data);
     const msg = JSON.parse(data as string);
@@ -362,6 +362,7 @@ async function main() {
       process.exit(1);
     } else if (result === Result.Continue) {
       // all good.
+      return;
     } else if (result === Result.CleanExit) {
       console.log('Transaction Done and Relayed Successfully!');
       console.log(`Checking balance of the recipient (${recipient})`);
@@ -400,6 +401,14 @@ async function main() {
   console.log('Proof Generated!');
   const req = generateWithdrawRequest(testedChain, proof, args);
   if (client.readyState === client.OPEN) {
+    //client.send(JSON.stringify(relayerInfo), (err) => {
+    //if (err !== undefined) {
+    //console.log('!!Error!!', err);
+    //relayer.kill('SIGTERM');
+    //client.terminate();
+    //process.exit(1);
+    //}
+    //});
     let data = JSON.stringify(req);
     console.log('Sending Proof to the Relayer ..');
     console.log('=>', data);
@@ -412,8 +421,10 @@ async function main() {
         process.exit(1);
       }
     });
+    console.log('Waiting for the relayer to finish the Tx ..');
     await sleep(45_000);
   } else {
+    client.terminate();
     console.error('Relayer Connection closed!');
     relayer.kill();
     process.exit(1);
