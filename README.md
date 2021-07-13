@@ -33,7 +33,7 @@ Example:
 
 * Create a `config.toml` file and add the following configuration
 
-> By default `webb-relayer` looks for the config at ~/.config/webb-relayer/config.toml
+> By default `webb-relayer` looks for the config at ~/.config/webb-relayer/config.toml on Unix.
 
 ```toml
 # Webb Relayer configuration
@@ -71,14 +71,28 @@ port = 9955
 # indices may be legally prefixed with arbitrary number of zeros.
 # Similarly an empty password (ending the SURI with `///`) is perfectly
 # valid and will generally be equivalent to no password at all.
-
+[substrate.webb]
 suri = "//Alice" # For testing purposes.
+
+# Configuration for EVM Networks.
+[evm.ganache]
+private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
+withdrew-fee = "0x05"
+withdrew-gaslimit = "0x350000"
+
+[evm.beresheet]
+private-key = "0x000000000000000000000000000000000000000000000000000000000000c0de"
+withdrew-fee = "0x05"
+withdrew-gaslimit = "0x350000"
+
+# .. and so on.
+# see the current supported networks in the next section.
 ```
 
 Then Simply run
 
 ```
-$ webb-relayer -vvv -c config.toml
+$ webb-relayer -vvv -c config.toml # or config.json
 ```
 
 > Hot Tip 🌶️: you could also use the json format for the config file if you prefer that, and it would work!
@@ -87,13 +101,39 @@ $ webb-relayer -vvv -c config.toml
 
 You could override the values in the configuration file using environment variables so that config value could be prefixed with `WEBB_`
 
-For example, use `WEBB_PORT` to override the port number, and `WEBB_SURI` to override the relayer account controller.
+For example, use `WEBB_PORT` to override the port number, and `WEBB_SUBSTRATE_WEBB_SURI` to override the relayer account controller for Webb Substrate Based Network.
 
-Thats very useful, you could create an empty config file, with empty values so that you can use env for security reasons!
+That's very useful, you could create an empty config file, with empty values so that you can use env for security reasons!
+
+### Current Supported Networks
+
+1. Substrate Based Networks
+    a. Webb (substrate.webb)
+    b. Beresheet (substrate.beresheet)
+2. EVM Based Networks
+    a. Ganache (evm.ganache)
+    b. Beresheet (evm.beresheet)
+    c. Harmony (evm.harmony)
+
+> Note: as of the current time of writing this we don't support any substrate based relaying transactions
+we plan to add them back soon, once we add them to the dApp.
 
 ## Using Docker 🐳
 
-> Soon! 🔜
+To Use Docker in and to run the relayer on any cloud provider, all you need is to create your configuration file
+as it is shown above, save it into a `config` directory then you run the following command:
+
+```sh
+$ docker run --rm -v "./config:/config" ghcr.io/webb-tools/relayer:v0.1.0-beta.2 # change the version to the latest one.
+```
+
+> Note: to use the latest and pre-released version deployed from `main` branch use `edge` as a version.
+
+This will mount a configuration file at the `/config` directory inside the container so it would allow it to read
+the configuration you added.
+
+> Note that the `json` configuration format will not work inside the docker.
+
 
 ## Safety ⚡
 
