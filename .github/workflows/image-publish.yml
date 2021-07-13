@@ -10,7 +10,7 @@ on:
       - v*
 
 env:
-  IMAGE_NAME: app
+  IMAGE_NAME: relayer
 
 jobs:
   # This job downloads and stores `cross` as an artifact, so that it can be
