@@ -16,13 +16,6 @@
 curl -fsSL https://git.io/get-webb-relayer.sh | sh
 ```
 
-#### Windows
-
-```
-iwr https://git.io/get-webb-relayer.ps1 -useb | iex
-```
-
-
 
 
 ## Running and Configuring 🚀
