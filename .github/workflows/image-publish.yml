@@ -9,6 +9,9 @@ on:
     tags:
       - v*
 
+env:
+  IMAGE_NAME: app
+
 jobs:
   # This job downloads and stores `cross` as an artifact, so that it can be
   # redownloaded across all of the jobs. Currently this copied pasted between
@@ -39,6 +42,9 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
     needs: install-cross
+    permissions:
+      packages: write
+      contents: read
     steps:
       - uses: actions/checkout@v2
       - name: Cache Cargo
@@ -48,7 +54,8 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin
-            target
+            target/x86_64-unknown-linux-musl
+            target/release
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-x86_64-unknown-linux-musl
       - uses: actions/download-artifact@v1
         with:
@@ -60,14 +67,14 @@ jobs:
       - run: ci/build.bash /tmp/cross x86_64-unknown-linux-musl RELEASE DOCKER
 
       - name: Build Image
-        run: docker build . --tag image
+        run: docker build . --file Dockerfile --tag $IMAGE_NAME --label "runnumber=${GITHUB_RUN_ID}"
 
       - name: Log into registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login docker.pkg.github.com -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Push image
         run: |
-          IMAGE_ID=docker.pkg.github.com/webb-tools/relayer/app
+          IMAGE_ID=ghcr.io/${{ github.repository_owner }}/$IMAGE_NAME
 
           # Change all uppercase to lowercase
           IMAGE_ID=$(echo $IMAGE_ID | tr '[A-Z]' '[a-z]')
@@ -83,7 +90,6 @@ jobs:
 
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
-
-          docker tag image $IMAGE_ID:$VERSION
+          docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
 

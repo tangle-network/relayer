@@ -5,8 +5,9 @@ LABEL AUTHOR="Webb Developers <dev@webb.tools>"
 ENV RUST_BACKTRACE=full
 ENV WEBB_PORT=9955
 
-ADD build/webb-relayer webb-relayer
 VOLUME [ "/config" ]
+
+ADD build/webb-relayer webb-relayer
 
 EXPOSE ${WEBB_PORT}
 
