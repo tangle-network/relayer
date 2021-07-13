@@ -13,13 +13,13 @@
 #### Unix (Linux, macOS, WSL2, ..)
 
 ```
-$ curl -fsSL https://git.io/get-webb-relayer.sh | sh
+curl -fsSL https://git.io/get-webb-relayer.sh | sh
 ```
 
 #### Windows
 
 ```
-$ iwr https://git.io/get-webb-relayer.ps1 -useb | iex
+iwr https://git.io/get-webb-relayer.ps1 -useb | iex
 ```
 
 
@@ -92,7 +92,7 @@ withdrew-gaslimit = "0x350000"
 Then Simply run
 
 ```
-$ webb-relayer -vvv -c config.toml # or config.json
+webb-relayer -vvv -c config.toml # or config.json
 ```
 
 > Hot Tip 🌶️: you could also use the json format for the config file if you prefer that, and it would work!
@@ -108,12 +108,12 @@ That's very useful, you could create an empty config file, with empty values so 
 ### Current Supported Networks
 
 1. Substrate Based Networks
-    a. Webb (substrate.webb)
-    b. Beresheet (substrate.beresheet)
+    * Webb (substrate.webb)
+    * Beresheet (substrate.beresheet)
 2. EVM Based Networks
-    a. Ganache (evm.ganache)
-    b. Beresheet (evm.beresheet)
-    c. Harmony (evm.harmony)
+    * Ganache (evm.ganache)
+    * Beresheet (evm.beresheet)
+    * Harmony (evm.harmony)
 
 > Note: as of the current time of writing this we don't support any substrate based relaying transactions
 we plan to add them back soon, once we add them to the dApp.
@@ -124,7 +124,7 @@ To Use Docker in and to run the relayer on any cloud provider, all you need is t
 as it is shown above, save it into a `config` directory then you run the following command:
 
 ```sh
-$ docker run --rm -v "./config:/config" ghcr.io/webb-tools/relayer:v0.1.0-beta.2 # change the version to the latest one.
+docker run --rm -v "./config:/config" ghcr.io/webb-tools/relayer:0.1.0-beta.2
 ```
 
 > Note: to use the latest and pre-released version deployed from `main` branch use `edge` as a version.
