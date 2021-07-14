@@ -16,8 +16,6 @@
 curl -fsSL https://git.io/get-webb-relayer.sh | sh
 ```
 
-
-
 ## Running and Configuring 🚀
 
 Webb Relayer is easy to run and with flexible config 👌, to test it out first you have to create a config file
