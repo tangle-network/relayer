@@ -1,11 +1,14 @@
 #![deny(unsafe_code)]
 
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Context;
 use directories_next::ProjectDirs;
 use structopt::StructOpt;
-use tokio::net::TcpListener;
+use warp::Filter;
+
+use crate::context::RelayerContext;
 
 mod chains;
 mod config;
@@ -62,33 +65,28 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let config_path = args
         .config_filename
         .unwrap_or_else(|| dirs.config_dir().join("config.toml"));
-    log::trace!("Loaded Config ..");
+    log::trace!("Loaded Config from {} ..", config_path.display());
     let config =
         config::load(config_path).context("failed to load the config file")?;
+    let port = config.port;
+    let ctx = Arc::new(RelayerContext::new(config));
+    let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
+    let ws = warp::path("ws").and(warp::ws()).and(ctx_filter).map(
+        |ws: warp::ws::Ws, ctx: Arc<RelayerContext>| {
+            ws.on_upgrade(|socket| async move {
+                let _ = handler::accept_connection(ctx.as_ref(), socket).await;
+            })
+        },
+    );
 
-    let addr = format!("0.0.0.0:{}", config.port);
-    let ctx = context::RelayerContext::new(config);
-    log::debug!("Starting the server on {}", addr);
-    let socket = TcpListener::bind(addr).await?;
-
-    // create a task for background sockets.
-    let socket_task = async move {
-        while let Ok((stream, _)) = socket.accept().await {
-            log::debug!("Client Connected: {}", stream.peer_addr()?);
-            tokio::spawn(handler::accept_connection(ctx.clone(), stream));
-        }
-        Result::<_, anyhow::Error>::Ok(())
+    let ctrlc = async {
+        let _ = tokio::signal::ctrl_c().await;
     };
 
-    let ctrl_c = tokio::signal::ctrl_c();
-    // now we wait which of these would end first.
-    tokio::select! {
-        _ = socket_task => {
-            log::warn!("Relayer Server Stopped.");
-        },
-        _ = ctrl_c => {
-            log::info!("Stopping the Relayer Server.");
-        }
-    }
+    let (addr, server) = warp::serve(ws)
+        .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), ctrlc)?;
+    log::debug!("Starting the server on {}", addr);
+    // fire the server.
+    server.await;
     Ok(())
 }
