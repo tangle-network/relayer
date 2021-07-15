@@ -1,6 +1,8 @@
 #![allow(clippy::large_enum_variant)]
 
+use std::convert::Infallible;
 use std::error::Error;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use async_stream::stream;
@@ -8,10 +10,7 @@ use chains::evm;
 use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
-use tokio::net::TcpStream;
-use tungstenite::tokio::accept_async_with_config;
-use tungstenite::tungstenite::protocol::WebSocketConfig;
-use tungstenite::tungstenite::Message;
+use warp::ws::Message;
 use webb::evm::contract::anchor::AnchorContract;
 use webb::evm::ethereum_types::{Address, H256, U256};
 use webb::evm::ethers::prelude::*;
@@ -26,46 +25,34 @@ use crate::chains;
 use crate::context::RelayerContext;
 
 pub async fn accept_connection(
-    ctx: RelayerContext,
-    stream: TcpStream,
+    ctx: &RelayerContext,
+    stream: warp::ws::WebSocket,
 ) -> anyhow::Result<()> {
-    let config = WebSocketConfig {
-        max_send_queue: Some(5),
-        max_message_size: Some(2 << 20), // 5MB
-        ..Default::default()
-    };
-    let peer_addr = stream.peer_addr().unwrap();
-    let ws_stream = accept_async_with_config(stream, Some(config)).await?;
-    let (mut tx, mut rx) = ws_stream.split();
+    let (mut tx, mut rx) = stream.split();
     while let Some(msg) = rx.try_next().await? {
-        match msg {
-            Message::Text(v) => handle_text(&ctx, v, &mut tx).await?,
-            Message::Binary(_) => {
-                // should we close the connection?
-            },
-            _ => continue,
+        if let Ok(text) = msg.to_str() {
+            handle_text(ctx, text, &mut tx).await?;
         }
     }
-    log::debug!("Client disconnected: {}", peer_addr);
     Ok(())
 }
 
 pub async fn handle_text<TX>(
     ctx: &RelayerContext,
-    v: String,
+    v: &str,
     tx: &mut TX,
 ) -> anyhow::Result<()>
 where
     TX: Sink<Message> + Unpin,
     TX::Error: Error + Send + Sync + 'static,
 {
-    match serde_json::from_str(&v) {
+    match serde_json::from_str(v) {
         Ok(cmd) => {
             handle_cmd(ctx.clone(), cmd)
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
                 .inspect(|v| log::trace!("Sending: {}", v))
-                .map(Message::Text)
+                .map(Message::text)
                 .map(Result::Ok)
                 .forward(tx)
                 .await?;
@@ -74,10 +61,22 @@ where
             log::warn!("Got invalid payload: {:?}", e);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
-            tx.send(Message::Text(value)).await?
+            tx.send(Message::text(value)).await?
         },
     };
     Ok(())
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IpInformationResponse {
+    ip: Option<SocketAddr>,
+}
+
+pub async fn handle_ip_info(
+    ip: Option<SocketAddr>,
+) -> Result<impl warp::Reply, Infallible> {
+    Ok(warp::reply::json(&IpInformationResponse { ip }))
 }
 
 /// Proof data for withdrawal

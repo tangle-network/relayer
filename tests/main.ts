@@ -348,7 +348,7 @@ async function main() {
   console.log('Starting the Relayer ..');
   const relayer = await startWebbRelayer();
   await sleep(500); // just to wait for the relayer start-up
-  const client = new WebSocket('ws://localhost:9955');
+  const client = new WebSocket('ws://localhost:9955/ws');
   await new Promise((resolve) => client.on('open', resolve));
   console.log('Connected to Relayer!');
 
