@@ -1,6 +1,8 @@
 #![allow(clippy::large_enum_variant)]
 
+use std::convert::Infallible;
 use std::error::Error;
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 use async_stream::stream;
@@ -63,6 +65,18 @@ where
         },
     };
     Ok(())
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IpInformationResponse {
+    ip: Option<SocketAddr>,
+}
+
+pub async fn handle_ip_info(
+    ip: Option<SocketAddr>,
+) -> Result<impl warp::Reply, Infallible> {
+    Ok(warp::reply::json(&IpInformationResponse { ip }))
 }
 
 /// Proof data for withdrawal

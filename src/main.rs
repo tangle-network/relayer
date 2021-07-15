@@ -71,7 +71,9 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let port = config.port;
     let ctx = Arc::new(RelayerContext::new(config));
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
-    let ws = warp::path("ws").and(warp::ws()).and(ctx_filter).map(
+
+    // the websocket server.
+    let ws_filter = warp::path("ws").and(warp::ws()).and(ctx_filter).map(
         |ws: warp::ws::Ws, ctx: Arc<RelayerContext>| {
             ws.on_upgrade(|socket| async move {
                 let _ = handler::accept_connection(ctx.as_ref(), socket).await;
@@ -79,12 +81,24 @@ async fn main(args: Opts) -> anyhow::Result<()> {
         },
     );
 
+    // get the ip of the caller.
+    let ip_filter = warp::path("ip")
+        .and(warp::get())
+        .and(warp::addr::remote())
+        .and_then(handler::handle_ip_info);
+
+    let routes = ip_filter; // will add more routes here.
+    let http_filter = warp::path("api").and(warp::path("v1")).and(routes);
+
     let ctrlc = async {
         let _ = tokio::signal::ctrl_c().await;
     };
 
-    let (addr, server) = warp::serve(ws)
+    let service = http_filter.or(ws_filter).with(warp::trace::request());
+
+    let (addr, server) = warp::serve(service)
         .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), ctrlc)?;
+
     log::debug!("Starting the server on {}", addr);
     // fire the server.
     server.await;
