@@ -55,7 +55,7 @@ impl RelayerContext {
                 let wallet = LocalWallet::from(key).set_chain_id(C::chain_id());
                 Ok(wallet)
             },
-            ChainName::Harmoney if evm.harmony.is_some() => {
+            ChainName::Harmony if evm.harmony.is_some() => {
                 let c = evm.harmony.clone().unwrap();
                 let pk = c.private_key;
                 let key = SecretKey::from_bytes(pk.as_bytes())?;

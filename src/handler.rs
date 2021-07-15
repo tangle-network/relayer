@@ -79,6 +79,39 @@ pub async fn handle_ip_info(
     Ok(warp::reply::json(&IpInformationResponse { ip }))
 }
 
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RelayerInformationResponse {
+    #[serde(flatten)]
+    config: crate::config::WebbRelayerConfig,
+}
+
+pub async fn handle_relayer_info(
+    ctx: Arc<RelayerContext>,
+) -> Result<impl warp::Reply, Infallible> {
+    let mut config = ctx.config.clone();
+    macro_rules! update_account_for {
+        ($f: tt, $network: ty) => {
+            if let Some((c, w)) = config
+                .evm
+                .$f
+                .as_mut()
+                .zip(ctx.evm_wallet::<$network>().await.ok())
+            {
+                c.account = Some(w.address());
+            }
+        };
+    }
+
+    update_account_for!(webb, evm::Webb);
+    update_account_for!(ganache, evm::Ganache);
+    update_account_for!(edgeware, evm::Edgeware);
+    update_account_for!(beresheet, evm::Beresheet);
+    update_account_for!(harmony, evm::Harmony);
+
+    Ok(warp::reply::json(&RelayerInformationResponse { config }))
+}
+
 /// Proof data for withdrawal
 #[derive(Debug, PartialEq, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -204,7 +237,6 @@ pub enum SubstrateEdgewareCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmEdgewareCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -217,7 +249,6 @@ pub enum SubstrateBeresheetCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmBeresheetCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -230,7 +261,6 @@ pub enum SubstrateWebbCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmWebbCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -243,21 +273,18 @@ pub enum SubstrateHedgewareCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmHedgewareCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmGanacheCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmHarmonyCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -283,7 +310,6 @@ pub enum CommandResponse {
     Pong(),
     Network(NetworkStatus),
     Withdraw(WithdrawStatus),
-    EvmRelayerInformation(EvmRelayerInformation),
     Error(String),
     Unimplemented(&'static str),
 }
@@ -311,14 +337,6 @@ pub enum WithdrawStatus {
     },
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EvmRelayerInformation {
-    pub enabled: bool,
-    pub withdraw_fee: Option<U256>,
-    pub withdrew_gaslimit: Option<U256>,
-}
-
 pub fn handle_cmd<'a>(
     ctx: RelayerContext,
     cmd: Command,
@@ -344,77 +362,28 @@ pub fn handle_evm<'a>(
             EvmEdgewareCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Edgeware>(ctx, proof)
             },
-            EvmEdgewareCommand::Information() => {
-                handle_evm_info::<evm::Edgeware>(ctx)
-            },
         },
         Harmony(c) => match c {
             EvmHarmonyCommand::RelayWithdrew(proof) => {
-                handle_evm_withdrew::<evm::Harmoney>(ctx, proof)
-            },
-            EvmHarmonyCommand::Information() => {
-                handle_evm_info::<evm::Harmoney>(ctx)
+                handle_evm_withdrew::<evm::Harmony>(ctx, proof)
             },
         },
         Beresheet(c) => match c {
             EvmBeresheetCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Beresheet>(ctx, proof)
             },
-            EvmBeresheetCommand::Information() => {
-                handle_evm_info::<evm::Beresheet>(ctx)
-            },
         },
         Ganache(c) => match c {
             EvmGanacheCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Ganache>(ctx, proof)
-            },
-            EvmGanacheCommand::Information() => {
-                handle_evm_info::<evm::Ganache>(ctx)
             },
         },
         Webb(c) => match c {
             EvmWebbCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Webb>(ctx, proof)
             },
-            EvmWebbCommand::Information() => handle_evm_info::<evm::Webb>(ctx),
         },
         Hedgeware(_) => todo!(),
-    };
-    s.boxed()
-}
-
-fn handle_evm_info<'a, C: evm::EvmChain>(
-    ctx: RelayerContext,
-) -> BoxStream<'a, CommandResponse> {
-    let evm = &ctx.config.evm;
-    let cfg = match C::name() {
-        evm::ChainName::Webb if evm.webb.is_some() => evm.webb.clone().unwrap(),
-        evm::ChainName::Edgeware if evm.edgeware.is_some() => {
-            evm.edgeware.clone().unwrap()
-        },
-        evm::ChainName::Ganache if evm.ganache.is_some() => {
-            evm.ganache.clone().unwrap()
-        },
-        evm::ChainName::Beresheet if evm.beresheet.is_some() => {
-            evm.beresheet.clone().unwrap()
-        },
-        evm::ChainName::Harmoney if evm.harmony.is_some() => {
-            evm.harmony.clone().unwrap()
-        },
-        _ => {
-            // return default value, means this network is not enabled.
-            let s = stream! {
-                yield CommandResponse::EvmRelayerInformation(Default::default())
-            };
-            return s.boxed();
-        },
-    };
-    let s = stream! {
-        yield CommandResponse::EvmRelayerInformation(EvmRelayerInformation {
-            enabled: true,
-            withdrew_gaslimit: Some(cfg.withdrew_gaslimit),
-            withdraw_fee: Some(cfg.withdrew_fee),
-        });
     };
     s.boxed()
 }
