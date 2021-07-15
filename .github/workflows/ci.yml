@@ -86,6 +86,10 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin
             target
+            target/x86_64-apple-darwin/debug
+            target/x86_64-apple-darwin/release
+            target/debug
+            target/release
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
       - uses: actions/download-artifact@v1
         with:
@@ -140,6 +144,16 @@ jobs:
             ~/.cargo/git
             ~/.cargo/bin
             target
+            target/x86_64-unknown-linux-musl/debug
+            target/x86_64-unknown-linux-musl/release
+            target/x86_64-unknown-linux-gnu/debug
+            target/x86_64-unknown-linux-gnu/release
+            target/aarch64-unknown-linux-musl/debug
+            target/aarch64-unknown-linux-musl/release
+            target/aarch64-unknown-linux-gnu/debug
+            target/aarch64-unknown-linux-gnu/release
+            target/debug
+            target/release
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
       - name: Download Cross
         uses: actions/download-artifact@v1
