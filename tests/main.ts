@@ -348,6 +348,9 @@ async function main() {
   console.log('Starting the Relayer ..');
   const relayer = await startWebbRelayer();
   await sleep(500); // just to wait for the relayer start-up
+  // get all relayer information
+  const relayerInfoRes = await fetch('http://localhost:9955/api/v1/info');
+  const relayerInfo: any = await relayerInfoRes.json();
   const client = new WebSocket('ws://localhost:9955/ws');
   await new Promise((resolve) => client.on('open', resolve));
   console.log('Connected to Relayer!');
@@ -399,6 +402,8 @@ async function main() {
     contractAddress
   );
   console.log('Proof Generated!');
+  const relayerChainInfo = relayerInfo.evm[testedChain.name];
+  console.log({ relayerChainInfo });
   const req = generateWithdrawRequest(testedChain, proof, args);
   if (client.readyState === client.OPEN) {
     const data = JSON.stringify(req);
