@@ -1,10 +1,12 @@
 #![deny(unsafe_code)]
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use anyhow::Context;
 use directories_next::ProjectDirs;
+use futures::Future;
 use structopt::StructOpt;
 use warp::Filter;
 
@@ -14,9 +16,6 @@ mod chains;
 mod config;
 mod context;
 mod handler;
-
-#[cfg(all(test, feature = "integration-tests"))]
-mod test;
 
 const PACKAGE_ID: [&str; 3] = ["tools", "webb", "webb-relayer"];
 /// The Webb Relayer Command-line tool
@@ -43,18 +42,7 @@ struct Opts {
 #[paw::main]
 #[tokio::main]
 async fn main(args: Opts) -> anyhow::Result<()> {
-    let log_level = match args.verbose {
-        0 => log::LevelFilter::Error,
-        1 => log::LevelFilter::Warn,
-        2 => log::LevelFilter::Info,
-        3 => log::LevelFilter::Debug,
-        _ => log::LevelFilter::max(),
-    };
-    // setup logger
-    env_logger::builder()
-        .format_timestamp(None)
-        .filter_module("webb_relayer", log_level)
-        .init();
+    setup_logger(args.verbose);
     log::debug!("Getting default dirs for webb relayer");
     let dirs = ProjectDirs::from(
         crate::PACKAGE_ID[0],
@@ -68,8 +56,33 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     log::trace!("Loaded Config from {} ..", config_path.display());
     let config =
         config::load(config_path).context("failed to load the config file")?;
-    let port = config.port;
-    let ctx = Arc::new(RelayerContext::new(config));
+    let ctx = RelayerContext::new(config);
+    let (addr, server) = build_relayer(ctx)?;
+    log::debug!("Starting the server on {}", addr);
+    // fire the server.
+    server.await;
+    Ok(())
+}
+
+fn setup_logger(verbosity: i32) {
+    let log_level = match verbosity {
+        0 => log::LevelFilter::Error,
+        1 => log::LevelFilter::Warn,
+        2 => log::LevelFilter::Info,
+        3 => log::LevelFilter::Debug,
+        _ => log::LevelFilter::max(),
+    };
+    env_logger::builder()
+        .format_timestamp(None)
+        .filter_module("webb_relayer", log_level)
+        .init();
+}
+
+fn build_relayer(
+    ctx: RelayerContext,
+) -> anyhow::Result<(SocketAddr, impl Future<Output = ()> + 'static)> {
+    let port = ctx.config.port;
+    let ctx = Arc::new(ctx);
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
 
     // the websocket server.
@@ -88,6 +101,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
         .and(warp::addr::remote())
         .and_then(handler::handle_ip_info);
 
+    // relayer info
     let info_filter = warp::path("info")
         .and(warp::get())
         .and(ctx_filter)
@@ -102,11 +116,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
 
     let service = http_filter.or(ws_filter).with(warp::trace::request());
 
-    let (addr, server) = warp::serve(service)
-        .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), ctrlc)?;
-
-    log::debug!("Starting the server on {}", addr);
-    // fire the server.
-    server.await;
-    Ok(())
+    warp::serve(service)
+        .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), ctrlc)
+        .map_err(Into::into)
 }
