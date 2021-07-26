@@ -1,7 +1,7 @@
 #![deny(unsafe_code)]
 
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -43,19 +43,7 @@ struct Opts {
 #[tokio::main]
 async fn main(args: Opts) -> anyhow::Result<()> {
     setup_logger(args.verbose);
-    log::debug!("Getting default dirs for webb relayer");
-    let dirs = ProjectDirs::from(
-        crate::PACKAGE_ID[0],
-        crate::PACKAGE_ID[1],
-        crate::PACKAGE_ID[2],
-    )
-    .context("failed to get config")?;
-    let config_path = args
-        .config_filename
-        .unwrap_or_else(|| dirs.config_dir().join("config.toml"));
-    log::trace!("Loaded Config from {} ..", config_path.display());
-    let config =
-        config::load(config_path).context("failed to load the config file")?;
+    let config = load_config(args.config_filename)?;
     let ctx = RelayerContext::new(config);
     let (addr, server) = build_relayer(ctx)?;
     log::debug!("Starting the server on {}", addr);
@@ -76,6 +64,27 @@ fn setup_logger(verbosity: i32) {
         .format_timestamp(None)
         .filter_module("webb_relayer", log_level)
         .init();
+}
+
+fn load_config<P>(
+    config_filename: Option<P>,
+) -> anyhow::Result<config::WebbRelayerConfig>
+where
+    P: AsRef<Path>,
+{
+    log::debug!("Getting default dirs for webb relayer");
+    let dirs = ProjectDirs::from(
+        crate::PACKAGE_ID[0],
+        crate::PACKAGE_ID[1],
+        crate::PACKAGE_ID[2],
+    )
+    .context("failed to get config")?;
+    let config_path = match config_filename {
+        Some(p) => p.as_ref().to_path_buf(),
+        None => dirs.config_dir().join("config.toml"),
+    };
+    log::trace!("Loaded Config from {} ..", config_path.display());
+    config::load(config_path).context("failed to load the config file")
 }
 
 fn build_relayer(

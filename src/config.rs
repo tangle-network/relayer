@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::Path;
 
 use serde::{Deserialize, Serialize};
 use webb::evm::ethereum_types::{Address, Secret, U256};
@@ -87,10 +87,10 @@ pub struct EvmConfig {
     pub harmony: Option<CommonEvmConfig>,
 }
 
-pub fn load<P: Into<PathBuf>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
-    let base: PathBuf = path.into();
+pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
-    cfg.merge(config::File::with_name(&base.display().to_string()))?
+    let base = path.as_ref().display().to_string();
+    cfg.merge(config::File::with_name(&base))?
         .merge(config::Environment::with_prefix("WEBB"))?;
     cfg.try_into().map_err(Into::into)
 }
