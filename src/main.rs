@@ -84,7 +84,6 @@ fn build_relayer(
     let port = ctx.config.port;
     let ctx = Arc::new(ctx);
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
-
     // the websocket server.
     let ws_filter = warp::path("ws")
         .and(warp::ws())
@@ -114,7 +113,11 @@ fn build_relayer(
         let _ = tokio::signal::ctrl_c().await;
     };
 
-    let service = http_filter.or(ws_filter).with(warp::trace::request());
+    let cors = warp::cors().allow_any_origin();
+    let service = http_filter
+        .or(ws_filter)
+        .with(cors)
+        .with(warp::trace::request());
 
     warp::serve(service)
         .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), ctrlc)
