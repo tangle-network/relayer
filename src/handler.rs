@@ -15,10 +15,6 @@ use webb::evm::contract::anchor::AnchorContract;
 use webb::evm::ethereum_types::{Address, H256, U256};
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::types::Bytes;
-use webb::substrate::pallet::merkle::Merkle;
-use webb::substrate::pallet::mixer::{self, *};
-use webb::substrate::pallet::*;
-use webb::substrate::subxt::sp_runtime::AccountId32;
 
 use crate::chains;
 
@@ -79,92 +75,50 @@ pub async fn handle_ip_info(
     Ok(warp::reply::json(&IpInformationResponse { ip }))
 }
 
-/// Proof data for withdrawal
-#[derive(Debug, PartialEq, Clone, Deserialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SubstrateRelayerWithdrawProof {
-    /// The mixer id this withdraw proof corresponds to
-    pub mixer_id: u32,
-    /// The cached block for the cached root being proven against
-    pub cached_block: u32,
-    /// The cached root being proven against
-    pub cached_root: [u8; 32],
-    /// The individual scalar commitments (to the randomness and nullifier)
-    pub comms: Vec<[u8; 32]>,
-    /// The nullifier hash with itself
-    pub nullifier_hash: [u8; 32],
-    /// The proof in bytes representation
-    pub proof_bytes: Vec<u8>,
-    /// The leaf index scalar commitments to decide on which side to hash
-    pub leaf_index_commitments: Vec<[u8; 32]>,
-    /// The scalar commitments to merkle proof path elements
-    pub proof_commitments: Vec<[u8; 32]>,
-    /// The recipient to withdraw amount of currency to
-    pub recipient: Option<[u8; 32]>,
-    /// The recipient to withdraw amount of currency to
-    pub relayer: Option<[u8; 32]>,
+pub struct RelayerInformationResponse {
+    #[serde(flatten)]
+    config: crate::config::WebbRelayerConfig,
 }
 
-impl<T> From<SubstrateRelayerWithdrawProof> for mixer::WithdrawProof<T>
-where
-    T: Merkle + Mixer,
-    T::TreeId: From<u32>,
-    T::BlockNumber: From<u32>,
-    T::AccountId: From<AccountId32>,
-{
-    fn from(p: SubstrateRelayerWithdrawProof) -> Self {
-        Self {
-            mixer_id: p.mixer_id.into(),
-            cached_block: p.cached_block.into(),
-            cached_root: ScalarData(p.cached_root),
-            comms: p.comms.into_iter().map(Commitment).collect(),
-            nullifier_hash: ScalarData(p.nullifier_hash),
-            proof_bytes: p.proof_bytes,
-            leaf_index_commitments: p
-                .leaf_index_commitments
-                .into_iter()
-                .map(Commitment)
-                .collect(),
-            proof_commitments: p
-                .proof_commitments
-                .into_iter()
-                .map(Commitment)
-                .collect(),
-            recipient: p.recipient.map(AccountId32::new).map(Into::into),
-            relayer: p.relayer.map(AccountId32::new).map(Into::into),
-        }
+pub async fn handle_relayer_info(
+    ctx: Arc<RelayerContext>,
+) -> Result<impl warp::Reply, Infallible> {
+    // clone the original config, to update it with accounts.
+    let mut config = ctx.config.clone();
+    /// Updates the account address in the provided network configuration.
+    ///
+    /// it takes the network name, as defined as a property in
+    /// [`crate::config::WebbRelayerConfig`].
+    /// and the [`evm::EvmChain`] to match on [`evm::ChainName`].
+    macro_rules! update_account_for {
+        ($f: tt, $network: ty) => {
+            // first read the property (network) form the config, as mutable
+            // but we also, at the same time require that we need the wallet
+            // to be configured for that network, so we zip them together
+            // in which either we get them both, or None.
+            //
+            // after this, we update the account property with the wallet
+            // address.
+            if let Some((c, w)) = config
+                .evm
+                .$f
+                .as_mut()
+                .zip(ctx.evm_wallet::<$network>().await.ok())
+            {
+                c.account = Some(w.address());
+            }
+        };
     }
-}
 
-impl<T> From<mixer::WithdrawProof<T>> for SubstrateRelayerWithdrawProof
-where
-    T: Merkle + Mixer,
-    T::TreeId: Into<u32>,
-    T::BlockNumber: Into<u32>,
-    T::AccountId: Into<AccountId32>,
-{
-    fn from(p: mixer::WithdrawProof<T>) -> Self {
-        Self {
-            mixer_id: p.mixer_id.into(),
-            cached_block: p.cached_block.into(),
-            cached_root: p.cached_root.0,
-            comms: p.comms.into_iter().map(|v| v.0).collect(),
-            nullifier_hash: p.nullifier_hash.0,
-            proof_bytes: p.proof_bytes,
-            leaf_index_commitments: p
-                .leaf_index_commitments
-                .into_iter()
-                .map(|v| v.0)
-                .collect(),
-            proof_commitments: p
-                .proof_commitments
-                .into_iter()
-                .map(|v| v.0)
-                .collect(),
-            recipient: p.recipient.map(|v| *v.into().as_ref()),
-            relayer: p.relayer.map(|v| *v.into().as_ref()),
-        }
-    }
+    update_account_for!(webb, evm::Webb);
+    update_account_for!(ganache, evm::Ganache);
+    update_account_for!(edgeware, evm::Edgeware);
+    update_account_for!(beresheet, evm::Beresheet);
+    update_account_for!(harmony, evm::Harmony);
+
+    Ok(warp::reply::json(&RelayerInformationResponse { config }))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -198,66 +152,60 @@ pub enum EvmCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateEdgewareCommand {
-    RelayWithdrew(SubstrateRelayerWithdrawProof),
+    RelayWithdrew(),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmEdgewareCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateBeresheetCommand {
-    RelayWithdrew(SubstrateRelayerWithdrawProof),
+    RelayWithdrew(),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmBeresheetCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateWebbCommand {
-    RelayWithdrew(SubstrateRelayerWithdrawProof),
+    RelayWithdrew(),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmWebbCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateHedgewareCommand {
-    RelayWithdrew(SubstrateRelayerWithdrawProof),
+    RelayWithdrew(),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmHedgewareCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmGanacheCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmHarmonyCommand {
-    Information(),
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -283,7 +231,6 @@ pub enum CommandResponse {
     Pong(),
     Network(NetworkStatus),
     Withdraw(WithdrawStatus),
-    EvmRelayerInformation(EvmRelayerInformation),
     Error(String),
     Unimplemented(&'static str),
 }
@@ -311,14 +258,6 @@ pub enum WithdrawStatus {
     },
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EvmRelayerInformation {
-    pub enabled: bool,
-    pub withdraw_fee: Option<U256>,
-    pub withdrew_gaslimit: Option<U256>,
-}
-
 pub fn handle_cmd<'a>(
     ctx: RelayerContext,
     cmd: Command,
@@ -344,77 +283,28 @@ pub fn handle_evm<'a>(
             EvmEdgewareCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Edgeware>(ctx, proof)
             },
-            EvmEdgewareCommand::Information() => {
-                handle_evm_info::<evm::Edgeware>(ctx)
-            },
         },
         Harmony(c) => match c {
             EvmHarmonyCommand::RelayWithdrew(proof) => {
-                handle_evm_withdrew::<evm::Harmoney>(ctx, proof)
-            },
-            EvmHarmonyCommand::Information() => {
-                handle_evm_info::<evm::Harmoney>(ctx)
+                handle_evm_withdrew::<evm::Harmony>(ctx, proof)
             },
         },
         Beresheet(c) => match c {
             EvmBeresheetCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Beresheet>(ctx, proof)
             },
-            EvmBeresheetCommand::Information() => {
-                handle_evm_info::<evm::Beresheet>(ctx)
-            },
         },
         Ganache(c) => match c {
             EvmGanacheCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Ganache>(ctx, proof)
-            },
-            EvmGanacheCommand::Information() => {
-                handle_evm_info::<evm::Ganache>(ctx)
             },
         },
         Webb(c) => match c {
             EvmWebbCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Webb>(ctx, proof)
             },
-            EvmWebbCommand::Information() => handle_evm_info::<evm::Webb>(ctx),
         },
         Hedgeware(_) => todo!(),
-    };
-    s.boxed()
-}
-
-fn handle_evm_info<'a, C: evm::EvmChain>(
-    ctx: RelayerContext,
-) -> BoxStream<'a, CommandResponse> {
-    let evm = &ctx.config.evm;
-    let cfg = match C::name() {
-        evm::ChainName::Webb if evm.webb.is_some() => evm.webb.clone().unwrap(),
-        evm::ChainName::Edgeware if evm.edgeware.is_some() => {
-            evm.edgeware.clone().unwrap()
-        },
-        evm::ChainName::Ganache if evm.ganache.is_some() => {
-            evm.ganache.clone().unwrap()
-        },
-        evm::ChainName::Beresheet if evm.beresheet.is_some() => {
-            evm.beresheet.clone().unwrap()
-        },
-        evm::ChainName::Harmoney if evm.harmony.is_some() => {
-            evm.harmony.clone().unwrap()
-        },
-        _ => {
-            // return default value, means this network is not enabled.
-            let s = stream! {
-                yield CommandResponse::EvmRelayerInformation(Default::default())
-            };
-            return s.boxed();
-        },
-    };
-    let s = stream! {
-        yield CommandResponse::EvmRelayerInformation(EvmRelayerInformation {
-            enabled: true,
-            withdrew_gaslimit: Some(cfg.withdrew_gaslimit),
-            withdraw_fee: Some(cfg.withdrew_fee),
-        });
     };
     s.boxed()
 }

@@ -29,7 +29,7 @@ pub mod evm {
         Webb,
         Ganache,
         Beresheet,
-        Harmoney,
+        Harmony,
     }
 
     pub trait EvmChain {
@@ -118,7 +118,7 @@ pub mod evm {
     }
 
     define_chain! {
-        Harmoney => {
+        Harmony => {
             endpoint: "https://api.s1.b.hmny.io",
             chain_id: 1666700001,
             contracts: [

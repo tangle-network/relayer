@@ -1,23 +1,23 @@
 use std::path::PathBuf;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use webb::evm::ethereum_types::{Address, Secret, U256};
 
 const fn default_port() -> u16 { 9955 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct WebbRelayerConfig {
     /// WebSocket Server Port number
     ///
     /// default to 9955
-    #[serde(default = "default_port")]
+    #[serde(default = "default_port", skip_serializing)]
     pub port: u16,
     pub substrate: SubstrateConfig,
     pub evm: EvmConfig,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CommonSubstrateConfig {
     /// Interprets the string in order to generate a key Pair.
@@ -48,19 +48,26 @@ pub struct CommonSubstrateConfig {
     /// indices may be legally prefixed with arbitrary number of zeros.
     /// Similarly an empty password (ending the SURI with `///`) is perfectly
     /// valid and will generally be equivalent to no password at all.
+    #[serde(skip_serializing)]
     pub suri: String,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct CommonEvmConfig {
+    #[serde(skip_serializing)]
     pub private_key: Secret,
+    #[serde(skip_serializing)]
     pub reward_account: Option<Address>,
+    #[serde(rename(serialize = "withdrewFee"))]
     pub withdrew_fee: U256,
+    #[serde(rename(serialize = "withdrewGaslimit"))]
     pub withdrew_gaslimit: U256,
+    #[serde(skip_deserializing)]
+    pub account: Option<Address>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct SubstrateConfig {
     pub webb: Option<CommonSubstrateConfig>,
@@ -69,7 +76,7 @@ pub struct SubstrateConfig {
     pub beresheet: Option<CommonSubstrateConfig>,
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct EvmConfig {
     pub webb: Option<CommonEvmConfig>,

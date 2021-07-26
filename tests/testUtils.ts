@@ -14,16 +14,6 @@ export const getSupportedChain = (chainName: string): TestableChain => {
   return chain;
 };
 
-export const generateRelayerInformationRequest = (chain: TestableChain) => {
-  return {
-    evm: {
-      [chain.name]: {
-        information: [],
-      },
-    },
-  };
-};
-
 export const generateWithdrawRequest = (
   chain: TestableChain,
   proof: string,
