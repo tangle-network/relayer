@@ -52,13 +52,13 @@ where
                 .map(Result::Ok)
                 .forward(tx)
                 .await?;
-        },
+        }
         Err(e) => {
             log::warn!("Got invalid payload: {:?}", e);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
             tx.send(Message::text(value)).await?
-        },
+        }
     };
     Ok(())
 }
@@ -283,27 +283,27 @@ pub fn handle_evm<'a>(
         Edgeware(c) => match c {
             EvmEdgewareCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Edgeware>(ctx, proof)
-            },
+            }
         },
         Harmony(c) => match c {
             EvmHarmonyCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Harmony>(ctx, proof)
-            },
+            }
         },
         Beresheet(c) => match c {
             EvmBeresheetCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Beresheet>(ctx, proof)
-            },
+            }
         },
         Ganache(c) => match c {
             EvmGanacheCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Ganache>(ctx, proof)
-            },
+            }
         },
         Webb(c) => match c {
             EvmWebbCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Webb>(ctx, proof)
-            },
+            }
         },
         Hedgeware(_) => todo!(),
     };

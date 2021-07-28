@@ -2767,7 +2767,7 @@ dependencies = [
 [[package]]
 name = "pedersen-hash"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/webb-rs.git#3812e6540b94fec8114f03784936be30845a7e53"
+source = "git+https://github.com/webb-tools/webb-rs.git#bc8e61e070c279ff3bf5dddf06a7202c8de488fe"
 dependencies = [
  "ark-crypto-primitives",
  "ark-ed-on-bn254",
@@ -4886,7 +4886,7 @@ dependencies = [
 [[package]]
 name = "webb"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/webb-rs.git#3812e6540b94fec8114f03784936be30845a7e53"
+source = "git+https://github.com/webb-tools/webb-rs.git#bc8e61e070c279ff3bf5dddf06a7202c8de488fe"
 dependencies = [
  "async-trait",
  "ethereum-types",
