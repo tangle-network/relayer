@@ -93,7 +93,7 @@ pub async fn handle_relayer_info(
     /// [`crate::config::WebbRelayerConfig`].
     /// and the [`evm::EvmChain`] to match on [`evm::ChainName`].
     macro_rules! update_account_for {
-        ($f: tt, $network: ty) => {
+        ($c: expr, $f: tt, $network: ty) => {
             // first read the property (network) form the config, as mutable
             // but we also, at the same time require that we need the wallet
             // to be configured for that network, so we zip them together
@@ -101,7 +101,7 @@ pub async fn handle_relayer_info(
             //
             // after this, we update the account property with the wallet
             // address.
-            if let Some((c, w)) = config
+            if let Some((c, w)) = $c
                 .evm
                 .$f
                 .as_mut()
@@ -112,11 +112,11 @@ pub async fn handle_relayer_info(
         };
     }
 
-    update_account_for!(webb, evm::Webb);
-    update_account_for!(ganache, evm::Ganache);
-    update_account_for!(edgeware, evm::Edgeware);
-    update_account_for!(beresheet, evm::Beresheet);
-    update_account_for!(harmony, evm::Harmony);
+    update_account_for!(config, webb, evm::Webb);
+    update_account_for!(config, ganache, evm::Ganache);
+    update_account_for!(config, edgeware, evm::Edgeware);
+    update_account_for!(config, beresheet, evm::Beresheet);
+    update_account_for!(config, harmony, evm::Harmony);
 
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
 }
@@ -253,6 +253,7 @@ pub enum WithdrawStatus {
         #[serde(rename = "txHash")]
         tx_hash: H256,
     },
+    DroppedFromMemPool,
     Errored {
         reason: String,
     },
@@ -367,10 +368,14 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
             }
         };
         match tx {
-            Ok(receipt) => {
+            Ok(Some(receipt)) => {
                 log::debug!("Finlized Tx #{}", receipt.transaction_hash);
                 yield Withdraw(WithdrawStatus::Finlized { tx_hash: receipt.transaction_hash });
             },
+            Ok(None) => {
+                log::warn!("Transaction Dropped from Mempool!!");
+                yield Withdraw(WithdrawStatus::DroppedFromMemPool);
+            }
             Err(e) => {
                 let reason = e.to_string();
                 log::error!("Transaction Errored: {}", reason);
@@ -475,7 +480,7 @@ where
 
     pub async fn watch(self) -> anyhow::Result<()> {
         let endpoint = C::endpoint();
-        let fetch_interval = Duration::from_secs(6);
+        let fetch_interval = Duration::from_millis(200);
         let provider = Provider::try_from(endpoint)?.interval(fetch_interval);
         let client = Arc::new(provider);
         let contract = AnchorContract::new(self.contract, client);
@@ -490,7 +495,11 @@ where
         self.store.insert_leaves(self.contract, &missing_leaves)?;
         let mut events = filter.stream().await?;
         while let Some(event) = events.try_next().await? {
-            dbg!(event);
+            self.store.insert_leaves(
+                self.contract,
+                &[H256::from_slice(&event.commitment)],
+            )?;
+            // TODO(@shekohex): update the last block number here.
         }
         Ok(())
     }
@@ -498,27 +507,132 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-    use tokio::time::timeout;
+    use std::convert::TryFrom;
+    use std::fs;
+    use std::path::PathBuf;
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use anyhow::Context;
+    use ethers::abi::Tokenizable;
+    use ethers::utils::{Ganache, GanacheInstance};
+    use rand::SeedableRng;
+    use webb::evm::ethers;
+    use webb::evm::ethers::prelude::*;
+    use webb::evm::note::{Deposit, Note};
 
     use super::*;
 
-    #[tokio::test]
+    fn create_contract_factory<P: Into<PathBuf>, M: Middleware>(
+        path: P,
+        client: Arc<M>,
+    ) -> anyhow::Result<ContractFactory<M>> {
+        let json_file = fs::read_to_string(path.into())
+            .context("reading contract json file")?;
+        let raw: serde_json::Value =
+            serde_json::from_str(&json_file).context("parsing json file")?;
+        let abi = serde_json::from_value(raw["abi"].clone())?;
+        let bytecode_hex = raw["bytecode"].as_str().expect("bytecode");
+        let bytecode = hex::decode(&bytecode_hex[2..])
+            .context("decoding bytecode from hex to bytes")?;
+        Ok(ContractFactory::new(abi, bytecode.into(), client))
+    }
+    async fn deploy_anchor_contract<M: Middleware + 'static>(
+        client: Arc<M>,
+    ) -> anyhow::Result<Address> {
+        let hasher_factory = create_contract_factory(
+            "tests/build/contracts/Hasher.json",
+            client.clone(),
+        )
+        .context("create hasher factory")?;
+        let verifier_factory = create_contract_factory(
+            "tests/build/contracts/Verifier.json",
+            client.clone(),
+        )
+        .context("create verifier factory")?;
+        let native_anchor_factory = create_contract_factory(
+            "tests/build/contracts/NativeAnchor.json",
+            client.clone(),
+        )
+        .context("create native anchor factory")?;
+        let hasher_instance = hasher_factory
+            .deploy(())
+            .context("deploy hasher")?
+            .send()
+            .await?;
+        let verifier_instance = verifier_factory
+            .deploy(())
+            .context("deploy verifier")?
+            .send()
+            .await?;
+
+        let verifier_address = verifier_instance.address().into_token();
+        let hasher_address = hasher_instance.address().into_token();
+        let denomination = ethers::utils::parse_ether("1")?.into_token();
+        let merkle_tree_hight = 20u32.into_token();
+        let args = (
+            verifier_address,
+            hasher_address,
+            denomination,
+            merkle_tree_hight,
+        );
+        let native_anchor_instance = native_anchor_factory
+            .deploy(args)
+            .context("deploy native anchor")?
+            .send()
+            .await?;
+        Ok(native_anchor_instance.address())
+    }
+
+    async fn launch_ganache() -> GanacheInstance {
+        tokio::task::spawn_blocking(|| {
+            Ganache::new().port(1998u16).block_time(1u64).spawn()
+        })
+        .await
+        .unwrap()
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn leaves_watcher() -> anyhow::Result<()> {
+        env_logger::builder().is_test(true).init();
+        let ganache = launch_ganache().await;
+        let provider = Provider::<Http>::try_from(ganache.endpoint())?
+            .interval(Duration::from_millis(10u64));
+        let key = ganache.keys().first().cloned().unwrap();
+        let wallet = LocalWallet::from(key).set_chain_id(1337u64);
+        let client = SignerMiddleware::new(provider, wallet);
+        let client = Arc::new(client);
+        let anchor_contract_address =
+            deploy_anchor_contract(client.clone()).await?;
         let store = InMemoryLeafCache::with_last_block_number(1);
-        let address =
-            Address::from_str("0x8a4D675dcC71A7387a3C4f27d7D78834369b9542")?;
-        let leaves_watcher =
-            LeavesWatcher::<evm::Harmony, _>::new(store.clone(), address);
-        let watcher = leaves_watcher.watch();
-        if timeout(Duration::from_secs(60 * 60 * 60), watcher)
-            .await
-            .is_err()
-        {
-            println!("Timeout ..");
+        let leaves_watcher = LeavesWatcher::<evm::Ganache, _>::new(
+            store.clone(),
+            anchor_contract_address,
+        );
+        // run the leaves watcher in another task
+        let task_handle = tokio::task::spawn(leaves_watcher.watch());
+        let contract =
+            AnchorContract::new(anchor_contract_address, client.clone());
+        let mut rng = rand::rngs::StdRng::from_seed([0u8; 32]);
+        let mut expected_leaves = Vec::new();
+        for _ in 0..3 {
+            let note = Note::builder()
+                .with_chain_id(1337u64)
+                .with_amount(1u64)
+                .with_currency("ETH")
+                .build(&mut rng);
+            let deposit: Deposit = note.clone().into();
+            let tx = contract
+                .deposit(deposit.commitment.into())
+                .value(ethers::utils::parse_ether(note.amount)?);
+            let result = tx.send().await?;
+            let _receipt = result.await?;
+            expected_leaves.push(deposit.commitment);
         }
-        let leaves = store.get_leaves(address)?;
-        dbg!(leaves);
+        tokio::time::sleep(Duration::from_secs(10)).await;
+        let leaves = store.get_leaves(anchor_contract_address)?;
+        assert_eq!(expected_leaves, leaves);
+        task_handle.abort();
         Ok(())
     }
 }

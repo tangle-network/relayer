@@ -100,6 +100,12 @@ jobs:
 
       - run: ci/set_rust_version.bash ${{ matrix.channel }} ${{ matrix.target }}
       - run: ci/build.bash cross ${{ matrix.target }}
+      - name: Use Node.js 14.x
+        if: matrix.target == 'x86_64-apple-darwin'
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - run: npm install -g ganache-cli
         # Only test on macOS platforms since we can't simulate the others.
       - run: ci/test.bash cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-apple-darwin'
@@ -163,6 +169,12 @@ jobs:
       - run: chmod +x /tmp/cross
       - run: ci/set_rust_version.bash ${{ matrix.channel }} ${{ matrix.target }}
       - run: ci/build.bash /tmp/cross ${{ matrix.target }}
+      - name: Use Node.js 14.x
+        if: matrix.target == 'x86_64-apple-darwin'
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - run: npm install -g ganache-cli
         # These targets have issues with being tested so they are disabled
         # by default. You can try disabling to see if they work for
         # your project.
@@ -176,11 +188,6 @@ jobs:
       - run: cargo build
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         shell: bash
-      - name: Use Node.js 14.x
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
-        uses: actions/setup-node@v1
-        with:
-          node-version: 14.x
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: cd tests && yarn

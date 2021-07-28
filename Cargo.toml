@@ -11,7 +11,7 @@ anyhow = "^1"
 async-trait = "^0.1"
 async-stream = "^0.3"
 log = "^0.4"
-env_logger = "^0.8"
+env_logger = "^0.9"
 url = "^2.2"
 futures = { version = "^0.3", default-features = false }
 serde = { version = "^1", default-features = false, features = ["derive"] }
@@ -23,7 +23,8 @@ webb = { version = "0.1.0", git = "https://github.com/webb-tools/webb-rs.git" }
 structopt = { version = "^0.3", features = ["paw"] }
 paw = "^1.0"
 directories-next = "^2.0"
-
+rand = { version = "0.8", default-features = false, features = ["getrandom"] }
+hex = { version = "0.4", default-features = false }
 # just to make it compile on linux where the openssl is not available.
 # until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
 native-tls = { version = "^0.2", features = ["vendored"] }
