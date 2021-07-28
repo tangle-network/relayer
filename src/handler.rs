@@ -380,3 +380,145 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
     };
     s.boxed()
 }
+
+use parking_lot::RwLock;
+use std::collections::HashMap;
+use std::convert::TryFrom;
+use std::marker::PhantomData;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
+
+/// A Leaf Cache Store is a simple trait that would help in
+/// getting the leaves and insert them with a simple API.
+pub trait LeafCacheStore {
+    type Output: IntoIterator<Item = H256>;
+
+    fn get_leaves(&self, contract: Address) -> anyhow::Result<Self::Output>;
+
+    fn insert_leaves(
+        &self,
+        contract: Address,
+        leaves: &[H256],
+    ) -> anyhow::Result<()>;
+
+    fn set_last_block_number(&self, block_number: u64) -> anyhow::Result<()>;
+    fn get_last_block_number(&self) -> anyhow::Result<u64>;
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct InMemoryLeafCache {
+    store: Arc<RwLock<HashMap<Address, Vec<H256>>>>,
+    last_block_number: Arc<AtomicU64>,
+}
+
+impl InMemoryLeafCache {
+    pub fn with_last_block_number(n: u64) -> Self {
+        let this = Self::default();
+        this.last_block_number.store(n, Ordering::Relaxed);
+        this
+    }
+}
+
+impl LeafCacheStore for InMemoryLeafCache {
+    type Output = Vec<H256>;
+
+    fn get_leaves(&self, contract: Address) -> anyhow::Result<Self::Output> {
+        let guard = self.store.read();
+        let val = guard.get(&contract).cloned().unwrap_or_default();
+        Ok(val)
+    }
+
+    fn insert_leaves(
+        &self,
+        contract: Address,
+        leaves: &[H256],
+    ) -> anyhow::Result<()> {
+        let mut guard = self.store.write();
+        guard
+            .entry(contract)
+            .and_modify(|v| v.extend_from_slice(leaves))
+            .or_insert_with(|| leaves.to_vec());
+        Ok(())
+    }
+
+    fn get_last_block_number(&self) -> anyhow::Result<u64> {
+        let val = self.last_block_number.load(Ordering::Relaxed);
+        Ok(val)
+    }
+
+    fn set_last_block_number(&self, block_number: u64) -> anyhow::Result<()> {
+        self.last_block_number
+            .store(block_number, Ordering::Relaxed);
+        Ok(())
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct LeavesWatcher<C, S> {
+    _chain: PhantomData<C>,
+    store: S,
+    contract: Address,
+}
+
+impl<C, S> LeavesWatcher<C, S>
+where
+    C: evm::EvmChain,
+    S: LeafCacheStore,
+{
+    pub fn new(store: S, contract: Address) -> Self {
+        Self {
+            contract,
+            store,
+            _chain: PhantomData::default(),
+        }
+    }
+
+    pub async fn watch(self) -> anyhow::Result<()> {
+        let endpoint = C::endpoint();
+        let fetch_interval = Duration::from_secs(6);
+        let provider = Provider::try_from(endpoint)?.interval(fetch_interval);
+        let client = Arc::new(provider);
+        let contract = AnchorContract::new(self.contract, client);
+        let block = self.store.get_last_block_number()?;
+        let filter = contract.deposit_filter().from_block(block);
+        let missing_events = filter.query().await?;
+        dbg!(&missing_events);
+        let missing_leaves = missing_events
+            .into_iter()
+            .map(|v| H256::from_slice(&v.commitment))
+            .collect::<Vec<_>>();
+        self.store.insert_leaves(self.contract, &missing_leaves)?;
+        let mut events = filter.stream().await?;
+        while let Some(event) = events.try_next().await? {
+            dbg!(event);
+        }
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+    use tokio::time::timeout;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn leaves_watcher() -> anyhow::Result<()> {
+        let store = InMemoryLeafCache::with_last_block_number(1);
+        let address =
+            Address::from_str("0x8a4D675dcC71A7387a3C4f27d7D78834369b9542")?;
+        let leaves_watcher =
+            LeavesWatcher::<evm::Harmony, _>::new(store.clone(), address);
+        let watcher = leaves_watcher.watch();
+        if timeout(Duration::from_secs(60 * 60 * 60), watcher)
+            .await
+            .is_err()
+        {
+            println!("Timeout ..");
+        }
+        let leaves = store.get_leaves(address)?;
+        dbg!(leaves);
+        Ok(())
+    }
+}
