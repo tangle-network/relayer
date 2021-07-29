@@ -388,10 +388,9 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
 
 use parking_lot::RwLock;
 use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::marker::PhantomData;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
+use webb::evm::ethers::providers::Ws;
 
 /// A Leaf Cache Store is a simple trait that would help in
 /// getting the leaves and insert them with a simple API.
@@ -403,16 +402,18 @@ pub trait LeafCacheStore {
     fn insert_leaves(
         &self,
         contract: Address,
-        leaves: &[H256],
+        leaves: &[(u32, H256)],
     ) -> anyhow::Result<()>;
-
-    fn set_last_block_number(&self, block_number: u64) -> anyhow::Result<()>;
+    /// Sets the new block number for the cache and returns the old one.
+    fn set_last_block_number(&self, block_number: u64) -> anyhow::Result<u64>;
     fn get_last_block_number(&self) -> anyhow::Result<u64>;
 }
 
+type MemStore = HashMap<Address, Vec<(u32, H256)>>;
+
 #[derive(Debug, Clone, Default)]
 pub struct InMemoryLeafCache {
-    store: Arc<RwLock<HashMap<Address, Vec<H256>>>>,
+    store: Arc<RwLock<MemStore>>,
     last_block_number: Arc<AtomicU64>,
 }
 
@@ -429,14 +430,20 @@ impl LeafCacheStore for InMemoryLeafCache {
 
     fn get_leaves(&self, contract: Address) -> anyhow::Result<Self::Output> {
         let guard = self.store.read();
-        let val = guard.get(&contract).cloned().unwrap_or_default();
+        let val = guard
+            .get(&contract)
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|v| v.1)
+            .collect();
         Ok(val)
     }
 
     fn insert_leaves(
         &self,
         contract: Address,
-        leaves: &[H256],
+        leaves: &[(u32, H256)],
     ) -> anyhow::Result<()> {
         let mut guard = self.store.write();
         guard
@@ -451,55 +458,75 @@ impl LeafCacheStore for InMemoryLeafCache {
         Ok(val)
     }
 
-    fn set_last_block_number(&self, block_number: u64) -> anyhow::Result<()> {
-        self.last_block_number
-            .store(block_number, Ordering::Relaxed);
-        Ok(())
+    fn set_last_block_number(&self, block_number: u64) -> anyhow::Result<u64> {
+        let old = self.last_block_number.swap(block_number, Ordering::Relaxed);
+        Ok(old)
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct LeavesWatcher<C, S> {
-    _chain: PhantomData<C>,
+pub struct LeavesWatcher<S> {
+    ws_endpoint: String,
     store: S,
     contract: Address,
 }
 
-impl<C, S> LeavesWatcher<C, S>
+impl<S> LeavesWatcher<S>
 where
-    C: evm::EvmChain,
     S: LeafCacheStore,
 {
-    pub fn new(store: S, contract: Address) -> Self {
+    pub fn new(
+        ws_endpoint: impl Into<String>,
+        store: S,
+        contract: Address,
+    ) -> Self {
         Self {
+            ws_endpoint: ws_endpoint.into(),
             contract,
             store,
-            _chain: PhantomData::default(),
         }
     }
 
     pub async fn watch(self) -> anyhow::Result<()> {
-        let endpoint = C::endpoint();
+        log::debug!("Connecting to {}", self.ws_endpoint);
+        let ws = Ws::connect(&self.ws_endpoint).await?;
         let fetch_interval = Duration::from_millis(200);
-        let provider = Provider::try_from(endpoint)?.interval(fetch_interval);
+        let provider = Provider::new(ws).interval(fetch_interval);
         let client = Arc::new(provider);
-        let contract = AnchorContract::new(self.contract, client);
+        let contract = AnchorContract::new(self.contract, client.clone());
         let block = self.store.get_last_block_number()?;
-        let filter = contract.deposit_filter().from_block(block);
-        let missing_events = filter.query().await?;
-        dbg!(&missing_events);
-        let missing_leaves = missing_events
-            .into_iter()
-            .map(|v| H256::from_slice(&v.commitment))
-            .collect::<Vec<_>>();
-        self.store.insert_leaves(self.contract, &missing_leaves)?;
-        let mut events = filter.stream().await?;
-        while let Some(event) = events.try_next().await? {
+        log::debug!("Starting from block {}", block + 1);
+        let filter = contract.deposit_filter().from_block(block + 1);
+        let missing_events = filter.query_with_meta().await?;
+        log::debug!("Got #{} missing events", missing_events.len());
+        for (e, log) in missing_events {
             self.store.insert_leaves(
                 self.contract,
-                &[H256::from_slice(&event.commitment)],
+                &[(e.leaf_index, H256::from_slice(&e.commitment))],
             )?;
-            // TODO(@shekohex): update the last block number here.
+            let old = self
+                .store
+                .set_last_block_number(log.block_number.as_u64())?;
+            log::debug!(
+                "Going from #{} to #{}",
+                old,
+                log.block_number.as_u64()
+            );
+        }
+        let mut events = filter.subscribe().await?;
+        while let Some(e) = events.try_next().await? {
+            self.store.insert_leaves(
+                self.contract,
+                &[(e.leaf_index, H256::from_slice(&e.commitment))],
+            )?;
+            // FIXME(@shekohex): currently we fetch events from the stream
+            // but we never have a way to get the current block number from where this event occurred.
+            // as for now, we will get the latest block number and just assume that it
+            // is the same block number this event occurred.
+            let last_block_number = client.get_block_number().await?;
+            log::debug!("Last block number: {}", last_block_number);
+            self.store
+                .set_last_block_number(last_block_number.as_u64())?;
         }
         Ok(())
     }
@@ -585,11 +612,29 @@ mod tests {
     }
 
     async fn launch_ganache() -> GanacheInstance {
-        tokio::task::spawn_blocking(|| {
-            Ganache::new().port(1998u16).block_time(1u64).spawn()
-        })
-        .await
-        .unwrap()
+        tokio::task::spawn_blocking(|| Ganache::new().port(1998u16).spawn())
+            .await
+            .unwrap()
+    }
+
+    async fn make_deposit<M: 'static + Middleware>(
+        rng: &mut impl rand::Rng,
+        contract: &AnchorContract<M>,
+        leaves: &mut Vec<H256>,
+    ) -> anyhow::Result<()> {
+        let note = Note::builder()
+            .with_chain_id(1337u64)
+            .with_amount(1u64)
+            .with_currency("ETH")
+            .build(rng);
+        let deposit: Deposit = note.clone().into();
+        let tx = contract
+            .deposit(deposit.commitment.into())
+            .value(ethers::utils::parse_ether(note.amount)?);
+        let result = tx.send().await?;
+        let _receipt = result.await?;
+        leaves.push(deposit.commitment);
+        Ok(())
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -604,32 +649,41 @@ mod tests {
         let client = Arc::new(client);
         let anchor_contract_address =
             deploy_anchor_contract(client.clone()).await?;
-        let store = InMemoryLeafCache::with_last_block_number(1);
-        let leaves_watcher = LeavesWatcher::<evm::Ganache, _>::new(
+        let contract =
+            AnchorContract::new(anchor_contract_address, client.clone());
+        let mut expected_leaves = Vec::new();
+        let mut rng = rand::rngs::StdRng::from_seed([0u8; 32]);
+        // make a couple of deposit now, before starting the watcher.
+        make_deposit(&mut rng, &contract, &mut expected_leaves).await?;
+        make_deposit(&mut rng, &contract, &mut expected_leaves).await?;
+        let store = InMemoryLeafCache::default();
+        let leaves_watcher = LeavesWatcher::new(
+            ganache.ws_endpoint(),
             store.clone(),
             anchor_contract_address,
         );
         // run the leaves watcher in another task
         let task_handle = tokio::task::spawn(leaves_watcher.watch());
-        let contract =
-            AnchorContract::new(anchor_contract_address, client.clone());
-        let mut rng = rand::rngs::StdRng::from_seed([0u8; 32]);
-        let mut expected_leaves = Vec::new();
-        for _ in 0..3 {
-            let note = Note::builder()
-                .with_chain_id(1337u64)
-                .with_amount(1u64)
-                .with_currency("ETH")
-                .build(&mut rng);
-            let deposit: Deposit = note.clone().into();
-            let tx = contract
-                .deposit(deposit.commitment.into())
-                .value(ethers::utils::parse_ether(note.amount)?);
-            let result = tx.send().await?;
-            let _receipt = result.await?;
-            expected_leaves.push(deposit.commitment);
-        }
-        tokio::time::sleep(Duration::from_secs(10)).await;
+        // then, make another deposit, while the watcher is running.
+        make_deposit(&mut rng, &contract, &mut expected_leaves).await?;
+        // it should now contains the 2 leaves when the watcher was offline, and
+        // the new one that happened while it is watching.
+        let leaves = store.get_leaves(anchor_contract_address)?;
+        assert_eq!(expected_leaves, leaves);
+        // now let's abort it, and try to do another deposit.
+        task_handle.abort();
+        make_deposit(&mut rng, &contract, &mut expected_leaves).await?;
+        // let's run it again, using the same old store.
+        let leaves_watcher = LeavesWatcher::new(
+            ganache.ws_endpoint(),
+            store.clone(),
+            anchor_contract_address,
+        );
+        let task_handle = tokio::task::spawn(leaves_watcher.watch());
+        log::debug!("Waiting for 5s allowing the task to run..");
+        // let's wait for a bit.. to allow the task to run.
+        tokio::time::sleep(Duration::from_secs(5)).await;
+        // now it should now contain all the old leaves + the missing one.
         let leaves = store.get_leaves(anchor_contract_address)?;
         assert_eq!(expected_leaves, leaves);
         task_handle.abort();

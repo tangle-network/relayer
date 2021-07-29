@@ -170,7 +170,6 @@ jobs:
       - run: ci/set_rust_version.bash ${{ matrix.channel }} ${{ matrix.target }}
       - run: ci/build.bash /tmp/cross ${{ matrix.target }}
       - name: Use Node.js 14.x
-        if: matrix.target == 'x86_64-apple-darwin'
         uses: actions/setup-node@v1
         with:
           node-version: 14.x
