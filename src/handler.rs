@@ -20,9 +20,6 @@ use crate::chains;
 
 use crate::context::RelayerContext;
 
-// How can I import this
-mod utils;
-
 pub async fn accept_connection(
     ctx: &RelayerContext,
     stream: warp::ws::WebSocket,
@@ -245,6 +242,7 @@ pub enum NetworkStatus {
     Connected,
     Failed { reason: String },
     Disconnected,
+    UnsupportedContract,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -256,6 +254,7 @@ pub enum WithdrawStatus {
         #[serde(rename = "txHash")]
         tx_hash: H256,
     },
+    Valid,
     Errored {
         reason: String,
     },
@@ -318,6 +317,11 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     let s = stream! {
+        let supported_contracts = C::contracts();
+        if (!supported_contracts.contains_key(data.contract.to_string().as_str())) {
+            yield Network(NetworkStatus::UnsupportedContract);
+            return;
+        }
         log::debug!("Connecting to chain {:?} .. at {}", C::name(), C::endpoint());
         yield Network(NetworkStatus::Connecting);
         let provider = match ctx.evm_provider::<C>().await {
@@ -343,20 +347,27 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
         let contract = AnchorContract::new(data.contract, client);
-        let supportedContracts = C::contracts();
-        let contractSize = match supportedContracts.get(data.contract.to_string()) {
+        let denomination = match contract.denomination().call().await {
             Ok(v) => v,
             Err(e) => {
-                log::error!("Passed contract not found!");
-                yield Error(format!("Misconfigured contract address: {:?}", data.contract.to_string().unwrap()));
+                log::error!("Misconfigured Contract Denomination: {}", e);
+                yield Error(format!("Misconfigured Contract: {:?}", data.contract));
+                return;
+            }
+        };
+        let withdraw_fee_percentage = match ctx.fee_percentage::<C>(){
+            Ok(v) => v,
+            Err(e) => {
+                log::error!("Misconfigured Fee in Config: {}", e);
+                yield Error(format!("Misconfigured Fee: {:?}", C::name()));
                 return;
             }
         };
         // How can I get the withdrew_fee_percentage parameter from the ctx for this calculation?
-        let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, utils::calculate_bigInt_fee(ctx.config.evm.???.unwrap().withdrew_percentage_fee, contractSize));
+        let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, calculate_fee(withdraw_fee_percentage, denomination));
         if (unacceptable_fee) {
             log::error!("Received a fee lower than configuration");
-            yield Error(format!("User sent a fee that is too low {:?}", data.fee.to_string().unwrap()));
+            yield Error(format!("User sent a fee that is too low {:?}", data.fee.to_string()));
             return;
         }
 
@@ -369,6 +380,19 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 data.fee,
                 data.refund
             );
+        // Make sure the transaction will go through successfully (and pay relayer)
+        match call.call().await {
+            Ok(_) => {
+                yield Withdraw(WithdrawStatus::Valid);
+                log::debug!("Proof is valid");
+            },
+            Err(e) => {
+                let reason = e.to_string();
+                log::error!("Error Client sent an invalid proof: {}", reason);
+                yield Withdraw(WithdrawStatus::Errored { reason });
+                return;
+            }
+        };
         log::trace!("About to send Tx to {:?} Chain", C::name());
         let tx = match call.send().await {
             Ok(pending) => {
@@ -400,3 +424,27 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
     };
     s.boxed()
 }
+
+pub fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
+    let mill_fee = (fee_percent * 1_000_000.0) as u32;
+    let mill_u256: U256 = principle * (mill_fee);
+    let fee_u256: U256 = mill_u256 / (1_000_000);
+    return fee_u256
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn percent_fee() {
+        let submitted_value: U256 = U256::from_dec_str("5000000000000000").ok().unwrap();
+        let expected_fee: U256 = U256::from_dec_str("250000000000000").ok().unwrap();
+        let withdraw_fee_percent_dec: f64 = 0.05;
+        let formatted_fee: U256 = calculate_fee(withdraw_fee_percent_dec, submitted_value);
+
+        assert_eq!(expected_fee, formatted_fee);
+    }
+}
+
+
