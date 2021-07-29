@@ -123,12 +123,20 @@ pub mod evm {
             chain_id: 1666700001,
             contracts: [
                 {
-                    size: 1,
-                    address: "0x59DCE3dcA8f47Da895aaC4Df997d8A2E29815B1B",
+                    size: 100,
+                    address: "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a",
                 },
                 {
-                    size: 100,
-                    address: "0xF06fA633f6E801d9fF3D450Af8806489D4fa70a1",
+                    size: 1000,
+                    address: "0xD7f9BB9957100310aD397D2bA31771D939BD4731",
+                },
+                {
+                    size: 10000,
+                    address: "0xeE2eB8F142e48e5D1bDD34e0924Ed3B4aa0d4222",
+                },
+                {
+                    size: 100000,
+                    address: "0x7cd173094eF78FFAeDee4e14576A73a79aA716ac",
                 }
             ],
         }

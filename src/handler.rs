@@ -20,6 +20,9 @@ use crate::chains;
 
 use crate::context::RelayerContext;
 
+// How can I import this
+mod utils;
+
 pub async fn accept_connection(
     ctx: &RelayerContext,
     stream: warp::ws::WebSocket,
@@ -340,6 +343,23 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
         let contract = AnchorContract::new(data.contract, client);
+        let supportedContracts = C::contracts();
+        let contractSize = match supportedContracts.get(data.contract.to_string()) {
+            Ok(v) => v,
+            Err(e) => {
+                log::error!("Passed contract not found!");
+                yield Error(format!("Misconfigured contract address: {:?}", data.contract.to_string().unwrap()));
+                return;
+            }
+        };
+        // How can I get the withdrew_fee_percentage parameter from the ctx for this calculation?
+        let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, utils::calculate_bigInt_fee(ctx.config.evm.???.unwrap().withdrew_percentage_fee, contractSize));
+        if (unacceptable_fee) {
+            log::error!("Received a fee lower than configuration");
+            yield Error(format!("User sent a fee that is too low {:?}", data.fee.to_string().unwrap()));
+            return;
+        }
+
         let call = contract.withdraw(
                 data.proof.to_vec(),
                 data.root.to_fixed_bytes(),
