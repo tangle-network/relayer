@@ -28,49 +28,6 @@ jobs:
       matrix:
         platform: [linux-musl, apple-darwin]
 
-  windows:
-    if: ${{ false }} # disable windows
-    runs-on: windows-latest
-    # Windows technically doesn't need this, but if we don't block windows on it
-    # some of the windows jobs could fill up the concurrent job queue before
-    # one of the install-cross jobs has started, so this makes sure all
-    # artifacts are downloaded first.
-    needs: install-cross
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 50
-      - name: Cache Cargo
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
-      - run: ci/set_rust_version.bash ${{ matrix.channel }} ${{ matrix.target }}
-        shell: bash
-      - run: ci/build.bash cargo ${{ matrix.target }}
-        shell: bash
-      - run: ci/test.bash cargo ${{ matrix.target }}
-        shell: bash
-
-    strategy:
-      fail-fast: true
-      matrix:
-        channel: [stable]
-        target:
-          # MSVC
-          - i686-pc-windows-msvc
-          - x86_64-pc-windows-msvc
-          # GNU:
-          # You typically only need to test Windows GNU if you're
-          # specifically targetting it, and it can cause issues with some
-          # dependencies if you're not so it's disabled by self.
-          # - i686-pc-windows-gnu
-          # - x86_64-pc-windows-gnu
-
   macos:
     runs-on: macos-latest
     needs: install-cross
@@ -102,7 +59,8 @@ jobs:
         if: matrix.target == 'x86_64-apple-darwin'
         uses: actions/setup-node@v1
         with:
-          node-version: 14.x
+          node-version: '14'
+          cache: 'npm'
       - run: npm install -g ganache-cli
         if: matrix.target == 'x86_64-apple-darwin'
         # Only test on macOS platforms since we can't simulate the others.
@@ -123,11 +81,7 @@ jobs:
       matrix:
         channel: [stable]
         target:
-          # macOS
           - x86_64-apple-darwin
-          # iOS
-          # - aarch64-apple-ios
-          # - x86_64-apple-ios
 
   linux:
     runs-on: ubuntu-latest
@@ -146,12 +100,8 @@ jobs:
             target
             target/x86_64-unknown-linux-musl/debug
             target/x86_64-unknown-linux-musl/release
-            target/x86_64-unknown-linux-gnu/debug
-            target/x86_64-unknown-linux-gnu/release
             target/aarch64-unknown-linux-musl/debug
             target/aarch64-unknown-linux-musl/release
-            target/aarch64-unknown-linux-gnu/debug
-            target/aarch64-unknown-linux-gnu/release
             target/debug
             target/release
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
@@ -166,18 +116,11 @@ jobs:
       - name: Use Node.js 14.x
         uses: actions/setup-node@v1
         with:
-          node-version: 14.x
+          node-version: '14'
+          cache: 'npm'
       - run: npm install -g ganache-cli
-        # These targets have issues with being tested so they are disabled
-        # by default. You can try disabling to see if they work for
-        # your project.
       - run: ci/test.bash /tmp/cross ${{ matrix.target }}
-        if: |
-          !contains(matrix.target, 'android') &&
-          !contains(matrix.target, 'bsd') &&
-          !contains(matrix.target, 'solaris') &&
-          matrix.target != 'armv5te-unknown-linux-musleabi' &&
-          matrix.target != 'sparc64-unknown-linux-gnu'
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
       - run: cargo build
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         shell: bash
@@ -193,56 +136,5 @@ jobs:
       matrix:
         channel: [stable]
         target:
-          # WASM, off by default as most rust projects aren't compatible yet.
-          # - wasm32-unknown-emscripten
-          # Linux
-          - aarch64-unknown-linux-gnu
           - aarch64-unknown-linux-musl
-          # - arm-unknown-linux-gnueabi
-          # - arm-unknown-linux-gnueabihf
-          # - arm-unknown-linux-musleabi
-          # - arm-unknown-linux-musleabihf
-          # - armv5te-unknown-linux-musleabi
-          # - armv7-unknown-linux-gnueabihf
-          # - armv7-unknown-linux-musleabihf
-          # - i586-unknown-linux-gnu
-          # - i586-unknown-linux-musl
-          # - i686-unknown-linux-gnu
-          # - i686-unknown-linux-musl
-          # - mips-unknown-linux-gnu
-          # - mips-unknown-linux-musl
-          # - mips64-unknown-linux-gnuabi64
-          # - mips64el-unknown-linux-gnuabi64
-          # - mipsel-unknown-linux-gnu
-          # - mipsel-unknown-linux-musl
-          # - powerpc-unknown-linux-gnu
-          # - powerpc64-unknown-linux-gnu
-          # - powerpc64le-unknown-linux-gnu
-          # - s390x-unknown-linux-gnu
-          - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl
-          # - sparc64-unknown-linux-gnu
-          # Android
-          # - aarch64-linux-android
-          # - arm-linux-androideabi
-          # - armv7-linux-androideabi
-          # - i686-linux-android
-          # - x86_64-linux-android
-          # *BSD
-          # The FreeBSD targets can have issues linking so they are disabled
-          # by default.
-          # - i686-unknown-freebsd
-          # - x86_64-unknown-freebsd
-          # - x86_64-unknown-netbsd
-          # DragonFly (Doesn't currently work)
-          # - x86_64-unknown-dragonfly
-          # Solaris
-          # - sparcv9-sun-solaris
-          # - x86_64-sun-solaris
-          # Bare Metal
-          # These are no-std embedded targets, so they will only build if your
-          # crate is `no_std` compatible.
-          # - thumbv6m-none-eabi
-          # - thumbv7em-none-eabi
-          # - thumbv7em-none-eabihf
-          # - thumbv7m-none-eabi
