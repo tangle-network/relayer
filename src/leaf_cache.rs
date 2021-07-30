@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use anyhow::Error;
 use ethers::prelude::*;
 use futures::prelude::*;
 use parking_lot::RwLock;
@@ -80,11 +81,11 @@ pub struct LeavesWatcher<S> {
     contract: Address,
 }
 
+#[allow(unused)]
 impl<S> LeavesWatcher<S>
 where
-    S: LeafCacheStore,
+    S: LeafCacheStore + Clone + Send + Sync + 'static,
 {
-    #[allow(unused)]
     pub fn new(
         ws_endpoint: impl Into<String>,
         store: S,
@@ -97,10 +98,22 @@ where
         }
     }
 
-    #[allow(unused)]
     pub async fn watch(self) -> anyhow::Result<()> {
+        let backoff = backoff::ExponentialBackoff {
+            max_elapsed_time: None,
+            ..Default::default()
+        };
+        let task = || async { self.watch_for_events().await };
+        backoff::future::retry(backoff, task).await?;
+        Ok(())
+    }
+
+    async fn watch_for_events(&self) -> Result<(), backoff::Error<Error>> {
         log::debug!("Connecting to {}", self.ws_endpoint);
-        let ws = Ws::connect(&self.ws_endpoint).await?;
+        let endpoint = url::Url::parse(&self.ws_endpoint)
+            .map_err(Into::into)
+            .map_err(backoff::Error::Permanent)?;
+        let ws = Ws::connect(endpoint).map_err(Error::from).await?;
         let fetch_interval = Duration::from_millis(200);
         let provider = Provider::new(ws).interval(fetch_interval);
         let client = Arc::new(provider);
@@ -108,11 +121,12 @@ where
         let block = self.store.get_last_block_number()?;
         log::debug!("Starting from block {}", block + 1);
         let filter = contract.deposit_filter().from_block(block + 1);
-        let missing_events = filter.query_with_meta().await?;
+        let missing_events =
+            filter.query_with_meta().map_err(Error::from).await?;
         log::debug!("Got #{} missing events", missing_events.len());
         for (e, log) in missing_events {
             self.store.insert_leaves(
-                self.contract,
+                contract.address(),
                 &[(e.leaf_index, H256::from_slice(&e.commitment))],
             )?;
             let old = self
@@ -124,11 +138,12 @@ where
                 log.block_number.as_u64()
             );
         }
-        let events = filter.subscribe().await?;
-        let mut events_with_meta = events.with_meta();
-        while let Some((e, log)) = events_with_meta.try_next().await? {
+        let events = filter.subscribe().map_err(Error::from).await?;
+        let mut stream = events.with_meta();
+        while let Some(v) = stream.try_next().map_err(Error::from).await? {
+            let (e, log) = v;
             self.store.insert_leaves(
-                self.contract,
+                contract.address(),
                 &[(e.leaf_index, H256::from_slice(&e.commitment))],
             )?;
             self.store
