@@ -84,6 +84,7 @@ impl<S> LeavesWatcher<S>
 where
     S: LeafCacheStore,
 {
+    #[allow(unused)]
     pub fn new(
         ws_endpoint: impl Into<String>,
         store: S,
@@ -96,6 +97,7 @@ where
         }
     }
 
+    #[allow(unused)]
     pub async fn watch(self) -> anyhow::Result<()> {
         log::debug!("Connecting to {}", self.ws_endpoint);
         let ws = Ws::connect(&self.ws_endpoint).await?;
