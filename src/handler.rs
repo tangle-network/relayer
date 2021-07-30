@@ -6,7 +6,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use async_stream::stream;
-use chains::evm;
 use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
@@ -16,7 +15,7 @@ use webb::evm::ethereum_types::{Address, H256, U256};
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::types::Bytes;
 
-use crate::chains;
+use crate::chains::evm;
 
 use crate::context::RelayerContext;
 
@@ -513,20 +512,15 @@ where
                 log.block_number.as_u64()
             );
         }
-        let mut events = filter.subscribe().await?;
-        while let Some(e) = events.try_next().await? {
+        let events = filter.subscribe().await?;
+        let mut events_with_meta = events.with_meta();
+        while let Some((e, log)) = events_with_meta.try_next().await? {
             self.store.insert_leaves(
                 self.contract,
                 &[(e.leaf_index, H256::from_slice(&e.commitment))],
             )?;
-            // FIXME(@shekohex): currently we fetch events from the stream
-            // but we never have a way to get the current block number from where this event occurred.
-            // as for now, we will get the latest block number and just assume that it
-            // is the same block number this event occurred.
-            let last_block_number = client.get_block_number().await?;
-            log::debug!("Last block number: {}", last_block_number);
             self.store
-                .set_last_block_number(last_block_number.as_u64())?;
+                .set_last_block_number(log.block_number.as_u64())?;
         }
         Ok(())
     }
@@ -644,7 +638,7 @@ mod tests {
         let provider = Provider::<Http>::try_from(ganache.endpoint())?
             .interval(Duration::from_millis(10u64));
         let key = ganache.keys().first().cloned().unwrap();
-        let wallet = LocalWallet::from(key).set_chain_id(1337u64);
+        let wallet = LocalWallet::from(key).with_chain_id(1337u64);
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
         let anchor_contract_address =
