@@ -95,9 +95,7 @@ jobs:
         with:
           name: cross-apple-darwin
           path: /usr/local/bin/
-
       - run: chmod +x /usr/local/bin/cross
-
       - run: ci/set_rust_version.bash ${{ matrix.channel }} ${{ matrix.target }}
       - run: ci/build.bash cross ${{ matrix.target }}
       - name: Use Node.js 14.x
@@ -106,17 +104,13 @@ jobs:
         with:
           node-version: 14.x
       - run: npm install -g ganache-cli
+        if: matrix.target == 'x86_64-apple-darwin'
         # Only test on macOS platforms since we can't simulate the others.
       - run: ci/test.bash cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-apple-darwin'
       - run: cargo build
         if: matrix.target == 'x86_64-apple-darwin'
         shell: bash
-      - name: Use Node.js 14.x
-        if: matrix.target == 'x86_64-apple-darwin'
-        uses: actions/setup-node@v1
-        with:
-          node-version: 14.x
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-apple-darwin'
         run: cd tests && yarn
