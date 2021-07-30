@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::sync::Arc;
 
 use anyhow::Error;
@@ -23,8 +24,8 @@ pub trait LeafCacheStore {
         leaves: &[(u32, H256)],
     ) -> anyhow::Result<()>;
     /// Sets the new block number for the cache and returns the old one.
-    fn set_last_block_number(&self, block_number: u64) -> anyhow::Result<u64>;
-    fn get_last_block_number(&self) -> anyhow::Result<u64>;
+    fn set_last_block_number(&self, block_number: U64) -> anyhow::Result<U64>;
+    fn get_last_block_number(&self) -> anyhow::Result<U64>;
 }
 
 type MemStore = HashMap<Address, Vec<(u32, H256)>>;
@@ -63,14 +64,78 @@ impl LeafCacheStore for InMemoryLeafCache {
         Ok(())
     }
 
-    fn get_last_block_number(&self) -> anyhow::Result<u64> {
+    fn get_last_block_number(&self) -> anyhow::Result<U64> {
         let val = self.last_block_number.load(Ordering::Relaxed);
-        Ok(val)
+        Ok(U64::from(val))
     }
 
-    fn set_last_block_number(&self, block_number: u64) -> anyhow::Result<u64> {
-        let old = self.last_block_number.swap(block_number, Ordering::Relaxed);
-        Ok(old)
+    fn set_last_block_number(&self, block_number: U64) -> anyhow::Result<U64> {
+        let old = self
+            .last_block_number
+            .swap(block_number.as_u64(), Ordering::Relaxed);
+        Ok(U64::from(old))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SledLeafCache {
+    db: sled::Db,
+}
+
+impl SledLeafCache {
+    pub fn open<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
+        let db = sled::Config::new()
+            .path(path)
+            .temporary(cfg!(test))
+            .use_compression(true)
+            .compression_factor(18)
+            .open()?;
+        Ok(Self { db })
+    }
+}
+
+impl LeafCacheStore for SledLeafCache {
+    type Output = Vec<H256>;
+
+    fn get_leaves(&self, contract: Address) -> anyhow::Result<Self::Output> {
+        let tree = self.db.open_tree(contract)?;
+        let leaves = tree
+            .iter()
+            .values()
+            .flatten()
+            .map(|v| H256::from_slice(&v))
+            .collect();
+        Ok(leaves)
+    }
+
+    fn insert_leaves(
+        &self,
+        contract: Address,
+        leaves: &[(u32, H256)],
+    ) -> anyhow::Result<()> {
+        let tree = self.db.open_tree(contract)?;
+        for (k, v) in leaves {
+            tree.insert(k.to_le_bytes(), v.as_bytes())?;
+        }
+        Ok(())
+    }
+
+    fn set_last_block_number(&self, block_number: U64) -> anyhow::Result<U64> {
+        let mut bytes = [0u8; std::mem::size_of::<u64>()];
+        block_number.to_little_endian(&mut bytes);
+        let old = self.db.insert(b"last_block_number", &bytes)?;
+        match old {
+            Some(v) => Ok(U64::from_little_endian(&v)),
+            None => Ok(U64::zero()),
+        }
+    }
+
+    fn get_last_block_number(&self) -> anyhow::Result<U64> {
+        let val = self.db.get(b"last_block_number")?;
+        match val {
+            Some(v) => Ok(U64::from_little_endian(&v)),
+            None => Ok(U64::zero()),
+        }
     }
 }
 
@@ -81,7 +146,6 @@ pub struct LeavesWatcher<S> {
     contract: Address,
 }
 
-#[allow(unused)]
 impl<S> LeavesWatcher<S>
 where
     S: LeafCacheStore + Clone + Send + Sync + 'static,
@@ -111,7 +175,7 @@ where
     async fn watch_for_events(&self) -> Result<(), backoff::Error<Error>> {
         log::debug!("Connecting to {}", self.ws_endpoint);
         let endpoint = url::Url::parse(&self.ws_endpoint)
-            .map_err(Into::into)
+            .map_err(Error::from)
             .map_err(backoff::Error::Permanent)?;
         let ws = Ws::connect(endpoint).map_err(Error::from).await?;
         let fetch_interval = Duration::from_millis(200);
@@ -129,14 +193,8 @@ where
                 contract.address(),
                 &[(e.leaf_index, H256::from_slice(&e.commitment))],
             )?;
-            let old = self
-                .store
-                .set_last_block_number(log.block_number.as_u64())?;
-            log::debug!(
-                "Going from #{} to #{}",
-                old,
-                log.block_number.as_u64()
-            );
+            let old = self.store.set_last_block_number(log.block_number)?;
+            log::debug!("Going from #{} to #{}", old, log.block_number);
         }
         let events = filter.subscribe().map_err(Error::from).await?;
         let mut stream = events.with_meta();
@@ -146,8 +204,7 @@ where
                 contract.address(),
                 &[(e.leaf_index, H256::from_slice(&e.commitment))],
             )?;
-            self.store
-                .set_last_block_number(log.block_number.as_u64())?;
+            self.store.set_last_block_number(log.block_number)?;
         }
         Ok(())
     }
@@ -180,7 +237,8 @@ mod tests {
         // make a couple of deposit now, before starting the watcher.
         make_deposit(&mut rng, &contract, &mut expected_leaves).await?;
         make_deposit(&mut rng, &contract, &mut expected_leaves).await?;
-        let store = InMemoryLeafCache::default();
+        let db = tempfile::tempdir()?;
+        let store = SledLeafCache::open(db.path())?;
         let leaves_watcher = LeavesWatcher::new(
             ganache.ws_endpoint(),
             store.clone(),

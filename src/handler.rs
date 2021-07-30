@@ -18,6 +18,7 @@ use webb::evm::ethers::types::Bytes;
 use crate::chains::evm;
 
 use crate::context::RelayerContext;
+use crate::leaf_cache::LeafCacheStore;
 
 pub async fn accept_connection(
     ctx: &RelayerContext,
@@ -118,6 +119,20 @@ pub async fn handle_relayer_info(
     update_account_for!(config, harmony, evm::Harmony);
 
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeavesCacheResponse {
+    leaves: Vec<H256>,
+}
+
+pub async fn handle_leaves_cache(
+    store: Arc<crate::leaf_cache::SledLeafCache>,
+    contract: Address,
+) -> Result<impl warp::Reply, Infallible> {
+    let leaves = store.get_leaves(contract).unwrap();
+    Ok(warp::reply::json(&LeavesCacheResponse { leaves }))
 }
 
 #[derive(Debug, Clone, Deserialize)]
