@@ -457,13 +457,12 @@ mod test {
 
     #[test]
     fn percent_fee() {
-        let submitted_value: U256 = U256::from_dec_str("5000000000000000").ok().unwrap();
-        let expected_fee: U256 = U256::from_dec_str("250000000000000").ok().unwrap();
-        let withdraw_fee_percent_dec: f64 = 0.05;
-        let formatted_fee: U256 = calculate_fee(withdraw_fee_percent_dec, submitted_value);
+        let submitted_value = U256::from_dec_str("5000000000000000").ok().unwrap();
+        let expected_fee = U256::from_dec_str("250000000000000").ok().unwrap();
+        let withdraw_fee_percent_dec = 0.05f64;
+        let formatted_fee = calculate_fee(withdraw_fee_percent_dec, submitted_value);
 
         assert_eq!(expected_fee, formatted_fee);
     }
 }
-
 
