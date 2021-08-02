@@ -169,17 +169,40 @@ where
         Some((_, parent)) => parent.join("leaves"),
         None => p.join("leaves"),
     };
+
     let store = leaf_cache::SledLeafCache::open(db_path)?;
-    let ganache_contracts = chains::evm::Ganache::contracts()
-        .into_keys()
-        .collect::<Vec<_>>();
-    for contract in ganache_contracts {
-        let watcher = leaf_cache::LeavesWatcher::new(
-            "",
-            store.clone(),
-            Address::from_str(contract)?,
-        );
-        tokio::task::spawn(watcher.watch());
+    // some macro magic to not repeat myself.
+    macro_rules! start_network_watcher_for {
+        ($network: ident) => {
+            let contracts = chains::evm::$network::contracts()
+                .into_keys()
+                .collect::<Vec<_>>();
+            for contract in contracts {
+                let watcher = leaf_cache::LeavesWatcher::new(
+                    chains::evm::$network::ws_endpoint(),
+                    store.clone(),
+                    Address::from_str(contract)?,
+                );
+                let task = async move {
+                    tokio::select! {
+                        _ = watcher.watch() => {
+                            log::warn!("watcher for {} stopped", stringify!($network));
+                        },
+                        _ = tokio::signal::ctrl_c() => {
+                            log::debug!("Stopping the Task watcher for {}", stringify!($network));
+                        }
+                    };
+                };
+                tokio::task::spawn(task);
+            }
+        };
+        ($($network: ident),+) => {
+            $(
+                start_network_watcher_for!($network);
+            )+
+        }
     }
+
+    start_network_watcher_for!(Ganache, Beresheet, Harmony);
     Ok(store)
 }

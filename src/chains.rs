@@ -35,6 +35,7 @@ pub mod evm {
     pub trait EvmChain {
         fn name() -> ChainName;
         fn endpoint() -> &'static str;
+        fn ws_endpoint() -> &'static str;
         fn chain_id() -> u32;
         fn contracts() -> HashMap<&'static str, u128>;
     }
@@ -42,6 +43,7 @@ pub mod evm {
     macro_rules! define_chain {
         ($name:ident => {
             endpoint: $endpoint:expr,
+            ws_endpoint: $ws_endpoint:expr,
             chain_id: $chain_id:expr,
             contracts: [
                 $({
@@ -56,6 +58,8 @@ pub mod evm {
                 fn name() -> ChainName { ChainName::$name }
 
                 fn endpoint() -> &'static str { $endpoint }
+
+                fn ws_endpoint() -> &'static str { $ws_endpoint }
 
                 fn chain_id() -> u32 { $chain_id }
 
@@ -74,6 +78,7 @@ pub mod evm {
     define_chain! {
         Edgeware => {
             endpoint: "https://mainnet1.edgewa.re/evm",
+            ws_endpoint: "wss://mainnet1.edgewa.re/evm",
             chain_id: 2021,
             contracts: [],
         }
@@ -82,6 +87,7 @@ pub mod evm {
     define_chain! {
         Ganache => {
             endpoint: "http://localhost:1998",
+            ws_endpoint: "ws://localhost:8545",
             chain_id: 1337,
             contracts: [
                 {
@@ -95,6 +101,7 @@ pub mod evm {
     define_chain! {
         Beresheet => {
             endpoint: "http://beresheet1.edgewa.re:9933",
+            ws_endpoint: "ws://beresheet1.edgewa.re:9933",
             chain_id: 2022,
             contracts: [
                 {
@@ -120,6 +127,7 @@ pub mod evm {
     define_chain! {
         Harmony => {
             endpoint: "https://api.s1.b.hmny.io",
+            ws_endpoint: "wss://ws.s1.b.hmny.io",
             chain_id: 1666700001,
             contracts: [
                 {
@@ -145,6 +153,7 @@ pub mod evm {
     define_chain! {
         Webb => {
             endpoint: "",
+            ws_endpoint: "",
             chain_id: 0,
             contracts: [],
         }
