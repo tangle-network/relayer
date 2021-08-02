@@ -256,7 +256,6 @@ pub enum NetworkStatus {
     Connected,
     Failed { reason: String },
     Disconnected,
-    UnsupportedContract,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -332,11 +331,6 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     let s = stream! {
-        let supported_contracts = C::contracts();
-        if (!supported_contracts.contains_key(data.contract.to_string().as_str())) {
-            yield Network(NetworkStatus::UnsupportedContract);
-            return;
-        }
         log::debug!("Connecting to chain {:?} .. at {}", C::name(), C::endpoint());
         yield Network(NetworkStatus::Connecting);
         let provider = match ctx.evm_provider::<C>().await {
@@ -359,9 +353,15 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 return;
             }
         };
+        let relayer_address = wallet.address();
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
         let contract = AnchorContract::new(data.contract, client);
+        if (relayer_address != data.relayer) {
+            log::error!("Proof address does not match the relayer");
+            yield Error(format!("User is attempting to use a different relayer"));
+            return;
+        }
         let denomination = match contract.denomination().call().await {
             Ok(v) => v,
             Err(e) => {
@@ -445,8 +445,8 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
 
 pub fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
     let mill_fee = (fee_percent * 1_000_000.0) as u32;
-    let mill_u256: U256 = principle * (mill_fee);
-    let fee_u256: U256 = mill_u256 / (1_000_000);
+    let mill_u256 = principle * (mill_fee);
+    let fee_u256 = mill_u256 / (1_000_000);
     return fee_u256
 }
 

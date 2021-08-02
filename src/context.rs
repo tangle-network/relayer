@@ -96,7 +96,34 @@ impl RelayerContext {
                 let c = evm.harmony.clone().unwrap();
                 Ok(c.withdrew_fee_percentage)
             },
-            _ => anyhow::bail!("Chain Fee Not Configured!"),
+            _ => anyhow::bail!("Chain Not Configured!"),
+        }
+    }
+
+    pub fn reward_account<C: EvmChain>(&self) -> anyhow::Result<Option<Address>> {
+        let evm = &self.config.evm;
+        match C::name() {
+            ChainName::Edgeware if evm.edgeware.is_some() => {
+                let c = evm.edgeware.clone().unwrap();
+                Ok(c.account)
+            },
+            ChainName::Webb if evm.webb.is_some() => {
+                let c = evm.webb.clone().unwrap();
+                Ok(c.account)
+            },
+            ChainName::Ganache if evm.ganache.is_some() => {
+                let c = evm.ganache.clone().unwrap();
+                Ok(c.account)
+            },
+            ChainName::Beresheet if evm.beresheet.is_some() => {
+                let c = evm.beresheet.clone().unwrap();
+                Ok(c.account)
+            },
+            ChainName::Harmony if evm.harmony.is_some() => {
+                let c = evm.harmony.clone().unwrap();
+                Ok(c.account)
+            },
+            _ => anyhow::bail!("Chain Not Configured!"),
         }
     }
 
