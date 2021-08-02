@@ -334,7 +334,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
     use CommandResponse::*;
     let s = stream! {
         let supported_contracts = C::contracts();
-        if (!supported_contracts.contains_key(&data.contract)) {
+        if !supported_contracts.contains_key(&data.contract) {
             yield Network(NetworkStatus::UnsupportedContract);
             return;
         }
@@ -368,6 +368,15 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 return;
             }
         };
+        let wallet = match ctx.evm_wallet::<C>().await {
+            Ok(v) => v,
+            Err(e) => {
+                log::error!("Misconfigured Network: {}", e);
+                yield Error(format!("Misconfigured Network: {:?}", C::name()));
+                return;
+            }
+        };
+
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
         let contract = AnchorContract::new(data.contract, client);
@@ -389,7 +398,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         };
         let expected_fee = calculate_fee(withdraw_fee_percentage, denomination);
         let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, expected_fee);
-        if (unacceptable_fee) {
+        if unacceptable_fee {
             log::error!("Received a fee lower than configuration");
             let msg = format!(
                 "User sent a fee that is too low {} but expected {}",
@@ -409,7 +418,8 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 data.fee,
                 data.refund
             );
-        // Make a dry call, to make sure the transaction will go through successfully (to avoid wasting fees on invalid calls.)
+        // Make a dry call, to make sure the transaction will go through successfully
+        // to avoid wasting fees on invalid calls.
         match call.call().await {
             Ok(_) => {
                 yield Withdraw(WithdrawStatus::Valid);
