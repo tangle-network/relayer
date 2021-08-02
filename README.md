@@ -34,46 +34,21 @@ Example:
 # default to 9955
 port = 9955
 
-# Interprets the suri string in order to generate a key Pair.
-#
-# - If `suri` is a possibly `0x` prefixed 64-digit hex string, then it will
-#   be interpreted
-# directly as a `MiniSecretKey` (aka "seed" in `subkey`).
-# - If `suri` is a valid BIP-39 key phrase of 12, 15, 18, 21 or 24 words,
-#   then the key will
-# be derived from it. In this case:
-#   - the phrase may be followed by one or more items delimited by `/`
-#     characters.
-#   - the path may be followed by `///`, in which case everything after
-#     the `#` is treated
-# as a password.
-# - If `suri` begins with a `/` character it is prefixed with the Substrate
-#   public `DEV_PHRASE` and
-# interpreted as above.
-#
-# In this case they are interpreted as HDKD junctions; purely numeric
-# items are interpreted as integers, non-numeric items as strings.
-# Junctions prefixed with `/` are interpreted as soft junctions, and
-# with `//` as hard junctions.
-#
-# There is no correspondence mapping between SURI strings and the keys
-# they represent. Two different non-identical strings can actually
-# lead to the same secret being derived. Notably, integer junction
-# indices may be legally prefixed with arbitrary number of zeros.
-# Similarly an empty password (ending the SURI with `///`) is perfectly
-# valid and will generally be equivalent to no password at all.
-[substrate.webb]
-suri = "//Alice" # For testing purposes.
-
 # Configuration for EVM Networks.
+
 [evm.ganache]
 private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
-withdrew-fee = "0x05"
+withdrew-fee-percentage = "0.05"
 withdrew-gaslimit = "0x350000"
 
 [evm.beresheet]
-private-key = "0x000000000000000000000000000000000000000000000000000000000000c0de"
-withdrew-fee = "0x05"
+private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
+withdrew-fee-percentage = "0.05"
+withdrew-gaslimit = "0x350000"
+
+[evm.harmony]
+private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
+withdrew-fee-percentage = "0.05"
 withdrew-gaslimit = "0x350000"
 
 # .. and so on.
