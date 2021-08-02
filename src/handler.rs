@@ -395,7 +395,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 data.fee,
                 data.refund
             );
-        // Make sure the transaction will go through successfully (and pay relayer)
+        // Make a dry call, to make sure the transaction will go through successfully (to avoid wasting fees on invalid calls.)
         match call.call().await {
             Ok(_) => {
                 yield Withdraw(WithdrawStatus::Valid);
@@ -465,4 +465,3 @@ mod test {
         assert_eq!(expected_fee, formatted_fee);
     }
 }
-
