@@ -242,7 +242,6 @@ pub enum NetworkStatus {
     Connected,
     Failed { reason: String },
     Disconnected,
-    UnsupportedContract,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -317,11 +316,6 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     let s = stream! {
-        let supported_contracts = C::contracts();
-        if (!supported_contracts.contains_key(data.contract.to_string().as_str())) {
-            yield Network(NetworkStatus::UnsupportedContract);
-            return;
-        }
         log::debug!("Connecting to chain {:?} .. at {}", C::name(), C::endpoint());
         yield Network(NetworkStatus::Connecting);
         let provider = match ctx.evm_provider::<C>().await {
@@ -344,9 +338,15 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 return;
             }
         };
+        let relayer_address = wallet.address();
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
         let contract = AnchorContract::new(data.contract, client);
+        if (relayer_address != data.relayer) {
+            log::error!("Proof address does not match the relayer");
+            yield Error(format!("User is attempting to use a different relayer"));
+            return;
+        }
         let denomination = match contract.denomination().call().await {
             Ok(v) => v,
             Err(e) => {
@@ -363,7 +363,6 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 return;
             }
         };
-        // How can I get the withdrew_fee_percentage parameter from the ctx for this calculation?
         let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, calculate_fee(withdraw_fee_percentage, denomination));
         if (unacceptable_fee) {
             log::error!("Received a fee lower than configuration");
@@ -380,7 +379,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 data.fee,
                 data.refund
             );
-        // Make sure the transaction will go through successfully (and pay relayer)
+        // Make a dry call, to make sure the transaction will go through successfully (to avoid wasting fees on invalid calls.)
         match call.call().await {
             Ok(_) => {
                 yield Withdraw(WithdrawStatus::Valid);
@@ -427,8 +426,8 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
 
 pub fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
     let mill_fee = (fee_percent * 1_000_000.0) as u32;
-    let mill_u256: U256 = principle * (mill_fee);
-    let fee_u256: U256 = mill_u256 / (1_000_000);
+    let mill_u256 = principle * (mill_fee);
+    let fee_u256 = mill_u256 / (1_000_000);
     return fee_u256
 }
 
@@ -438,10 +437,10 @@ mod test {
 
     #[test]
     fn percent_fee() {
-        let submitted_value: U256 = U256::from_dec_str("5000000000000000").ok().unwrap();
-        let expected_fee: U256 = U256::from_dec_str("250000000000000").ok().unwrap();
-        let withdraw_fee_percent_dec: f64 = 0.05;
-        let formatted_fee: U256 = calculate_fee(withdraw_fee_percent_dec, submitted_value);
+        let submitted_value = U256::from_dec_str("5000000000000000").ok().unwrap();
+        let expected_fee = U256::from_dec_str("250000000000000").ok().unwrap();
+        let withdraw_fee_percent_dec = 0.05f64;
+        let formatted_fee = calculate_fee(withdraw_fee_percent_dec, submitted_value);
 
         assert_eq!(expected_fee, formatted_fee);
     }
