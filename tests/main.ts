@@ -347,12 +347,12 @@ async function sunny_day() {
   console.log('Deposit Done ..');
   console.log('Starting the Relayer ..');
   const relayer = await startWebbRelayer();
-  await sleep(500); // just to wait for the relayer start-up
+  await sleep(1500); // just to wait for the relayer start-up
+  const client = new WebSocket('ws://localhost:9955/ws');
+  await new Promise((resolve) => client.on('open', resolve));
   // get all relayer information
   const relayerInfoRes = await fetch('http://localhost:9955/api/v1/info');
   const relayerInfo: any = await relayerInfoRes.json();
-  const client = new WebSocket('ws://localhost:9955/ws');
-  await new Promise((resolve) => client.on('open', resolve));
   console.log('Connected to Relayer!');
 
   client.on('message', async (data) => {
