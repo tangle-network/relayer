@@ -96,6 +96,7 @@ const PRIVATE_KEY =
   '0x000000000000000000000000000000000000000000000000000000000000dead';
 const PORT = 1998;
 const ENDPOINT = 'http://127.0.0.1:1998';
+let ganacheServer;
 let relayer;
 let recipient;
 let wallet;
@@ -114,7 +115,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
   this.timeout(30_000);
 
   before(async function () {
-    startGanacheServer();
+    ganacheServer = startGanacheServer();
     console.log('Starting the Relayer ..');
     relayer = await startWebbRelayer();
     await sleep(1500); // wait for the relayer start-up
@@ -386,6 +387,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
   });
 
   after(function () {
+    ganacheServer.close(console.error);
     client.terminate();
     relayer.kill('SIGINT');
   });
