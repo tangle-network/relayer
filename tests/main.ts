@@ -429,4 +429,4 @@ async function sunnyDay() {
   process.exit();
 }
 
-sunny_day().catch(console.error);
+sunnyDay().catch(console.error);
