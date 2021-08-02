@@ -7,7 +7,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "test": "mocha --require ts-node/register 'integration_tests/**/*.ts'"
+    "test": "mocha --require ts-node/register 'integration_tests/**/*.ts' --exit"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.2.0",
