@@ -2,7 +2,6 @@
 
 use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::sync::Arc;
 
 use anyhow::Context;
@@ -10,7 +9,6 @@ use directories_next::ProjectDirs;
 use futures::Future;
 use structopt::StructOpt;
 use warp::Filter;
-use webb::evm::ethereum_types::Address;
 
 use crate::chains::evm::EvmChain;
 use crate::context::RelayerContext;
@@ -181,7 +179,7 @@ where
                 let watcher = leaf_cache::LeavesWatcher::new(
                     chains::evm::$network::ws_endpoint(),
                     store.clone(),
-                    Address::from_str(contract)?,
+                    contract,
                 );
                 let task = async move {
                     tokio::select! {
