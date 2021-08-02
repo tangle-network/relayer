@@ -34,74 +34,13 @@ jobs:
       matrix:
         platform: [linux-musl, apple-darwin]
 
-  windows:
-    if: ${{ false }} # disable windows
-    runs-on: windows-latest
-    needs: install-cross
-    strategy:
-      matrix:
-        target:
-          # MSVC
-          - i686-pc-windows-msvc
-          - x86_64-pc-windows-msvc
-          # GNU
-          # - i686-pc-windows-gnu
-          # - x86_64-pc-windows-gnu
-    steps:
-      - uses: actions/checkout@v2
-      - name: Cache Cargo
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
-      - run: bash ci/set_rust_version.bash stable ${{ matrix.target }}
-      - run: bash ci/build.bash cargo ${{ matrix.target }} RELEASE
-      - run: |
-          cd ./target/${{ matrix.target }}/release/
-          7z a "${{ env.BIN }}.zip" "${{ env.BIN }}.exe"
-          mv "${{ env.BIN }}.zip" $GITHUB_WORKSPACE
-        shell: bash
-        # We're using using a fork of `actions/create-release` that detects
-        # whether a release is already available or not first.
-      - uses: XAMPPRocky/create-release@v1.0.2
-        id: create_release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: ${{ github.ref }}
-          # Draft should **always** be false. GitHub doesn't provide a way to
-          # get draft releases from its API, so there's no point using it.
-          draft: false
-          prerelease: false
-      - uses: actions/upload-release-asset@v1
-        id: upload-release-asset
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ env.BIN }}.zip
-          asset_name: ${{ env.BIN }}-${{ matrix.target }}.zip
-          asset_content_type: application/zip
-
   macos:
     runs-on: macos-latest
     needs: install-cross
     strategy:
       matrix:
         target:
-          # macOS
           - x86_64-apple-darwin
-          # iOS
-          # - aarch64-apple-ios
-          # - armv7-apple-ios
-          # - armv7s-apple-ios
-          # - i386-apple-ios
-          # - x86_64-apple-ios
     steps:
       - uses: actions/checkout@v2
       - name: Cache Cargo
@@ -147,45 +86,9 @@ jobs:
     strategy:
       matrix:
         target:
-          # WASM, off by default as most rust projects aren't compatible yet.
-          # - wasm32-unknown-emscripten
-          # Linux
           - aarch64-unknown-linux-gnu
-          - arm-unknown-linux-gnueabi
-          # - armv7-unknown-linux-gnueabihf
-          - i686-unknown-linux-gnu
-          - i686-unknown-linux-musl
-          # - mips-unknown-linux-gnu
-          # - mips64-unknown-linux-gnuabi64
-          # - mips64el-unknown-linux-gnuabi64
-          # - mipsel-unknown-linux-gnu
-          # - powerpc-unknown-linux-gnu
-          # - powerpc64-unknown-linux-gnu
-          # - powerpc64le-unknown-linux-gnu
-          # - s390x-unknown-linux-gnu
           - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl
-          # Android
-          # - aarch64-linux-android
-          # - arm-linux-androideabi
-          # - armv7-linux-androideabi
-          # - i686-linux-android
-          # - x86_64-linux-android
-          # *BSD
-          # The FreeBSD targets can have issues linking so they are disabled
-          # by default.
-          # - i686-unknown-freebsd
-          # - x86_64-unknown-freebsd
-          # - x86_64-unknown-netbsd
-          # Solaris
-          # - sparcv9-sun-solaris
-          # Bare Metal
-          # These are no-std embedded targets, so they will only build if your
-          # crate is `no_std` compatible.
-          # - thumbv6m-none-eabi
-          # - thumbv7em-none-eabi
-          # - thumbv7em-none-eabihf
-          # - thumbv7m-none-eabi
     steps:
       - uses: actions/checkout@v2
       - name: Cache Cargo

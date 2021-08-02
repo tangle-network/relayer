@@ -3,7 +3,9 @@ use std::path::Path;
 use serde::{Deserialize, Serialize};
 use webb::evm::ethereum_types::{Address, Secret, U256};
 
-const fn default_port() -> u16 { 9955 }
+const fn default_port() -> u16 {
+    9955
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]

@@ -11,30 +11,33 @@ anyhow = "^1"
 async-trait = "^0.1"
 async-stream = "^0.3"
 log = "^0.4"
-env_logger = "^0.8"
+env_logger = "^0.9"
 url = "^2.2"
+sled = { version = "^0.34", features = ["compression"] }
 futures = { version = "^0.3", default-features = false }
+backoff = { version = "0.3.0", features = ["tokio"] }
 serde = { version = "^1", default-features = false, features = ["derive"] }
 tokio = { version = "^1", features = ["full"] }
 warp = { version = "0.3.1", default-features = false, features = ["websocket", "tls"] }
 config = { version = "0.11", default-features = false, features = ["toml", "json"] }
 serde_json = { version = "^1", default-features = false }
-webb = { version = "0.1.0", git = "https://github.com/webb-tools/webb-rs.git" }
 structopt = { version = "^0.3", features = ["paw"] }
 paw = "^1.0"
 directories-next = "^2.0"
-
+rand = { version = "0.8", default-features = false, features = ["getrandom"] }
+hex = { version = "0.4", default-features = false }
 # just to make it compile on linux where the openssl is not available.
 # until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
 native-tls = { version = "^0.2", features = ["vendored"] }
 
+[dependencies.webb]
+version = "0.1.0"
+git = "https://github.com/webb-tools/webb-rs.git"
+default-features = false
+features = ["evm-runtime"]
 
 [dev-dependencies]
-sp-keyring = "^3"
-curve25519-dalek = "^3"
-bulletproofs = { package = "webb-bulletproofs", version = "^2", default-features = false, features = ["yoloproofs"] }
-bulletproofs-gadgets = "^2"
-merlin = "^2"
+tempfile = "^3.2"
 
 [features]
 default = []

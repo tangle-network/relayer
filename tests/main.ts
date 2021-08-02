@@ -348,8 +348,6 @@ async function sunny_day() {
   console.log('Starting the Relayer ..');
   const relayer = await startWebbRelayer();
   await sleep(1500); // just to wait for the relayer start-up
-  const client = new WebSocket('ws://localhost:9955/ws');
-  await new Promise((resolve) => client.on('open', resolve));
   // get all relayer information
   const relayerInfoRes = await fetch('http://localhost:9955/api/v1/info');
   const relayerInfo: any = await relayerInfoRes.json();
@@ -382,7 +380,7 @@ async function sunny_day() {
         )} UNIT`
       );
       console.log('Clean Exit');
-      relayer.kill('SIGTERM');
+      relayer.kill('SIGINT');
       client.close();
       process.exit(0);
     } else {
@@ -427,7 +425,7 @@ async function sunny_day() {
     process.exit(1);
   }
 
-  relayer.kill('SIGTERM');
+  relayer.kill('SIGINT');
   process.exit();
 }
 

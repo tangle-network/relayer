@@ -6,7 +6,6 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 
 use async_stream::stream;
-use chains::evm;
 use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
@@ -16,9 +15,10 @@ use webb::evm::ethereum_types::{Address, H256, U256};
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::types::Bytes;
 
-use crate::chains;
+use crate::chains::evm;
 
 use crate::context::RelayerContext;
+use crate::leaf_cache::LeafCacheStore;
 
 pub async fn accept_connection(
     ctx: &RelayerContext,
@@ -52,13 +52,13 @@ where
                 .map(Result::Ok)
                 .forward(tx)
                 .await?;
-        },
+        }
         Err(e) => {
             log::warn!("Got invalid payload: {:?}", e);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
             tx.send(Message::text(value)).await?
-        },
+        }
     };
     Ok(())
 }
@@ -93,7 +93,7 @@ pub async fn handle_relayer_info(
     /// [`crate::config::WebbRelayerConfig`].
     /// and the [`evm::EvmChain`] to match on [`evm::ChainName`].
     macro_rules! update_account_for {
-        ($f: tt, $network: ty) => {
+        ($c: expr, $f: tt, $network: ty) => {
             // first read the property (network) form the config, as mutable
             // but we also, at the same time require that we need the wallet
             // to be configured for that network, so we zip them together
@@ -101,7 +101,7 @@ pub async fn handle_relayer_info(
             //
             // after this, we update the account property with the wallet
             // address.
-            if let Some((c, w)) = config
+            if let Some((c, w)) = $c
                 .evm
                 .$f
                 .as_mut()
@@ -112,13 +112,27 @@ pub async fn handle_relayer_info(
         };
     }
 
-    update_account_for!(webb, evm::Webb);
-    update_account_for!(ganache, evm::Ganache);
-    update_account_for!(edgeware, evm::Edgeware);
-    update_account_for!(beresheet, evm::Beresheet);
-    update_account_for!(harmony, evm::Harmony);
+    update_account_for!(config, webb, evm::Webb);
+    update_account_for!(config, ganache, evm::Ganache);
+    update_account_for!(config, edgeware, evm::Edgeware);
+    update_account_for!(config, beresheet, evm::Beresheet);
+    update_account_for!(config, harmony, evm::Harmony);
 
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LeavesCacheResponse {
+    leaves: Vec<H256>,
+}
+
+pub async fn handle_leaves_cache(
+    store: Arc<crate::leaf_cache::SledLeafCache>,
+    contract: Address,
+) -> Result<impl warp::Reply, Infallible> {
+    let leaves = store.get_leaves(contract).unwrap();
+    Ok(warp::reply::json(&LeavesCacheResponse { leaves }))
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -255,6 +269,7 @@ pub enum WithdrawStatus {
         tx_hash: H256,
     },
     Valid,
+    DroppedFromMemPool,
     Errored {
         reason: String,
     },
@@ -284,27 +299,27 @@ pub fn handle_evm<'a>(
         Edgeware(c) => match c {
             EvmEdgewareCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Edgeware>(ctx, proof)
-            },
+            }
         },
         Harmony(c) => match c {
             EvmHarmonyCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Harmony>(ctx, proof)
-            },
+            }
         },
         Beresheet(c) => match c {
             EvmBeresheetCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Beresheet>(ctx, proof)
-            },
+            }
         },
         Ganache(c) => match c {
             EvmGanacheCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Ganache>(ctx, proof)
-            },
+            }
         },
         Webb(c) => match c {
             EvmWebbCommand::RelayWithdrew(proof) => {
                 handle_evm_withdrew::<evm::Webb>(ctx, proof)
-            },
+            }
         },
         Hedgeware(_) => todo!(),
     };
@@ -411,10 +426,14 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
             }
         };
         match tx {
-            Ok(receipt) => {
+            Ok(Some(receipt)) => {
                 log::debug!("Finlized Tx #{}", receipt.transaction_hash);
                 yield Withdraw(WithdrawStatus::Finlized { tx_hash: receipt.transaction_hash });
             },
+            Ok(None) => {
+                log::warn!("Transaction Dropped from Mempool!!");
+                yield Withdraw(WithdrawStatus::DroppedFromMemPool);
+            }
             Err(e) => {
                 let reason = e.to_string();
                 log::error!("Transaction Errored: {}", reason);

@@ -1,4 +1,4 @@
 [toolchain]
-channel = "nightly-2021-03-24"
+channel = "stable"
 components = ["rustfmt", "clippy"]
 targets = []
