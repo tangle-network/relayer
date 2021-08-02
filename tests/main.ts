@@ -317,7 +317,7 @@ async function handleMessage(data: any): Promise<Result> {
   }
 }
 
-async function sunny_day() {
+async function sunnyDay() {
   provider = new ethers.providers.JsonRpcProvider(testedChain.endpoint);
   wallet = new ethers.Wallet(PRIVATE_KEY, provider);
 
