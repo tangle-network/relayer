@@ -378,7 +378,6 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 return;
             }
         };
-        // How can I get the withdrew_fee_percentage parameter from the ctx for this calculation?
         let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, calculate_fee(withdraw_fee_percentage, denomination));
         if (unacceptable_fee) {
             log::error!("Received a fee lower than configuration");
