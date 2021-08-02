@@ -347,7 +347,7 @@ async function main() {
   console.log('Deposit Done ..');
   console.log('Starting the Relayer ..');
   const relayer = await startWebbRelayer();
-  await sleep(500); // just to wait for the relayer start-up
+  await sleep(1500); // just to wait for the relayer start-up
   // get all relayer information
   const relayerInfoRes = await fetch('http://localhost:9955/api/v1/info');
   const relayerInfo: any = await relayerInfoRes.json();
@@ -382,7 +382,7 @@ async function main() {
         )} UNIT`
       );
       console.log('Clean Exit');
-      relayer.kill('SIGTERM');
+      relayer.kill('SIGINT');
       client.close();
       process.exit(0);
     } else {
@@ -427,7 +427,7 @@ async function main() {
     process.exit(1);
   }
 
-  relayer.kill('SIGTERM');
+  relayer.kill('SIGINT');
   process.exit();
 }
 
