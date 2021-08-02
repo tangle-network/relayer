@@ -5,7 +5,7 @@ export type RelayerChainConfig = {
   withdrewFeePercentage: number;
   withdrewGaslimit: string;
   account: string;
-}
+};
 
 export const generateWithdrawRequest = (
   chainName: string,
@@ -29,16 +29,18 @@ export const generateWithdrawRequest = (
   },
 });
 
-export const getRelayerConfig = async (chainName: string): Promise<RelayerChainConfig> => {
+export const getRelayerConfig = async (
+  chainName: string
+): Promise<RelayerChainConfig> => {
   const relayerInfoRes = await fetch('http://localhost:9955/api/v1/info');
   const relayerInfo: any = await relayerInfoRes.json();
-  
+
   return {
     account: relayerInfo.evm[chainName].account,
     withdrewFeePercentage: relayerInfo.evm[chainName].withdrewFeePercentage,
     withdrewGaslimit: relayerInfo.evm[chainName].withdrewGaslimit,
   };
-}
+};
 
 export async function startWebbRelayer() {
   const proc = spawn('../target/debug/webb-relayer', [
@@ -71,6 +73,8 @@ export enum Result {
 
 export function handleMessage(data: any): Result {
   if (data.error || data.withdraw?.errored) {
+    return Result.Errored;
+  } else if (data.network === 'invalidRelayerAddress') {
     return Result.Errored;
   } else if (data.withdraw?.finlized) {
     return Result.CleanExit;

@@ -5,8 +5,22 @@ import WebSocket from 'ws';
 import nativeAnchorContract from '../build/contracts/NativeAnchor.json';
 import verifierContract from '../build/contracts/Verifier.json';
 import hasherContract from '../build/Hasher.json';
-import { getAnchorDenomination, deposit, generateSnarkProof, getDepositLeavesFromChain, calculateFee } from '../proofUtils';
-import { generateWithdrawRequest, RelayerChainConfig, getRelayerConfig, sleep, handleMessage, Result, startWebbRelayer } from '../relayerUtils';
+import {
+  getAnchorDenomination,
+  deposit,
+  generateSnarkProof,
+  getDepositLeavesFromChain,
+  calculateFee,
+} from '../proofUtils';
+import {
+  generateWithdrawRequest,
+  RelayerChainConfig,
+  getRelayerConfig,
+  sleep,
+  handleMessage,
+  Result,
+  startWebbRelayer,
+} from '../relayerUtils';
 
 function startGanacheServer() {
   const ganacheServer = ganache.server({
@@ -78,7 +92,8 @@ async function deployNativeAnchor(wallet: ethers.Wallet) {
   return nativeAnchorAddress.address;
 }
 
-const PRIVATE_KEY = '0x000000000000000000000000000000000000000000000000000000000000dead'
+const PRIVATE_KEY =
+  '0x000000000000000000000000000000000000000000000000000000000000dead';
 const PORT = 1998;
 const ENDPOINT = 'http://127.0.0.1:1998';
 let relayer;
@@ -95,51 +110,55 @@ let client: WebSocket;
 let relayerChainInfo: RelayerChainConfig;
 
 describe('Ganache Relayer Withdraw Tests', function () {
-
   // increase the timeout for relayer tests
-  this.timeout(30000);
+  this.timeout(30_000);
 
-  before(async function (){
+  before(async function () {
     startGanacheServer();
     console.log('Starting the Relayer ..');
     relayer = await startWebbRelayer();
-    await sleep(500); // wait for the relayer start-up
-    
+    await sleep(1500); // wait for the relayer start-up
+
     provider = new ethers.providers.WebSocketProvider(ENDPOINT);
     wallet = new ethers.Wallet(PRIVATE_KEY, provider);
-  
+
     recipient = ethers.utils.getAddress(
       '0xe8f999AC5DAa08e134735016FAcE0D6439baFF94'
     );
     startingRecipientBalance = await provider.getBalance(recipient);
 
-    contractAddress = await deployNativeAnchor(wallet);  
-    contractDenomination = await getAnchorDenomination(contractAddress, provider);
-    
+    contractAddress = await deployNativeAnchor(wallet);
+    contractDenomination = await getAnchorDenomination(
+      contractAddress,
+      provider
+    );
+
     // get the info from the relayer
     relayerChainInfo = await getRelayerConfig('ganache');
     console.log({ relayerChainInfo });
-  
+
     // save the relayer configured parameters
-    calculatedFee = calculateFee(relayerChainInfo.withdrewFeePercentage, contractDenomination);
+    calculatedFee = calculateFee(
+      relayerChainInfo.withdrewFeePercentage,
+      contractDenomination
+    );
   });
 
-  describe('Sunny day setup', function() {
-
-    before(async function(){
+  describe('Sunny day setup', function () {
+    before(async function () {
       // make a deposit
       const depositArgs = await deposit(contractAddress, wallet);
 
       // get the leaves
       const leaves = await getDepositLeavesFromChain(contractAddress, provider);
-      
+
       // generate the withdraw tx to send to relayer
       const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
         leaves,
         depositArgs,
         recipient,
         relayerChainInfo.account,
-        calculatedFee,
+        calculatedFee
       );
 
       proof = zkProof;
@@ -149,10 +168,9 @@ describe('Ganache Relayer Withdraw Tests', function () {
       client = new WebSocket('ws://localhost:9955/ws');
       await new Promise((resolve) => client.on('open', resolve));
       console.log('Connected to Relayer!');
-    })
+    });
 
-    it('should work in sunny day scenario', function(done) {
-
+    it('should work in sunny day scenario', function (done) {
       // Setup relayer interaction with logging
       client.on('message', async (data) => {
         console.log('Received data from the relayer');
@@ -169,7 +187,11 @@ describe('Ganache Relayer Withdraw Tests', function () {
           // check the recipient balance
           const endingRecipientBalance = await provider.getBalance(recipient);
           const changeInBalance = contractDenomination - calculatedFee;
-          assert(endingRecipientBalance.eq(startingRecipientBalance + changeInBalance));
+          assert(
+            endingRecipientBalance.eq(
+              startingRecipientBalance + changeInBalance
+            )
+          );
           done();
         }
       });
@@ -177,8 +199,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
         console.log('[E]', err);
         done('Client connection errored in sunny day');
       });
-  
-      const req = generateWithdrawRequest('ganache', contractAddress, proof, args);
+
+      const req = generateWithdrawRequest(
+        'ganache',
+        contractAddress,
+        proof,
+        args
+      );
       if (client.readyState === client.OPEN) {
         const data = JSON.stringify(req);
         console.log('Sending Proof to the Relayer ..');
@@ -196,27 +223,26 @@ describe('Ganache Relayer Withdraw Tests', function () {
       }
     });
 
-    after(async function() {
+    after(async function () {
       client.terminate();
     });
   });
 
-  describe('invalid relayer address setup', function() {
-
-    before(async function() {
+  describe('invalid relayer address setup', function () {
+    before(async function () {
       // make a deposit
       const depositArgs = await deposit(contractAddress, wallet);
 
       // get the leaves
       const leaves = await getDepositLeavesFromChain(contractAddress, provider);
-      
+
       // generate the withdraw tx to send to relayer
       const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
         leaves,
         depositArgs,
         recipient,
         recipient,
-        calculatedFee,
+        calculatedFee
       );
 
       proof = zkProof;
@@ -228,7 +254,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
       console.log('Connected to Relayer!');
     });
 
-    it('Should not send transaction with different relayer address', function(done) {
+    it('Should not send transaction with different relayer address', function (done) {
       // Setup relayer interaction with logging
       client.on('message', async (data) => {
         console.log('Received data from the relayer');
@@ -236,7 +262,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         const msg = JSON.parse(data as string);
         const result = handleMessage(msg);
         if (result === Result.Errored) {
-          expect(msg).to.deep.equal({"error":"User is attempting to use a different relayer"});
+          // it should be errored.
           done();
         } else if (result === Result.Continue) {
           // all good.
@@ -250,8 +276,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
         console.log('[E]', err);
         done('Client connection errored unexpectedly');
       });
-  
-      const req = generateWithdrawRequest('ganache', contractAddress, proof, args);
+
+      const req = generateWithdrawRequest(
+        'ganache',
+        contractAddress,
+        proof,
+        args
+      );
       if (client.readyState === client.OPEN) {
         const data = JSON.stringify(req);
         console.log('Sending Proof to the Relayer ..');
@@ -267,29 +298,28 @@ describe('Ganache Relayer Withdraw Tests', function () {
         console.error('Relayer Connection closed!');
         done('Client error, not OPEN');
       }
-    })
+    });
 
-    after(function() {
+    after(function () {
       client.terminate();
-    })
+    });
   });
 
-  describe('invalid fee setup', function() {
-
-    before(async function() {
+  describe('invalid fee setup', function () {
+    before(async function () {
       // make a deposit
       const depositArgs = await deposit(contractAddress, wallet);
 
       // get the leaves
       const leaves = await getDepositLeavesFromChain(contractAddress, provider);
-      
+
       // generate the withdraw tx to send to relayer
       const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
         leaves,
         depositArgs,
         recipient,
         relayerChainInfo.account,
-        "0",
+        '0'
       );
 
       proof = zkProof;
@@ -309,7 +339,10 @@ describe('Ganache Relayer Withdraw Tests', function () {
         const msg = JSON.parse(data as string);
         const result = handleMessage(msg);
         if (result === Result.Errored) {
-          expect(msg).to.deep.equal({"error":"User sent a fee that is too low \"0\""});
+          expect(msg).to.deep.equal({
+            error:
+              'User sent a fee that is too low 0 but expected 50000000000000000',
+          });
           done();
         } else if (result === Result.Continue) {
           // all good.
@@ -324,7 +357,12 @@ describe('Ganache Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateWithdrawRequest('ganache', contractAddress, proof, args);
+      const req = generateWithdrawRequest(
+        'ganache',
+        contractAddress,
+        proof,
+        args
+      );
       if (client.readyState === client.OPEN) {
         const data = JSON.stringify(req);
         console.log('Sending Proof to the Relayer ..');
@@ -342,13 +380,14 @@ describe('Ganache Relayer Withdraw Tests', function () {
       }
     });
 
-    after(function() {
+    after(function () {
       client.terminate();
-    })
-
+    });
   });
 
   after(function () {
+    client.terminate();
     relayer.kill('SIGINT');
   });
 });
+
