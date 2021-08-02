@@ -1,3 +1,5 @@
+import 'source-map-support/register';
+
 import circomlib from 'circomlib';
 import crypto from 'crypto';
 import { ethers } from 'ethers';
@@ -135,13 +137,18 @@ function createDeposit() {
   return deposit;
 }
 
-async function deposit(contractAddress: string) {
-  const deposit = createDeposit();
+function makeAnchorContract(address: string) {
   const nativeAnchorInstance = new ethers.Contract(
-    contractAddress,
+    address,
     nativeAnchorContract.abi,
     wallet
   );
+  return nativeAnchorInstance;
+}
+
+async function deposit(contractAddress: string) {
+  const deposit = createDeposit();
+  const nativeAnchorInstance = makeAnchorContract(contractAddress);
   const toFixedHex = (number: number | Buffer, length = 32) =>
     '0x' +
     (number instanceof Buffer
@@ -227,7 +234,9 @@ async function generateMerkleProof(deposit: any, contractAddress: string) {
 async function generateSnarkProof(
   deposit: any,
   recipient: string,
-  contractAddress: string
+  contractAddress: string,
+  relayer: string,
+  fee: number
 ) {
   // find the inputs that correspond to the path for the deposit
   const { root, path_elements, path_index } = await generateMerkleProof(
@@ -246,9 +255,9 @@ async function generateSnarkProof(
     // public
     root: root,
     nullifierHash: deposit.nullifierHash,
-    relayer: 0,
+    relayer: snarkjs.bigInt(relayer),
     recipient: snarkjs.bigInt(recipient),
-    fee: 0,
+    fee,
     refund: 0,
 
     // private
@@ -317,6 +326,12 @@ async function handleMessage(data: any): Promise<Result> {
   }
 }
 
+function calculateFee(feePercent: number, denomination: any): any {
+  const millFee = (feePercent * 1_000_000).toFixed(0);
+  const mill = BigInt(denomination) / BigInt(millFee);
+  return mill / BigInt(1_000_000);
+}
+
 async function sunnyDay() {
   provider = new ethers.providers.JsonRpcProvider(testedChain.endpoint);
   wallet = new ethers.Wallet(PRIVATE_KEY, provider);
@@ -348,6 +363,8 @@ async function sunnyDay() {
   console.log('Starting the Relayer ..');
   const relayer = await startWebbRelayer();
   await sleep(1500); // just to wait for the relayer start-up
+  const client = new WebSocket('ws://localhost:9955/ws');
+  await new Promise((resolve) => client.on('open', resolve));
   // get all relayer information
   const relayerInfoRes = await fetch('http://localhost:9955/api/v1/info');
   const relayerInfo: any = await relayerInfoRes.json();
@@ -394,13 +411,22 @@ async function sunnyDay() {
     process.exit(1);
   });
   console.log('Generating zkProof to do a withdraw ..');
+  const relayerChainInfo = relayerInfo.evm[testedChain.name];
+  console.log(relayerChainInfo);
+  const nativeAnchorInstance = makeAnchorContract(testedChain.contractAddress);
+  const denomination = await nativeAnchorInstance.functions.denomination!();
+  const fee = calculateFee(
+    relayerChainInfo.withdrewFeePercentage,
+    denomination
+  );
   const { proof, args } = await generateSnarkProof(
     depositArgs,
     recipient,
-    contractAddress
+    contractAddress,
+    ethers.utils.getAddress(relayerChainInfo.account),
+    fee
   );
   console.log('Proof Generated!');
-  const relayerChainInfo = relayerInfo.evm[testedChain.name];
   console.log({ relayerChainInfo });
   const req = generateWithdrawRequest(testedChain, proof, args);
   if (client.readyState === client.OPEN) {

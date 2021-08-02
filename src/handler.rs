@@ -257,6 +257,7 @@ pub enum NetworkStatus {
     Failed { reason: String },
     Disconnected,
     UnsupportedContract,
+    InvalidRelayerAddress,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -333,10 +334,26 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
     use CommandResponse::*;
     let s = stream! {
         let supported_contracts = C::contracts();
-        if (!supported_contracts.contains_key(data.contract.to_string().as_str())) {
+        if (!supported_contracts.contains_key(&data.contract)) {
             yield Network(NetworkStatus::UnsupportedContract);
             return;
         }
+        let wallet = match ctx.evm_wallet::<C>().await {
+            Ok(v) => v,
+            Err(e) => {
+                log::error!("Misconfigured Network: {}", e);
+                yield Error(format!("Misconfigured Network: {:?}", C::name()));
+                return;
+            }
+        };
+        // validate the relayer address first before trying
+        // send the transaction.
+        let relayer_address = wallet.address();
+        if (data.relayer != relayer_address) {
+            yield Network(NetworkStatus::InvalidRelayerAddress);
+            return;
+        }
+
         log::debug!("Connecting to chain {:?} .. at {}", C::name(), C::endpoint());
         yield Network(NetworkStatus::Connecting);
         let provider = match ctx.evm_provider::<C>().await {
@@ -348,14 +365,6 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 let reason = e.to_string();
                 yield Network(NetworkStatus::Failed { reason });
                 yield Network(NetworkStatus::Disconnected);
-                return;
-            }
-        };
-        let wallet = match ctx.evm_wallet::<C>().await {
-            Ok(v) => v,
-            Err(e) => {
-                log::error!("Misconfigured Network: {}", e);
-                yield Error(format!("Misconfigured Network: {:?}", C::name()));
                 return;
             }
         };
@@ -378,10 +387,16 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
                 return;
             }
         };
-        let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, calculate_fee(withdraw_fee_percentage, denomination));
+        let expected_fee = calculate_fee(withdraw_fee_percentage, denomination);
+        let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, expected_fee);
         if (unacceptable_fee) {
             log::error!("Received a fee lower than configuration");
-            yield Error(format!("User sent a fee that is too low {:?}", data.fee.to_string()));
+            let msg = format!(
+                "User sent a fee that is too low {} but expected {}",
+                data.fee,
+                expected_fee,
+            );
+            yield Error(msg);
             return;
         }
 
@@ -447,7 +462,7 @@ pub fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
     let mill_fee = (fee_percent * 1_000_000.0) as u32;
     let mill_u256: U256 = principle * (mill_fee);
     let fee_u256: U256 = mill_u256 / (1_000_000);
-    return fee_u256
+    fee_u256
 }
 
 #[cfg(test)]
@@ -456,10 +471,12 @@ mod test {
 
     #[test]
     fn percent_fee() {
-        let submitted_value = U256::from_dec_str("5000000000000000").ok().unwrap();
+        let submitted_value =
+            U256::from_dec_str("5000000000000000").ok().unwrap();
         let expected_fee = U256::from_dec_str("250000000000000").ok().unwrap();
         let withdraw_fee_percent_dec = 0.05f64;
-        let formatted_fee = calculate_fee(withdraw_fee_percent_dec, submitted_value);
+        let formatted_fee =
+            calculate_fee(withdraw_fee_percent_dec, submitted_value);
 
         assert_eq!(expected_fee, formatted_fee);
     }

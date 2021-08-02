@@ -22,6 +22,9 @@ pub mod substrate {
 
 pub mod evm {
     use std::collections::HashMap;
+    use std::str::FromStr;
+
+    use webb::evm::ethereum_types::Address;
     /// All Supported Chains by Webb Realyer.
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
     pub enum ChainName {
@@ -37,7 +40,7 @@ pub mod evm {
         fn endpoint() -> &'static str;
         fn ws_endpoint() -> &'static str;
         fn chain_id() -> u32;
-        fn contracts() -> HashMap<&'static str, u128>;
+        fn contracts() -> HashMap<Address, u128>;
     }
 
     macro_rules! define_chain {
@@ -63,11 +66,12 @@ pub mod evm {
 
                 fn chain_id() -> u32 { $chain_id }
 
-                fn contracts() -> HashMap<&'static str, u128> {
+                fn contracts() -> HashMap<Address, u128> {
                     #[allow(unused_mut)]
                     let mut map = HashMap::new();
                     $(
-                        map.insert($address, $size);
+                        let address = Address::from_str($address).unwrap();
+                        map.insert(address, $size);
                     )*
                     map
                 }
@@ -92,7 +96,7 @@ pub mod evm {
             contracts: [
                 {
                     size: 1,
-                    address: "0xF759e19b1142079b1963e1E323B07e4AC67aB899",
+                    address: "0xf759e19b1142079b1963e1e323b07e4ac67ab899",
                 }
             ],
         }
@@ -106,19 +110,19 @@ pub mod evm {
             contracts: [
                 {
                     size: 10,
-                    address: "0x5f771fc87F87DB48C9fB11aA228D833226580689",
+                    address: "0x5f771fc87f87db48c9fb11aa228d833226580689",
                 },
                 {
                     size: 100,
-                    address: "0x2ee2e51cab1561E4482cacc8Be8b46CE61E46991",
+                    address: "0x2ee2e51cab1561e4482cacc8be8b46ce61e46991",
                 },
                 {
-                    size: 1000,
-                    address: "0x5696b4AfBc169454d7FA26e0a41828d445CFae20",
+                    size: 1_000,
+                    address: "0x5696b4afbc169454d7fa26e0a41828d445cfae20",
                 },
                 {
-                    size: 10000,
-                    address: "0x626FEc5Ffa7Bf1EE8CEd7daBdE545630473E3ABb",
+                    size: 10_000,
+                    address: "0x626fec5ffa7bf1ee8ced7dabde545630473e3abb",
                 }
             ],
         }
@@ -132,19 +136,19 @@ pub mod evm {
             contracts: [
                 {
                     size: 100,
-                    address: "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a",
+                    address: "0x7cd1f52e5eedf753e99d945276a725ce533aad1a",
                 },
                 {
-                    size: 1000,
-                    address: "0xD7f9BB9957100310aD397D2bA31771D939BD4731",
+                    size: 1_000,
+                    address: "0xd7f9bb9957100310ad397d2ba31771d939bd4731",
                 },
                 {
-                    size: 10000,
-                    address: "0xeE2eB8F142e48e5D1bDD34e0924Ed3B4aa0d4222",
+                    size: 10_000,
+                    address: "0xee2eb8f142e48e5d1bdd34e0924ed3b4aa0d4222",
                 },
                 {
-                    size: 100000,
-                    address: "0x7cd173094eF78FFAeDee4e14576A73a79aA716ac",
+                    size: 100_000,
+                    address: "0x7cd173094ef78ffaedee4e14576a73a79aa716ac",
                 }
             ],
         }

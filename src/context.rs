@@ -79,25 +79,24 @@ impl RelayerContext {
             ChainName::Edgeware if evm.edgeware.is_some() => {
                 let c = evm.edgeware.clone().unwrap();
                 Ok(c.withdrew_fee_percentage)
-            },
+            }
             ChainName::Webb if evm.webb.is_some() => {
                 let c = evm.webb.clone().unwrap();
                 Ok(c.withdrew_fee_percentage)
-            },
+            }
             ChainName::Ganache if evm.ganache.is_some() => {
                 let c = evm.ganache.clone().unwrap();
                 Ok(c.withdrew_fee_percentage)
-            },
+            }
             ChainName::Beresheet if evm.beresheet.is_some() => {
                 let c = evm.beresheet.clone().unwrap();
                 Ok(c.withdrew_fee_percentage)
-            },
+            }
             ChainName::Harmony if evm.harmony.is_some() => {
                 let c = evm.harmony.clone().unwrap();
                 Ok(c.withdrew_fee_percentage)
-            },
+            }
             _ => anyhow::bail!("Chain Fee Not Configured!"),
         }
     }
-
 }
