@@ -237,7 +237,7 @@ where
         Ok(())
     }
 
-    #[tracing::instrument]
+    #[tracing::instrument(skip(self), fields(contract = %self.contract))]
     async fn watch_for_events(&self) -> Result<(), backoff::Error<Error>> {
         tracing::trace!("Connecting to {}", self.ws_endpoint);
         let endpoint = url::Url::parse(&self.ws_endpoint)
@@ -261,7 +261,7 @@ where
             client.get_block_number().map_err(Error::from).await?;
         tracing::trace!("And Last Block {}", current_block_number);
         let step = U64::from(50);
-        while block != current_block_number {
+        while block <= current_block_number {
             tracing::trace!("Reading from #{} to #{}", block + 1, block + step);
             let filter = contract
                 .deposit_filter()
@@ -306,6 +306,7 @@ where
                 contract.address(),
                 &[(e.leaf_index, H256::from_slice(&e.commitment))],
             )?;
+            tracing::trace!("Got new Event at block {}", log.block_number);
             self.store
                 .set_last_block_number(contract.address(), log.block_number)?;
         }

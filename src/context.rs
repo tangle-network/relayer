@@ -52,7 +52,8 @@ impl RelayerContext {
             Webb = webb,
             Ganache = ganache,
             Beresheet = beresheet,
-            Harmony = harmony
+            Harmony = harmony,
+            Rinkeby = rinkeby
         }
     }
 
@@ -78,7 +79,8 @@ impl RelayerContext {
             Webb = webb,
             Ganache = ganache,
             Beresheet = beresheet,
-            Harmony = harmony
+            Harmony = harmony,
+            Rinkeby = rinkeby
         }
     }
 
@@ -104,7 +106,8 @@ impl RelayerContext {
             Webb = webb,
             Ganache = ganache,
             Beresheet = beresheet,
-            Harmony = harmony
+            Harmony = harmony,
+            Rinkeby = rinkeby
         }
     }
 }

@@ -85,6 +85,7 @@ That's very useful, you could create an empty config file, with empty values so 
     * Ganache (evm.ganache)
     * Beresheet (evm.beresheet)
     * Harmony (evm.harmony)
+    * Rinkeby (evm.rinkeby)
 
 > Note: as of the current time of writing this we don't support any substrate based relaying transactions
 we plan to add them back soon, once we add them to the dApp.

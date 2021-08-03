@@ -93,6 +93,7 @@ pub struct EvmConfig {
     pub hedgeware: Option<CommonEvmConfig>,
     pub beresheet: Option<CommonEvmConfig>,
     pub harmony: Option<CommonEvmConfig>,
+    pub rinkeby: Option<CommonEvmConfig>,
 }
 
 pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
