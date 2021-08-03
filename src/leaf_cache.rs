@@ -263,10 +263,10 @@ where
         let step = U64::from(50);
         while block < current_block_number {
             let dest_block = std::cmp::min(block + step, current_block_number);
-            tracing::trace!("Reading from #{} to #{}", block, dest_block);
+            tracing::trace!("Reading from #{} to #{}", block + 1, dest_block);
             let filter = contract
                 .deposit_filter()
-                .from_block(block)
+                .from_block(block + 1)
                 .to_block(dest_block);
             let missing_events = filter
                 .query_with_meta()
