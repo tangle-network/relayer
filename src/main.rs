@@ -175,6 +175,7 @@ where
             let contracts = chains::evm::$network::contracts()
                 .into_keys()
                 .collect::<Vec<_>>();
+            log::debug!("Start network leaf watcher for {}", stringify!($network));
             for contract in contracts {
                 let watcher = leaf_cache::LeavesWatcher::new(
                     chains::evm::$network::ws_endpoint(),

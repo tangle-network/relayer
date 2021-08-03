@@ -173,7 +173,7 @@ where
     }
 
     async fn watch_for_events(&self) -> Result<(), backoff::Error<Error>> {
-        log::debug!("Connecting to {}", self.ws_endpoint);
+        log::trace!("Connecting to {}", self.ws_endpoint);
         let endpoint = url::Url::parse(&self.ws_endpoint)
             .map_err(Error::from)
             .map_err(backoff::Error::Permanent)?;
@@ -183,18 +183,18 @@ where
         let client = Arc::new(provider);
         let contract = AnchorContract::new(self.contract, client.clone());
         let block = self.store.get_last_block_number()?;
-        log::debug!("Starting from block {}", block + 1);
+        log::trace!("Starting from block {}", block + 1);
         let filter = contract.deposit_filter().from_block(block + 1);
         let missing_events =
             filter.query_with_meta().map_err(Error::from).await?;
-        log::debug!("Got #{} missing events", missing_events.len());
+        log::trace!("Got #{} missing events", missing_events.len());
         for (e, log) in missing_events {
             self.store.insert_leaves(
                 contract.address(),
                 &[(e.leaf_index, H256::from_slice(&e.commitment))],
             )?;
             let old = self.store.set_last_block_number(log.block_number)?;
-            log::debug!("Going from #{} to #{}", old, log.block_number);
+            log::trace!("Going from #{} to #{}", old, log.block_number);
         }
         let events = filter.subscribe().map_err(Error::from).await?;
         let mut stream = events.with_meta();

@@ -104,25 +104,25 @@ pub mod evm {
 
     define_chain! {
         Beresheet => {
-            endpoint: "http://beresheet1.edgewa.re:9933",
-            ws_endpoint: "ws://beresheet1.edgewa.re:9933",
+            endpoint: "https://beresheet.edgewa.re/evm",
+            ws_endpoint: "wss://beresheet.edgewa.re/evm",
             chain_id: 2022,
             contracts: [
                 {
                     size: 10,
-                    address: "0x5f771fc87f87db48c9fb11aa228d833226580689",
+                    address: "0xf0EA8Fa17daCF79434d10C51941D8Fc24515AbE3",
                 },
                 {
                     size: 100,
-                    address: "0x2ee2e51cab1561e4482cacc8be8b46ce61e46991",
+                    address: "0xc0d863EE313636F067dCF89e6ea904AD5f8DEC65",
                 },
                 {
                     size: 1_000,
-                    address: "0x5696b4afbc169454d7fa26e0a41828d445cfae20",
+                    address: "0xc7c6152214d0Db4e161Fa67fB62811Be7326834A",
                 },
                 {
                     size: 10_000,
-                    address: "0x626fec5ffa7bf1ee8ced7dabde545630473e3abb",
+                    address: "0xf0290d80880E3c59512e454E303FcD48f431acA3",
                 }
             ],
         }
@@ -136,19 +136,19 @@ pub mod evm {
             contracts: [
                 {
                     size: 100,
-                    address: "0x7cd1f52e5eedf753e99d945276a725ce533aad1a",
+                    address: "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a",
                 },
                 {
                     size: 1_000,
-                    address: "0xd7f9bb9957100310ad397d2ba31771d939bd4731",
+                    address: "0xD7f9BB9957100310aD397D2bA31771D939BD4731",
                 },
                 {
                     size: 10_000,
-                    address: "0xee2eb8f142e48e5d1bdd34e0924ed3b4aa0d4222",
+                    address: "0xeE2eB8F142e48e5D1bDD34e0924Ed3B4aa0d4222",
                 },
                 {
                     size: 100_000,
-                    address: "0x7cd173094ef78ffaedee4e14576a73a79aa716ac",
+                    address: "0x7cd173094eF78FFAeDee4e14576A73a79aA716ac",
                 }
             ],
         }
