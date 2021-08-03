@@ -24,7 +24,9 @@ Example:
 
 * Create a `config.toml` file and add the following configuration
 
-> By default `webb-relayer` looks for the config at ~/.config/webb-relayer/config.toml on Unix.
+	> On Unix `webb-relayer` looks for the config at ~/.config/webb-relayer/config.toml .
+
+	> On MacOS `webb-relayer` looks for the config at ~/Library/Application Support/tools.webb.webb-relayer/config.toml .
 
 ```toml
 # Webb Relayer configuration
