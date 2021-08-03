@@ -47,14 +47,14 @@ where
             handle_cmd(ctx.clone(), cmd)
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
-                .inspect(|v| log::trace!("Sending: {}", v))
+                .inspect(|v| tracing::trace!("Sending: {}", v))
                 .map(Message::text)
                 .map(Result::Ok)
                 .forward(tx)
                 .await?;
         }
         Err(e) => {
-            log::warn!("Got invalid payload: {:?}", e);
+            tracing::warn!("Got invalid payload: {:?}", e);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
             tx.send(Message::text(value)).await?
@@ -341,7 +341,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         let wallet = match ctx.evm_wallet::<C>().await {
             Ok(v) => v,
             Err(e) => {
-                log::error!("Misconfigured Network: {}", e);
+                tracing::error!("Misconfigured Network: {}", e);
                 yield Error(format!("Misconfigured Network: {:?}", C::name()));
                 return;
             }
@@ -354,7 +354,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
             return;
         }
 
-        log::debug!("Connecting to chain {:?} .. at {}", C::name(), C::endpoint());
+        tracing::debug!("Connecting to chain {:?} .. at {}", C::name(), C::endpoint());
         yield Network(NetworkStatus::Connecting);
         let provider = match ctx.evm_provider::<C>().await {
             Ok(value) => {
@@ -371,7 +371,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         let wallet = match ctx.evm_wallet::<C>().await {
             Ok(v) => v,
             Err(e) => {
-                log::error!("Misconfigured Network: {}", e);
+                tracing::error!("Misconfigured Network: {}", e);
                 yield Error(format!("Misconfigured Network: {:?}", C::name()));
                 return;
             }
@@ -383,7 +383,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         let denomination = match contract.denomination().call().await {
             Ok(v) => v,
             Err(e) => {
-                log::error!("Misconfigured Contract Denomination: {}", e);
+                tracing::error!("Misconfigured Contract Denomination: {}", e);
                 yield Error(format!("Misconfigured Contract: {:?}", data.contract));
                 return;
             }
@@ -391,7 +391,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         let withdraw_fee_percentage = match ctx.fee_percentage::<C>(){
             Ok(v) => v,
             Err(e) => {
-                log::error!("Misconfigured Fee in Config: {}", e);
+                tracing::error!("Misconfigured Fee in Config: {}", e);
                 yield Error(format!("Misconfigured Fee: {:?}", C::name()));
                 return;
             }
@@ -399,7 +399,7 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         let expected_fee = calculate_fee(withdraw_fee_percentage, denomination);
         let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, expected_fee);
         if unacceptable_fee {
-            log::error!("Received a fee lower than configuration");
+            tracing::error!("Received a fee lower than configuration");
             let msg = format!(
                 "User sent a fee that is too low {} but expected {}",
                 data.fee,
@@ -423,44 +423,44 @@ fn handle_evm_withdrew<'a, C: evm::EvmChain>(
         match call.call().await {
             Ok(_) => {
                 yield Withdraw(WithdrawStatus::Valid);
-                log::debug!("Proof is valid");
+                tracing::debug!("Proof is valid");
             },
             Err(e) => {
                 let reason = e.to_string();
-                log::error!("Error Client sent an invalid proof: {}", reason);
+                tracing::error!("Error Client sent an invalid proof: {}", reason);
                 yield Withdraw(WithdrawStatus::Errored { reason });
                 return;
             }
         };
-        log::trace!("About to send Tx to {:?} Chain", C::name());
+        tracing::trace!("About to send Tx to {:?} Chain", C::name());
         let tx = match call.send().await {
             Ok(pending) => {
                 yield Withdraw(WithdrawStatus::Sent);
-                log::debug!("Tx is created! {}", *pending);
+                tracing::debug!("Tx is created! {}", *pending);
                 let result = pending.await;
-                log::debug!("Tx Submitted!");
+                tracing::debug!("Tx Submitted!");
                 yield Withdraw(WithdrawStatus::Submitted);
                 result
             },
             Err(e) => {
                 let reason = e.to_string();
-                log::error!("Error while sending Tx: {}", reason);
+                tracing::error!("Error while sending Tx: {}", reason);
                 yield Withdraw(WithdrawStatus::Errored { reason });
                 return;
             }
         };
         match tx {
             Ok(Some(receipt)) => {
-                log::debug!("Finlized Tx #{}", receipt.transaction_hash);
+                tracing::debug!("Finlized Tx #{}", receipt.transaction_hash);
                 yield Withdraw(WithdrawStatus::Finlized { tx_hash: receipt.transaction_hash });
             },
             Ok(None) => {
-                log::warn!("Transaction Dropped from Mempool!!");
+                tracing::warn!("Transaction Dropped from Mempool!!");
                 yield Withdraw(WithdrawStatus::DroppedFromMemPool);
             }
             Err(e) => {
                 let reason = e.to_string();
-                log::error!("Transaction Errored: {}", reason);
+                tracing::error!("Transaction Errored: {}", reason);
                 yield Withdraw(WithdrawStatus::Errored { reason });
             }
         };

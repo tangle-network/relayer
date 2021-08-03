@@ -25,6 +25,13 @@ pub mod evm {
     use std::str::FromStr;
 
     use webb::evm::ethereum_types::Address;
+
+    #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+    pub struct DeployedContract {
+        pub address: Address,
+        pub size: u128,
+        pub deplyed_at: u64,
+    }
     /// All Supported Chains by Webb Realyer.
     #[derive(Debug, Clone, Copy, Eq, PartialEq)]
     pub enum ChainName {
@@ -40,7 +47,7 @@ pub mod evm {
         fn endpoint() -> &'static str;
         fn ws_endpoint() -> &'static str;
         fn chain_id() -> u32;
-        fn contracts() -> HashMap<Address, u128>;
+        fn contracts() -> HashMap<Address, DeployedContract>;
     }
 
     macro_rules! define_chain {
@@ -52,6 +59,7 @@ pub mod evm {
                 $({
                     size: $size:expr,
                     address: $address:expr,
+                    at: $at:expr,
                 }),*
             ],
         }) => {
@@ -66,12 +74,17 @@ pub mod evm {
 
                 fn chain_id() -> u32 { $chain_id }
 
-                fn contracts() -> HashMap<Address, u128> {
+                fn contracts() -> HashMap<Address, DeployedContract> {
                     #[allow(unused_mut)]
                     let mut map = HashMap::new();
                     $(
                         let address = Address::from_str($address).unwrap();
-                        map.insert(address, $size);
+                        let contract = DeployedContract {
+                            address,
+                            size: $size,
+                            deplyed_at: $at,
+                        };
+                        map.insert(address, contract);
                     )*
                     map
                 }
@@ -97,6 +110,7 @@ pub mod evm {
                 {
                     size: 1,
                     address: "0xf759e19b1142079b1963e1e323b07e4ac67ab899",
+                    at: 1,
                 }
             ],
         }
@@ -105,24 +119,28 @@ pub mod evm {
     define_chain! {
         Beresheet => {
             endpoint: "https://beresheet.edgewa.re/evm",
-            ws_endpoint: "wss://beresheet.edgewa.re/evm",
+            ws_endpoint: "wss://beresheet.edgewa.re",
             chain_id: 2022,
             contracts: [
                 {
                     size: 10,
                     address: "0xf0EA8Fa17daCF79434d10C51941D8Fc24515AbE3",
+                    at: 0,
                 },
                 {
                     size: 100,
                     address: "0xc0d863EE313636F067dCF89e6ea904AD5f8DEC65",
+                    at: 0,
                 },
                 {
                     size: 1_000,
                     address: "0xc7c6152214d0Db4e161Fa67fB62811Be7326834A",
+                    at: 0,
                 },
                 {
                     size: 10_000,
                     address: "0xf0290d80880E3c59512e454E303FcD48f431acA3",
+                    at: 0,
                 }
             ],
         }
@@ -137,18 +155,22 @@ pub mod evm {
                 {
                     size: 100,
                     address: "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a",
+                    at: 12_040_000,
                 },
                 {
                     size: 1_000,
                     address: "0xD7f9BB9957100310aD397D2bA31771D939BD4731",
+                    at: 12_892_487,
                 },
                 {
                     size: 10_000,
                     address: "0xeE2eB8F142e48e5D1bDD34e0924Ed3B4aa0d4222",
+                    at: 12_892_648,
                 },
                 {
                     size: 100_000,
                     address: "0x7cd173094eF78FFAeDee4e14576A73a79aA716ac",
+                    at: 12_892_840,
                 }
             ],
         }

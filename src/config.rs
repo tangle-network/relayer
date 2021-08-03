@@ -7,6 +7,10 @@ const fn default_port() -> u16 {
     9955
 }
 
+const fn enable_leaves_watcher_default() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct WebbRelayerConfig {
@@ -67,6 +71,8 @@ pub struct CommonEvmConfig {
     pub withdrew_gaslimit: U256,
     #[serde(skip_deserializing)]
     pub account: Option<Address>,
+    #[serde(default = "enable_leaves_watcher_default")]
+    pub enable_leaves_watcher: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]

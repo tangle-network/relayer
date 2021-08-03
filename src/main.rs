@@ -27,7 +27,7 @@ const PACKAGE_ID: [&str; 3] = ["tools", "webb", "webb-relayer"];
 ///
 /// Start the relayer from a config file:
 ///
-///     $ webb-relayer -c <CONFIG_FILE_PATH>
+///     $ webb-relayer -vvv -c <CONFIG_FILE_PATH>
 #[derive(StructOpt)]
 #[structopt(name = "Webb Relayer")]
 struct Opts {
@@ -47,29 +47,34 @@ struct Opts {
 #[paw::main]
 #[tokio::main]
 async fn main(args: Opts) -> anyhow::Result<()> {
-    setup_logger(args.verbose);
+    setup_logger(args.verbose)?;
     let config = load_config(args.config_filename.clone())?;
     let ctx = RelayerContext::new(config);
-    let store = start_leave_cache_service(args.config_filename).await?;
+    let store = start_leave_cache_service(args.config_filename, &ctx).await?;
     let (addr, server) = build_relayer(ctx, store)?;
-    log::debug!("Starting the server on {}", addr);
+    tracing::info!("Starting the server on {}", addr);
     // fire the server.
     server.await;
     Ok(())
 }
 
-fn setup_logger(verbosity: i32) {
+fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
+    use tracing::Level;
     let log_level = match verbosity {
-        0 => log::LevelFilter::Error,
-        1 => log::LevelFilter::Warn,
-        2 => log::LevelFilter::Info,
-        3 => log::LevelFilter::Debug,
-        _ => log::LevelFilter::max(),
+        0 => Level::ERROR,
+        1 => Level::WARN,
+        2 => Level::INFO,
+        3 => Level::DEBUG,
+        _ => Level::TRACE,
     };
-    env_logger::builder()
-        .format_timestamp(None)
-        .filter_module("webb_relayer", log_level)
+
+    let env_filter = tracing_subscriber::EnvFilter::from_default_env()
+        .add_directive(format!("webb_relayer={}", log_level).parse()?);
+    tracing_subscriber::fmt()
+        .with_max_level(log_level)
+        .with_env_filter(env_filter)
         .init();
+    Ok(())
 }
 
 fn load_config<P>(
@@ -78,7 +83,7 @@ fn load_config<P>(
 where
     P: AsRef<Path>,
 {
-    log::debug!("Getting default dirs for webb relayer");
+    tracing::debug!("Getting default dirs for webb relayer");
     let dirs = ProjectDirs::from(
         crate::PACKAGE_ID[0],
         crate::PACKAGE_ID[1],
@@ -89,7 +94,7 @@ where
         Some(p) => p.as_ref().to_path_buf(),
         None => dirs.config_dir().join("config.toml"),
     };
-    log::trace!("Loaded Config from {} ..", config_path.display());
+    tracing::trace!("Loaded Config from {} ..", config_path.display());
     config::load(config_path).context("failed to load the config file")
 }
 
@@ -149,6 +154,7 @@ fn build_relayer(
 
 async fn start_leave_cache_service<P>(
     path: Option<P>,
+    ctx: &RelayerContext,
 ) -> anyhow::Result<leaf_cache::SledLeafCache>
 where
     P: AsRef<Path>,
@@ -171,33 +177,46 @@ where
     let store = leaf_cache::SledLeafCache::open(db_path)?;
     // some macro magic to not repeat myself.
     macro_rules! start_network_watcher_for {
-        ($network: ident) => {
-            let contracts = chains::evm::$network::contracts()
-                .into_keys()
+        ($chain: ident) => {
+            // check to see if we should enable the leaves watcher
+            // for this chain.
+            let leaf_watcher_enabled = ctx.leaves_watcher_enabled::<chains::evm::$chain>();
+            let contracts = chains::evm::$chain::contracts()
+                .into_values()
+                .filter(|_| leaf_watcher_enabled) // will skip all if `false`.
                 .collect::<Vec<_>>();
-            log::debug!("Start network leaf watcher for {}", stringify!($network));
             for contract in contracts {
                 let watcher = leaf_cache::LeavesWatcher::new(
-                    chains::evm::$network::ws_endpoint(),
+                    chains::evm::$chain::ws_endpoint(),
                     store.clone(),
-                    contract,
+                    contract.address,
+                    contract.deplyed_at,
                 );
                 let task = async move {
                     tokio::select! {
                         _ = watcher.watch() => {
-                            log::warn!("watcher for {} stopped", stringify!($network));
+                            tracing::warn!("watcher for {} stopped", stringify!($chain));
                         },
                         _ = tokio::signal::ctrl_c() => {
-                            log::debug!("Stopping the Task watcher for {}", stringify!($network));
+                            tracing::debug!(
+                                "Stopping the leaves watcher for {} ({})",
+                                stringify!($chain),
+                                contract.address,
+                            );
                         }
                     };
                 };
+                tracing::debug!(
+                    "leaves watcher for {} ({}) Started.",
+                    stringify!($chain),
+                    contract.address,
+                );
                 tokio::task::spawn(task);
             }
         };
-        ($($network: ident),+) => {
+        ($($chain: ident),+) => {
             $(
-                start_network_watcher_for!($network);
+                start_network_watcher_for!($chain);
             )+
         }
     }

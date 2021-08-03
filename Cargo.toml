@@ -10,8 +10,9 @@ once_cell = "^1.8"
 anyhow = "^1"
 async-trait = "^0.1"
 async-stream = "^0.3"
-log = "^0.4"
-env_logger = "^0.9"
+tracing = { version = "^0.1", features = ["log"] }
+tracing-futures = "^0.2"
+tracing-subscriber = { version = "^0.2", features = ["parking_lot"] }
 url = "^2.2"
 sled = { version = "^0.34", features = ["compression"] }
 futures = { version = "^0.3", default-features = false }

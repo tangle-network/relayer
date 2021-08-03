@@ -28,75 +28,83 @@ impl RelayerContext {
 
     pub async fn evm_wallet<C: EvmChain>(&self) -> anyhow::Result<LocalWallet> {
         let evm = &self.config.evm;
-        match C::name() {
-            ChainName::Edgeware if evm.edgeware.is_some() => {
-                let c = evm.edgeware.clone().unwrap();
-                let pk = c.private_key;
-                let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet =
-                    LocalWallet::from(key).with_chain_id(C::chain_id());
-                Ok(wallet)
+        // DRY
+        macro_rules! wallet {
+            ($($chain: ident = $f: ident),+) => {
+                match C::name() {
+                    $(
+                        ChainName::$chain if evm.$f.is_some() => {
+                            let c = evm.$f.clone().unwrap();
+                            let pk = c.private_key;
+                            let key = SecretKey::from_bytes(pk.as_bytes())?;
+                            let wallet =
+                                LocalWallet::from(key).with_chain_id(C::chain_id());
+                            Ok(wallet)
+                        }
+                    )+
+                    _ => anyhow::bail!("Chain Not Configured!"),
+                }
             }
-            ChainName::Webb if evm.webb.is_some() => {
-                let c = evm.webb.clone().unwrap();
-                let pk = c.private_key;
-                let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet =
-                    LocalWallet::from(key).with_chain_id(C::chain_id());
-                Ok(wallet)
-            }
-            ChainName::Ganache if evm.ganache.is_some() => {
-                let c = evm.ganache.clone().unwrap();
-                let pk = c.private_key;
-                let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet =
-                    LocalWallet::from(key).with_chain_id(C::chain_id());
-                Ok(wallet)
-            }
-            ChainName::Beresheet if evm.beresheet.is_some() => {
-                let c = evm.beresheet.clone().unwrap();
-                let pk = c.private_key;
-                let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet =
-                    LocalWallet::from(key).with_chain_id(C::chain_id());
-                Ok(wallet)
-            }
-            ChainName::Harmony if evm.harmony.is_some() => {
-                let c = evm.harmony.clone().unwrap();
-                let pk = c.private_key;
-                let key = SecretKey::from_bytes(pk.as_bytes())?;
-                let wallet =
-                    LocalWallet::from(key).with_chain_id(C::chain_id());
-                Ok(wallet)
-            }
-            _ => anyhow::bail!("Chain Not Configured!"),
+        }
+
+        wallet! {
+            Edgeware = edgeware,
+            Webb = webb,
+            Ganache = ganache,
+            Beresheet = beresheet,
+            Harmony = harmony
         }
     }
 
     pub fn fee_percentage<C: EvmChain>(&self) -> anyhow::Result<f64> {
         let evm = &self.config.evm;
-        match C::name() {
-            ChainName::Edgeware if evm.edgeware.is_some() => {
-                let c = evm.edgeware.clone().unwrap();
-                Ok(c.withdrew_fee_percentage)
+        // DRY
+        macro_rules! extract_fee_percentage {
+            ($($chain: ident = $f: ident),+) => {
+                match C::name() {
+                    $(
+                        ChainName::$chain if evm.$f.is_some() => {
+                            let c = evm.$f.clone().unwrap();
+                            Ok(c.withdrew_fee_percentage)
+                        }
+                    )+
+                    _ => anyhow::bail!("Chain Fee Not Configured!"),
+                }
             }
-            ChainName::Webb if evm.webb.is_some() => {
-                let c = evm.webb.clone().unwrap();
-                Ok(c.withdrew_fee_percentage)
+        }
+
+        extract_fee_percentage! {
+            Edgeware = edgeware,
+            Webb = webb,
+            Ganache = ganache,
+            Beresheet = beresheet,
+            Harmony = harmony
+        }
+    }
+
+    pub fn leaves_watcher_enabled<C: EvmChain>(&self) -> bool {
+        let evm = &self.config.evm;
+        // DRY
+        macro_rules! is_enabled {
+            ($($chain: ident = $f: ident),+) => {
+                match C::name() {
+                    $(
+                        ChainName::$chain if evm.$f.is_some() => {
+                            let c = evm.$f.clone().unwrap();
+                            c.enable_leaves_watcher
+                        }
+                    )+
+                    _ => false,
+                }
             }
-            ChainName::Ganache if evm.ganache.is_some() => {
-                let c = evm.ganache.clone().unwrap();
-                Ok(c.withdrew_fee_percentage)
-            }
-            ChainName::Beresheet if evm.beresheet.is_some() => {
-                let c = evm.beresheet.clone().unwrap();
-                Ok(c.withdrew_fee_percentage)
-            }
-            ChainName::Harmony if evm.harmony.is_some() => {
-                let c = evm.harmony.clone().unwrap();
-                Ok(c.withdrew_fee_percentage)
-            }
-            _ => anyhow::bail!("Chain Fee Not Configured!"),
+        }
+
+        is_enabled! {
+            Edgeware = edgeware,
+            Webb = webb,
+            Ganache = ganache,
+            Beresheet = beresheet,
+            Harmony = harmony
         }
     }
 }

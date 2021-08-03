@@ -1,3 +1,4 @@
+use std::fmt::{self, Debug};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -6,8 +7,8 @@ use ethers::prelude::*;
 use futures::prelude::*;
 use parking_lot::RwLock;
 use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
+use tracing::Instrument;
 use webb::evm::contract::anchor::AnchorContract;
 use webb::evm::ethers;
 
@@ -23,22 +24,46 @@ pub trait LeafCacheStore {
         contract: Address,
         leaves: &[(u32, H256)],
     ) -> anyhow::Result<()>;
-    /// Sets the new block number for the cache and returns the old one.
-    fn set_last_block_number(&self, block_number: U64) -> anyhow::Result<U64>;
-    fn get_last_block_number(&self) -> anyhow::Result<U64>;
+
+    /// Sets the new block number for that contract in the cache and returns the old one.
+    fn set_last_block_number(
+        &self,
+        contract: Address,
+        block_number: U64,
+    ) -> anyhow::Result<U64>;
+
+    fn get_last_block_number(
+        &self,
+        contract: Address,
+        default_block_number: U64,
+    ) -> anyhow::Result<U64>;
+
+    fn get_last_block_number_or_default(
+        &self,
+        contract: Address,
+    ) -> anyhow::Result<U64> {
+        self.get_last_block_number(contract, U64::one())
+    }
 }
 
 type MemStore = HashMap<Address, Vec<(u32, H256)>>;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct InMemoryLeafCache {
     store: Arc<RwLock<MemStore>>,
-    last_block_number: Arc<AtomicU64>,
+    last_block_numbers: Arc<RwLock<HashMap<Address, U64>>>,
+}
+
+impl Debug for InMemoryLeafCache {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad("InMemoryLeafCache")
+    }
 }
 
 impl LeafCacheStore for InMemoryLeafCache {
     type Output = Vec<H256>;
 
+    #[tracing::instrument(skip(self))]
     fn get_leaves(&self, contract: Address) -> anyhow::Result<Self::Output> {
         let guard = self.store.read();
         let val = guard
@@ -51,6 +76,7 @@ impl LeafCacheStore for InMemoryLeafCache {
         Ok(val)
     }
 
+    #[tracing::instrument(skip(self))]
     fn insert_leaves(
         &self,
         contract: Address,
@@ -64,22 +90,43 @@ impl LeafCacheStore for InMemoryLeafCache {
         Ok(())
     }
 
-    fn get_last_block_number(&self) -> anyhow::Result<U64> {
-        let val = self.last_block_number.load(Ordering::Relaxed);
-        Ok(U64::from(val))
+    #[tracing::instrument(skip(self))]
+    fn get_last_block_number(
+        &self,
+        contract: Address,
+        default_block_number: U64,
+    ) -> anyhow::Result<U64> {
+        let guard = self.last_block_numbers.read();
+        let val = guard
+            .get(&contract)
+            .cloned()
+            .unwrap_or(default_block_number);
+        Ok(val)
     }
 
-    fn set_last_block_number(&self, block_number: U64) -> anyhow::Result<U64> {
-        let old = self
-            .last_block_number
-            .swap(block_number.as_u64(), Ordering::Relaxed);
-        Ok(U64::from(old))
+    #[tracing::instrument(skip(self))]
+    fn set_last_block_number(
+        &self,
+        contract: Address,
+        block_number: U64,
+    ) -> anyhow::Result<U64> {
+        let mut guard = self.last_block_numbers.write();
+        let val = guard.entry(contract).or_insert(block_number);
+        let old = *val;
+        *val = block_number;
+        Ok(old)
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SledLeafCache {
     db: sled::Db,
+}
+
+impl Debug for SledLeafCache {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.pad("SledLeafCache")
+    }
 }
 
 impl SledLeafCache {
@@ -97,6 +144,7 @@ impl SledLeafCache {
 impl LeafCacheStore for SledLeafCache {
     type Output = Vec<H256>;
 
+    #[tracing::instrument]
     fn get_leaves(&self, contract: Address) -> anyhow::Result<Self::Output> {
         let tree = self.db.open_tree(contract)?;
         let leaves = tree
@@ -108,6 +156,7 @@ impl LeafCacheStore for SledLeafCache {
         Ok(leaves)
     }
 
+    #[tracing::instrument]
     fn insert_leaves(
         &self,
         contract: Address,
@@ -120,21 +169,33 @@ impl LeafCacheStore for SledLeafCache {
         Ok(())
     }
 
-    fn set_last_block_number(&self, block_number: U64) -> anyhow::Result<U64> {
+    #[tracing::instrument]
+    fn set_last_block_number(
+        &self,
+        contract: Address,
+        block_number: U64,
+    ) -> anyhow::Result<U64> {
+        let tree = self.db.open_tree("last_block_numbers")?;
         let mut bytes = [0u8; std::mem::size_of::<u64>()];
         block_number.to_little_endian(&mut bytes);
-        let old = self.db.insert(b"last_block_number", &bytes)?;
+        let old = tree.insert(contract, &bytes)?;
         match old {
             Some(v) => Ok(U64::from_little_endian(&v)),
-            None => Ok(U64::zero()),
+            None => Ok(block_number),
         }
     }
 
-    fn get_last_block_number(&self) -> anyhow::Result<U64> {
-        let val = self.db.get(b"last_block_number")?;
+    #[tracing::instrument]
+    fn get_last_block_number(
+        &self,
+        contract: Address,
+        default_block_number: U64,
+    ) -> anyhow::Result<U64> {
+        let tree = self.db.open_tree("last_block_numbers")?;
+        let val = tree.get(contract)?;
         match val {
             Some(v) => Ok(U64::from_little_endian(&v)),
-            None => Ok(U64::zero()),
+            None => Ok(default_block_number),
         }
     }
 }
@@ -144,24 +205,28 @@ pub struct LeavesWatcher<S> {
     ws_endpoint: String,
     store: S,
     contract: Address,
+    start_block_number: u64,
 }
 
 impl<S> LeavesWatcher<S>
 where
-    S: LeafCacheStore + Clone + Send + Sync + 'static,
+    S: LeafCacheStore + Debug + Clone + Send + Sync + 'static,
 {
     pub fn new(
         ws_endpoint: impl Into<String>,
         store: S,
         contract: Address,
+        start_block_number: u64,
     ) -> Self {
         Self {
             ws_endpoint: ws_endpoint.into(),
             contract,
             store,
+            start_block_number,
         }
     }
 
+    #[tracing::instrument(skip(self))]
     pub async fn watch(self) -> anyhow::Result<()> {
         let backoff = backoff::ExponentialBackoff {
             max_elapsed_time: None,
@@ -172,31 +237,68 @@ where
         Ok(())
     }
 
+    #[tracing::instrument]
     async fn watch_for_events(&self) -> Result<(), backoff::Error<Error>> {
-        log::trace!("Connecting to {}", self.ws_endpoint);
+        tracing::trace!("Connecting to {}", self.ws_endpoint);
         let endpoint = url::Url::parse(&self.ws_endpoint)
             .map_err(Error::from)
             .map_err(backoff::Error::Permanent)?;
-        let ws = Ws::connect(endpoint).map_err(Error::from).await?;
+        let ws = Ws::connect(endpoint)
+            .map_err(Error::from)
+            .instrument(tracing::trace_span!("websocket"))
+            .await?;
         let fetch_interval = Duration::from_millis(200);
         let provider = Provider::new(ws).interval(fetch_interval);
         let client = Arc::new(provider);
         let contract = AnchorContract::new(self.contract, client.clone());
-        let block = self.store.get_last_block_number()?;
-        log::trace!("Starting from block {}", block + 1);
-        let filter = contract.deposit_filter().from_block(block + 1);
-        let missing_events =
-            filter.query_with_meta().map_err(Error::from).await?;
-        log::trace!("Got #{} missing events", missing_events.len());
-        for (e, log) in missing_events {
-            self.store.insert_leaves(
+        let mut block = self.store.get_last_block_number(
+            contract.address(),
+            self.start_block_number.into(),
+        )?;
+
+        tracing::trace!("Starting from block {}", block + 1);
+        let current_block_number =
+            client.get_block_number().map_err(Error::from).await?;
+        tracing::trace!("And Last Block {}", current_block_number);
+        let step = U64::from(50);
+        while block != current_block_number {
+            tracing::trace!("Reading from #{} to #{}", block + 1, block + step);
+            let filter = contract
+                .deposit_filter()
+                .from_block(block + 1)
+                .to_block(block + step);
+            let missing_events = filter
+                .query_with_meta()
+                .instrument(tracing::trace_span!("query_with_meta"))
+                .map_err(Error::from)
+                .await?;
+            tracing::trace!("Got #{} missing events", missing_events.len());
+            if missing_events.is_empty() {
+                // if no missing events in this region
+                // we move on.
+                self.store
+                    .set_last_block_number(contract.address(), block + step)?;
+            }
+            for (e, log) in missing_events {
+                self.store.insert_leaves(
+                    contract.address(),
+                    &[(e.leaf_index, H256::from_slice(&e.commitment))],
+                )?;
+                let old = self.store.set_last_block_number(
+                    contract.address(),
+                    log.block_number,
+                )?;
+                tracing::trace!("Going from #{} to #{}", old, log.block_number);
+            }
+
+            block = self.store.get_last_block_number(
                 contract.address(),
-                &[(e.leaf_index, H256::from_slice(&e.commitment))],
+                self.start_block_number.into(),
             )?;
-            let old = self.store.set_last_block_number(log.block_number)?;
-            log::trace!("Going from #{} to #{}", old, log.block_number);
         }
-        let events = filter.subscribe().map_err(Error::from).await?;
+        // now we start listening on new events.
+        let events_filter = contract.deposit_filter().from_block(block);
+        let events = events_filter.subscribe().map_err(Error::from).await?;
         let mut stream = events.with_meta();
         while let Some(v) = stream.try_next().map_err(Error::from).await? {
             let (e, log) = v;
@@ -204,7 +306,8 @@ where
                 contract.address(),
                 &[(e.leaf_index, H256::from_slice(&e.commitment))],
             )?;
-            self.store.set_last_block_number(log.block_number)?;
+            self.store
+                .set_last_block_number(contract.address(), log.block_number)?;
         }
         Ok(())
     }
@@ -222,7 +325,10 @@ mod tests {
     use super::*;
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn watcher() -> anyhow::Result<()> {
-        env_logger::builder().is_test(true).init();
+        tracing_subscriber::fmt()
+            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+            .with_test_writer()
+            .init();
         let ganache = launch_ganache().await;
         let provider = Provider::<Http>::try_from(ganache.endpoint())?
             .interval(Duration::from_millis(10u64));
@@ -243,6 +349,7 @@ mod tests {
             ganache.ws_endpoint(),
             store.clone(),
             contract_address,
+            0,
         );
         // run the leaves watcher in another task
         let task_handle = tokio::task::spawn(leaves_watcher.watch());
@@ -260,9 +367,10 @@ mod tests {
             ganache.ws_endpoint(),
             store.clone(),
             contract_address,
+            0,
         );
         let task_handle = tokio::task::spawn(leaves_watcher.watch());
-        log::debug!("Waiting for 5s allowing the task to run..");
+        tracing::debug!("Waiting for 5s allowing the task to run..");
         // let's wait for a bit.. to allow the task to run.
         tokio::time::sleep(Duration::from_secs(5)).await;
         // now it should now contain all the old leaves + the missing one.
