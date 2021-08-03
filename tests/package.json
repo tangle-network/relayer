@@ -7,7 +7,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "test": "mocha --require ts-node/register 'integration_tests/**/*.ts' --exit"
+    "test": "mocha --require ts-node/register 'integration_tests/**/*.ts' --exit",
+    "test:beresheet": "ts-node scripts/beresheetSanity.ts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.2.0",
