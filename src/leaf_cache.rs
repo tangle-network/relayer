@@ -259,14 +259,15 @@ where
         tracing::trace!("Starting from block {}", block + 1);
         let current_block_number =
             client.get_block_number().map_err(Error::from).await?;
-        tracing::trace!("And Last Block {}", current_block_number);
+        tracing::trace!("And Last Block is #{}", current_block_number);
         let step = U64::from(50);
-        while block <= current_block_number {
-            tracing::trace!("Reading from #{} to #{}", block + 1, block + step);
+        while block < current_block_number {
+            let dest_block = std::cmp::min(block + step, current_block_number);
+            tracing::trace!("Reading from #{} to #{}", block, dest_block);
             let filter = contract
                 .deposit_filter()
-                .from_block(block + 1)
-                .to_block(block + step);
+                .from_block(block)
+                .to_block(dest_block);
             let missing_events = filter
                 .query_with_meta()
                 .instrument(tracing::trace_span!("query_with_meta"))
@@ -277,7 +278,7 @@ where
                 // if no missing events in this region
                 // we move on.
                 self.store
-                    .set_last_block_number(contract.address(), block + step)?;
+                    .set_last_block_number(contract.address(), dest_block)?;
             }
             for (e, log) in missing_events {
                 self.store.insert_leaves(
@@ -356,6 +357,7 @@ mod tests {
         let task_handle = tokio::task::spawn(leaves_watcher.watch());
         // then, make another deposit, while the watcher is running.
         make_deposit(&mut rng, &contract, &mut expected_leaves).await?;
+        tokio::time::sleep(Duration::from_secs(5)).await;
         // it should now contains the 2 leaves when the watcher was offline, and
         // the new one that happened while it is watching.
         let leaves = store.get_leaves(contract_address)?;
