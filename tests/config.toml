@@ -20,3 +20,9 @@ withdrew-fee-percentage = "0.05"
 withdrew-gaslimit = "0x350000"
 enable-leaves-watcher = true
 
+[evm.rinkeby]
+private-key = "0x0000000000000000000000000000000000000000000000000000000000000001" # TODO: change this.
+withdrew-fee-percentage = "0.05"
+withdrew-gaslimit = "0x350000"
+enable-leaves-watcher = true
+

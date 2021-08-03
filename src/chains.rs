@@ -26,10 +26,10 @@ pub mod evm {
 
     use webb::evm::ethereum_types::Address;
 
-    #[derive(Debug, Clone, Copy, Eq, PartialEq)]
+    #[derive(Debug, Clone, Copy)]
     pub struct DeployedContract {
         pub address: Address,
-        pub size: u128,
+        pub size: f64,
         pub deplyed_at: u64,
     }
     /// All Supported Chains by Webb Realyer.
@@ -40,6 +40,7 @@ pub mod evm {
         Ganache,
         Beresheet,
         Harmony,
+        Rinkeby,
     }
 
     pub trait EvmChain {
@@ -81,7 +82,7 @@ pub mod evm {
                         let address = Address::from_str($address).unwrap();
                         let contract = DeployedContract {
                             address,
-                            size: $size,
+                            size: $size as f64,
                             deplyed_at: $at,
                         };
                         map.insert(address, contract);
@@ -182,6 +183,26 @@ pub mod evm {
             ws_endpoint: "",
             chain_id: 0,
             contracts: [],
+        }
+    }
+
+    define_chain! {
+        Rinkeby => {
+            endpoint: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+            ws_endpoint: "wss://rinkeby.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+            chain_id: 4,
+            contracts: [
+                {
+                    size: 0.1,
+                    address: "0x626FEc5Ffa7Bf1EE8CEd7daBdE545630473E3ABb",
+                    at: 8_896_800,
+                },
+                {
+                    size: 1,
+                    address: "0x979cBd4917e81447983ef87591B9E1ab21727a61",
+                    at: 8_896_800,
+                }
+            ],
         }
     }
 }

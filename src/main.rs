@@ -221,6 +221,6 @@ where
         }
     }
 
-    start_network_watcher_for!(Ganache, Beresheet, Harmony);
+    start_network_watcher_for!(Ganache, Beresheet, Harmony, Rinkeby);
     Ok(store)
 }
