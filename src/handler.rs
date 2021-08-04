@@ -162,6 +162,7 @@ pub enum EvmCommand {
     Ganache(EvmGanacheCommand),
     Hedgeware(EvmHedgewareCommand),
     Webb(EvmWebbCommand),
+    Rinkeby(EvmRinkebyCommand),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -197,6 +198,12 @@ pub enum SubstrateWebbCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmWebbCommand {
+    RelayWithdrew(EvmRelayerWithdrawProof),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum EvmRinkebyCommand {
     RelayWithdrew(EvmRelayerWithdrawProof),
 }
 
@@ -324,6 +331,11 @@ pub fn handle_evm<'a>(
             }
         },
         Hedgeware(_) => todo!(),
+        Rinkeby(c) => match c {
+            EvmRinkebyCommand::RelayWithdrew(proof) => {
+                handle_evm_withdrew::<evm::Rinkeby>(ctx, proof)
+            }
+        },
     };
     s.boxed()
 }
