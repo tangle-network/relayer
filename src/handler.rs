@@ -117,6 +117,7 @@ pub async fn handle_relayer_info(
     update_account_for!(config, edgeware, evm::Edgeware);
     update_account_for!(config, beresheet, evm::Beresheet);
     update_account_for!(config, harmony, evm::Harmony);
+    update_account_for!(config, rinkeby, evm::Rinkeby);
 
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
 }
