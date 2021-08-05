@@ -8,10 +8,11 @@ import buildGroth16 from 'websnark/src/groth16';
 import anchorContract from './build/contracts/Anchor.json';
 import nativeAnchorContract from './build/contracts/NativeAnchor.json';
 import MerkleTree from './lib/MerkleTree';
+import fetch from 'node-fetch';
 
-// type EvmLeavesResponse = {
-//   leaves: [{ commitment: string }];
-// };
+type EvmLeavesResponse = {
+  leaves: [{ commitment: string }];
+};
 
 const toHex = (number: number | Buffer, length = 32) =>
   '0x' +
@@ -118,17 +119,17 @@ export async function getDepositLeavesFromChain(contractAddress: string, provide
   return leaves;
 }
 
-// async function getDepositLeavesFromServer(
-//   contractAddress: string
-// ): Promise<string[]> {
-//   const serverResponse = await fetch(
-//     `http://nepoche.com:5050/evm-leaves/${contractAddress}`
-//   );
-//   const jsonResponse: EvmLeavesResponse = await serverResponse.json();
-//   let leaves = jsonResponse.leaves.map((val) => val.commitment);
+export async function getDepositLeavesFromServer(
+  contractAddress: string
+): Promise<string[]> {
+  const serverResponse = await fetch(
+    `http://nepoche.com:5050/evm-leaves/${contractAddress}`
+  );
+  const jsonResponse: EvmLeavesResponse = await serverResponse.json();
+  let leaves = jsonResponse.leaves.map((val) => val.commitment);
 
-//   return leaves;
-// }
+  return leaves;
+}
 
 export async function generateMerkleProof(leaves: any, deposit: any) {
   const tree = new MerkleTree(20, leaves);
