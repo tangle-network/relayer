@@ -140,7 +140,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
     // save the relayer configured parameters
     calculatedFee = calculateFee(
-      relayerChainInfo.withdrewFeePercentage,
+      relayerChainInfo.withdrawFeePercentage,
       contractDenomination
     );
   });
