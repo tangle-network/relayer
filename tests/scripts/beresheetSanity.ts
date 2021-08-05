@@ -51,7 +51,7 @@ async function main() {
     provider
   );
   const calculatedFee = calculateFee(
-    relayerInfo.withdrewFeePercentage,
+    relayerInfo.withdrawFeePercentage,
     contractDenomination
   );
 
