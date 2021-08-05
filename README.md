@@ -40,20 +40,20 @@ port = 9955
 
 [evm.ganache]
 private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
-withdrew-fee-percentage = "0.05"
-withdrew-gaslimit = "0x350000"
+withdraw-fee-percentage = "0.05"
+withdraw-gaslimit = "0x350000"
 enable-leaves-watcher = true
 
 [evm.beresheet]
 private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
-withdrew-fee-percentage = "0.05"
-withdrew-gaslimit = "0x350000"
+withdraw-fee-percentage = "0.05"
+withdraw-gaslimit = "0x350000"
 enable-leaves-watcher = false
 
 [evm.harmony]
 private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
-withdrew-fee-percentage = "0.05"
-withdrew-gaslimit = "0x350000"
+withdraw-fee-percentage = "0.05"
+withdraw-gaslimit = "0x350000"
 enable-leaves-watcher = true
 
 # .. and so on.

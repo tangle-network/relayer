@@ -2,8 +2,8 @@ import fetch from 'node-fetch';
 import { spawn } from 'child_process';
 
 export type RelayerChainConfig = {
-  withdrewFeePercentage: number;
-  withdrewGaslimit: string;
+  withdrawFeePercentage: number;
+  withdrawGaslimit: string;
   account: string;
 };
 
@@ -15,7 +15,7 @@ export const generateWithdrawRequest = (
 ) => ({
   evm: {
     [chainName]: {
-      relayWithdrew: {
+      relayWithdraw: {
         contract: contractAddress,
         proof,
         root: args[0],
@@ -37,8 +37,8 @@ export const getRelayerConfig = async (
 
   return {
     account: relayerInfo.evm[chainName].account,
-    withdrewFeePercentage: relayerInfo.evm[chainName].withdrewFeePercentage,
-    withdrewGaslimit: relayerInfo.evm[chainName].withdrewGaslimit,
+    withdrawFeePercentage: relayerInfo.evm[chainName].withdrawFeePercentage,
+    withdrawGaslimit: relayerInfo.evm[chainName].withdrawGaslimit,
   };
 };
 

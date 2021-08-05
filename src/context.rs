@@ -66,7 +66,7 @@ impl RelayerContext {
                     $(
                         ChainName::$chain if evm.$f.is_some() => {
                             let c = evm.$f.clone().unwrap();
-                            Ok(c.withdrew_fee_percentage)
+                            Ok(c.withdraw_fee_percentage)
                         }
                     )+
                     _ => anyhow::bail!("Chain Fee Not Configured!"),

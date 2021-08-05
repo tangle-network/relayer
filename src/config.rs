@@ -65,10 +65,10 @@ pub struct CommonEvmConfig {
     pub private_key: Secret,
     #[serde(skip_serializing)]
     pub reward_account: Option<Address>,
-    #[serde(rename(serialize = "withdrewFeePercentage"))]
-    pub withdrew_fee_percentage: f64,
-    #[serde(rename(serialize = "withdrewGaslimit"))]
-    pub withdrew_gaslimit: U256,
+    #[serde(rename(serialize = "withdrawFeePercentage"))]
+    pub withdraw_fee_percentage: f64,
+    #[serde(skip_serializing)]
+    pub withdraw_gaslimit: U256,
     #[serde(skip_deserializing)]
     pub account: Option<Address>,
     #[serde(default = "enable_leaves_watcher_default")]

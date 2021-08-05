@@ -166,61 +166,61 @@ pub enum EvmCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateEdgewareCommand {
-    RelayWithdrew(),
+    RelayWithdraw(),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmEdgewareCommand {
-    RelayWithdrew(EvmRelayerWithdrawProof),
+    RelayWithdraw(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateBeresheetCommand {
-    RelayWithdrew(),
+    RelayWithdraw(),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmBeresheetCommand {
-    RelayWithdrew(EvmRelayerWithdrawProof),
+    RelayWithdraw(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateWebbCommand {
-    RelayWithdrew(),
+    RelayWithdraw(),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmWebbCommand {
-    RelayWithdrew(EvmRelayerWithdrawProof),
+    RelayWithdraw(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateHedgewareCommand {
-    RelayWithdrew(),
+    RelayWithdraw(),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmHedgewareCommand {
-    RelayWithdrew(EvmRelayerWithdrawProof),
+    RelayWithdraw(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmGanacheCommand {
-    RelayWithdrew(EvmRelayerWithdrawProof),
+    RelayWithdraw(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmHarmonyCommand {
-    RelayWithdrew(EvmRelayerWithdrawProof),
+    RelayWithdraw(EvmRelayerWithdrawProof),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -298,28 +298,28 @@ pub fn handle_evm<'a>(
     use EvmCommand::*;
     let s = match cmd {
         Edgeware(c) => match c {
-            EvmEdgewareCommand::RelayWithdrew(proof) => {
-                handle_evm_withdrew::<evm::Edgeware>(ctx, proof)
+            EvmEdgewareCommand::RelayWithdraw(proof) => {
+                handle_evm_withdraw::<evm::Edgeware>(ctx, proof)
             }
         },
         Harmony(c) => match c {
-            EvmHarmonyCommand::RelayWithdrew(proof) => {
-                handle_evm_withdrew::<evm::Harmony>(ctx, proof)
+            EvmHarmonyCommand::RelayWithdraw(proof) => {
+                handle_evm_withdraw::<evm::Harmony>(ctx, proof)
             }
         },
         Beresheet(c) => match c {
-            EvmBeresheetCommand::RelayWithdrew(proof) => {
-                handle_evm_withdrew::<evm::Beresheet>(ctx, proof)
+            EvmBeresheetCommand::RelayWithdraw(proof) => {
+                handle_evm_withdraw::<evm::Beresheet>(ctx, proof)
             }
         },
         Ganache(c) => match c {
-            EvmGanacheCommand::RelayWithdrew(proof) => {
-                handle_evm_withdrew::<evm::Ganache>(ctx, proof)
+            EvmGanacheCommand::RelayWithdraw(proof) => {
+                handle_evm_withdraw::<evm::Ganache>(ctx, proof)
             }
         },
         Webb(c) => match c {
-            EvmWebbCommand::RelayWithdrew(proof) => {
-                handle_evm_withdrew::<evm::Webb>(ctx, proof)
+            EvmWebbCommand::RelayWithdraw(proof) => {
+                handle_evm_withdraw::<evm::Webb>(ctx, proof)
             }
         },
         Hedgeware(_) => todo!(),
@@ -327,7 +327,7 @@ pub fn handle_evm<'a>(
     s.boxed()
 }
 
-fn handle_evm_withdrew<'a, C: evm::EvmChain>(
+fn handle_evm_withdraw<'a, C: evm::EvmChain>(
     ctx: RelayerContext,
     data: EvmRelayerWithdrawProof,
 ) -> BoxStream<'a, CommandResponse> {
