@@ -280,6 +280,7 @@ pub enum WithdrawStatus {
     Valid,
     DroppedFromMemPool,
     Errored {
+        code: i32,
         reason: String,
     },
 }
@@ -439,9 +440,9 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
                 tracing::debug!("Proof is valid");
             },
             Err(e) => {
-                let reason = e.to_string();
-                tracing::error!("Error Client sent an invalid proof: {}", reason);
-                yield Withdraw(WithdrawStatus::Errored { reason });
+                tracing::error!("Error Client sent an invalid proof: {}", e);
+                let err = into_withdraw_error(e);
+                yield Withdraw(err);
                 return;
             }
         };
@@ -456,9 +457,9 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
                 result
             },
             Err(e) => {
-                let reason = e.to_string();
-                tracing::error!("Error while sending Tx: {}", reason);
-                yield Withdraw(WithdrawStatus::Errored { reason });
+                tracing::error!("Error while sending Tx: {}", e);
+                let err = into_withdraw_error(e);
+                yield Withdraw(err);
                 return;
             }
         };
@@ -474,14 +475,55 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
             Err(e) => {
                 let reason = e.to_string();
                 tracing::error!("Transaction Errored: {}", reason);
-                yield Withdraw(WithdrawStatus::Errored { reason });
+                yield Withdraw(WithdrawStatus::Errored { reason, code: 4 });
             }
         };
     };
     s.boxed()
 }
 
-pub fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
+fn into_withdraw_error<M: Middleware>(e: ContractError<M>) -> WithdrawStatus {
+    // a poor man error parser
+    // WARNING: **don't try this at home**.
+
+    let msg = format!("{}", e);
+    // split the error into words, lazily.
+    let mut words = msg.split_whitespace();
+    // skip until we find the "(code:" span
+    let code = loop {
+        if words.next() == Some("(code:") {
+            // the next is the code.
+            // example: "-32000,"
+            let code: i32 = match words.next() {
+                Some(val) => {
+                    let mut v = val.to_string();
+                    v.pop(); // remove ","
+                    v.parse().unwrap_or(-1)
+                }
+                _ => -1, // unknown code
+            };
+            break code;
+        }
+    };
+
+    let reason = loop {
+        // skip until we find this
+        if words.next() == Some("transaction:") {
+            // next we need to collect all words in between "transaction:"
+            // and "data:", that would be the error message.
+            let msg: Vec<_> = words
+                .skip(1) // word "revert"
+                .take_while(|v| *v != "data:")
+                .collect();
+            let mut reason = msg.join(" ");
+            reason.pop(); // remove the "," at the end.
+            break reason;
+        }
+    };
+    WithdrawStatus::Errored { reason, code }
+}
+
+fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
     let mill_fee = (fee_percent * 1_000_000.0) as u32;
     let mill_u256: U256 = principle * (mill_fee);
     let fee_u256: U256 = mill_u256 / (1_000_000);

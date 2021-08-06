@@ -21,6 +21,7 @@ import {
   Result,
   startWebbRelayer,
 } from '../relayerUtils';
+import { ChildProcessWithoutNullStreams } from 'child_process';
 
 function startGanacheServer() {
   const ganacheServer = ganache.server({
@@ -96,17 +97,17 @@ const PRIVATE_KEY =
   '0x000000000000000000000000000000000000000000000000000000000000dead';
 const PORT = 1998;
 const ENDPOINT = 'http://127.0.0.1:1998';
-let ganacheServer;
-let relayer;
-let recipient;
-let wallet;
-let provider;
-let contractAddress;
-let contractDenomination;
-let calculatedFee;
-let startingRecipientBalance;
-let proof;
-let args;
+let ganacheServer: any;
+let relayer: ChildProcessWithoutNullStreams;
+let recipient: string;
+let wallet: ethers.Wallet;
+let provider: ethers.providers.Provider;
+let contractAddress: string;
+let contractDenomination: string;
+let calculatedFee: string;
+let startingRecipientBalance: ethers.BigNumber;
+let proof: string;
+let args: string[];
 let client: WebSocket;
 let relayerChainInfo: RelayerChainConfig;
 
@@ -187,9 +188,11 @@ describe('Ganache Relayer Withdraw Tests', function () {
           console.log('Transaction Done and Relayed Successfully!');
           // check the recipient balance
           const endingRecipientBalance = await provider.getBalance(recipient);
+          //@ts-ignore
           const changeInBalance = contractDenomination - calculatedFee;
           assert(
             endingRecipientBalance.eq(
+              //@ts-ignore
               startingRecipientBalance + changeInBalance
             )
           );
@@ -386,10 +389,96 @@ describe('Ganache Relayer Withdraw Tests', function () {
     });
   });
 
+  describe('bad proof (missing correct relayer address)', function () {
+    before(async function () {
+      // make a deposit
+      const depositArgs = await deposit(contractAddress, wallet);
+
+      // get the leaves
+      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+
+      // generate the withdraw tx to send to relayer
+      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+        leaves,
+        depositArgs,
+        recipient,
+        recipient, // relayer
+        calculatedFee
+      );
+
+      proof = zkProof;
+      args = zkArgs;
+      args[3] = relayerChainInfo.account;
+      console.log(args);
+
+      // setup relayer connections
+      client = new WebSocket('ws://localhost:9955/ws');
+      await new Promise((resolve) => client.on('open', resolve));
+      console.log('Connected to Relayer!');
+    });
+
+    it('should not relay a transaction with a bad proof', function (done) {
+      // Setup relayer interaction with logging
+      client.on('message', async (data) => {
+        console.log('Received data from the relayer');
+        console.log('<==', data);
+        const msg = JSON.parse(data as string);
+        const result = handleMessage(msg);
+        if (result === Result.Errored) {
+          expect(msg).to.deep.equal({
+            withdraw: {
+              errored: { code: -32000, reason: 'Invalid withdraw proof' },
+            },
+          });
+          done();
+        } else if (result === Result.Continue) {
+          // all good.
+          return;
+        } else if (result === Result.CleanExit) {
+          console.log('Transaction Done and Relayed Successfully!!!');
+          expect(
+            false,
+            'Transaction was submitted and executed, which should not have happened!'
+          );
+          done();
+        }
+      });
+      client.on('error', (err) => {
+        console.log('[E]', err);
+        done('Client connection errored unexpectedly');
+      });
+
+      const req = generateWithdrawRequest(
+        'ganache',
+        contractAddress,
+        proof,
+        args
+      );
+      if (client.readyState === client.OPEN) {
+        const data = JSON.stringify(req);
+        console.log('Sending Proof to the Relayer ..');
+        console.log('=>', data);
+        client.send(data, (err) => {
+          console.log('Proof Sent!');
+          if (err !== undefined) {
+            console.log('!!Error!!', err);
+            done('Client error sending proof');
+          }
+        });
+      } else {
+        console.error('Relayer Connection closed!');
+        done('Client error, not OPEN');
+      }
+    });
+
+    after(function () {
+      client.terminate();
+    });
+  });
+
   after(function () {
     ganacheServer.close(console.error);
     client.terminate();
     relayer.kill('SIGINT');
   });
 });
-

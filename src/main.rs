@@ -71,6 +71,9 @@ fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
     let env_filter = tracing_subscriber::EnvFilter::from_default_env()
         .add_directive(format!("webb_relayer={}", log_level).parse()?);
     tracing_subscriber::fmt()
+        .pretty()
+        .with_level(false)
+        .with_target(false)
         .with_max_level(log_level)
         .with_env_filter(env_filter)
         .init();
