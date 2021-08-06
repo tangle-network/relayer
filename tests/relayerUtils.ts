@@ -76,7 +76,7 @@ export function handleMessage(data: any): Result {
     return Result.Errored;
   } else if (data.network === 'invalidRelayerAddress') {
     return Result.Errored;
-  } else if (data.withdraw?.finlized) {
+  } else if (data.withdraw?.finalized) {
     return Result.CleanExit;
   } else {
     return Result.Continue;

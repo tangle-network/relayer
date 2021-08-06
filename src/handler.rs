@@ -273,7 +273,7 @@ pub enum NetworkStatus {
 pub enum WithdrawStatus {
     Sent,
     Submitted,
-    Finlized {
+    Finalized {
         #[serde(rename = "txHash")]
         tx_hash: H256,
     },
@@ -464,8 +464,8 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
         };
         match tx {
             Ok(Some(receipt)) => {
-                tracing::debug!("Finlized Tx #{}", receipt.transaction_hash);
-                yield Withdraw(WithdrawStatus::Finlized { tx_hash: receipt.transaction_hash });
+                tracing::debug!("Finalized Tx #{}", receipt.transaction_hash);
+                yield Withdraw(WithdrawStatus::Finalized { tx_hash: receipt.transaction_hash });
             },
             Ok(None) => {
                 tracing::warn!("Transaction Dropped from Mempool!!");
