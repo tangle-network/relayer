@@ -14,14 +14,17 @@ type EvmLeavesResponse = {
   leaves: [{ commitment: string }];
 };
 
-const toHex = (number: number | Buffer, length = 32) =>
+export const toHex = (number: number | Buffer, length = 32) =>
   '0x' +
   (number instanceof Buffer
     ? number.toString('hex')
     : snarkjs.bigInt(number).toString(16)
   ).padStart(length * 2, '0');
 
-export async function getAnchorDenomination(contractAddress: string, provider: ethers.providers.JsonRpcProvider): Promise<string> {
+export async function getAnchorDenomination(
+  contractAddress: string,
+  provider: ethers.providers.Provider
+): Promise<string> {
   const nativeAnchorInstance = new ethers.Contract(
     contractAddress,
     nativeAnchorContract.abi,
@@ -33,7 +36,10 @@ export async function getAnchorDenomination(contractAddress: string, provider: e
 }
 
 // BigNumber for principle
-export const calculateFee = (withdrawFeePercentage: number, principle: string): string => {
+export const calculateFee = (
+  withdrawFeePercentage: number,
+  principle: string
+): string => {
   const principleBig = snarkjs.bigInt(principle);
   const withdrawFeeMill = withdrawFeePercentage * 1000000;
   const withdrawFeeMillBig = snarkjs.bigInt(withdrawFeeMill);
@@ -42,7 +48,7 @@ export const calculateFee = (withdrawFeePercentage: number, principle: string): 
   const fee = feeBig.toString();
 
   return fee;
-}
+};
 
 function createDeposit() {
   const rbigint = (nbytes: number) =>
@@ -87,7 +93,10 @@ export async function deposit(contractAddress: string, wallet: ethers.Signer) {
   return deposit;
 }
 
-export async function getDepositLeavesFromChain(contractAddress: string, provider: ethers.providers.JsonRpcProvider) {
+export async function getDepositLeavesFromChain(
+  contractAddress: string,
+  provider: ethers.providers.Provider
+) {
   // Query the blockchain for all deposits that have happened
   const anchorInterface = new ethers.utils.Interface(anchorContract.abi);
   const anchorInstance = new ethers.Contract(
@@ -146,12 +155,12 @@ export async function generateSnarkProof(
   deposit: any,
   recipient: string,
   relayer: string,
-  fee: string,
+  fee: string
 ) {
   // find the inputs that correspond to the path for the deposit
   const { root, path_elements, path_index } = await generateMerkleProof(
     leaves,
-    deposit,
+    deposit
   );
 
   let groth16 = await buildGroth16();
