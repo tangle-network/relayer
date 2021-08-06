@@ -72,6 +72,7 @@ pub struct CommonEvmConfig {
     #[serde(skip_deserializing)]
     pub account: Option<Address>,
     #[serde(default = "enable_leaves_watcher_default")]
+    #[serde(rename(serialize = "enableLeavesWatcher"))]
     pub enable_leaves_watcher: bool,
 }
 
