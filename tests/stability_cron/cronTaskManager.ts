@@ -1,23 +1,23 @@
 import { ethers } from 'ethers';
-const cron = require('node-cron');
+// const cron = require('node-cron');
 require('dotenv').config({ path: '.env' });
-import { create_slack_alert } from '../scripts/dispatchSlackNotification';
-import WebSocket from 'ws';
+// import { create_slack_alert } from '../scripts/dispatchSlackNotification';
+// import WebSocket from 'ws';
 import { 
-  generateSnarkProof,
-  getDepositLeavesFromRelayer,
-  getAnchorDenomination,
-  calculateFee,
+  // generateSnarkProof,
+  // getDepositLeavesFromRelayer,
+  // getAnchorDenomination,
+  // calculateFee,
   toHex,
   deposit,
   Deposit
 } from '../proofUtils';
-import { 
-  getRelayerConfig,
-  generateWithdrawRequest,
-  handleMessage,
-  Result
-} from '../relayerUtils';
+// import { 
+//   getRelayerConfig,
+//   generateWithdrawRequest,
+//   handleMessage,
+//   Result
+// } from '../relayerUtils';
 
 type configuredChain = {
   name: string,
@@ -96,92 +96,102 @@ function generateNoteString(deposit: Deposit, chain: configuredChain): string {
   return `${chain.name}-${toHex(deposit.preimage, 62)}`
 }
 
-async function setupCronJobs() {
-
+async function createDeposits() {  
   const configuredChains = populateConfiguredChains();
+
+  setInterval(async () => {
+    const res = await deposit(configuredChains[0]!.contractAddress, configuredChains[0]!.wallet);
+    const noteString = generateNoteString(res, configuredChains[0]!);
+    console.log(`made a deposit with: ${noteString}`);
+  }, 10000);
+};
+
+// async function setupCronJobs() {
+
+//   const configuredChains = populateConfiguredChains();
   
-  for (let i=0; i<configuredChains.length; i++) {
-    // Schedule for deposits
-    cron.schedule(`${0+i} * * * *`, async () => {
-      console.log('cron job started for deposit');
-      const res = await deposit(configuredChains[i]!.contractAddress, configuredChains[i]!.wallet);
-      configuredChains[i]!.deposits.push(res);
-      const noteString = generateNoteString(res, configuredChains[i]!);
-      create_slack_alert("deposited into the contract", `and got a deposit note: ${noteString}`);
-    });
+//   for (let i=0; i<configuredChains.length; i++) {
+//     // Schedule for deposits
+//     cron.schedule(`${i} * * * *`, async () => {
+//       console.log('cron job started for deposit');
+//       const res = await deposit(configuredChains[i]!.contractAddress, configuredChains[i]!.wallet);
+//       configuredChains[i]!.deposits.push(res);
+//       const noteString = generateNoteString(res, configuredChains[i]!);
+//       create_slack_alert("deposited into the contract", `and got a deposit note: ${noteString}`);
+//     });
 
-    // Schedule for withdrawals
-    cron.schedule(`${1+i} * * * *`, async () => {
-      // get relayer information
-      const relayerInfo = await getRelayerConfig(configuredChains[i]!.name);
-      const contractDenomination = await getAnchorDenomination(
-        configuredChains[i]!.contractAddress,
-        configuredChains[i]!.wallet.provider!
-      );
-      const calculatedFee = calculateFee(
-        relayerInfo.withdrawFeePercentage,
-        contractDenomination
-      );
+//     // Schedule for withdrawals
+//     cron.schedule(`${1+i} * * * *`, async () => {
+//       // get relayer information
+//       const relayerInfo = await getRelayerConfig(configuredChains[i]!.name);
+//       const contractDenomination = await getAnchorDenomination(
+//         configuredChains[i]!.contractAddress,
+//         configuredChains[i]!.wallet.provider!
+//       );
+//       const calculatedFee = calculateFee(
+//         relayerInfo.withdrawFeePercentage,
+//         contractDenomination
+//       );
 
-      const client = new WebSocket(process.env.RELAYER_ENDPOINT_WS || 'ws://localhost:9955/ws');
-      await new Promise((resolve) => client.on('open', resolve));
+//       const client = new WebSocket(process.env.RELAYER_ENDPOINT_WS || 'ws://localhost:9955/ws');
+//       await new Promise((resolve) => client.on('open', resolve));
 
-      // Setup websockets response to data
-      client.on('message', async (data) => {
-        console.log('<==', data);
-        const msg = JSON.parse(data as string);
-        const result = await handleMessage(msg);
-        if (result === Result.Errored) {
-          client.terminate();
-          create_slack_alert("Relayed withdraw failed.", `Error: ${msg}`);
-        } else if (result === Result.Continue) {
-          // all good.
-          return;
-        } else if (result === Result.CleanExit) {
-          console.log('Transaction Done and Relayed Successfully!');
-          console.log('Clean Exit');
-          client.close();
-        } else {
-          // ??
-        }
-      });
-      client.on('error', (err) => {
-        console.log('[E]', err);
-        client.terminate();
-        create_slack_alert("Websockets communication failed.", `Error: ${err}`);
-      });
+//       // Setup websockets response to data
+//       client.on('message', async (data) => {
+//         console.log('<==', data);
+//         const msg = JSON.parse(data as string);
+//         const result = await handleMessage(msg);
+//         if (result === Result.Errored) {
+//           client.terminate();
+//           create_slack_alert("Relayed withdraw failed.", `Error: ${msg}`);
+//         } else if (result === Result.Continue) {
+//           // all good.
+//           return;
+//         } else if (result === Result.CleanExit) {
+//           console.log('Transaction Done and Relayed Successfully!');
+//           console.log('Clean Exit');
+//           client.close();
+//         } else {
+//           // ??
+//         }
+//       });
+//       client.on('error', (err) => {
+//         console.log('[E]', err);
+//         client.terminate();
+//         create_slack_alert("Websockets communication failed.", `Error: ${err}`);
+//       });
 
-      // 
-      console.log('Generating zkProof to do a withdraw ..');
-      const leaves = await getDepositLeavesFromRelayer(configuredChains[i]!.contractAddress);
-      const { proof, args } = await generateSnarkProof(
-        leaves,
-        configuredChains[i]!.deposits.pop(),
-        await configuredChains[i]!.wallet.getAddress(),
-        relayerInfo.account,
-        calculatedFee
-      );
-      console.log('Proof Generated!');
-      const req = generateWithdrawRequest(configuredChains[i]!.name, configuredChains[i]!.contractAddress, proof, args);
-      if (client.readyState === client.OPEN) {
-        const data = JSON.stringify(req);
-        console.log('Sending Proof to the Relayer ..');
-        console.log('=>', data);
-        client.send(data, (err) => {
-          console.log('Proof Sent!');
-          if (err !== undefined) {
-            console.log('!!Error!!', err);
-            client.terminate();
-            create_slack_alert("Websockets sending proof failed.", `Error: ${err}`);
-          }
-        });
-      } else {
-        client.terminate();
-        console.error('Relayer Connection closed!');
-        create_slack_alert("Websockets client was not in open state");
-      }
-    })
-  }
-}
+//       // 
+//       console.log('Generating zkProof to do a withdraw ..');
+//       const leaves = await getDepositLeavesFromRelayer(configuredChains[i]!.contractAddress);
+//       const { proof, args } = await generateSnarkProof(
+//         leaves,
+//         configuredChains[i]!.deposits.pop(),
+//         await configuredChains[i]!.wallet.getAddress(),
+//         relayerInfo.account,
+//         calculatedFee
+//       );
+//       console.log('Proof Generated!');
+//       const req = generateWithdrawRequest(configuredChains[i]!.name, configuredChains[i]!.contractAddress, proof, args);
+//       if (client.readyState === client.OPEN) {
+//         const data = JSON.stringify(req);
+//         console.log('Sending Proof to the Relayer ..');
+//         console.log('=>', data);
+//         client.send(data, (err) => {
+//           console.log('Proof Sent!');
+//           if (err !== undefined) {
+//             console.log('!!Error!!', err);
+//             client.terminate();
+//             create_slack_alert("Websockets sending proof failed.", `Error: ${err}`);
+//           }
+//         });
+//       } else {
+//         client.terminate();
+//         console.error('Relayer Connection closed!');
+//         create_slack_alert("Websockets client was not in open state");
+//       }
+//     })
+//   }
+// }
 
-setupCronJobs();
+createDeposits();
