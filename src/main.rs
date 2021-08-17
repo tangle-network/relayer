@@ -197,7 +197,7 @@ where
                 );
                 let task = async move {
                     tokio::select! {
-                        _ = watcher.watch() => {
+                        _ = watcher.run() => {
                             tracing::warn!("watcher for {} stopped", stringify!($chain));
                         },
                         _ = tokio::signal::ctrl_c() => {

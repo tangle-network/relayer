@@ -110,7 +110,7 @@ pub mod evm {
             contracts: [
                 {
                     size: 1,
-                    address: "0xf759e19b1142079b1963e1e323b07e4ac67ab899",
+                    address: "0xFBD61C9961e0bf872B5Ec041b718C0B2a106Ce9D",
                     at: 1,
                 }
             ],
