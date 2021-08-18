@@ -14,6 +14,14 @@ type EvmLeavesResponse = {
   leaves: [{ commitment: string }];
 };
 
+export type Deposit = {
+  nullifier: snarkjs.bigInt;
+  secret: snarkjs.bigInt;
+  preimage: Buffer;
+  commitment: snarkjs.bigInt;
+  nullifierHash: snarkjs.bigInt;
+}
+
 export const toHex = (number: number | Buffer, length = 32) =>
   '0x' +
   (number instanceof Buffer
@@ -67,6 +75,7 @@ function createDeposit() {
 
 export async function deposit(contractAddress: string, wallet: ethers.Signer) {
   const deposit = createDeposit();
+  console.log('deposit created');
   const nativeAnchorInstance = new ethers.Contract(
     contractAddress,
     nativeAnchorContract.abi,
@@ -81,6 +90,7 @@ export async function deposit(contractAddress: string, wallet: ethers.Signer) {
 
   const denomination = await nativeAnchorInstance.functions.denomination!();
 
+  console.log(denomination.toString());
   // Gas limit values required for beresheet
   const depositTx = await nativeAnchorInstance.deposit(
     toFixedHex(deposit.commitment),
@@ -124,6 +134,19 @@ export async function getDepositLeavesFromChain(
   const leaves = decodedEvents
     .sort((a, b) => a.args.leafIndex - b.args.leafIndex) // Sort events in chronological order
     .map((e) => e.args.commitment);
+
+  return leaves;
+}
+
+export async function getDepositLeavesFromRelayer(
+  contractAddress: string
+): Promise<string[]> {
+  const relayerResponse = await fetch(
+    `http://nepoche.com:9955/api/v1/leaves/${contractAddress}`
+  );
+
+  const jsonResponse = await relayerResponse.json();
+  let leaves = jsonResponse.leaves;
 
   return leaves;
 }

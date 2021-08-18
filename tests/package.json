@@ -8,7 +8,8 @@
   "private": true,
   "scripts": {
     "test": "mocha --require ts-node/register 'integration_tests/**/*.ts' --exit",
-    "test:beresheet": "ts-node scripts/beresheetSanity.ts"
+    "test:beresheet": "ts-node scripts/beresheetSanity.ts",
+    "cron": "ts-node stability_cron/cronTaskManager.ts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.2.0",
@@ -16,11 +17,14 @@
     "@types/mocha": "^9.0.0",
     "circom": "^0.5.45",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
+    "dotenv": "^10.0.0",
     "ethers": "^5.4.0",
     "ganache-cli": "^6.12.2",
     "keccak": "^3.0.1",
     "mocha": "^9.0.3",
+    "node-cron": "^3.0.0",
     "node-fetch": "^2.6.1",
+    "opsgenie-sdk": "^0.5.0",
     "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#869181cfaf7526fe8972073d31655493a04326d5",
     "websnark": "git+https://github.com/tornadocash/websnark.git#4c0af6a8b65aabea3c09f377f63c44e7a58afa6d",
     "ws": "^7.5.1"

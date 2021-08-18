@@ -1,7 +1,9 @@
 import fetch from 'node-fetch';
 import { spawn } from 'child_process';
+require('dotenv').config({ path: '.env' });
 
 export type RelayerChainConfig = {
+  chainName: string;
   withdrawFeePercentage: number;
   withdrawGaslimit: string;
   account: string;
@@ -32,10 +34,11 @@ export const generateWithdrawRequest = (
 export const getRelayerConfig = async (
   chainName: string
 ): Promise<RelayerChainConfig> => {
-  const relayerInfoRes = await fetch('http://localhost:9955/api/v1/info');
+  const relayerInfoRes = await fetch(process.env.RELAYER_ENDPOINT_HTTP || 'http://localhost:9955/api/v1/info');
   const relayerInfo: any = await relayerInfoRes.json();
 
   return {
+    chainName: chainName,
     account: relayerInfo.evm[chainName].account,
     withdrawFeePercentage: relayerInfo.evm[chainName].withdrawFeePercentage,
     withdrawGaslimit: relayerInfo.evm[chainName].withdrawGaslimit,
