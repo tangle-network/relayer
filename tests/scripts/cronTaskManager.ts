@@ -113,7 +113,7 @@ async function setupCronJobs() {
     // Schedule for withdrawals
     cron.schedule(`${1+i} * * * *`, async () => {
       // get relayer information
-      const relayerInfo = await getRelayerConfig(configuredChains[i]!.name);
+      const relayerInfo = await getRelayerConfig(configuredChains[i]!.name, `${process.env.RELAYER_ENDPOINT_HTTP}`);
       const contractDenomination = await getAnchorDenomination(
         configuredChains[i]!.contractAddress,
         configuredChains[i]!.wallet.provider!
@@ -153,7 +153,7 @@ async function setupCronJobs() {
 
       // 
       console.log('Generating zkProof to do a withdraw ..');
-      const leaves = await getDepositLeavesFromRelayer(configuredChains[i]!.contractAddress);
+      const leaves = await getDepositLeavesFromRelayer(configuredChains[i]!.contractAddress, `${process.env.RELAYER_ENDPOINT_HTTP}`);
       const { proof, args } = await generateSnarkProof(
         leaves,
         configuredChains[i]!.deposits.pop(),

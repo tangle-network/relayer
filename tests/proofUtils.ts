@@ -10,10 +10,6 @@ import nativeAnchorContract from './build/contracts/NativeAnchor.json';
 import MerkleTree from './lib/MerkleTree';
 import fetch from 'node-fetch';
 
-type EvmLeavesResponse = {
-  leaves: [{ commitment: string }];
-};
-
 export type Deposit = {
   nullifier: snarkjs.bigInt;
   secret: snarkjs.bigInt;
@@ -139,13 +135,10 @@ export async function getDepositLeavesFromChain(
 }
 
 export async function getDepositLeavesFromRelayer(
-  contractAddress: string
+  contractAddress: string,
+  endpoint: string
 ): Promise<string[]> {
-  const relayerResponse = process.env.RELAYER_ENDPOINT_HTTP ? 
-    await fetch(
-      `${process.env.RELAYER_ENDPOINT_HTTP}/api/v1/leaves/${contractAddress}`
-    ) :
-    await fetch(`http://localhost:9955/api/v1/leaves/${contractAddress}`);
+  const relayerResponse = await fetch(`${endpoint}/api/v1/leaves/${contractAddress}`);
 
   const jsonResponse = await relayerResponse.json();
   let leaves = jsonResponse.leaves;

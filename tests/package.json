@@ -8,7 +8,7 @@
   "private": true,
   "scripts": {
     "test": "mocha --require ts-node/register 'integration_tests/**/*.ts' --exit",
-    "test:beresheet": "ts-node scripts/beresheetSanity.ts",
+    "sanity": "ts-node scripts/networkSanity.ts",
     "cron": "ts-node scripts/cronTaskManager.ts"
   },
   "dependencies": {

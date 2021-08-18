@@ -21,7 +21,7 @@ withdraw-gaslimit = "0x350000"
 enable-leaves-watcher = false
 
 [evm.rinkeby]
-private-key = "0x0000000000000000000000000000000000000000000000000000000000000001" # TODO: change this.
+private-key = "0x8917174396171783496173419137618235192359106130478137647163400318" # TODO: change this.
 withdraw-fee-percentage = "0.05"
 withdraw-gaslimit = "0x350000"
 enable-leaves-watcher = false

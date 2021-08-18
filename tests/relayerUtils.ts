@@ -32,9 +32,10 @@ export const generateWithdrawRequest = (
 });
 
 export const getRelayerConfig = async (
-  chainName: string
+  chainName: string,
+  endpoint: string,
 ): Promise<RelayerChainConfig> => {
-  const relayerInfoRes = await fetch(process.env.RELAYER_ENDPOINT_HTTP || 'http://localhost:9955/api/v1/info');
+  const relayerInfoRes = await fetch(`${endpoint}/api/v1/info`)
   const relayerInfo: any = await relayerInfoRes.json();
 
   return {
@@ -45,7 +46,7 @@ export const getRelayerConfig = async (
   };
 };
 
-export async function startWebbRelayer() {
+export function startWebbRelayer() {
   const proc = spawn('../target/debug/webb-relayer', [
     '-vvv',
     '-c',
