@@ -107,7 +107,7 @@ async function setupCronJobs() {
       const res = await deposit(configuredChains[i]!.contractAddress, configuredChains[i]!.wallet);
       configuredChains[i]!.deposits.push(res);
       const noteString = generateNoteString(res, configuredChains[i]!);
-      create_slack_alert("deposited into the contract", `and got a deposit note: ${noteString}`);
+      console.log(noteString);
     });
 
     // Schedule for withdrawals

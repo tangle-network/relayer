@@ -81,6 +81,8 @@ export function handleMessage(data: any): Result {
     return Result.Errored;
   } else if (data.withdraw?.finalized) {
     return Result.CleanExit;
+  } else if (data.withdraw?.droppedFromMemPool) {
+    return Result.Errored;
   } else {
     return Result.Continue;
   }
