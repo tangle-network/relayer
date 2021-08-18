@@ -9,7 +9,7 @@
   "scripts": {
     "test": "mocha --require ts-node/register 'integration_tests/**/*.ts' --exit",
     "test:beresheet": "ts-node scripts/beresheetSanity.ts",
-    "cron": "ts-node stability_cron/cronTaskManager.ts"
+    "cron": "ts-node scripts/cronTaskManager.ts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.2.0",
