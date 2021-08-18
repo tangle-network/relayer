@@ -154,6 +154,11 @@ pub mod evm {
             chain_id: 1666700001,
             contracts: [
                 {
+                    size: 0.0000000001,
+                    address: "0x4c37863bf2642Ba4e8De7e746500C700540119E8",
+                    at: 13_600_000,
+                },
+                {
                     size: 100,
                     address: "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a",
                     at: 12_040_000,
