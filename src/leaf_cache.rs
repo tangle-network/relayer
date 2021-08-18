@@ -247,7 +247,7 @@ where
             .map_err(Error::from)
             .instrument(tracing::trace_span!("websocket"))
             .await?;
-        let fetch_interval = Duration::from_millis(200);
+        let fetch_interval = Duration::from_millis(2000);
         let provider = Provider::new(ws).interval(fetch_interval);
         let client = Arc::new(provider);
 
