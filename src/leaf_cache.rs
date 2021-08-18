@@ -321,6 +321,8 @@ where
             let events_filter = contract.deposit_filter().from_block(block).to_block(current_block_number);
             let found_events = events_filter.query_with_meta().map_err(Error::from).await?;
 
+            tracing::trace!("Found #{} events", found_events.len());
+
             for (e, _log) in found_events {
                 self.store.insert_leaves(
                     contract.address(),

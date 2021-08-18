@@ -32,6 +32,7 @@ function startGanacheServer() {
       },
     ],
     port: PORT,
+    mnemonic: "congress island collect purity dentist team gas unlock nuclear pig combine sight",
   });
 
   ganacheServer.listen(PORT);
@@ -94,9 +95,9 @@ async function deployNativeAnchor(wallet: ethers.Wallet) {
 }
 
 const PRIVATE_KEY =
-  '0x000000000000000000000000000000000000000000000000000000000000dead';
-const PORT = 1998;
-const ENDPOINT = 'http://127.0.0.1:1998';
+  '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
+const PORT = 8545;
+const ENDPOINT = 'http://127.0.0.1:8545';
 let ganacheServer: any;
 let relayer: ChildProcessWithoutNullStreams;
 let recipient: string;

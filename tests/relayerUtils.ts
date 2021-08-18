@@ -44,7 +44,7 @@ export const getRelayerConfig = async (
 
 export async function startWebbRelayer() {
   const proc = spawn('../target/debug/webb-relayer', [
-    '-vvvv',
+    '-vvv',
     '-c',
     './config.toml',
   ]);
