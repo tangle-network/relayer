@@ -451,11 +451,9 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
         let tx = match call.send().await {
             Ok(pending) => {
                 yield Withdraw(WithdrawStatus::Sent);
-                tracing::debug!("Tx is created! {}", *pending);
-                let result = pending.await;
-                tracing::debug!("Tx Submitted!");
+                tracing::debug!("Tx is submitted and pending! {}", *pending);
+                let result = pending.confirmations(1).await;
                 yield Withdraw(WithdrawStatus::Submitted);
-                tokio::time::sleep(Duration::from_secs(3)).await;
                 result
             },
             Err(e) => {
