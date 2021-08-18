@@ -421,7 +421,8 @@ mod tests {
         let task_handle = tokio::task::spawn(leaves_watcher.run());
         // then, make another deposit, while the watcher is running.
         make_deposit(&mut rng, &contract, &mut expected_leaves).await?;
-        tokio::time::sleep(Duration::from_secs(5)).await;
+        // sleep for the duration of the polling interval
+        tokio::time::sleep(Duration::from_secs(30)).await;
         // it should now contains the 2 leaves when the watcher was offline, and
         // the new one that happened while it is watching.
         let leaves = store.get_leaves(contract_address)?;
