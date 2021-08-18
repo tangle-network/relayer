@@ -141,24 +141,14 @@ export async function getDepositLeavesFromChain(
 export async function getDepositLeavesFromRelayer(
   contractAddress: string
 ): Promise<string[]> {
-  const relayerResponse = await fetch(
-    `http://nepoche.com:9955/api/v1/leaves/${contractAddress}`
-  );
+  const relayerResponse = process.env.RELAYER_ENDPOINT_HTTP ? 
+    await fetch(
+      `${process.env.RELAYER_ENDPOINT_HTTP}/api/v1/leaves/${contractAddress}`
+    ) :
+    await fetch(`http://localhost:9955/api/v1/leaves/${contractAddress}`);
 
   const jsonResponse = await relayerResponse.json();
   let leaves = jsonResponse.leaves;
-
-  return leaves;
-}
-
-export async function getDepositLeavesFromServer(
-  contractAddress: string
-): Promise<string[]> {
-  const serverResponse = await fetch(
-    `http://nepoche.com:5050/evm-leaves/${contractAddress}`
-  );
-  const jsonResponse: EvmLeavesResponse = await serverResponse.json();
-  let leaves = jsonResponse.leaves.map((val) => val.commitment);
 
   return leaves;
 }

@@ -3,7 +3,7 @@ import WebSocket from 'ws';
 import { 
   generateSnarkProof,
   getAnchorDenomination,
-  getDepositLeavesFromServer,
+  getDepositLeavesFromRelayer,
   calculateFee,
   deposit
 } from '../proofUtils';
@@ -95,7 +95,7 @@ async function main() {
     process.exit(1);
   });
   console.log('Generating zkProof to do a withdraw ..');
-  const leaves = await getDepositLeavesFromServer(contractAddress);
+  const leaves = await getDepositLeavesFromRelayer(contractAddress);
   const { proof, args } = await generateSnarkProof(
     leaves,
     depositArgs,

@@ -452,7 +452,7 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
             Ok(pending) => {
                 yield Withdraw(WithdrawStatus::Sent);
                 tracing::debug!("Tx is submitted and pending! {}", *pending);
-                let result = pending.confirmations(1).await;
+                let result = pending.interval(Duration::from_millis(7000)).await;
                 yield Withdraw(WithdrawStatus::Submitted);
                 result
             },
