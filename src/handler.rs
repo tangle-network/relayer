@@ -4,6 +4,7 @@ use std::convert::Infallible;
 use std::error::Error;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_stream::stream;
 use futures::prelude::*;
@@ -454,6 +455,7 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
                 let result = pending.await;
                 tracing::debug!("Tx Submitted!");
                 yield Withdraw(WithdrawStatus::Submitted);
+                tokio::time::sleep(Duration::from_secs(3)).await;
                 result
             },
             Err(e) => {
