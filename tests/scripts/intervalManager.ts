@@ -1,5 +1,4 @@
 import { ethers } from 'ethers';
-const cron = require('node-cron');
 require('dotenv').config({ path: '.env' });
 import { create_slack_alert } from './dispatchSlackNotification';
 import WebSocket from 'ws';
@@ -16,7 +15,8 @@ import {
   getRelayerConfig,
   generateWithdrawRequest,
   handleMessage,
-  Result
+  Result,
+  sleep
 } from '../relayerUtils';
 
 type configuredChain = {
@@ -96,25 +96,22 @@ function generateNoteString(deposit: Deposit, chain: configuredChain): string {
   return `${chain.name}-${toHex(deposit.preimage, 62)}`
 }
 
-async function setupCronJobs() {
-
+async function run() {  
   const configuredChains = populateConfiguredChains();
-  
-  for (let i=0; i<configuredChains.length; i++) {
-    // Schedule for deposits
-    cron.schedule(`${i} * * * *`, async () => {
-      console.log('cron job started for deposit');
+
+  for(let i=0; i<configuredChains.length; i++) {
+    setInterval(async () => {
       const res = await deposit(configuredChains[i]!.contractAddress, configuredChains[i]!.wallet);
       configuredChains[i]!.deposits.push(res);
       const noteString = generateNoteString(res, configuredChains[i]!);
-      console.log(noteString);
-    });
+      console.log(`made a deposit with: ${noteString}`);
+    }, 300000);
+  
+    // allow time for deposit and polling (30s)
+    await sleep(45000);
 
-    // Schedule for withdrawals
-    cron.schedule(`${2+i} * * * *`, async () => {
-      // get relayer information
+    setInterval(async () => {
       const relayerInfo = await getRelayerConfig(configuredChains[i]!.name, `${process.env.RELAYER_ENDPOINT_HTTP}`);
-      console.log(relayerInfo);
       const contractDenomination = await getAnchorDenomination(
         configuredChains[i]!.contractAddress,
         configuredChains[i]!.wallet.provider!
@@ -181,8 +178,9 @@ async function setupCronJobs() {
         console.error('Relayer Connection closed!');
         create_slack_alert("Websockets client was not in open state");
       }
-    })
+    }, 300000);
   }
-}
 
-setupCronJobs();
+};
+
+run();

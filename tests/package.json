@@ -9,7 +9,8 @@
   "scripts": {
     "test": "mocha --require ts-node/register 'integration_tests/**/*.ts' --exit",
     "sanity": "ts-node scripts/networkSanity.ts",
-    "cron": "ts-node scripts/cronTaskManager.ts"
+    "cron": "ts-node scripts/cronTaskManager.ts",
+    "interval": "ts-node scripts/intervalManager.ts"
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.2.0",
