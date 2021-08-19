@@ -23,7 +23,6 @@ type configuredChain = {
   name: string,
   contractAddress: string,
   wallet: ethers.Signer,
-  deposits: Deposit[],
 }
 
 function populateConfiguredChains(): configuredChain[] {
@@ -35,7 +34,6 @@ function populateConfiguredChains(): configuredChain[] {
       wallet: initializeWallet('beresheet'),
       name: 'beresheet',
       contractAddress: '0xf0EA8Fa17daCF79434d10C51941D8Fc24515AbE3',
-      deposits: []
     });
   }
   
@@ -44,7 +42,6 @@ function populateConfiguredChains(): configuredChain[] {
       wallet: initializeWallet('harmony'),
       name: 'harmony',
       contractAddress: '0x4c37863bf2642Ba4e8De7e746500C700540119E8',
-      deposits: []
     });
   }
 
@@ -53,7 +50,6 @@ function populateConfiguredChains(): configuredChain[] {
       wallet: initializeWallet('rinkeby'),
       name: 'rinkeby',
       contractAddress: '0x626FEc5Ffa7Bf1EE8CEd7daBdE545630473E3ABb',
-      deposits: []
     });
   }
 
@@ -97,20 +93,18 @@ function generateNoteString(deposit: Deposit, chain: configuredChain): string {
 }
 
 async function run() {  
-  const configuredChains = populateConfiguredChains();
+  setInterval(async () => {
+    const configuredChains = populateConfiguredChains();
 
-  for(let i=0; i<configuredChains.length; i++) {
-    setInterval(async () => {
+    for(let i=0; i<configuredChains.length; i++) {
+
       const res = await deposit(configuredChains[i]!.contractAddress, configuredChains[i]!.wallet);
-      configuredChains[i]!.deposits.push(res);
       const noteString = generateNoteString(res, configuredChains[i]!);
       console.log(`made a deposit with: ${noteString}`);
-    }, 300000);
-  
-    // allow time for deposit and polling (30s)
-    await sleep(45000);
 
-    setInterval(async () => {
+      // allow time for relayer polling to see deposit
+      await sleep(30000);
+
       const relayerInfo = await getRelayerConfig(configuredChains[i]!.name, `${process.env.RELAYER_ENDPOINT_HTTP}`);
       const contractDenomination = await getAnchorDenomination(
         configuredChains[i]!.contractAddress,
@@ -149,12 +143,11 @@ async function run() {
         create_slack_alert("Websockets communication failed.", `Error: ${err}`);
       });
 
-      // 
       console.log('Generating zkProof to do a withdraw ..');
       const leaves = await getDepositLeavesFromRelayer(configuredChains[i]!.contractAddress, `${process.env.RELAYER_ENDPOINT_HTTP}`);
       const { proof, args } = await generateSnarkProof(
         leaves,
-        configuredChains[i]!.deposits.pop(),
+        res,
         await configuredChains[i]!.wallet.getAddress(),
         relayerInfo.account,
         calculatedFee
@@ -178,9 +171,8 @@ async function run() {
         console.error('Relayer Connection closed!');
         create_slack_alert("Websockets client was not in open state");
       }
-    }, 300000);
-  }
-
+    }
+  }, 300000); // run every 6 minutes
 };
 
 run();
