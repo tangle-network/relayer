@@ -338,7 +338,6 @@ where
 
             tokio::time::sleep(Duration::from_secs(30)).await;
         }
-        Ok(())
     }
 
     #[tracing::instrument(skip(self), fields(contract = %self.contract))]
@@ -375,7 +374,6 @@ where
                 }
             }
         }
-        Ok(())
     }
 }
 
