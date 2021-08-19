@@ -10,6 +10,9 @@ import nativeAnchorContract from './build/contracts/NativeAnchor.json';
 import MerkleTree from './lib/MerkleTree';
 import fetch from 'node-fetch';
 
+// variable to hold groth16 and not reinitialize
+let groth16;
+
 export type Deposit = {
   nullifier: snarkjs.bigInt;
   secret: snarkjs.bigInt;
@@ -169,7 +172,10 @@ export async function generateSnarkProof(
     deposit
   );
 
-  let groth16 = await buildGroth16();
+  // Only build groth16 once
+  if (!groth16) {
+    groth16 = await buildGroth16();
+  }
   let circuit = require('./build/circuits/withdraw.json');
   let proving_key = fs.readFileSync(
     './build/circuits/withdraw_proving_key.bin'
