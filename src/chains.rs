@@ -158,7 +158,7 @@ pub mod evm {
         Harmony => {
             endpoint: "https://api.s1.b.hmny.io",
             ws_endpoint: "wss://ws.s1.b.hmny.io",
-            polling_interval_ms: 3,
+            polling_interval_ms: 3000,
             chain_id: 1666700001,
             contracts: [
                 {
