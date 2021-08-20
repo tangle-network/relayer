@@ -356,7 +356,8 @@ where
 
             block = current_block_number;
 
-            tokio::time::sleep(Duration::from_millis(self.polling_interval_ms)).await;
+            tokio::time::sleep(Duration::from_millis(self.polling_interval_ms))
+                .await;
         }
     }
 
