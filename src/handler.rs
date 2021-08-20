@@ -4,6 +4,7 @@ use std::convert::Infallible;
 use std::error::Error;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::time::Duration;
 
 use async_stream::stream;
 use futures::prelude::*;
@@ -450,9 +451,8 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
         let tx = match call.send().await {
             Ok(pending) => {
                 yield Withdraw(WithdrawStatus::Sent);
-                tracing::debug!("Tx is created! {}", *pending);
-                let result = pending.await;
-                tracing::debug!("Tx Submitted!");
+                tracing::debug!("Tx is submitted and pending! {}", *pending);
+                let result = pending.interval(Duration::from_millis(7000)).await;
                 yield Withdraw(WithdrawStatus::Submitted);
                 result
             },

@@ -10,9 +10,16 @@ import nativeAnchorContract from './build/contracts/NativeAnchor.json';
 import MerkleTree from './lib/MerkleTree';
 import fetch from 'node-fetch';
 
-type EvmLeavesResponse = {
-  leaves: [{ commitment: string }];
-};
+// variable to hold groth16 and not reinitialize
+let groth16;
+
+export type Deposit = {
+  nullifier: snarkjs.bigInt;
+  secret: snarkjs.bigInt;
+  preimage: Buffer;
+  commitment: snarkjs.bigInt;
+  nullifierHash: snarkjs.bigInt;
+}
 
 export const toHex = (number: number | Buffer, length = 32) =>
   '0x' +
@@ -67,6 +74,7 @@ function createDeposit() {
 
 export async function deposit(contractAddress: string, wallet: ethers.Signer) {
   const deposit = createDeposit();
+  console.log('deposit created');
   const nativeAnchorInstance = new ethers.Contract(
     contractAddress,
     nativeAnchorContract.abi,
@@ -81,6 +89,7 @@ export async function deposit(contractAddress: string, wallet: ethers.Signer) {
 
   const denomination = await nativeAnchorInstance.functions.denomination!();
 
+  console.log(denomination.toString());
   // Gas limit values required for beresheet
   const depositTx = await nativeAnchorInstance.deposit(
     toFixedHex(deposit.commitment),
@@ -128,14 +137,14 @@ export async function getDepositLeavesFromChain(
   return leaves;
 }
 
-export async function getDepositLeavesFromServer(
-  contractAddress: string
+export async function getDepositLeavesFromRelayer(
+  contractAddress: string,
+  endpoint: string
 ): Promise<string[]> {
-  const serverResponse = await fetch(
-    `http://nepoche.com:5050/evm-leaves/${contractAddress}`
-  );
-  const jsonResponse: EvmLeavesResponse = await serverResponse.json();
-  let leaves = jsonResponse.leaves.map((val) => val.commitment);
+  const relayerResponse = await fetch(`${endpoint}/api/v1/leaves/${contractAddress}`);
+
+  const jsonResponse = await relayerResponse.json();
+  let leaves = jsonResponse.leaves;
 
   return leaves;
 }
@@ -163,7 +172,10 @@ export async function generateSnarkProof(
     deposit
   );
 
-  let groth16 = await buildGroth16();
+  // Only build groth16 once
+  if (!groth16) {
+    groth16 = await buildGroth16();
+  }
   let circuit = require('./build/circuits/withdraw.json');
   let proving_key = fs.readFileSync(
     './build/circuits/withdraw_proving_key.bin'

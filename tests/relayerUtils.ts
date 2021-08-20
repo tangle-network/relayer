@@ -1,7 +1,9 @@
 import fetch from 'node-fetch';
 import { spawn } from 'child_process';
+require('dotenv').config({ path: '.env' });
 
 export type RelayerChainConfig = {
+  chainName: string;
   withdrawFeePercentage: number;
   withdrawGaslimit: string;
   account: string;
@@ -30,21 +32,23 @@ export const generateWithdrawRequest = (
 });
 
 export const getRelayerConfig = async (
-  chainName: string
+  chainName: string,
+  endpoint: string,
 ): Promise<RelayerChainConfig> => {
-  const relayerInfoRes = await fetch('http://localhost:9955/api/v1/info');
+  const relayerInfoRes = await fetch(`${endpoint}/api/v1/info`)
   const relayerInfo: any = await relayerInfoRes.json();
 
   return {
+    chainName: chainName,
     account: relayerInfo.evm[chainName].account,
     withdrawFeePercentage: relayerInfo.evm[chainName].withdrawFeePercentage,
     withdrawGaslimit: relayerInfo.evm[chainName].withdrawGaslimit,
   };
 };
 
-export async function startWebbRelayer() {
+export function startWebbRelayer() {
   const proc = spawn('../target/debug/webb-relayer', [
-    '-vvvv',
+    '-vvv',
     '-c',
     './config.toml',
   ]);
@@ -78,6 +82,8 @@ export function handleMessage(data: any): Result {
     return Result.Errored;
   } else if (data.withdraw?.finalized) {
     return Result.CleanExit;
+  } else if (data.withdraw?.droppedFromMemPool) {
+    return Result.Errored;
   } else {
     return Result.Continue;
   }

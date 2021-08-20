@@ -194,10 +194,11 @@ where
                     store.clone(),
                     contract.address,
                     contract.deplyed_at,
+                    chains::evm::$chain::polling_interval_ms(),
                 );
                 let task = async move {
                     tokio::select! {
-                        _ = watcher.watch() => {
+                        _ = watcher.run() => {
                             tracing::warn!("watcher for {} stopped", stringify!($chain));
                         },
                         _ = tokio::signal::ctrl_c() => {
