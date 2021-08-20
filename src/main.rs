@@ -194,6 +194,7 @@ where
                     store.clone(),
                     contract.address,
                     contract.deplyed_at,
+                    chains::evm::$chain::polling_interval_ms(),
                 );
                 let task = async move {
                     tokio::select! {

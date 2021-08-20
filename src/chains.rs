@@ -47,6 +47,7 @@ pub mod evm {
         fn name() -> ChainName;
         fn endpoint() -> &'static str;
         fn ws_endpoint() -> &'static str;
+        fn polling_interval_ms() -> u64;
         fn chain_id() -> u32;
         fn contracts() -> HashMap<Address, DeployedContract>;
     }
@@ -55,6 +56,7 @@ pub mod evm {
         ($name:ident => {
             endpoint: $endpoint:expr,
             ws_endpoint: $ws_endpoint:expr,
+            polling_interval_ms: $polling_interval_ms:expr,
             chain_id: $chain_id:expr,
             contracts: [
                 $({
@@ -72,6 +74,8 @@ pub mod evm {
                 fn endpoint() -> &'static str { $endpoint }
 
                 fn ws_endpoint() -> &'static str { $ws_endpoint }
+
+                fn polling_interval_ms() -> u64 { $polling_interval_ms }
 
                 fn chain_id() -> u32 { $chain_id }
 
@@ -97,6 +101,7 @@ pub mod evm {
         Edgeware => {
             endpoint: "https://mainnet1.edgewa.re/evm",
             ws_endpoint: "wss://mainnet1.edgewa.re/evm",
+            polling_interval_ms: 7000,
             chain_id: 2021,
             contracts: [],
         }
@@ -106,6 +111,7 @@ pub mod evm {
         Ganache => {
             endpoint: "http://localhost:8545",
             ws_endpoint: "ws://localhost:8545",
+            polling_interval_ms: 1000,
             chain_id: 1337,
             contracts: [
                 {
@@ -121,6 +127,7 @@ pub mod evm {
         Beresheet => {
             endpoint: "https://beresheet.edgewa.re/evm",
             ws_endpoint: "wss://beresheet.edgewa.re",
+            polling_interval_ms: 7000,
             chain_id: 2022,
             contracts: [
                 {
@@ -151,6 +158,7 @@ pub mod evm {
         Harmony => {
             endpoint: "https://api.s1.b.hmny.io",
             ws_endpoint: "wss://ws.s1.b.hmny.io",
+            polling_interval_ms: 3,
             chain_id: 1666700001,
             contracts: [
                 {
@@ -186,6 +194,7 @@ pub mod evm {
         Webb => {
             endpoint: "",
             ws_endpoint: "",
+            polling_interval_ms: 0,
             chain_id: 0,
             contracts: [],
         }
@@ -195,6 +204,7 @@ pub mod evm {
         Rinkeby => {
             endpoint: "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
             ws_endpoint: "wss://rinkeby.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+            polling_interval_ms: 30000,
             chain_id: 4,
             contracts: [
                 {

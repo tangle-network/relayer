@@ -63,8 +63,6 @@ pub struct CommonSubstrateConfig {
 pub struct CommonEvmConfig {
     #[serde(skip_serializing)]
     pub private_key: Secret,
-    #[serde(skip_serializing)]
-    pub reward_account: Option<Address>,
     #[serde(rename(serialize = "withdrawFeePercentage"))]
     pub withdraw_fee_percentage: f64,
     #[serde(skip_serializing)]

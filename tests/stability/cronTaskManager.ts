@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 const cron = require('node-cron');
 require('dotenv').config({ path: '.env' });
-import { create_slack_alert } from './dispatchSlackNotification';
+import { create_slack_alert } from '../scripts/dispatchSlackNotification';
 import WebSocket from 'ws';
 import { 
   generateSnarkProof,
@@ -102,7 +102,7 @@ async function setupCronJobs() {
   const configuredChains = populateConfiguredChains();
   
   for (let i=0; i<configuredChains.length; i++) {
-    // Schedule for deposits
+    // Run the deposit and withdraw script below every 10 minutes.
     cron.schedule(`${i} */10 * * * *`, async () => {
       console.log('cron job started for deposit');
       const res = await deposit(configuredChains[i]!.contractAddress, configuredChains[i]!.wallet);

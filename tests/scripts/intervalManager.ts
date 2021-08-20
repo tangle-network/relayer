@@ -172,7 +172,7 @@ async function run() {
         create_slack_alert("Websockets client was not in open state");
       }
     }
-  }, 300000); // run every 6 minutes
+  }, 600000); // run every 10 minutes
 };
 
 run();

@@ -206,6 +206,7 @@ pub struct LeavesWatcher<S> {
     store: S,
     contract: Address,
     start_block_number: u64,
+    polling_interval_ms: u64,
 }
 
 impl<S> LeavesWatcher<S>
@@ -217,12 +218,14 @@ where
         store: S,
         contract: Address,
         start_block_number: u64,
+        polling_interval_ms: u64,
     ) -> Self {
         Self {
             ws_endpoint: ws_endpoint.into(),
             contract,
             store,
             start_block_number,
+            polling_interval_ms,
         }
     }
 
@@ -353,7 +356,7 @@ where
 
             block = current_block_number;
 
-            tokio::time::sleep(Duration::from_secs(6)).await;
+            tokio::time::sleep(Duration::from_millis(self.polling_interval_ms)).await;
         }
     }
 
@@ -442,6 +445,7 @@ mod tests {
             store.clone(),
             contract_address,
             0,
+            1,
         );
         // run the leaves watcher in another task
         let task_handle = tokio::task::spawn(leaves_watcher.run());
@@ -462,6 +466,7 @@ mod tests {
             store.clone(),
             contract_address,
             0,
+            1,
         );
         let task_handle = tokio::task::spawn(leaves_watcher.run());
         tracing::debug!("Waiting for 5s allowing the task to run..");
