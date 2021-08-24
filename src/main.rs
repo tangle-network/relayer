@@ -120,27 +120,16 @@ fn build_relayer(
         });
 
     // get the ip of the caller.
-    // let proxy_addr = [127, 0, 0, 1].into();
-    // let ip_filter = warp::path("ip")
-    //     .and(warp::get())
-    //     .and(real_ip(vec![proxy_addr]))
-    //     .map(|addr: Option<IpAddr>| {
-    //         match addr {
-    //             Some(a) => a,
-    //             None => {
-    //                 IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1))
-    //             }
-    //         }
-    //     })
-    //     // If there was no X-Forwarded-For header, use this IP
-    //     .or(warp::addr::remote())
-    //     // .unify()
-    //     .and_then(handler::handle_ip_info);
-
+    let proxy_addr = [127, 0, 0, 1].into();
     let ip_filter = warp::path("ip")
         .and(warp::get())
-        .and(warp::addr::remote())
+        .and(real_ip(vec![proxy_addr]))
         .and_then(handler::handle_ip_info);
+
+    // let ip_filter = warp::path("ip")
+    //     .and(warp::get())
+    //     .and(warp::addr::remote())
+    //     .and_then(handler::handle_ip_info);
 
     // relayer info
     let info_filter = warp::path("info")
