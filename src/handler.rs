@@ -1,6 +1,5 @@
 #![allow(clippy::large_enum_variant)]
 
-use ipgeolocate::{Locator, Service};
 use std::convert::Infallible;
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
@@ -69,60 +68,22 @@ where
 #[serde(rename_all = "camelCase")]
 pub struct IpInformationResponse {
     ip: String,
-    city: String,
-    country: String,
 }
 
 pub async fn handle_ip_info(
     ip: Option<IpAddr>,
 ) -> Result<impl warp::Reply, Infallible> {
-    let service = Service::IpApi;
-    let reply = match Locator::get_ipaddr(ip.unwrap(), service).await {
-        Ok(ip) => IpInformationResponse {
-            ip: ip.ip,
-            city: ip.city,
-            country: ip.country,
-        },
-        Err(error) => {
-            println!(
-                "Failed to get geolocation for ip: {}, {}",
-                ip.unwrap(),
-                error
-            );
-            IpInformationResponse {
-                ip: ip.unwrap().to_string(),
-                city: "Unknown".to_string(),
-                country: "Unknown".to_string(),
-            }
-        }
-    };
-    Ok(warp::reply::json(&reply))
+    Ok(warp::reply::json(&IpInformationResponse {
+        ip: ip.unwrap().to_string(),
+    }))
 }
 
 pub async fn handle_socket_info(
     ip: Option<SocketAddr>,
 ) -> Result<impl warp::Reply, Infallible> {
-    let service = Service::IpApi;
-    let reply = match Locator::get_ipaddr(ip.unwrap().ip(), service).await {
-        Ok(ip) => IpInformationResponse {
-            ip: ip.ip,
-            city: ip.city,
-            country: ip.country,
-        },
-        Err(error) => {
-            println!(
-                "Failed to get geolocation for ip: {}, {}",
-                ip.unwrap(),
-                error
-            );
-            IpInformationResponse {
-                ip: ip.unwrap().ip().to_string(),
-                city: "Unknown".to_string(),
-                country: "Unknown".to_string(),
-            }
-        }
-    };
-    Ok(warp::reply::json(&reply))
+    Ok(warp::reply::json(&IpInformationResponse {
+        ip: ip.unwrap().ip().to_string(),
+    }))
 }
 
 #[derive(Debug, Serialize)]

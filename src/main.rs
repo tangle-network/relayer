@@ -121,6 +121,8 @@ fn build_relayer(
 
     // get the ip of the caller.
     let proxy_addr = [127, 0, 0, 1].into();
+
+    // First check the x-forwarded-for with 'real_ip' for reverse proxy setups
     let ip_filter = warp::path("ip")
         .and(warp::get())
         .and(real_ip(vec![proxy_addr]))
