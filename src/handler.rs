@@ -1,9 +1,9 @@
 #![allow(clippy::large_enum_variant)]
 
+use ipgeolocate::{Locator, Service};
 use std::convert::Infallible;
 use std::error::Error;
-use std::net::{SocketAddr, IpAddr};
-use ipgeolocate::{Locator, Service};
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -78,15 +78,17 @@ pub async fn handle_ip_info(
 ) -> Result<impl warp::Reply, Infallible> {
     let service = Service::IpApi;
     let reply = match Locator::get_ipaddr(ip.unwrap(), service).await {
-        Ok(ip) => {
-            IpInformationResponse {
-                ip: ip.ip,
-                city: ip.city,
-                country: ip.country,
-            }
+        Ok(ip) => IpInformationResponse {
+            ip: ip.ip,
+            city: ip.city,
+            country: ip.country,
         },
         Err(error) => {
-            println!("Failed to get geolocation for ip: {}, {}", ip.unwrap(), error);
+            println!(
+                "Failed to get geolocation for ip: {}, {}",
+                ip.unwrap(),
+                error
+            );
             IpInformationResponse {
                 ip: ip.unwrap().to_string(),
                 city: "Unknown".to_string(),
@@ -102,15 +104,17 @@ pub async fn handle_socket_info(
 ) -> Result<impl warp::Reply, Infallible> {
     let service = Service::IpApi;
     let reply = match Locator::get_ipaddr(ip.unwrap().ip(), service).await {
-        Ok(ip) => {
-            IpInformationResponse {
-                ip: ip.ip,
-                city: ip.city,
-                country: ip.country,
-            }
+        Ok(ip) => IpInformationResponse {
+            ip: ip.ip,
+            city: ip.city,
+            country: ip.country,
         },
         Err(error) => {
-            println!("Failed to get geolocation for ip: {}, {}", ip.unwrap(), error);
+            println!(
+                "Failed to get geolocation for ip: {}, {}",
+                ip.unwrap(),
+                error
+            );
             IpInformationResponse {
                 ip: ip.unwrap().ip().to_string(),
                 city: "Unknown".to_string(),

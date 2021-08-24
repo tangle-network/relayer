@@ -6,10 +6,10 @@ use std::sync::Arc;
 use anyhow::Context;
 use directories_next::ProjectDirs;
 use futures::Future;
+use std::net::{SocketAddr};
 use structopt::StructOpt;
 use warp::Filter;
 use warp_real_ip::real_ip;
-use std::net::{SocketAddr, IpAddr, Ipv4Addr};
 
 use crate::chains::evm::EvmChain;
 use crate::context::RelayerContext;
@@ -125,17 +125,10 @@ fn build_relayer(
         .and(warp::get())
         .and(real_ip(vec![proxy_addr]))
         .and_then(handler::handle_ip_info)
-        .or(
-            warp::path("ip")
-                .and(warp::get())
-                .and(warp::addr::remote())
-                .and_then(handler::handle_socket_info)
-        );
-
-    // let ip_filter = warp::path("ip")
-    //     .and(warp::get())
-    //     .and(warp::addr::remote())
-    //     .and_then(handler::handle_ip_info);
+        .or(warp::path("ip")
+            .and(warp::get())
+            .and(warp::addr::remote())
+            .and_then(handler::handle_socket_info));
 
     // relayer info
     let info_filter = warp::path("info")
