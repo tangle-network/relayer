@@ -6,7 +6,7 @@ use std::sync::Arc;
 use anyhow::Context;
 use directories_next::ProjectDirs;
 use futures::Future;
-use std::net::{SocketAddr};
+use std::net::SocketAddr;
 use structopt::StructOpt;
 use warp::Filter;
 use warp_real_ip::real_ip;
