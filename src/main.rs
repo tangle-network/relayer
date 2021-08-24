@@ -124,7 +124,13 @@ fn build_relayer(
     let ip_filter = warp::path("ip")
         .and(warp::get())
         .and(real_ip(vec![proxy_addr]))
-        .and_then(handler::handle_ip_info);
+        .and_then(handler::handle_ip_info)
+        .or(
+            warp::path("ip")
+                .and(warp::get())
+                .and(warp::addr::remote())
+                .and_then(handler::handle_socket_info)
+        );
 
     // let ip_filter = warp::path("ip")
     //     .and(warp::get())
