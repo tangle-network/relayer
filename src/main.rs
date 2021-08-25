@@ -1,14 +1,15 @@
 #![deny(unsafe_code)]
 
-use std::net::SocketAddr;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Context;
 use directories_next::ProjectDirs;
 use futures::Future;
+use std::net::SocketAddr;
 use structopt::StructOpt;
 use warp::Filter;
+use warp_real_ip::real_ip;
 
 use crate::chains::evm::EvmChain;
 use crate::context::RelayerContext;
@@ -119,10 +120,17 @@ fn build_relayer(
         });
 
     // get the ip of the caller.
+    let proxy_addr = [127, 0, 0, 1].into();
+
+    // First check the x-forwarded-for with 'real_ip' for reverse proxy setups
     let ip_filter = warp::path("ip")
         .and(warp::get())
-        .and(warp::addr::remote())
-        .and_then(handler::handle_ip_info);
+        .and(real_ip(vec![proxy_addr]))
+        .and_then(handler::handle_ip_info)
+        .or(warp::path("ip")
+            .and(warp::get())
+            .and(warp::addr::remote())
+            .and_then(handler::handle_socket_info));
 
     // relayer info
     let info_filter = warp::path("info")

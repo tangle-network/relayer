@@ -2,7 +2,7 @@
 
 use std::convert::Infallible;
 use std::error::Error;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -67,13 +67,23 @@ where
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IpInformationResponse {
-    ip: Option<SocketAddr>,
+    ip: String,
 }
 
 pub async fn handle_ip_info(
+    ip: Option<IpAddr>,
+) -> Result<impl warp::Reply, Infallible> {
+    Ok(warp::reply::json(&IpInformationResponse {
+        ip: ip.unwrap().to_string(),
+    }))
+}
+
+pub async fn handle_socket_info(
     ip: Option<SocketAddr>,
 ) -> Result<impl warp::Reply, Infallible> {
-    Ok(warp::reply::json(&IpInformationResponse { ip }))
+    Ok(warp::reply::json(&IpInformationResponse {
+        ip: ip.unwrap().ip().to_string(),
+    }))
 }
 
 #[derive(Debug, Serialize)]
