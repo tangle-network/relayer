@@ -125,6 +125,8 @@ pub async fn handle_relayer_info(
 
     update_account_for!(config, webb, evm::Webb);
     update_account_for!(config, ganache, evm::Ganache);
+    update_account_for!(config, ganache1, evm::Ganache1);
+    update_account_for!(config, ganache2, evm::Ganache2);
     update_account_for!(config, edgeware, evm::Edgeware);
     update_account_for!(config, beresheet, evm::Beresheet);
     update_account_for!(config, harmony, evm::Harmony);
@@ -171,6 +173,8 @@ pub enum EvmCommand {
     Harmony(EvmHarmonyCommand),
     Beresheet(EvmBeresheetCommand),
     Ganache(EvmGanacheCommand),
+    Ganache1(EvmGanacheCommand),
+    Ganache2(EvmGanacheCommand),
     Hedgeware(EvmHedgewareCommand),
     Webb(EvmWebbCommand),
     Rinkeby(EvmRinkebyCommand),
@@ -332,7 +336,7 @@ pub fn handle_evm<'a>(
                 handle_evm_withdraw::<evm::Beresheet>(ctx, proof)
             }
         },
-        Ganache(c) => match c {
+        Ganache(c) | Ganache1(c) | Ganache2(c) => match c {
             EvmGanacheCommand::RelayWithdraw(proof) => {
                 handle_evm_withdraw::<evm::Ganache>(ctx, proof)
             }
@@ -358,7 +362,7 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     let s = stream! {
-        let supported_contracts = C::contracts();
+        let supported_contracts = C::anchor_contracts();
         if !supported_contracts.contains_key(&data.contract) {
             yield Network(NetworkStatus::UnsupportedContract);
             return;

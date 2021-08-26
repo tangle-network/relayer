@@ -38,6 +38,8 @@ pub mod evm {
         Edgeware,
         Webb,
         Ganache,
+        Ganache1,
+        Ganache2,
         Beresheet,
         Harmony,
         Rinkeby,
@@ -49,7 +51,7 @@ pub mod evm {
         fn ws_endpoint() -> &'static str;
         fn polling_interval_ms() -> u64;
         fn chain_id() -> u32;
-        fn contracts() -> HashMap<Address, DeployedContract>;
+        fn anchor_contracts() -> HashMap<Address, DeployedContract>;
     }
 
     macro_rules! define_chain {
@@ -58,7 +60,7 @@ pub mod evm {
             ws_endpoint: $ws_endpoint:expr,
             polling_interval_ms: $polling_interval_ms:expr,
             chain_id: $chain_id:expr,
-            contracts: [
+            anchor_contracts: [
                 $({
                     size: $size:expr,
                     address: $address:expr,
@@ -79,7 +81,7 @@ pub mod evm {
 
                 fn chain_id() -> u32 { $chain_id }
 
-                fn contracts() -> HashMap<Address, DeployedContract> {
+                fn anchor_contracts() -> HashMap<Address, DeployedContract> {
                     #[allow(unused_mut)]
                     let mut map = HashMap::new();
                     $(
@@ -103,7 +105,7 @@ pub mod evm {
             ws_endpoint: "wss://mainnet1.edgewa.re/evm",
             polling_interval_ms: 7000,
             chain_id: 2021,
-            contracts: [],
+            anchor_contracts: [],
         }
     }
 
@@ -113,7 +115,39 @@ pub mod evm {
             ws_endpoint: "ws://localhost:8545",
             polling_interval_ms: 1000,
             chain_id: 1337,
-            contracts: [
+            anchor_contracts: [
+                {
+                    size: 1,
+                    address: "0xFBD61C9961e0bf872B5Ec041b718C0B2a106Ce9D",
+                    at: 1,
+                }
+            ],
+        }
+    }
+
+    define_chain! {
+        Ganache1 => {
+            endpoint: "http://localhost:8546",
+            ws_endpoint: "ws://localhost:8545",
+            polling_interval_ms: 1000,
+            chain_id: 1337,
+            anchor_contracts: [
+                {
+                    size: 1,
+                    address: "0xFBD61C9961e0bf872B5Ec041b718C0B2a106Ce9D",
+                    at: 1,
+                }
+            ],
+        }
+    }
+
+    define_chain! {
+        Ganache2 => {
+            endpoint: "http://localhost:8547",
+            ws_endpoint: "ws://localhost:8545",
+            polling_interval_ms: 1000,
+            chain_id: 1337,
+            anchor_contracts: [
                 {
                     size: 1,
                     address: "0xFBD61C9961e0bf872B5Ec041b718C0B2a106Ce9D",
@@ -129,7 +163,7 @@ pub mod evm {
             ws_endpoint: "wss://beresheet.edgewa.re",
             polling_interval_ms: 7000,
             chain_id: 2022,
-            contracts: [
+            anchor_contracts: [
                 {
                     size: 10,
                     address: "0xf0EA8Fa17daCF79434d10C51941D8Fc24515AbE3",
@@ -160,7 +194,7 @@ pub mod evm {
             ws_endpoint: "wss://ws.s1.b.hmny.io",
             polling_interval_ms: 3000,
             chain_id: 1666700001,
-            contracts: [
+            anchor_contracts: [
                 {
                     size: 0.0000000001,
                     address: "0x4c37863bf2642Ba4e8De7e746500C700540119E8",
@@ -196,7 +230,7 @@ pub mod evm {
             ws_endpoint: "",
             polling_interval_ms: 0,
             chain_id: 0,
-            contracts: [],
+            anchor_contracts: [],
         }
     }
 
@@ -206,7 +240,7 @@ pub mod evm {
             ws_endpoint: "wss://rinkeby.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161",
             polling_interval_ms: 30000,
             chain_id: 4,
-            contracts: [
+            anchor_contracts: [
                 {
                     size: 0.1,
                     address: "0x626FEc5Ffa7Bf1EE8CEd7daBdE545630473E3ABb",

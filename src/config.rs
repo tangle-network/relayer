@@ -89,6 +89,8 @@ pub struct EvmConfig {
     pub webb: Option<CommonEvmConfig>,
     pub edgeware: Option<CommonEvmConfig>,
     pub ganache: Option<CommonEvmConfig>,
+    pub ganache1: Option<CommonEvmConfig>,
+    pub ganache2: Option<CommonEvmConfig>,
     pub hedgeware: Option<CommonEvmConfig>,
     pub beresheet: Option<CommonEvmConfig>,
     pub harmony: Option<CommonEvmConfig>,

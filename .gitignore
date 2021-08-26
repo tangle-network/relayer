@@ -7,3 +7,5 @@ config/
 
 tests/node_modules
 tests/leaves
+leaves
+config.toml

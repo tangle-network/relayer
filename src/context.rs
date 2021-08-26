@@ -51,6 +51,8 @@ impl RelayerContext {
             Edgeware = edgeware,
             Webb = webb,
             Ganache = ganache,
+            Ganache1 = ganache1,
+            Ganache2 = ganache2,
             Beresheet = beresheet,
             Harmony = harmony,
             Rinkeby = rinkeby
@@ -78,6 +80,8 @@ impl RelayerContext {
             Edgeware = edgeware,
             Webb = webb,
             Ganache = ganache,
+            Ganache1 = ganache1,
+            Ganache2 = ganache2,
             Beresheet = beresheet,
             Harmony = harmony,
             Rinkeby = rinkeby
@@ -105,6 +109,8 @@ impl RelayerContext {
             Edgeware = edgeware,
             Webb = webb,
             Ganache = ganache,
+            Ganache1 = ganache1,
+            Ganache2 = ganache2,
             Beresheet = beresheet,
             Harmony = harmony,
             Rinkeby = rinkeby
