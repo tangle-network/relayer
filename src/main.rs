@@ -11,10 +11,8 @@ use structopt::StructOpt;
 use warp::Filter;
 use warp_real_ip::real_ip;
 
-use crate::chains::evm::EvmChain;
 use crate::context::RelayerContext;
 
-mod chains;
 mod config;
 mod context;
 mod handler;
@@ -186,53 +184,42 @@ where
     };
 
     let store = leaf_cache::SledLeafCache::open(db_path)?;
-    // some macro magic to not repeat myself.
-    macro_rules! start_network_watcher_for {
-        ($chain: ident) => {
-            // check to see if we should enable the leaves watcher
-            // for this chain.
-            let leaf_watcher_enabled = ctx.leaves_watcher_enabled::<chains::evm::$chain>();
-            let contracts = chains::evm::$chain::contracts()
-                .into_values()
-                .filter(|_| leaf_watcher_enabled) // will skip all if `false`.
-                .collect::<Vec<_>>();
-            for contract in contracts {
-                let watcher = leaf_cache::LeavesWatcher::new(
-                    chains::evm::$chain::ws_endpoint(),
-                    store.clone(),
-                    contract.address,
-                    contract.deplyed_at,
-                    chains::evm::$chain::polling_interval_ms(),
-                );
-                let task = async move {
-                    tokio::select! {
-                        _ = watcher.run() => {
-                            tracing::warn!("watcher for {} stopped", stringify!($chain));
-                        },
-                        _ = tokio::signal::ctrl_c() => {
-                            tracing::debug!(
-                                "Stopping the leaves watcher for {} ({})",
-                                stringify!($chain),
-                                contract.address,
-                            );
-                        }
-                    };
-                };
-                tracing::debug!(
-                    "leaves watcher for {} ({}) Started.",
-                    stringify!($chain),
-                    contract.address,
-                );
-                tokio::task::spawn(task);
-            }
-        };
-        ($($chain: ident),+) => {
-            $(
-                start_network_watcher_for!($chain);
-            )+
+    // now we go through each chain, in our configuration
+    for (chain_name, chain_config) in &ctx.config.evm {
+        // check first if we should start the leaf watcher for this chain.
+        if !chain_config.anchor_leaves_watcher.enabled {
+            tracing::warn!(
+                "Anchor Leaves watcher is disabled for {}.",
+                chain_name
+            );
+            continue;
+        }
+        // filter only for anchor contracts (for now).
+        let anchor_contracts = chain_config
+            .contracts
+            .iter()
+            .filter(|c| matches!(c, config::Contract::Anchor(_)));
+        for contract in anchor_contracts {
+            let c = match contract {
+                config::Contract::Anchor(c) => c,
+                _ => unreachable!(),
+            };
+
+            let watcher = leaf_cache::LeavesWatcher::new(
+                chain_config.ws_endpoint.as_str(),
+                store.clone(),
+                c.common.address,
+                c.common.deployed_at,
+                chain_config.anchor_leaves_watcher.polling_interval,
+            );
+
+            tracing::debug!(
+                "leaves watcher for {} ({}) Started.",
+                chain_name,
+                c.common.address,
+            );
+            tokio::task::spawn(watcher.run());
         }
     }
-
-    start_network_watcher_for!(Ganache, Beresheet, Harmony, Rinkeby);
     Ok(store)
 }

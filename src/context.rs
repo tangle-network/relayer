@@ -1,10 +1,10 @@
 use std::convert::TryFrom;
 use std::time::Duration;
 
+use anyhow::Context;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 
-use crate::chains::evm::{ChainName, EvmChain};
 use crate::config;
 
 #[derive(Clone)]
@@ -17,97 +17,41 @@ impl RelayerContext {
         Self { config }
     }
 
-    pub async fn evm_provider<C: EvmChain>(
+    pub async fn evm_provider(
         &self,
+        chain_name: &str,
     ) -> anyhow::Result<Provider<Http>> {
-        let endpoint = C::endpoint();
-        let provider =
-            Provider::try_from(endpoint)?.interval(Duration::from_millis(5u64));
+        let chain_config = self
+            .config
+            .evm
+            .get(chain_name)
+            .context("this chain not configured")?;
+        let provider = Provider::try_from(chain_config.http_endpoint.as_str())?
+            .interval(Duration::from_millis(5u64));
         Ok(provider)
     }
 
-    pub async fn evm_wallet<C: EvmChain>(&self) -> anyhow::Result<LocalWallet> {
-        let evm = &self.config.evm;
-        // DRY
-        macro_rules! wallet {
-            ($($chain: ident = $f: ident),+) => {
-                match C::name() {
-                    $(
-                        ChainName::$chain if evm.$f.is_some() => {
-                            let c = evm.$f.clone().unwrap();
-                            let pk = c.private_key;
-                            let key = SecretKey::from_bytes(pk.as_bytes())?;
-                            let wallet =
-                                LocalWallet::from(key).with_chain_id(C::chain_id());
-                            Ok(wallet)
-                        }
-                    )+
-                    _ => anyhow::bail!("Chain Not Configured!"),
-                }
-            }
-        }
-
-        wallet! {
-            Edgeware = edgeware,
-            Webb = webb,
-            Ganache = ganache,
-            Beresheet = beresheet,
-            Harmony = harmony,
-            Rinkeby = rinkeby
-        }
+    pub async fn evm_wallet(
+        &self,
+        chain_name: &str,
+    ) -> anyhow::Result<LocalWallet> {
+        let chain_config = self
+            .config
+            .evm
+            .get(chain_name)
+            .context("this chain not configured")?;
+        let key = SecretKey::from_bytes(chain_config.private_key.as_bytes())?;
+        let chain_id = chain_config.chain_id;
+        let wallet = LocalWallet::from(key).with_chain_id(chain_id);
+        Ok(wallet)
     }
 
-    pub fn fee_percentage<C: EvmChain>(&self) -> anyhow::Result<f64> {
-        let evm = &self.config.evm;
-        // DRY
-        macro_rules! extract_fee_percentage {
-            ($($chain: ident = $f: ident),+) => {
-                match C::name() {
-                    $(
-                        ChainName::$chain if evm.$f.is_some() => {
-                            let c = evm.$f.clone().unwrap();
-                            Ok(c.withdraw_fee_percentage)
-                        }
-                    )+
-                    _ => anyhow::bail!("Chain Fee Not Configured!"),
-                }
-            }
-        }
-
-        extract_fee_percentage! {
-            Edgeware = edgeware,
-            Webb = webb,
-            Ganache = ganache,
-            Beresheet = beresheet,
-            Harmony = harmony,
-            Rinkeby = rinkeby
-        }
-    }
-
-    pub fn leaves_watcher_enabled<C: EvmChain>(&self) -> bool {
-        let evm = &self.config.evm;
-        // DRY
-        macro_rules! is_enabled {
-            ($($chain: ident = $f: ident),+) => {
-                match C::name() {
-                    $(
-                        ChainName::$chain if evm.$f.is_some() => {
-                            let c = evm.$f.clone().unwrap();
-                            c.enable_leaves_watcher
-                        }
-                    )+
-                    _ => false,
-                }
-            }
-        }
-
-        is_enabled! {
-            Edgeware = edgeware,
-            Webb = webb,
-            Ganache = ganache,
-            Beresheet = beresheet,
-            Harmony = harmony,
-            Rinkeby = rinkeby
-        }
+    pub fn fee_percentage(&self, chain_name: &str) -> anyhow::Result<f64> {
+        let chain_config = self
+            .config
+            .evm
+            .get(chain_name)
+            .context("this chain not configured")?;
+        Ok(chain_config.withdraw_fee_percentage)
     }
 }

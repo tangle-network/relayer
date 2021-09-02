@@ -1,2 +1,2 @@
 [alias]
-relayer = "run -q -- -c tests/config.toml"
+relayer = "run -- -c tests/config.toml"

@@ -259,7 +259,7 @@ where
         Ok(())
     }
 
-    #[tracing::instrument(skip(self), fields(contract = %self.contract))]
+    #[tracing::instrument(skip(self, client), fields(contract = %self.contract))]
     async fn fetch_previous_deposits(
         &self,
         client: Arc<Provider<Ws>>,

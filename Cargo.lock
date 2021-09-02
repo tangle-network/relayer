@@ -3323,6 +3323,7 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
+ "serde",
 ]
 
 [[package]]
@@ -3538,6 +3539,7 @@ dependencies = [
  "sled",
  "structopt",
  "tempfile",
+ "thiserror",
  "tokio",
  "tracing",
  "tracing-futures",

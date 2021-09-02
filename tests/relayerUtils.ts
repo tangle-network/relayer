@@ -16,26 +16,23 @@ export const generateWithdrawRequest = (
   args: string[]
 ) => ({
   evm: {
-    [chainName]: {
-      relayWithdraw: {
-        contract: contractAddress,
-        proof,
-        root: args[0],
-        nullifierHash: args[1],
-        recipient: args[2],
-        relayer: args[3],
-        fee: args[4],
-        refund: args[5],
-      },
-    },
+    chain: chainName,
+    contract: contractAddress,
+    proof,
+    root: args[0],
+    nullifierHash: args[1],
+    recipient: args[2],
+    relayer: args[3],
+    fee: args[4],
+    refund: args[5],
   },
 });
 
 export const getRelayerConfig = async (
   chainName: string,
-  endpoint: string,
+  endpoint: string
 ): Promise<RelayerChainConfig> => {
-  const relayerInfoRes = await fetch(`${endpoint}/api/v1/info`)
+  const relayerInfoRes = await fetch(`${endpoint}/api/v1/info`);
   const relayerInfo: any = await relayerInfoRes.json();
 
   return {
