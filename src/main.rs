@@ -195,28 +195,24 @@ where
             continue;
         }
         // filter only for anchor contracts (for now).
-        let anchor_contracts = chain_config
-            .contracts
-            .iter()
-            .filter(|c| matches!(c, config::Contract::Anchor(_)));
+        let anchor_contracts =
+            chain_config.contracts.iter().filter_map(|c| match c {
+                config::Contract::Anchor(v) => Some(v),
+                _ => None,
+            });
         for contract in anchor_contracts {
-            let c = match contract {
-                config::Contract::Anchor(c) => c,
-                _ => unreachable!(),
-            };
-
             let watcher = leaf_cache::LeavesWatcher::new(
                 chain_config.ws_endpoint.as_str(),
                 store.clone(),
-                c.common.address,
-                c.common.deployed_at,
+                contract.common.address,
+                contract.common.deployed_at,
                 chain_config.anchor_leaves_watcher.polling_interval,
             );
 
             tracing::debug!(
                 "leaves watcher for {} ({}) Started.",
                 chain_name,
-                c.common.address,
+                contract.common.address,
             );
             tokio::task::spawn(watcher.run());
         }
