@@ -68,10 +68,6 @@ pub struct ChainConfig {
     /// INTERNAL: got updated with the account address of the private key.
     #[serde(skip_deserializing)]
     pub account: Option<Address>,
-    /// controls the leaf watcher
-    /// NOTE: only available for `Anchor` and `Anchor2` contracts
-    #[serde(rename(serialize = "anchorLeavesWatcher"))]
-    pub anchor_leaves_watcher: AnchorLeavesWatcherConfig,
     /// Supported contracts over this chain.
     pub contracts: Vec<Contract>,
 }
@@ -111,6 +107,9 @@ pub struct CommonContractConfig {
 pub struct AnchorContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
+    /// Controls the leaf watcher
+    #[serde(rename(serialize = "leavesWatcher"))]
+    pub leaves_watcher: AnchorLeavesWatcherConfig,
     /// The size of this contract
     pub size: f64,
 }
@@ -120,6 +119,9 @@ pub struct AnchorContractConfig {
 pub struct Anchor2ContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
+    /// Controls the leaf watcher
+    #[serde(rename(serialize = "leavesWatcher"))]
+    pub leaves_watcher: AnchorLeavesWatcherConfig,
     /// The size of this contract
     pub size: f64,
 }

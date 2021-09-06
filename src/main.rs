@@ -1,5 +1,6 @@
 #![deny(unsafe_code)]
 
+use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -10,13 +11,16 @@ use std::net::SocketAddr;
 use structopt::StructOpt;
 use warp::Filter;
 use warp_real_ip::real_ip;
+use webb::evm::ethers::providers;
 
 use crate::context::RelayerContext;
+use crate::events_watcher::EventWatcher;
 
 mod config;
 mod context;
+mod events_watcher;
 mod handler;
-mod leaf_cache;
+mod store;
 
 #[cfg(test)]
 mod test_utils;
@@ -102,7 +106,7 @@ where
 
 fn build_relayer(
     ctx: RelayerContext,
-    store: leaf_cache::SledLeafCache,
+    store: store::sled::SledLeafCache,
 ) -> anyhow::Result<(SocketAddr, impl Future<Output = ()> + 'static)> {
     let port = ctx.config.port;
     let ctx = Arc::new(ctx);
@@ -164,7 +168,7 @@ fn build_relayer(
 async fn start_leave_cache_service<P>(
     path: Option<P>,
     ctx: &RelayerContext,
-) -> anyhow::Result<leaf_cache::SledLeafCache>
+) -> anyhow::Result<store::sled::SledLeafCache>
 where
     P: AsRef<Path>,
 {
@@ -183,38 +187,47 @@ where
         None => p.join("leaves"),
     };
 
-    let store = leaf_cache::SledLeafCache::open(db_path)?;
+    let store = store::sled::SledLeafCache::open(db_path)?;
     // now we go through each chain, in our configuration
     for (chain_name, chain_config) in &ctx.config.evm {
-        // check first if we should start the leaf watcher for this chain.
-        if !chain_config.anchor_leaves_watcher.enabled {
-            tracing::warn!(
-                "Anchor Leaves watcher is disabled for {}.",
-                chain_name
-            );
-            continue;
-        }
         // filter only for anchor contracts (for now).
         let anchor_contracts =
             chain_config.contracts.iter().filter_map(|c| match c {
                 config::Contract::Anchor(v) => Some(v),
                 _ => None,
             });
-        for contract in anchor_contracts {
-            let watcher = leaf_cache::LeavesWatcher::new(
-                chain_config.ws_endpoint.as_str(),
-                store.clone(),
-                contract.common.address,
-                contract.common.deployed_at,
-                chain_config.anchor_leaves_watcher.polling_interval,
-            );
+        let provider = providers::Provider::<providers::Http>::try_from(
+            chain_config.http_endpoint.as_str(),
+        )?
+        .interval(std::time::Duration::from_millis(6u64));
+        let client = Arc::new(provider);
 
+        for contract in anchor_contracts {
+            // check first if we should start the leaf watcher for this contract.
+            if !contract.leaves_watcher.enabled {
+                tracing::warn!(
+                    "Anchor Leaves watcher is disabled for {} on {}.",
+                    contract.common.address,
+                    chain_name,
+                );
+                continue;
+            }
+            let wrapper = events_watcher::AnchorContractWrapper::new(
+                contract.clone(),
+                client.clone(),
+            );
             tracing::debug!(
                 "leaves watcher for {} ({}) Started.",
                 chain_name,
                 contract.common.address,
             );
-            tokio::task::spawn(watcher.run());
+            let store = Arc::new(store.clone());
+            // kick off the watcher.
+            tokio::task::spawn(events_watcher::AnchorLeavesWatcher.run(
+                client.clone(),
+                store,
+                wrapper,
+            ));
         }
     }
     Ok(store)
