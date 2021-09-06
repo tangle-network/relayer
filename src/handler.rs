@@ -1,5 +1,6 @@
 #![allow(clippy::large_enum_variant)]
 
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
@@ -13,10 +14,9 @@ use serde::{Deserialize, Serialize};
 use warp::ws::Message;
 use webb::evm::contract::anchor::AnchorContract;
 use webb::evm::ethereum_types::{Address, H256, U256};
+use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::types::Bytes;
-
-use crate::chains::evm;
 
 use crate::context::RelayerContext;
 use crate::leaf_cache::LeafCacheStore;
@@ -86,63 +86,40 @@ pub async fn handle_socket_info(
     }))
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RelayerInformationResponse {
-    #[serde(flatten)]
-    config: crate::config::WebbRelayerConfig,
-}
-
 pub async fn handle_relayer_info(
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
+    #[derive(Debug, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct RelayerInformationResponse {
+        #[serde(flatten)]
+        config: crate::config::WebbRelayerConfig,
+    }
     // clone the original config, to update it with accounts.
     let mut config = ctx.config.clone();
-    /// Updates the account address in the provided network configuration.
-    ///
-    /// it takes the network name, as defined as a property in
-    /// [`crate::config::WebbRelayerConfig`].
-    /// and the [`evm::EvmChain`] to match on [`evm::ChainName`].
-    macro_rules! update_account_for {
-        ($c: expr, $f: tt, $network: ty) => {
-            // first read the property (network) form the config, as mutable
-            // but we also, at the same time require that we need the wallet
-            // to be configured for that network, so we zip them together
-            // in which either we get them both, or None.
-            //
-            // after this, we update the account property with the wallet
-            // address.
-            if let Some((c, w)) = $c
-                .evm
-                .$f
-                .as_mut()
-                .zip(ctx.evm_wallet::<$network>().await.ok())
-            {
-                c.account = Some(w.address());
-            }
-        };
-    }
 
-    update_account_for!(config, webb, evm::Webb);
-    update_account_for!(config, ganache, evm::Ganache);
-    update_account_for!(config, edgeware, evm::Edgeware);
-    update_account_for!(config, beresheet, evm::Beresheet);
-    update_account_for!(config, harmony, evm::Harmony);
-    update_account_for!(config, rinkeby, evm::Rinkeby);
-
+    let _ = config
+        .evm
+        .values_mut()
+        .filter(|v| v.account.is_none())
+        .try_for_each(|v| {
+            let key = SecretKey::from_bytes(v.private_key.as_bytes())?;
+            let wallet = LocalWallet::from(key);
+            v.account = Some(wallet.address());
+            Result::<_, anyhow::Error>::Ok(())
+        });
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct LeavesCacheResponse {
-    leaves: Vec<H256>,
 }
 
 pub async fn handle_leaves_cache(
     store: Arc<crate::leaf_cache::SledLeafCache>,
     contract: Address,
 ) -> Result<impl warp::Reply, Infallible> {
+    #[derive(Debug, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct LeavesCacheResponse {
+        leaves: Vec<H256>,
+    }
     let leaves = store.get_leaves(contract).unwrap();
     Ok(warp::reply::json(&LeavesCacheResponse { leaves }))
 }
@@ -157,94 +134,13 @@ pub enum Command {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum SubstrateCommand {
-    Edgeware(SubstrateEdgewareCommand),
-    Beresheet(SubstrateBeresheetCommand),
-    Hedgeware(SubstrateHedgewareCommand),
-    Webb(SubstrateWebbCommand),
-}
+pub struct SubstrateCommand {}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum EvmCommand {
-    Edgeware(EvmEdgewareCommand),
-    Harmony(EvmHarmonyCommand),
-    Beresheet(EvmBeresheetCommand),
-    Ganache(EvmGanacheCommand),
-    Hedgeware(EvmHedgewareCommand),
-    Webb(EvmWebbCommand),
-    Rinkeby(EvmRinkebyCommand),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SubstrateEdgewareCommand {
-    RelayWithdraw(),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum EvmEdgewareCommand {
-    RelayWithdraw(EvmRelayerWithdrawProof),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SubstrateBeresheetCommand {
-    RelayWithdraw(),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum EvmBeresheetCommand {
-    RelayWithdraw(EvmRelayerWithdrawProof),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SubstrateWebbCommand {
-    RelayWithdraw(),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum EvmWebbCommand {
-    RelayWithdraw(EvmRelayerWithdrawProof),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum EvmRinkebyCommand {
-    RelayWithdraw(EvmRelayerWithdrawProof),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SubstrateHedgewareCommand {
-    RelayWithdraw(),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum EvmHedgewareCommand {
-    RelayWithdraw(EvmRelayerWithdrawProof),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum EvmGanacheCommand {
-    RelayWithdraw(EvmRelayerWithdrawProof),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum EvmHarmonyCommand {
-    RelayWithdraw(EvmRelayerWithdrawProof),
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EvmRelayerWithdrawProof {
+pub struct EvmCommand {
+    /// one of the supported chains of this realyer
+    pub chain: String,
     /// The target contract.
     pub contract: Address,
     /// Proof bytes
@@ -276,6 +172,7 @@ pub enum NetworkStatus {
     Failed { reason: String },
     Disconnected,
     UnsupportedContract,
+    UnsupportedChain,
     InvalidRelayerAddress,
 }
 
@@ -315,73 +212,44 @@ pub fn handle_evm<'a>(
     ctx: RelayerContext,
     cmd: EvmCommand,
 ) -> BoxStream<'a, CommandResponse> {
-    use EvmCommand::*;
-    let s = match cmd {
-        Edgeware(c) => match c {
-            EvmEdgewareCommand::RelayWithdraw(proof) => {
-                handle_evm_withdraw::<evm::Edgeware>(ctx, proof)
-            }
-        },
-        Harmony(c) => match c {
-            EvmHarmonyCommand::RelayWithdraw(proof) => {
-                handle_evm_withdraw::<evm::Harmony>(ctx, proof)
-            }
-        },
-        Beresheet(c) => match c {
-            EvmBeresheetCommand::RelayWithdraw(proof) => {
-                handle_evm_withdraw::<evm::Beresheet>(ctx, proof)
-            }
-        },
-        Ganache(c) => match c {
-            EvmGanacheCommand::RelayWithdraw(proof) => {
-                handle_evm_withdraw::<evm::Ganache>(ctx, proof)
-            }
-        },
-        Webb(c) => match c {
-            EvmWebbCommand::RelayWithdraw(proof) => {
-                handle_evm_withdraw::<evm::Webb>(ctx, proof)
-            }
-        },
-        Hedgeware(_) => todo!(),
-        Rinkeby(c) => match c {
-            EvmRinkebyCommand::RelayWithdraw(proof) => {
-                handle_evm_withdraw::<evm::Rinkeby>(ctx, proof)
-            }
-        },
-    };
-    s.boxed()
-}
-
-fn handle_evm_withdraw<'a, C: evm::EvmChain>(
-    ctx: RelayerContext,
-    data: EvmRelayerWithdrawProof,
-) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     let s = stream! {
-        let supported_contracts = C::contracts();
-        if !supported_contracts.contains_key(&data.contract) {
+        let chain = match ctx.config.evm.get(&cmd.chain) {
+            Some(v) => v,
+            None => {
+                yield Network(NetworkStatus::UnsupportedChain);
+                return;
+            },
+        };
+        let supported_contracts: HashMap<_, _> = chain.contracts
+            .iter()
+            .cloned()
+            .filter_map(|c| match c { crate::config::Contract::Anchor(c) => Some(c), _ => None })
+            .map(|c| (c.common.address, c))
+            .collect();
+        if !supported_contracts.contains_key(&cmd.contract) {
             yield Network(NetworkStatus::UnsupportedContract);
             return;
         }
-        let wallet = match ctx.evm_wallet::<C>().await {
+        let wallet = match ctx.evm_wallet(&cmd.chain).await {
             Ok(v) => v,
             Err(e) => {
                 tracing::error!("Misconfigured Network: {}", e);
-                yield Error(format!("Misconfigured Network: {:?}", C::name()));
+                yield Error(format!("Misconfigured Network: {:?}", cmd.chain));
                 return;
             }
         };
         // validate the relayer address first before trying
         // send the transaction.
         let relayer_address = wallet.address();
-        if (data.relayer != relayer_address) {
+        if (cmd.relayer != relayer_address) {
             yield Network(NetworkStatus::InvalidRelayerAddress);
             return;
         }
 
-        tracing::debug!("Connecting to chain {:?} .. at {}", C::name(), C::endpoint());
+        tracing::debug!("Connecting to chain {:?} .. at {}", cmd.chain, chain.http_endpoint);
         yield Network(NetworkStatus::Connecting);
-        let provider = match ctx.evm_provider::<C>().await {
+        let provider = match ctx.evm_provider(&cmd.chain).await {
             Ok(value) => {
                 yield Network(NetworkStatus::Connected);
                 value
@@ -393,41 +261,33 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
                 return;
             }
         };
-        let wallet = match ctx.evm_wallet::<C>().await {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!("Misconfigured Network: {}", e);
-                yield Error(format!("Misconfigured Network: {:?}", C::name()));
-                return;
-            }
-        };
 
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
-        let contract = AnchorContract::new(data.contract, client);
+        let contract = AnchorContract::new(cmd.contract, client);
         let denomination = match contract.denomination().call().await {
             Ok(v) => v,
             Err(e) => {
                 tracing::error!("Misconfigured Contract Denomination: {}", e);
-                yield Error(format!("Misconfigured Contract: {:?}", data.contract));
+                yield Error(format!("Misconfigured Contract: {:?}", cmd.contract));
                 return;
             }
         };
-        let withdraw_fee_percentage = match ctx.fee_percentage::<C>(){
+        let withdraw_fee_percentage = match ctx.fee_percentage(&cmd.chain){
             Ok(v) => v,
             Err(e) => {
                 tracing::error!("Misconfigured Fee in Config: {}", e);
-                yield Error(format!("Misconfigured Fee: {:?}", C::name()));
+                yield Error(format!("Misconfigured Fee: {:?}", cmd.chain));
                 return;
             }
         };
         let expected_fee = calculate_fee(withdraw_fee_percentage, denomination);
-        let (_, unacceptable_fee) = U256::overflowing_sub(data.fee, expected_fee);
+        let (_, unacceptable_fee) = U256::overflowing_sub(cmd.fee, expected_fee);
         if unacceptable_fee {
             tracing::error!("Received a fee lower than configuration");
             let msg = format!(
                 "User sent a fee that is too low {} but expected {}",
-                data.fee,
+                cmd.fee,
                 expected_fee,
             );
             yield Error(msg);
@@ -435,13 +295,13 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
         }
 
         let call = contract.withdraw(
-                data.proof.to_vec(),
-                data.root.to_fixed_bytes(),
-                data.nullifier_hash.to_fixed_bytes(),
-                data.recipient,
-                data.relayer,
-                data.fee,
-                data.refund
+                cmd.proof.to_vec(),
+                cmd.root.to_fixed_bytes(),
+                cmd.nullifier_hash.to_fixed_bytes(),
+                cmd.recipient,
+                cmd.relayer,
+                cmd.fee,
+                cmd.refund
             );
         // Make a dry call, to make sure the transaction will go through successfully
         // to avoid wasting fees on invalid calls.
@@ -457,7 +317,7 @@ fn handle_evm_withdraw<'a, C: evm::EvmChain>(
                 return;
             }
         };
-        tracing::trace!("About to send Tx to {:?} Chain", C::name());
+        tracing::trace!("About to send Tx to {:?} Chain", cmd.chain);
         let tx = match call.send().await {
             Ok(pending) => {
                 yield Withdraw(WithdrawStatus::Sent);

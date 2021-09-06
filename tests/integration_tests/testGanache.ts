@@ -32,7 +32,8 @@ function startGanacheServer() {
       },
     ],
     port: PORT,
-    mnemonic: "congress island collect purity dentist team gas unlock nuclear pig combine sight",
+    mnemonic:
+      'congress island collect purity dentist team gas unlock nuclear pig combine sight',
   });
 
   ganacheServer.listen(PORT);
@@ -137,7 +138,10 @@ describe('Ganache Relayer Withdraw Tests', function () {
     );
 
     // get the info from the relayer
-    relayerChainInfo = await getRelayerConfig('ganache', 'http://localhost:9955');
+    relayerChainInfo = await getRelayerConfig(
+      'ganache',
+      'http://localhost:9955'
+    );
     console.log({ relayerChainInfo });
 
     // save the relayer configured parameters

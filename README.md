@@ -29,35 +29,71 @@ Example:
 	> On MacOS `webb-relayer` looks for the config at ~/Library/Application Support/tools.webb.webb-relayer/config.toml .
 
 ```toml
-# Webb Relayer configuration
-
-# WebSocket Server Port number
-#
-# default to 9955
+# Webb Relayer Network Port
+# default: 9955
 port = 9955
 
-# Configuration for EVM Networks.
-
-[evm.ganache]
-private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
-withdraw-fee-percentage = "0.05"
-withdraw-gaslimit = "0x350000"
-enable-leaves-watcher = true
-
-[evm.beresheet]
-private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
-withdraw-fee-percentage = "0.05"
-withdraw-gaslimit = "0x350000"
-enable-leaves-watcher = false
-
 [evm.harmony]
-private-key = "0x000000000000000000000000000000000000000000000000000000000000dead"
+# Http(s) Endpoint for quick Req/Res
+http-endpoint = "https://api.s1.b.hmny.io"
+# Websocket Endpoint for long living connections
+ws-endpoint = "wss://ws.s1.b.hmny.io"
+# chain specific id.
+chain-id = 1666700001
+# The Private Key of this account on this network
+# the format is more dynamic here:
+# 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
+#    private key.
+#    Example: 0x8917174396171783496173419137618235192359106130478137647163400318
+#
+# 2. if it starts with '$' then it would be considered as an Enviroment variable
+#    of a hex-encoded private key.
+#    Example: $HARMONY_PRIVATE_KEY
+#
+# 3. if it starts with '> ' then it would be considered as a command that
+#    the relayer would execute and the output of this command would be the
+#    hex encoded private key.
+#    Example: > pass harmony-privatekey
+#
+# 4. if it doesn't contains special characters and has 12 or 24 words in it
+#    then we should process it as a mnemonic string: 'word two three four ...'
+private-key = "0x8917174396171783496173419137618235192359106130478137647163400318"
+# The fee percentage that your account will receive when you relay a transaction
+# over this chain.
 withdraw-fee-percentage = "0.05"
+# A hex value of the gaslimit when doing a withdraw relay transaction
+# on this chain.
 withdraw-gaslimit = "0x350000"
-enable-leaves-watcher = true
+# control the leaves watcher
+# Note: only available for `Anchor` and `Anchor2` contracts.
+anchor-leaves-watcher = { enabled = false, polling-interval = 3000 }
 
-# .. and so on.
-# see the current supported networks in the next section.
+# chain contracts
+[[evm.harmony.contracts]]
+# The contract can be one of these values
+# - Anchor (tornado protocol)
+# - Anchor2 (darkwebb protocol)
+# - Bridge
+# - GovernanceBravoDelegate
+contract = "Anchor"
+# The address of this contract on this chain.
+address = "0x4c37863bf2642Ba4e8De7e746500C700540119E8"
+# the block number where this contract got deployed at.
+deployed-at = 13600000
+# The size of this contract
+# Note: only available for `Anchor` and `Anchor2` contracts.
+# and would error otherwise.
+size = 0.0000000001
+
+[[evm.harmony.contracts]]
+contract = "Anchor"
+address = "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a"
+deployed-at = 12040000
+size = 100
+
+# and so on for other networks and other contracts and chains ...
+
+
 ```
 
 Then Simply run
@@ -67,28 +103,6 @@ webb-relayer -vvv -c config.toml # or config.json
 ```
 
 > Hot Tip 🌶️: you could also use the json format for the config file if you prefer that, and it would work!
-
-* Using Environment Variables:
-
-You could override the values in the configuration file using environment variables so that config value could be prefixed with `WEBB_`
-
-For example, use `WEBB_PORT` to override the port number, and `WEBB_SUBSTRATE_WEBB_SURI` to override the relayer account controller for Webb Substrate Based Network.
-
-That's very useful, you could create an empty config file, with empty values so that you can use env for security reasons!
-
-### Current Supported Networks
-
-1. Substrate Based Networks
-    * Webb (substrate.webb)
-    * Beresheet (substrate.beresheet)
-2. EVM Based Networks
-    * Ganache (evm.ganache)
-    * Beresheet (evm.beresheet)
-    * Harmony (evm.harmony)
-    * Rinkeby (evm.rinkeby)
-
-> Note: as of the current time of writing this we don't support any substrate based relaying transactions
-we plan to add them back soon, once we add them to the dApp.
 
 ## Using Docker 🐳
 
