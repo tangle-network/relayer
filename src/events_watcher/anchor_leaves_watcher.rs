@@ -104,7 +104,7 @@ mod tests {
             .init();
         let ganache = launch_ganache().await;
         let provider = Provider::<Http>::try_from(ganache.endpoint())?
-            .interval(Duration::from_millis(10u64));
+            .interval(Duration::from_millis(7u64));
         let key = ganache.keys().first().cloned().unwrap();
         let wallet = LocalWallet::from(key).with_chain_id(1337u64);
         let client = SignerMiddleware::new(provider, wallet);
@@ -121,7 +121,7 @@ mod tests {
             },
             leaves_watcher: AnchorLeavesWatcherConfig {
                 enabled: true,
-                polling_interval: 7000,
+                polling_interval: 1000,
             },
             size: 1.0,
         };
@@ -152,7 +152,6 @@ mod tests {
         task_handle.abort();
         make_deposit(&mut rng, &anchor_contract, &mut expected_leaves).await?;
         // let's run it again, using the same old store.
-
         let task_handle = tokio::task::spawn(AnchorLeavesWatcher.run(
             inner_client.clone(),
             store.clone(),
