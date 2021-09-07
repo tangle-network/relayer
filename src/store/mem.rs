@@ -14,6 +14,12 @@ pub struct InMemoryLeafCache {
     last_block_numbers: Arc<RwLock<HashMap<types::Address, types::U64>>>,
 }
 
+impl std::fmt::Debug for InMemoryLeafCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InMemoryLeafCache").finish()
+    }
+}
+
 impl HistoryStore for InMemoryLeafCache {
     #[tracing::instrument(skip(self))]
     fn get_last_block_number(
