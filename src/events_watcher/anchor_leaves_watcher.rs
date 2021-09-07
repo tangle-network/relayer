@@ -110,6 +110,8 @@ mod tests {
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
         let contract_address = deploy_anchor_contract(client.clone()).await?;
+        let anchor_contract =
+            AnchorContract::new(contract_address, client.clone());
         let mut expected_leaves = Vec::new();
         let mut rng = StdRng::from_seed([0u8; 32]);
         let config = AnchorContractConfig {
@@ -119,7 +121,7 @@ mod tests {
             },
             leaves_watcher: AnchorLeavesWatcherConfig {
                 enabled: true,
-                polling_interval: 1000,
+                polling_interval: 7000,
             },
             size: 1.0,
         };
@@ -127,8 +129,8 @@ mod tests {
         let inner_client = Arc::new(client.provider().clone());
         let wrapper = AnchorContractWrapper::new(config, inner_client.clone());
         // make a couple of deposit now, before starting the watcher.
-        make_deposit(&mut rng, &wrapper.contract, &mut expected_leaves).await?;
-        make_deposit(&mut rng, &wrapper.contract, &mut expected_leaves).await?;
+        make_deposit(&mut rng, &anchor_contract, &mut expected_leaves).await?;
+        make_deposit(&mut rng, &anchor_contract, &mut expected_leaves).await?;
         let db = tempfile::tempdir()?;
         let store = SledLeafCache::open(db.path())?;
         let store = Arc::new(store.clone());
@@ -139,7 +141,7 @@ mod tests {
             wrapper.clone(),
         ));
         // then, make another deposit, while the watcher is running.
-        make_deposit(&mut rng, &wrapper.contract, &mut expected_leaves).await?;
+        make_deposit(&mut rng, &anchor_contract, &mut expected_leaves).await?;
         // sleep for the duration of the polling interval
         tokio::time::sleep(Duration::from_secs(7)).await;
         // it should now contains the 2 leaves when the watcher was offline, and
@@ -148,7 +150,7 @@ mod tests {
         assert_eq!(expected_leaves, leaves);
         // now let's abort it, and try to do another deposit.
         task_handle.abort();
-        make_deposit(&mut rng, &wrapper.contract, &mut expected_leaves).await?;
+        make_deposit(&mut rng, &anchor_contract, &mut expected_leaves).await?;
         // let's run it again, using the same old store.
 
         let task_handle = tokio::task::spawn(AnchorLeavesWatcher.run(
