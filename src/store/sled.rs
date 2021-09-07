@@ -35,7 +35,7 @@ impl HistoryStore for SledLeafCache {
         block_number: types::U64,
     ) -> anyhow::Result<types::U64> {
         let tree = self.db.open_tree("last_block_numbers")?;
-        let mut bytes = [0u8; std::mem::size_of::<u64>()];
+        let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
         block_number.to_little_endian(&mut bytes);
         let old = tree.insert(contract, &bytes)?;
         match old {
