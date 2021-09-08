@@ -37,6 +37,10 @@ pub trait EventWatcher {
 
     /// Returns a task that should be running in the background
     /// that will watch events
+    #[tracing::instrument(
+        skip(self, client, store, contract),
+        fields(contract = %contract.address())
+    )]
     async fn run(
         &self,
         client: Arc<Self::Middleware>,
