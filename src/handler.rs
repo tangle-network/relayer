@@ -19,7 +19,7 @@ use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::types::Bytes;
 
 use crate::context::RelayerContext;
-use crate::leaf_cache::LeafCacheStore;
+use crate::store::LeafCacheStore;
 
 pub async fn accept_connection(
     ctx: &RelayerContext,
@@ -112,7 +112,7 @@ pub async fn handle_relayer_info(
 }
 
 pub async fn handle_leaves_cache(
-    store: Arc<crate::leaf_cache::SledLeafCache>,
+    store: Arc<crate::store::sled::SledLeafCache>,
     contract: Address,
 ) -> Result<impl warp::Reply, Infallible> {
     #[derive(Debug, Serialize)]
