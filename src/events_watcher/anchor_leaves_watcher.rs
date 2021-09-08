@@ -58,6 +58,7 @@ impl super::EventWatcher for AnchorLeavesWatcher {
 
     type Store = SledLeafCache;
 
+    #[tracing::instrument(skip(self, store, event))]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
@@ -68,10 +69,13 @@ impl super::EventWatcher for AnchorLeavesWatcher {
             AnchorContractEvents::DepositFilter(deposit) => {
                 let commitment = deposit.commitment;
                 let leaf_index = deposit.leaf_index;
-                store.insert_leaves(
-                    contract_address,
-                    &[(leaf_index, H256::from_slice(&commitment))],
-                )?;
+                let value = (leaf_index, H256::from_slice(&commitment));
+                store.insert_leaves(contract_address, &[value])?;
+                tracing::trace!(
+                    "Saved Deposit Event ({}, {})",
+                    value.0,
+                    value.1
+                );
             }
             AnchorContractEvents::WithdrawalFilter(_) => {
                 // we don't care for withdraw events for now

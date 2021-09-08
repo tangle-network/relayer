@@ -54,10 +54,29 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let config = load_config(args.config_filename.clone())?;
     let ctx = RelayerContext::new(config);
     let store = start_leave_cache_service(args.config_filename, &ctx).await?;
-    let (addr, server) = build_relayer(ctx, store)?;
+    let (addr, server) = build_relayer(ctx.clone(), store)?;
     tracing::info!("Starting the server on {}", addr);
     // fire the server.
-    server.await;
+    let server_handle = tokio::spawn(server);
+
+    match tokio::signal::ctrl_c().await {
+        Ok(()) => {
+            tracing::warn!("Shutting down...");
+            // send shutdown signal to all of the application.
+            ctx.shutdown();
+            // also abort the server task
+            server_handle.abort();
+            tracing::info!("Shutting down...");
+            tracing::info!("Clean Exit ..");
+        }
+        Err(err) => {
+            tracing::error!("Unable to listen for shutdown signal: {}", err);
+            // we also shut down in case of error
+            ctx.shutdown();
+            // Force shutdown.
+            std::process::exit(1);
+        }
+    }
     Ok(())
 }
 
@@ -74,9 +93,7 @@ fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
     let env_filter = tracing_subscriber::EnvFilter::from_default_env()
         .add_directive(format!("webb_relayer={}", log_level).parse()?);
     tracing_subscriber::fmt()
-        .pretty()
-        .with_level(false)
-        .with_target(false)
+        .with_target(true)
         .with_max_level(log_level)
         .with_env_filter(env_filter)
         .init();
@@ -109,8 +126,8 @@ fn build_relayer(
     store: store::sled::SledLeafCache,
 ) -> anyhow::Result<(SocketAddr, impl Future<Output = ()> + 'static)> {
     let port = ctx.config.port;
-    let ctx = Arc::new(ctx);
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx));
+    let ctx_arc = Arc::new(ctx.clone());
+    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc));
     // the websocket server.
     let ws_filter = warp::path("ws")
         .and(warp::ws())
@@ -150,18 +167,17 @@ fn build_relayer(
     let routes = ip_filter.or(info_filter).or(leaves_cache_filter); // will add more routes here.
     let http_filter = warp::path("api").and(warp::path("v1")).and(routes);
 
-    let ctrlc = async {
-        let _ = tokio::signal::ctrl_c().await;
-    };
-
     let cors = warp::cors().allow_any_origin();
     let service = http_filter
         .or(ws_filter)
         .with(cors)
         .with(warp::trace::request());
-
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let shutdown_signal = async move {
+        shutdown_signal.recv().await;
+    };
     warp::serve(service)
-        .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), ctrlc)
+        .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), shutdown_signal)
         .map_err(Into::into)
 }
 
@@ -222,12 +238,22 @@ where
                 contract.common.address,
             );
             let store = Arc::new(store.clone());
-            // kick off the watcher.
-            tokio::task::spawn(events_watcher::AnchorLeavesWatcher.run(
+            let watcher = events_watcher::AnchorLeavesWatcher.run(
                 client.clone(),
                 store,
                 wrapper,
-            ));
+            );
+            let mut shutdown_signal = ctx.shutdown_signal();
+            let task = async move {
+                // await the watcher to stop
+                // or we get a shutdown signal.
+                tokio::select! {
+                    _ = watcher => {},
+                    _ = shutdown_signal.recv() => {},
+                }
+            };
+            // kick off the watcher.
+            tokio::task::spawn(task);
         }
     }
     Ok(store)
