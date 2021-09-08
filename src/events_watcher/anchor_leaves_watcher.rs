@@ -2,8 +2,8 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
-use webb::evm::contract::anchor::AnchorContract;
-use webb::evm::contract::anchor::AnchorContractEvents;
+use webb::evm::contract::tornado::AnchorContract;
+use webb::evm::contract::tornado::AnchorContractEvents;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
