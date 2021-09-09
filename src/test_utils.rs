@@ -6,7 +6,7 @@ use anyhow::Context;
 use ethers::abi::Tokenizable;
 use ethers::prelude::*;
 use ethers::utils::{Ganache, GanacheInstance};
-use webb::evm::contract::anchor::AnchorContract;
+use webb::evm::contract::tornado::AnchorContract;
 use webb::evm::ethers;
 use webb::evm::note::{Deposit, Note};
 

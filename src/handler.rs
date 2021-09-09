@@ -12,7 +12,7 @@ use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 use warp::ws::Message;
-use webb::evm::contract::anchor::AnchorContract;
+use webb::evm::contract::tornado::AnchorContract;
 use webb::evm::ethereum_types::{Address, H256, U256};
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
