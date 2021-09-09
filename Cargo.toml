@@ -34,12 +34,6 @@ native-tls = { version = "^0.2", features = ["vendored"] }
 thiserror = "1.0.28"
 webb = { version = "0.2.0", default-features = false, features = ["evm-runtime"] }
 
-# [dependencies.webb]
-# git = "https://github.com/webb-tools/webb-rs.git"
-# branch = "nathan.ethers-v0.5.1"
-# default-features = false
-# features = ["evm-runtime"]
-
 [dev-dependencies]
 tempfile = "^3.2"
 
