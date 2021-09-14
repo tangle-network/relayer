@@ -67,15 +67,6 @@ impl RelayerContext {
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
     }
-
-    pub fn fee_percentage(&self, chain_name: &str) -> anyhow::Result<f64> {
-        let chain_config = self
-            .config
-            .evm
-            .get(chain_name)
-            .context("this chain not configured")?;
-        Ok(chain_config.withdraw_fee_percentage)
-    }
 }
 
 /// Listens for the server shutdown signal.
