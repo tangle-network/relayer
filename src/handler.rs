@@ -286,15 +286,11 @@ pub fn handle_evm<'a>(
                 return;
             }
         };
-        let withdraw_fee_percentage = match ctx.fee_percentage(&cmd.chain) {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!("Misconfigured Fee in Config: {}", e);
-                yield Error(format!("Misconfigured Fee: {:?}", cmd.chain));
-                return;
-            }
-        };
-        let expected_fee = calculate_fee(withdraw_fee_percentage, denomination);
+        // check the fee
+        let expected_fee = calculate_fee(
+            contract_config.withdraw_config.withdraw_fee_percentage,
+            denomination,
+        );
         let (_, unacceptable_fee) = U256::overflowing_sub(cmd.fee, expected_fee);
         if unacceptable_fee {
             tracing::error!("Received a fee lower than configuration");
