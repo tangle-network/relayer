@@ -29,12 +29,6 @@ chain-id = 1666700001
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
 private-key = "0x8917174396171783496173419137618235192359106130478137647163400318"
-# The fee percentage that your account will receive when you relay a transaction
-# over this chain.
-withdraw-fee-percentage = "0.05"
-# A hex value of the gaslimit when doing a withdraw relay transaction
-# on this chain.
-withdraw-gaslimit = "0x350000"
 
 # chain contracts
 [[evm.harmony.contracts]]
@@ -62,6 +56,23 @@ address = "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a"
 deployed-at = 12040000
 size = 100
 leaves-watcher = { enabled = false, polling-interval = 3000 }
+
+[evm.ethereum]
+http-endpoint = ""
+chain-id = 1
+
+[[evm.harmony.contracts]]
+contract = "Bridge"
+connected-to = [{ chain = "ethereum", address = "0x89171743961717834961734191376182351923" }]
+anchors = [{ contract = "Anchor2", address = "0x89171743961717834961734191376182351923", asset = "webbONE" }]
+address = "0x89171743961717834961734191376182351923"
+deployed-at = 12040000
+
+[[evm.etherium.contracts]]
+contract = "Bridge"
+connected_to = "Harmony"
+address = "0x89171743961717834961734191376182351923"
+deployed-at = 12040000
 
 # and so on for other networks and other contracts ...
 

@@ -62,7 +62,7 @@ impl super::EventWatcher for AnchorLeavesWatcher {
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
-        contract_address: types::Address,
+        contract: &Self::Contract,
         event: Self::Events,
     ) -> anyhow::Result<()> {
         match event {
@@ -70,7 +70,7 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                 let commitment = deposit.commitment;
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
-                store.insert_leaves(contract_address, &[value])?;
+                store.insert_leaves(contract.address(), &[value])?;
                 tracing::trace!(
                     "Saved Deposit Event ({}, {})",
                     value.0,

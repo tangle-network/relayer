@@ -273,7 +273,7 @@ pub fn handle_evm<'a>(
                 return;
             }
         };
-        let withdraw_fee_percentage = match ctx.fee_percentage(&cmd.chain){
+        let withdraw_fee_percentage = match ctx.fee_percentage(&cmd.chain) {
             Ok(v) => v,
             Err(e) => {
                 tracing::error!("Misconfigured Fee in Config: {}", e);
