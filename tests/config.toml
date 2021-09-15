@@ -65,23 +65,6 @@ leaves-watcher = { enabled = false, polling-interval = 3000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
-[evm.ethereum]
-http-endpoint = ""
-chain-id = 1
-
-[[evm.harmony.contracts]]
-contract = "Bridge"
-connected-to = [{ chain = "ethereum", address = "0x89171743961717834961734191376182351923" }]
-anchors = [{ contract = "Anchor2", address = "0x89171743961717834961734191376182351923", asset = "webbONE" }]
-address = "0x89171743961717834961734191376182351923"
-deployed-at = 12040000
-
-[[evm.etherium.contracts]]
-contract = "Bridge"
-connected_to = "Harmony"
-address = "0x89171743961717834961734191376182351923"
-deployed-at = 12040000
-
 # and so on for other networks and other contracts ...
 
 [evm.ganache]
