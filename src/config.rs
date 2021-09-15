@@ -58,13 +58,6 @@ pub struct ChainConfig {
     ///   then we should process it as a mnemonic string: 'word two three four ...'
     #[serde(skip_serializing)]
     pub private_key: PrivateKey,
-    /// The fee percentage that your account will receive when you relay a transaction
-    /// over this chain.
-    #[serde(rename(serialize = "withdrawFeePercentage"))]
-    pub withdraw_fee_percentage: f64,
-    /// A hex value of the gaslimit when doing a withdraw relay transaction on this chain.
-    #[serde(skip_serializing)]
-    pub withdraw_gaslimit: U256,
     /// INTERNAL: got updated with the account address of the private key.
     #[serde(skip_deserializing)]
     pub account: Option<Address>,
@@ -81,6 +74,18 @@ pub struct AnchorLeavesWatcherConfig {
     /// Polling interval in milliseconds
     #[serde(rename(serialize = "pollingInterval"))]
     pub polling_interval: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct AnchorWithdrawConfig {
+    /// The fee percentage that your account will receive when you relay a transaction
+    /// over this chain.
+    #[serde(rename(serialize = "withdrawFeePercentage"))]
+    pub withdraw_fee_percentage: f64,
+    /// A hex value of the gaslimit when doing a withdraw relay transaction on this chain.
+    #[serde(skip_serializing)]
+    pub withdraw_gaslimit: U256,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,6 +117,9 @@ pub struct AnchorContractConfig {
     pub leaves_watcher: AnchorLeavesWatcherConfig,
     /// The size of this contract
     pub size: f64,
+    /// Anchor withdraw configuration.
+    #[serde(flatten)]
+    pub withdraw_config: AnchorWithdrawConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

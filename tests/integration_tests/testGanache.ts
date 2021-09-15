@@ -142,11 +142,15 @@ describe('Ganache Relayer Withdraw Tests', function () {
       'ganache',
       'http://localhost:9955'
     );
-    console.log({ relayerChainInfo });
+    console.log(JSON.stringify(relayerChainInfo));
+
+    const contractConfig = relayerChainInfo.contracts.find(
+      (e) => e.address.toLowerCase() === contractAddress.toLowerCase()
+    );
 
     // save the relayer configured parameters
     calculatedFee = calculateFee(
-      relayerChainInfo.withdrawFeePercentage,
+      contractConfig?.withdrawFeePercentage ?? 0.0,
       contractDenomination
     );
   });

@@ -3637,7 +3637,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer"
-version = "0.1.0-beta.4"
+version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-stream",

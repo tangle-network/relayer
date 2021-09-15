@@ -128,6 +128,10 @@ mod tests {
                 polling_interval: 1000,
             },
             size: 1.0,
+            withdraw_config: AnchorWithdrawConfig {
+                withdraw_fee_percentage: 0.0000000001,
+                withdraw_gaslimit: 0.into(),
+            },
         };
 
         let inner_client = Arc::new(client.provider().clone());

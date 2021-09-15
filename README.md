@@ -32,6 +32,8 @@ Example:
 # Webb Relayer Network Port
 # default: 9955
 port = 9955
+[substrate.webb]
+suri = "//Alice"
 
 [evm.harmony]
 # Http(s) Endpoint for quick Req/Res
@@ -58,12 +60,6 @@ chain-id = 1666700001
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
 private-key = "0x8917174396171783496173419137618235192359106130478137647163400318"
-# The fee percentage that your account will receive when you relay a transaction
-# over this chain.
-withdraw-fee-percentage = "0.05"
-# A hex value of the gaslimit when doing a withdraw relay transaction
-# on this chain.
-withdraw-gaslimit = "0x350000"
 
 # chain contracts
 [[evm.harmony.contracts]]
@@ -84,6 +80,12 @@ size = 0.0000000001
 # control the leaves watcher for this contract
 # Note: only available for `Anchor` and `Anchor2` contracts.
 leaves-watcher = { enabled = false, polling-interval = 3000 }
+# The fee percentage that your account will receive when you relay a transaction
+# over this chain.
+withdraw-fee-percentage = 0.05
+# A hex value of the gaslimit when doing a withdraw relay transaction
+# on this chain.
+withdraw-gaslimit = "0x350000"
 
 [[evm.harmony.contracts]]
 contract = "Anchor"
@@ -91,6 +93,8 @@ address = "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a"
 deployed-at = 12040000
 size = 100
 leaves-watcher = { enabled = false, polling-interval = 3000 }
+withdraw-fee-percentage = 0.05
+withdraw-gaslimit = "0x350000"
 
 # and so on for other networks and other contracts ...
 
