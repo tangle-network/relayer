@@ -4,7 +4,7 @@ require('dotenv').config({ path: '.env' });
 
 export type RelayerChainConfig = {
   chainName: string;
-  withdrawFeePercentage: number;
+  contracts: [{ address: string; withdrawFeePercentage: number }];
   account: string;
 };
 
@@ -37,7 +37,7 @@ export const getRelayerConfig = async (
   return {
     chainName: chainName,
     account: relayerInfo.evm[chainName].account,
-    withdrawFeePercentage: relayerInfo.evm[chainName].withdrawFeePercentage,
+    contracts: relayerInfo.evm[chainName].contracts,
   };
 };
 

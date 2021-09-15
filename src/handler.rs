@@ -219,18 +219,27 @@ pub fn handle_evm<'a>(
             None => {
                 yield Network(NetworkStatus::UnsupportedChain);
                 return;
-            },
+            }
         };
-        let supported_contracts: HashMap<_, _> = chain.contracts
+        let supported_contracts: HashMap<_, _> = chain
+            .contracts
             .iter()
             .cloned()
-            .filter_map(|c| match c { crate::config::Contract::Anchor(c) => Some(c), _ => None })
+            .filter_map(|c| match c {
+                crate::config::Contract::Anchor(c) => Some(c),
+                _ => None,
+            })
             .map(|c| (c.common.address, c))
             .collect();
-        if !supported_contracts.contains_key(&cmd.contract) {
-            yield Network(NetworkStatus::UnsupportedContract);
-            return;
-        }
+        // get the contract configuration
+        let contract_config = match supported_contracts.get(&cmd.contract) {
+            Some(config) => config,
+            None => {
+                yield Network(NetworkStatus::UnsupportedContract);
+                return;
+            }
+        };
+
         let wallet = match ctx.evm_wallet(&cmd.chain).await {
             Ok(v) => v,
             Err(e) => {
@@ -247,13 +256,17 @@ pub fn handle_evm<'a>(
             return;
         }
 
-        tracing::debug!("Connecting to chain {:?} .. at {}", cmd.chain, chain.http_endpoint);
+        tracing::debug!(
+            "Connecting to chain {:?} .. at {}",
+            cmd.chain,
+            chain.http_endpoint
+        );
         yield Network(NetworkStatus::Connecting);
         let provider = match ctx.evm_provider(&cmd.chain).await {
             Ok(value) => {
                 yield Network(NetworkStatus::Connected);
                 value
-            },
+            }
             Err(e) => {
                 let reason = e.to_string();
                 yield Network(NetworkStatus::Failed { reason });
@@ -273,43 +286,38 @@ pub fn handle_evm<'a>(
                 return;
             }
         };
-        let withdraw_fee_percentage = match ctx.fee_percentage(&cmd.chain){
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!("Misconfigured Fee in Config: {}", e);
-                yield Error(format!("Misconfigured Fee: {:?}", cmd.chain));
-                return;
-            }
-        };
-        let expected_fee = calculate_fee(withdraw_fee_percentage, denomination);
+        // check the fee
+        let expected_fee = calculate_fee(
+            contract_config.withdraw_config.withdraw_fee_percentage,
+            denomination,
+        );
         let (_, unacceptable_fee) = U256::overflowing_sub(cmd.fee, expected_fee);
         if unacceptable_fee {
             tracing::error!("Received a fee lower than configuration");
             let msg = format!(
                 "User sent a fee that is too low {} but expected {}",
-                cmd.fee,
-                expected_fee,
+                cmd.fee, expected_fee,
             );
             yield Error(msg);
             return;
         }
 
         let call = contract.withdraw(
-                cmd.proof.to_vec(),
-                cmd.root.to_fixed_bytes(),
-                cmd.nullifier_hash.to_fixed_bytes(),
-                cmd.recipient,
-                cmd.relayer,
-                cmd.fee,
-                cmd.refund
-            );
+            cmd.proof.to_vec(),
+            cmd.root.to_fixed_bytes(),
+            cmd.nullifier_hash.to_fixed_bytes(),
+            cmd.recipient,
+            cmd.relayer,
+            cmd.fee,
+            cmd.refund,
+        );
         // Make a dry call, to make sure the transaction will go through successfully
         // to avoid wasting fees on invalid calls.
         match call.call().await {
             Ok(_) => {
                 yield Withdraw(WithdrawStatus::Valid);
                 tracing::debug!("Proof is valid");
-            },
+            }
             Err(e) => {
                 tracing::error!("Error Client sent an invalid proof: {}", e);
                 let err = into_withdraw_error(e);
@@ -325,7 +333,7 @@ pub fn handle_evm<'a>(
                 let result = pending.interval(Duration::from_millis(7000)).await;
                 yield Withdraw(WithdrawStatus::Submitted);
                 result
-            },
+            }
             Err(e) => {
                 tracing::error!("Error while sending Tx: {}", e);
                 let err = into_withdraw_error(e);
@@ -336,8 +344,10 @@ pub fn handle_evm<'a>(
         match tx {
             Ok(Some(receipt)) => {
                 tracing::debug!("Finalized Tx #{}", receipt.transaction_hash);
-                yield Withdraw(WithdrawStatus::Finalized { tx_hash: receipt.transaction_hash });
-            },
+                yield Withdraw(WithdrawStatus::Finalized {
+                    tx_hash: receipt.transaction_hash,
+                });
+            }
             Ok(None) => {
                 tracing::warn!("Transaction Dropped from Mempool!!");
                 yield Withdraw(WithdrawStatus::DroppedFromMemPool);
