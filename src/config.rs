@@ -67,7 +67,7 @@ pub struct ChainConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct AnchorLeavesWatcherConfig {
+pub struct EventsWatcherConfig {
     #[serde(default = "enable_leaves_watcher_default")]
     /// if it is enabled for this chain or not.
     pub enabled: bool,
@@ -112,9 +112,9 @@ pub struct CommonContractConfig {
 pub struct AnchorContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
-    /// Controls the leaf watcher
-    #[serde(rename(serialize = "leavesWatcher"))]
-    pub leaves_watcher: AnchorLeavesWatcherConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
     /// The size of this contract
     pub size: f64,
     /// Anchor withdraw configuration.
@@ -127,11 +127,14 @@ pub struct AnchorContractConfig {
 pub struct Anchor2ContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
-    /// Controls the leaf watcher
-    #[serde(rename(serialize = "leavesWatcher"))]
-    pub leaves_watcher: AnchorLeavesWatcherConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
     /// The size of this contract
     pub size: f64,
+    /// Anchor withdraw configuration.
+    #[serde(flatten)]
+    pub withdraw_config: AnchorWithdrawConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -139,7 +142,9 @@ pub struct Anchor2ContractConfig {
 pub struct BridgeContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
-    // TODO(@shekohex): add more fields here...
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

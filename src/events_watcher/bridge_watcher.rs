@@ -13,7 +13,7 @@ use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 
 use crate::config;
-use crate::store::sled::SledLeafCache;
+use crate::store::sled::SledStore;
 
 use super::{BridgeWatcher, EventWatcher};
 
@@ -123,7 +123,7 @@ impl EventWatcher for BridgeContractWatcher {
 
     type Events = BridgeContractEvents;
 
-    type Store = SledLeafCache;
+    type Store = SledStore;
 
     async fn handle_event(
         &self,

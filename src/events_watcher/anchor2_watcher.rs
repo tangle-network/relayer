@@ -11,7 +11,7 @@ use webb::evm::ethers::types;
 
 use crate::config;
 use crate::events_watcher::{BridgeCommand, BridgeKey, BridgeRegistry};
-use crate::store::sled::SledLeafCache;
+use crate::store::sled::SledStore;
 use crate::store::LeafCacheStore;
 
 pub struct ForLeaves;
@@ -58,7 +58,7 @@ impl<M: Middleware> super::WatchableContract for Anchor2ContractWrapper<M> {
     }
 
     fn polling_interval(&self) -> Duration {
-        Duration::from_millis(self.config.leaves_watcher.polling_interval)
+        Duration::from_millis(self.config.events_watcher.polling_interval)
     }
 }
 
@@ -70,7 +70,7 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
 
     type Events = Anchor2ContractEvents;
 
-    type Store = SledLeafCache;
+    type Store = SledStore;
 
     #[tracing::instrument(skip(self, store, event))]
     async fn handle_event(
@@ -108,7 +108,7 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
 
     type Events = Anchor2ContractEvents;
 
-    type Store = SledLeafCache;
+    type Store = SledStore;
 
     #[tracing::instrument(skip(self, _store, event))]
     async fn handle_event(

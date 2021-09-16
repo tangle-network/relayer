@@ -1,3 +1,4 @@
+use std::cmp;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
@@ -58,20 +59,32 @@ pub trait EventWatcher {
             ..Default::default()
         };
         let task = || async {
-            let mut block = store.get_last_block_number(
-                contract.address(),
-                contract.deployed_at(),
-            )?;
+            let step = types::U64::from(50);
+            // a bool indicates that if this our first time syncing?
+            // means that we are far behind the latest block.
+            let mut first_time_sync: bool;
             // now we start polling for new events.
             loop {
+                let block = store.get_last_block_number(
+                    contract.address(),
+                    contract.deployed_at(),
+                )?;
                 let current_block_number = client
                     .get_block_number()
                     .map_err(anyhow::Error::from)
                     .await?;
+                tracing::trace!(
+                    "Latest block number: #{}",
+                    current_block_number
+                );
+                let dest_block = cmp::min(block + step, current_block_number);
+                // check if we are now on the latest block.
+                first_time_sync = dest_block != current_block_number;
+                tracing::trace!("Reading from #{} to #{}", block, dest_block);
                 let events_filter = contract
                     .event_with_filter::<Self::Events>(Default::default())
                     .from_block(block)
-                    .to_block(current_block_number);
+                    .to_block(dest_block);
                 let found_events = events_filter
                     .query_with_meta()
                     .map_err(anyhow::Error::from)
@@ -83,29 +96,40 @@ pub trait EventWatcher {
                     let result = self
                         .handle_event(store.clone(), &contract, event)
                         .await;
-
                     match result {
                         Ok(_) => {
-                            // save the the block number of this event.
                             store.set_last_block_number(
                                 contract.address(),
                                 log.block_number,
                             )?;
+                            tracing::trace!(
+                                "event handled successfully. at #{}",
+                                log.block_number
+                            );
                         }
                         Err(e) => {
-                            tracing::error!("{}", e);
+                            tracing::error!(
+                                "Error while handling event: {}",
+                                e
+                            );
                             // this a transient error, so we will retry again.
                             return Err(backoff::Error::Transient(e));
                         }
                     }
                 }
-                tracing::trace!(
-                    "Polled from #{} to #{}",
-                    block,
-                    current_block_number
-                );
-                block = current_block_number;
-                tokio::time::sleep(contract.polling_interval()).await;
+                // move forward.
+                store.set_last_block_number(contract.address(), dest_block)?;
+                tracing::trace!("Polled from #{} to #{}", block, dest_block);
+                if first_time_sync {
+                    tracing::trace!("First time sync, skip sleep!");
+                } else {
+                    let duration = contract.polling_interval();
+                    tracing::trace!(
+                        "Cooldown a bit for {}ms",
+                        duration.as_millis()
+                    );
+                    tokio::time::sleep(duration).await;
+                }
             }
         };
         backoff::future::retry(backoff, task).await?;

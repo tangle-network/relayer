@@ -9,18 +9,18 @@ use super::{HistoryStore, LeafCacheStore};
 type MemStore = HashMap<types::Address, Vec<(u32, types::H256)>>;
 
 #[derive(Clone, Default)]
-pub struct InMemoryLeafCache {
+pub struct InMemoryStore {
     store: Arc<RwLock<MemStore>>,
     last_block_numbers: Arc<RwLock<HashMap<types::Address, types::U64>>>,
 }
 
-impl std::fmt::Debug for InMemoryLeafCache {
+impl std::fmt::Debug for InMemoryStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("InMemoryLeafCache").finish()
     }
 }
 
-impl HistoryStore for InMemoryLeafCache {
+impl HistoryStore for InMemoryStore {
     #[tracing::instrument(skip(self))]
     fn get_last_block_number(
         &self,
@@ -49,7 +49,7 @@ impl HistoryStore for InMemoryLeafCache {
     }
 }
 
-impl LeafCacheStore for InMemoryLeafCache {
+impl LeafCacheStore for InMemoryStore {
     type Output = Vec<types::H256>;
 
     #[tracing::instrument(skip(self))]
