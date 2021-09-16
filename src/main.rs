@@ -1,9 +1,7 @@
 #![deny(unsafe_code)]
 
-use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::Duration;
 
 use anyhow::Context;
 use directories_next::ProjectDirs;
@@ -13,15 +11,14 @@ use structopt::StructOpt;
 use tokio::signal::unix;
 use warp::Filter;
 use warp_real_ip::real_ip;
-use webb::evm::ethers::providers;
 
 use crate::context::RelayerContext;
-use crate::events_watcher::*;
 
 mod config;
 mod context;
 mod events_watcher;
 mod handler;
+mod service;
 mod store;
 
 #[cfg(test)]
@@ -62,7 +59,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let server_handle = tokio::spawn(server);
     // start all background services.
     // this does not block, will fire the services on background tasks.
-    start_background_services(&ctx, Arc::new(store))?;
+    service::ignite(&ctx, Arc::new(store))?;
     // watch for signals
     let mut ctrlc_signal = unix::signal(unix::SignalKind::interrupt())?;
     let mut termination_signal = unix::signal(unix::SignalKind::terminate())?;
@@ -73,6 +70,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
         ctx.shutdown();
         // also abort the server task
         server_handle.abort();
+        std::thread::sleep(std::time::Duration::from_millis(300));
         tracing::info!("Clean Exit ..");
     };
     tokio::select! {
@@ -216,150 +214,4 @@ where
 
     let store = store::sled::SledStore::open(db_path)?;
     Ok(store)
-}
-
-fn start_background_services(
-    ctx: &RelayerContext,
-    store: Arc<store::sled::SledStore>,
-) -> anyhow::Result<()> {
-    // now we go through each chain, in our configuration
-    for (chain_name, chain_config) in &ctx.config.evm {
-        let provider = providers::Provider::<providers::Http>::try_from(
-            chain_config.http_endpoint.as_str(),
-        )?
-        .interval(Duration::from_millis(6u64));
-        let client = Arc::new(provider);
-        // TODO(@shekohex): move every variant block into small a async functions.
-        // Also, worth mentioning that we should move everything into another module.
-        for contract in &chain_config.contracts {
-            match contract {
-                config::Contract::Anchor(config) => {
-                    // check first if we should start the events watcher for this contract.
-                    if !config.events_watcher.enabled {
-                        tracing::warn!(
-                            "Anchor events watcher is disabled for {} on {}.",
-                            config.common.address,
-                            chain_name,
-                        );
-                        continue;
-                    }
-                    let wrapper = AnchorContractWrapper::new(
-                        config.clone(),
-                        client.clone(),
-                    );
-                    tracing::debug!(
-                        "events watcher for {} ({}) Started.",
-                        chain_name,
-                        config.common.address,
-                    );
-                    let watcher = AnchorLeavesWatcher.run(
-                        client.clone(),
-                        store.clone(),
-                        wrapper,
-                    );
-                    let mut shutdown_signal = ctx.shutdown_signal();
-                    let task = async move {
-                        // await the watcher to stop
-                        // or we get a shutdown signal.
-                        tokio::select! {
-                            _ = watcher => {},
-                            _ = shutdown_signal.recv() => {},
-                        }
-                    };
-                    // kick off the watcher.
-                    tokio::task::spawn(task);
-                }
-                config::Contract::Anchor2(config) => {
-                    // check first if we should start the events watcher for this contract.
-                    if !config.events_watcher.enabled {
-                        tracing::warn!(
-                            "Anchor2 events watcher is disabled for {} on {}.",
-                            config.common.address,
-                            chain_name,
-                        );
-                        continue;
-                    }
-                    let wrapper = Anchor2ContractWrapper::new(
-                        config.clone(),
-                        client.clone(),
-                    );
-                    tracing::debug!(
-                        "Anchor2 events watcher for {} ({}) Started.",
-                        chain_name,
-                        config.common.address,
-                    );
-
-                    const LEAVES_WATCHER: Anchor2LeavesWatcher =
-                        Anchor2LeavesWatcher::new();
-                    let leaves_watcher_task = LEAVES_WATCHER.run(
-                        client.clone(),
-                        store.clone(),
-                        wrapper.clone(),
-                    );
-
-                    const BRIDGE_WATCHER: Anchor2BridgeWatcher =
-                        Anchor2BridgeWatcher::new();
-                    let bridge_watcher_task = BRIDGE_WATCHER.run(
-                        client.clone(),
-                        store.clone(),
-                        wrapper.clone(),
-                    );
-                    let mut shutdown_signal = ctx.shutdown_signal();
-                    let task = async move {
-                        tokio::select! {
-                            _ = leaves_watcher_task => {},
-                            _ = bridge_watcher_task => {},
-                            _ = shutdown_signal.recv() => {},
-                        }
-                    };
-                    // kick off the watcher.
-                    tokio::task::spawn(task);
-                }
-                config::Contract::Bridge(config) => {
-                    if !config.events_watcher.enabled {
-                        tracing::warn!(
-                            "Bridge events watcher is disabled for {} on {}.",
-                            config.common.address,
-                            chain_name,
-                        );
-                        continue;
-                    }
-                    let wrapper = BridgeContractWrapper::new(
-                        config.clone(),
-                        client.clone(),
-                    );
-                    tracing::debug!(
-                        "bridge watcher for {} ({}) Started.",
-                        chain_name,
-                        config.common.address,
-                    );
-
-                    let events_watcher_task = EventWatcher::run(
-                        &BridgeContractWatcher,
-                        client.clone(),
-                        store.clone(),
-                        wrapper.clone(),
-                    );
-                    let cmd_handler_task = BridgeWatcher::run(
-                        &BridgeContractWatcher,
-                        client.clone(),
-                        store.clone(),
-                        wrapper.clone(),
-                    );
-                    let mut shutdown_signal = ctx.shutdown_signal();
-                    let task = async move {
-                        tokio::select! {
-                            _ = events_watcher_task => {},
-                            _ = cmd_handler_task => {},
-                            _ = shutdown_signal.recv() => {},
-                        }
-                    };
-                    // kick off the watcher.
-                    tokio::task::spawn(task);
-                }
-                config::Contract::GovernanceBravoDelegate(_) => {}
-            }
-        }
-    }
-    Ok(())
 }
