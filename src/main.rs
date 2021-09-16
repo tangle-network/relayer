@@ -10,6 +10,7 @@ use directories_next::ProjectDirs;
 use futures::Future;
 use std::net::SocketAddr;
 use structopt::StructOpt;
+use tokio::signal::unix;
 use warp::Filter;
 use warp_real_ip::real_ip;
 use webb::evm::ethers::providers;
@@ -55,29 +56,38 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let config = load_config(args.config_filename.clone())?;
     let ctx = RelayerContext::new(config);
     let store = create_store(args.config_filename).await?;
-    start_background_services(&ctx, Arc::new(store.clone())).await?;
-    let (addr, server) = build_relayer(ctx.clone(), store)?;
+    let (addr, server) = build_relayer(ctx.clone(), store.clone())?;
     tracing::info!("Starting the server on {}", addr);
     // fire the server.
     let server_handle = tokio::spawn(server);
-
-    match tokio::signal::ctrl_c().await {
-        Ok(()) => {
-            tracing::warn!("Shutting down...");
-            // send shutdown signal to all of the application.
-            ctx.shutdown();
-            // also abort the server task
-            server_handle.abort();
-            tracing::info!("Shutting down...");
-            tracing::info!("Clean Exit ..");
-        }
-        Err(err) => {
-            tracing::error!("Unable to listen for shutdown signal: {}", err);
-            // we also shut down in case of error
-            ctx.shutdown();
-            // Force shutdown.
-            std::process::exit(1);
-        }
+    // start all background services.
+    // this does not block, will fire the services on background tasks.
+    start_background_services(&ctx, Arc::new(store))?;
+    // watch for signals
+    let mut ctrlc_signal = unix::signal(unix::SignalKind::interrupt())?;
+    let mut termination_signal = unix::signal(unix::SignalKind::terminate())?;
+    let mut quit_signal = unix::signal(unix::SignalKind::quit())?;
+    let shutdown = || {
+        tracing::warn!("Shutting down...");
+        // send shutdown signal to all of the application.
+        ctx.shutdown();
+        // also abort the server task
+        server_handle.abort();
+        tracing::info!("Clean Exit ..");
+    };
+    tokio::select! {
+        _ = ctrlc_signal.recv() => {
+            tracing::warn!("Interrupted (Ctrl+C) ...");
+            shutdown();
+        },
+        _ = termination_signal.recv() => {
+            tracing::warn!("Got Terminate signal ...");
+            shutdown();
+        },
+        _ = quit_signal.recv() => {
+            tracing::warn!("Quitting ...");
+            shutdown();
+        },
     }
     Ok(())
 }
@@ -125,7 +135,7 @@ where
 
 fn build_relayer(
     ctx: RelayerContext,
-    store: store::sled::SledLeafCache,
+    store: store::sled::SledStore,
 ) -> anyhow::Result<(SocketAddr, impl Future<Output = ()> + 'static)> {
     let port = ctx.config.port;
     let ctx_arc = Arc::new(ctx.clone());
@@ -185,7 +195,7 @@ fn build_relayer(
 
 async fn create_store<P>(
     path: Option<P>,
-) -> anyhow::Result<store::sled::SledLeafCache>
+) -> anyhow::Result<store::sled::SledStore>
 where
     P: AsRef<Path>,
 {
@@ -204,13 +214,13 @@ where
         None => p.join("store"),
     };
 
-    let store = store::sled::SledLeafCache::open(db_path)?;
+    let store = store::sled::SledStore::open(db_path)?;
     Ok(store)
 }
 
-async fn start_background_services(
+fn start_background_services(
     ctx: &RelayerContext,
-    store: Arc<store::sled::SledLeafCache>,
+    store: Arc<store::sled::SledStore>,
 ) -> anyhow::Result<()> {
     // now we go through each chain, in our configuration
     for (chain_name, chain_config) in &ctx.config.evm {
@@ -224,10 +234,10 @@ async fn start_background_services(
         for contract in &chain_config.contracts {
             match contract {
                 config::Contract::Anchor(config) => {
-                    // check first if we should start the leaf watcher for this contract.
-                    if !config.leaves_watcher.enabled {
+                    // check first if we should start the events watcher for this contract.
+                    if !config.events_watcher.enabled {
                         tracing::warn!(
-                            "Anchor Leaves watcher is disabled for {} on {}.",
+                            "Anchor events watcher is disabled for {} on {}.",
                             config.common.address,
                             chain_name,
                         );
@@ -238,7 +248,7 @@ async fn start_background_services(
                         client.clone(),
                     );
                     tracing::debug!(
-                        "leaves watcher for {} ({}) Started.",
+                        "events watcher for {} ({}) Started.",
                         chain_name,
                         config.common.address,
                     );
@@ -260,10 +270,10 @@ async fn start_background_services(
                     tokio::task::spawn(task);
                 }
                 config::Contract::Anchor2(config) => {
-                    // check first if we should start the leaf watcher for this contract.
-                    if !config.leaves_watcher.enabled {
+                    // check first if we should start the events watcher for this contract.
+                    if !config.events_watcher.enabled {
                         tracing::warn!(
-                            "Anchor Leaves watcher is disabled for {} on {}.",
+                            "Anchor2 events watcher is disabled for {} on {}.",
                             config.common.address,
                             chain_name,
                         );
@@ -274,7 +284,7 @@ async fn start_background_services(
                         client.clone(),
                     );
                     tracing::debug!(
-                        "leaves watcher for {} ({}) Started.",
+                        "Anchor2 events watcher for {} ({}) Started.",
                         chain_name,
                         config.common.address,
                     );
@@ -306,6 +316,14 @@ async fn start_background_services(
                     tokio::task::spawn(task);
                 }
                 config::Contract::Bridge(config) => {
+                    if !config.events_watcher.enabled {
+                        tracing::warn!(
+                            "Bridge events watcher is disabled for {} on {}.",
+                            config.common.address,
+                            chain_name,
+                        );
+                        continue;
+                    }
                     let wrapper = BridgeContractWrapper::new(
                         config.clone(),
                         client.clone(),
@@ -316,16 +334,14 @@ async fn start_background_services(
                         config.common.address,
                     );
 
-                    const BRIDGE_CONTRACT_WATCHER: BridgeContractWatcher =
-                        BridgeContractWatcher;
                     let events_watcher_task = EventWatcher::run(
-                        &BRIDGE_CONTRACT_WATCHER,
+                        &BridgeContractWatcher,
                         client.clone(),
                         store.clone(),
                         wrapper.clone(),
                     );
                     let cmd_handler_task = BridgeWatcher::run(
-                        &BRIDGE_CONTRACT_WATCHER,
+                        &BridgeContractWatcher,
                         client.clone(),
                         store.clone(),
                         wrapper.clone(),
