@@ -5,17 +5,17 @@ use webb::evm::ethers::types;
 use super::{HistoryStore, LeafCacheStore};
 
 #[derive(Clone)]
-pub struct SledLeafCache {
+pub struct SledStore {
     db: sled::Db,
 }
 
-impl std::fmt::Debug for SledLeafCache {
+impl std::fmt::Debug for SledStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("SledLeafCache").finish()
+        f.debug_struct("SledStore").finish()
     }
 }
 
-impl SledLeafCache {
+impl SledStore {
     pub fn open<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
         let db = sled::Config::new()
             .path(path)
@@ -27,7 +27,7 @@ impl SledLeafCache {
     }
 }
 
-impl HistoryStore for SledLeafCache {
+impl HistoryStore for SledStore {
     #[tracing::instrument(skip(self))]
     fn set_last_block_number(
         &self,
@@ -59,7 +59,7 @@ impl HistoryStore for SledLeafCache {
     }
 }
 
-impl LeafCacheStore for SledLeafCache {
+impl LeafCacheStore for SledStore {
     type Output = Vec<types::H256>;
 
     #[tracing::instrument(skip(self))]
@@ -67,7 +67,7 @@ impl LeafCacheStore for SledLeafCache {
         &self,
         contract: types::Address,
     ) -> anyhow::Result<Self::Output> {
-        let tree = self.db.open_tree(contract)?;
+        let tree = self.db.open_tree(format!("leaves/{}", contract))?;
         let leaves = tree
             .iter()
             .values()
@@ -83,7 +83,7 @@ impl LeafCacheStore for SledLeafCache {
         contract: types::Address,
         leaves: &[(u32, types::H256)],
     ) -> anyhow::Result<()> {
-        let tree = self.db.open_tree(contract)?;
+        let tree = self.db.open_tree(format!("leaves/{}", contract))?;
         for (k, v) in leaves {
             tree.insert(k.to_le_bytes(), v.as_bytes())?;
         }

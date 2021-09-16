@@ -9,7 +9,7 @@ use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 
 use crate::config;
-use crate::store::sled::SledLeafCache;
+use crate::store::sled::SledStore;
 use crate::store::LeafCacheStore;
 
 #[derive(Copy, Clone, Debug)]
@@ -44,7 +44,7 @@ impl<M: Middleware> super::WatchableContract for AnchorContractWrapper<M> {
     }
 
     fn polling_interval(&self) -> Duration {
-        Duration::from_millis(self.config.leaves_watcher.polling_interval)
+        Duration::from_millis(self.config.events_watcher.polling_interval)
     }
 }
 
@@ -56,13 +56,13 @@ impl super::EventWatcher for AnchorLeavesWatcher {
 
     type Events = AnchorContractEvents;
 
-    type Store = SledLeafCache;
+    type Store = SledStore;
 
     #[tracing::instrument(skip(self, store, event))]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
-        contract_address: types::Address,
+        contract: &Self::Contract,
         event: Self::Events,
     ) -> anyhow::Result<()> {
         match event {
@@ -70,7 +70,7 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                 let commitment = deposit.commitment;
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
-                store.insert_leaves(contract_address, &[value])?;
+                store.insert_leaves(contract.address(), &[value])?;
                 tracing::trace!(
                     "Saved Deposit Event ({}, {})",
                     value.0,
@@ -95,7 +95,7 @@ mod tests {
 
     use crate::config::*;
     use crate::events_watcher::EventWatcher;
-    use crate::store::sled::SledLeafCache;
+    use crate::store::sled::SledStore;
     use crate::test_utils::*;
 
     use super::*;
@@ -123,7 +123,7 @@ mod tests {
                 address: contract_address,
                 deployed_at: 2,
             },
-            leaves_watcher: AnchorLeavesWatcherConfig {
+            events_watcher: EventsWatcherConfig {
                 enabled: true,
                 polling_interval: 1000,
             },
@@ -140,7 +140,7 @@ mod tests {
         make_deposit(&mut rng, &anchor_contract, &mut expected_leaves).await?;
         make_deposit(&mut rng, &anchor_contract, &mut expected_leaves).await?;
         let db = tempfile::tempdir()?;
-        let store = SledLeafCache::open(db.path())?;
+        let store = SledStore::open(db.path())?;
         let store = Arc::new(store.clone());
         // run the leaves watcher in another task
         let task_handle = tokio::task::spawn(AnchorLeavesWatcher.run(

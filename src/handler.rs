@@ -112,7 +112,7 @@ pub async fn handle_relayer_info(
 }
 
 pub async fn handle_leaves_cache(
-    store: Arc<crate::store::sled::SledLeafCache>,
+    store: Arc<crate::store::sled::SledStore>,
     contract: Address,
 ) -> Result<impl warp::Reply, Infallible> {
     #[derive(Debug, Serialize)]

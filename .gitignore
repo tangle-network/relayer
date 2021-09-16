@@ -6,4 +6,4 @@ config/
 **/*.rs.bk
 
 tests/node_modules
-tests/leaves
+tests/store

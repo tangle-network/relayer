@@ -1,6 +1,5 @@
 #![deny(unsafe_code)]
 
-use std::convert::TryFrom;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -9,17 +8,17 @@ use directories_next::ProjectDirs;
 use futures::Future;
 use std::net::SocketAddr;
 use structopt::StructOpt;
+use tokio::signal::unix;
 use warp::Filter;
 use warp_real_ip::real_ip;
-use webb::evm::ethers::providers;
 
 use crate::context::RelayerContext;
-use crate::events_watcher::EventWatcher;
 
 mod config;
 mod context;
 mod events_watcher;
 mod handler;
+mod service;
 mod store;
 
 #[cfg(test)]
@@ -53,29 +52,40 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     setup_logger(args.verbose)?;
     let config = load_config(args.config_filename.clone())?;
     let ctx = RelayerContext::new(config);
-    let store = start_leave_cache_service(args.config_filename, &ctx).await?;
-    let (addr, server) = build_relayer(ctx.clone(), store)?;
+    let store = create_store(args.config_filename).await?;
+    let (addr, server) = build_relayer(ctx.clone(), store.clone())?;
     tracing::info!("Starting the server on {}", addr);
     // fire the server.
     let server_handle = tokio::spawn(server);
-
-    match tokio::signal::ctrl_c().await {
-        Ok(()) => {
-            tracing::warn!("Shutting down...");
-            // send shutdown signal to all of the application.
-            ctx.shutdown();
-            // also abort the server task
-            server_handle.abort();
-            tracing::info!("Shutting down...");
-            tracing::info!("Clean Exit ..");
-        }
-        Err(err) => {
-            tracing::error!("Unable to listen for shutdown signal: {}", err);
-            // we also shut down in case of error
-            ctx.shutdown();
-            // Force shutdown.
-            std::process::exit(1);
-        }
+    // start all background services.
+    // this does not block, will fire the services on background tasks.
+    service::ignite(&ctx, Arc::new(store))?;
+    // watch for signals
+    let mut ctrlc_signal = unix::signal(unix::SignalKind::interrupt())?;
+    let mut termination_signal = unix::signal(unix::SignalKind::terminate())?;
+    let mut quit_signal = unix::signal(unix::SignalKind::quit())?;
+    let shutdown = || {
+        tracing::warn!("Shutting down...");
+        // send shutdown signal to all of the application.
+        ctx.shutdown();
+        // also abort the server task
+        server_handle.abort();
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        tracing::info!("Clean Exit ..");
+    };
+    tokio::select! {
+        _ = ctrlc_signal.recv() => {
+            tracing::warn!("Interrupted (Ctrl+C) ...");
+            shutdown();
+        },
+        _ = termination_signal.recv() => {
+            tracing::warn!("Got Terminate signal ...");
+            shutdown();
+        },
+        _ = quit_signal.recv() => {
+            tracing::warn!("Quitting ...");
+            shutdown();
+        },
     }
     Ok(())
 }
@@ -123,7 +133,7 @@ where
 
 fn build_relayer(
     ctx: RelayerContext,
-    store: store::sled::SledLeafCache,
+    store: store::sled::SledStore,
 ) -> anyhow::Result<(SocketAddr, impl Future<Output = ()> + 'static)> {
     let port = ctx.config.port;
     let ctx_arc = Arc::new(ctx.clone());
@@ -181,10 +191,9 @@ fn build_relayer(
         .map_err(Into::into)
 }
 
-async fn start_leave_cache_service<P>(
+async fn create_store<P>(
     path: Option<P>,
-    ctx: &RelayerContext,
-) -> anyhow::Result<store::sled::SledLeafCache>
+) -> anyhow::Result<store::sled::SledStore>
 where
     P: AsRef<Path>,
 {
@@ -199,62 +208,10 @@ where
         None => dirs.data_local_dir().to_path_buf(),
     };
     let db_path = match path.zip(p.parent()) {
-        Some((_, parent)) => parent.join("leaves"),
-        None => p.join("leaves"),
+        Some((_, parent)) => parent.join("store"),
+        None => p.join("store"),
     };
 
-    let store = store::sled::SledLeafCache::open(db_path)?;
-    // now we go through each chain, in our configuration
-    for (chain_name, chain_config) in &ctx.config.evm {
-        // filter only for anchor contracts (for now).
-        let anchor_contracts =
-            chain_config.contracts.iter().filter_map(|c| match c {
-                config::Contract::Anchor(v) => Some(v),
-                _ => None,
-            });
-        let provider = providers::Provider::<providers::Http>::try_from(
-            chain_config.http_endpoint.as_str(),
-        )?
-        .interval(std::time::Duration::from_millis(6u64));
-        let client = Arc::new(provider);
-
-        for contract in anchor_contracts {
-            // check first if we should start the leaf watcher for this contract.
-            if !contract.leaves_watcher.enabled {
-                tracing::warn!(
-                    "Anchor Leaves watcher is disabled for {} on {}.",
-                    contract.common.address,
-                    chain_name,
-                );
-                continue;
-            }
-            let wrapper = events_watcher::AnchorContractWrapper::new(
-                contract.clone(),
-                client.clone(),
-            );
-            tracing::debug!(
-                "leaves watcher for {} ({}) Started.",
-                chain_name,
-                contract.common.address,
-            );
-            let store = Arc::new(store.clone());
-            let watcher = events_watcher::AnchorLeavesWatcher.run(
-                client.clone(),
-                store,
-                wrapper,
-            );
-            let mut shutdown_signal = ctx.shutdown_signal();
-            let task = async move {
-                // await the watcher to stop
-                // or we get a shutdown signal.
-                tokio::select! {
-                    _ = watcher => {},
-                    _ = shutdown_signal.recv() => {},
-                }
-            };
-            // kick off the watcher.
-            tokio::task::spawn(task);
-        }
-    }
+    let store = store::sled::SledStore::open(db_path)?;
     Ok(store)
 }

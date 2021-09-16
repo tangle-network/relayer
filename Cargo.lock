@@ -3607,9 +3607,9 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.2.1"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6d22e42de27b94ae3cac2018196f388a76828a43b6ab629eaf6d871895f5195d"
+checksum = "d2e0dad95f7988cad18087bb0a931a831f0915030601b5fd3b3e042be73e2615"
 dependencies = [
  "async-trait",
  "ethereum-types",
@@ -3659,6 +3659,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tokio",
+ "tokio-stream",
  "tracing",
  "tracing-futures",
  "tracing-subscriber",

@@ -77,9 +77,9 @@ deployed-at = 13600000
 # Note: only available for `Anchor` and `Anchor2` contracts.
 # and would error otherwise.
 size = 0.0000000001
-# control the leaves watcher for this contract
+# control the events watcher for this contract
 # Note: only available for `Anchor` and `Anchor2` contracts.
-leaves-watcher = { enabled = false, polling-interval = 3000 }
+events-watcher = { enabled = false, polling-interval = 3000 }
 # The fee percentage that your account will receive when you relay a transaction
 # over this chain.
 withdraw-fee-percentage = 0.05
@@ -92,7 +92,7 @@ contract = "Anchor"
 address = "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a"
 deployed-at = 12040000
 size = 100
-leaves-watcher = { enabled = false, polling-interval = 3000 }
+events-watcher = { enabled = false, polling-interval = 3000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
