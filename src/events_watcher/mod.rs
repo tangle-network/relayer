@@ -60,9 +60,6 @@ pub trait EventWatcher {
         };
         let task = || async {
             let step = types::U64::from(50);
-            // a bool indicates that if this our first time syncing?
-            // means that we are far behind the latest block.
-            let mut first_time_sync: bool;
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
@@ -79,7 +76,7 @@ pub trait EventWatcher {
                 );
                 let dest_block = cmp::min(block + step, current_block_number);
                 // check if we are now on the latest block.
-                first_time_sync = dest_block != current_block_number;
+                let should_cooldown = dest_block == current_block_number;
                 tracing::trace!("Reading from #{} to #{}", block, dest_block);
                 let events_filter = contract
                     .event_with_filter::<Self::Events>(Default::default())
@@ -120,9 +117,7 @@ pub trait EventWatcher {
                 // move forward.
                 store.set_last_block_number(contract.address(), dest_block)?;
                 tracing::trace!("Polled from #{} to #{}", block, dest_block);
-                if first_time_sync {
-                    tracing::trace!("First time sync, skip sleep!");
-                } else {
+                if should_cooldown {
                     let duration = contract.polling_interval();
                     tracing::trace!(
                         "Cooldown a bit for {}ms",
