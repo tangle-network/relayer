@@ -46,9 +46,8 @@ deployed-at = 13600000
 # Note: only available for `Anchor` and `Anchor2` contracts.
 # and would error otherwise.
 size = 0.0000000001
-# control the leaves watcher for this contract
-# Note: only available for `Anchor` and `Anchor2` contracts.
-leaves-watcher = { enabled = false, polling-interval = 3000 }
+# control the events watcher for this contract
+events-watcher = { enabled = false, polling-interval = 3000 }
 # The fee percentage that your account will receive when you relay a transaction
 # over this chain.
 withdraw-fee-percentage = 0.05
@@ -61,7 +60,7 @@ contract = "Anchor"
 address = "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a"
 deployed-at = 12040000
 size = 100
-leaves-watcher = { enabled = false, polling-interval = 3000 }
+events-watcher = { enabled = false, polling-interval = 3000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
@@ -78,7 +77,7 @@ contract = "Anchor"
 address = "0xFBD61C9961e0bf872B5Ec041b718C0B2a106Ce9D"
 deployed-at = 1
 size = 1
-leaves-watcher = { enabled = false, polling-interval = 1000 }
+events-watcher = { enabled = false, polling-interval = 1000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
@@ -93,7 +92,7 @@ contract = "Anchor"
 address = "0xf0EA8Fa17daCF79434d10C51941D8Fc24515AbE3"
 deployed-at = 299740
 size = 10
-leaves-watcher = { enabled = false, polling-interval = 7000 }
+events-watcher = { enabled = false, polling-interval = 7000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
@@ -108,7 +107,21 @@ contract = "Anchor"
 address = "0x626FEc5Ffa7Bf1EE8CEd7daBdE545630473E3ABb"
 deployed-at = 8896800
 size = 0.1
-leaves-watcher = { enabled = false, polling-interval = 7000 }
+events-watcher = { enabled = false, polling-interval = 7000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
+[[evm.rinkeby.contracts]]
+contract = "Anchor2"
+address = "0x5aCF1A99945AeC335309Ff0662504c8ebbf5c000"
+deployed-at = 9219989
+size = 0.1
+events-watcher = { enabled = true, polling-interval = 7000 }
+withdraw-fee-percentage = 0.05
+withdraw-gaslimit = "0x350000"
+
+[[evm.rinkeby.contracts]]
+contract = "Bridge"
+address = "0xaAab02BA2e2343a22B8DA69E72566B32109d152B"
+deployed-at = 9219991
+events-watcher = { enabled = true, polling-interval = 7000 }
