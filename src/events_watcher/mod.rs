@@ -137,6 +137,7 @@ pub trait BridgeWatcher: EventWatcher {
     async fn handle_cmd(
         &self,
         store: Arc<Self::Store>,
+        contract: &Self::Contract,
         cmd: BridgeCommand,
     ) -> anyhow::Result<()>;
 
@@ -163,8 +164,9 @@ pub trait BridgeWatcher: EventWatcher {
             let my_key = BridgeKey::new(my_address, my_chain_id);
             let rx = BridgeRegistry::register(my_key);
             let mut rx_stream = tokio_stream::wrappers::ReceiverStream::new(rx);
-            while let Some(cmd) = rx_stream.next().await {
-                let result = self.handle_cmd(store.clone(), cmd).await;
+            while let Some(command) = rx_stream.next().await {
+                let result =
+                    self.handle_cmd(store.clone(), &contract, command).await;
                 match result {
                     Ok(_) => {
                         continue;

@@ -5,12 +5,11 @@ use std::time::Duration;
 
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
-use webb::evm::contract::darkwebb::{
-    Anchor2ContractEvents, BridgeContract, BridgeContractEvents,
-};
+use webb::evm::contract::darkwebb::{BridgeContract, BridgeContractEvents};
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
+use webb::evm::ethers::utils;
 
 use crate::config;
 use crate::store::sled::SledStore;
@@ -20,6 +19,7 @@ use super::{BridgeWatcher, EventWatcher};
 type BridgeConnectionSender = tokio::sync::mpsc::Sender<BridgeCommand>;
 type BridgeConnectionReceiver = tokio::sync::mpsc::Receiver<BridgeCommand>;
 type Registry = RwLock<HashMap<BridgeKey, BridgeConnectionSender>>;
+type HttpProvider = providers::Provider<providers::Http>;
 
 static BRIDGE_REGISTRY: OnceCell<Registry> = OnceCell::new();
 
@@ -38,8 +38,16 @@ impl BridgeKey {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ProposalData {
+    pub contract: types::Address,
+    pub origin_chain_id: types::U256,
+    pub block_height: types::U64,
+    pub merkle_root: [u8; 32],
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BridgeCommand {
-    ProcessAnchor2ContractEvents(Anchor2ContractEvents),
+    CreateProposal(ProposalData),
 }
 
 /// A Bridge Registry is a simple Key-Value store, that provides an easy way to register
@@ -107,8 +115,7 @@ impl<M: Middleware> super::WatchableContract for BridgeContractWrapper<M> {
     }
 
     fn polling_interval(&self) -> Duration {
-        // FIXME(@shekohex): should probably handled from the config.
-        Duration::from_millis(6_000)
+        Duration::from_millis(self.config.events_watcher.polling_interval)
     }
 }
 
@@ -117,7 +124,7 @@ pub struct BridgeContractWatcher;
 
 #[async_trait::async_trait]
 impl EventWatcher for BridgeContractWatcher {
-    type Middleware = providers::Provider<providers::Http>;
+    type Middleware = HttpProvider;
 
     type Contract = BridgeContractWrapper<Self::Middleware>;
 
@@ -141,11 +148,85 @@ impl EventWatcher for BridgeContractWatcher {
 impl BridgeWatcher for BridgeContractWatcher {
     async fn handle_cmd(
         &self,
-        _store: Arc<Self::Store>,
+        store: Arc<Self::Store>,
+        wrapper: &Self::Contract,
         cmd: BridgeCommand,
     ) -> anyhow::Result<()> {
-        // TODO(@shekohex): Handle the cmd here.
-        tracing::debug!("Got cmd {:?}", cmd);
+        use BridgeCommand::*;
+        tracing::trace!("Got cmd {:?}", cmd);
+        match cmd {
+            CreateProposal(data) => {
+                self.create_proposed(store, &wrapper.contract, data).await?;
+            }
+        };
         Ok(())
     }
+}
+
+impl BridgeContractWatcher
+where
+    Self: BridgeWatcher,
+{
+    #[tracing::instrument(skip(self, store, contract))]
+    async fn create_proposed(
+        &self,
+        store: Arc<<Self as EventWatcher>::Store>,
+        contract: &BridgeContract<<Self as EventWatcher>::Middleware>,
+        ProposalData {
+            contract: anchor2_address,
+            origin_chain_id: chain_id,
+            block_height,
+            merkle_root,
+        }: ProposalData,
+    ) -> anyhow::Result<()> {
+        let data = create_proposal_data(chain_id, block_height, merkle_root);
+        let data_hash = utils::keccak256(&data);
+        let nonce = 1;
+        let resource_id = create_resource_id(anchor2_address, chain_id)?;
+        // TODO(@shekohex): check if we should create now or later.
+        contract
+            .vote_proposal(chain_id, nonce, resource_id, data_hash)
+            .call()
+            .await?;
+        Ok(())
+    }
+}
+
+fn create_proposal_data(
+    chain_id: types::U256,
+    block_height: types::U64,
+    merkle_root: [u8; 32],
+) -> String {
+    let mut b = [0u8; 32];
+
+    chain_id.to_big_endian(&mut b);
+    let chain_id_hex = hex::encode(&b);
+    b.copy_from_slice(&[0; 32]); // clear the memory.
+
+    block_height.to_big_endian(&mut b);
+    let block_height_hex = hex::encode(&b);
+    b.copy_from_slice(&[0; 32]); // clear the memory
+
+    let merkle_root_hex = hex::encode(&merkle_root);
+    format!(
+        "{chain_id}{block_height}{merkle_root}",
+        chain_id = chain_id_hex,
+        block_height = block_height_hex,
+        merkle_root = merkle_root_hex,
+    )
+}
+
+fn create_resource_id(
+    anchor2_address: types::Address,
+    chain_id: types::U256,
+) -> anyhow::Result<[u8; 32]> {
+    let mut b = [0u8; 32];
+    chain_id.to_big_endian(&mut b);
+    let chain_id_hex = hex::encode(&b);
+
+    let address_hex = hex::encode(anchor2_address.to_fixed_bytes());
+    let result = format!("0x{}{}", address_hex, chain_id_hex);
+    let mut result_bytes = [0u8; 32];
+    hex::decode_to_slice(result, &mut result_bytes)?;
+    Ok(result_bytes)
 }

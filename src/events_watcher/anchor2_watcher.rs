@@ -10,6 +10,7 @@ use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 
 use crate::config;
+use crate::events_watcher::ProposalData;
 use crate::events_watcher::{BridgeCommand, BridgeKey, BridgeRegistry};
 use crate::store::sled::SledStore;
 use crate::store::LeafCacheStore;
@@ -110,24 +111,34 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
 
     type Store = SledStore;
 
-    #[tracing::instrument(skip(self, _store, event))]
+    #[tracing::instrument(skip(self, _store, e))]
     async fn handle_event(
         &self,
         _store: Arc<Self::Store>,
         Anchor2ContractWrapper { contract, .. }: &Self::Contract,
-        event: Self::Events,
+        e: Self::Events,
     ) -> anyhow::Result<()> {
+        use Anchor2ContractEvents::*;
         let bridge_address = contract.bridge().call().await?;
-        let chain_id = contract.chain_id().call().await?;
-        let key = BridgeKey::new(bridge_address, chain_id);
+        let client = contract.client();
+        let origin_chain_id = contract.chain_id().call().await?;
+        let key = BridgeKey::new(bridge_address, origin_chain_id);
         let bridge = BridgeRegistry::lookup(key);
         match bridge {
             Some(signal) => {
-                signal
-                    .send(BridgeCommand::ProcessAnchor2ContractEvents(
-                        event.clone(),
-                    ))
-                    .await?;
+                let is_deposit = matches!(e, DepositFilter(..));
+                if is_deposit {
+                    let block_height = client.get_block_number().await?;
+                    let merkle_root = contract.get_last_root().call().await?;
+                    signal
+                        .send(BridgeCommand::CreateProposal(ProposalData {
+                            origin_chain_id,
+                            block_height,
+                            merkle_root,
+                            contract: contract.address(),
+                        }))
+                        .await?;
+                }
             }
             None => {
                 tracing::warn!(
