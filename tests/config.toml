@@ -64,6 +64,21 @@ events-watcher = { enabled = false, polling-interval = 3000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
+[[evm.harmony.contracts]]
+contract = "Anchor2"
+address = "0x64E9727C4a835D518C34d3A50A8157120CAeb32F"
+deployed-at = 15183626
+size = 0.1
+events-watcher = { enabled = false, polling-interval = 7000 }
+withdraw-fee-percentage = 0.05
+withdraw-gaslimit = "0x350000"
+linked-anchors = [{ chain = "Rinkeby2", address = "0xB42139fFcEF02dC85db12aC9416a19A12381167D" }]
+
+[[evm.harmony.contracts]]
+contract = "Bridge"
+address = "0xD776C2CB8137f5cd2eE42601F02b9B3320220429"
+deployed-at = 15183634
+events-watcher = { enabled = false, polling-interval = 7000 }
 # and so on for other networks and other contracts ...
 
 [evm.ganache]
@@ -113,15 +128,16 @@ withdraw-gaslimit = "0x350000"
 
 [[evm.rinkeby.contracts]]
 contract = "Anchor2"
-address = "0x5aCF1A99945AeC335309Ff0662504c8ebbf5c000"
-deployed-at = 9219989
+address = "0xB42139fFcEF02dC85db12aC9416a19A12381167D"
+deployed-at = 9326378
 size = 0.1
-events-watcher = { enabled = true, polling-interval = 7000 }
+events-watcher = { enabled = false, polling-interval = 7000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
+linked-anchors = [{ chain = "Harmony", address = "0x64E9727C4a835D518C34d3A50A8157120CAeb32F" }]
 
 [[evm.rinkeby.contracts]]
 contract = "Bridge"
-address = "0xaAab02BA2e2343a22B8DA69E72566B32109d152B"
-deployed-at = 9219991
-events-watcher = { enabled = true, polling-interval = 7000 }
+address = "0x4Dc953Ad1FfE7eD5d46C704C10162A55c543f902"
+deployed-at = 9326380
+events-watcher = { enabled = false, polling-interval = 7000 }

@@ -214,7 +214,8 @@ pub fn handle_evm<'a>(
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     let s = stream! {
-        let chain = match ctx.config.evm.get(&cmd.chain) {
+        let requested_chain = cmd.chain.to_lowercase();
+        let chain = match ctx.config.evm.get(&requested_chain) {
             Some(v) => v,
             None => {
                 yield Network(NetworkStatus::UnsupportedChain);

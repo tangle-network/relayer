@@ -39,9 +39,12 @@ impl BridgeKey {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ProposalData {
-    pub contract: types::Address,
+    pub origin_contract: types::Address,
     pub origin_chain_id: types::U256,
+    pub dest_contract: types::Address,
+    pub dest_chain_id: types::U256,
     pub block_height: types::U64,
+    pub leaf_index: u32,
     pub merkle_root: [u8; 32],
 }
 
@@ -156,7 +159,7 @@ impl BridgeWatcher for BridgeContractWatcher {
         tracing::trace!("Got cmd {:?}", cmd);
         match cmd {
             CreateProposal(data) => {
-                self.create_proposed(store, &wrapper.contract, data).await?;
+                self.create_proposal(store, &wrapper.contract, data).await?;
             }
         };
         Ok(())
@@ -168,21 +171,22 @@ where
     Self: BridgeWatcher,
 {
     #[tracing::instrument(skip(self, store, contract))]
-    async fn create_proposed(
+    async fn create_proposal(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
         contract: &BridgeContract<<Self as EventWatcher>::Middleware>,
         ProposalData {
-            contract: anchor2_address,
+            origin_contract,
             origin_chain_id: chain_id,
             block_height,
             merkle_root,
+            ..
         }: ProposalData,
     ) -> anyhow::Result<()> {
         let data = create_proposal_data(chain_id, block_height, merkle_root);
         let data_hash = utils::keccak256(&data);
         let nonce = 1;
-        let resource_id = create_resource_id(anchor2_address, chain_id)?;
+        let resource_id = create_resource_id(origin_contract, chain_id)?;
         // TODO(@shekohex): check if we should create now or later.
         contract
             .vote_proposal(chain_id, nonce, resource_id, data_hash)

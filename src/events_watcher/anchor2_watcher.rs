@@ -115,10 +115,15 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
     async fn handle_event(
         &self,
         _store: Arc<Self::Store>,
-        Anchor2ContractWrapper { contract, .. }: &Self::Contract,
+        Anchor2ContractWrapper { contract, config }: &Self::Contract,
         e: Self::Events,
     ) -> anyhow::Result<()> {
         use Anchor2ContractEvents::*;
+        // only process anchor deposit events.
+        let event_data = match e {
+            DepositFilter(data) => data,
+            _ => return Ok(()),
+        };
         let bridge_address = contract.bridge().call().await?;
         let client = contract.client();
         let origin_chain_id = contract.chain_id().call().await?;
@@ -126,16 +131,22 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
         let bridge = BridgeRegistry::lookup(key);
         match bridge {
             Some(signal) => {
-                let is_deposit = matches!(e, DepositFilter(..));
-                if is_deposit {
-                    let block_height = client.get_block_number().await?;
-                    let merkle_root = contract.get_last_root().call().await?;
+                let block_height = client.get_block_number().await?;
+                let merkle_root = contract.get_last_root().call().await?;
+                let leaf_index = event_data.leaf_index;
+                // the correct way for getting the other linked anchors
+                // is by getting it from the edge_list, but for now we hardcoded
+                // them in the config.
+                for linked_anchor in &config.linked_anchors {
                     signal
                         .send(BridgeCommand::CreateProposal(ProposalData {
                             origin_chain_id,
+                            dest_chain_id: 0.into(), // FIXME(@shekohex): get the chain id from the config.
                             block_height,
                             merkle_root,
-                            contract: contract.address(),
+                            leaf_index,
+                            origin_contract: contract.address(),
+                            dest_contract: linked_anchor.address,
                         }))
                         .await?;
                 }

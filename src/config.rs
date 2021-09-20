@@ -89,6 +89,16 @@ pub struct AnchorWithdrawConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct LinkedAnchorConfig {
+    /// The Chain name where this anchor belongs to.
+    /// and it is case-insensitive.
+    pub chain: String,
+    /// The Anchor2 Contract Address.
+    pub address: Address,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
 pub enum Contract {
     Anchor(AnchorContractConfig),
@@ -135,6 +145,9 @@ pub struct Anchor2ContractConfig {
     /// Anchor withdraw configuration.
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
+    /// A List of linked Anchor2 Contracts (on other chains) to this contract.
+    #[serde(rename(serialize = "linkedAnchors"))]
+    pub linked_anchors: Vec<LinkedAnchorConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -217,5 +230,41 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let base = path.as_ref().display().to_string();
     cfg.merge(config::File::with_name(&base))?
         .merge(config::Environment::with_prefix("WEBB"))?;
-    cfg.try_into().map_err(Into::into)
+    postloading_process(cfg.try_into()?)
+}
+
+fn postloading_process(
+    mut config: WebbRelayerConfig,
+) -> anyhow::Result<WebbRelayerConfig> {
+    tracing::trace!("Checking configration sanity ...");
+    // make all chain names lower case
+    // 1. drain everything.
+    let old_evm: HashMap<_, _> = config.evm.drain().collect();
+    // 2. insert them again, as lowercased.
+    for (k, v) in old_evm {
+        config.evm.insert(k.to_lowercase(), v);
+    }
+    // check that all required chains are already present in the config.
+    for (chain_name, chain_config) in &config.evm {
+        let anchors2 = chain_config.contracts.iter().filter_map(|c| match c {
+            Contract::Anchor2(cfg) => Some(cfg),
+            _ => None,
+        });
+        for anchor2 in anchors2 {
+            for linked_anchor in &anchor2.linked_anchors {
+                let chain = linked_anchor.chain.to_lowercase();
+                let chain_defined = config.evm.contains_key(&chain);
+                if !chain_defined {
+                    tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
+                        which is required by the Anchor2 Contract ({}) defined on {} chain.
+                        Please, define it manually, to allow the relayer to work properly.",
+                        chain,
+                        anchor2.common.address,
+                        chain_name
+                    );
+                }
+            }
+        }
+    }
+    Ok(config)
 }
