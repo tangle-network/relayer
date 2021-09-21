@@ -111,7 +111,11 @@ fn start_anchor2_events_watcher(
         );
         return Ok(());
     }
-    let wrapper = Anchor2ContractWrapper::new(config.clone(), client.clone());
+    let wrapper = Anchor2ContractWrapper::new(
+        config.clone(),
+        ctx.config.clone(), // the original config to access all networks.
+        client.clone(),
+    );
     tracing::debug!(
         "Anchor2 events watcher for ({}) Started.",
         config.common.address,

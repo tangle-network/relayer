@@ -3,6 +3,7 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
+use anyhow::Context;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use webb::evm::contract::darkwebb::{BridgeContract, BridgeContractEvents};
@@ -39,10 +40,9 @@ impl BridgeKey {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ProposalData {
-    pub origin_contract: types::Address,
-    pub origin_chain_id: types::U256,
     pub dest_contract: types::Address,
-    pub dest_chain_id: types::U256,
+    pub dest_handler: types::Address,
+    pub origin_chain_id: types::U256,
     pub block_height: types::U64,
     pub leaf_index: u32,
     pub merkle_root: [u8; 32],
@@ -142,7 +142,7 @@ impl EventWatcher for BridgeContractWatcher {
         event: Self::Events,
     ) -> anyhow::Result<()> {
         // TODO(@shekohex): Handle the events here.
-        tracing::debug!("Got Event {:?}", event);
+        tracing::trace!("Got Event {:?}", event);
         Ok(())
     }
 }
@@ -170,67 +170,75 @@ impl BridgeContractWatcher
 where
     Self: BridgeWatcher,
 {
-    #[tracing::instrument(skip(self, store, contract))]
+    #[tracing::instrument(skip(self, _store, contract))]
     async fn create_proposal(
         &self,
-        store: Arc<<Self as EventWatcher>::Store>,
+        _store: Arc<<Self as EventWatcher>::Store>,
         contract: &BridgeContract<<Self as EventWatcher>::Middleware>,
-        ProposalData {
-            origin_contract,
-            origin_chain_id: chain_id,
-            block_height,
-            merkle_root,
-            ..
-        }: ProposalData,
+        data: ProposalData,
     ) -> anyhow::Result<()> {
-        let data = create_proposal_data(chain_id, block_height, merkle_root);
-        let data_hash = utils::keccak256(&data);
-        let nonce = 1;
-        let resource_id = create_resource_id(origin_contract, chain_id)?;
-        // TODO(@shekohex): check if we should create now or later.
+        let dest_chain_id = contract.client().get_chainid().await?;
+        let update_data = create_update_proposal_data(
+            data.origin_chain_id,
+            data.block_height,
+            data.merkle_root,
+        );
+        tracing::debug!("update_data = {:?}", update_data);
+        let pre_hashed = format!("{:?}{}", data.dest_handler, update_data);
+        tracing::debug!("data to be hashed = {:?}", pre_hashed);
+        let data_hash = utils::keccak256(pre_hashed);
+        let resource_id =
+            create_resource_id(data.dest_contract, dest_chain_id)?;
+        tracing::debug!(
+            "Voting with Data = 0x{} & hash = {:?} with resource_id = {:?}",
+            update_data,
+            data_hash,
+            resource_id
+        );
+        // TODO(@shekohex): we should really check if this proposal is active, before sending Tx.
+        // TODO(@shekohex): we need a way to determine whether we should vote
+        // now or wait for a bit.
         contract
-            .vote_proposal(chain_id, nonce, resource_id, data_hash)
+            .vote_proposal(
+                data.origin_chain_id,
+                data.leaf_index as _,
+                resource_id,
+                data_hash,
+            )
+            .gas(0x5B8D80)
             .call()
             .await?;
         Ok(())
     }
 }
 
-fn create_proposal_data(
+fn create_update_proposal_data(
     chain_id: types::U256,
     block_height: types::U64,
     merkle_root: [u8; 32],
 ) -> String {
-    let mut b = [0u8; 32];
-
-    chain_id.to_big_endian(&mut b);
-    let chain_id_hex = hex::encode(&b);
-    b.copy_from_slice(&[0; 32]); // clear the memory.
-
-    block_height.to_big_endian(&mut b);
-    let block_height_hex = hex::encode(&b);
-    b.copy_from_slice(&[0; 32]); // clear the memory
-
     let merkle_root_hex = hex::encode(&merkle_root);
-    format!(
-        "{chain_id}{block_height}{merkle_root}",
-        chain_id = chain_id_hex,
-        block_height = block_height_hex,
-        merkle_root = merkle_root_hex,
-    )
+    format!("{:x}{:x}{}", chain_id, block_height, merkle_root_hex,)
 }
 
 fn create_resource_id(
     anchor2_address: types::Address,
     chain_id: types::U256,
 ) -> anyhow::Result<[u8; 32]> {
-    let mut b = [0u8; 32];
-    chain_id.to_big_endian(&mut b);
-    let chain_id_hex = hex::encode(&b);
-
-    let address_hex = hex::encode(anchor2_address.to_fixed_bytes());
-    let result = format!("0x{}{}", address_hex, chain_id_hex);
+    let result = format!("{:?}{:04x}", anchor2_address, chain_id);
+    tracing::debug!("resource_id(hex): {:?}", result);
+    let mut result = result
+        .strip_prefix("0x")
+        .map(ToOwned::to_owned)
+        .context("can't find 0x")?;
+    if result.len() % 2 != 0 {
+        result.insert(0, '0'); // fix the hex value.
+    }
+    let hash = hex::decode(&result)?;
     let mut result_bytes = [0u8; 32];
-    hex::decode_to_slice(result, &mut result_bytes)?;
+    result_bytes
+        .iter_mut()
+        .zip(hash.iter().take(32))
+        .for_each(|(r, h)| *r = *h);
     Ok(result_bytes)
 }
