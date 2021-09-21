@@ -7,6 +7,7 @@ use webb::evm::contract::tornado::AnchorContractEvents;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
+use webb::evm::ethers::contract::LogMeta;
 
 use crate::config;
 use crate::store::sled::SledStore;
@@ -64,6 +65,7 @@ impl super::EventWatcher for AnchorLeavesWatcher {
         store: Arc<Self::Store>,
         contract: &Self::Contract,
         event: Self::Events,
+        log: LogMeta,
     ) -> anyhow::Result<()> {
         match event {
             AnchorContractEvents::DepositFilter(deposit) => {
@@ -71,6 +73,10 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
                 store.insert_leaves(contract.address(), &[value])?;
+
+                // retrieve block metadata from the log
+                store.insert_last_deposit(contract.address(), log.block_number)?;
+
                 tracing::trace!(
                     "Saved Deposit Event ({}, {})",
                     value.0,

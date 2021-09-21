@@ -18,6 +18,7 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::types::Bytes;
 
+
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
 
@@ -119,9 +120,11 @@ pub async fn handle_leaves_cache(
     #[serde(rename_all = "camelCase")]
     struct LeavesCacheResponse {
         leaves: Vec<H256>,
+        last_queried_block: U64,
     }
     let leaves = store.get_leaves(contract).unwrap();
-    Ok(warp::reply::json(&LeavesCacheResponse { leaves }))
+    let last_queried_block = store.get_last_deposit(contract).unwrap();
+    Ok(warp::reply::json(&LeavesCacheResponse { leaves, last_queried_block }))
 }
 
 #[derive(Debug, Clone, Deserialize)]

@@ -89,4 +89,31 @@ impl LeafCacheStore for SledStore {
         }
         Ok(())
     }
+
+    fn get_last_deposit(
+        &self,
+        contract: types::Address,
+    ) -> anyhow::Result<types::U64> {
+        let tree = self.db.open_tree("last_deposit")?;
+        let val = tree.get(contract)?;
+        match val {
+            Some(v) => Ok(types::U64::from_little_endian(&v)),
+            None => Ok(types::U64::from(0)),
+        }
+    }
+
+    fn insert_last_deposit(
+        &self,
+        contract: types::Address,
+        last_deposit: types::U64,
+    ) -> anyhow::Result<types::U64> {
+        let tree = self.db.open_tree("last_deposit")?;
+        let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
+        last_deposit.to_little_endian(&mut bytes);
+        let old = tree.insert(contract, &bytes)?;
+        match old {
+            Some(v) => Ok(types::U64::from_little_endian(&v)),
+            None => Ok(last_deposit),
+        }
+    }
 }

@@ -78,6 +78,7 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
         store: Arc<Self::Store>,
         contract: &Self::Contract,
         event: Self::Events,
+        _log: LogMeta,
     ) -> anyhow::Result<()> {
         match event {
             Anchor2ContractEvents::DepositFilter(deposit) => {
@@ -116,6 +117,7 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
         _store: Arc<Self::Store>,
         Anchor2ContractWrapper { contract, .. }: &Self::Contract,
         event: Self::Events,
+        _log: LogMeta,
     ) -> anyhow::Result<()> {
         let bridge_address = contract.bridge().call().await?;
         let chain_id = contract.chain_id().call().await?;

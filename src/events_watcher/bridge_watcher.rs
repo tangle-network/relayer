@@ -130,6 +130,7 @@ impl EventWatcher for BridgeContractWatcher {
         _store: Arc<Self::Store>,
         _contract: &Self::Contract,
         event: Self::Events,
+        _log: LogMeta,
     ) -> anyhow::Result<()> {
         // TODO(@shekohex): Handle the events here.
         tracing::debug!("Got Event {:?}", event);

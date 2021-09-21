@@ -40,6 +40,7 @@ pub trait EventWatcher {
         store: Arc<Self::Store>,
         contract: &Self::Contract,
         event: Self::Events,
+        log: contract::LogMeta,
     ) -> anyhow::Result<()>;
 
     /// Returns a task that should be running in the background
@@ -91,7 +92,7 @@ pub trait EventWatcher {
 
                 for (event, log) in found_events {
                     let result = self
-                        .handle_event(store.clone(), &contract, event)
+                        .handle_event(store.clone(), &contract, event, log.clone())
                         .await;
                     match result {
                         Ok(_) => {
