@@ -178,7 +178,9 @@ pub trait BridgeWatcher: EventWatcher {
                     }
                 }
             }
-            Ok(())
+            // whenever this loop stops, we will restart the whole task again.
+            // that way we never have to worry about closed channels.
+            Err(backoff::Error::Transient(anyhow::anyhow!("Restarting")))
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())

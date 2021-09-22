@@ -126,7 +126,7 @@ pub struct BridgeContractWatcher;
 
 #[async_trait::async_trait]
 impl EventWatcher for BridgeContractWatcher {
-    type Middleware = HttpProvider;
+    type Middleware = SignerMiddleware<HttpProvider, LocalWallet>;
 
     type Contract = BridgeContractWrapper<Self::Middleware>;
 

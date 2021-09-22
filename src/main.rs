@@ -59,7 +59,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let server_handle = tokio::spawn(server);
     // start all background services.
     // this does not block, will fire the services on background tasks.
-    service::ignite(&ctx, Arc::new(store))?;
+    service::ignite(&ctx, Arc::new(store)).await?;
     // watch for signals
     let mut ctrlc_signal = unix::signal(unix::SignalKind::interrupt())?;
     let mut termination_signal = unix::signal(unix::SignalKind::terminate())?;
@@ -103,6 +103,7 @@ fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
     let env_filter = tracing_subscriber::EnvFilter::from_default_env()
         .add_directive(format!("webb_relayer={}", log_level).parse()?);
     tracing_subscriber::fmt()
+        .pretty()
         .with_target(true)
         .with_max_level(log_level)
         .with_env_filter(env_filter)

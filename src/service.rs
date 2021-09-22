@@ -1,8 +1,8 @@
-use std::convert::TryFrom;
 use std::sync::Arc;
-use std::time::Duration;
 
+use webb::evm::ethers::middleware::SignerMiddleware;
 use webb::evm::ethers::providers;
+use webb::evm::ethers::signers::LocalWallet;
 
 use crate::context::RelayerContext;
 
@@ -12,11 +12,13 @@ use crate::events_watcher::*;
 type Client = providers::Provider<providers::Http>;
 type Store = crate::store::sled::SledStore;
 
-pub fn ignite(ctx: &RelayerContext, store: Arc<Store>) -> anyhow::Result<()> {
+pub async fn ignite(
+    ctx: &RelayerContext,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
     // now we go through each chain, in our configuration
     for (chain_name, chain_config) in &ctx.config.evm {
-        let provider = Client::try_from(chain_config.http_endpoint.as_str())?
-            .interval(Duration::from_millis(6u64));
+        let provider = ctx.evm_provider(chain_name).await?;
         let client = Arc::new(provider);
         tracing::debug!(
             "Starting Background Services for ({}) chain.",
@@ -41,6 +43,10 @@ pub fn ignite(ctx: &RelayerContext, store: Arc<Store>) -> anyhow::Result<()> {
                     )?;
                 }
                 Contract::Bridge(config) => {
+                    let provider = ctx.evm_provider(chain_name).await?;
+                    let wallet = ctx.evm_wallet(chain_name).await?;
+                    let client = SignerMiddleware::new(provider, wallet);
+                    let client = Arc::new(client);
                     start_bridge_watcher(
                         ctx,
                         config,
@@ -160,7 +166,7 @@ fn start_anchor2_events_watcher(
 fn start_bridge_watcher(
     ctx: &RelayerContext,
     config: &BridgeContractConfig,
-    client: Arc<Client>,
+    client: Arc<SignerMiddleware<Client, LocalWallet>>,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
     if !config.events_watcher.enabled {
