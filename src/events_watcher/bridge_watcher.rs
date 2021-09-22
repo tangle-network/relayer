@@ -37,10 +37,34 @@ impl BridgeKey {
     }
 }
 
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ProposalStatus {
+    Inactive = 0,
+    Active = 1,
+    Passed = 2,
+    Executed = 3,
+    Cancelled = 4,
+    Unknown = u8::MAX,
+}
+
+impl From<u8> for ProposalStatus {
+    fn from(v: u8) -> Self {
+        match v {
+            0 => ProposalStatus::Inactive,
+            1 => ProposalStatus::Active,
+            2 => ProposalStatus::Passed,
+            3 => ProposalStatus::Executed,
+            4 => ProposalStatus::Cancelled,
+            _ => ProposalStatus::Unknown,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ProposalData {
-    pub dest_contract: types::Address,
-    pub dest_handler: types::Address,
+    pub anchor2_address: types::Address,
+    pub anchor2_handler_address: types::Address,
     pub origin_chain_id: types::U256,
     pub block_height: types::U64,
     pub leaf_index: u32,
@@ -141,7 +165,7 @@ impl EventWatcher for BridgeContractWatcher {
         event: Self::Events,
     ) -> anyhow::Result<()> {
         // TODO(@shekohex): Handle the events here.
-        tracing::trace!("Got Event {:?}", event);
+        tracing::debug!("Got Event {:?}", event);
         Ok(())
     }
 }
@@ -182,11 +206,18 @@ where
             data.block_height,
             data.merkle_root,
         );
-        let pre_hashed = format!("{:x}{}", data.dest_handler, update_data);
+        let pre_hashed =
+            format!("{:x}{}", data.anchor2_handler_address, update_data);
         let data_to_be_hashed = hex::decode(pre_hashed)?;
         let data_hash = utils::keccak256(data_to_be_hashed);
         let resource_id =
-            create_resource_id(data.dest_contract, dest_chain_id)?;
+            create_resource_id(data.anchor2_address, dest_chain_id)?;
+        let (status, ..) = contract
+            .get_proposal(data.origin_chain_id, data.leaf_index as _, data_hash)
+            .call()
+            .await?;
+        let status = ProposalStatus::from(status);
+        tracing::debug!("ProposalStatus({:?})", status);
         tracing::debug!(
             "Voting with Data = 0x{} & hash = {:?} with resource_id = {:?}",
             update_data,
@@ -203,8 +234,7 @@ where
                 resource_id,
                 data_hash,
             )
-            .gas(0x5B8D80)
-            .call()
+            .send()
             .await?;
         Ok(())
     }

@@ -28,7 +28,7 @@ chain-id = 1666700001
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "0x8917174396171783496173419137618235192359106130478137647163400318"
+private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
 
 # chain contracts
 [[evm.harmonys1.contracts]]
@@ -68,7 +68,7 @@ withdraw-gaslimit = "0x350000"
 http-endpoint = "https://api.s0.b.hmny.io"
 ws-endpoint = "wss://ws.s0.b.hmny.io"
 chain-id = 1666700000
-private-key = "0x8917174396171783496173419137618235192359106130478137647163400318"
+private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
 # chain contracts
 [[evm.harmonys0.contracts]]
 contract = "Anchor2"
@@ -105,7 +105,7 @@ withdraw-gaslimit = "0x350000"
 http-endpoint = "https://beresheet.edgewa.re/evm"
 ws-endpoint = "wss://beresheet.edgewa.re"
 chain-id = 2022
-private-key = "0x8917174396171783496173419137618235192359106130478137647163400318"
+private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
 
 [[evm.beresheet.contracts]]
 contract = "Anchor"
@@ -120,7 +120,7 @@ withdraw-gaslimit = "0x350000"
 http-endpoint = "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
 ws-endpoint = "wss://rinkeby.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161"
 chain-id = 4
-private-key = "0x8917174396171783496173419137618235192359106130478137647163400318"
+private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
 
 [[evm.rinkeby.contracts]]
 contract = "Anchor"

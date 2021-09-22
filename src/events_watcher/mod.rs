@@ -172,7 +172,7 @@ pub trait BridgeWatcher: EventWatcher {
                         continue;
                     }
                     Err(e) => {
-                        tracing::error!("{}", e);
+                        tracing::error!("Error while handle_cmd {}", e);
                         // this a transient error, so we will retry again.
                         return Err(backoff::Error::Transient(e));
                     }

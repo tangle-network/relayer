@@ -190,8 +190,8 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
                 Some(signal) => {
                     signal
                         .send(BridgeCommand::CreateProposal(ProposalData {
-                            dest_contract: dest_contract.address(),
-                            dest_handler,
+                            anchor2_address: dest_contract.address(),
+                            anchor2_handler_address: dest_handler,
                             origin_chain_id,
                             block_height,
                             leaf_index,
