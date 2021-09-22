@@ -3,7 +3,6 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Context;
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use webb::evm::contract::darkwebb::{BridgeContract, BridgeContractEvents};
@@ -183,10 +182,9 @@ where
             data.block_height,
             data.merkle_root,
         );
-        tracing::debug!("update_data = {:?}", update_data);
-        let pre_hashed = format!("{:?}{}", data.dest_handler, update_data);
-        tracing::debug!("data to be hashed = {:?}", pre_hashed);
-        let data_hash = utils::keccak256(pre_hashed);
+        let pre_hashed = format!("{:x}{}", data.dest_handler, update_data);
+        let data_to_be_hashed = hex::decode(pre_hashed)?;
+        let data_hash = utils::keccak256(data_to_be_hashed);
         let resource_id =
             create_resource_id(data.dest_contract, dest_chain_id)?;
         tracing::debug!(
@@ -217,28 +215,79 @@ fn create_update_proposal_data(
     block_height: types::U64,
     merkle_root: [u8; 32],
 ) -> String {
+    let chain_id_hex = pad32(&format!("{:x}", chain_id));
+    let block_height_hex = pad32(&format!("{:x}", block_height));
     let merkle_root_hex = hex::encode(&merkle_root);
-    format!("{:x}{:x}{}", chain_id, block_height, merkle_root_hex,)
+    format!("{}{}{}", chain_id_hex, block_height_hex, merkle_root_hex,)
 }
 
 fn create_resource_id(
     anchor2_address: types::Address,
     chain_id: types::U256,
 ) -> anyhow::Result<[u8; 32]> {
-    let result = format!("{:?}{:04x}", anchor2_address, chain_id);
-    tracing::debug!("resource_id(hex): {:?}", result);
-    let mut result = result
-        .strip_prefix("0x")
-        .map(ToOwned::to_owned)
-        .context("can't find 0x")?;
-    if result.len() % 2 != 0 {
-        result.insert(0, '0'); // fix the hex value.
-    }
-    let hash = hex::decode(&result)?;
+    let chain_id_hex = pad(&format!("{:x}", chain_id), 2);
+    let result = format!("{:x}{}", anchor2_address, chain_id_hex);
+    let hash = hex::decode(pad32(&result))?;
     let mut result_bytes = [0u8; 32];
     result_bytes
         .iter_mut()
         .zip(hash.iter().take(32))
         .for_each(|(r, h)| *r = *h);
     Ok(result_bytes)
+}
+
+fn pad32(val: &str) -> String {
+    pad(val, 64)
+}
+
+fn pad(val: &str, n: usize) -> String {
+    format!("{}{}", "0".repeat(n.saturating_sub(val.len())), val)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn should_create_update_proposal() {
+        let chain_id = types::U256::from(4);
+        let block_height = types::U64::one();
+        let merkle_root = [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+            19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+        ];
+        let result =
+            create_update_proposal_data(chain_id, block_height, merkle_root);
+        let expected = include_str!("../../tests/fixtures/proposal_data.txt")
+            .trim_end_matches('\n');
+        assert_eq!(result, expected);
+        let dest_handler = types::Address::from_str(
+            "0x7Bb1Af8D06495E85DDC1e0c49111C9E0Ab50266E",
+        )
+        .unwrap();
+        let pre_hashed = format!("{:x}{}", dest_handler, result);
+        let data_to_be_hashed = hex::decode(pre_hashed).unwrap();
+        let data_hash = hex::encode(utils::keccak256(data_to_be_hashed));
+        let expected_data_hash =
+            "45822e043e5735fc2485e52dd71403d140f3a755cd59dc02539eaef3bcfd4bcb";
+        assert_eq!(data_hash, expected_data_hash);
+    }
+
+    #[test]
+    fn should_create_resouce_id() {
+        let chain_id = types::U256::from(4);
+        let anchor2_address = types::Address::from_str(
+            "0xB42139fFcEF02dC85db12aC9416a19A12381167D",
+        )
+        .unwrap();
+        let resource_id =
+            create_resource_id(anchor2_address, chain_id).unwrap();
+        let expected = hex::decode(
+            "0000000000000000000000b42139ffcef02dc85db12ac9416a19a12381167d04",
+        )
+        .unwrap();
+        assert_eq!(resource_id, expected.as_slice());
+    }
 }
