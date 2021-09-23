@@ -43,14 +43,28 @@ pub async fn ignite(
                     )?;
                 }
                 Contract::Bridge(config) => {
+                    // here we create a new connection different
+                    // from the normal one, since we need to have a signer
+                    // middleware in between.
+                    //
+                    // so to minimize the use of private key, we only give this
+                    // permission to only watchers that needs it.
+                    //
+                    // And since bridge watcher will create transactions, at some point
+                    // it needs the signer middleware to be available.
+                    //
+                    // In the near future we would have a transaction queue, where we
+                    // would just create the transaction parameters and queue it for later
+                    // execution.
+                    //
+                    // TODO(@shekohex): update comments once we have the transaction queue
+                    // implemented.
                     let provider = ctx.evm_provider(chain_name).await?;
                     let wallet = ctx.evm_wallet(chain_name).await?;
-                    let client = SignerMiddleware::new(provider, wallet);
-                    let client = Arc::new(client);
                     start_bridge_watcher(
                         ctx,
                         config,
-                        client.clone(),
+                        Arc::new(SignerMiddleware::new(provider, wallet)),
                         store.clone(),
                     )?;
                 }
