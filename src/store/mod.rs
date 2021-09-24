@@ -45,4 +45,18 @@ pub trait LeafCacheStore: HistoryStore {
         contract: types::Address,
         leaves: &[(u32, types::H256)],
     ) -> anyhow::Result<()>;
+
+    // The last deposit info is sent to the client on leaf request
+    // So they can verify when the last transaction was sent to maintain
+    // their own state of mixers.
+    fn get_last_deposit_block_number(
+        &self,
+        contract: types::Address,
+    ) -> anyhow::Result<types::U64>;
+
+    fn insert_last_deposit_block_number(
+        &self,
+        contract: types::Address,
+        block_number: types::U64,
+    ) -> anyhow::Result<types::U64>;
 }

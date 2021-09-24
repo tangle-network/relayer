@@ -4,6 +4,7 @@ use std::time::Duration;
 
 use webb::evm::contract::tornado::AnchorContract;
 use webb::evm::contract::tornado::AnchorContractEvents;
+use webb::evm::ethers::contract::LogMeta;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
@@ -58,12 +59,12 @@ impl super::EventWatcher for AnchorLeavesWatcher {
 
     type Store = SledStore;
 
-    #[tracing::instrument(skip(self, store, event))]
+    #[tracing::instrument(skip_all)]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
         contract: &Self::Contract,
-        event: Self::Events,
+        (event, log): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         match event {
             AnchorContractEvents::DepositFilter(deposit) => {
@@ -71,6 +72,11 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
                 store.insert_leaves(contract.address(), &[value])?;
+                store.insert_last_deposit_block_number(
+                    contract.address(),
+                    log.block_number,
+                )?;
+
                 tracing::trace!(
                     "Saved Deposit Event ({}, {})",
                     value.0,
@@ -93,19 +99,17 @@ mod tests {
     use rand::rngs::StdRng;
     use rand::SeedableRng;
 
+    use tracing_test::traced_test;
+
+    use super::*;
     use crate::config::*;
     use crate::events_watcher::EventWatcher;
     use crate::store::sled::SledStore;
     use crate::test_utils::*;
 
-    use super::*;
-
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[traced_test]
     async fn it_should_work() -> anyhow::Result<()> {
-        tracing_subscriber::fmt()
-            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-            .with_test_writer()
-            .init();
         let ganache = launch_ganache().await;
         let provider = Provider::<Http>::try_from(ganache.endpoint())?
             .interval(Duration::from_millis(7u64));
@@ -151,7 +155,7 @@ mod tests {
         // then, make another deposit, while the watcher is running.
         make_deposit(&mut rng, &anchor_contract, &mut expected_leaves).await?;
         // sleep for the duration of the polling interval
-        tokio::time::sleep(Duration::from_secs(7)).await;
+        tokio::time::sleep(Duration::from_secs(2)).await;
         // it should now contains the 2 leaves when the watcher was offline, and
         // the new one that happened while it is watching.
         let leaves = store.get_leaves(contract_address)?;
@@ -172,6 +176,124 @@ mod tests {
         let leaves = store.get_leaves(contract_address)?;
         assert_eq!(expected_leaves, leaves);
         task_handle.abort();
+        drop(ganache);
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    #[traced_test]
+    async fn last_deposit_block_number_should_update() -> anyhow::Result<()> {
+        let ganache = launch_ganache().await;
+        let provider = Provider::<Http>::try_from(ganache.endpoint())?
+            .interval(Duration::from_millis(7u64));
+        let key = ganache.keys().first().cloned().unwrap();
+        let wallet = LocalWallet::from(key).with_chain_id(1337u64);
+        let client = SignerMiddleware::new(provider, wallet);
+        let client = Arc::new(client);
+        let contract_address_1 = deploy_anchor_contract(client.clone()).await?;
+        let contract_address_2 = deploy_anchor_contract(client.clone()).await?;
+        let anchor_contract_1 =
+            AnchorContract::new(contract_address_1, client.clone());
+        let anchor_contract_2 =
+            AnchorContract::new(contract_address_2, client.clone());
+        let mut expected_leaves = Vec::new();
+        let mut rng = StdRng::from_seed([0u8; 32]);
+        let config_1 = AnchorContractConfig {
+            common: CommonContractConfig {
+                address: contract_address_1,
+                deployed_at: 2,
+            },
+            events_watcher: EventsWatcherConfig {
+                enabled: true,
+                polling_interval: 1000,
+            },
+            size: 1.0,
+            withdraw_config: AnchorWithdrawConfig {
+                withdraw_fee_percentage: 0.0000000001,
+                withdraw_gaslimit: 0.into(),
+            },
+        };
+        let config_2 = AnchorContractConfig {
+            common: CommonContractConfig {
+                address: contract_address_2,
+                deployed_at: 3,
+            },
+            events_watcher: EventsWatcherConfig {
+                enabled: true,
+                polling_interval: 1000,
+            },
+            size: 1.0,
+            withdraw_config: AnchorWithdrawConfig {
+                withdraw_fee_percentage: 0.0000000001,
+                withdraw_gaslimit: 0.into(),
+            },
+        };
+
+        let inner_client_1 = Arc::new(client.provider().clone());
+        let inner_client_2 = Arc::new(client.provider().clone());
+        let wrapper_1 =
+            AnchorContractWrapper::new(config_1, inner_client_1.clone());
+        let wrapper_2 =
+            AnchorContractWrapper::new(config_2, inner_client_2.clone());
+        let db = tempfile::tempdir()?;
+        let store = SledStore::open(db.path())?;
+        let store = Arc::new(store.clone());
+
+        // start watching for deposits on contract_1
+        let task_handle_1 = tokio::task::spawn(AnchorLeavesWatcher.run(
+            inner_client_1.clone(),
+            store.clone(),
+            wrapper_1.clone(),
+        ));
+        // start watching for deposits on contract_2
+        let task_handle_2 = tokio::task::spawn(AnchorLeavesWatcher.run(
+            inner_client_2.clone(),
+            store.clone(),
+            wrapper_2.clone(),
+        ));
+
+        // make a deposit on each contract to populate last_deposit_block_number
+        make_deposit(&mut rng, &anchor_contract_2, &mut expected_leaves)
+            .await?;
+        make_deposit(&mut rng, &anchor_contract_1, &mut expected_leaves)
+            .await?;
+
+        // sleep for the duration of the polling interval
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        // get the last_deposit_blocknumer from contract 1
+        let expected_deposit_block_number =
+            store.get_last_deposit_block_number(contract_address_1)?;
+
+        // make a deposit on contract 2, which should increase the block_number by 1 for ganache
+        make_deposit(&mut rng, &anchor_contract_2, &mut expected_leaves)
+            .await?;
+
+        // sleep for the duration of the polling interval
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        // check contract 1 last_deposit_block_number is unchanged
+        let actual_deposit_block_number =
+            store.get_last_deposit_block_number(contract_address_1)?;
+        assert_eq!(expected_deposit_block_number, actual_deposit_block_number);
+
+        // make a deposit on contract 1, which should increase the block_number by 1 for ganache
+        make_deposit(&mut rng, &anchor_contract_1, &mut expected_leaves)
+            .await?;
+
+        // sleep for the duration of the polling interval
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        let actual_deposit_block_number =
+            store.get_last_deposit_block_number(contract_address_1)?;
+        assert_eq!(
+            expected_deposit_block_number + 2,
+            actual_deposit_block_number
+        );
+
+        task_handle_1.abort();
+        task_handle_2.abort();
+        drop(ganache);
         Ok(())
     }
 }

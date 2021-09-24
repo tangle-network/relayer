@@ -87,7 +87,7 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
         &self,
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
-        event: Self::Events,
+        (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         match event {
             Anchor2ContractEvents::DepositFilter(deposit) => {
@@ -125,7 +125,7 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
         &self,
         _store: Arc<Self::Store>,
         wrapper: &Self::Contract,
-        e: Self::Events,
+        (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         use Anchor2ContractEvents::*;
         // only process anchor deposit events.
