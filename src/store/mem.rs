@@ -94,7 +94,7 @@ impl LeafCacheStore for InMemoryStore {
     fn insert_last_deposit_block_number(
         &self,
         contract: types::Address,
-        last_deposit: types::U64,
+        block_number: types::U64,
     ) -> anyhow::Result<types::U64> {
         Ok(types::U64::from(0))
     }

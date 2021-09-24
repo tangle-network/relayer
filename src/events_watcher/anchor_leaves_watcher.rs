@@ -59,13 +59,12 @@ impl super::EventWatcher for AnchorLeavesWatcher {
 
     type Store = SledStore;
 
-    #[tracing::instrument(skip(self, store, event))]
+    #[tracing::instrument(skip(self, store))]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
         contract: &Self::Contract,
-        event: Self::Events,
-        log: LogMeta,
+        (event, log): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         match event {
             AnchorContractEvents::DepositFilter(deposit) => {
@@ -73,8 +72,6 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
                 store.insert_leaves(contract.address(), &[value])?;
-
-                // retrieve block metadata from the log
                 store.insert_last_deposit_block_number(contract.address(), log.block_number)?;
 
                 tracing::trace!(
@@ -103,7 +100,6 @@ mod tests {
     use crate::events_watcher::EventWatcher;
     use crate::store::sled::SledStore;
     use crate::test_utils::*;
-
     use super::*;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -187,7 +183,9 @@ mod tests {
         tracing_subscriber::fmt()
             .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
             .with_test_writer()
+            // .with(fmt::Layer::default().with_writer(file_writer))
             .init();
+
         let ganache = launch_ganache().await;
         let provider = Provider::<Http>::try_from(ganache.endpoint())?
             .interval(Duration::from_millis(7u64));

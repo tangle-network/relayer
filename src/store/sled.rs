@@ -94,7 +94,7 @@ impl LeafCacheStore for SledStore {
         &self,
         contract: types::Address,
     ) -> anyhow::Result<types::U64> {
-        let tree = self.db.open_tree("last_deposit")?;
+        let tree = self.db.open_tree("last_deposit_block_number")?;
         let val = tree.get(contract)?;
         match val {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
@@ -105,15 +105,15 @@ impl LeafCacheStore for SledStore {
     fn insert_last_deposit_block_number(
         &self,
         contract: types::Address,
-        last_deposit: types::U64,
+        block_number: types::U64,
     ) -> anyhow::Result<types::U64> {
-        let tree = self.db.open_tree("last_deposit")?;
+        let tree = self.db.open_tree("last_deposit_block_number")?;
         let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
-        last_deposit.to_little_endian(&mut bytes);
+        block_number.to_little_endian(&mut bytes);
         let old = tree.insert(contract, &bytes)?;
         match old {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
-            None => Ok(last_deposit),
+            None => Ok(block_number),
         }
     }
 }

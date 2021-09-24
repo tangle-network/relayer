@@ -57,6 +57,6 @@ pub trait LeafCacheStore: HistoryStore {
     fn insert_last_deposit_block_number(
         &self,
         contract: types::Address,
-        last_deposit: types::U64,
+        block_number: types::U64,
     ) -> anyhow::Result<types::U64>;
 }
