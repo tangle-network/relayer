@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::LowerHex;
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
@@ -38,7 +39,7 @@ impl BridgeKey {
 }
 
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ProposalStatus {
     Inactive = 0,
     Active = 1,
@@ -212,30 +213,68 @@ where
         let data_hash = utils::keccak256(data_to_be_hashed);
         let resource_id =
             create_resource_id(data.anchor2_address, dest_chain_id)?;
+        let contract_handler_address = contract
+            .resource_id_to_handler_address(resource_id)
+            .call()
+            .await?;
+        // sanity check
+        assert_eq!(contract_handler_address, data.anchor2_handler_address);
         let (status, ..) = contract
             .get_proposal(data.origin_chain_id, data.leaf_index as _, data_hash)
             .call()
             .await?;
         let status = ProposalStatus::from(status);
+        // TODO(@shekohex): we should really check if this proposal is active, before sending Tx.
         tracing::debug!("ProposalStatus({:?})", status);
+        if status >= ProposalStatus::Passed {
+            tracing::debug!("Skipping this proposal ... already {:?}", status);
+            return Ok(());
+        }
         tracing::debug!(
             "Voting with Data = 0x{} & hash = {:?} with resource_id = {:?}",
             update_data,
             data_hash,
             resource_id
         );
-        // TODO(@shekohex): we should really check if this proposal is active, before sending Tx.
         // TODO(@shekohex): we need a way to determine whether we should vote
         // now or wait for a bit.
-        contract
-            .vote_proposal(
-                data.origin_chain_id,
-                data.leaf_index as _,
-                resource_id,
-                data_hash,
-            )
-            .send()
-            .await?;
+        let call = contract.vote_proposal(
+            data.origin_chain_id,
+            data.leaf_index as _,
+            resource_id,
+            data_hash,
+        );
+
+        let tx = match call.send().await {
+            Ok(pending) => {
+                tracing::debug!(
+                    "Vote Tx is submitted and pending! {}",
+                    *pending
+                );
+                let result =
+                    pending.interval(Duration::from_millis(7000)).await;
+                result
+            }
+            Err(e) => {
+                tracing::error!("Error while sending Vote Tx: {}", e);
+                return Err(anyhow::Error::from(e));
+            }
+        };
+        match tx {
+            Ok(Some(receipt)) => {
+                tracing::debug!(
+                    "Vote Tx Finalized #{}",
+                    receipt.transaction_hash
+                );
+            }
+            Ok(None) => {
+                tracing::warn!("Vote Tx Dropped from Mempool!!");
+            }
+            Err(e) => {
+                let reason = e.to_string();
+                tracing::error!("Vote Transaction Errored: {}", reason);
+            }
+        };
         Ok(())
     }
 }
@@ -245,33 +284,37 @@ fn create_update_proposal_data(
     block_height: types::U64,
     merkle_root: [u8; 32],
 ) -> String {
-    let chain_id_hex = pad32(&format!("{:x}", chain_id));
-    let block_height_hex = pad32(&format!("{:x}", block_height));
+    let chain_id_hex = to_hex(chain_id, 32);
+    let block_height_hex = to_hex(block_height, 32);
     let merkle_root_hex = hex::encode(&merkle_root);
-    format!("{}{}{}", chain_id_hex, block_height_hex, merkle_root_hex,)
+    format!("{}{}{}", chain_id_hex, block_height_hex, merkle_root_hex)
 }
 
 fn create_resource_id(
     anchor2_address: types::Address,
     chain_id: types::U256,
 ) -> anyhow::Result<[u8; 32]> {
-    let chain_id_hex = pad(&format!("{:x}", chain_id), 2);
-    let result = format!("{:x}{}", anchor2_address, chain_id_hex);
-    let hash = hex::decode(pad32(&result))?;
+    let truncated = to_hex(chain_id, 4);
+    let result = format!("{:x}{}", anchor2_address, truncated);
+    let hash = hex::decode(result)?;
     let mut result_bytes = [0u8; 32];
     result_bytes
         .iter_mut()
-        .zip(hash.iter().take(32))
-        .for_each(|(r, h)| *r = *h);
+        .skip(32 - hash.len())
+        .zip(hash)
+        .for_each(|(r, h)| *r = h);
     Ok(result_bytes)
 }
 
-fn pad32(val: &str) -> String {
-    pad(val, 64)
-}
-
-fn pad(val: &str, n: usize) -> String {
-    format!("{}{}", "0".repeat(n.saturating_sub(val.len())), val)
+fn to_hex(value: impl LowerHex, padding: usize) -> String {
+    let mut hexed = format!("{:x}", value);
+    if hexed.len() % 2 != 0 {
+        hexed = String::from("0") + &hexed;
+    }
+    while hexed.len() < 2 * padding {
+        hexed = String::from("0") + &hexed;
+    }
+    hexed
 }
 
 #[cfg(test)]
@@ -315,7 +358,7 @@ mod tests {
         let resource_id =
             create_resource_id(anchor2_address, chain_id).unwrap();
         let expected = hex::decode(
-            "0000000000000000000000b42139ffcef02dc85db12ac9416a19a12381167d04",
+            "0000000000000000b42139ffcef02dc85db12ac9416a19a12381167d00000004",
         )
         .unwrap();
         assert_eq!(resource_id, expected.as_slice());

@@ -174,7 +174,9 @@ pub trait BridgeWatcher: EventWatcher {
                     Err(e) => {
                         tracing::error!("Error while handle_cmd {}", e);
                         // this a transient error, so we will retry again.
-                        return Err(backoff::Error::Transient(e));
+                        // Internally it would use a queue so the value would be still in
+                        // the queue.
+                        continue; // keep going...
                     }
                 }
             }
