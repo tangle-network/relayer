@@ -90,7 +90,7 @@ impl LeafCacheStore for SledStore {
         Ok(())
     }
 
-    fn get_last_deposit(
+    fn get_last_deposit_block_number(
         &self,
         contract: types::Address,
     ) -> anyhow::Result<types::U64> {
@@ -102,7 +102,7 @@ impl LeafCacheStore for SledStore {
         }
     }
 
-    fn insert_last_deposit(
+    fn insert_last_deposit_block_number(
         &self,
         contract: types::Address,
         last_deposit: types::U64,

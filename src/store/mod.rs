@@ -49,12 +49,12 @@ pub trait LeafCacheStore: HistoryStore {
     // The last deposit info is sent to the client on leaf request
     // So they can verify when the last transaction was sent to maintain
     // their own state of mixers.
-    fn get_last_deposit(
+    fn get_last_deposit_block_number(
         &self,
         contract: types::Address,
     ) -> anyhow::Result<types::U64>;
 
-    fn insert_last_deposit(
+    fn insert_last_deposit_block_number(
         &self,
         contract: types::Address,
         last_deposit: types::U64,

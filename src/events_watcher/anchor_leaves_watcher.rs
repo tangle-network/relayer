@@ -75,7 +75,7 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                 store.insert_leaves(contract.address(), &[value])?;
 
                 // retrieve block metadata from the log
-                store.insert_last_deposit(contract.address(), log.block_number)?;
+                store.insert_last_deposit_block_number(contract.address(), log.block_number)?;
 
                 tracing::trace!(
                     "Saved Deposit Event ({}, {})",
@@ -178,6 +178,115 @@ mod tests {
         let leaves = store.get_leaves(contract_address)?;
         assert_eq!(expected_leaves, leaves);
         task_handle.abort();
+        Ok(())
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn last_deposit_block_number_should_update() -> anyhow::Result<()> {
+        // Setup deployment of two anchor contracts
+        tracing_subscriber::fmt()
+            .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+            .with_test_writer()
+            .init();
+        let ganache = launch_ganache().await;
+        let provider = Provider::<Http>::try_from(ganache.endpoint())?
+            .interval(Duration::from_millis(7u64));
+        let key = ganache.keys().first().cloned().unwrap();
+        let wallet = LocalWallet::from(key).with_chain_id(1337u64);
+        let client = SignerMiddleware::new(provider, wallet);
+        let client = Arc::new(client);
+        let contract_address_1 = deploy_anchor_contract(client.clone()).await?;
+        let contract_address_2 = deploy_anchor_contract(client.clone()).await?;
+        let anchor_contract_1 =
+            AnchorContract::new(contract_address_1, client.clone());
+        let anchor_contract_2 =
+            AnchorContract::new(contract_address_2, client.clone());
+        let mut expected_leaves = Vec::new();
+        let mut rng = StdRng::from_seed([0u8; 32]);
+        let config_1 = AnchorContractConfig {
+            common: CommonContractConfig {
+                address: contract_address_1,
+                deployed_at: 2,
+            },
+            events_watcher: EventsWatcherConfig {
+                enabled: true,
+                polling_interval: 1000,
+            },
+            size: 1.0,
+            withdraw_config: AnchorWithdrawConfig {
+                withdraw_fee_percentage: 0.0000000001,
+                withdraw_gaslimit: 0.into(),
+            },
+        };
+        let config_2 = AnchorContractConfig {
+            common: CommonContractConfig {
+                address: contract_address_2,
+                deployed_at: 3,
+            },
+            events_watcher: EventsWatcherConfig {
+                enabled: true,
+                polling_interval: 1000,
+            },
+            size: 1.0,
+            withdraw_config: AnchorWithdrawConfig {
+                withdraw_fee_percentage: 0.0000000001,
+                withdraw_gaslimit: 0.into(),
+            },
+        };
+
+        let inner_client = Arc::new(client.provider().clone());
+        let wrapper_1 = AnchorContractWrapper::new(config_1, inner_client.clone());
+        let wrapper_2 = AnchorContractWrapper::new(config_2, inner_client.clone());
+        let db = tempfile::tempdir()?;
+        let store = SledStore::open(db.path())?;
+        let store = Arc::new(store.clone());
+
+        // start watching for deposits on contract_1
+        let task_handle_1 = tokio::task::spawn(AnchorLeavesWatcher.run(
+            inner_client.clone(),
+            store.clone(),
+            wrapper_1.clone(),
+        ));
+        // start watching for deposits on contract_2
+        let task_handle_2 = tokio::task::spawn(AnchorLeavesWatcher.run(
+            inner_client.clone(),
+            store.clone(),
+            wrapper_2.clone(),
+        ));
+
+        // make a deposit on each contract to populate last_deposit_block_number
+        make_deposit(&mut rng, &anchor_contract_1, &mut expected_leaves).await?;
+        make_deposit(&mut rng, &anchor_contract_2, &mut expected_leaves).await?;
+
+        // sleep for the duration of the polling interval
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        // get the last_deposit_blocknumer from contract 1
+        let expected_deposit_block_number = store.get_last_deposit_block_number(contract_address_1)?;
+
+        println!("first deposit block number");
+
+        // make a deposit on contract 2, which should increase the block_number by 1 for ganache
+        make_deposit(&mut rng, &anchor_contract_2, &mut expected_leaves).await?;
+
+        // sleep for the duration of the polling interval
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        // check contract 1 last_deposit_block_number is unchanged
+        let actual_deposit_block_number = store.get_last_deposit_block_number(contract_address_1)?;
+        assert_eq!(expected_deposit_block_number, actual_deposit_block_number);
+
+        // make a deposit on contract 1, which should increase the block_number by 1 for ganache
+        make_deposit(&mut rng, &anchor_contract_1, &mut expected_leaves).await?;
+
+        // sleep for the duration of the polling interval
+        tokio::time::sleep(Duration::from_secs(2)).await;
+
+        let actual_deposit_block_number = store.get_last_deposit_block_number(contract_address_1)?;
+        assert_eq!(expected_deposit_block_number + 2, actual_deposit_block_number);
+
+        task_handle_1.abort();
+        task_handle_2.abort();
         Ok(())
     }
 }
