@@ -194,7 +194,6 @@ impl BridgeContractWatcher
 where
     Self: BridgeWatcher,
 {
-    #[tracing::instrument(skip(self, _store, contract))]
     async fn create_proposal(
         &self,
         _store: Arc<<Self as EventWatcher>::Store>,
