@@ -73,7 +73,7 @@ pub async fn deploy_anchor_contract<M: Middleware + 'static>(
 }
 
 pub async fn launch_ganache() -> GanacheInstance {
-    tokio::task::spawn_blocking(|| Ganache::new().port(1998u16).spawn())
+    tokio::task::spawn_blocking(|| Ganache::new().spawn())
         .await
         .unwrap()
 }

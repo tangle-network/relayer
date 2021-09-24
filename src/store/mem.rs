@@ -81,4 +81,21 @@ impl LeafCacheStore for InMemoryStore {
             .or_insert_with(|| leaves.to_vec());
         Ok(())
     }
+
+    #[tracing::instrument(skip(self))]
+    fn get_last_deposit_block_number(
+        &self,
+        contract: types::Address,
+    ) -> anyhow::Result<types::U64> {
+        Ok(types::U64::from(0))
+    }
+
+    #[tracing::instrument(skip(self))]
+    fn insert_last_deposit_block_number(
+        &self,
+        contract: types::Address,
+        block_number: types::U64,
+    ) -> anyhow::Result<types::U64> {
+        Ok(types::U64::from(0))
+    }
 }

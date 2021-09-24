@@ -72,12 +72,12 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
 
     type Store = SledStore;
 
-    #[tracing::instrument(skip(self, store, event))]
+    #[tracing::instrument(skip_all)]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
         contract: &Self::Contract,
-        event: Self::Events,
+        (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         match event {
             Anchor2ContractEvents::DepositFilter(deposit) => {
@@ -110,12 +110,12 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
 
     type Store = SledStore;
 
-    #[tracing::instrument(skip(self, _store, event))]
+    #[tracing::instrument(skip_all)]
     async fn handle_event(
         &self,
         _store: Arc<Self::Store>,
         Anchor2ContractWrapper { contract, .. }: &Self::Contract,
-        event: Self::Events,
+        (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         let bridge_address = contract.bridge().call().await?;
         let chain_id = contract.chain_id().call().await?;
