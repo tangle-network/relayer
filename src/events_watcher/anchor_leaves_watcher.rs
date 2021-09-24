@@ -4,10 +4,10 @@ use std::time::Duration;
 
 use webb::evm::contract::tornado::AnchorContract;
 use webb::evm::contract::tornado::AnchorContractEvents;
+use webb::evm::ethers::contract::LogMeta;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
-use webb::evm::ethers::contract::LogMeta;
 
 use crate::config;
 use crate::store::sled::SledStore;
@@ -72,7 +72,10 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
                 store.insert_leaves(contract.address(), &[value])?;
-                store.insert_last_deposit_block_number(contract.address(), log.block_number)?;
+                store.insert_last_deposit_block_number(
+                    contract.address(),
+                    log.block_number,
+                )?;
 
                 tracing::trace!(
                     "Saved Deposit Event ({}, {})",
@@ -98,11 +101,11 @@ mod tests {
 
     use tracing_test::traced_test;
 
+    use super::*;
     use crate::config::*;
     use crate::events_watcher::EventWatcher;
     use crate::store::sled::SledStore;
     use crate::test_utils::*;
-    use super::*;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     #[traced_test]
@@ -228,8 +231,10 @@ mod tests {
 
         let inner_client_1 = Arc::new(client.provider().clone());
         let inner_client_2 = Arc::new(client.provider().clone());
-        let wrapper_1 = AnchorContractWrapper::new(config_1, inner_client_1.clone());
-        let wrapper_2 = AnchorContractWrapper::new(config_2, inner_client_2.clone());
+        let wrapper_1 =
+            AnchorContractWrapper::new(config_1, inner_client_1.clone());
+        let wrapper_2 =
+            AnchorContractWrapper::new(config_2, inner_client_2.clone());
         let db = tempfile::tempdir()?;
         let store = SledStore::open(db.path())?;
         let store = Arc::new(store.clone());
@@ -248,33 +253,43 @@ mod tests {
         ));
 
         // make a deposit on each contract to populate last_deposit_block_number
-        make_deposit(&mut rng, &anchor_contract_2, &mut expected_leaves).await?;
-        make_deposit(&mut rng, &anchor_contract_1, &mut expected_leaves).await?;
+        make_deposit(&mut rng, &anchor_contract_2, &mut expected_leaves)
+            .await?;
+        make_deposit(&mut rng, &anchor_contract_1, &mut expected_leaves)
+            .await?;
 
         // sleep for the duration of the polling interval
         tokio::time::sleep(Duration::from_secs(2)).await;
 
         // get the last_deposit_blocknumer from contract 1
-        let expected_deposit_block_number = store.get_last_deposit_block_number(contract_address_1)?;
+        let expected_deposit_block_number =
+            store.get_last_deposit_block_number(contract_address_1)?;
 
         // make a deposit on contract 2, which should increase the block_number by 1 for ganache
-        make_deposit(&mut rng, &anchor_contract_2, &mut expected_leaves).await?;
+        make_deposit(&mut rng, &anchor_contract_2, &mut expected_leaves)
+            .await?;
 
         // sleep for the duration of the polling interval
         tokio::time::sleep(Duration::from_secs(2)).await;
 
         // check contract 1 last_deposit_block_number is unchanged
-        let actual_deposit_block_number = store.get_last_deposit_block_number(contract_address_1)?;
+        let actual_deposit_block_number =
+            store.get_last_deposit_block_number(contract_address_1)?;
         assert_eq!(expected_deposit_block_number, actual_deposit_block_number);
 
         // make a deposit on contract 1, which should increase the block_number by 1 for ganache
-        make_deposit(&mut rng, &anchor_contract_1, &mut expected_leaves).await?;
+        make_deposit(&mut rng, &anchor_contract_1, &mut expected_leaves)
+            .await?;
 
         // sleep for the duration of the polling interval
         tokio::time::sleep(Duration::from_secs(2)).await;
 
-        let actual_deposit_block_number = store.get_last_deposit_block_number(contract_address_1)?;
-        assert_eq!(expected_deposit_block_number + 2, actual_deposit_block_number);
+        let actual_deposit_block_number =
+            store.get_last_deposit_block_number(contract_address_1)?;
+        assert_eq!(
+            expected_deposit_block_number + 2,
+            actual_deposit_block_number
+        );
 
         task_handle_1.abort();
         task_handle_2.abort();

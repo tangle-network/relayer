@@ -91,7 +91,11 @@ pub trait EventWatcher {
 
                 for (event, log) in found_events {
                     let result = self
-                        .handle_event(store.clone(), &contract, (event, log.clone()))
+                        .handle_event(
+                            store.clone(),
+                            &contract,
+                            (event, log.clone()),
+                        )
                         .await;
                     match result {
                         Ok(_) => {

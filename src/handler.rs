@@ -18,7 +18,6 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::types::Bytes;
 
-
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
 
@@ -123,8 +122,12 @@ pub async fn handle_leaves_cache(
         last_queried_block: U64,
     }
     let leaves = store.get_leaves(contract).unwrap();
-    let last_queried_block = store.get_last_deposit_block_number(contract).unwrap();
-    Ok(warp::reply::json(&LeavesCacheResponse { leaves, last_queried_block }))
+    let last_queried_block =
+        store.get_last_deposit_block_number(contract).unwrap();
+    Ok(warp::reply::json(&LeavesCacheResponse {
+        leaves,
+        last_queried_block,
+    }))
 }
 
 #[derive(Debug, Clone, Deserialize)]
