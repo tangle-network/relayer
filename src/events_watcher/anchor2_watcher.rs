@@ -82,7 +82,7 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
 
     type Store = SledStore;
 
-    #[tracing::instrument(skip(self, store, wrapper, event))]
+    #[tracing::instrument(skip(self, store, wrapper))]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
@@ -129,7 +129,7 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
     ) -> anyhow::Result<()> {
         use Anchor2ContractEvents::*;
         // only process anchor deposit events.
-        let event_data = match e {
+        let event_data = match event {
             DepositFilter(data) => data,
             _ => return Ok(()),
         };
