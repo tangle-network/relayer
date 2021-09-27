@@ -141,6 +141,7 @@ pub trait BridgeWatcher: EventWatcher {
     async fn handle_cmd(
         &self,
         store: Arc<Self::Store>,
+        contract: &Self::Contract,
         cmd: BridgeCommand,
     ) -> anyhow::Result<()>;
 
@@ -167,20 +168,25 @@ pub trait BridgeWatcher: EventWatcher {
             let my_key = BridgeKey::new(my_address, my_chain_id);
             let rx = BridgeRegistry::register(my_key);
             let mut rx_stream = tokio_stream::wrappers::ReceiverStream::new(rx);
-            while let Some(cmd) = rx_stream.next().await {
-                let result = self.handle_cmd(store.clone(), cmd).await;
+            while let Some(command) = rx_stream.next().await {
+                let result =
+                    self.handle_cmd(store.clone(), &contract, command).await;
                 match result {
                     Ok(_) => {
                         continue;
                     }
                     Err(e) => {
-                        tracing::error!("{}", e);
+                        tracing::error!("Error while handle_cmd {}", e);
                         // this a transient error, so we will retry again.
-                        return Err(backoff::Error::Transient(e));
+                        // Internally it would use a queue so the value would be still in
+                        // the queue.
+                        continue; // keep going...
                     }
                 }
             }
-            Ok(())
+            // whenever this loop stops, we will restart the whole task again.
+            // that way we never have to worry about closed channels.
+            Err(backoff::Error::Transient(anyhow::anyhow!("Restarting")))
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())

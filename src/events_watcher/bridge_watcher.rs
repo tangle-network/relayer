@@ -1,16 +1,16 @@
 use std::collections::HashMap;
+use std::fmt::LowerHex;
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
-use webb::evm::contract::darkwebb::{
-    Anchor2ContractEvents, BridgeContract, BridgeContractEvents,
-};
+use webb::evm::contract::darkwebb::{BridgeContract, BridgeContractEvents};
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
+use webb::evm::ethers::utils;
 
 use crate::config;
 use crate::store::sled::SledStore;
@@ -20,6 +20,7 @@ use super::{BridgeWatcher, EventWatcher};
 type BridgeConnectionSender = tokio::sync::mpsc::Sender<BridgeCommand>;
 type BridgeConnectionReceiver = tokio::sync::mpsc::Receiver<BridgeCommand>;
 type Registry = RwLock<HashMap<BridgeKey, BridgeConnectionSender>>;
+type HttpProvider = providers::Provider<providers::Http>;
 
 static BRIDGE_REGISTRY: OnceCell<Registry> = OnceCell::new();
 
@@ -37,9 +38,43 @@ impl BridgeKey {
     }
 }
 
+#[repr(u8)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum ProposalStatus {
+    Inactive = 0,
+    Active = 1,
+    Passed = 2,
+    Executed = 3,
+    Cancelled = 4,
+    Unknown = u8::MAX,
+}
+
+impl From<u8> for ProposalStatus {
+    fn from(v: u8) -> Self {
+        match v {
+            0 => ProposalStatus::Inactive,
+            1 => ProposalStatus::Active,
+            2 => ProposalStatus::Passed,
+            3 => ProposalStatus::Executed,
+            4 => ProposalStatus::Cancelled,
+            _ => ProposalStatus::Unknown,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ProposalData {
+    pub anchor2_address: types::Address,
+    pub anchor2_handler_address: types::Address,
+    pub origin_chain_id: types::U256,
+    pub block_height: types::U64,
+    pub leaf_index: u32,
+    pub merkle_root: [u8; 32],
+}
+
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum BridgeCommand {
-    ProcessAnchor2ContractEvents(Anchor2ContractEvents),
+    CreateProposal(ProposalData),
 }
 
 /// A Bridge Registry is a simple Key-Value store, that provides an easy way to register
@@ -107,8 +142,7 @@ impl<M: Middleware> super::WatchableContract for BridgeContractWrapper<M> {
     }
 
     fn polling_interval(&self) -> Duration {
-        // FIXME(@shekohex): should probably handled from the config.
-        Duration::from_millis(6_000)
+        Duration::from_millis(self.config.events_watcher.polling_interval)
     }
 }
 
@@ -117,7 +151,7 @@ pub struct BridgeContractWatcher;
 
 #[async_trait::async_trait]
 impl EventWatcher for BridgeContractWatcher {
-    type Middleware = providers::Provider<providers::Http>;
+    type Middleware = SignerMiddleware<HttpProvider, LocalWallet>;
 
     type Contract = BridgeContractWrapper<Self::Middleware>;
 
@@ -141,11 +175,191 @@ impl EventWatcher for BridgeContractWatcher {
 impl BridgeWatcher for BridgeContractWatcher {
     async fn handle_cmd(
         &self,
-        _store: Arc<Self::Store>,
+        store: Arc<Self::Store>,
+        wrapper: &Self::Contract,
         cmd: BridgeCommand,
     ) -> anyhow::Result<()> {
-        // TODO(@shekohex): Handle the cmd here.
-        tracing::debug!("Got cmd {:?}", cmd);
+        use BridgeCommand::*;
+        tracing::trace!("Got cmd {:?}", cmd);
+        match cmd {
+            CreateProposal(data) => {
+                self.create_proposal(store, &wrapper.contract, data).await?;
+            }
+        };
         Ok(())
+    }
+}
+
+impl BridgeContractWatcher
+where
+    Self: BridgeWatcher,
+{
+    async fn create_proposal(
+        &self,
+        _store: Arc<<Self as EventWatcher>::Store>,
+        contract: &BridgeContract<<Self as EventWatcher>::Middleware>,
+        data: ProposalData,
+    ) -> anyhow::Result<()> {
+        let dest_chain_id = contract.client().get_chainid().await?;
+        let update_data = create_update_proposal_data(
+            data.origin_chain_id,
+            data.block_height,
+            data.merkle_root,
+        );
+        let pre_hashed =
+            format!("{:x}{}", data.anchor2_handler_address, update_data);
+        let data_to_be_hashed = hex::decode(pre_hashed)?;
+        let data_hash = utils::keccak256(data_to_be_hashed);
+        let resource_id =
+            create_resource_id(data.anchor2_address, dest_chain_id)?;
+        let contract_handler_address = contract
+            .resource_id_to_handler_address(resource_id)
+            .call()
+            .await?;
+        // sanity check
+        assert_eq!(contract_handler_address, data.anchor2_handler_address);
+        let (status, ..) = contract
+            .get_proposal(data.origin_chain_id, data.leaf_index as _, data_hash)
+            .call()
+            .await?;
+        let status = ProposalStatus::from(status);
+        // TODO(@shekohex): we should really check if this proposal is active, before sending Tx.
+        tracing::debug!("ProposalStatus({:?})", status);
+        if status >= ProposalStatus::Passed {
+            tracing::debug!("Skipping this proposal ... already {:?}", status);
+            return Ok(());
+        }
+        tracing::debug!(
+            "Voting with Data = 0x{} & hash = {:?} with resource_id = {:?}",
+            update_data,
+            data_hash,
+            resource_id
+        );
+        // TODO(@shekohex): we need a way to determine whether we should vote
+        // now or wait for a bit.
+        let call = contract.vote_proposal(
+            data.origin_chain_id,
+            data.leaf_index as _,
+            resource_id,
+            data_hash,
+        );
+
+        let tx = match call.send().await {
+            Ok(pending) => {
+                tracing::debug!(
+                    "Vote Tx is submitted and pending! {}",
+                    *pending
+                );
+                let result =
+                    pending.interval(Duration::from_millis(7000)).await;
+                result
+            }
+            Err(e) => {
+                tracing::error!("Error while sending Vote Tx: {}", e);
+                return Err(anyhow::Error::from(e));
+            }
+        };
+        match tx {
+            Ok(Some(receipt)) => {
+                tracing::debug!(
+                    "Vote Tx Finalized #{}",
+                    receipt.transaction_hash
+                );
+            }
+            Ok(None) => {
+                tracing::warn!("Vote Tx Dropped from Mempool!!");
+            }
+            Err(e) => {
+                let reason = e.to_string();
+                tracing::error!("Vote Transaction Errored: {}", reason);
+            }
+        };
+        Ok(())
+    }
+}
+
+fn create_update_proposal_data(
+    chain_id: types::U256,
+    block_height: types::U64,
+    merkle_root: [u8; 32],
+) -> String {
+    let chain_id_hex = to_hex(chain_id, 32);
+    let block_height_hex = to_hex(block_height, 32);
+    let merkle_root_hex = hex::encode(&merkle_root);
+    format!("{}{}{}", chain_id_hex, block_height_hex, merkle_root_hex)
+}
+
+fn create_resource_id(
+    anchor2_address: types::Address,
+    chain_id: types::U256,
+) -> anyhow::Result<[u8; 32]> {
+    let truncated = to_hex(chain_id, 4);
+    let result = format!("{:x}{}", anchor2_address, truncated);
+    let hash = hex::decode(result)?;
+    let mut result_bytes = [0u8; 32];
+    result_bytes
+        .iter_mut()
+        .skip(32 - hash.len())
+        .zip(hash)
+        .for_each(|(r, h)| *r = h);
+    Ok(result_bytes)
+}
+
+fn to_hex(value: impl LowerHex, padding: usize) -> String {
+    let mut hexed = format!("{:x}", value);
+    if hexed.len() % 2 != 0 {
+        hexed = String::from("0") + &hexed;
+    }
+    while hexed.len() < 2 * padding {
+        hexed = String::from("0") + &hexed;
+    }
+    hexed
+}
+
+#[cfg(test)]
+mod tests {
+    use std::str::FromStr;
+
+    use super::*;
+
+    #[test]
+    fn should_create_update_proposal() {
+        let chain_id = types::U256::from(4);
+        let block_height = types::U64::one();
+        let merkle_root = [
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+            19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
+        ];
+        let result =
+            create_update_proposal_data(chain_id, block_height, merkle_root);
+        let expected = include_str!("../../tests/fixtures/proposal_data.txt")
+            .trim_end_matches('\n');
+        assert_eq!(result, expected);
+        let dest_handler = types::Address::from_str(
+            "0x7Bb1Af8D06495E85DDC1e0c49111C9E0Ab50266E",
+        )
+        .unwrap();
+        let pre_hashed = format!("{:x}{}", dest_handler, result);
+        let data_to_be_hashed = hex::decode(pre_hashed).unwrap();
+        let data_hash = hex::encode(utils::keccak256(data_to_be_hashed));
+        let expected_data_hash =
+            "45822e043e5735fc2485e52dd71403d140f3a755cd59dc02539eaef3bcfd4bcb";
+        assert_eq!(data_hash, expected_data_hash);
+    }
+
+    #[test]
+    fn should_create_resouce_id() {
+        let chain_id = types::U256::from(4);
+        let anchor2_address = types::Address::from_str(
+            "0xB42139fFcEF02dC85db12aC9416a19A12381167D",
+        )
+        .unwrap();
+        let resource_id =
+            create_resource_id(anchor2_address, chain_id).unwrap();
+        let expected = hex::decode(
+            "0000000000000000b42139ffcef02dc85db12ac9416a19a12381167d00000004",
+        )
+        .unwrap();
+        assert_eq!(resource_id, expected.as_slice());
     }
 }
