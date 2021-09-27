@@ -100,6 +100,7 @@ withdraw-gaslimit = "0x350000"
 
 
 ```
+> Checkout [config.toml](./config.toml) as an example.
 
 Then Simply run
 
