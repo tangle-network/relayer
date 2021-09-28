@@ -82,7 +82,6 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
 
     type Store = SledStore;
 
-    #[tracing::instrument(skip(self, store, wrapper))]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
@@ -120,7 +119,6 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
 
     type Store = SledStore;
 
-    #[tracing::instrument(skip(self, _store, wrapper))]
     async fn handle_event(
         &self,
         _store: Arc<Self::Store>,

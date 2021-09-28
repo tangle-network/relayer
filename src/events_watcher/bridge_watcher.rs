@@ -15,7 +15,7 @@ use webb::evm::ethers::utils;
 use crate::config;
 use crate::store::sled::SledStore;
 
-use super::{BridgeWatcher, EventWatcher};
+use super::{BridgeWatcher, EventWatcher, TxQueueStore};
 
 type BridgeConnectionSender = tokio::sync::mpsc::Sender<BridgeCommand>;
 type BridgeConnectionReceiver = tokio::sync::mpsc::Receiver<BridgeCommand>;
@@ -151,7 +151,7 @@ pub struct BridgeContractWatcher;
 
 #[async_trait::async_trait]
 impl EventWatcher for BridgeContractWatcher {
-    type Middleware = SignerMiddleware<HttpProvider, LocalWallet>;
+    type Middleware = HttpProvider;
 
     type Contract = BridgeContractWrapper<Self::Middleware>;
 
@@ -165,8 +165,23 @@ impl EventWatcher for BridgeContractWatcher {
         _contract: &Self::Contract,
         (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
-        // TODO(@shekohex): Handle the events here.
-        tracing::debug!("Got Event {:?}", event);
+        // TODO(@shekohex): handle when the proposal is executed
+        // so that we remove it from the tx queue (if it exists).
+        match event {
+            // check for every proposal
+            // 1. if "executed" or "cancelled" -> remove it from the tx queue (if exists).
+            // 2. if "passed" -> create a tx to execute the proposal.
+            // 3. if "active" -> crate a tx to vote for it.
+            BridgeContractEvents::ProposalEventFilter(e) => {
+                tracing::debug!("Prposal Event: {:?}", e);
+            }
+            BridgeContractEvents::ProposalVoteFilter(e) => {
+                tracing::debug!("Proposal Vote: {:?}", e);
+            }
+            _ => {
+                tracing::trace!("Got Event {:?}", event);
+            }
+        };
         Ok(())
     }
 }
@@ -196,7 +211,7 @@ where
 {
     async fn create_proposal(
         &self,
-        _store: Arc<<Self as EventWatcher>::Store>,
+        store: Arc<<Self as EventWatcher>::Store>,
         contract: &BridgeContract<<Self as EventWatcher>::Middleware>,
         data: ProposalData,
     ) -> anyhow::Result<()> {
@@ -223,57 +238,25 @@ where
             .call()
             .await?;
         let status = ProposalStatus::from(status);
-        // TODO(@shekohex): we should really check if this proposal is active, before sending Tx.
         tracing::debug!("ProposalStatus({:?})", status);
         if status >= ProposalStatus::Passed {
             tracing::debug!("Skipping this proposal ... already {:?}", status);
             return Ok(());
         }
-        tracing::debug!(
-            "Voting with Data = 0x{} & hash = {:?} with resource_id = {:?}",
-            update_data,
-            data_hash,
-            resource_id
-        );
-        // TODO(@shekohex): we need a way to determine whether we should vote
-        // now or wait for a bit.
         let call = contract.vote_proposal(
             data.origin_chain_id,
             data.leaf_index as _,
             resource_id,
             data_hash,
         );
-
-        let tx = match call.send().await {
-            Ok(pending) => {
-                tracing::debug!(
-                    "Vote Tx is submitted and pending! {}",
-                    *pending
-                );
-                let result =
-                    pending.interval(Duration::from_millis(7000)).await;
-                result
-            }
-            Err(e) => {
-                tracing::error!("Error while sending Vote Tx: {}", e);
-                return Err(anyhow::Error::from(e));
-            }
-        };
-        match tx {
-            Ok(Some(receipt)) => {
-                tracing::debug!(
-                    "Vote Tx Finalized #{}",
-                    receipt.transaction_hash
-                );
-            }
-            Ok(None) => {
-                tracing::warn!("Vote Tx Dropped from Mempool!!");
-            }
-            Err(e) => {
-                let reason = e.to_string();
-                tracing::error!("Vote Transaction Errored: {}", reason);
-            }
-        };
+        tracing::debug!(
+            "Voting with Data = 0x{} & hash = {:?} with resource_id = {:?}",
+            update_data,
+            data_hash,
+            resource_id
+        );
+        // enqueue the transaction.
+        store.enqueue_tx_with_key(&data_hash, call.tx, dest_chain_id)?;
         Ok(())
     }
 }
