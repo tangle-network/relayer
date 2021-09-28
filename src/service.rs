@@ -1,13 +1,11 @@
 use std::sync::Arc;
 
-use webb::evm::ethers::middleware::SignerMiddleware;
 use webb::evm::ethers::providers;
-use webb::evm::ethers::signers::LocalWallet;
-
-use crate::context::RelayerContext;
 
 use crate::config::*;
+use crate::context::RelayerContext;
 use crate::events_watcher::*;
+use crate::tx_queue::TxQueue;
 
 type Client = providers::Provider<providers::Http>;
 type Store = crate::store::sled::SledStore;
@@ -24,6 +22,7 @@ pub async fn ignite(
             "Starting Background Services for ({}) chain.",
             chain_name
         );
+
         for contract in &chain_config.contracts {
             match contract {
                 Contract::Anchor(config) => {
@@ -43,34 +42,18 @@ pub async fn ignite(
                     )?;
                 }
                 Contract::Bridge(config) => {
-                    // here we create a new connection different
-                    // from the normal one, since we need to have a signer
-                    // middleware in between.
-                    //
-                    // so to minimize the use of private key, we only give this
-                    // permission to only watchers that needs it.
-                    //
-                    // And since bridge watcher will create transactions, at some point
-                    // it needs the signer middleware to be available.
-                    //
-                    // In the near future we would have a transaction queue, where we
-                    // would just create the transaction parameters and queue it for later
-                    // execution.
-                    //
-                    // TODO(@shekohex): update comments once we have the transaction queue
-                    // implemented.
-                    let provider = ctx.evm_provider(chain_name).await?;
-                    let wallet = ctx.evm_wallet(chain_name).await?;
                     start_bridge_watcher(
                         ctx,
                         config,
-                        Arc::new(SignerMiddleware::new(provider, wallet)),
+                        client.clone(),
                         store.clone(),
                     )?;
                 }
                 Contract::GovernanceBravoDelegate(_) => {}
             }
         }
+        // start the transaction queue after starting other tasks.
+        start_tx_queue(ctx.clone(), chain_name.clone(), store.clone())?;
     }
     Ok(())
 }
@@ -180,7 +163,7 @@ fn start_anchor2_events_watcher(
 fn start_bridge_watcher(
     ctx: &RelayerContext,
     config: &BridgeContractConfig,
-    client: Arc<SignerMiddleware<Client, LocalWallet>>,
+    client: Arc<Client>,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
     if !config.events_watcher.enabled {
@@ -226,6 +209,36 @@ fn start_bridge_watcher(
         }
     };
     // kick off the watcher.
+    tokio::task::spawn(task);
+    Ok(())
+}
+
+fn start_tx_queue(
+    ctx: RelayerContext,
+    chain_name: String,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let tx_queue = TxQueue::new(ctx, chain_name.clone(), store);
+
+    tracing::debug!("Transaction Queue for ({}) Started.", chain_name);
+    let task = async move {
+        tokio::select! {
+            _ = tx_queue.run() => {
+                tracing::warn!(
+                    "Transaction Queue task stopped for ({})",
+                    chain_name,
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping Transaction Queue for ({})",
+                    chain_name,
+                );
+            },
+        }
+    };
+    // kick off the tx_queue.
     tokio::task::spawn(task);
     Ok(())
 }

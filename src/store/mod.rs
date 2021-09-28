@@ -1,3 +1,4 @@
+use webb::evm::ethers::core::types::transaction;
 use webb::evm::ethers::types;
 
 pub mod mem;
@@ -59,4 +60,44 @@ pub trait LeafCacheStore: HistoryStore {
         contract: types::Address,
         block_number: types::U64,
     ) -> anyhow::Result<types::U64>;
+}
+
+/// A Transaction Queue Store is used to store transactions that
+/// can be polled from a background task that is only responsible for
+/// signing the transactions and send it to the network.
+pub trait TxQueueStore {
+    /// Saves the transactions into the queue.
+    fn enqueue_tx_with_key(
+        &self,
+        key: &[u8],
+        tx: transaction::eip2718::TypedTransaction,
+        chain_id: types::U256,
+    ) -> anyhow::Result<()>;
+    /// Saves the transactions into the queue.
+    ///
+    /// the chain id is used to create the transaction hash.
+    fn enqueue_tx(
+        &self,
+        tx: transaction::eip2718::TypedTransaction,
+        chain_id: types::U256,
+    ) -> anyhow::Result<()> {
+        let key = tx.sighash(chain_id.as_u64());
+        self.enqueue_tx_with_key(key.as_bytes(), tx, chain_id)
+    }
+    /// Polls a transaction from the queue.
+    fn dequeue_tx(
+        &self,
+        chain_id: types::U256,
+    ) -> anyhow::Result<Option<transaction::eip2718::TypedTransaction>>;
+    /// Reads a transaction from the queue, without actually removing it.
+    fn peek_tx(
+        &self,
+        chain_id: types::U256,
+    ) -> anyhow::Result<Option<transaction::eip2718::TypedTransaction>>;
+    /// Lookup for the transaction in the queue by transaction hash and removes it.
+    fn remove_tx(
+        &self,
+        key: &[u8],
+        chain_id: types::U256,
+    ) -> anyhow::Result<()>;
 }

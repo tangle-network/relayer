@@ -16,7 +16,7 @@ pub struct InMemoryStore {
 
 impl std::fmt::Debug for InMemoryStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("InMemoryLeafCache").finish()
+        f.debug_struct("InMemoryStore").finish()
     }
 }
 

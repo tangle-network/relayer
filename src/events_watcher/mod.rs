@@ -7,7 +7,7 @@ use futures::prelude::*;
 use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::{contract, providers, types};
 
-use crate::store::HistoryStore;
+use crate::store::{HistoryStore, TxQueueStore};
 
 mod anchor_leaves_watcher;
 pub use anchor_leaves_watcher::*;
@@ -137,7 +137,10 @@ pub trait EventWatcher {
 }
 
 #[async_trait::async_trait]
-pub trait BridgeWatcher: EventWatcher {
+pub trait BridgeWatcher: EventWatcher
+where
+    Self::Store: TxQueueStore,
+{
     async fn handle_cmd(
         &self,
         store: Arc<Self::Store>,
