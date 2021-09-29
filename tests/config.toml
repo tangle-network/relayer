@@ -75,7 +75,7 @@ contract = "Anchor2"
 address = "0x64E9727C4a835D518C34d3A50A8157120CAeb32F"
 deployed-at = 15183626
 size = 0.0000000001
-events-watcher = { enabled = true, polling-interval = 7000 }
+events-watcher = { enabled = true, polling-interval = 3000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 linked-anchors = [{ chain = "Rinkeby", address = "0xB42139fFcEF02dC85db12aC9416a19A12381167D" }]
@@ -84,7 +84,7 @@ linked-anchors = [{ chain = "Rinkeby", address = "0xB42139fFcEF02dC85db12aC9416a
 contract = "Bridge"
 address = "0xD776C2CB8137f5cd2eE42601F02b9B3320220429"
 deployed-at = 15183634
-events-watcher = { enabled = true, polling-interval = 7000 }
+events-watcher = { enabled = true, polling-interval = 3000 }
 
 [evm.ganache]
 http-endpoint = "http://localhost:8545"
@@ -127,7 +127,7 @@ contract = "Anchor"
 address = "0x626FEc5Ffa7Bf1EE8CEd7daBdE545630473E3ABb"
 deployed-at = 8896800
 size = 0.1
-events-watcher = { enabled = false, polling-interval = 7000 }
+events-watcher = { enabled = false, polling-interval = 15000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
@@ -136,7 +136,7 @@ contract = "Anchor2"
 address = "0xB42139fFcEF02dC85db12aC9416a19A12381167D"
 deployed-at = 9326378
 size = 0.1
-events-watcher = { enabled = true, polling-interval = 7000 }
+events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 linked-anchors = [{ chain = "HarmonyS0", address = "0x64E9727C4a835D518C34d3A50A8157120CAeb32F" }]
@@ -145,4 +145,4 @@ linked-anchors = [{ chain = "HarmonyS0", address = "0x64E9727C4a835D518C34d3A50A
 contract = "Bridge"
 address = "0x4Dc953Ad1FfE7eD5d46C704C10162A55c543f902"
 deployed-at = 9326380
-events-watcher = { enabled = true, polling-interval = 7000 }
+events-watcher = { enabled = true, polling-interval = 15000 }

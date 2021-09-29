@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
+use serde::{Deserialize, Serialize};
 use webb::evm::contract::darkwebb::{BridgeContract, BridgeContractEvents};
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
@@ -15,7 +16,7 @@ use webb::evm::ethers::utils;
 use crate::config;
 use crate::store::sled::SledStore;
 
-use super::{BridgeWatcher, EventWatcher, TxQueueStore};
+use super::{BridgeWatcher, EventWatcher, ProposalStore, TxQueueStore};
 
 type BridgeConnectionSender = tokio::sync::mpsc::Sender<BridgeCommand>;
 type BridgeConnectionReceiver = tokio::sync::mpsc::Receiver<BridgeCommand>;
@@ -70,6 +71,15 @@ pub struct ProposalData {
     pub block_height: types::U64,
     pub leaf_index: u32,
     pub merkle_root: [u8; 32],
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct ProposalEntity {
+    pub origin_chain_id: types::U256,
+    pub nonce: types::U64,
+    pub data: Vec<u8>,
+    pub data_hash: [u8; 32],
+    pub resource_id: [u8; 32],
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -161,22 +171,40 @@ impl EventWatcher for BridgeContractWatcher {
 
     async fn handle_event(
         &self,
-        _store: Arc<Self::Store>,
-        _contract: &Self::Contract,
+        store: Arc<Self::Store>,
+        wrapper: &Self::Contract,
         (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
-        // TODO(@shekohex): handle when the proposal is executed
-        // so that we remove it from the tx queue (if it exists).
         match event {
             // check for every proposal
             // 1. if "executed" or "cancelled" -> remove it from the tx queue (if exists).
             // 2. if "passed" -> create a tx to execute the proposal.
             // 3. if "active" -> crate a tx to vote for it.
             BridgeContractEvents::ProposalEventFilter(e) => {
-                tracing::debug!("Prposal Event: {:?}", e);
-            }
-            BridgeContractEvents::ProposalVoteFilter(e) => {
-                tracing::debug!("Proposal Vote: {:?}", e);
+                match ProposalStatus::from(e.status) {
+                    ProposalStatus::Executed | ProposalStatus::Cancelled => {
+                        self.remove_proposal(
+                            store,
+                            &wrapper.contract,
+                            &e.data_hash,
+                        )
+                        .await?;
+                    }
+                    ProposalStatus::Passed => {
+                        self.execute_proposal(
+                            store,
+                            &wrapper.contract,
+                            &e.data_hash,
+                        )
+                        .await?;
+                    }
+                    _ => {
+                        // shall we watch also for active proposal?
+                        // like should we vote when we see an active proposal
+                        // that we already have not seen before? or we should
+                        // just wait until we see it's event on the other chain?
+                    }
+                }
             }
             _ => {
                 tracing::trace!("Got Event {:?}", event);
@@ -221,12 +249,20 @@ where
             data.block_height,
             data.merkle_root,
         );
+        let data_bytes = hex::decode(&update_data)?;
         let pre_hashed =
             format!("{:x}{}", data.anchor2_handler_address, update_data);
         let data_to_be_hashed = hex::decode(pre_hashed)?;
         let data_hash = utils::keccak256(data_to_be_hashed);
         let resource_id =
             create_resource_id(data.anchor2_address, dest_chain_id)?;
+        let entity = ProposalEntity {
+            origin_chain_id: data.origin_chain_id,
+            data: data_bytes,
+            data_hash,
+            nonce: types::U64::from(data.leaf_index),
+            resource_id,
+        };
         let contract_handler_address = contract
             .resource_id_to_handler_address(resource_id)
             .call()
@@ -238,25 +274,73 @@ where
             .call()
             .await?;
         let status = ProposalStatus::from(status);
-        tracing::debug!("ProposalStatus({:?})", status);
         if status >= ProposalStatus::Passed {
             tracing::debug!("Skipping this proposal ... already {:?}", status);
             return Ok(());
         }
         let call = contract.vote_proposal(
-            data.origin_chain_id,
-            data.leaf_index as _,
-            resource_id,
-            data_hash,
+            entity.origin_chain_id,
+            entity.nonce.as_u64(),
+            entity.resource_id,
+            entity.data_hash,
         );
         tracing::debug!(
-            "Voting with Data = 0x{} & hash = {:?} with resource_id = {:?}",
-            update_data,
-            data_hash,
-            resource_id
+            "Voting for Proposal 0x{} with resourceID 0x{}",
+            hex::encode(&data_hash),
+            hex::encode(&entity.resource_id),
         );
         // enqueue the transaction.
         store.enqueue_tx_with_key(&data_hash, call.tx, dest_chain_id)?;
+        // save the proposal for later updates.
+        store.insert_proposal(entity)?;
+        Ok(())
+    }
+
+    async fn remove_proposal(
+        &self,
+        store: Arc<<Self as EventWatcher>::Store>,
+        contract: &BridgeContract<<Self as EventWatcher>::Middleware>,
+        data_hash: &[u8],
+    ) -> anyhow::Result<()> {
+        let chain_id = contract.client().get_chainid().await?;
+        store.remove_proposal(data_hash)?;
+        // it is okay, if the proposal tx is not stored in
+        // the queue, so it is okay to ignore the error in this case.
+        let _ = store.remove_tx(data_hash, chain_id);
+        tracing::debug!("Removed proposal 0x{}", hex::encode(&data_hash));
+        Ok(())
+    }
+
+    async fn execute_proposal(
+        &self,
+        store: Arc<<Self as EventWatcher>::Store>,
+        contract: &BridgeContract<<Self as EventWatcher>::Middleware>,
+        data_hash: &[u8],
+    ) -> anyhow::Result<()> {
+        let chain_id = contract.client().get_chainid().await?;
+        let entity = match store.remove_proposal(data_hash)? {
+            Some(v) => v,
+            None => {
+                tracing::warn!(
+                    "Trying to execute proposal 0x{} but no proposal found",
+                    hex::encode(&data_hash)
+                );
+                return Ok(());
+            }
+        };
+        let call = contract.execute_proposal(
+            entity.origin_chain_id,
+            entity.nonce.as_u64(),
+            entity.data,
+            entity.resource_id,
+        );
+        tracing::debug!(
+            "Executing proposal 0x{} with resourceID 0x{}",
+            hex::encode(data_hash),
+            hex::encode(&entity.resource_id),
+        );
+        // enqueue the transaction.
+        store.enqueue_tx_with_key(data_hash, call.tx, chain_id)?;
         Ok(())
     }
 }
