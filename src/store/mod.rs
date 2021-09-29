@@ -1,6 +1,8 @@
 use webb::evm::ethers::core::types::transaction;
 use webb::evm::ethers::types;
 
+use crate::events_watcher::ProposalEntity;
+
 pub mod mem;
 pub mod sled;
 
@@ -100,4 +102,12 @@ pub trait TxQueueStore {
         key: &[u8],
         chain_id: types::U256,
     ) -> anyhow::Result<()>;
+}
+
+pub trait ProposalStore {
+    fn insert_proposal(&self, proposal: ProposalEntity) -> anyhow::Result<()>;
+    fn remove_proposal(
+        &self,
+        data_hash: &[u8],
+    ) -> anyhow::Result<Option<ProposalEntity>>;
 }

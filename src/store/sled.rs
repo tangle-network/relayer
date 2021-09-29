@@ -3,7 +3,8 @@ use std::path::Path;
 use webb::evm::ethers::core::types::transaction;
 use webb::evm::ethers::types;
 
-use super::{HistoryStore, LeafCacheStore, TxQueueStore};
+use super::ProposalEntity;
+use super::{HistoryStore, LeafCacheStore, ProposalStore, TxQueueStore};
 
 #[derive(Clone)]
 pub struct SledStore {
@@ -209,8 +210,33 @@ impl TxQueueStore for SledStore {
             }
             None => {
                 // not found!
-                anyhow::bail!("tx {:?} not found in txqueue", key);
+                anyhow::bail!(
+                    "tx with key 0x{} not found in txqueue",
+                    hex::encode(key)
+                );
             }
+        }
+    }
+}
+
+impl ProposalStore for SledStore {
+    fn insert_proposal(&self, proposal: ProposalEntity) -> anyhow::Result<()> {
+        let tree = self.db.open_tree("proposal_store")?;
+        tree.insert(
+            &proposal.data_hash,
+            serde_json::to_vec(&proposal)?.as_slice(),
+        )?;
+        Ok(())
+    }
+
+    fn remove_proposal(
+        &self,
+        data_hash: &[u8],
+    ) -> anyhow::Result<Option<ProposalEntity>> {
+        let tree = self.db.open_tree("proposal_store")?;
+        match tree.get(&data_hash)? {
+            Some(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
+            None => Ok(None),
         }
     }
 }

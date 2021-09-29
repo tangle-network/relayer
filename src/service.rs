@@ -175,15 +175,14 @@ fn start_bridge_watcher(
     }
     let wrapper = BridgeContractWrapper::new(config.clone(), client.clone());
     tracing::debug!("Bridge watcher for ({}) Started.", config.common.address,);
-
+    static WATCHER: BridgeContractWatcher = BridgeContractWatcher;
     let events_watcher_task = EventWatcher::run(
-        &BridgeContractWatcher,
+        &WATCHER,
         client.clone(),
         store.clone(),
         wrapper.clone(),
     );
-    let cmd_handler_task =
-        BridgeWatcher::run(&BridgeContractWatcher, client, store, wrapper);
+    let cmd_handler_task = BridgeWatcher::run(&WATCHER, client, store, wrapper);
     let mut shutdown_signal = ctx.shutdown_signal();
     let contract_address = config.common.address;
     let task = async move {
