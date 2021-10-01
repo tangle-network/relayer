@@ -86,7 +86,7 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
         &self,
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
-        (event, _): (Self::Events, LogMeta),
+        (event, log): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         match event {
             Anchor2ContractEvents::DepositFilter(deposit) => {
@@ -94,6 +94,10 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
                 store.insert_leaves(wrapper.contract.address(), &[value])?;
+                store.insert_last_deposit_block_number(
+                    wrapper.contract.address(),
+                    log.block_number,
+                )?;
                 tracing::trace!(
                     "Saved Deposit Event ({}, {})",
                     value.0,
