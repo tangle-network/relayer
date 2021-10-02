@@ -171,13 +171,17 @@ impl EventWatcher for BridgeContractWatcher {
 
     type Store = SledStore;
 
+    #[tracing::instrument(
+        skip_all,
+        fields(ty = %to_event_type(&e.0)),
+    )]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
-        (event, _): (Self::Events, LogMeta),
+        e: (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
-        match event {
+        match e.0 {
             // check for every proposal
             // 1. if "executed" or "cancelled" -> remove it from the tx queue (if exists).
             // 2. if "passed" -> create a tx to execute the proposal.
@@ -209,7 +213,7 @@ impl EventWatcher for BridgeContractWatcher {
                 }
             }
             _ => {
-                tracing::trace!("Got Event {:?}", event);
+                tracing::trace!("Got Event {:?}", e.0);
             }
         };
         Ok(())
@@ -218,6 +222,7 @@ impl EventWatcher for BridgeContractWatcher {
 
 #[async_trait::async_trait]
 impl BridgeWatcher for BridgeContractWatcher {
+    #[tracing::instrument(skip_all)]
     async fn handle_cmd(
         &self,
         store: Arc<Self::Store>,
@@ -239,6 +244,7 @@ impl BridgeContractWatcher
 where
     Self: BridgeWatcher,
 {
+    #[tracing::instrument(skip_all)]
     async fn create_proposal(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
@@ -298,6 +304,7 @@ where
         Ok(())
     }
 
+    #[tracing::instrument(skip_all)]
     async fn remove_proposal(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
@@ -313,6 +320,7 @@ where
         Ok(())
     }
 
+    #[tracing::instrument(skip_all)]
     async fn execute_proposal(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
@@ -410,6 +418,22 @@ fn to_hex(value: impl LowerHex, padding: usize) -> String {
         hexed = String::from("0") + &hexed;
     }
     hexed
+}
+
+fn to_event_type(event: &BridgeContractEvents) -> &str {
+    match event {
+        BridgeContractEvents::PausedFilter(_) => "Paused",
+        BridgeContractEvents::ProposalEventFilter(_) => "ProposalEvent",
+        BridgeContractEvents::ProposalVoteFilter(_) => "ProposalVote",
+        BridgeContractEvents::RelayerAddedFilter(_) => "RelayerAdded",
+        BridgeContractEvents::RelayerRemovedFilter(_) => "RelayerRemoved",
+        BridgeContractEvents::RelayerThresholdChangedFilter(_) => {
+            "RelayerThresholdChanged"
+        }
+        BridgeContractEvents::RoleGrantedFilter(_) => "RoleGranted",
+        BridgeContractEvents::RoleRevokedFilter(_) => "RoleRevoked",
+        BridgeContractEvents::UnpausedFilter(_) => "Unpaused",
+    }
 }
 
 #[cfg(test)]
