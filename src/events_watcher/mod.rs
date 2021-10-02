@@ -29,6 +29,7 @@ pub trait WatchableContract: Send + Sync {
 
 #[async_trait::async_trait]
 pub trait EventWatcher {
+    const TAG: &'static str;
     type Middleware: providers::Middleware + 'static;
     type Contract: Deref<Target = contract::Contract<Self::Middleware>>
         + WatchableContract;
@@ -45,8 +46,12 @@ pub trait EventWatcher {
     /// Returns a task that should be running in the background
     /// that will watch events
     #[tracing::instrument(
-        skip(self, client, store, contract),
-        fields(contract = %contract.address())
+        skip_all,
+        fields(
+            chain_id = %client.get_chainid().await?,
+            address = %contract.address(),
+            tag = %Self::TAG,
+        ),
     )]
     async fn run(
         &self,
@@ -60,6 +65,8 @@ pub trait EventWatcher {
         };
         let task = || async {
             let step = types::U64::from(50);
+            // saves the last time we printed sync progress.
+            let mut instant = std::time::Instant::now();
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
@@ -129,6 +136,25 @@ pub trait EventWatcher {
                     );
                     tokio::time::sleep(duration).await;
                 }
+
+                // only print the progress if 7 seconds is passed.
+                if instant.elapsed() > Duration::from_secs(7) {
+                    // calculate sync progress.
+                    let total = current_block_number.as_u64() as f64;
+                    let current_value = dest_block.as_u64() as f64;
+                    let diff = total - current_value;
+                    let percentage = (diff / current_value) * 100.0;
+                    // should be always less that 100.
+                    // and this would be our current progress.
+                    let sync_progress = 100.0 - percentage;
+                    tracing::info!(
+                        "🔄 #{} of #{} ({:.4}%)",
+                        dest_block,
+                        current_block_number,
+                        sync_progress
+                    );
+                    instant = std::time::Instant::now();
+                }
             }
         };
         backoff::future::retry(backoff, task).await?;
@@ -151,8 +177,12 @@ where
     /// Returns a task that should be running in the background
     /// that will watch for all commands
     #[tracing::instrument(
-        skip(self, client, store, contract),
-        fields(contract = %contract.address())
+        skip_all,
+        fields(
+            chain_id = %client.get_chainid().await?,
+            address = %contract.address(),
+            tag = %Self::TAG,
+        ),
     )]
     async fn run(
         &self,

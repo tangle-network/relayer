@@ -51,6 +51,8 @@ impl<M: Middleware> super::WatchableContract for AnchorContractWrapper<M> {
 
 #[async_trait::async_trait]
 impl super::EventWatcher for AnchorLeavesWatcher {
+    const TAG: &'static str = "Anchor Watcher For Leaves";
+
     type Middleware = providers::Provider<providers::Http>;
 
     type Contract = AnchorContractWrapper<Self::Middleware>;

@@ -57,7 +57,7 @@ impl<S: TxQueueStore> TxQueue<S> {
                                     "Error while sending Tx: {}",
                                     e
                                 );
-                                return Err(e.into());
+                                continue; // keep going.
                             }
                         };
                         match tx {
@@ -68,11 +68,12 @@ impl<S: TxQueueStore> TxQueue<S> {
                                 );
                             }
                             Ok(None) => {
+                                // this should never happen
+                                // as we already know that is a bug in ethers
+                                // about timeing, so we already wait a bit
+                                // and increased the time interval for checking for
+                                // transaction status.
                                 tracing::warn!("Tx Dropped from Mempool!!");
-                                return Err(anyhow::anyhow!(
-                                    "DroppedFromMemPool",
-                                )
-                                .into());
                             }
                             Err(e) => {
                                 let reason = e.to_string();

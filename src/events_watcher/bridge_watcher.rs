@@ -161,6 +161,8 @@ pub struct BridgeContractWatcher;
 
 #[async_trait::async_trait]
 impl EventWatcher for BridgeContractWatcher {
+    const TAG: &'static str = "Bridge Watcher";
+
     type Middleware = HttpProvider;
 
     type Contract = BridgeContractWrapper<Self::Middleware>;
@@ -322,12 +324,39 @@ where
             Some(v) => v,
             None => {
                 tracing::warn!(
-                    "Trying to execute proposal 0x{} but no proposal found",
+                    "no proposal with 0x{} found locally (skipping)",
                     hex::encode(&data_hash)
                 );
                 return Ok(());
             }
         };
+        // before trying to execute the proposal, we need to
+        // double check that the proposal is not already executed.
+        //
+        // why we do the check?
+        // since sometimes the relayer would be offline for a bit, and then it sees
+        // that this proposal is passed (from the events as it sync) but in the current
+        // time, this proposal is already executed (since this event is from the past).
+        // that's why we need to do this check here.
+        let (status, ..) = contract
+            .get_proposal(
+                entity.origin_chain_id,
+                entity.nonce.as_u64(),
+                entity.data_hash,
+            )
+            .call()
+            .await?;
+        let status = ProposalStatus::from(status);
+        if status >= ProposalStatus::Executed {
+            tracing::debug!(
+                "Skipping execution of proposal 0x{} since it is already {:?}",
+                hex::encode(data_hash),
+                status
+            );
+            return Ok(());
+        }
+        // and also assert it is passed.
+        assert_eq!(status, ProposalStatus::Passed);
         let call = contract.execute_proposal(
             entity.origin_chain_id,
             entity.nonce.as_u64(),

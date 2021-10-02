@@ -121,6 +121,10 @@ impl LeafCacheStore for SledStore {
 }
 
 impl TxQueueStore for SledStore {
+    #[tracing::instrument(
+        skip_all,
+        fields(chain_id = %chain_id, tx_key = %hex::encode(key))
+    )]
     fn enqueue_tx_with_key(
         &self,
         key: &[u8],
@@ -155,11 +159,14 @@ impl TxQueueStore for SledStore {
             db.insert(&tx_key, tx_bytes.as_slice())?;
             // also save the key where we can find it by special key.
             db.insert(key, &tx_key)?;
+            let tx_hash = tx.sighash(chain_id.as_u64());
+            tracing::trace!("enqueue transaction with txhash = {:?}", tx_hash);
             Ok(())
         })?;
         Ok(())
     }
 
+    #[tracing::instrument(skip_all, fields(chain_id = %chain_id))]
     fn dequeue_tx(
         &self,
         chain_id: types::U256,
@@ -172,7 +179,10 @@ impl TxQueueStore for SledStore {
         let mut queue = tree.scan_prefix(prefix);
         let (key, value) = match queue.next() {
             Some(Ok(v)) => v,
-            _ => return Ok(None),
+            _ => {
+                tracing::trace!("queue is empty ..");
+                return Ok(None);
+            }
         };
         let tx = serde_json::from_slice(&value)?;
         // now it is safe to remove it from the queue.
@@ -197,6 +207,10 @@ impl TxQueueStore for SledStore {
         Ok(Some(tx))
     }
 
+    #[tracing::instrument(
+        skip_all,
+        fields(chain_id = %chain_id, tx_key = %hex::encode(key))
+    )]
     fn remove_tx(
         &self,
         key: &[u8],
@@ -206,6 +220,7 @@ impl TxQueueStore for SledStore {
         match tree.get(key)? {
             Some(k) => {
                 tree.remove(k)?;
+                tracing::debug!("removed tx from the queue..");
                 Ok(())
             }
             None => {
@@ -220,23 +235,49 @@ impl TxQueueStore for SledStore {
 }
 
 impl ProposalStore for SledStore {
+    #[tracing::instrument(
+        skip_all,
+        fields(data_hash = %hex::encode(&proposal.data_hash))
+    )]
     fn insert_proposal(&self, proposal: ProposalEntity) -> anyhow::Result<()> {
         let tree = self.db.open_tree("proposal_store")?;
         tree.insert(
             &proposal.data_hash,
             serde_json::to_vec(&proposal)?.as_slice(),
         )?;
+        tracing::debug!(
+            "Saved Proposal @{} with resource_id = 0x{}",
+            proposal.origin_chain_id,
+            hex::encode(proposal.resource_id)
+        );
         Ok(())
     }
 
+    #[tracing::instrument(
+        skip_all,
+        fields(data_hash = %hex::encode(data_hash))
+    )]
     fn remove_proposal(
         &self,
         data_hash: &[u8],
     ) -> anyhow::Result<Option<ProposalEntity>> {
         let tree = self.db.open_tree("proposal_store")?;
         match tree.get(&data_hash)? {
-            Some(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
-            None => Ok(None),
+            Some(bytes) => {
+                let proposal: ProposalEntity = serde_json::from_slice(&bytes)?;
+                tracing::debug!(
+                    "Removed Proposal @{} with resource_id = 0x{}",
+                    proposal.origin_chain_id,
+                    hex::encode(proposal.resource_id)
+                );
+                Ok(Some(proposal))
+            }
+            None => {
+                tracing::warn!(
+                    "Proposal not seen yet; not found in the proposal storage."
+                );
+                Ok(None)
+            }
         }
     }
 }
