@@ -21,6 +21,7 @@ mod handler;
 mod service;
 mod store;
 mod tx_queue;
+mod utils;
 
 #[cfg(test)]
 mod test_utils;

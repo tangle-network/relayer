@@ -36,6 +36,12 @@ pub struct ChainConfig {
     /// Websocket Endpoint for long living connections
     #[serde(skip_serializing)]
     pub ws_endpoint: url::Url,
+    /// Block Explorer for this chain.
+    ///
+    /// Optional, and only used for printing a clickable links
+    /// for transactions and contracts.
+    #[serde(skip_serializing)]
+    pub explorer: Option<url::Url>,
     /// chain specific id.
     #[serde(rename(serialize = "chainId"))]
     pub chain_id: u64,
