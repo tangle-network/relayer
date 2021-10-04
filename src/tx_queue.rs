@@ -141,7 +141,7 @@ impl<S: TxQueueStore> TxQueue<S> {
                     };
                 }
                 // sleep for a random amount of time.
-                let s = rand::thread_rng().gen_range(5..=60);
+                let s = rand::thread_rng().gen_range(1..=10);
                 tracing::debug!("next queue round after {} seconds", s);
                 tokio::time::sleep(Duration::from_secs(s)).await;
             }
