@@ -74,6 +74,8 @@ impl<M: Middleware> super::WatchableContract for Anchor2ContractWrapper<M> {
 
 #[async_trait::async_trait]
 impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
+    const TAG: &'static str = "Anchor2 Watcher For Leaves";
+
     type Middleware = HttpProvider;
 
     type Contract = Anchor2ContractWrapper<Self::Middleware>;
@@ -82,14 +84,16 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
 
     type Store = SledStore;
 
+    #[tracing::instrument(skip_all)]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
+        use Anchor2ContractEvents::*;
         match event {
-            Anchor2ContractEvents::DepositFilter(deposit) => {
+            DepositFilter(deposit) => {
                 let commitment = deposit.commitment;
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
@@ -98,14 +102,27 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
                     wrapper.contract.address(),
                     log.block_number,
                 )?;
-                tracing::trace!(
+                tracing::debug!(
                     "Saved Deposit Event ({}, {})",
                     value.0,
                     value.1
                 );
             }
+            EdgeUpdateFilter(v) => {
+                tracing::debug!(
+                    "Edge Updated of chain {} with root 0x{}",
+                    v.chain_id,
+                    hex::encode(v.merkle_root)
+                );
+            }
+            RootHistoryUpdateFilter(v) => {
+                tracing::debug!(
+                    "New Merkle Root 0x{}!",
+                    hex::encode(v.roots[0])
+                );
+            }
             _ => {
-                tracing::warn!("Unhandled event {:?}", event);
+                tracing::trace!("Unhandled event {:?}", event);
             }
         };
 
@@ -115,6 +132,7 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
 
 #[async_trait::async_trait]
 impl super::EventWatcher for Anchor2Watcher<ForBridge> {
+    const TAG: &'static str = "Anchor2 Watcher For Bridge";
     type Middleware = HttpProvider;
 
     type Contract = Anchor2ContractWrapper<Self::Middleware>;
@@ -123,6 +141,7 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
 
     type Store = SledStore;
 
+    #[tracing::instrument(skip_all)]
     async fn handle_event(
         &self,
         _store: Arc<Self::Store>,
@@ -190,6 +209,11 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
             let bridge = BridgeRegistry::lookup(key);
             match bridge {
                 Some(signal) => {
+                    tracing::debug!(
+                        "Signaling Bridge@{} to create a new proposal from Anchor2@{}",
+                        dest_chain_id,
+                        origin_chain_id,
+                    );
                     signal
                         .send(BridgeCommand::CreateProposal(ProposalData {
                             anchor2_address: dest_contract.address(),

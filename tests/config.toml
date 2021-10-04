@@ -9,6 +9,10 @@ suri = "//Alice"
 http-endpoint = "https://api.s1.b.hmny.io"
 # Websocket Endpoint for long living connections
 ws-endpoint = "wss://ws.s1.b.hmny.io"
+# Block Explorer
+# Optinal, and used for generating clickable links
+# for transactions that happens on this chain.
+explorer = "https://explorer.pops.one"
 # chain specific id.
 chain-id = 1666700001
 # The Private Key of this account on this network
@@ -67,6 +71,7 @@ withdraw-gaslimit = "0x350000"
 [evm.harmonys0]
 http-endpoint = "https://api.s0.b.hmny.io"
 ws-endpoint = "wss://ws.s0.b.hmny.io"
+explorer = "https://explorer.pops.one"
 chain-id = 1666700000
 private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
 # chain contracts
@@ -119,6 +124,7 @@ withdraw-gaslimit = "0x350000"
 [evm.rinkeby]
 http-endpoint = "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
 ws-endpoint = "wss://rinkeby.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+explorer = "https://rinkeby.etherscan.io"
 chain-id = 4
 private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
 

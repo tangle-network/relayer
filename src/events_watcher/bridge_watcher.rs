@@ -161,6 +161,8 @@ pub struct BridgeContractWatcher;
 
 #[async_trait::async_trait]
 impl EventWatcher for BridgeContractWatcher {
+    const TAG: &'static str = "Bridge Watcher";
+
     type Middleware = HttpProvider;
 
     type Contract = BridgeContractWrapper<Self::Middleware>;
@@ -169,13 +171,17 @@ impl EventWatcher for BridgeContractWatcher {
 
     type Store = SledStore;
 
+    #[tracing::instrument(
+        skip_all,
+        fields(ty = %to_event_type(&e.0)),
+    )]
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
-        (event, _): (Self::Events, LogMeta),
+        e: (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
-        match event {
+        match e.0 {
             // check for every proposal
             // 1. if "executed" or "cancelled" -> remove it from the tx queue (if exists).
             // 2. if "passed" -> create a tx to execute the proposal.
@@ -207,7 +213,7 @@ impl EventWatcher for BridgeContractWatcher {
                 }
             }
             _ => {
-                tracing::trace!("Got Event {:?}", event);
+                tracing::trace!("Got Event {:?}", e.0);
             }
         };
         Ok(())
@@ -216,6 +222,7 @@ impl EventWatcher for BridgeContractWatcher {
 
 #[async_trait::async_trait]
 impl BridgeWatcher for BridgeContractWatcher {
+    #[tracing::instrument(skip_all)]
     async fn handle_cmd(
         &self,
         store: Arc<Self::Store>,
@@ -237,6 +244,7 @@ impl BridgeContractWatcher
 where
     Self: BridgeWatcher,
 {
+    #[tracing::instrument(skip_all)]
     async fn create_proposal(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
@@ -296,6 +304,7 @@ where
         Ok(())
     }
 
+    #[tracing::instrument(skip_all)]
     async fn remove_proposal(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
@@ -311,6 +320,7 @@ where
         Ok(())
     }
 
+    #[tracing::instrument(skip_all)]
     async fn execute_proposal(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
@@ -322,12 +332,39 @@ where
             Some(v) => v,
             None => {
                 tracing::warn!(
-                    "Trying to execute proposal 0x{} but no proposal found",
+                    "no proposal with 0x{} found locally (skipping)",
                     hex::encode(&data_hash)
                 );
                 return Ok(());
             }
         };
+        // before trying to execute the proposal, we need to
+        // double check that the proposal is not already executed.
+        //
+        // why we do the check?
+        // since sometimes the relayer would be offline for a bit, and then it sees
+        // that this proposal is passed (from the events as it sync) but in the current
+        // time, this proposal is already executed (since this event is from the past).
+        // that's why we need to do this check here.
+        let (status, ..) = contract
+            .get_proposal(
+                entity.origin_chain_id,
+                entity.nonce.as_u64(),
+                entity.data_hash,
+            )
+            .call()
+            .await?;
+        let status = ProposalStatus::from(status);
+        if status >= ProposalStatus::Executed {
+            tracing::debug!(
+                "Skipping execution of proposal 0x{} since it is already {:?}",
+                hex::encode(data_hash),
+                status
+            );
+            return Ok(());
+        }
+        // and also assert it is passed.
+        assert_eq!(status, ProposalStatus::Passed);
         let call = contract.execute_proposal(
             entity.origin_chain_id,
             entity.nonce.as_u64(),
@@ -381,6 +418,22 @@ fn to_hex(value: impl LowerHex, padding: usize) -> String {
         hexed = String::from("0") + &hexed;
     }
     hexed
+}
+
+fn to_event_type(event: &BridgeContractEvents) -> &str {
+    match event {
+        BridgeContractEvents::PausedFilter(_) => "Paused",
+        BridgeContractEvents::ProposalEventFilter(_) => "ProposalEvent",
+        BridgeContractEvents::ProposalVoteFilter(_) => "ProposalVote",
+        BridgeContractEvents::RelayerAddedFilter(_) => "RelayerAdded",
+        BridgeContractEvents::RelayerRemovedFilter(_) => "RelayerRemoved",
+        BridgeContractEvents::RelayerThresholdChangedFilter(_) => {
+            "RelayerThresholdChanged"
+        }
+        BridgeContractEvents::RoleGrantedFilter(_) => "RoleGranted",
+        BridgeContractEvents::RoleRevokedFilter(_) => "RoleRevoked",
+        BridgeContractEvents::UnpausedFilter(_) => "Unpaused",
+    }
 }
 
 #[cfg(test)]

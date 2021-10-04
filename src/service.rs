@@ -124,12 +124,17 @@ fn start_anchor2_events_watcher(
         config.common.address,
     );
 
-    const LEAVES_WATCHER: Anchor2LeavesWatcher = Anchor2LeavesWatcher::new();
-    let leaves_watcher_task =
-        LEAVES_WATCHER.run(client.clone(), store.clone(), wrapper.clone());
+    static LEAVES_WATCHER: Anchor2LeavesWatcher = Anchor2LeavesWatcher::new();
+    let leaves_watcher_task = EventWatcher::run(
+        &LEAVES_WATCHER,
+        client.clone(),
+        store.clone(),
+        wrapper.clone(),
+    );
 
-    const BRIDGE_WATCHER: Anchor2BridgeWatcher = Anchor2BridgeWatcher::new();
-    let bridge_watcher_task = BRIDGE_WATCHER.run(client, store, wrapper);
+    static BRIDGE_WATCHER: Anchor2BridgeWatcher = Anchor2BridgeWatcher::new();
+    let bridge_watcher_task =
+        EventWatcher::run(&BRIDGE_WATCHER, client, store, wrapper);
     let mut shutdown_signal = ctx.shutdown_signal();
     let contract_address = config.common.address;
     let task = async move {
