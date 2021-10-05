@@ -13,7 +13,7 @@ import {
   calculateFee,
 } from '../proofUtils';
 import {
-  generateWithdrawRequest,
+  generateAnchorWithdrawRequest,
   RelayerChainConfig,
   getRelayerConfig,
   sleep,
@@ -213,7 +213,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         done('Client connection errored in sunny day');
       });
 
-      const req = generateWithdrawRequest(
+      const req = generateAnchorWithdrawRequest(
         'ganache',
         contractAddress,
         proof,
@@ -290,7 +290,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateWithdrawRequest(
+      const req = generateAnchorWithdrawRequest(
         'ganache',
         contractAddress,
         proof,
@@ -370,7 +370,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateWithdrawRequest(
+      const req = generateAnchorWithdrawRequest(
         'ganache',
         contractAddress,
         proof,
@@ -457,7 +457,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateWithdrawRequest(
+      const req = generateAnchorWithdrawRequest(
         'ganache',
         contractAddress,
         proof,
