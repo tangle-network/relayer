@@ -4,7 +4,7 @@ port = 9955
 [substrate.webb]
 suri = "//Alice"
 
-[evm.harmonys1]
+[evm.harmonytestnet1]
 # Http(s) Endpoint for quick Req/Res
 http-endpoint = "https://api.s1.b.hmny.io"
 # Websocket Endpoint for long living connections
@@ -35,7 +35,7 @@ chain-id = 1666700001
 private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
 
 # chain contracts
-[[evm.harmonys1.contracts]]
+[[evm.harmonytestnet1.contracts]]
 # The contract can be one of these values
 # - Anchor (tornado protocol)
 # - Anchor2 (darkwebb protocol)
@@ -59,7 +59,7 @@ withdraw-fee-percentage = 0.05
 # on this chain.
 withdraw-gaslimit = "0x350000"
 
-[[evm.harmonys1.contracts]]
+[[evm.harmonytestnet1.contracts]]
 contract = "Anchor"
 address = "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a"
 deployed-at = 12040000
@@ -68,14 +68,14 @@ events-watcher = { enabled = false, polling-interval = 3000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
-[evm.harmonys0]
+[evm.harmonytestnet0]
 http-endpoint = "https://api.s0.b.hmny.io"
 ws-endpoint = "wss://ws.s0.b.hmny.io"
 explorer = "https://explorer.pops.one"
 chain-id = 1666700000
 private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
 # chain contracts
-[[evm.harmonys0.contracts]]
+[[evm.harmonytestnet0.contracts]]
 contract = "Anchor2"
 address = "0x64E9727C4a835D518C34d3A50A8157120CAeb32F"
 deployed-at = 15183626
@@ -83,9 +83,9 @@ size = 0.0000000001
 events-watcher = { enabled = true, polling-interval = 3000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
-linked-anchors = [{ chain = "Rinkeby", address = "0xB42139fFcEF02dC85db12aC9416a19A12381167D" }]
+linked-anchors = [{ chain = "rinkeby", address = "0xB42139fFcEF02dC85db12aC9416a19A12381167D" }]
 
-[[evm.harmonys0.contracts]]
+[[evm.harmonytestnet0.contracts]]
 contract = "Bridge"
 address = "0xD776C2CB8137f5cd2eE42601F02b9B3320220429"
 deployed-at = 15183634
@@ -145,7 +145,7 @@ size = 0.1
 events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
-linked-anchors = [{ chain = "HarmonyS0", address = "0x64E9727C4a835D518C34d3A50A8157120CAeb32F" }]
+linked-anchors = [{ chain = "harmonytestnet0", address = "0x64E9727C4a835D518C34d3A50A8157120CAeb32F" }]
 
 [[evm.rinkeby.contracts]]
 contract = "Bridge"
