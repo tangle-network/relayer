@@ -191,7 +191,6 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
                             anchor2_handler_address: dest_handler,
                             origin_chain_id,
                             leaf_index,
-                            leaf_index,
                             merkle_root: root,
                         }))
                         .await?;

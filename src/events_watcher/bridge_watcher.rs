@@ -68,7 +68,6 @@ pub struct ProposalData {
     pub anchor2_handler_address: types::Address,
     pub origin_chain_id: types::U256,
     pub leaf_index: u32,
-    pub leaf_index: u32,
     pub merkle_root: [u8; 32],
 }
 
