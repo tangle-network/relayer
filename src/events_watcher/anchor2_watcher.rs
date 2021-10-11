@@ -156,9 +156,8 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
         //      a. dest_contract (the anchor2 contract on dest_chain).
         //      b. dest_handler (used for creating data_hash).
         //      c. origin_chain_id (used for creating proposal).
-        //      d. leaf_index (used for creating proposal).
-        //      e. leaf_index (used as nonce, for creating proposal).
-        //      f. merkle_root (the new merkle_root, used for creating proposal).
+        //      d. leaf_index (used as nonce, for creating proposal).
+        //      e. merkle_root (the new merkle_root, used for creating proposal).
         //
         for linked_anchor in &wrapper.config.linked_anchors {
             let dest_chain = linked_anchor.chain.to_lowercase();
