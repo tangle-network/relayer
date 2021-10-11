@@ -67,7 +67,7 @@ pub struct ProposalData {
     pub anchor2_address: types::Address,
     pub anchor2_handler_address: types::Address,
     pub origin_chain_id: types::U256,
-    pub block_height: types::U64,
+    pub leaf_index: u32,
     pub leaf_index: u32,
     pub merkle_root: [u8; 32],
 }
@@ -218,7 +218,7 @@ where
         let dest_chain_id = contract.client().get_chainid().await?;
         let update_data = create_update_proposal_data(
             data.origin_chain_id,
-            data.block_height,
+            data.leaf_index,
             data.merkle_root,
         );
         let pre_hashed =
@@ -263,13 +263,13 @@ where
 
 fn create_update_proposal_data(
     chain_id: types::U256,
-    block_height: types::U64,
+    leaf_index: u32,
     merkle_root: [u8; 32],
 ) -> String {
     let chain_id_hex = to_hex(chain_id, 32);
-    let block_height_hex = to_hex(block_height, 32);
+    let leaf_index_hex = to_hex(leaf_index, 32);
     let merkle_root_hex = hex::encode(&merkle_root);
-    format!("{}{}{}", chain_id_hex, block_height_hex, merkle_root_hex)
+    format!("{}{}{}", chain_id_hex, leaf_index_hex, merkle_root_hex)
 }
 
 fn create_resource_id(
@@ -308,13 +308,13 @@ mod tests {
     #[test]
     fn should_create_update_proposal() {
         let chain_id = types::U256::from(4);
-        let block_height = types::U64::one();
+        let leaf_index = 1u32;
         let merkle_root = [
             0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
             19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
         ];
         let result =
-            create_update_proposal_data(chain_id, block_height, merkle_root);
+            create_update_proposal_data(chain_id, leaf_index, merkle_root);
         let expected = include_str!("../../tests/fixtures/proposal_data.txt")
             .trim_end_matches('\n');
         assert_eq!(result, expected);
