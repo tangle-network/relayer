@@ -156,7 +156,6 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
         };
         let client = wrapper.contract.client();
         let origin_chain_id = client.get_chainid().await?;
-        let block_height = client.get_block_number().await?;
         let root = wrapper.contract.get_last_root().call().await?;
         let leaf_index = event_data.leaf_index;
         // the correct way for getting the other linked anchors
@@ -180,9 +179,8 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
         //      a. dest_contract (the anchor2 contract on dest_chain).
         //      b. dest_handler (used for creating data_hash).
         //      c. origin_chain_id (used for creating proposal).
-        //      d. block_height (used for creating proposal).
-        //      e. leaf_index (used as nonce, for creating proposal).
-        //      f. merkle_root (the new merkle_root, used for creating proposal).
+        //      d. leaf_index (used as nonce, for creating proposal).
+        //      e. merkle_root (the new merkle_root, used for creating proposal).
         //
         for linked_anchor in &wrapper.config.linked_anchors {
             let dest_chain = linked_anchor.chain.to_lowercase();
@@ -219,7 +217,6 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
                             anchor2_address: dest_contract.address(),
                             anchor2_handler_address: dest_handler,
                             origin_chain_id,
-                            block_height,
                             leaf_index,
                             merkle_root: root,
                         }))
