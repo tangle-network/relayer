@@ -8,22 +8,45 @@ export type RelayerChainConfig = {
   account: string;
 };
 
-export const generateWithdrawRequest = (
+export const generateAnchorWithdrawRequest = (
   chainName: string,
   contractAddress: string,
   proof: string,
   args: string[]
 ) => ({
   evm: {
-    chain: chainName,
-    contract: contractAddress,
-    proof,
-    root: args[0],
-    nullifierHash: args[1],
-    recipient: args[2],
-    relayer: args[3],
-    fee: args[4],
-    refund: args[5],
+    anchorRelayTx: {
+      chain: chainName,
+      contract: contractAddress,
+      proof,
+      root: args[0],
+      nullifierHash: args[1],
+      recipient: args[2],
+      relayer: args[3],
+      fee: args[4],
+      refund: args[5],
+    },
+  },
+});
+
+export const generateAnchor2WithdrawRequest = (
+  chainName: string,
+  contractAddress: string,
+  proof: string,
+  args: string[]
+) => ({
+  evm: {
+    anchor2RelayTx: {
+      chain: chainName,
+      contract: contractAddress,
+      proof,
+      roots: args[0],
+      nullifierHash: args[1],
+      recipient: args[2],
+      relayer: args[3],
+      fee: args[4],
+      refund: args[5],
+    },
   },
 });
 
@@ -45,7 +68,7 @@ export function startWebbRelayer() {
   const proc = spawn('../target/debug/webb-relayer', [
     '-vvv',
     '-c',
-    './config.toml',
+    './config.test.toml',
   ]);
   proc.stdout.on('data', (data) => {
     console.log(data.toString());
