@@ -22,11 +22,7 @@ Webb Relayer is easy to run and with flexible config 👌, to test it out first 
 
 Example:
 
-* Create a `config.toml` file and add the following configuration
-
-	> On Unix `webb-relayer` looks for the config at ~/.config/webb-relayer/config.toml .
-
-	> On MacOS `webb-relayer` looks for the config at ~/Library/Application Support/tools.webb.webb-relayer/config.toml .
+* Create a `config.toml` file in any directory and add the following configuration
 
 ```toml
 # Webb Relayer Network Port
@@ -100,19 +96,19 @@ withdraw-gaslimit = "0x350000"
 
 
 ```
-> Checkout [config.toml](./tests/config.toml) as an example.
+> Checkout [config](./config) as an example for that.
 
 Then Simply run
 
 ```
-webb-relayer -vvv -c config.toml # or config.json
+webb-relayer -vvv -c ./config
 ```
 
-> Hot Tip 🌶️: you could also use the json format for the config file if you prefer that, and it would work!
+> Hot Tip 🌶️: you could also use the json format for the config files if you prefer that, and it would work!
 
 ## Using Docker 🐳
 
-To Use Docker in and to run the relayer on any cloud provider, all you need is to create your configuration file
+To Use Docker in and to run the relayer on any cloud provider, all you need is to create your configuration files
 as it is shown above, save it into a `config` directory then you run the following command:
 
 ```sh
@@ -121,10 +117,7 @@ docker run --rm -v "./config:/config" -e WEBB_PORT=9955 -p 9955:9955 ghcr.io/web
 
 > Note: this uses the latest and pre-released version deployed from `main` branch, change `edge` to the latest stable release version.
 
-This will mount a configuration file at the `/config` directory inside the container so it would allow it to read
-the configuration you added.
-
-> Note that the `json` configuration format will not work inside the docker.
+This will mount a configuration files at the `/config` directory inside the container so it would allow it to read the configuration you added.
 
 
 ## Safety ⚡

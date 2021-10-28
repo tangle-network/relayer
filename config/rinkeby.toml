@@ -1,0 +1,31 @@
+[evm.rinkeby]
+http-endpoint = "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+ws-endpoint = "wss://rinkeby.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+explorer = "https://rinkeby.etherscan.io"
+chain-id = 4
+private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
+
+[[evm.rinkeby.contracts]]
+contract = "Anchor"
+address = "0x626FEc5Ffa7Bf1EE8CEd7daBdE545630473E3ABb"
+deployed-at = 8896800
+size = 0.1
+events-watcher = { enabled = false, polling-interval = 15000 }
+withdraw-fee-percentage = 0.05
+withdraw-gaslimit = "0x350000"
+
+[[evm.rinkeby.contracts]]
+contract = "Anchor2"
+address = "0xB42139fFcEF02dC85db12aC9416a19A12381167D"
+deployed-at = 9326378
+size = 0.1
+events-watcher = { enabled = true, polling-interval = 15000 }
+withdraw-fee-percentage = 0.05
+withdraw-gaslimit = "0x350000"
+linked-anchors = [{ chain = "harmony-shard0", address = "0x64E9727C4a835D518C34d3A50A8157120CAeb32F" }]
+
+[[evm.rinkeby.contracts]]
+contract = "Bridge"
+address = "0x4Dc953Ad1FfE7eD5d46C704C10162A55c543f902"
+deployed-at = 9326380
+events-watcher = { enabled = true, polling-interval = 15000 }
