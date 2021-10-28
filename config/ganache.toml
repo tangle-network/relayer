@@ -1,7 +1,3 @@
-port = 9955
-[substrate.webb]
-suri = "//Alice"
-
 [evm.ganache]
 http-endpoint = "http://localhost:8545"
 ws-endpoint = "ws://localhost:8545"
@@ -16,4 +12,3 @@ size = 1
 events-watcher = { enabled = false, polling-interval = 1000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
-

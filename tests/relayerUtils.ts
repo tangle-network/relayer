@@ -68,7 +68,7 @@ export function startWebbRelayer() {
   const proc = spawn('../target/debug/webb-relayer', [
     '-vvv',
     '-c',
-    './config.test.toml',
+    './config',
   ]);
   proc.stdout.on('data', (data) => {
     console.log(data.toString());
