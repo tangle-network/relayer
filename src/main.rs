@@ -38,23 +38,23 @@ struct Opts {
     /// A level of verbosity, and can be used multiple times
     #[structopt(short, long, parse(from_occurrences))]
     verbose: i32,
-    /// File that contains configration.
+    /// Directory that contains configration files.
     #[structopt(
         short = "c",
-        long = "config-filename",
+        long = "config-dir",
         value_name = "PATH",
         parse(from_os_str)
     )]
-    config_filename: Option<PathBuf>,
+    config_dir: Option<PathBuf>,
 }
 
 #[paw::main]
 #[tokio::main]
 async fn main(args: Opts) -> anyhow::Result<()> {
     setup_logger(args.verbose)?;
-    let config = load_config(args.config_filename.clone())?;
+    let config = load_config(args.config_dir.clone())?;
     let ctx = RelayerContext::new(config);
-    let store = create_store(args.config_filename).await?;
+    let store = create_store(args.config_dir).await?;
     let (addr, server) = build_relayer(ctx.clone(), store.clone())?;
     tracing::info!("Starting the server on {}", addr);
     // fire the server.
@@ -114,7 +114,7 @@ fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
 }
 
 fn load_config<P>(
-    config_filename: Option<P>,
+    config_dir: Option<P>,
 ) -> anyhow::Result<config::WebbRelayerConfig>
 where
     P: AsRef<Path>,
@@ -126,12 +126,16 @@ where
         crate::PACKAGE_ID[2],
     )
     .context("failed to get config")?;
-    let config_path = match config_filename {
+    let path = match config_dir {
         Some(p) => p.as_ref().to_path_buf(),
-        None => dirs.config_dir().join("config.toml"),
+        None => dirs.config_dir().to_path_buf(),
     };
-    tracing::trace!("Loaded Config from {} ..", config_path.display());
-    config::load(config_path).context("failed to load the config file")
+    // return an error if the path is not a directory.
+    if !path.is_dir() {
+        return Err(anyhow::anyhow!("{} is not a directory", path.display()));
+    }
+    tracing::trace!("Loading Config from {} ..", path.display());
+    config::load(path).context("failed to load the config files")
 }
 
 fn build_relayer(

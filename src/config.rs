@@ -233,9 +233,18 @@ impl<'de> Deserialize<'de> for PrivateKey {
 
 pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
-    let base = path.as_ref().display().to_string();
-    cfg.merge(config::File::with_name(&base))?
-        .merge(config::Environment::with_prefix("WEBB"))?;
+    // A pattern that covers all toml files in the config directory and subdirectories.
+    let pattern = format!("{}/**/*.toml", path.as_ref().display());
+    // then get an iterator over all matching files
+    let config_files = glob::glob(&pattern)?.flatten();
+    for config_file in config_files {
+        let base = config_file.display().to_string();
+        // merge the file into the config
+        cfg.merge(config::File::with_name(&base))?;
+    }
+    // also merge in the environment (with a prefix of WEBB).
+    cfg.merge(config::Environment::with_prefix("WEBB"))?;
+    // and finally deserialize the config and post-process it
     postloading_process(cfg.try_into()?)
 }
 

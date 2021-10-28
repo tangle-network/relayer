@@ -12,7 +12,7 @@ async-trait = "^0.1"
 async-stream = "^0.3"
 tracing = { version = "^0.1", features = ["log"] }
 tracing-futures = "^0.2"
-tracing-subscriber = { version = "^0.2", features = ["parking_lot"] }
+tracing-subscriber = { version = "0.3.1", features = ["parking_lot", "env-filter"] }
 tracing-test = "0.1"
 url = { version = "^2.2", features = ["serde"] }
 sled = { version = "^0.34", features = ["compression"] }
@@ -33,7 +33,8 @@ hex = { version = "0.4", default-features = false }
 # just to make it compile on linux where the openssl is not available.
 # until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
 native-tls = { version = "^0.2", features = ["vendored"] }
-thiserror = "1.0.28"
+thiserror = "^1.0"
+glob = "^0.3"
 webb = { version = "^0.2", default-features = false, features = ["evm-runtime"] }
 
 [dev-dependencies]
