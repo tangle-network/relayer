@@ -35,6 +35,7 @@ hex = { version = "0.4", default-features = false }
 native-tls = { version = "^0.2", features = ["vendored"] }
 thiserror = "^1.0"
 glob = "^0.3"
+headers = "0.3.5"
 webb = { version = "^0.2", default-features = false, features = ["evm-runtime"] }
 
 [dev-dependencies]

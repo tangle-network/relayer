@@ -3678,6 +3678,7 @@ dependencies = [
  "directories-next",
  "futures",
  "glob",
+ "headers",
  "hex",
  "native-tls",
  "once_cell",
