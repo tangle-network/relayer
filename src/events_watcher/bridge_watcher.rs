@@ -474,8 +474,7 @@ mod tests {
             "0xB42139fFcEF02dC85db12aC9416a19A12381167D",
         )
         .unwrap();
-        let resource_id =
-            create_resource_id(anchor_address, chain_id).unwrap();
+        let resource_id = create_resource_id(anchor_address, chain_id).unwrap();
         let expected = hex::decode(
             "0000000000000000b42139ffcef02dc85db12ac9416a19a12381167d00000004",
         )

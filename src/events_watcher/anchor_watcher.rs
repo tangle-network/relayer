@@ -98,7 +98,10 @@ impl super::EventWatcher for AnchorWatcher<ForLeaves> {
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
                 let chain_id = wrapper.contract.client().get_chainid().await?;
-                store.insert_leaves((chain_id, wrapper.contract.address()), &[value])?;
+                store.insert_leaves(
+                    (chain_id, wrapper.contract.address()),
+                    &[value],
+                )?;
                 store.insert_last_deposit_block_number(
                     (chain_id, wrapper.contract.address()),
                     log.block_number,

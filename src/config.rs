@@ -216,8 +216,13 @@ impl<'de> Deserialize<'de> for PrivateKey {
                 } else if value.starts_with('$') {
                     // env
                     let var = value.strip_prefix('$').unwrap_or(value);
-                    let val = std::env::var(var)
-                        .map_err(|e| serde::de::Error::custom(format!("{}: {}", e.to_string(), var)))?;
+                    let val = std::env::var(var).map_err(|e| {
+                        serde::de::Error::custom(format!(
+                            "{}: {}",
+                            e.to_string(),
+                            var
+                        ))
+                    })?;
                     Secret::from_str(&val)
                         .map_err(|e| serde::de::Error::custom(e.to_string()))
                 } else if value.starts_with('>') {

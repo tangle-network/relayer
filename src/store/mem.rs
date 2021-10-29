@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use parking_lot::RwLock;
 use webb::evm::ethers::types;

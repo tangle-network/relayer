@@ -1,5 +1,5 @@
-use std::path::Path;
 use std::fmt::Debug;
+use std::path::Path;
 use webb::evm::ethers::core::types::transaction;
 use webb::evm::ethers::types;
 
@@ -309,13 +309,12 @@ mod tests {
         let block_number = types::U64::from(20);
         let default_block_number = types::U64::from(1);
 
-        
-        store.set_last_block_number((chain_id, contract), block_number).unwrap();
+        store
+            .set_last_block_number((chain_id, contract), block_number)
+            .unwrap();
 
-        let block = store.get_last_block_number(
-            (contract, chain_id),
-            default_block_number,
-        );
+        let block = store
+            .get_last_block_number((contract, chain_id), default_block_number);
 
         match block {
             Ok(b) => {

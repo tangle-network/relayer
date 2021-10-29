@@ -1,4 +1,4 @@
-use std::fmt::{Display, Debug};
+use std::fmt::{Debug, Display};
 
 use webb::evm::ethers::core::types::transaction;
 use webb::evm::ethers::types;
@@ -15,10 +15,7 @@ pub struct ContractKey {
 }
 
 impl ContractKey {
-    pub fn new(
-        chain_id: types::U256,
-        address: types::Address,
-    ) -> Self {
+    pub fn new(chain_id: types::U256, address: types::Address) -> Self {
         Self { chain_id, address }
     }
 
@@ -71,7 +68,7 @@ pub trait HistoryStore: Clone + Send + Sync {
         &self,
         key: K,
     ) -> anyhow::Result<types::U64> {
-        self.get_last_block_number(key,types::U64::one())
+        self.get_last_block_number(key, types::U64::one())
     }
 }
 

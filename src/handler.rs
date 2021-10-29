@@ -12,8 +12,8 @@ use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 use warp::ws::Message;
-use webb::evm::contract::darkwebb::AnchorContract;
 use webb::evm::contract::darkwebb::anchor::PublicInputs;
+use webb::evm::contract::darkwebb::AnchorContract;
 use webb::evm::contract::tornado::TornadoContract;
 use webb::evm::ethereum_types::{Address, H256, U256};
 use webb::evm::ethers::core::k256::SecretKey;
@@ -125,8 +125,9 @@ pub async fn handle_leaves_cache(
         last_queried_block: U64,
     }
     let leaves = store.get_leaves((chain_id, contract)).unwrap();
-    let last_queried_block =
-        store.get_last_deposit_block_number((chain_id, contract)).unwrap();
+    let last_queried_block = store
+        .get_last_deposit_block_number((chain_id, contract))
+        .unwrap();
     Ok(warp::reply::json(&LeavesCacheResponse {
         leaves,
         last_queried_block,
@@ -510,9 +511,9 @@ fn handle_anchor_relay_tx<'a>(
             return;
         }
 
-        // pub struct PublicInputs { pub roots : Vec < u8 > , pub nullifier_hash : [u8 ; 32] , pub 
+        // pub struct PublicInputs { pub roots : Vec < u8 > , pub nullifier_hash : [u8 ; 32] , pub
         // refresh_commitment : [u8 ; 32] , pub recipient : ethers :: core :: types :: Address , pub relayer
-        // : ethers :: core :: types :: Address , pub fee : ethers :: core :: types :: U256 , pub refund : 
+        // : ethers :: core :: types :: Address , pub fee : ethers :: core :: types :: U256 , pub refund :
         // ethers :: core :: types :: U256 } }
         let inputs = PublicInputs {
             roots: cmd.roots,

@@ -74,7 +74,8 @@ impl super::EventWatcher for TornadoLeavesWatcher {
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
                 let chain_id = contract.client().get_chainid().await?;
-                store.insert_leaves((chain_id, contract.address()), &[value])?;
+                store
+                    .insert_leaves((chain_id, contract.address()), &[value])?;
                 store.insert_last_deposit_block_number(
                     (chain_id, contract.address()),
                     log.block_number,
@@ -194,8 +195,10 @@ mod tests {
         let wallet = LocalWallet::from(key).with_chain_id(1337u64);
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
-        let contract_address_1 = deploy_tornado_contract(client.clone()).await?;
-        let contract_address_2 = deploy_tornado_contract(client.clone()).await?;
+        let contract_address_1 =
+            deploy_tornado_contract(client.clone()).await?;
+        let contract_address_2 =
+            deploy_tornado_contract(client.clone()).await?;
         let tornado_contract_1 =
             TornadoContract::new(contract_address_1, client.clone());
         let tornado_contract_2 =
@@ -267,8 +270,8 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(2)).await;
 
         // get the last_deposit_blocknumer from contract 1
-        let expected_deposit_block_number =
-            store.get_last_deposit_block_number((chain_id, contract_address_1))?;
+        let expected_deposit_block_number = store
+            .get_last_deposit_block_number((chain_id, contract_address_1))?;
 
         // make a deposit on contract 2, which should increase the block_number by 1 for ganache
         make_deposit(&mut rng, &tornado_contract_2, &mut expected_leaves)
@@ -278,8 +281,8 @@ mod tests {
         tokio::time::sleep(Duration::from_secs(2)).await;
 
         // check contract 1 last_deposit_block_number is unchanged
-        let actual_deposit_block_number =
-            store.get_last_deposit_block_number((chain_id, contract_address_1))?;
+        let actual_deposit_block_number = store
+            .get_last_deposit_block_number((chain_id, contract_address_1))?;
         assert_eq!(expected_deposit_block_number, actual_deposit_block_number);
 
         // make a deposit on contract 1, which should increase the block_number by 1 for ganache
@@ -289,8 +292,8 @@ mod tests {
         // sleep for the duration of the polling interval
         tokio::time::sleep(Duration::from_secs(2)).await;
 
-        let actual_deposit_block_number =
-            store.get_last_deposit_block_number((chain_id, contract_address_1))?;
+        let actual_deposit_block_number = store
+            .get_last_deposit_block_number((chain_id, contract_address_1))?;
         assert_eq!(
             expected_deposit_block_number + 2,
             actual_deposit_block_number

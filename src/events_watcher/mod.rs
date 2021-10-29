@@ -67,12 +67,12 @@ pub trait EventWatcher {
             let step = types::U64::from(50);
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
-            let chain_id = client.get_chainid().map_err(anyhow::Error::from).await?;
+            let chain_id =
+                client.get_chainid().map_err(anyhow::Error::from).await?;
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
-                    (chain_id,
-                    contract.address()),
+                    (chain_id, contract.address()),
                     contract.deployed_at(),
                 )?;
                 let current_block_number = client
@@ -128,7 +128,10 @@ pub trait EventWatcher {
                     }
                 }
                 // move forward.
-                store.set_last_block_number((chain_id, contract.address()), dest_block)?;
+                store.set_last_block_number(
+                    (chain_id, contract.address()),
+                    dest_block,
+                )?;
                 tracing::trace!("Polled from #{} to #{}", block, dest_block);
                 if should_cooldown {
                     let duration = contract.polling_interval();
