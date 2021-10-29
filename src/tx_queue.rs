@@ -45,11 +45,13 @@ impl<S: TxQueueStore> TxQueue<S> {
         };
         let task = || async {
             loop {
-                tracing::debug!("Checking for any txs in the queue ...");
+                tracing::trace!("Checking for any txs in the queue ...");
                 let maybe_tx = store.dequeue_tx(chain_id)?;
                 let maybe_explorer = &chain_config.explorer;
-                let tx_hash: H256;
+                let mut tx_hash: H256;
                 if let Some(tx) = maybe_tx {
+                    let my_tx_hash = tx.sighash(chain_id.as_u64());
+                    tx_hash = my_tx_hash;
                     let pending_tx = client
                         .send_transaction(tx, None)
                         .map_err(anyhow::Error::from);
@@ -79,7 +81,25 @@ impl<S: TxQueueStore> TxQueue<S> {
                             result
                         }
                         Err(e) => {
-                            tracing::error!("Error while sending Tx: {}", e);
+                            let tx_hash_string = format!("0x{:x}", tx_hash);
+                            if let Some(mut url) = maybe_explorer.clone() {
+                                url.set_path(&format!("tx/{}", tx_hash_string));
+                                let clickable_link = ClickableLink::new(
+                                    &tx_hash_string,
+                                    url.as_str(),
+                                );
+                                tracing::error!(
+                                    "Error while sending tx {}, {}",
+                                    clickable_link,
+                                    e,
+                                );
+                            } else {
+                                tracing::error!(
+                                    "Error while sending tx {}, {}",
+                                    tx_hash_string,
+                                    e
+                                );
+                            }
                             continue; // keep going.
                         }
                     };

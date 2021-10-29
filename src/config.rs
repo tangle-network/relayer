@@ -30,6 +30,8 @@ pub struct WebbRelayerConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct ChainConfig {
+    #[serde(default)]
+    pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
     #[serde(skip_serializing)]
     pub http_endpoint: url::Url,
@@ -100,15 +102,15 @@ pub struct LinkedAnchorConfig {
     /// The Chain name where this anchor belongs to.
     /// and it is case-insensitive.
     pub chain: String,
-    /// The Anchor2 Contract Address.
+    /// The Anchor Contract Address.
     pub address: Address,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
 pub enum Contract {
+    Tornado(TornadoContractConfig),
     Anchor(AnchorContractConfig),
-    Anchor2(Anchor2ContractConfig),
     Bridge(BridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
@@ -125,7 +127,7 @@ pub struct CommonContractConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct AnchorContractConfig {
+pub struct TornadoContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
@@ -140,7 +142,7 @@ pub struct AnchorContractConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct Anchor2ContractConfig {
+pub struct AnchorContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
@@ -151,7 +153,7 @@ pub struct Anchor2ContractConfig {
     /// Anchor withdraw configuration.
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
-    /// A List of linked Anchor2 Contracts (on other chains) to this contract.
+    /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"))]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
 }
@@ -215,7 +217,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     // env
                     let var = value.strip_prefix('$').unwrap_or(value);
                     let val = std::env::var(var)
-                        .map_err(|e| serde::de::Error::custom(e.to_string()))?;
+                        .map_err(|e| serde::de::Error::custom(format!("{}: {}", e.to_string(), var)))?;
                     Secret::from_str(&val)
                         .map_err(|e| serde::de::Error::custom(e.to_string()))
                 } else if value.starts_with('>') {
@@ -233,9 +235,18 @@ impl<'de> Deserialize<'de> for PrivateKey {
 
 pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
-    let base = path.as_ref().display().to_string();
-    cfg.merge(config::File::with_name(&base))?
-        .merge(config::Environment::with_prefix("WEBB"))?;
+    // A pattern that covers all toml files in the config directory and subdirectories.
+    let pattern = format!("{}/**/*.toml", path.as_ref().display());
+    // then get an iterator over all matching files
+    let config_files = glob::glob(&pattern)?.flatten();
+    for config_file in config_files {
+        let base = config_file.display().to_string();
+        // merge the file into the config
+        cfg.merge(config::File::with_name(&base))?;
+    }
+    // also merge in the environment (with a prefix of WEBB).
+    cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
+    // and finally deserialize the config and post-process it
     postloading_process(cfg.try_into()?)
 }
 
@@ -252,20 +263,20 @@ fn postloading_process(
     }
     // check that all required chains are already present in the config.
     for (chain_name, chain_config) in &config.evm {
-        let anchors2 = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::Anchor2(cfg) => Some(cfg),
+        let anchors = chain_config.contracts.iter().filter_map(|c| match c {
+            Contract::Anchor(cfg) => Some(cfg),
             _ => None,
         });
-        for anchor2 in anchors2 {
-            for linked_anchor in &anchor2.linked_anchors {
+        for anchor in anchors {
+            for linked_anchor in &anchor.linked_anchors {
                 let chain = linked_anchor.chain.to_lowercase();
                 let chain_defined = config.evm.contains_key(&chain);
                 if !chain_defined {
                     tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
-                        which is required by the Anchor2 Contract ({}) defined on {} chain.
+                        which is required by the Anchor Contract ({}) defined on {} chain.
                         Please, define it manually, to allow the relayer to work properly.",
                         chain,
-                        anchor2.common.address,
+                        anchor.common.address,
                         chain_name
                     );
                 }

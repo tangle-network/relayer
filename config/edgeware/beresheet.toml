@@ -1,0 +1,14 @@
+[evm.beresheet]
+http-endpoint = "https://beresheet.edgewa.re/evm"
+ws-endpoint = "wss://beresheet.edgewa.re"
+chain-id = 2022
+private-key = "$BERESHEET_PRIVATE_KEY"
+
+[[evm.beresheet.contracts]]
+contract = "Tornado"
+address = "0xf0EA8Fa17daCF79434d10C51941D8Fc24515AbE3"
+deployed-at = 299740
+size = 10
+events-watcher = { enabled = false, polling-interval = 7000 }
+withdraw-fee-percentage = 0.05
+withdraw-gaslimit = "0x350000"

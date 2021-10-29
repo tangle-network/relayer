@@ -6,14 +6,14 @@ import nativeAnchorContract from '../build/contracts/NativeAnchor.json';
 import verifierContract from '../build/contracts/Verifier.json';
 import hasherContract from '../build/Hasher.json';
 import {
-  getAnchorDenomination,
+  getTornadoDenomination,
   deposit,
   generateSnarkProof,
   getDepositLeavesFromChain,
   calculateFee,
 } from '../proofUtils';
 import {
-  generateAnchorWithdrawRequest,
+  generateTornadoWithdrawRequest,
   RelayerChainConfig,
   getRelayerConfig,
   sleep,
@@ -132,7 +132,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
     startingRecipientBalance = await provider.getBalance(recipient);
 
     contractAddress = await deployNativeAnchor(wallet);
-    contractDenomination = await getAnchorDenomination(
+    contractDenomination = await getTornadoDenomination(
       contractAddress,
       provider
     );
@@ -213,7 +213,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         done('Client connection errored in sunny day');
       });
 
-      const req = generateAnchorWithdrawRequest(
+      const req = generateTornadoWithdrawRequest(
         'ganache',
         contractAddress,
         proof,
@@ -290,7 +290,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateAnchorWithdrawRequest(
+      const req = generateTornadoWithdrawRequest(
         'ganache',
         contractAddress,
         proof,
@@ -370,7 +370,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateAnchorWithdrawRequest(
+      const req = generateTornadoWithdrawRequest(
         'ganache',
         contractAddress,
         proof,
@@ -457,7 +457,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateAnchorWithdrawRequest(
+      const req = generateTornadoWithdrawRequest(
         'ganache',
         contractAddress,
         proof,

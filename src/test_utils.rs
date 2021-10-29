@@ -6,7 +6,7 @@ use anyhow::Context;
 use ethers::abi::Tokenizable;
 use ethers::prelude::*;
 use ethers::utils::{Ganache, GanacheInstance};
-use webb::evm::contract::tornado::AnchorContract;
+use webb::evm::contract::tornado::TornadoContract;
 use webb::evm::ethers;
 use webb::evm::note::{Deposit, Note};
 
@@ -25,7 +25,7 @@ pub fn create_contract_factory<P: Into<PathBuf>, M: Middleware>(
     Ok(ContractFactory::new(abi, bytecode.into(), client))
 }
 
-pub async fn deploy_anchor_contract<M: Middleware + 'static>(
+pub async fn deploy_tornado_contract<M: Middleware + 'static>(
     client: Arc<M>,
 ) -> anyhow::Result<Address> {
     let hasher_factory = create_contract_factory(
@@ -80,7 +80,7 @@ pub async fn launch_ganache() -> GanacheInstance {
 
 pub async fn make_deposit<M: 'static + Middleware>(
     rng: &mut impl rand::Rng,
-    contract: &AnchorContract<M>,
+    contract: &TornadoContract<M>,
     leaves: &mut Vec<H256>,
 ) -> anyhow::Result<()> {
     let note = Note::builder()

@@ -1,0 +1,25 @@
+[evm.harmonymainnet0]
+http-endpoint = "https://api.harmony.one"
+ws-endpoint = "wss://api.harmony.one"
+explorer = "https://explorer.harmony.one"
+chain-id = 1666600000
+private-key = "$HARMONY_MAINNET_0_PRIVATE_KEY"
+
+# chain contracts
+[[evm.harmonymainnet0.contracts]]
+contract = "Tornado"
+address = "0x2B9A7085Afba278BEc6bBfFb399A3C042ED05046"
+deployed-at = 18796580
+size = 100
+events-watcher = { enabled = true, polling-interval = 3000 }
+withdraw-fee-percentage = 0.05
+withdraw-gaslimit = "0x350000"
+
+[[evm.harmonymainnet0.contracts]]
+contract = "Tornado"
+address = "0x4b271E1E67B3eE56467599cd46f1F74A5a369c72"
+deployed-at = 18796580
+size = 10000
+events-watcher = { enabled = true, polling-interval = 3000 }
+withdraw-fee-percentage = 0.05
+withdraw-gaslimit = "0x350000"

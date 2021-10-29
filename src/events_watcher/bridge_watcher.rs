@@ -65,8 +65,8 @@ impl From<u8> for ProposalStatus {
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct ProposalData {
-    pub anchor2_address: types::Address,
-    pub anchor2_handler_address: types::Address,
+    pub anchor_address: types::Address,
+    pub anchor_handler_address: types::Address,
     pub origin_chain_id: types::U256,
     pub leaf_index: u32,
     pub merkle_root: [u8; 32],
@@ -258,11 +258,11 @@ where
         );
         let data_bytes = hex::decode(&update_data)?;
         let pre_hashed =
-            format!("{:x}{}", data.anchor2_handler_address, update_data);
+            format!("{:x}{}", data.anchor_handler_address, update_data);
         let data_to_be_hashed = hex::decode(pre_hashed)?;
         let data_hash = utils::keccak256(data_to_be_hashed);
         let resource_id =
-            create_resource_id(data.anchor2_address, dest_chain_id)?;
+            create_resource_id(data.anchor_address, dest_chain_id)?;
         let entity = ProposalEntity {
             origin_chain_id: data.origin_chain_id,
             data: data_bytes,
@@ -275,7 +275,7 @@ where
             .call()
             .await?;
         // sanity check
-        assert_eq!(contract_handler_address, data.anchor2_handler_address);
+        assert_eq!(contract_handler_address, data.anchor_handler_address);
         let (status, ..) = contract
             .get_proposal(data.origin_chain_id, data.leaf_index as _, data_hash)
             .call()
@@ -393,11 +393,11 @@ fn create_update_proposal_data(
 }
 
 fn create_resource_id(
-    anchor2_address: types::Address,
+    anchor_address: types::Address,
     chain_id: types::U256,
 ) -> anyhow::Result<[u8; 32]> {
     let truncated = to_hex(chain_id, 4);
-    let result = format!("{:x}{}", anchor2_address, truncated);
+    let result = format!("{:x}{}", anchor_address, truncated);
     let hash = hex::decode(result)?;
     let mut result_bytes = [0u8; 32];
     result_bytes
@@ -432,6 +432,7 @@ fn to_event_type(event: &BridgeContractEvents) -> &str {
         BridgeContractEvents::RoleGrantedFilter(_) => "RoleGranted",
         BridgeContractEvents::RoleRevokedFilter(_) => "RoleRevoked",
         BridgeContractEvents::UnpausedFilter(_) => "Unpaused",
+        BridgeContractEvents::DepositFilter(_) => "Deposit",
     }
 }
 
@@ -469,12 +470,12 @@ mod tests {
     #[test]
     fn should_create_resouce_id() {
         let chain_id = types::U256::from(4);
-        let anchor2_address = types::Address::from_str(
+        let anchor_address = types::Address::from_str(
             "0xB42139fFcEF02dC85db12aC9416a19A12381167D",
         )
         .unwrap();
         let resource_id =
-            create_resource_id(anchor2_address, chain_id).unwrap();
+            create_resource_id(anchor_address, chain_id).unwrap();
         let expected = hex::decode(
             "0000000000000000b42139ffcef02dc85db12ac9416a19a12381167d00000004",
         )

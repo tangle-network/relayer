@@ -1,0 +1,25 @@
+[evm.goerli]
+http-endpoint = "https://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+ws-endpoint = "wss://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+explorer = "https://goerli.etherscan.io"
+chain-id = 5
+private-key = "$GOERLI_PRIVATE_KEY"
+
+[[evm.goerli.contracts]]
+contract = "Bridge"
+address = "0x9575c39d616EC6bc8281e0D915f8d108DEa5cdbd"
+deployed-at = 5743380
+events-watcher = { enabled = true, polling-interval = 15000 }
+
+[[evm.goerli.contracts]]
+contract = "Anchor"
+address = "0x19b72e48a90975a5B9F88C5ae907607A13bf827A"
+deployed-at = 5743380
+size = 0.0000000000001
+events-watcher = { enabled = true, polling-interval = 15000 }
+withdraw-fee-percentage = 0
+withdraw-gaslimit = "0x350000"
+linked-anchors = [
+  { chain = "rinkeby", address = "0x33EAD0AE289f172E00BDD2e5c39BDF5b18F9d63A" },
+  { chain = "ropsten", address = "0xB039952e6A46b890e2a44835d97dE253482b2Ca2" },
+]
