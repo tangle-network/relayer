@@ -16,7 +16,7 @@ pub async fn ignite(
 ) -> anyhow::Result<()> {
     // now we go through each chain, in our configuration
     for (chain_name, chain_config) in &ctx.config.evm {
-        if chain_config.enabled == false {
+        if !chain_config.enabled {
             continue;
         }
         let provider = ctx.evm_provider(chain_name).await?;

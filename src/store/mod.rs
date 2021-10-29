@@ -22,7 +22,7 @@ impl ContractKey {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut vec = vec![];
         vec.extend_from_slice(&self.chain_id.as_u128().to_le_bytes());
-        vec.extend_from_slice(&self.address.as_bytes());
+        vec.extend_from_slice(self.address.as_bytes());
         vec
     }
 }
