@@ -1,0 +1,11 @@
+[evm.harmonytestnet0]
+http-endpoint = "https://api.s0.b.hmny.io"
+ws-endpoint = "wss://ws.s0.b.hmny.io"
+explorer = "https://explorer.pops.one"
+chain-id = 1666700000
+private-key = "$HARMONY_TESTNET_0_PRIVATE_KEY"
+contracts = []
+
+# chain contracts
+# [[evm.harmonytestnet0.contracts]]
+

@@ -12,8 +12,9 @@ use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 use warp::ws::Message;
-use webb::evm::contract::darkwebb::Anchor2Contract;
-use webb::evm::contract::tornado::AnchorContract;
+use webb::evm::contract::darkwebb::anchor::PublicInputs;
+use webb::evm::contract::darkwebb::AnchorContract;
+use webb::evm::contract::tornado::TornadoContract;
 use webb::evm::ethereum_types::{Address, H256, U256};
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
@@ -114,6 +115,7 @@ pub async fn handle_relayer_info(
 
 pub async fn handle_leaves_cache(
     store: Arc<crate::store::sled::SledStore>,
+    chain_id: U256,
     contract: Address,
 ) -> Result<impl warp::Reply, Infallible> {
     #[derive(Debug, Serialize)]
@@ -122,9 +124,10 @@ pub async fn handle_leaves_cache(
         leaves: Vec<H256>,
         last_queried_block: U64,
     }
-    let leaves = store.get_leaves(contract).unwrap();
-    let last_queried_block =
-        store.get_last_deposit_block_number(contract).unwrap();
+    let leaves = store.get_leaves((chain_id, contract)).unwrap();
+    let last_queried_block = store
+        .get_last_deposit_block_number((chain_id, contract))
+        .unwrap();
     Ok(warp::reply::json(&LeavesCacheResponse {
         leaves,
         last_queried_block,
@@ -146,13 +149,13 @@ pub struct SubstrateCommand {}
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmCommand {
+    TornadoRelayTx(TornadoRelayTransaction),
     AnchorRelayTx(AnchorRelayTransaction),
-    Anchor2RelayTx(Anchor2RelayTransaction),
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AnchorRelayTransaction {
+pub struct TornadoRelayTransaction {
     /// one of the supported chains of this realyer
     pub chain: String,
     /// The target contract.
@@ -170,7 +173,7 @@ pub struct AnchorRelayTransaction {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Anchor2RelayTransaction {
+pub struct AnchorRelayTransaction {
     /// one of the supported chains of this realyer
     pub chain: String,
     /// The target contract.
@@ -179,6 +182,7 @@ pub struct Anchor2RelayTransaction {
     pub proof: Bytes,
     /// Args...
     pub roots: Vec<u8>,
+    pub refresh_commitment: H256,
     pub nullifier_hash: H256,
     pub recipient: Address, // H160 ([u8; 20])
     pub relayer: Address,   // H160 (should be this realyer account)
@@ -246,14 +250,14 @@ pub fn handle_evm<'a>(
     cmd: EvmCommand,
 ) -> BoxStream<'a, CommandResponse> {
     match cmd {
+        EvmCommand::TornadoRelayTx(cmd) => handle_tornado_relay_tx(ctx, cmd),
         EvmCommand::AnchorRelayTx(cmd) => handle_anchor_relay_tx(ctx, cmd),
-        EvmCommand::Anchor2RelayTx(cmd) => handle_anchor2_relay_tx(ctx, cmd),
     }
 }
 
-fn handle_anchor_relay_tx<'a>(
+fn handle_tornado_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: AnchorRelayTransaction,
+    cmd: TornadoRelayTransaction,
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     let s = stream! {
@@ -270,7 +274,7 @@ fn handle_anchor_relay_tx<'a>(
             .iter()
             .cloned()
             .filter_map(|c| match c {
-                crate::config::Contract::Anchor(c) => Some(c),
+                crate::config::Contract::Tornado(c) => Some(c),
                 _ => None,
             })
             .map(|c| (c.common.address, c))
@@ -321,7 +325,7 @@ fn handle_anchor_relay_tx<'a>(
 
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
-        let contract = AnchorContract::new(cmd.contract, client);
+        let contract = TornadoContract::new(cmd.contract, client);
         let denomination = match contract.denomination().call().await {
             Ok(v) => v,
             Err(e) => {
@@ -406,9 +410,9 @@ fn handle_anchor_relay_tx<'a>(
     s.boxed()
 }
 
-fn handle_anchor2_relay_tx<'a>(
+fn handle_anchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: Anchor2RelayTransaction,
+    cmd: AnchorRelayTransaction,
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     let s = stream! {
@@ -425,7 +429,7 @@ fn handle_anchor2_relay_tx<'a>(
             .iter()
             .cloned()
             .filter_map(|c| match c {
-                crate::config::Contract::Anchor2(c) => Some(c),
+                crate::config::Contract::Anchor(c) => Some(c),
                 _ => None,
             })
             .map(|c| (c.common.address, c))
@@ -482,7 +486,7 @@ fn handle_anchor2_relay_tx<'a>(
 
         let client = SignerMiddleware::new(provider, wallet);
         let client = Arc::new(client);
-        let contract = Anchor2Contract::new(cmd.contract, client);
+        let contract = AnchorContract::new(cmd.contract, client);
         let denomination = match contract.denomination().call().await {
             Ok(v) => v,
             Err(e) => {
@@ -507,14 +511,23 @@ fn handle_anchor2_relay_tx<'a>(
             return;
         }
 
+        // pub struct PublicInputs { pub roots : Vec < u8 > , pub nullifier_hash : [u8 ; 32] , pub
+        // refresh_commitment : [u8 ; 32] , pub recipient : ethers :: core :: types :: Address , pub relayer
+        // : ethers :: core :: types :: Address , pub fee : ethers :: core :: types :: U256 , pub refund :
+        // ethers :: core :: types :: U256 } }
+        let inputs = PublicInputs {
+            roots: cmd.roots,
+            refresh_commitment: cmd.refresh_commitment.to_fixed_bytes(),
+            nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
+            recipient: cmd.recipient,
+            relayer: cmd.relayer,
+            fee: cmd.fee,
+            refund: cmd.refund,
+        };
+
         let call = contract.withdraw(
             cmd.proof.to_vec(),
-            cmd.roots,
-            cmd.nullifier_hash.to_fixed_bytes(),
-            cmd.recipient,
-            cmd.relayer,
-            cmd.fee,
-            cmd.refund,
+            inputs,
         );
         // Make a dry call, to make sure the transaction will go through successfully
         // to avoid wasting fees on invalid calls.

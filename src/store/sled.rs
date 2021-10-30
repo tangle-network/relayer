@@ -1,9 +1,9 @@
+use std::fmt::Debug;
 use std::path::Path;
-
 use webb::evm::ethers::core::types::transaction;
 use webb::evm::ethers::types;
 
-use super::ProposalEntity;
+use super::{ContractKey, ProposalEntity};
 use super::{HistoryStore, LeafCacheStore, ProposalStore, TxQueueStore};
 
 #[derive(Clone)]
@@ -31,15 +31,16 @@ impl SledStore {
 
 impl HistoryStore for SledStore {
     #[tracing::instrument(skip(self))]
-    fn set_last_block_number(
+    fn set_last_block_number<K: Into<ContractKey> + Debug>(
         &self,
-        contract: types::Address,
+        key: K,
         block_number: types::U64,
     ) -> anyhow::Result<types::U64> {
         let tree = self.db.open_tree("last_block_numbers")?;
         let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
         block_number.to_little_endian(&mut bytes);
-        let old = tree.insert(contract, &bytes)?;
+        let key: ContractKey = key.into();
+        let old = tree.insert(key.to_bytes(), &bytes)?;
         match old {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
             None => Ok(block_number),
@@ -47,13 +48,14 @@ impl HistoryStore for SledStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn get_last_block_number(
+    fn get_last_block_number<K: Into<ContractKey> + Debug>(
         &self,
-        contract: types::Address,
+        key: K,
         default_block_number: types::U64,
     ) -> anyhow::Result<types::U64> {
         let tree = self.db.open_tree("last_block_numbers")?;
-        let val = tree.get(contract)?;
+        let key: ContractKey = key.into();
+        let val = tree.get(key.to_bytes())?;
         match val {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
             None => Ok(default_block_number),
@@ -65,11 +67,14 @@ impl LeafCacheStore for SledStore {
     type Output = Vec<types::H256>;
 
     #[tracing::instrument(skip(self))]
-    fn get_leaves(
+    fn get_leaves<K: Into<ContractKey> + Debug>(
         &self,
-        contract: types::Address,
+        key: K,
     ) -> anyhow::Result<Self::Output> {
-        let tree = self.db.open_tree(format!("leaves/{}", contract))?;
+        let key: ContractKey = key.into();
+        let tree = self
+            .db
+            .open_tree(format!("leaves/{}/{}", key.chain_id, key.address))?;
         let leaves = tree
             .iter()
             .values()
@@ -80,39 +85,45 @@ impl LeafCacheStore for SledStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn insert_leaves(
+    fn insert_leaves<K: Into<ContractKey> + Debug>(
         &self,
-        contract: types::Address,
+        key: K,
         leaves: &[(u32, types::H256)],
     ) -> anyhow::Result<()> {
-        let tree = self.db.open_tree(format!("leaves/{}", contract))?;
+        let key: ContractKey = key.into();
+
+        let tree = self
+            .db
+            .open_tree(format!("leaves/{}/{}", key.chain_id, key.address))?;
         for (k, v) in leaves {
             tree.insert(k.to_le_bytes(), v.as_bytes())?;
         }
         Ok(())
     }
 
-    fn get_last_deposit_block_number(
+    fn get_last_deposit_block_number<K: Into<ContractKey> + Debug>(
         &self,
-        contract: types::Address,
+        key: K,
     ) -> anyhow::Result<types::U64> {
         let tree = self.db.open_tree("last_deposit_block_number")?;
-        let val = tree.get(contract)?;
+        let key: ContractKey = key.into();
+        let val = tree.get(key.to_bytes())?;
         match val {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
             None => Ok(types::U64::from(0)),
         }
     }
 
-    fn insert_last_deposit_block_number(
+    fn insert_last_deposit_block_number<K: Into<ContractKey> + Debug>(
         &self,
-        contract: types::Address,
+        key: K,
         block_number: types::U64,
     ) -> anyhow::Result<types::U64> {
         let tree = self.db.open_tree("last_deposit_block_number")?;
         let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
         block_number.to_little_endian(&mut bytes);
-        let old = tree.insert(contract, &bytes)?;
+        let key: ContractKey = key.into();
+        let old = tree.insert(key.to_bytes(), &bytes)?;
         match old {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
             None => Ok(block_number),
@@ -220,7 +231,7 @@ impl TxQueueStore for SledStore {
         match tree.get(key)? {
             Some(k) => {
                 tree.remove(k)?;
-                tracing::debug!("removed tx from the queue..");
+                tracing::trace!("removed tx from the queue..");
                 Ok(())
             }
             None => {
@@ -245,7 +256,7 @@ impl ProposalStore for SledStore {
             &proposal.data_hash,
             serde_json::to_vec(&proposal)?.as_slice(),
         )?;
-        tracing::debug!(
+        tracing::trace!(
             "Saved Proposal @{} with resource_id = 0x{}",
             proposal.origin_chain_id,
             hex::encode(proposal.resource_id)
@@ -265,7 +276,7 @@ impl ProposalStore for SledStore {
         match tree.get(&data_hash)? {
             Some(bytes) => {
                 let proposal: ProposalEntity = serde_json::from_slice(&bytes)?;
-                tracing::debug!(
+                tracing::trace!(
                     "Removed Proposal @{} with resource_id = 0x{}",
                     proposal.origin_chain_id,
                     hex::encode(proposal.resource_id)
@@ -289,7 +300,35 @@ mod tests {
     use webb::evm::ethers::types::transaction::request::TransactionRequest;
 
     #[test]
-    fn tx_queue_should_workd() {
+    fn get_leaves_should_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+        let chain_id = types::U256::one();
+        let contract =
+            types::H160::from_slice("11111111111111111111".as_bytes());
+        let block_number = types::U64::from(20);
+        let default_block_number = types::U64::from(1);
+
+        store
+            .set_last_block_number((chain_id, contract), block_number)
+            .unwrap();
+
+        let block = store
+            .get_last_block_number((contract, chain_id), default_block_number);
+
+        match block {
+            Ok(b) => {
+                println!("retrieved block {:?}", block);
+                assert_eq!(b, types::U64::from(20));
+            }
+            Err(e) => {
+                println!("Error encountered {:?}", e);
+            }
+        }
+    }
+
+    #[test]
+    fn tx_queue_should_work() {
         let tmp = tempfile::tempdir().unwrap();
         let store = SledStore::open(tmp.path()).unwrap();
         let chain_id = types::U256::one();

@@ -33,10 +33,11 @@ hex = { version = "0.4", default-features = false }
 # just to make it compile on linux where the openssl is not available.
 # until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
 native-tls = { version = "^0.2", features = ["vendored"] }
+webb = { git='https://github.com/webb-tools/webb-rs', branch='main', default-features = false, features = ["evm-runtime"] }
 thiserror = "^1.0"
 glob = "^0.3"
 headers = "0.3.5"
-webb = { version = "^0.2", default-features = false, features = ["evm-runtime"] }
+dotenv = "0.15.0"
 
 [dev-dependencies]
 tempfile = "^3.2"

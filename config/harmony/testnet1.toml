@@ -1,4 +1,4 @@
-[evm.harmony-shard1]
+[evm.harmonytestnet1]
 # Http(s) Endpoint for quick Req/Res
 http-endpoint = "https://api.s1.b.hmny.io"
 # Websocket Endpoint for long living connections
@@ -26,16 +26,16 @@ chain-id = 1666700001
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "0x1749563947452850678456352849674537239203756595873523849581626549"
+private-key = "$HARMONY_TESTNET_1_PRIVATE_KEY"
 
 # chain contracts
-[[evm.harmony-shard1.contracts]]
+[[evm.harmonytestnet1.contracts]]
 # The contract can be one of these values
 # - Anchor (tornado protocol)
 # - Anchor2 (darkwebb protocol)
 # - Bridge
 # - GovernanceBravoDelegate
-contract = "Anchor"
+contract = "Tornado"
 # The address of this contract on this chain.
 address = "0x4c37863bf2642Ba4e8De7e746500C700540119E8"
 # the block number where this contract got deployed at.
@@ -53,8 +53,8 @@ withdraw-fee-percentage = 0.05
 # on this chain.
 withdraw-gaslimit = "0x350000"
 
-[[evm.harmony-shard1.contracts]]
-contract = "Anchor"
+[[evm.harmonytestnet1.contracts]]
+contract = "Tornado"
 address = "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a"
 deployed-at = 12040000
 size = 100

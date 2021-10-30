@@ -4,8 +4,8 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
-use webb::evm::contract::darkwebb::Anchor2Contract;
-use webb::evm::contract::darkwebb::Anchor2ContractEvents;
+use webb::evm::contract::darkwebb::AnchorContract;
+use webb::evm::contract::darkwebb::AnchorContractEvents;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
@@ -22,39 +22,39 @@ pub struct ForLeaves;
 pub struct ForBridge;
 
 #[derive(Copy, Clone, Debug)]
-pub struct Anchor2Watcher<H>(PhantomData<H>);
+pub struct AnchorWatcher<H>(PhantomData<H>);
 
-impl<H> Anchor2Watcher<H> {
-    pub const fn new() -> Anchor2Watcher<H> {
+impl<H> AnchorWatcher<H> {
+    pub const fn new() -> AnchorWatcher<H> {
         Self(PhantomData)
     }
 }
 
-pub type Anchor2LeavesWatcher = Anchor2Watcher<ForLeaves>;
-pub type Anchor2BridgeWatcher = Anchor2Watcher<ForBridge>;
+pub type AnchorLeavesWatcher = AnchorWatcher<ForLeaves>;
+pub type AnchorBridgeWatcher = AnchorWatcher<ForBridge>;
 
 #[derive(Clone, Debug)]
-pub struct Anchor2ContractWrapper<M: Middleware> {
-    config: config::Anchor2ContractConfig,
+pub struct AnchorContractWrapper<M: Middleware> {
+    config: config::AnchorContractConfig,
     webb_config: config::WebbRelayerConfig,
-    contract: Anchor2Contract<M>,
+    contract: AnchorContract<M>,
 }
 
-impl<M: Middleware> Anchor2ContractWrapper<M> {
+impl<M: Middleware> AnchorContractWrapper<M> {
     pub fn new(
-        config: config::Anchor2ContractConfig,
+        config: config::AnchorContractConfig,
         webb_config: config::WebbRelayerConfig,
         client: Arc<M>,
     ) -> Self {
         Self {
-            contract: Anchor2Contract::new(config.common.address, client),
+            contract: AnchorContract::new(config.common.address, client),
             config,
             webb_config,
         }
     }
 }
 
-impl<M: Middleware> ops::Deref for Anchor2ContractWrapper<M> {
+impl<M: Middleware> ops::Deref for AnchorContractWrapper<M> {
     type Target = Contract<M>;
 
     fn deref(&self) -> &Self::Target {
@@ -62,7 +62,7 @@ impl<M: Middleware> ops::Deref for Anchor2ContractWrapper<M> {
     }
 }
 
-impl<M: Middleware> super::WatchableContract for Anchor2ContractWrapper<M> {
+impl<M: Middleware> super::WatchableContract for AnchorContractWrapper<M> {
     fn deployed_at(&self) -> types::U64 {
         self.config.common.deployed_at.into()
     }
@@ -73,14 +73,14 @@ impl<M: Middleware> super::WatchableContract for Anchor2ContractWrapper<M> {
 }
 
 #[async_trait::async_trait]
-impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
-    const TAG: &'static str = "Anchor2 Watcher For Leaves";
+impl super::EventWatcher for AnchorWatcher<ForLeaves> {
+    const TAG: &'static str = "Anchor Watcher For Leaves";
 
     type Middleware = HttpProvider;
 
-    type Contract = Anchor2ContractWrapper<Self::Middleware>;
+    type Contract = AnchorContractWrapper<Self::Middleware>;
 
-    type Events = Anchor2ContractEvents;
+    type Events = AnchorContractEvents;
 
     type Store = SledStore;
 
@@ -91,15 +91,19 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
-        use Anchor2ContractEvents::*;
+        use AnchorContractEvents::*;
         match event {
             DepositFilter(deposit) => {
                 let commitment = deposit.commitment;
                 let leaf_index = deposit.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
-                store.insert_leaves(wrapper.contract.address(), &[value])?;
+                let chain_id = wrapper.contract.client().get_chainid().await?;
+                store.insert_leaves(
+                    (chain_id, wrapper.contract.address()),
+                    &[value],
+                )?;
                 store.insert_last_deposit_block_number(
-                    wrapper.contract.address(),
+                    (chain_id, wrapper.contract.address()),
                     log.block_number,
                 )?;
                 tracing::debug!(
@@ -115,12 +119,6 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
                     hex::encode(v.merkle_root)
                 );
             }
-            RootHistoryUpdateFilter(v) => {
-                tracing::debug!(
-                    "New Merkle Root 0x{}!",
-                    hex::encode(v.roots[0])
-                );
-            }
             _ => {
                 tracing::trace!("Unhandled event {:?}", event);
             }
@@ -131,13 +129,13 @@ impl super::EventWatcher for Anchor2Watcher<ForLeaves> {
 }
 
 #[async_trait::async_trait]
-impl super::EventWatcher for Anchor2Watcher<ForBridge> {
-    const TAG: &'static str = "Anchor2 Watcher For Bridge";
+impl super::EventWatcher for AnchorWatcher<ForBridge> {
+    const TAG: &'static str = "Anchor Watcher For Bridge";
     type Middleware = HttpProvider;
 
-    type Contract = Anchor2ContractWrapper<Self::Middleware>;
+    type Contract = AnchorContractWrapper<Self::Middleware>;
 
-    type Events = Anchor2ContractEvents;
+    type Events = AnchorContractEvents;
 
     type Store = SledStore;
 
@@ -148,7 +146,7 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
         wrapper: &Self::Contract,
         (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
-        use Anchor2ContractEvents::*;
+        use AnchorContractEvents::*;
         // only process anchor deposit events.
         let event_data = match event {
             DepositFilter(data) => data,
@@ -176,7 +174,7 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
         // 3. Then we create a `BridgeKey` of that `dest_bridge` to send the proposal data.
         //    if not found, we skip.
         // 4. Signal the bridge with the following data:
-        //      a. dest_contract (the anchor2 contract on dest_chain).
+        //      a. dest_contract (the Anchor contract on dest_chain).
         //      b. dest_handler (used for creating data_hash).
         //      c. origin_chain_id (used for creating proposal).
         //      d. leaf_index (used as nonce, for creating proposal).
@@ -197,10 +195,7 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
             let dest_client = Arc::new(provider);
             let dest_chain_id = dest_client.get_chainid().await?;
             let dest_contract =
-                Anchor2Contract::new(linked_anchor.address, dest_client);
-            let contract_chain_id = dest_contract.chain_id().call().await?;
-            // sanity check.
-            assert_eq!(dest_chain_id, contract_chain_id);
+                AnchorContract::new(linked_anchor.address, dest_client);
             let dest_bridge = dest_contract.bridge().call().await?;
             let dest_handler = dest_contract.handler().call().await?;
             let key = BridgeKey::new(dest_bridge, dest_chain_id);
@@ -208,14 +203,14 @@ impl super::EventWatcher for Anchor2Watcher<ForBridge> {
             match bridge {
                 Some(signal) => {
                     tracing::debug!(
-                        "Signaling Bridge@{} to create a new proposal from Anchor2@{}",
+                        "Signaling Bridge@{} to create a new proposal from Anchor@{}",
                         dest_chain_id,
                         origin_chain_id,
                     );
                     signal
                         .send(BridgeCommand::CreateProposal(ProposalData {
-                            anchor2_address: dest_contract.address(),
-                            anchor2_handler_address: dest_handler,
+                            anchor_address: dest_contract.address(),
+                            anchor_handler_address: dest_handler,
                             origin_chain_id,
                             leaf_index,
                             merkle_root: root,

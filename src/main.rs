@@ -52,6 +52,14 @@ struct Opts {
 #[tokio::main]
 async fn main(args: Opts) -> anyhow::Result<()> {
     setup_logger(args.verbose)?;
+    match dotenv::dotenv() {
+        Ok(_) => {
+            tracing::trace!("Loaded .env file");
+        }
+        Err(e) => {
+            tracing::warn!("Failed to load .env file: {}", e);
+        }
+    }
     let config = load_config(args.config_dir.clone())?;
     let ctx = RelayerContext::new(config);
     let store = create_store(args.config_dir).await?;
@@ -178,6 +186,7 @@ fn build_relayer(
     let store_filter = warp::any().map(move || Arc::clone(&store));
     let leaves_cache_filter = warp::path("leaves")
         .and(store_filter)
+        .and(warp::path::param())
         .and(warp::path::param())
         .and_then(handler::handle_leaves_cache);
 

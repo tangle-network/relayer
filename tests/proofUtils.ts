@@ -28,7 +28,7 @@ export const toHex = (number: number | Buffer, length = 32) =>
     : snarkjs.bigInt(number).toString(16)
   ).padStart(length * 2, '0');
 
-export async function getAnchorDenomination(
+export async function getTornadoDenomination(
   contractAddress: string,
   provider: ethers.providers.Provider
 ): Promise<string> {

@@ -9,11 +9,11 @@ use webb::evm::ethers::{contract, providers, types};
 
 use crate::store::{HistoryStore, ProposalStore, TxQueueStore};
 
-mod anchor_leaves_watcher;
-pub use anchor_leaves_watcher::*;
+mod tornado_leaves_watcher;
+pub use tornado_leaves_watcher::*;
 
-mod anchor2_watcher;
-pub use anchor2_watcher::*;
+mod anchor_watcher;
+pub use anchor_watcher::*;
 
 mod bridge_watcher;
 pub use bridge_watcher::*;
@@ -67,10 +67,12 @@ pub trait EventWatcher {
             let step = types::U64::from(50);
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
+            let chain_id =
+                client.get_chainid().map_err(anyhow::Error::from).await?;
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
-                    contract.address(),
+                    (chain_id, contract.address()),
                     contract.deployed_at(),
                 )?;
                 let current_block_number = client
@@ -107,7 +109,7 @@ pub trait EventWatcher {
                     match result {
                         Ok(_) => {
                             store.set_last_block_number(
-                                contract.address(),
+                                (chain_id, contract.address()),
                                 log.block_number,
                             )?;
                             tracing::trace!(
@@ -126,7 +128,10 @@ pub trait EventWatcher {
                     }
                 }
                 // move forward.
-                store.set_last_block_number(contract.address(), dest_block)?;
+                store.set_last_block_number(
+                    (chain_id, contract.address()),
+                    dest_block,
+                )?;
                 tracing::trace!("Polled from #{} to #{}", block, dest_block);
                 if should_cooldown {
                     let duration = contract.polling_interval();
