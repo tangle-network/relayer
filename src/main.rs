@@ -52,7 +52,14 @@ struct Opts {
 #[tokio::main]
 async fn main(args: Opts) -> anyhow::Result<()> {
     setup_logger(args.verbose)?;
-    dotenv::dotenv()?;
+    match dotenv::dotenv() {
+        Ok(_) => {
+            tracing::trace!("Loaded .env file");
+        }
+        Err(e) => {
+            tracing::warn!("Failed to load .env file: {}", e);
+        }
+    }
     let config = load_config(args.config_dir.clone())?;
     let ctx = RelayerContext::new(config);
     let store = create_store(args.config_dir).await?;

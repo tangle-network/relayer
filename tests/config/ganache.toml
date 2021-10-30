@@ -1,4 +1,5 @@
 [evm.ganache]
+enabled = true
 http-endpoint = "http://localhost:8545"
 ws-endpoint = "ws://localhost:8545"
 chain-id = 1337
