@@ -26,7 +26,7 @@ chain-id = 1666700001
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "$HARMONY_TESTNET_1_PRIVATE_KEY"
+private-key = "$HARMONYTESTNET1_PRIVATE_KEY"
 
 # chain contracts
 [[evm.harmonytestnet1.contracts]]
@@ -45,7 +45,7 @@ deployed-at = 13600000
 # and would error otherwise.
 size = 0.0000000001
 # control the events watcher for this contract
-events-watcher = { enabled = false, polling-interval = 3000 }
+events-watcher = { enabled = true, polling-interval = 3000 }
 # The fee percentage that your account will receive when you relay a transaction
 # over this chain.
 withdraw-fee-percentage = 0.05
