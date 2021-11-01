@@ -260,13 +260,15 @@ fn postloading_process(
 ) -> anyhow::Result<WebbRelayerConfig> {
     tracing::trace!("Checking configration sanity ...");
     // make all chain names lower case
-    // 1. drain everything.
-    let old_evm: HashMap<_, _> = config.evm.drain().collect();
-    // 3. insert them again, as lowercased, if they are enabled.
+    // 1. drain everything, and take enabled chains.
+    let old_evm = config
+        .evm
+        .drain()
+        .take_while(|(_, chain)| chain.enabled)
+        .collect::<HashMap<_, _>>();
+    // 2. insert them again, as lowercased.
     for (k, v) in old_evm {
-        if v.enabled {
-            config.evm.insert(k.to_lowercase(), v);
-        }
+        config.evm.insert(k.to_lowercase(), v);
     }
     // check that all required chains are already present in the config.
     for (chain_name, chain_config) in &config.evm {
