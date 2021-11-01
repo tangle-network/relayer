@@ -264,7 +264,7 @@ fn postloading_process(
     let old_evm = config
         .evm
         .drain()
-        .take_while(|(_, chain)| chain.enabled)
+        .filter(|(_, chain)| chain.enabled)
         .collect::<HashMap<_, _>>();
     // 2. insert them again, as lowercased.
     for (k, v) in old_evm {
@@ -292,6 +292,5 @@ fn postloading_process(
             }
         }
     }
-    tracing::trace!("Config to return: {:?}", config);
     Ok(config)
 }
