@@ -262,9 +262,11 @@ fn postloading_process(
     // make all chain names lower case
     // 1. drain everything.
     let old_evm: HashMap<_, _> = config.evm.drain().collect();
-    // 2. insert them again, as lowercased.
+    // 3. insert them again, as lowercased, if they are enabled.
     for (k, v) in old_evm {
-        config.evm.insert(k.to_lowercase(), v);
+        if v.enabled {
+            config.evm.insert(k.to_lowercase(), v);
+        }
     }
     // check that all required chains are already present in the config.
     for (chain_name, chain_config) in &config.evm {
@@ -288,5 +290,6 @@ fn postloading_process(
             }
         }
     }
+    tracing::trace!("Config to return: {:?}", config);
     Ok(config)
 }
