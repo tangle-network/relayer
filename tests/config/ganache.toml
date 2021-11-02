@@ -3,7 +3,7 @@ enabled = true
 http-endpoint = "http://localhost:8545"
 ws-endpoint = "ws://localhost:8545"
 chain-id = 1337
-private-key = "$GANACHE_PRIVATE_KEY"
+private-key = "0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e"
 
 [[evm.ganache.contracts]]
 contract = "Tornado"

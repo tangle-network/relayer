@@ -32,3 +32,21 @@ contract = "Bridge"
 address = "0xdC8Dd9275d900cBCBC7889C1c03Ec658FfE300d2"
 deployed-at = 9568750
 events-watcher = { enabled = true, polling-interval = 15000 }
+
+[[evm.rinkeby.contracts]]
+contract = "Anchor"
+address = "0x6244Cf3D15aE8D9F973f080Af561b99c501e5e9D"
+deployed-at = 9569465
+size = 0.1
+events-watcher = { enabled = true, polling-interval = 15000 }
+withdraw-fee-percentage = 0
+withdraw-gaslimit = "0x350000"
+linked-anchors = [
+  { chain = "harmonytestnet0", address = "0x30a9E294b1Fc166194d2D1AF936CDdfF0e86A47B" },
+]
+
+[[evm.rinkeby.contracts]]
+contract = "Bridge"
+address = "0x4d59Fa909B897956a70eeB922b6c366b41733C13"
+deployed-at = 9569465
+events-watcher = { enabled = true, polling-interval = 15000 }
