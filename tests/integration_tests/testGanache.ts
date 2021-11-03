@@ -2,18 +2,19 @@ import { assert, expect } from 'chai';
 import ganache from 'ganache-cli';
 import { ethers } from 'ethers';
 import WebSocket from 'ws';
-import nativeAnchorContract from '../build/contracts/NativeAnchor.json';
-import verifierContract from '../build/contracts/Verifier.json';
-import hasherContract from '../build/Hasher.json';
+import nativeTornadoContract from '../build/contracts/tornado/NativeAnchor.json';
+import tornadoVerifierContract from '../build/contracts/tornado/Verifier.json';
+import tornadoHasherContract from '../build/contracts/tornado/Hasher.json';
 import {
   getTornadoDenomination,
-  deposit,
-  generateSnarkProof,
+  tornadoDeposit,
+  generateTornadoSnarkProof,
   getDepositLeavesFromChain,
   calculateFee,
 } from '../proofUtils';
 import {
   generateTornadoWithdrawRequest,
+  generateAnchorWithdrawRequest,
   RelayerChainConfig,
   getRelayerConfig,
   sleep,
@@ -22,6 +23,10 @@ import {
   startWebbRelayer,
 } from '../relayerUtils';
 import { ChildProcessWithoutNullStreams } from 'child_process';
+import Anchor from '../lib/protocol_solidity/Anchor';
+import GovernedTokenWrapper from '../lib/protocol_solidity/GovernedTokenWrapper';
+import { getHasherFactory } from '../lib/protocol_solidity/utils';
+import Verifier from '../lib/protocol_solidity/Verifier';
 
 function startGanacheServer() {
   const ganacheServer = ganache.server({
@@ -41,36 +46,36 @@ function startGanacheServer() {
   return ganacheServer;
 }
 
-async function deployNativeAnchor(wallet: ethers.Wallet) {
-  const hasherContractRaw = {
+async function deployNativeTornado(wallet: ethers.Wallet) {
+  const tornadoHasherContractRaw = {
     contractName: 'Hasher',
-    abi: hasherContract.abi,
-    bytecode: hasherContract.bytecode,
+    abi: tornadoHasherContract.abi,
+    bytecode: tornadoHasherContract.bytecode,
   };
 
-  const verifierContractRaw = {
+  const tornadoVerifierContractRaw = {
     contractName: 'Verifier',
-    abi: verifierContract.abi,
-    bytecode: verifierContract.bytecode,
+    abi: tornadoVerifierContract.abi,
+    bytecode: tornadoVerifierContract.bytecode,
   };
 
-  const nativeAnchorContractRaw = {
+  const nativeTornadoContractRaw = {
     contractName: 'NativeAnchor',
-    abi: nativeAnchorContract.abi,
-    bytecode: nativeAnchorContract.bytecode,
+    abi: nativeTornadoContract.abi,
+    bytecode: nativeTornadoContract.bytecode,
   };
 
   const hasherFactory = new ethers.ContractFactory(
-    hasherContractRaw.abi,
-    hasherContractRaw.bytecode,
+    tornadoHasherContractRaw.abi,
+    tornadoHasherContractRaw.bytecode,
     wallet
   );
   let hasherInstance = await hasherFactory.deploy({ gasLimit: '0x5B8D80' });
   await hasherInstance.deployed();
 
   const verifierFactory = new ethers.ContractFactory(
-    verifierContractRaw.abi,
-    verifierContractRaw.bytecode,
+    tornadoVerifierContractRaw.abi,
+    tornadoVerifierContractRaw.bytecode,
     wallet
   );
   let verifierInstance = await verifierFactory.deploy({ gasLimit: '0x5B8D80' });
@@ -78,21 +83,56 @@ async function deployNativeAnchor(wallet: ethers.Wallet) {
 
   const denomination = ethers.utils.parseEther('1');
   const merkleTreeHeight = 20;
-  const nativeAnchorFactory = new ethers.ContractFactory(
-    nativeAnchorContractRaw.abi,
-    nativeAnchorContractRaw.bytecode,
+  const nativeTornadoFactory = new ethers.ContractFactory(
+    nativeTornadoContractRaw.abi,
+    nativeTornadoContractRaw.bytecode,
     wallet
   );
-  let nativeAnchorInstance = await nativeAnchorFactory.deploy(
+  let nativeTornadoInstance = await nativeTornadoFactory.deploy(
     verifierInstance.address,
     hasherInstance.address,
     denomination,
     merkleTreeHeight,
     { gasLimit: '0x5B8D80' }
   );
-  const nativeAnchorAddress = await nativeAnchorInstance.deployed();
+  const nativeTornadoAddress = await nativeTornadoInstance.deployed();
 
-  return nativeAnchorAddress.address;
+  return nativeTornadoAddress.address;
+}
+
+async function deployAnchor(wallet: ethers.Signer) {
+  const walletAddress = await wallet.getAddress();
+
+  const hasherFactory = await getHasherFactory(wallet);
+  let hasherInstance = await hasherFactory.deploy({ gasLimit: '0x5B8D80' });
+  await hasherInstance.deployed();
+
+  const verifier = await Verifier.createVerifier(wallet);
+  let verifierInstance = verifier.contract;
+
+  const tokenWrapper = await GovernedTokenWrapper.createGovernedTokenWrapper(
+    'testToken',
+    'tTKN',
+    walletAddress,
+    '10000000000000000000000000',
+    true,
+    wallet
+  );
+
+  const anchor = await Anchor.createAnchor(
+    verifierInstance.address,
+    hasherInstance.address,
+    '1000000000000000000',
+    30,
+    tokenWrapper.contract.address,
+    walletAddress,
+    walletAddress,
+    walletAddress,
+    1,
+    wallet
+  );
+
+  return anchor.contract.address;
 }
 
 const PRIVATE_KEY =
@@ -104,7 +144,8 @@ let relayer: ChildProcessWithoutNullStreams;
 let recipient: string;
 let wallet: ethers.Wallet;
 let provider: ethers.providers.Provider;
-let contractAddress: string;
+let tornadoContractAddress: string;
+let anchorContractAddress: string;
 let contractDenomination: string;
 let calculatedFee: string;
 let startingRecipientBalance: ethers.BigNumber;
@@ -131,11 +172,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
     );
     startingRecipientBalance = await provider.getBalance(recipient);
 
-    contractAddress = await deployNativeAnchor(wallet);
+    tornadoContractAddress = await deployNativeTornado(wallet);
     contractDenomination = await getTornadoDenomination(
-      contractAddress,
+      tornadoContractAddress,
       provider
     );
+
+    anchorContractAddress = await deployAnchor(wallet);
 
     // get the info from the relayer
     relayerChainInfo = await getRelayerConfig(
@@ -145,7 +188,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
     console.log(JSON.stringify(relayerChainInfo));
 
     const contractConfig = relayerChainInfo.contracts.find(
-      (e) => e.address.toLowerCase() === contractAddress.toLowerCase()
+      (e) => e.address.toLowerCase() === tornadoContractAddress.toLowerCase()
     );
 
     // save the relayer configured parameters
@@ -153,18 +196,19 @@ describe('Ganache Relayer Withdraw Tests', function () {
       contractConfig?.withdrawFeePercentage ?? 0.0,
       contractDenomination
     );
+
   });
 
-  describe('Sunny day setup', function () {
+  describe('Sunny day tornado setup', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await deposit(contractAddress, wallet);
+      const depositArgs = await tornadoDeposit(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -181,7 +225,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
       console.log('Connected to Relayer!');
     });
 
-    it('should work in sunny day scenario', function (done) {
+    it('tornado should work in sunny day scenario', function (done) {
       // Setup relayer interaction with logging
       client.on('message', async (data) => {
         console.log('Received data from the relayer');
@@ -215,7 +259,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       const req = generateTornadoWithdrawRequest(
         'ganache',
-        contractAddress,
+        tornadoContractAddress,
         proof,
         args
       );
@@ -244,13 +288,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
   describe('invalid relayer address setup', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await deposit(contractAddress, wallet);
+      const depositArgs = await tornadoDeposit(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -292,7 +336,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       const req = generateTornadoWithdrawRequest(
         'ganache',
-        contractAddress,
+        tornadoContractAddress,
         proof,
         args
       );
@@ -321,13 +365,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
   describe('invalid fee setup', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await deposit(contractAddress, wallet);
+      const depositArgs = await tornadoDeposit(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -372,7 +416,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       const req = generateTornadoWithdrawRequest(
         'ganache',
-        contractAddress,
+        tornadoContractAddress,
         proof,
         args
       );
@@ -401,13 +445,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
   describe('bad proof (missing correct relayer address)', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await deposit(contractAddress, wallet);
+      const depositArgs = await tornadoDeposit(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -459,7 +503,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       const req = generateTornadoWithdrawRequest(
         'ganache',
-        contractAddress,
+        tornadoContractAddress,
         proof,
         args
       );
@@ -484,6 +528,88 @@ describe('Ganache Relayer Withdraw Tests', function () {
       client.terminate();
     });
   });
+
+  describe.only('Sunny day anchor setup', function () {
+    before(async function () {
+
+      // create the anchor
+      const anchor = await Anchor.connect(anchorContractAddress, wallet);
+      await anchor.update();
+
+      // make a deposit
+      const deposit = await anchor.deposit();
+
+      // setup the withdraw
+      const withdraw = await anchor.setupWithdraw(deposit.deposit, deposit.index, recipient, relayerChainInfo.account, BigInt(0), 0);
+
+      proof = withdraw.proofEncoded;
+      args = withdraw.args;
+
+      // setup relayer connections
+      client = new WebSocket('ws://localhost:9955/ws');
+      await new Promise((resolve) => client.on('open', resolve));
+      console.log('Connected to Relayer!');
+    });
+
+    it('anchor should work in sunny day scenario', function (done) {
+      // Setup relayer interaction with logging
+      client.on('message', async (data) => {
+        console.log('Received data from the relayer');
+        console.log('<==', data);
+        const msg = JSON.parse(data as string);
+        const result = handleMessage(msg);
+        if (result === Result.Errored) {
+          done('Relayer errored in sunny day');
+        } else if (result === Result.Continue) {
+          // all good.
+          return;
+        } else if (result === Result.CleanExit) {
+          console.log('Transaction Done and Relayed Successfully!');
+          // check the recipient balance
+          const endingRecipientBalance = await provider.getBalance(recipient);
+          //@ts-ignore
+          const changeInBalance = contractDenomination - calculatedFee;
+          assert(
+            endingRecipientBalance.eq(
+              //@ts-ignore
+              startingRecipientBalance + changeInBalance
+            )
+          );
+          done();
+        }
+      });
+      client.on('error', (err) => {
+        console.log('[E]', err);
+        done('Client connection errored in sunny day');
+      });
+
+      const req = generateAnchorWithdrawRequest(
+        'ganache',
+        anchorContractAddress,
+        proof,
+        args
+      );
+      if (client.readyState === client.OPEN) {
+        const data = JSON.stringify(req);
+        console.log('Sending Proof to the Relayer ..');
+        console.log('=>', data);
+        client.send(data, (err) => {
+          console.log('Proof Sent!');
+          if (err !== undefined) {
+            console.log('!!Error!!', err);
+            done('Client error sending proof');
+          }
+        });
+      } else {
+        console.error('Relayer Connection closed!');
+        done('Client error, not OPEN');
+      }
+    });
+
+    after(async function () {
+      client.terminate();
+    });
+  })
 
   after(function () {
     ganacheServer.close(console.error);

@@ -13,3 +13,15 @@ size = 1
 events-watcher = { enabled = false, polling-interval = 1000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
+
+[[evm.ganache.contracts]]
+contract = "Anchor"
+address = "0x4B2480c893480250Ad67b3005D234f044c5C67bA"
+deployed-at = 1
+size = 1
+events-watcher = { enabled = false, polling-interval = 1000 }
+withdraw-fee-percentage = 0
+withdraw-gaslimit = "0x350000"
+linked-anchors = [
+  { chain = "ganache", address = "0x4B2480c893480250Ad67b3005D234f044c5C67bA" },
+]

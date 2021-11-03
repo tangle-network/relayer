@@ -1,0 +1,16 @@
+const circomlibjs = require('circomlibjs');
+const maci = require('maci-crypto');
+
+class PoseidonHasher {
+  //@ts-ignore
+  hash(level: any, left: any, right: any) {
+    return maci.hashLeftRight(BigInt(left), BigInt(right)).toString()
+  }
+
+  hash3(inputs: any) {
+    if (inputs.length !== 3) throw new Error('panic');
+    return circomlibjs.poseidon(inputs);
+  }
+}
+
+export default PoseidonHasher;

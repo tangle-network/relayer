@@ -2,14 +2,14 @@ import { ethers } from 'ethers';
 import WebSocket from 'ws';
 import {
   generateSnarkProof,
-  getAnchorDenomination,
+  getTornadoDenomination,
   getDepositLeavesFromRelayer,
   calculateFee,
   deposit,
 } from '../proofUtils';
 import {
   getRelayerConfig,
-  generateAnchorWithdrawRequest,
+  generateTornadoWithdrawRequest,
   startWebbRelayer,
   handleMessage,
   sleep,
@@ -77,12 +77,12 @@ async function main() {
       'beresheet',
       'http://localhost:9955'
     );
-    const contractDenomination = await getAnchorDenomination(
+    const contractDenomination = await getTornadoDenomination(
       chains[i]!.contractAddress,
       provider
     );
     const calculatedFee = calculateFee(
-      relayerInfo.withdrawFeePercentage,
+      relayerInfo.contracts[chains[i]!.contractAddress].withdrawFeePercentage,
       contractDenomination
     );
 
@@ -135,7 +135,7 @@ async function main() {
       calculatedFee
     );
     console.log('Proof Generated!');
-    const req = generateAnchorWithdrawRequest(
+    const req = generateTornadoWithdrawRequest(
       chains[i]!.name,
       chains[i]!.contractAddress,
       proof,
