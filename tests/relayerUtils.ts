@@ -29,27 +29,51 @@ export const generateTornadoWithdrawRequest = (
   },
 });
 
+// Convert a hex string to a byte array
+function hexStringToByte(str) {
+  if (!str) {
+    return new Uint8Array();
+  }
+  
+  var a = [];
+  for (var i = 0, len = str.length; i < len; i+=2) {
+    // @ts-ignore
+    a.push(parseInt(str.substr(i,2),16));
+  }
+  
+  return new Uint8Array(a);
+}
+
 export const generateAnchorWithdrawRequest = (
   chainName: string,
   contractAddress: string,
   proof: string,
   args: string[]
-) => ({
-  evm: {
-    anchorRelayTx: {
-      chain: chainName,
-      contract: contractAddress,
-      proof,
-      roots: args[0],
-      refreshCommitment: args[2],
-      nullifierHash: args[1],
-      recipient: args[3],
-      relayer: args[4],
-      fee: args[5],
-      refund: args[6],
+) => { 
+  console.log('roots string format: ', args[0]);
+
+  // trim the first '0x'
+  let roots = args[0]!.substr(2);
+  let rootsBytes = hexStringToByte(roots);
+  let rootsArray = Array.from(rootsBytes);
+  
+  return ({
+    evm: {
+      anchorRelayTx: {
+        chain: chainName,
+        contract: contractAddress,
+        proof,
+        roots: rootsArray,
+        refreshCommitment: args[2],
+        nullifierHash: args[1],
+        recipient: args[3],
+        relayer: args[4],
+        fee: args[5],
+        refund: args[6],
+      },
     },
-  },
-});
+  })
+};
 
 export const getRelayerConfig = async (
   chainName: string,

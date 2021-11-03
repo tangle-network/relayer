@@ -264,6 +264,8 @@ class Anchor {
     }
     await tx.wait();
 
+    console.log('inserting into tree: ', deposit.commitment);
+
     const index: number = await this.tree.insert(deposit.commitment);
 
     const root = await this.contract.getLastRoot();
@@ -310,7 +312,6 @@ class Anchor {
   ): Promise<any> {
     const { chainID, nullifierHash, nullifier, secret } = deposit;
     let rootDiffIndex: number;
-    console.log(`chainID: ${chainID}, originChain: ${originChain}`);
     // read the origin chain's index into the roots array
     if (chainID == BigInt(originChain)) {
       rootDiffIndex = 0;
@@ -335,6 +336,7 @@ class Anchor {
   public async checkKnownRoot() {
     const isKnownRoot = await this.contract.isKnownRoot(toFixedHex(await this.tree.get_root()));
     if (!isKnownRoot) {
+      console.log('unknown root');
       await this.update(this.latestSyncedBlock);
     }
   }
@@ -370,6 +372,9 @@ class Anchor {
     await this.checkKnownRoot();
 
     const { pathElements, pathIndices } = await this.tree.path(index);
+
+    console.log('pathElements: ', pathElements);
+
     const chainId = await this.signer.getChainId();
 
     const roots = await this.populateRootsForProof();
@@ -386,8 +391,6 @@ class Anchor {
       pathElements,
       pathIndices,
     );
-
-    console.log('input', input);
 
     const wtns = await this.createWitness(input);
     let proofEncoded = await this.proveAndVerify(wtns);

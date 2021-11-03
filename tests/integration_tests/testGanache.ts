@@ -27,6 +27,7 @@ import Anchor from '../lib/protocol_solidity/Anchor';
 import GovernedTokenWrapper from '../lib/protocol_solidity/GovernedTokenWrapper';
 import { getHasherFactory } from '../lib/protocol_solidity/utils';
 import Verifier from '../lib/protocol_solidity/Verifier';
+import { toFixedHex } from '../lib/protocol_solidity/utils';
 
 function startGanacheServer() {
   const ganacheServer = ganache.server({
@@ -132,6 +133,8 @@ async function deployAnchor(wallet: ethers.Signer) {
     wallet
   );
 
+  await tokenWrapper.grantMinterRole(anchor.contract.address);
+
   return anchor.contract.address;
 }
 
@@ -185,7 +188,6 @@ describe('Ganache Relayer Withdraw Tests', function () {
       'ganache',
       'http://localhost:9955'
     );
-    console.log(JSON.stringify(relayerChainInfo));
 
     const contractConfig = relayerChainInfo.contracts.find(
       (e) => e.address.toLowerCase() === tornadoContractAddress.toLowerCase()
@@ -217,6 +219,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
       );
 
       proof = zkProof;
+      console.log('tornado proof: ', proof);
       args = zkArgs;
 
       // setup relayer connections
@@ -534,15 +537,18 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       // create the anchor
       const anchor = await Anchor.connect(anchorContractAddress, wallet);
-      await anchor.update();
 
       // make a deposit
-      const deposit = await anchor.deposit();
+      const deposit = await anchor.wrapAndDeposit("0x0000000000000000000000000000000000000000");
+
+      const contractRoot = await anchor.contract.getLastRoot();
+      const neighborRoot = await anchor.contract.getLatestNeighborRoots();
+      console.log(`contractRoot: ${contractRoot}, neighborRoot: ${neighborRoot}`);
 
       // setup the withdraw
-      const withdraw = await anchor.setupWithdraw(deposit.deposit, deposit.index, recipient, relayerChainInfo.account, BigInt(0), 0);
+      const withdraw = await anchor.setupWithdraw(deposit.deposit, deposit.index, recipient, relayerChainInfo.account, BigInt(0), toFixedHex('0'));
 
-      proof = withdraw.proofEncoded;
+      proof = `0x${withdraw.proofEncoded}`;
       args = withdraw.args;
 
       // setup relayer connections
