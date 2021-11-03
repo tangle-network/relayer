@@ -3,7 +3,7 @@ http-endpoint = "https://api.harmony.one"
 ws-endpoint = "wss://api.harmony.one"
 explorer = "https://explorer.harmony.one"
 chain-id = 1666600000
-private-key = "$HARMONY_MAINNET_0_PRIVATE_KEY"
+private-key = "$HARMONYMAINNET0_PRIVATE_KEY"
 
 # chain contracts
 [[evm.harmonymainnet0.contracts]]

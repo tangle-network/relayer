@@ -3,9 +3,23 @@ http-endpoint = "https://api.s0.b.hmny.io"
 ws-endpoint = "wss://ws.s0.b.hmny.io"
 explorer = "https://explorer.pops.one"
 chain-id = 1666700000
-private-key = "$HARMONY_TESTNET_0_PRIVATE_KEY"
-contracts = []
+private-key = "$HARMONYTESTNET0_PRIVATE_KEY"
 
 # chain contracts
-# [[evm.harmonytestnet0.contracts]]
+[[evm.harmonytestnet0.contracts]]
+contract = "Anchor"
+address = "0x30a9E294b1Fc166194d2D1AF936CDdfF0e86A47B"
+deployed-at = 16999000
+size = 0.1
+events-watcher = { enabled = true, polling-interval = 3000 }
+withdraw-fee-percentage = 0
+withdraw-gaslimit = "0x350000"
+linked-anchors = [
+  { chain = "rinkeby", address = "0x6244Cf3D15aE8D9F973f080Af561b99c501e5e9D" },
+]
 
+[[evm.harmonytestnet0.contracts]]
+contract = "Bridge"
+address = "0xc7c6152214d0Db4e161Fa67fB62811Be7326834A"
+deployed-at = 16999000
+events-watcher = { enabled = true, polling-interval = 3000 }

@@ -16,19 +16,37 @@ withdraw-gaslimit = "0x350000"
 
 [[evm.rinkeby.contracts]]
 contract = "Anchor"
-address = "0x33EAD0AE289f172E00BDD2e5c39BDF5b18F9d63A"
-deployed-at = 9537650
-size = 0.0000000000001
+address = "0x15A66977f0A9D21e09eB6C1B42b001aF992f0C8f"
+deployed-at = 9568750
+size = 0.01
 events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "ropsten", address = "0xB039952e6A46b890e2a44835d97dE253482b2Ca2" },
-  { chain = "goerli", address = "0x19b72e48a90975a5B9F88C5ae907607A13bf827A" },
+  { chain = "ropsten", address = "0x0711Ea63FDEDD2c8a9d3C9340a5A8F6cd84b6A92" },
+  { chain = "goerli", address = "0x025348e15e9d5529E5A4A55E8eA7eC923b7fB8b6" },
 ]
 
 [[evm.rinkeby.contracts]]
 contract = "Bridge"
-address = "0xd0f7f800fBcd1909F7e8E38dA426B1932660F489"
-deployed-at = 9537650
+address = "0xdC8Dd9275d900cBCBC7889C1c03Ec658FfE300d2"
+deployed-at = 9568750
+events-watcher = { enabled = true, polling-interval = 15000 }
+
+[[evm.rinkeby.contracts]]
+contract = "Anchor"
+address = "0x6244Cf3D15aE8D9F973f080Af561b99c501e5e9D"
+deployed-at = 9569465
+size = 0.1
+events-watcher = { enabled = true, polling-interval = 15000 }
+withdraw-fee-percentage = 0
+withdraw-gaslimit = "0x350000"
+linked-anchors = [
+  { chain = "harmonytestnet0", address = "0x30a9E294b1Fc166194d2D1AF936CDdfF0e86A47B" },
+]
+
+[[evm.rinkeby.contracts]]
+contract = "Bridge"
+address = "0x4d59Fa909B897956a70eeB922b6c366b41733C13"
+deployed-at = 9569465
 events-watcher = { enabled = true, polling-interval = 15000 }

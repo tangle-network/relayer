@@ -7,19 +7,19 @@ private-key = "$GOERLI_PRIVATE_KEY"
 
 [[evm.goerli.contracts]]
 contract = "Bridge"
-address = "0x9575c39d616EC6bc8281e0D915f8d108DEa5cdbd"
-deployed-at = 5743380
+address = "0x0208B3b3eD5Bf872b91f279855E9927480123c2f"
+deployed-at = 5774480
 events-watcher = { enabled = true, polling-interval = 15000 }
 
 [[evm.goerli.contracts]]
 contract = "Anchor"
-address = "0x19b72e48a90975a5B9F88C5ae907607A13bf827A"
-deployed-at = 5743380
-size = 0.0000000000001
+address = "0x025348e15e9d5529E5A4A55E8eA7eC923b7fB8b6"
+deployed-at = 5774480
+size = 0.01
 events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "rinkeby", address = "0x33EAD0AE289f172E00BDD2e5c39BDF5b18F9d63A" },
-  { chain = "ropsten", address = "0xB039952e6A46b890e2a44835d97dE253482b2Ca2" },
+  { chain = "rinkeby", address = "0x15A66977f0A9D21e09eB6C1B42b001aF992f0C8f" },
+  { chain = "ropsten", address = "0x0711Ea63FDEDD2c8a9d3C9340a5A8F6cd84b6A92" },
 ]
