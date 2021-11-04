@@ -517,13 +517,23 @@ fn handle_anchor_relay_tx<'a>(
         // ethers :: core :: types :: U256 } }
         let inputs = PublicInputs {
             roots: cmd.roots,
-            refresh_commitment: cmd.refresh_commitment.to_fixed_bytes(),
             nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
+            refresh_commitment: cmd.refresh_commitment.to_fixed_bytes(),
             recipient: cmd.recipient,
             relayer: cmd.relayer,
             fee: cmd.fee,
             refund: cmd.refund,
         };
+
+        tracing::debug!(
+            "Encoded proof passed to withdraw {:?}",
+            cmd.proof.to_vec(),
+        );
+
+        tracing::debug!(
+            "Inputs passed to webb-rs withdraw {:?}",
+            inputs
+        );
 
         let call = contract.withdraw(
             cmd.proof.to_vec(),

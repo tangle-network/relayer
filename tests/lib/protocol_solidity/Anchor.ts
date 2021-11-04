@@ -72,8 +72,8 @@ class Anchor {
     this.tree = new MerkleTree('', treeHeight);
     this.latestSyncedBlock = 0;
     this.depositHistory = {};
-    this.circuitWASMPath = 'fixtures/2/poseidon_bridge_2.wasm';
-    this.circuitZkeyPath = 'fixtures/2/circuit_final.zkey';
+    this.circuitWASMPath = './fixtures/2/poseidon_bridge_2.wasm';
+    this.circuitZkeyPath = './fixtures/2/circuit_final.zkey';
     this.witnessCalculator = require("../../fixtures/2/witness_calculator");
   }
 
@@ -373,8 +373,6 @@ class Anchor {
 
     const { pathElements, pathIndices } = await this.tree.path(index);
 
-    console.log('pathElements: ', pathElements);
-
     const chainId = await this.signer.getChainId();
 
     const roots = await this.populateRootsForProof();
@@ -391,6 +389,8 @@ class Anchor {
       pathElements,
       pathIndices,
     );
+
+    console.log('input', input);
 
     const wtns = await this.createWitness(input);
     let proofEncoded = await this.proveAndVerify(wtns);
@@ -430,6 +430,9 @@ class Anchor {
       fee,
       refreshCommitment,
     );
+
+    console.log('proofEncoded after setupWithdraw: ', proofEncoded);
+
     //@ts-ignore
     let tx = await this.contract.withdraw(
       `0x${proofEncoded}`,

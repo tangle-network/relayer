@@ -58,6 +58,6 @@ contract = "Tornado"
 address = "0x7cd1F52e5EEdf753e99D945276a725CE533AaD1a"
 deployed-at = 12040000
 size = 100
-events-watcher = { enabled = false, polling-interval = 3000 }
+events-watcher = { enabled = true, polling-interval = 3000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
