@@ -10,43 +10,31 @@ contract = "Tornado"
 address = "0x626FEc5Ffa7Bf1EE8CEd7daBdE545630473E3ABb"
 deployed-at = 8896800
 size = 0.1
-events-watcher = { enabled = false, polling-interval = 15000 }
+events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0.05
 withdraw-gaslimit = "0x350000"
 
 [[evm.rinkeby.contracts]]
 contract = "Anchor"
-address = "0x15A66977f0A9D21e09eB6C1B42b001aF992f0C8f"
-deployed-at = 9568750
+address = "0x0ab17504465cB1b5235c6b4020A65faf070D5cDA"
+deployed-at = 9618040
 size = 0.01
 events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "ropsten", address = "0x0711Ea63FDEDD2c8a9d3C9340a5A8F6cd84b6A92" },
-  { chain = "goerli", address = "0x025348e15e9d5529E5A4A55E8eA7eC923b7fB8b6" },
+  { chain = "ropsten", address = "0x03812879Bc2Cc702956671036463E6873f631786" },
+  { chain = "goerli", address = "0x0Aa49a86f526E44853A2704984d6A91C7289Fc93" },
 ]
 
 [[evm.rinkeby.contracts]]
-contract = "Bridge"
-address = "0xdC8Dd9275d900cBCBC7889C1c03Ec658FfE300d2"
-deployed-at = 9568750
-events-watcher = { enabled = true, polling-interval = 15000 }
-
-[[evm.rinkeby.contracts]]
 contract = "Anchor"
-address = "0x6244Cf3D15aE8D9F973f080Af561b99c501e5e9D"
-deployed-at = 9569465
+address = "0x8431fDec940555becED3f4C04374c1D60b4ac07e"
+deployed-at = 9618040
 size = 0.1
 events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "harmonytestnet0", address = "0x30a9E294b1Fc166194d2D1AF936CDdfF0e86A47B" },
+  { chain = "goerli", address = "0xD24Eea4f4e17f7a708b2b156D3B90C921659BE80" },
 ]
-
-[[evm.rinkeby.contracts]]
-contract = "Bridge"
-address = "0x4d59Fa909B897956a70eeB922b6c366b41733C13"
-deployed-at = 9569465
-events-watcher = { enabled = true, polling-interval = 15000 }
