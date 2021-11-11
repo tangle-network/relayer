@@ -6,20 +6,14 @@ chain-id = 3
 private-key = "$ROPSTEN_PRIVATE_KEY"
 
 [[evm.ropsten.contracts]]
-contract = "Bridge"
-address = "0x5D755FF247Ba6c588386b15fE29D04B1DcaC0124"
-deployed-at = 11342930
-events-watcher = { enabled = true, polling-interval = 15000 }
-
-[[evm.ropsten.contracts]]
 contract = "Anchor"
-address = "0x0711Ea63FDEDD2c8a9d3C9340a5A8F6cd84b6A92"
-deployed-at = 11342930
+address = "0x03812879Bc2Cc702956671036463E6873f631786"
+deployed-at = 11400390
 size = 0.01
 events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "rinkeby", address = "0x15A66977f0A9D21e09eB6C1B42b001aF992f0C8f" },
-  { chain = "goerli", address = "0x025348e15e9d5529E5A4A55E8eA7eC923b7fB8b6" },
+  { chain = "rinkeby", address = "0x0ab17504465cB1b5235c6b4020A65faf070D5cDA" },
+  { chain = "goerli", address = "0x0Aa49a86f526E44853A2704984d6A91C7289Fc93" },
 ]
