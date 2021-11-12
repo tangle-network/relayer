@@ -579,19 +579,19 @@ fn handle_anchor_relay_tx<'a>(
     };
     s.boxed()
 }
+
 fn into_withdraw_error<M: Middleware>(e: ContractError<M>) -> WithdrawStatus {
     // a poor man error parser
     // WARNING: **don't try this at home**.
-
     let msg = format!("{}", e);
     // split the error into words, lazily.
     let mut words = msg.split_whitespace();
-    // skip until we find the "(code:" span
-    let code = loop {
-        if words.next() == Some("(code:") {
-            // the next is the code.
-            // example: "-32000,"
-            let code: i32 = match words.next() {
+    let mut reason = "unknown".to_string();
+    let mut code = -1;
+
+    while let Some(current_word) = words.next() {
+        if current_word == "(code:" {
+            code = match words.next() {
                 Some(val) => {
                     let mut v = val.to_string();
                     v.pop(); // remove ","
@@ -599,24 +599,16 @@ fn into_withdraw_error<M: Middleware>(e: ContractError<M>) -> WithdrawStatus {
                 }
                 _ => -1, // unknown code
             };
-            break code;
-        }
-    };
-
-    let reason = loop {
-        // skip until we find this
-        if words.next() == Some("transaction:") {
-            // next we need to collect all words in between "transaction:"
+        } else if current_word == "message:" {
+            // next we need to collect all words in between "message:"
             // and "data:", that would be the error message.
-            let msg: Vec<_> = words
-                .skip(1) // word "revert"
-                .take_while(|v| *v != "data:")
-                .collect();
-            let mut reason = msg.join(" ");
+            let msg: Vec<_> =
+                words.clone().take_while(|v| *v != "data:").collect();
+            reason = msg.join(" ");
             reason.pop(); // remove the "," at the end.
-            break reason;
         }
-    };
+    }
+
     WithdrawStatus::Errored { reason, code }
 }
 

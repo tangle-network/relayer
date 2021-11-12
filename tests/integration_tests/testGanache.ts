@@ -11,6 +11,7 @@ import {
   generateSnarkProof,
   getDepositLeavesFromChain,
   calculateFee,
+  withdraw,
 } from '../proofUtils';
 import {
   generateTornadoWithdrawRequest,
@@ -436,7 +437,97 @@ describe('Ganache Relayer Withdraw Tests', function () {
         if (result === Result.Errored) {
           expect(msg).to.deep.equal({
             withdraw: {
-              errored: { code: -32000, reason: 'Invalid withdraw proof' },
+              errored: { code: -32000, reason: 'VM Exception while processing transaction: revert Invalid withdraw proof' },
+            },
+          });
+          done();
+        } else if (result === Result.Continue) {
+          // all good.
+          return;
+        } else if (result === Result.CleanExit) {
+          console.log('Transaction Done and Relayed Successfully!!!');
+          expect(
+            false,
+            'Transaction was submitted and executed, which should not have happened!'
+          );
+          done();
+        }
+      });
+      client.on('error', (err) => {
+        console.log('[E]', err);
+        done('Client connection errored unexpectedly');
+      });
+
+      const req = generateTornadoWithdrawRequest(
+        'ganache',
+        contractAddress,
+        proof,
+        args
+      );
+      if (client.readyState === client.OPEN) {
+        const data = JSON.stringify(req);
+        console.log('Sending Proof to the Relayer ..');
+        console.log('=>', data);
+        client.send(data, (err) => {
+          console.log('Proof Sent!');
+          if (err !== undefined) {
+            console.log('!!Error!!', err);
+            done('Client error sending proof');
+          }
+        });
+      } else {
+        console.error('Relayer Connection closed!');
+        done('Client error, not OPEN');
+      }
+    });
+
+    after(function () {
+      client.terminate();
+    });
+  });
+
+  describe('Already spent note', function () {
+    before(async function () {
+      // make a deposit
+      const depositArgs = await deposit(contractAddress, wallet);
+
+      // get the leaves
+      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+
+      // generate the withdraw tx to send to relayer
+      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+        leaves,
+        depositArgs,
+        recipient,
+        relayerChainInfo.account, // relayer
+        calculatedFee
+      );
+
+      proof = zkProof;
+      args = zkArgs;
+      args[3] = relayerChainInfo.account;
+      console.log(args);
+
+      // withdraw the deposit
+      await withdraw(contractAddress, proof, args, wallet);
+
+      // setup relayer connections
+      client = new WebSocket('ws://localhost:9955/ws');
+      await new Promise((resolve) => client.on('open', resolve));
+      console.log('Connected to Relayer!');
+    });
+
+    it('should not relay a transaction from an already spent note', function (done) {
+      // Setup relayer interaction with logging
+      client.on('message', async (data) => {
+        console.log('Received data from the relayer');
+        console.log('<==', data);
+        const msg = JSON.parse(data as string);
+        const result = handleMessage(msg);
+        if (result === Result.Errored) {
+          expect(msg).to.deep.equal({
+            withdraw: {
+              errored: { code: -32000, reason: 'VM Exception while processing transaction: revert The note has been already spent' },
             },
           });
           done();
