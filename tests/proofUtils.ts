@@ -102,6 +102,24 @@ export async function deposit(contractAddress: string, wallet: ethers.Signer) {
   return deposit;
 }
 
+export async function withdraw(contractAddress: string, proof: any, args: any, wallet: ethers.Signer) {
+  const nativeAnchorInstance = new ethers.Contract(
+    contractAddress,
+    nativeAnchorContract.abi,
+    wallet
+  );
+
+  const withdrawTx = await nativeAnchorInstance.withdraw(
+    proof, 
+    ...args,
+    {
+      gasLimit: 6000000
+    }
+  );
+  const receipt = await withdrawTx.wait();
+  return receipt;
+}
+
 export async function getDepositLeavesFromChain(
   contractAddress: string,
   provider: ethers.providers.Provider
