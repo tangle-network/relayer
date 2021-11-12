@@ -599,14 +599,11 @@ fn into_withdraw_error<M: Middleware>(e: ContractError<M>) -> WithdrawStatus {
                 }
                 _ => -1, // unknown code
             };
-        }
-        else if current_word == "message:" {
+        } else if current_word == "message:" {
             // next we need to collect all words in between "message:"
             // and "data:", that would be the error message.
-            let msg: Vec<_> = words
-                .clone()
-                .take_while(|v| *v != "data:")
-                .collect();
+            let msg: Vec<_> =
+                words.clone().take_while(|v| *v != "data:").collect();
             reason = msg.join(" ");
             reason.pop(); // remove the "," at the end.
         }
