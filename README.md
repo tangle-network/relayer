@@ -42,11 +42,11 @@ webb-relayer -vvv -c ./config
 
 ## Using Docker 🐳
 
-To Use Docker in and to run the relayer on any cloud provider, all you need is to create your configuration files
+To Use Docker in and to run the relayer on any cloud provider, all you need is to create your configuration and .env files
 as it is shown above, save it into a `config` directory then you run the following command:
 
 ```sh
-docker run --rm -v "./config:/config" -e WEBB_PORT=9955 -p 9955:9955 ghcr.io/webb-tools/relayer:edge
+docker run --rm -v "<ABSOLUTE_PATH_TO_CONFIGS_DIRECTORY>:/config" --env-file .env -p 9955:9955 ghcr.io/webb-tools/relayer:edge
 ```
 
 > Note: this uses the latest and pre-released version deployed from `main` branch, change `edge` to the latest stable release version.
