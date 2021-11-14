@@ -11,4 +11,4 @@ ADD build/webb-relayer webb-relayer
 
 EXPOSE ${WEBB_PORT}
 
-CMD ["./webb-relayer", "-vvv", "-c", "/config"]
+CMD ["./webb-relayer", "-vvvv", "-c", "/config"]
