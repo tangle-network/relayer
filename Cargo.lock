@@ -2699,6 +2699,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde_path_to_error"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0421d4f173fab82d72d6babf36d57fae38b994ca5c2d78e704260ba6d12118b"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "serde_urlencoded"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3692,6 +3701,7 @@ dependencies = [
  "rand 0.8.4",
  "serde",
  "serde_json",
+ "serde_path_to_error",
  "sled",
  "structopt",
  "tempfile",
