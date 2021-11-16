@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
 
+use config::FileFormat;
 use serde::{Deserialize, Serialize};
 use webb::evm::ethereum_types::{Address, Secret, U256};
 
@@ -211,20 +212,26 @@ impl<'de> Deserialize<'de> for PrivateKey {
             {
                 if value.starts_with("0x") {
                     // hex value
-                    Secret::from_str(value)
-                        .map_err(|e| serde::de::Error::custom(e.to_string()))
+                    let maybe_hex = Secret::from_str(value);
+                    match maybe_hex {
+                        Ok(val) => Ok(val),
+                        Err(e) => Err(serde::de::Error::custom(format!("{}\n got {} but expected a 66 string (including the 0x prefix)", e, value))),
+                    }
                 } else if value.starts_with('$') {
                     // env
                     let var = value.strip_prefix('$').unwrap_or(value);
+                    tracing::trace!("Reading {} from env", var);
                     let val = std::env::var(var).map_err(|e| {
                         serde::de::Error::custom(format!(
-                            "{}: {}",
-                            e.to_string(),
-                            var
+                            "error while loading this env {}: {}",
+                            var, e,
                         ))
                     })?;
-                    Secret::from_str(&val)
-                        .map_err(|e| serde::de::Error::custom(e.to_string()))
+                    let maybe_hex = Secret::from_str(&val);
+                    match maybe_hex {
+                        Ok(val) => Ok(val),
+                        Err(e) => Err(serde::de::Error::custom(format!("{}\n got {} but expected a 66 chars string (including the 0x prefix) but found {} char", e, val, val.len()))),
+                    }
                 } else if value.starts_with('>') {
                     todo!("Implement command execution to extract the private key")
                 } else {
@@ -246,12 +253,13 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let config_files = glob::glob(&pattern)?.flatten();
     for config_file in config_files {
         let base = config_file.display().to_string();
+        let file = config::File::from(config_file).format(FileFormat::Toml);
         let mut incremental_config = config::Config::new();
-        incremental_config.merge(config::File::with_name(&base))?;
+        incremental_config.merge(file.clone())?;
         match incremental_config.try_into::<WebbRelayerConfig>() {
             Ok(_) => {
                 // merge the file into the cfg
-                cfg.merge(config::File::with_name(&base))?
+                cfg.merge(file)?
             }
             Err(e) => {
                 // print the issue that occurred while deserializing, then skip that config
@@ -267,7 +275,14 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     // also merge in the environment (with a prefix of WEBB).
     cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
     // and finally deserialize the config and post-process it
-    postloading_process(cfg.try_into()?)
+    let config = serde_path_to_error::deserialize(cfg);
+    match config {
+        Ok(config) => postloading_process(config),
+        Err(e) => {
+            tracing::error!("{}", e);
+            anyhow::bail!("Error while loading config files")
+        }
+    }
 }
 
 fn postloading_process(
