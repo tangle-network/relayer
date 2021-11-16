@@ -256,10 +256,14 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
         let file = config::File::from(config_file).format(FileFormat::Toml);
         let mut incremental_config = config::Config::new();
         incremental_config.merge(file.clone())?;
-        match incremental_config.try_into::<WebbRelayerConfig>() {
+        let config: Result<
+            WebbRelayerConfig,
+            serde_path_to_error::Error<config::ConfigError>,
+        > = serde_path_to_error::deserialize(incremental_config);
+        match config {
             Ok(_) => {
                 // merge the file into the cfg
-                cfg.merge(file)?
+                cfg.merge(file)?;
             }
             Err(e) => {
                 // print the issue that occurred while deserializing, then skip that config
@@ -268,7 +272,6 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
                     e,
                     base
                 );
-                &cfg
             }
         };
     }
