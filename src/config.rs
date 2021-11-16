@@ -255,7 +255,11 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
             }
             Err(e) => {
                 // print the issue that occurred while deserializing, then skip that config
-                tracing::debug!("Error {} while attempting to deserialize {}", e, base);
+                tracing::debug!(
+                    "Error {} while attempting to deserialize {}",
+                    e,
+                    base
+                );
                 &cfg
             }
         };
