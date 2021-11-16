@@ -3690,6 +3690,7 @@ dependencies = [
  "parking_lot",
  "paw",
  "rand 0.8.4",
+ "regex",
  "serde",
  "serde_json",
  "sled",
