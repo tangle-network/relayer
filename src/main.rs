@@ -143,7 +143,7 @@ where
         return Err(anyhow::anyhow!("{} is not a directory", path.display()));
     }
     tracing::trace!("Loading Config from {} ..", path.display());
-    config::load(path).context("failed to load the config files")
+    config::load(path)
 }
 
 fn build_relayer(
