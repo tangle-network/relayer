@@ -4,4 +4,5 @@ ws-endpoint = "wss://ws.s0.b.hmny.io"
 explorer = "https://explorer.pops.one"
 chain-id = 1666700000
 private-key = "$HARMONYTESTNET0_PRIVATE_KEY"
+reward-address = "$HARMONYTESTNET0_REWARD_ADDRESS"
 contracts = []

@@ -4,6 +4,7 @@ ws-endpoint = "wss://ropsten.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
 explorer = "https://ropsten.etherscan.io"
 chain-id = 3
 private-key = "$ROPSTEN_PRIVATE_KEY"
+reward-address = "$ROPSTEN_REWARD_ADDRESS"
 
 [[evm.ropsten.contracts]]
 contract = "Anchor"
