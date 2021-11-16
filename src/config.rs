@@ -252,9 +252,28 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     // then get an iterator over all matching files
     let config_files = glob::glob(&pattern)?.flatten();
     for config_file in config_files {
+        let base = config_file.display().to_string();
         let file = config::File::from(config_file).format(FileFormat::Toml);
-        // merge the file into the config
-        cfg.merge(file)?;
+        let mut incremental_config = config::Config::new();
+        incremental_config.merge(file.clone())?;
+        let config: Result<
+            WebbRelayerConfig,
+            serde_path_to_error::Error<config::ConfigError>,
+        > = serde_path_to_error::deserialize(incremental_config);
+        match config {
+            Ok(_) => {
+                // merge the file into the cfg
+                cfg.merge(file)?;
+            }
+            Err(e) => {
+                // print the issue that occurred while deserializing, then skip that config
+                tracing::debug!(
+                    "Error {} while attempting to deserialize {}",
+                    e,
+                    base
+                );
+            }
+        };
     }
     // also merge in the environment (with a prefix of WEBB).
     cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
