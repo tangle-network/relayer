@@ -306,7 +306,10 @@ fn handle_tornado_relay_tx<'a>(
         };
         // validate the relayer address first before trying
         // send the transaction.
-        let relayer_address = wallet.address();
+        let relayer_address = match cmd.relayer.to_string().is_empty() {
+            true => wallet.address(),
+            false => cmd.relayer,
+        };
         if cmd.relayer != relayer_address {
             yield Network(NetworkStatus::InvalidRelayerAddress);
             return;
