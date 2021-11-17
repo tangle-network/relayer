@@ -75,9 +75,6 @@ pub struct ChainConfig {
     ///OPTIONAL: allows relayer to specify another address for rewards
     #[serde(skip_serializing)]
     pub reward_address: PrivateKey,
-
-    #[serde(skip_deserializing)]
-    pub reward_account: Option<Address>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

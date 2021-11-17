@@ -107,10 +107,15 @@ pub async fn handle_relayer_info(
         .try_for_each(|v| {
             let key = SecretKey::from_bytes(v.private_key.as_bytes())?;
             let wallet = LocalWallet::from(key);
-            v.account = Some(wallet.address());
-            let reward_key = SecretKey::from_bytes(v.reward_address.as_bytes())?;
+            let reward_key =
+                SecretKey::from_bytes(v.reward_address.as_bytes())?;
             let reward_wallet = LocalWallet::from(reward_key);
-            v.reward_account = Some(reward_wallet.address());
+
+            v.account = match v.reward_address.to_string().is_empty() {
+                true => Some(wallet.address()),
+                false => Some(reward_wallet.address()),
+            };
+
             Result::<_, anyhow::Error>::Ok(())
         });
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
