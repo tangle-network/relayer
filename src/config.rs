@@ -74,7 +74,7 @@ pub struct ChainConfig {
     pub contracts: Vec<Contract>,
     ///OPTIONAL: allows relayer to specify another address for rewards
     #[serde(skip_serializing)]
-    pub reward_address: PrivateKey,
+    pub reward_address: Option<Address>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
