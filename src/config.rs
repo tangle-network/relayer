@@ -282,7 +282,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     // and finally deserialize the config and post-process it
     let config = serde_path_to_error::deserialize(cfg);
     match config {
-        Ok(config) => dbg!(postloading_process(config)),
+        Ok(config) => postloading_process(config),
         Err(e) => {
             tracing::error!("{}", e);
             anyhow::bail!("Error while loading config files")
