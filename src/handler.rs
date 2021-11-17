@@ -103,19 +103,11 @@ pub async fn handle_relayer_info(
     let _ = config
         .evm
         .values_mut()
-        .filter(|v| v.account.is_none())
+        .filter(|v| v.beneficiary.is_none())
         .try_for_each(|v| {
             let key = SecretKey::from_bytes(v.private_key.as_bytes())?;
             let wallet = LocalWallet::from(key);
-            v.account = match v.reward_address {
-                // A reward address was specified
-                Some(address) => {
-                    Some(address)
-                }
-                None => {
-                    Some(wallet.address())
-                }
-            };
+            v.beneficiary = Some(wallet.address());
             Result::<_, anyhow::Error>::Ok(())
         });
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
@@ -306,20 +298,9 @@ fn handle_tornado_relay_tx<'a>(
         };
         // validate the relayer address first before trying
         // send the transaction.
-        // let relayer_address = match cmd.relayer.to_string().is_empty() {
-        //     true => wallet.address(),
-        //     false => cmd.relayer,
-        // };
-
-        let reward_address = match chain.account {
-            Some(account) => {
-                account
-            }
-            None => {
-                tracing::error!("Account is not set on the configuration: {}", cmd.chain);
-                yield Error(format!("Misconfigured Account: {:?}", cmd.chain));
-                return;
-            }
+        let reward_address = match chain.beneficiary {
+            Some(account) => account,
+            None => wallet.address()
         };
 
         if cmd.relayer != reward_address {

@@ -4,7 +4,6 @@ ws-endpoint = "wss://goerli.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
 explorer = "https://goerli.etherscan.io"
 chain-id = 5
 private-key = "$GOERLI_PRIVATE_KEY"
-reward-address = "$GOERLI_REWARD_ADDRESS"
 
 [[evm.goerli.contracts]]
 contract = "Anchor"

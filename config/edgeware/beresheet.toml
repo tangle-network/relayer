@@ -3,7 +3,6 @@ http-endpoint = "https://beresheet.edgewa.re/evm"
 ws-endpoint = "wss://beresheet.edgewa.re"
 chain-id = 2022
 private-key = "$BERESHEET_PRIVATE_KEY"
-reward-address = "$BERESHEET_REWARD_ADDRESS"
 
 [[evm.beresheet.contracts]]
 contract = "Tornado"

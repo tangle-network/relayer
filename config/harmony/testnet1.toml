@@ -28,7 +28,6 @@ chain-id = 1666700001
 #    then we should process it as a mnemonic string: 'word two three four ...'
 private-key = "$HARMONYTESTNET1_PRIVATE_KEY"
 #account address for fee rewards (other than the one which is submitting the transaction)
-reward-address = "$HARMONYTESTNET1_REWARD_ADDRESS"
 
 # chain contracts
 [[evm.harmonytestnet1.contracts]]

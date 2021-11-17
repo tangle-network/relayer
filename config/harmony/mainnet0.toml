@@ -4,7 +4,6 @@ ws-endpoint = "wss://api.harmony.one"
 explorer = "https://explorer.harmony.one"
 chain-id = 1666600000
 private-key = "$HARMONYMAINNET0_PRIVATE_KEY"
-reward-address = "$HARMONYMAINNET0_REWARD_ADDRESS"
 
 # chain contracts
 [[evm.harmonymainnet0.contracts]]

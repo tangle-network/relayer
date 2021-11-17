@@ -67,14 +67,10 @@ pub struct ChainConfig {
     ///   then we should process it as a mnemonic string: 'word two three four ...'
     #[serde(skip_serializing)]
     pub private_key: PrivateKey,
-    /// INTERNAL: got updated with the account address of the private key.
-    #[serde(skip_deserializing)]
-    pub account: Option<Address>,
+    /// Optionally, a user can specify an account to receive rewards for relaying
+    pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
     pub contracts: Vec<Contract>,
-    ///OPTIONAL: allows relayer to specify another address for rewards
-    #[serde(skip_serializing)]
-    pub reward_address: Option<Address>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -128,6 +124,9 @@ pub struct CommonContractConfig {
     #[serde(rename(serialize = "deployedAt"))]
     pub deployed_at: u64,
 }
+
+#[derive(Debug, Clone)]
+pub struct SerializeableAddress(Address);
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -283,7 +282,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     // and finally deserialize the config and post-process it
     let config = serde_path_to_error::deserialize(cfg);
     match config {
-        Ok(config) => postloading_process(config),
+        Ok(config) => dbg!(postloading_process(config)),
         Err(e) => {
             tracing::error!("{}", e);
             anyhow::bail!("Error while loading config files")
