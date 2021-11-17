@@ -2,7 +2,6 @@
 http-endpoint = "https://shiden.api.onfinality.io/public"
 ws-endpoint = "wss://shiden.api.onfinality.io/public"
 private-key = "$SHIDEN_PRIVATE_KEY"
-reward-address = "$SHIDEN_REWARD_ADDRESS"
 chain-id = 336
 
 [[evm.shiden.contracts]]
