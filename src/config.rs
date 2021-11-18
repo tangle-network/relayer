@@ -125,9 +125,6 @@ pub struct CommonContractConfig {
     pub deployed_at: u64,
 }
 
-#[derive(Debug, Clone)]
-pub struct SerializeableAddress(Address);
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct TornadoContractConfig {

@@ -28,6 +28,8 @@ Example:
 WEBB_EVM_<network>_ENABLED=true
 WEBB_EVM_<network>_PRIVATE_KEY=<0X_PREFIXED_PRIVATE_KEY>
 
+WEBB_EVM_<network>_BENEFICIARY=<0X_PREFIXED_ADDRESS>
+
 ```
 
 > Checkout [config](./config) for useful default configurations for many networks. These config files can be changed to your preferences, and are enabled with the .env configuration listed above.
