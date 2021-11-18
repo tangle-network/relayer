@@ -27,7 +27,6 @@ chain-id = 1666700001
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
 private-key = "$HARMONYTESTNET1_PRIVATE_KEY"
-#account address for fee rewards (other than the one which is submitting the transaction)
 
 # chain contracts
 [[evm.harmonytestnet1.contracts]]
