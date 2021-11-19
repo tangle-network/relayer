@@ -5,7 +5,7 @@ import WebSocket from 'ws';
 import {
   generateSnarkProof,
   getDepositLeavesFromRelayer,
-  getAnchorDenomination,
+  getTornadoDenomination,
   calculateFee,
   toHex,
   deposit,
@@ -113,12 +113,13 @@ async function run() {
         configuredChains[i]!.name,
         `${process.env.RELAYER_ENDPOINT_HTTP}`
       );
-      const contractDenomination = await getAnchorDenomination(
-        configuredChains[i]!.contractAddress,
+      const contractAddress = configuredChains[i]!.contractAddress;
+      const contractDenomination = await getTornadoDenomination(
+        contractAddress,
         configuredChains[i]!.wallet.provider!
       );
       const calculatedFee = calculateFee(
-        relayerInfo.withdrawFeePercentage,
+        relayerInfo.contracts[contractAddress].withdrawFeePercentage,
         contractDenomination
       );
 
@@ -161,7 +162,7 @@ async function run() {
         leaves,
         res,
         await configuredChains[i]!.wallet.getAddress(),
-        relayerInfo.account,
+        relayerInfo.beneficiary,
         calculatedFee
       );
       console.log('Proof Generated!');

@@ -169,7 +169,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         leaves,
         depositArgs,
         recipient,
-        relayerChainInfo.account,
+        relayerChainInfo.beneficiary,
         calculatedFee
       );
 
@@ -332,7 +332,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
         leaves,
         depositArgs,
         recipient,
-        relayerChainInfo.account,
+        relayerChainInfo.beneficiary,
         '0'
       );
 
@@ -418,7 +418,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       proof = zkProof;
       args = zkArgs;
-      args[3] = relayerChainInfo.account;
+      args[3] = relayerChainInfo.beneficiary;
       console.log(args);
 
       // setup relayer connections
@@ -499,13 +499,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
         leaves,
         depositArgs,
         recipient,
-        relayerChainInfo.account, // relayer
+        relayerChainInfo.beneficiary, // relayer
         calculatedFee
       );
 
       proof = zkProof;
       args = zkArgs;
-      args[3] = relayerChainInfo.account;
+      args[3] = relayerChainInfo.beneficiary;
       console.log(args);
 
       // withdraw the deposit

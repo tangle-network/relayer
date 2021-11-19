@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import WebSocket from 'ws';
 import {
   generateSnarkProof,
-  getAnchorDenomination,
+  getTornadoDenomination,
   getDepositLeavesFromRelayer,
   calculateFee,
   deposit,
@@ -77,12 +77,13 @@ async function main() {
       'beresheet',
       'http://localhost:9955'
     );
-    const contractDenomination = await getAnchorDenomination(
-      chains[i]!.contractAddress,
+    const contractAddress = chains[i]!.contractAddress;
+    const contractDenomination = await getTornadoDenomination(
+      contractAddress,
       provider
     );
     const calculatedFee = calculateFee(
-      relayerInfo.withdrawFeePercentage,
+      relayerInfo.contracts[contractAddress].withdrawFeePercentage,
       contractDenomination
     );
 
@@ -131,7 +132,7 @@ async function main() {
       leaves,
       depositArgs,
       recipient,
-      relayerInfo.account,
+      relayerInfo.beneficiary,
       calculatedFee
     );
     console.log('Proof Generated!');

@@ -6,7 +6,7 @@ import WebSocket from 'ws';
 import {
   generateSnarkProof,
   getDepositLeavesFromRelayer,
-  getAnchorDenomination,
+  getTornadoDenomination,
   calculateFee,
   toHex,
   deposit,
@@ -115,17 +115,18 @@ async function setupCronJobs() {
 
       // allow time for relayer polling to see deposit
       await sleep(30000);
-
+      const networkName = configuredChains[i]!.name;
       const relayerInfo = await getRelayerConfig(
-        configuredChains[i]!.name,
+        networkName,
         `${process.env.RELAYER_ENDPOINT_HTTP}`
       );
-      const contractDenomination = await getAnchorDenomination(
-        configuredChains[i]!.contractAddress,
+      const contractAddress = configuredChains[i]!.contractAddress;
+      const contractDenomination = await getTornadoDenomination(
+        contractAddress,
         configuredChains[i]!.wallet.provider!
       );
       const calculatedFee = calculateFee(
-        relayerInfo.withdrawFeePercentage,
+        relayerInfo.contracts[contractAddress].withdrawFeePercentage,
         contractDenomination
       );
 
@@ -168,7 +169,7 @@ async function setupCronJobs() {
         leaves,
         res,
         await configuredChains[i]!.wallet.getAddress(),
-        relayerInfo.account,
+        relayerInfo.beneficiary,
         calculatedFee
       );
       console.log('Proof Generated!');
