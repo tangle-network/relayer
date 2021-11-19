@@ -5,7 +5,7 @@ require('dotenv').config({ path: '.env' });
 export type RelayerChainConfig = {
   chainName: string;
   contracts: [{ address: string; withdrawFeePercentage: number }];
-  account: string;
+  beneficiary: string;
 };
 
 export const generateTornadoWithdrawRequest = (
@@ -59,7 +59,7 @@ export const getRelayerConfig = async (
 
   return {
     chainName: chainName,
-    account: relayerInfo.evm[chainName].account,
+    beneficiary: relayerInfo.evm[chainName].beneficiary,
     contracts: relayerInfo.evm[chainName].contracts,
   };
 };

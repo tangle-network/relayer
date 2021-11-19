@@ -67,9 +67,8 @@ pub struct ChainConfig {
     ///   then we should process it as a mnemonic string: 'word two three four ...'
     #[serde(skip_serializing)]
     pub private_key: PrivateKey,
-    /// INTERNAL: got updated with the account address of the private key.
-    #[serde(skip_deserializing)]
-    pub account: Option<Address>,
+    /// Optionally, a user can specify an account to receive rewards for relaying
+    pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
     pub contracts: Vec<Contract>,
 }
