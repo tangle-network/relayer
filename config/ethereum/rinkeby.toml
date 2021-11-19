@@ -4,7 +4,6 @@ ws-endpoint = "wss://rinkeby.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161"
 explorer = "https://rinkeby.etherscan.io"
 chain-id = 4
 private-key = "$RINKEBY_PRIVATE_KEY"
-beneficiary = "0x2222222222222222222222222222222222222222"
 
 [[evm.rinkeby.contracts]]
 contract = "Tornado"
