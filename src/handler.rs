@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_stream::stream;
+use ethereum_types::{Address, H256, U256, U64};
 use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
@@ -15,9 +16,12 @@ use warp::ws::Message;
 use webb::evm::contract::darkwebb::anchor::PublicInputs;
 use webb::evm::contract::darkwebb::AnchorContract;
 use webb::evm::contract::tornado::TornadoContract;
-use webb::evm::ethereum_types::{Address, H256, U256};
+use webb::evm::ethers::contract::ContractError;
 use webb::evm::ethers::core::k256::SecretKey;
-use webb::evm::ethers::prelude::*;
+use webb::evm::ethers::middleware::SignerMiddleware;
+use webb::evm::ethers::providers::Middleware;
+use webb::evm::ethers::signers::LocalWallet;
+use webb::evm::ethers::signers::Signer;
 use webb::evm::ethers::types::Bytes;
 
 use crate::context::RelayerContext;

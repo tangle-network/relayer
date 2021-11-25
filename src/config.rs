@@ -3,8 +3,8 @@ use std::path::Path;
 use std::str::FromStr;
 
 use config::FileFormat;
+use ethereum_types::{Address, Secret, U256};
 use serde::{Deserialize, Serialize};
-use webb::evm::ethereum_types::{Address, Secret, U256};
 
 const fn default_port() -> u16 {
     9955

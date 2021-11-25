@@ -2,9 +2,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Context;
+use ethereum_types::H256;
 use futures::TryFutureExt;
 use rand::Rng;
-use webb::evm::ethers::prelude::*;
+use webb::evm::ethers::middleware::SignerMiddleware;
+use webb::evm::ethers::providers::Middleware;
 
 use crate::context::RelayerContext;
 use crate::store::TxQueueStore;
