@@ -1,12 +1,14 @@
 import { ethers } from 'ethers';
-import { Anchor, Verifier } from 'test-webb-solidity/src/lib/fixed-bridge';
-import { GovernedTokenWrapper } from 'test-webb-solidity/src/lib/tokens';
-import { PoseidonT3__factory } from 'test-webb-solidity/src/typechain';
-import { getAnchorZkComponents } from '../proofUtils';
-const snarkjs = require('anchor-snarkjs');
+import { Verifier, Anchor } from '@nepoche/fixed-bridge';
+import { GovernedTokenWrapper } from '@nepoche/tokens';
+import { PoseidonT3__factory } from '@nepoche/contracts';
+import { fetchComponentsFromFilePaths } from '@nepoche/utils';
+// import { getAnchorZkComponents } from '../proofUtils';
+import path from 'path';
+// const snarkjs = require('anchor-snarkjs');
 const bigInt = require('big-integer');
-const F = require('circomlibjs').babyjub.F;
-const Scalar = require("ffjavascript").Scalar;
+// const F = require('circomlibjs').babyjub.F;
+// const Scalar = require("ffjavascript").Scalar;
 
 const PRIVATE_KEY =
   '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
@@ -26,7 +28,11 @@ async function run() {
   const verifier = await Verifier.createVerifier(wallet);
   let verifierInstance = verifier.contract;
 
-  const zkComponents = await getAnchorZkComponents(1);
+  const zkComponents = await fetchComponentsFromFilePaths(
+    path.resolve(__dirname, '../fixtures/2/poseidon_bridge_2.wasm'),
+    path.resolve(__dirname, '../fixtures/2/witness_calculator.js'),
+    path.resolve(__dirname, '../fixtures/2/circuit_final.zkey')
+  );
 
   const tokenWrapper = await GovernedTokenWrapper.createGovernedTokenWrapper(
     'testToken',
@@ -58,72 +64,16 @@ async function run() {
   // create a deposit
   const deposit = await anchor.deposit();
 
-  let createWitness = async (data: any) => {
-    const witnessCalculator = require("../fixtures/2/witness_calculator.js");
-    const fileBuf = require('fs').readFileSync('fixtures/2/poseidon_bridge_2.wasm');
-    const wtnsCalc = await witnessCalculator(fileBuf)
-    const wtns = await wtnsCalc.calculateWTNSBin(data,0);
-    return wtns;
-  }
+  const withdrawSetup = await anchor.setupWithdraw(deposit.deposit, deposit.index, recipient, relayer, BigInt(0), bigInt(0));
 
-  const { pathElements, pathIndices } = await anchor.tree.path(deposit.index);
-  const roots = await anchor.populateRootsForProof();
+  const proof = `0x${withdrawSetup.proofEncoded}`;
+  const args = withdrawSetup.args;
+  const publicInputs = Anchor.convertArgsArrayToStruct(args);
 
-  const input = {
-    // public
-    nullifierHash: deposit.deposit.nullifierHash,
-    refreshCommitment: 0,
-    recipient,
-    relayer,
-    fee: BigInt(0),
-    refund: BigInt(0),
-    chainID: deposit.deposit.chainID,
-    roots: roots,
-    // private
-    nullifier: deposit.deposit.nullifier,
-    secret: deposit.deposit.secret,
-    pathElements: pathElements,
-    pathIndices: pathIndices,
-    diffs: roots.map(r => {
-      return F.sub(
-        Scalar.fromString(`${r}`),
-        Scalar.fromString(`${roots[0]}`),
-      ).toString();
-    }),
-  };
-
-  console.log('input in native: ', input);
-
-  const wtns = await createWitness(input);
-
-  let res = await snarkjs.groth16.prove('./fixtures/2/circuit_final.zkey', wtns);
-  const proof = res.proof;
-  let publicSignals = res.publicSignals;
-  const vKey = await snarkjs.zKey.exportVerificationKey('./fixtures/2/circuit_final.zkey');
-  res = await snarkjs.groth16.verify(vKey, publicSignals, proof);
-  console.log(res);
-
-  const proofEncoded = await anchor.proveAndVerify(wtns);
-  console.log('proof encoded of native input: ', proofEncoded);
-
-  // // construct the withdraw on contract directly
-  // const args = [
-  //   Anchor.createRootsBytes(input.roots),
-  //   toFixedHex(input.nullifierHash),
-  //   toFixedHex(input.refreshCommitment, 32),
-  //   toFixedHex(input.recipient, 20),
-  //   toFixedHex(input.relayer, 20),
-  //   toFixedHex(input.fee),
-  //   toFixedHex(input.refund),
-  // ];
-  // const publicInputs = Anchor.convertArgsArrayToStruct(args);
-
-  // const withdrawTx = await anchor.contract.withdraw(`0x${proofEncoded}`, publicInputs, { gasLimit: '0x5B8D80' });
-  // await withdrawTx.wait();
+  const withdraw = await anchor.contract.withdraw(proof, publicInputs, { gasLimit: "0x5B8D80" });
 
   // withdraw the deposit
-  // @ts-ignore
-  const withdraw = await anchor.withdraw(deposit.deposit, deposit.index, recipient, relayer, BigInt(0), bigInt(0));
+  // const withdraw = await anchor.withdraw(deposit.deposit, deposit.index, recipient, relayer, BigInt(0), bigInt(0));
 
   console.log(withdraw);
 }

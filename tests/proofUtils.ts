@@ -5,12 +5,12 @@ import fs from 'fs';
 import snarkjs from 'snarkjs';
 import websnarkUtils from 'websnark/src/utils';
 import buildGroth16 from 'websnark/src/groth16';
-import anchorContract from './build/contracts/Anchor.json';
-import nativeAnchorContract from './build/contracts/NativeAnchor.json';
+import tornadoContract from './build/contracts/Anchor.json';
+import nativeTornadoContract from './build/contracts/NativeAnchor.json';
 import MerkleTree from './lib/MerkleTree';
 import fetch from 'node-fetch';
 
-import { ZkComponents } from 'test-webb-solidity/src/lib/fixed-bridge';
+import { ZkComponents } from '@nepoche/utils';
 
 // variable to hold groth16 and not reinitialize
 let groth16;
@@ -34,13 +34,13 @@ export async function getTornadoDenomination(
   contractAddress: string,
   provider: ethers.providers.Provider
 ): Promise<string> {
-  const nativeAnchorInstance = new ethers.Contract(
+  const nativeTornadoInstance = new ethers.Contract(
     contractAddress,
-    nativeAnchorContract.abi,
+    nativeTornadoContract.abi,
     provider
   );
 
-  const denomination = await nativeAnchorInstance.functions.denomination!();
+  const denomination = await nativeTornadoInstance.functions.denomination!();
   return denomination;
 }
 
@@ -77,9 +77,9 @@ function createTornadoDeposit() {
 export async function depositTornado(contractAddress: string, wallet: ethers.Signer) {
   const deposit = createTornadoDeposit();
   console.log('deposit created');
-  const nativeAnchorInstance = new ethers.Contract(
+  const nativeTornadoInstance = new ethers.Contract(
     contractAddress,
-    nativeAnchorContract.abi,
+    nativeTornadoContract.abi,
     wallet
   );
   const toFixedHex = (number: number | Buffer, length = 32) =>
@@ -89,11 +89,11 @@ export async function depositTornado(contractAddress: string, wallet: ethers.Sig
       : snarkjs.bigInt(number).toString(16)
     ).padStart(length * 2, '0');
 
-  const denomination = await nativeAnchorInstance.functions.denomination!();
+  const denomination = await nativeTornadoInstance.functions.denomination!();
 
   console.log(denomination.toString());
   // Gas limit values required for beresheet
-  const depositTx = await nativeAnchorInstance.deposit(
+  const depositTx = await nativeTornadoInstance.deposit(
     toFixedHex(deposit.commitment),
     {
       value: denomination.toString(),
@@ -105,13 +105,13 @@ export async function depositTornado(contractAddress: string, wallet: ethers.Sig
 }
 
 export async function withdrawTornado(contractAddress: string, proof: any, args: any, wallet: ethers.Signer) {
-  const nativeAnchorInstance = new ethers.Contract(
+  const nativeTornadoInstance = new ethers.Contract(
     contractAddress,
-    nativeAnchorContract.abi,
+    nativeTornadoContract.abi,
     wallet
   );
 
-  const withdrawTx = await nativeAnchorInstance.withdraw(
+  const withdrawTx = await nativeTornadoInstance.withdraw(
     proof, 
     ...args,
     {
@@ -127,13 +127,13 @@ export async function getDepositLeavesFromChain(
   provider: ethers.providers.Provider
 ) {
   // Query the blockchain for all deposits that have happened
-  const anchorInterface = new ethers.utils.Interface(anchorContract.abi);
-  const anchorInstance = new ethers.Contract(
+  const TornadoInterface = new ethers.utils.Interface(tornadoContract.abi);
+  const TornadoInstance = new ethers.Contract(
     contractAddress,
-    anchorContract.abi,
+    tornadoContract.abi,
     provider
   );
-  const depositFilterResult = anchorInstance.filters.Deposit!();
+  const depositFilterResult = TornadoInstance.filters.Deposit!();
   const currentBlock = await provider.getBlockNumber();
 
   const logs = await provider.getLogs({
@@ -146,7 +146,7 @@ export async function getDepositLeavesFromChain(
 
   // Decode the logs for deposit events
   const decodedEvents = logs.map((log) => {
-    return anchorInterface.parseLog(log);
+    return TornadoInterface.parseLog(log);
   });
 
   // format the decoded events into a sorted array of leaves.
@@ -309,7 +309,6 @@ const fetchKeyForEdges = async (maxEdges: number) => {
 
 // get the zero knowledge components
 export async function getAnchorZkComponents(maxEdges: number): Promise<ZkComponents> {
-
   const wasmArrayBuf = (await fetchWasmForEdges(maxEdges))!;
   const zkey = (await fetchKeyForEdges(maxEdges))!;
   const witnessCalculatorGenerator = require('./fixtures/witness_calculator');
@@ -321,5 +320,4 @@ export async function getAnchorZkComponents(maxEdges: number): Promise<ZkCompone
     zkey,
     witnessCalculator
   }
-
 }

@@ -2,17 +2,17 @@ import { assert, expect } from 'chai';
 import ganache from 'ganache-cli';
 import { ethers } from 'ethers';
 import WebSocket from 'ws';
-import nativeAnchorContract from '../build/contracts/NativeAnchor.json';
-import verifierContract from '../build/contracts/Verifier.json';
-import hasherContract from '../build/Hasher.json';
+import nativeTornadoContract from '../../build/contracts/NativeAnchor.json';
+import verifierContract from '../../build/contracts/Verifier.json';
+import hasherContract from '../../build/Hasher.json';
 import {
   getTornadoDenomination,
-  deposit,
-  generateSnarkProof,
+  depositTornado,
+  generateTornadoSnarkProof,
   getDepositLeavesFromChain,
   calculateFee,
-  withdraw,
-} from '../proofUtils';
+  withdrawTornado,
+} from '../../proofUtils';
 import {
   generateTornadoWithdrawRequest,
   RelayerChainConfig,
@@ -21,7 +21,7 @@ import {
   handleMessage,
   Result,
   startWebbRelayer,
-} from '../relayerUtils';
+} from '../../relayerUtils';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 
 function startGanacheServer() {
@@ -33,6 +33,7 @@ function startGanacheServer() {
       },
     ],
     port: PORT,
+    chainId: 1337,
     mnemonic:
       'congress island collect purity dentist team gas unlock nuclear pig combine sight',
   });
@@ -42,7 +43,7 @@ function startGanacheServer() {
   return ganacheServer;
 }
 
-async function deployNativeAnchor(wallet: ethers.Wallet) {
+async function deployNativeTornado(wallet: ethers.Wallet) {
   const hasherContractRaw = {
     contractName: 'Hasher',
     abi: hasherContract.abi,
@@ -55,10 +56,10 @@ async function deployNativeAnchor(wallet: ethers.Wallet) {
     bytecode: verifierContract.bytecode,
   };
 
-  const nativeAnchorContractRaw = {
-    contractName: 'NativeAnchor',
-    abi: nativeAnchorContract.abi,
-    bytecode: nativeAnchorContract.bytecode,
+  const nativeTornadoContractRaw = {
+    contractName: 'NativeTornado',
+    abi: nativeTornadoContract.abi,
+    bytecode: nativeTornadoContract.bytecode,
   };
 
   const hasherFactory = new ethers.ContractFactory(
@@ -79,21 +80,21 @@ async function deployNativeAnchor(wallet: ethers.Wallet) {
 
   const denomination = ethers.utils.parseEther('1');
   const merkleTreeHeight = 20;
-  const nativeAnchorFactory = new ethers.ContractFactory(
-    nativeAnchorContractRaw.abi,
-    nativeAnchorContractRaw.bytecode,
+  const nativeTornadoFactory = new ethers.ContractFactory(
+    nativeTornadoContractRaw.abi,
+    nativeTornadoContractRaw.bytecode,
     wallet
   );
-  let nativeAnchorInstance = await nativeAnchorFactory.deploy(
+  let nativeTornadoInstance = await nativeTornadoFactory.deploy(
     verifierInstance.address,
     hasherInstance.address,
     denomination,
     merkleTreeHeight,
     { gasLimit: '0x5B8D80' }
   );
-  const nativeAnchorAddress = await nativeAnchorInstance.deployed();
+  const nativeTornadoAddress = await nativeTornadoInstance.deployed();
 
-  return nativeAnchorAddress.address;
+  return nativeTornadoAddress.address;
 }
 
 const PRIVATE_KEY =
@@ -105,7 +106,7 @@ let relayer: ChildProcessWithoutNullStreams;
 let recipient: string;
 let wallet: ethers.Wallet;
 let provider: ethers.providers.Provider;
-let contractAddress: string;
+let tornadoContractAddress: string;
 let contractDenomination: string;
 let calculatedFee: string;
 let startingRecipientBalance: ethers.BigNumber;
@@ -114,7 +115,7 @@ let args: string[];
 let client: WebSocket;
 let relayerChainInfo: RelayerChainConfig;
 
-describe('Ganache Relayer Withdraw Tests', function () {
+describe('Ganache Tornado Relayer Withdraw Tests', function () {
   // increase the timeout for relayer tests
   this.timeout(30_000);
 
@@ -132,9 +133,9 @@ describe('Ganache Relayer Withdraw Tests', function () {
     );
     startingRecipientBalance = await provider.getBalance(recipient);
 
-    contractAddress = await deployNativeAnchor(wallet);
+    tornadoContractAddress = await deployNativeTornado(wallet);
     contractDenomination = await getTornadoDenomination(
-      contractAddress,
+      tornadoContractAddress,
       provider
     );
 
@@ -146,7 +147,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
     console.log(JSON.stringify(relayerChainInfo));
 
     const contractConfig = relayerChainInfo.contracts.find(
-      (e) => e.address.toLowerCase() === contractAddress.toLowerCase()
+      (e) => e.address.toLowerCase() === tornadoContractAddress.toLowerCase()
     );
 
     // save the relayer configured parameters
@@ -156,16 +157,16 @@ describe('Ganache Relayer Withdraw Tests', function () {
     );
   });
 
-  describe('Sunny day setup', function () {
+  describe('Sunny day Tornado Relayed transaction', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await deposit(contractAddress, wallet);
+      const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -216,7 +217,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       const req = generateTornadoWithdrawRequest(
         'ganache',
-        contractAddress,
+        tornadoContractAddress,
         proof,
         args
       );
@@ -245,13 +246,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
   describe('invalid relayer address setup', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await deposit(contractAddress, wallet);
+      const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -293,7 +294,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       const req = generateTornadoWithdrawRequest(
         'ganache',
-        contractAddress,
+        tornadoContractAddress,
         proof,
         args
       );
@@ -322,13 +323,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
   describe('invalid fee setup', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await deposit(contractAddress, wallet);
+      const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -373,7 +374,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       const req = generateTornadoWithdrawRequest(
         'ganache',
-        contractAddress,
+        tornadoContractAddress,
         proof,
         args
       );
@@ -402,13 +403,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
   describe('bad proof (missing correct relayer address)', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await deposit(contractAddress, wallet);
+      const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -460,7 +461,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       const req = generateTornadoWithdrawRequest(
         'ganache',
-        contractAddress,
+        tornadoContractAddress,
         proof,
         args
       );
@@ -489,13 +490,13 @@ describe('Ganache Relayer Withdraw Tests', function () {
   describe('Already spent note', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await deposit(contractAddress, wallet);
+      const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(contractAddress, provider);
-
+      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -509,7 +510,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
       console.log(args);
 
       // withdraw the deposit
-      await withdraw(contractAddress, proof, args, wallet);
+      await withdrawTornado(tornadoContractAddress, proof, args, wallet);
 
       // setup relayer connections
       client = new WebSocket('ws://localhost:9955/ws');
@@ -550,7 +551,7 @@ describe('Ganache Relayer Withdraw Tests', function () {
 
       const req = generateTornadoWithdrawRequest(
         'ganache',
-        contractAddress,
+        tornadoContractAddress,
         proof,
         args
       );
