@@ -262,11 +262,12 @@ describe.only('Ganache Anchor Tests', function () {
     });
 
     after(function () {
+      console.log('terminating websockets connection');
       client.terminate();
     });
   });
 
-  describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+  describe.skip('Sunny day Anchor withdraw relayed transaction across bridge', function () {
     before(async function () {
       this.timeout(60_000);
 
@@ -280,6 +281,8 @@ describe.only('Ganache Anchor Tests', function () {
       const webbToken1Address = await bridge.getWebbTokenAddress(chainId1)!;
       const webbToken1 = await MintableToken.tokenFromAddress(webbToken1Address, sourceWallet);
       await webbToken1.approveSpending(srcAnchor.contract.address);
+
+      console.log('token spending approved');
 
       const webbToken2Address = await bridge.getWebbTokenAddress(chainId2)!;
       const webbToken2 = await MintableToken.tokenFromAddress(webbToken2Address, sourceWallet);

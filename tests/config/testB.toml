@@ -10,7 +10,7 @@ contract = "Anchor"
 address = "0x4B2480c893480250Ad67b3005D234f044c5C67bA"
 deployed-at = 1
 size = 1
-events-watcher = { enabled = true, polling-interval = 1000 }
+events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
@@ -21,4 +21,4 @@ linked-anchors = [
 contract = "Bridge"
 address = "0xa44A763965228290100645C1b5893355398d937c"
 deployed-at = 1
-events-watcher = { enabled = true, polling-interval = 1000 }
+events-watcher = { enabled = true, polling-interval = 15000 }
