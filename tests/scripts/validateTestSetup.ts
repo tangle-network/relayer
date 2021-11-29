@@ -3,12 +3,8 @@ import { Verifier, Anchor } from '@nepoche/fixed-bridge';
 import { GovernedTokenWrapper } from '@nepoche/tokens';
 import { PoseidonT3__factory } from '@nepoche/contracts';
 import { fetchComponentsFromFilePaths } from '@nepoche/utils';
-// import { getAnchorZkComponents } from '../proofUtils';
 import path from 'path';
-// const snarkjs = require('anchor-snarkjs');
 const bigInt = require('big-integer');
-// const F = require('circomlibjs').babyjub.F;
-// const Scalar = require("ffjavascript").Scalar;
 
 const PRIVATE_KEY =
   '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';

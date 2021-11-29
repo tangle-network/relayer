@@ -17,7 +17,6 @@
     "@openzeppelin/contracts": "^4.2.0",
     "@truffle/hdwallet-provider": "^1.4.1",
     "@types/mocha": "^9.0.0",
-    "anchor-snarkjs": "git+https://github.com/iden3/snarkjs.git#3db91a10d4a26eccef5c83eb088a7cddd37c09d2",
     "circom": "^0.5.45",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
     "dotenv": "^10.0.0",
