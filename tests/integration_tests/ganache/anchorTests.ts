@@ -5,10 +5,7 @@ import WebSocket from 'ws';
 import { fixedBridge, tokens, utils } from 'test-webb-solidity';
 const { Bridge } = fixedBridge;
 const { MintableToken } = tokens;
-const { toFixedHex } = utils;
-import {
-  getAnchorZkComponents,
-} from '../../proofUtils';
+const { toFixedHex, fetchComponentsFromFilePaths } = utils;
 import {
   RelayerChainConfig,
   sleep,
@@ -19,6 +16,7 @@ import {
   getRelayerConfig,
 } from '../../relayerUtils';
 import { ChildProcessWithoutNullStreams } from 'child_process';
+import path from 'path';
 
 type GanacheAccounts = {
   balance: string,
@@ -131,7 +129,12 @@ describe.only('Ganache Anchor Tests', function () {
       [chainId1]: wallet1,
       [chainId2]: wallet2
     }
-    const zkComponents = await getAnchorZkComponents(1);
+    const zkComponents = await fetchComponentsFromFilePaths(
+      path.resolve(__dirname, '../../protocol-solidity-fixtures/fixtures/bridge/2/poseidon_bridge_2.wasm'),
+      path.resolve(__dirname, '../../protocol-solidity-fixtures/fixtures/bridge/2/witness_calculator.js'),
+      path.resolve(__dirname, '../../protocol-solidity-fixtures/fixtures/bridge/2/circuit_final.zkey')
+    );
+    
     bridge = await Bridge.deployBridge(bridgeInput, deployerConfig, zkComponents);
 
     console.log('finished bridge deployments');

@@ -29,7 +29,7 @@
     "node-fetch": "^2.6.1",
     "opsgenie-sdk": "^0.5.0",
     "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#869181cfaf7526fe8972073d31655493a04326d5",
-    "test-webb-solidity": "1.2.0",
+    "test-webb-solidity": "1.2.1",
     "websnark": "git+https://github.com/tornadocash/websnark.git#4c0af6a8b65aabea3c09f377f63c44e7a58afa6d",
     "ws": "^7.5.1"
   },

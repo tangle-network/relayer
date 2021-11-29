@@ -709,34 +709,34 @@
     fastfile "0.0.19"
     ffjavascript "^0.2.30"
 
-"@nepoche/contracts@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@nepoche/contracts/-/contracts-1.2.0.tgz#d01ce6266d89fa56a145f6b586a8d1c12d521eb1"
-  integrity sha512-OmmGXAJrBQ4hUM4SJer5s91pATVHQQX29uw80RKoPxYED4NfwN0kHGFojv1eb8hKYrPE3rfZCTUhlZcowm6GHA==
+"@nepoche/contracts@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@nepoche/contracts/-/contracts-1.2.1.tgz#951ba4bbff43797de5c66f4fde5408fb0f0b3c09"
+  integrity sha512-Xez1DG/c/SxIVZkd83iJ1lyw729nPb2s2H6Qg1PZ2CmkuUAw8A2gJ6agVA2Wuf5psQg3teTnqWaby0nJD26x8A==
   dependencies:
     "@typechain/ethers-v5" "^7.0.1"
     "@typechain/hardhat" "^2.3.0"
     ethers "5.5.1"
 
-"@nepoche/fixed-bridge@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@nepoche/fixed-bridge/-/fixed-bridge-1.2.0.tgz#2b0f0f0f7dce15f747fe92f5e33e34a1c48673f1"
-  integrity sha512-GGTV1wJKstV5pewaf1CQFIE2t6U+c0mICmqIeUQH+gHiNl3bz3lU5Bo1Y5QSl16SxEgPD4zq0EIzzsKwPBPItw==
+"@nepoche/fixed-bridge@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@nepoche/fixed-bridge/-/fixed-bridge-1.2.1.tgz#ac9ee437228110d5d5b84857c661fd35cefcd554"
+  integrity sha512-Idt/S65ZRkMHNay2F2cAfCFUN5ErlMP72RYSBbJ6JaoWNnRcZE8Ciio9bZ0yAl/P7Bgb3WpKBoSIOHABkuhC3Q==
   dependencies:
-    "@nepoche/contracts" "^1.2.0"
-    "@nepoche/tokens" "^1.2.0"
+    "@nepoche/contracts" "^1.2.1"
+    "@nepoche/tokens" "^1.2.1"
     "@nepoche/utils" "^1.2.0"
     circomlibjs "^0.0.8"
     ethers "5.5.1"
     ffjavascript "^0.2.38"
     snarkjs "0.4.10"
 
-"@nepoche/tokens@^1.2.0":
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/@nepoche/tokens/-/tokens-1.2.0.tgz#e37c0a221922640a105803468d81c4f6c2ca0d07"
-  integrity sha512-em6vaO9kVojcVdt2LYPIGMjyXPfEh6Os9oz3vJJoSsHdLeROdzJ2L828xzEFq7DwPFUekyVSKuW23BuTyixJPw==
+"@nepoche/tokens@^1.2.1":
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/@nepoche/tokens/-/tokens-1.2.1.tgz#a95164087d86e20655efb8e0506a3275793a2fcd"
+  integrity sha512-zldwH39GQvHUEN2ejtRI1zj0fJXHbkE+AZLBYv72+rhFwalnQ2/BFpRqEuydEDmxcG+Fb6ngh29xZ3vWbw6zsg==
   dependencies:
-    "@nepoche/contracts" "^1.2.0"
+    "@nepoche/contracts" "^1.2.1"
     ethers "5.5.1"
 
 "@nepoche/utils@^1.2.0":
@@ -5612,14 +5612,14 @@ tar@^4.0.2:
     safe-buffer "^5.1.2"
     yallist "^3.0.3"
 
-test-webb-solidity@1.2.0:
-  version "1.2.0"
-  resolved "https://registry.yarnpkg.com/test-webb-solidity/-/test-webb-solidity-1.2.0.tgz#6b5bc8eb1cceb584d133966a0b8b8ea77bcd301c"
-  integrity sha512-+A1EuKR0e92OAqDS085X1jofIPRBkt1JIXubsuz3WKn1HvFA9u/sjpH1kTXN+Raj2+e1mM/Y1otPcpwmlUwA5g==
+test-webb-solidity@1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/test-webb-solidity/-/test-webb-solidity-1.2.1.tgz#03a1326b164d2303f9672fb7c2d489d121607d42"
+  integrity sha512-ERz8flQFFaAwUqD66Z/+sm3mVo4Q41iDtXbKHFGTD1b+gPS+cfOG7+ac9d78Tkfd5URIxxjIkE8/LWqLnh09ig==
   dependencies:
-    "@nepoche/contracts" "^1.2.0"
-    "@nepoche/fixed-bridge" "^1.2.0"
-    "@nepoche/tokens" "^1.2.0"
+    "@nepoche/contracts" "^1.2.1"
+    "@nepoche/fixed-bridge" "^1.2.1"
+    "@nepoche/tokens" "^1.2.1"
     "@nepoche/utils" "^1.2.0"
 
 text-table@^0.2.0:
