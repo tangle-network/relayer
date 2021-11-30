@@ -7,7 +7,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "test": "mocha --require ts-node/register 'integration_tests/**/*.ts' --exit",
+    "test": "rm -rf store && mocha --require ts-node/register 'integration_tests/**/*.ts' --exit",
+    "validateSetup": "ts-node scripts/validateTestSetup.ts",
     "sanity": "ts-node scripts/networkSanity.ts",
     "cron": "ts-node stability/cronTaskManager.ts",
     "interval": "ts-node scripts/intervalManager.ts"
@@ -16,10 +17,11 @@
     "@openzeppelin/contracts": "^4.2.0",
     "@truffle/hdwallet-provider": "^1.4.1",
     "@types/mocha": "^9.0.0",
+    "@webb-tools/protocol-solidity": "0.0.2",
     "circom": "^0.5.45",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
     "dotenv": "^10.0.0",
-    "ethers": "^5.4.0",
+    "ethers": "5.5.1",
     "ganache-cli": "^6.12.2",
     "keccak": "^3.0.1",
     "mocha": "^9.0.3",

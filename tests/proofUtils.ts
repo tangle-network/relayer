@@ -5,8 +5,8 @@ import fs from 'fs';
 import snarkjs from 'snarkjs';
 import websnarkUtils from 'websnark/src/utils';
 import buildGroth16 from 'websnark/src/groth16';
-import anchorContract from './build/contracts/Anchor.json';
-import nativeAnchorContract from './build/contracts/NativeAnchor.json';
+import tornadoContract from './build/contracts/Anchor.json';
+import nativeTornadoContract from './build/contracts/NativeAnchor.json';
 import MerkleTree from './lib/MerkleTree';
 import fetch from 'node-fetch';
 
@@ -32,13 +32,13 @@ export async function getTornadoDenomination(
   contractAddress: string,
   provider: ethers.providers.Provider
 ): Promise<string> {
-  const nativeAnchorInstance = new ethers.Contract(
+  const nativeTornadoInstance = new ethers.Contract(
     contractAddress,
-    nativeAnchorContract.abi,
+    nativeTornadoContract.abi,
     provider
   );
 
-  const denomination = await nativeAnchorInstance.functions.denomination!();
+  const denomination = await nativeTornadoInstance.functions.denomination!();
   return denomination;
 }
 
@@ -57,7 +57,7 @@ export const calculateFee = (
   return fee;
 };
 
-function createDeposit() {
+function createTornadoDeposit() {
   const rbigint = (nbytes: number) =>
     snarkjs.bigInt.leBuff2int(crypto.randomBytes(nbytes));
   const pedersenHash = (data: any) =>
@@ -72,12 +72,12 @@ function createDeposit() {
   return deposit;
 }
 
-export async function deposit(contractAddress: string, wallet: ethers.Signer) {
-  const deposit = createDeposit();
+export async function depositTornado(contractAddress: string, wallet: ethers.Signer) {
+  const deposit = createTornadoDeposit();
   console.log('deposit created');
-  const nativeAnchorInstance = new ethers.Contract(
+  const nativeTornadoInstance = new ethers.Contract(
     contractAddress,
-    nativeAnchorContract.abi,
+    nativeTornadoContract.abi,
     wallet
   );
   const toFixedHex = (number: number | Buffer, length = 32) =>
@@ -87,11 +87,11 @@ export async function deposit(contractAddress: string, wallet: ethers.Signer) {
       : snarkjs.bigInt(number).toString(16)
     ).padStart(length * 2, '0');
 
-  const denomination = await nativeAnchorInstance.functions.denomination!();
+  const denomination = await nativeTornadoInstance.functions.denomination!();
 
   console.log(denomination.toString());
   // Gas limit values required for beresheet
-  const depositTx = await nativeAnchorInstance.deposit(
+  const depositTx = await nativeTornadoInstance.deposit(
     toFixedHex(deposit.commitment),
     {
       value: denomination.toString(),
@@ -102,14 +102,14 @@ export async function deposit(contractAddress: string, wallet: ethers.Signer) {
   return deposit;
 }
 
-export async function withdraw(contractAddress: string, proof: any, args: any, wallet: ethers.Signer) {
-  const nativeAnchorInstance = new ethers.Contract(
+export async function withdrawTornado(contractAddress: string, proof: any, args: any, wallet: ethers.Signer) {
+  const nativeTornadoInstance = new ethers.Contract(
     contractAddress,
-    nativeAnchorContract.abi,
+    nativeTornadoContract.abi,
     wallet
   );
 
-  const withdrawTx = await nativeAnchorInstance.withdraw(
+  const withdrawTx = await nativeTornadoInstance.withdraw(
     proof, 
     ...args,
     {
@@ -125,13 +125,13 @@ export async function getDepositLeavesFromChain(
   provider: ethers.providers.Provider
 ) {
   // Query the blockchain for all deposits that have happened
-  const anchorInterface = new ethers.utils.Interface(anchorContract.abi);
-  const anchorInstance = new ethers.Contract(
+  const TornadoInterface = new ethers.utils.Interface(tornadoContract.abi);
+  const TornadoInstance = new ethers.Contract(
     contractAddress,
-    anchorContract.abi,
+    tornadoContract.abi,
     provider
   );
-  const depositFilterResult = anchorInstance.filters.Deposit!();
+  const depositFilterResult = TornadoInstance.filters.Deposit!();
   const currentBlock = await provider.getBlockNumber();
 
   const logs = await provider.getLogs({
@@ -144,7 +144,7 @@ export async function getDepositLeavesFromChain(
 
   // Decode the logs for deposit events
   const decodedEvents = logs.map((log) => {
-    return anchorInterface.parseLog(log);
+    return TornadoInterface.parseLog(log);
   });
 
   // format the decoded events into a sorted array of leaves.
@@ -167,7 +167,7 @@ export async function getDepositLeavesFromRelayer(
   return leaves;
 }
 
-export async function generateMerkleProof(leaves: any, deposit: any) {
+export async function generateTornadoMerkleProof(leaves: any, deposit: any) {
   const tree = new MerkleTree(20, leaves);
 
   let leafIndex = leaves.findIndex((e) => e === toHex(deposit.commitment));
@@ -177,7 +177,7 @@ export async function generateMerkleProof(leaves: any, deposit: any) {
   return retVals;
 }
 
-export async function generateSnarkProof(
+export async function generateTornadoSnarkProof(
   leaves: any,
   deposit: any,
   recipient: string,
@@ -185,7 +185,7 @@ export async function generateSnarkProof(
   fee: string
 ) {
   // find the inputs that correspond to the path for the deposit
-  const { root, path_elements, path_index } = await generateMerkleProof(
+  const { root, path_elements, path_index } = await generateTornadoMerkleProof(
     leaves,
     deposit
   );
