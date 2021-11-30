@@ -1,5 +1,4 @@
 import { assert, expect } from 'chai';
-import ganache from 'ganache-cli';
 import { ethers } from 'ethers';
 import WebSocket from 'ws';
 import nativeTornadoContract from '../../build/contracts/NativeAnchor.json';
@@ -22,26 +21,8 @@ import {
   Result,
   startWebbRelayer,
 } from '../../relayerUtils';
+import { startGanacheServer } from '../../startGanacheServer';
 import { ChildProcessWithoutNullStreams } from 'child_process';
-
-function startGanacheServer() {
-  const ganacheServer = ganache.server({
-    accounts: [
-      {
-        balance: ethers.utils.parseEther('1000').toHexString(),
-        secretKey: PRIVATE_KEY,
-      },
-    ],
-    port: PORT,
-    chainId: 1337,
-    mnemonic:
-      'congress island collect purity dentist team gas unlock nuclear pig combine sight',
-  });
-
-  ganacheServer.listen(PORT);
-  console.log(`Ganache Started on http://127.0.0.1:${PORT} ..`);
-  return ganacheServer;
-}
 
 async function deployNativeTornado(wallet: ethers.Wallet) {
   const hasherContractRaw = {
@@ -120,7 +101,13 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
   this.timeout(30_000);
 
   before(async function () {
-    ganacheServer = startGanacheServer();
+    const ganacheAccount = [
+      {
+        balance: ethers.utils.parseEther('1000').toHexString(),
+        secretKey: PRIVATE_KEY,
+      },
+    ];
+    ganacheServer = startGanacheServer(PORT, 1337, ganacheAccount);
     console.log('Starting the Relayer ..');
     relayer = await startWebbRelayer();
     await sleep(1500); // wait for the relayer start-up

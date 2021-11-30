@@ -1,8 +1,7 @@
 import { assert } from 'chai';
-import ganache from 'ganache-cli';
 import { ethers } from 'ethers';
 import WebSocket from 'ws';
-import { fixedBridge, tokens, utils } from 'test-webb-solidity';
+import { fixedBridge, tokens, utils } from '@webb-tools/protocol-solidity';
 const { Bridge } = fixedBridge;
 const { MintableToken } = tokens;
 const { toFixedHex, fetchComponentsFromFilePaths } = utils;
@@ -15,29 +14,9 @@ import {
   generateAnchorWithdrawRequest,
   getRelayerConfig,
 } from '../../relayerUtils';
+import { startGanacheServer } from '../../startGanacheServer';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import path from 'path';
-
-type GanacheAccounts = {
-  balance: string,
-  secretKey: string,
-};
-
-function startGanacheServer(port: number, networkId: number, populatedAccounts: GanacheAccounts[]) {
-  const ganacheServer = ganache.server({
-    accounts: populatedAccounts,
-    port: port,
-    network_id: networkId,
-    _chainId: networkId,
-    chainId: networkId,
-    _chainIdRpc: networkId,
-  });
-
-  ganacheServer.listen(port);
-  console.log(`Ganache Started on http://127.0.0.1:${port} ..`);
-
-  return ganacheServer;
-}
 
 // deployer and relayer same private key so proposals can be voted and executed
 let relayerPrivateKey = "0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e";
@@ -61,14 +40,15 @@ let relayerChain1Info: RelayerChainConfig;
 let relayerChain2Info: RelayerChainConfig;
 
 // Variables intended to change across each test
-let wallet: ethers.Wallet;
+let sourceWallet: ethers.Wallet;
+let destWallet: ethers.Wallet;
 let anchorContractAddress: string;
 let proof: string;
 let args: string[];
 let client: WebSocket;
 let startingRecipientBalance: ethers.BigNumber;
 
-describe.only('Ganache Anchor Tests', function () {
+describe('Ganache Anchor Tests', function () {
   // increase the timeout for relayer tests
   this.timeout(60_000);
 
@@ -167,7 +147,7 @@ describe.only('Ganache Anchor Tests', function () {
     before(async function () {
       this.timeout(60_000);
 
-      const sourceWallet = new ethers.Wallet(senderPrivateKey, provider1)
+      sourceWallet = new ethers.Wallet(senderPrivateKey, provider1)
       const srcAnchor = await bridge.getAnchor(chainId1, '1000000000000000000');
       await srcAnchor.setSigner(sourceWallet);
       anchorContractAddress = srcAnchor.contract.address;
@@ -204,8 +184,6 @@ describe.only('Ganache Anchor Tests', function () {
       client = new WebSocket('ws://localhost:9955/ws');
       await new Promise((resolve) => client.on('open', resolve));
       console.log('Connected to Relayer!');
-
-      wallet = sourceWallet;
     });
 
     it('should relay successfully', function (done) {
@@ -225,7 +203,7 @@ describe.only('Ganache Anchor Tests', function () {
           console.log('Transaction Done and Relayed Successfully!');
           // check the recipient balance
           const webbTokenAddress = await bridge.getWebbTokenAddress(chainId1)!;
-          const webbToken = await MintableToken.tokenFromAddress(webbTokenAddress, wallet);
+          const webbToken = await MintableToken.tokenFromAddress(webbTokenAddress, sourceWallet);
           const endingRecipientBalance = await webbToken.getBalance(recipient);
           const changeInBalance: ethers.BigNumberish = '1000000000000000000';
           assert(
@@ -264,31 +242,29 @@ describe.only('Ganache Anchor Tests', function () {
       }
     });
 
-    after(function () {
+    after(async function () {
       console.log('terminating websockets connection');
       client.terminate();
+      await sleep(2000);
     });
   });
 
-  describe.skip('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+  describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
     before(async function () {
-      this.timeout(60_000);
+      this.timeout(50_000);
 
-      const sourceWallet = new ethers.Wallet(senderPrivateKey, provider1)
+      sourceWallet = new ethers.Wallet(senderPrivateKey, provider1);
+      destWallet = new ethers.Wallet(senderPrivateKey, provider2);
       const srcAnchor = await bridge.getAnchor(chainId1, '1000000000000000000');
       await srcAnchor.setSigner(sourceWallet);
-      const destAnchor = await bridge.getAnchor(chainId2, '1000000000000000000');
-      anchorContractAddress = srcAnchor.contract.address;
 
       // approve token spending
       const webbToken1Address = await bridge.getWebbTokenAddress(chainId1)!;
       const webbToken1 = await MintableToken.tokenFromAddress(webbToken1Address, sourceWallet);
       await webbToken1.approveSpending(srcAnchor.contract.address);
 
-      console.log('token spending approved');
-
       const webbToken2Address = await bridge.getWebbTokenAddress(chainId2)!;
-      const webbToken2 = await MintableToken.tokenFromAddress(webbToken2Address, sourceWallet);
+      const webbToken2 = await MintableToken.tokenFromAddress(webbToken2Address, destWallet);
       startingRecipientBalance = await webbToken2.getBalance(recipient);
 
       // deposit
@@ -296,17 +272,22 @@ describe.only('Ganache Anchor Tests', function () {
 
       // allow time for the bridge proposal and execution
       console.log('waiting for bridge proposal and execution');
-      await sleep(15000);
+      await sleep(23000);
 
       // generate the merkle proof from the source anchor
       await srcAnchor.checkKnownRoot();
       const { pathElements, pathIndices } = srcAnchor.tree.path(deposit.index);
 
+      // update the destAnchor
+      const destAnchor = await bridge.getAnchor(chainId2, '1000000000000000000');
+      anchorContractAddress = destAnchor.contract.address;
+
       const destRoots = await destAnchor.populateRootsForProof();
+
       const input = await destAnchor.generateWitnessInput(
         deposit.deposit,
         deposit.originChainId,
-        0,
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
         BigInt(recipient),
         BigInt(relayerChain2Info.beneficiary),
         BigInt(0),
@@ -352,7 +333,7 @@ describe.only('Ganache Anchor Tests', function () {
           console.log('Transaction Done and Relayed Successfully!');
           // check the recipient balance
           const webbTokenAddress = await bridge.getWebbTokenAddress(chainId2)!;
-          const webbToken = await MintableToken.tokenFromAddress(webbTokenAddress, wallet);
+          const webbToken = await MintableToken.tokenFromAddress(webbTokenAddress, destWallet);
           const endingRecipientBalance = await webbToken.getBalance(recipient);
           const changeInBalance: ethers.BigNumberish = '1000000000000000000';
           assert(
@@ -369,8 +350,8 @@ describe.only('Ganache Anchor Tests', function () {
       });
 
       const req = generateAnchorWithdrawRequest(
-        'ganache',
-        anchorContractAddress,
+        'testb',
+        anchorContractAddress.toLowerCase(),
         proof,
         args
       );

@@ -72,6 +72,7 @@ jobs:
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-apple-darwin'
         run: cd tests && yarn
+        run: git submodule update --init --recursive
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-apple-darwin'
         run: cd tests && yarn test

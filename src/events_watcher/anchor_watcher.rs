@@ -107,6 +107,10 @@ impl super::EventWatcher for AnchorWatcher<ForLeaves> {
                     log.block_number,
                 )?;
                 tracing::debug!(
+                    "detected log.block_number: {}",
+                    log.block_number
+                );
+                tracing::debug!(
                     "Saved Deposit Event ({}, {})",
                     value.0,
                     value.1
