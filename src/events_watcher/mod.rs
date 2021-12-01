@@ -18,6 +18,9 @@ pub use anchor_watcher::*;
 mod bridge_watcher;
 pub use bridge_watcher::*;
 
+mod anchor_watcher_over_dkg;
+pub use anchor_watcher_over_dkg::*;
+
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
     /// The block number where this contract is deployed.
@@ -222,6 +225,8 @@ where
                     }
                 }
             }
+            // loop ended, unregister.
+            BridgeRegistry::unregister(my_key);
             // whenever this loop stops, we will restart the whole task again.
             // that way we never have to worry about closed channels.
             Err(backoff::Error::Transient(anyhow::anyhow!("Restarting")))

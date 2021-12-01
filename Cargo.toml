@@ -47,8 +47,9 @@ tempfile = "^3.2"
 [features]
 default = [
   "evm-runtime",
+  "substrate-runtime",
 ]
 evm-runtime = ["webb/evm-runtime"]
-# substrate-runtime = ["webb/substrate-runtime"]
+substrate-runtime = ["webb/substrate-runtime"]
 integration-tests = []
 

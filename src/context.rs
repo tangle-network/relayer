@@ -5,6 +5,8 @@ use anyhow::Context;
 use tokio::sync::broadcast;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
+use webb::substrate::subxt;
+use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 
 use crate::config;
 
@@ -66,6 +68,39 @@ impl RelayerContext {
         let chain_id = chain_config.chain_id;
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
+    }
+
+    pub async fn substrate_provider<C: subxt::Config>(
+        &self,
+        node_name: &str,
+    ) -> anyhow::Result<subxt::Client<C>> {
+        let node_config = self
+            .config
+            .substrate
+            .get(node_name)
+            .context("this node not configured")?;
+        let client = subxt::ClientBuilder::new()
+            .set_url(node_config.ws_endpoint.as_str())
+            .build()
+            .await
+            .context(format!(
+                "connecting to {} using {}",
+                node_name, node_config.ws_endpoint
+            ))?;
+        Ok(client)
+    }
+
+    pub async fn substrate_wallet(
+        &self,
+        node_name: &str,
+    ) -> anyhow::Result<Sr25519Pair> {
+        let node_config = self
+            .config
+            .substrate
+            .get(node_name)
+            .cloned()
+            .context("this node not configured")?;
+        Ok(node_config.suri.into())
     }
 }
 

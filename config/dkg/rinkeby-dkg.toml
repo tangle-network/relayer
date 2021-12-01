@@ -1,0 +1,19 @@
+[evm.rinkebydkg]
+http-endpoint = "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+ws-endpoint = "wss://rinkeby.infura.io/ws/v3/9aa3d95b3bc440fa88ea12eaa4456161"
+explorer = "https://rinkeby.etherscan.io"
+chain-id = 4
+private-key = "$RINKEBY_PRIVATE_KEY"
+
+[[evm.rinkebydkg.contracts]]
+contract = "AnchorOverDKG"
+dkg-node = "dkglocal"
+address = "0x0ab17504465cB1b5235c6b4020A65faf070D5cDA"
+deployed-at = 9618040
+size = 0.01
+events-watcher = { enabled = true, polling-interval = 15000 }
+withdraw-fee-percentage = 0
+withdraw-gaslimit = "0x350000"
+linked-anchors = [
+  { chain = "ropstendkg", address = "0x03812879Bc2Cc702956671036463E6873f631786" },
+]

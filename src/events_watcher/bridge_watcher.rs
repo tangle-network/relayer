@@ -1,3 +1,4 @@
+use core::fmt;
 use std::collections::HashMap;
 use std::fmt::LowerHex;
 use std::ops;
@@ -36,6 +37,12 @@ pub struct BridgeKey {
 impl BridgeKey {
     pub fn new(address: types::Address, chain_id: types::U256) -> Self {
         Self { address, chain_id }
+    }
+}
+
+impl fmt::Display for BridgeKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Bridge {:?} on chain {}", self.address, self.chain_id)
     }
 }
 
@@ -104,7 +111,6 @@ impl BridgeRegistry {
 
     /// Unregisters a Bridge from the registry.
     /// this will remove the bridge connection receiver from the registry and close any channels.
-    #[allow(dead_code)]
     pub fn unregister(key: BridgeKey) {
         let registry = BRIDGE_REGISTRY.get_or_init(Self::init_registry);
         registry.write().remove(&key);
@@ -381,7 +387,7 @@ where
     }
 }
 
-fn create_update_proposal_data(
+pub fn create_update_proposal_data(
     chain_id: types::U256,
     leaf_index: u32,
     merkle_root: [u8; 32],
@@ -392,7 +398,7 @@ fn create_update_proposal_data(
     format!("{}{}{}", chain_id_hex, leaf_index_hex, merkle_root_hex)
 }
 
-fn create_resource_id(
+pub fn create_resource_id(
     anchor_address: types::Address,
     chain_id: types::U256,
 ) -> anyhow::Result<[u8; 32]> {
