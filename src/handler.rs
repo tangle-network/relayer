@@ -461,8 +461,12 @@ fn handle_anchor_relay_tx<'a>(
         };
         // validate the relayer address first before trying
         // send the transaction.
-        let relayer_address = wallet.address();
-        if cmd.relayer != relayer_address {
+        let reward_address = match chain.beneficiary {
+            Some(account) => account,
+            None => wallet.address()
+        };
+
+        if cmd.relayer != reward_address {
             yield Network(NetworkStatus::InvalidRelayerAddress);
             return;
         }

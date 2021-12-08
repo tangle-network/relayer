@@ -1,0 +1,24 @@
+[evm.testa]
+enabled = true
+http-endpoint = "http://localhost:3333"
+ws-endpoint = "ws://localhost:3333"
+chain-id = 3333
+private-key = "0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e"
+
+[[evm.testa.contracts]]
+contract = "Anchor"
+address = "0x79Cf3cd11AAA862BfA104ED7034e7a69E20bDE88"
+deployed-at = 1
+size = 1
+events-watcher = { enabled = true, polling-interval = 1000 }
+withdraw-fee-percentage = 0
+withdraw-gaslimit = "0x350000"
+linked-anchors = [
+  { chain = "testb", address = "0x4B2480c893480250Ad67b3005D234f044c5C67bA" },
+]
+
+[[evm.testa.contracts]]
+contract = "Bridge"
+address = "0xFBD61C9961e0bf872B5Ec041b718C0B2a106Ce9D"
+deployed-at = 1
+events-watcher = { enabled = true, polling-interval = 1000 }

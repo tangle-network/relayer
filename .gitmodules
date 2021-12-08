@@ -1,0 +1,3 @@
+[submodule "tests/protocol-solidity-fixtures"]
+	path = tests/protocol-solidity-fixtures
+	url = git@github.com:webb-tools/protocol-solidity-fixtures.git

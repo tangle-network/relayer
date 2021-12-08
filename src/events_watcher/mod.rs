@@ -90,51 +90,55 @@ pub trait EventWatcher {
                 // check if we are now on the latest block.
                 let should_cooldown = dest_block == current_block_number;
                 tracing::trace!("Reading from #{} to #{}", block, dest_block);
-                let events_filter = contract
-                    .event_with_filter::<Self::Events>(Default::default())
-                    .from_block(block)
-                    .to_block(dest_block);
-                let found_events = events_filter
-                    .query_with_meta()
-                    .map_err(anyhow::Error::from)
-                    .await?;
+                // Only handle events from found blocks if they are new
+                if dest_block != block {
+                    let events_filter = contract
+                        .event_with_filter::<Self::Events>(Default::default())
+                        .from_block(block)
+                        .to_block(dest_block);
+                    let found_events = events_filter
+                        .query_with_meta()
+                        .map_err(anyhow::Error::from)
+                        .await?;
 
-                tracing::trace!("Found #{} events", found_events.len());
+                    tracing::trace!("Found #{} events", found_events.len());
 
-                for (event, log) in found_events {
-                    let result = self
-                        .handle_event(
-                            store.clone(),
-                            &contract,
-                            (event, log.clone()),
-                        )
-                        .await;
-                    match result {
-                        Ok(_) => {
-                            store.set_last_block_number(
-                                (chain_id, contract.address()),
-                                log.block_number,
-                            )?;
-                            tracing::trace!(
-                                "event handled successfully. at #{}",
-                                log.block_number
-                            );
-                        }
-                        Err(e) => {
-                            tracing::error!(
-                                "Error while handling event: {}",
-                                e
-                            );
-                            // this a transient error, so we will retry again.
-                            return Err(backoff::Error::Transient(e));
+                    for (event, log) in found_events {
+                        let result = self
+                            .handle_event(
+                                store.clone(),
+                                &contract,
+                                (event, log.clone()),
+                            )
+                            .await;
+                        match result {
+                            Ok(_) => {
+                                store.set_last_block_number(
+                                    (chain_id, contract.address()),
+                                    log.block_number,
+                                )?;
+                                tracing::trace!(
+                                    "event handled successfully. at #{}",
+                                    log.block_number
+                                );
+                            }
+                            Err(e) => {
+                                tracing::error!(
+                                    "Error while handling event: {}",
+                                    e
+                                );
+                                // this a transient error, so we will retry again.
+                                return Err(backoff::Error::Transient(e));
+                            }
                         }
                     }
+
+                    // move forward.
+                    store.set_last_block_number(
+                        (chain_id, contract.address()),
+                        dest_block,
+                    )?;
                 }
-                // move forward.
-                store.set_last_block_number(
-                    (chain_id, contract.address()),
-                    dest_block,
-                )?;
                 tracing::trace!("Polled from #{} to #{}", block, dest_block);
                 if should_cooldown {
                     let duration = contract.polling_interval();
