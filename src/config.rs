@@ -27,10 +27,12 @@ pub struct WebbRelayerConfig {
     /// EVM based networks and the configuration.
     ///
     /// a map between chain name and its configuration.
+    #[serde(default)]
     pub evm: HashMap<String, EvmChainConfig>,
     /// Substrate based networks and the configuration.
     ///
     /// a map between chain name and its configuration.
+    #[serde(default)]
     pub substrate: HashMap<String, SubstrateConfig>,
 }
 
