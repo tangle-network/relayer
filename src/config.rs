@@ -255,10 +255,11 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let mut contracts: HashMap<String, Vec<Contract>> = HashMap::new();
 
     // read through all config files for the first time
-    // build up a collection of [contracts] 
+    // build up a collection of [contracts]
     for config_file in config_files {
         let base = config_file.display().to_string();
-        let file = config::File::from(config_file.clone()).format(FileFormat::Toml);
+        let file =
+            config::File::from(config_file.clone()).format(FileFormat::Toml);
         let mut incremental_config = config::Config::new();
         incremental_config.merge(file.clone())?;
         let config: Result<
@@ -273,16 +274,13 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
                     match contracts.get(network_name) {
                         Some(ex) => {
                             new_contracts.append(&mut ex.clone());
-                        },
+                        }
                         None => {}
                     }
                     new_contracts.append(&mut network_chain.contracts.clone());
                     contracts.insert(network_name.to_string(), new_contracts);
                 }
-                tracing::trace!(
-                    "Merging the file {:?}",
-                    config_file
-                );
+                tracing::trace!("Merging the file {:?}", config_file);
                 cfg.merge(file)?;
             }
             Err(e) => {
@@ -311,13 +309,13 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
                 match contracts.get(network_name) {
                     Some(stored_contracts) => {
                         network_chain.contracts = stored_contracts.clone();
-                    },
+                    }
                     None => {}
                 }
             }
-            
+
             postloading_process(c)
-        },
+        }
         Err(e) => {
             tracing::error!("{}", e);
             anyhow::bail!("Error while loading config files")

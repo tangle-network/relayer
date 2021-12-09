@@ -15,10 +15,10 @@ use warp::ws::Message;
 use webb::evm::contract::darkwebb::anchor::PublicInputs;
 use webb::evm::contract::darkwebb::AnchorContract;
 use webb::evm::contract::tornado::TornadoContract;
-use webb::evm::ethers::types::{Address, H256, U256};
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::types::Bytes;
+use webb::evm::ethers::types::{Address, H256, U256};
 
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
