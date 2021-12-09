@@ -4,7 +4,8 @@ use std::str::FromStr;
 
 use config::FileFormat;
 use serde::{Deserialize, Serialize};
-use webb::evm::ethereum_types::{Address, Secret, U256};
+use webb::evm::ethers::types::{Address, H256, U256};
+type Secret = H256;
 
 const fn default_port() -> u16 {
     9955
@@ -250,9 +251,14 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let pattern = format!("{}/**/*.toml", path.as_ref().display());
     // then get an iterator over all matching files
     let config_files = glob::glob(&pattern)?.flatten();
+
+    let mut contracts: HashMap<String, Vec<Contract>> = HashMap::new();
+
+    // read through all config files for the first time
+    // build up a collection of [contracts] 
     for config_file in config_files {
         let base = config_file.display().to_string();
-        let file = config::File::from(config_file).format(FileFormat::Toml);
+        let file = config::File::from(config_file.clone()).format(FileFormat::Toml);
         let mut incremental_config = config::Config::new();
         incremental_config.merge(file.clone())?;
         let config: Result<
@@ -260,8 +266,23 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
             serde_path_to_error::Error<config::ConfigError>,
         > = serde_path_to_error::deserialize(incremental_config);
         match config {
-            Ok(_) => {
+            Ok(c) => {
                 // merge the file into the cfg
+                for (network_name, network_chain) in c.evm.iter() {
+                    let mut new_contracts: Vec<Contract> = Vec::new();
+                    match contracts.get(network_name) {
+                        Some(ex) => {
+                            new_contracts.append(&mut ex.clone());
+                        },
+                        None => {}
+                    }
+                    new_contracts.append(&mut network_chain.contracts.clone());
+                    contracts.insert(network_name.to_string(), new_contracts);
+                }
+                tracing::trace!(
+                    "Merging the file {:?}",
+                    config_file
+                );
                 cfg.merge(file)?;
             }
             Err(e) => {
@@ -274,12 +295,29 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
             }
         };
     }
+
     // also merge in the environment (with a prefix of WEBB).
     cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
+
     // and finally deserialize the config and post-process it
-    let config = serde_path_to_error::deserialize(cfg);
+    let config: Result<
+        WebbRelayerConfig,
+        serde_path_to_error::Error<config::ConfigError>,
+    > = serde_path_to_error::deserialize(cfg);
     match config {
-        Ok(config) => postloading_process(config),
+        Ok(mut c) => {
+            // merge in all of the contracts into the config
+            for (network_name, network_chain) in c.evm.iter_mut() {
+                match contracts.get(network_name) {
+                    Some(stored_contracts) => {
+                        network_chain.contracts = stored_contracts.clone();
+                    },
+                    None => {}
+                }
+            }
+            
+            postloading_process(c)
+        },
         Err(e) => {
             tracing::error!("{}", e);
             anyhow::bail!("Error while loading config files")
@@ -291,6 +329,7 @@ fn postloading_process(
     mut config: WebbRelayerConfig,
 ) -> anyhow::Result<WebbRelayerConfig> {
     tracing::trace!("Checking configration sanity ...");
+    tracing::trace!("postloaded config: {:?}", config);
     // make all chain names lower case
     // 1. drain everything, and take enabled chains.
     let old_evm = config
