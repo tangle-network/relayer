@@ -83,13 +83,13 @@ class LocalChain {
 async function main() {
   const relayerPrivateKey =
     '0x0000000000000000000000000000000000000000000000000000000000000001';
-  const chainA = new LocalChain('ChainA', 5001, [
+  const chainA = new LocalChain('Hermes', 5001, [
     {
       balance: ethers.utils.parseEther('1000').toHexString(),
       secretKey: relayerPrivateKey,
     },
   ]);
-  const chainB = new LocalChain('ChainB', 5002, [
+  const chainB = new LocalChain('Athena', 5002, [
     {
       balance: ethers.utils.parseEther('1000').toHexString(),
       secretKey: relayerPrivateKey,
@@ -131,12 +131,18 @@ async function main() {
     chainB.stop();
   });
 
-  console.log('Chain A:', chainA.endpoint);
-  console.log('Chain B:', chainB.endpoint);
+  console.log('Chain A (Hermes):', chainA.endpoint);
+  console.log('Chain B (Athena):', chainB.endpoint);
   console.log('ChainA token: ', chainAToken.contract.address);
   console.log('ChainB token: ', chainBToken.contract.address);
-  console.log('ChainA anchor: ', chainAAnchor.contract.address);
-  console.log('ChainB anchor: ', chainBAnchor.contract.address);
+  console.log('ChainA anchor (Hermes): ', chainAAnchor.contract.address);
+  console.log('ChainB anchor (Athena): ', chainBAnchor.contract.address);
+  // send evm_mine every second to the chain
+  // to make sure the chain is still running
+  setInterval(async () => {
+    await chainA.provider().send('evm_mine', []);
+    await chainB.provider().send('evm_mine', []);
+  }, 1000);
 }
 
 main().catch(console.error);

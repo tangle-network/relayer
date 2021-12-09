@@ -8,7 +8,8 @@ export type GanacheAccounts = {
 export function startGanacheServer(
   port: number,
   networkId: number,
-  populatedAccounts: GanacheAccounts[]
+  populatedAccounts: GanacheAccounts[],
+  options: any = {}
 ) {
   const ganacheServer = ganache.server({
     accounts: populatedAccounts,
@@ -17,6 +18,7 @@ export function startGanacheServer(
     _chainId: networkId,
     chainId: networkId,
     _chainIdRpc: networkId,
+    ...options,
   });
 
   ganacheServer.listen(port);

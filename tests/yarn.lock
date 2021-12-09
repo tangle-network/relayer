@@ -3259,6 +3259,11 @@ ganache-cli@^6.12.2:
     source-map-support "0.5.12"
     yargs "13.2.4"
 
+ganache@^6.4.5:
+  version "6.4.5"
+  resolved "https://registry.yarnpkg.com/ganache/-/ganache-6.4.5.tgz#583f8d3669fc81e65cdb9cd6be2c845a9d39ca26"
+  integrity sha512-RVN/wOh3nEO4cG3PFojU7RXZTS+fYEW/mgg2bMZ8EdOP02T/HsQnw2b+fF2jKpdQ8ILz5EJWlWcZOGbzx2inNQ==
+
 get-caller-file@^1.0.1:
   version "1.0.3"
   resolved "https://registry.yarnpkg.com/get-caller-file/-/get-caller-file-1.0.3.tgz#f978fa4c90d1dfe7ff2d6beda2a515e713bdcf4a"
