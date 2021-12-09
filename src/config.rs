@@ -271,13 +271,10 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
                 // merge the file into the cfg
                 for (network_name, network_chain) in c.evm.iter() {
                     let mut new_contracts: Vec<Contract> = Vec::new();
-                    match contracts.get(network_name) {
-                        Some(ex) => {
-                            new_contracts.append(&mut ex.clone());
-                        }
-                        None => {}
+                    if let Some(existing_contracts) = contracts.get(network_name) {
+                        new_contracts.extend(existing_contracts.clone());
                     }
-                    new_contracts.append(&mut network_chain.contracts.clone());
+                    new_contracts.extend(network_chain.contracts.clone());
                     contracts.insert(network_name.to_string(), new_contracts);
                 }
                 tracing::trace!("Merging the file {:?}", config_file);
@@ -306,11 +303,8 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
         Ok(mut c) => {
             // merge in all of the contracts into the config
             for (network_name, network_chain) in c.evm.iter_mut() {
-                match contracts.get(network_name) {
-                    Some(stored_contracts) => {
-                        network_chain.contracts = stored_contracts.clone();
-                    }
-                    None => {}
+                if let Some(stored_contracts) = contracts.get(network_name) {
+                    network_chain.contracts = stored_contracts.clone();
                 }
             }
 
