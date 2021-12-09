@@ -271,7 +271,9 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
                 // merge the file into the cfg
                 for (network_name, network_chain) in c.evm.iter() {
                     let mut new_contracts: Vec<Contract> = Vec::new();
-                    if let Some(existing_contracts) = contracts.get(network_name) {
+                    if let Some(existing_contracts) =
+                        contracts.get(network_name)
+                    {
                         new_contracts.extend(existing_contracts.clone());
                     }
                     new_contracts.extend(network_chain.contracts.clone());
