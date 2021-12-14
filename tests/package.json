@@ -24,7 +24,7 @@
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
     "dotenv": "^10.0.0",
     "ethers": "5.5.1",
-    "ganache": "^6.4.5",
+    "ganache-cli": "^6.12.2",
     "keccak": "^3.0.1",
     "mocha": "^9.0.3",
     "node-cron": "^3.0.0",
