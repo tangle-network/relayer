@@ -440,7 +440,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     // then get an iterator over all matching files
     let config_files = glob::glob(&pattern)?.flatten();
 
-    let mut contracts: HashMap<String, Vec<Contract>> = HashMap::new();
+    let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
 
     // read through all config files for the first time
     // build up a collection of [contracts]
