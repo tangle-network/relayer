@@ -7,6 +7,8 @@ use ethereum_types::{Address, Secret, U256};
 use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::subxt::sp_core::Pair;
+use webb::evm::ethers::types::{Address, H256, U256};
+type Secret = H256;
 
 const fn default_port() -> u16 {
     9955
@@ -439,16 +441,35 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let pattern = format!("{}/**/*.toml", path.as_ref().display());
     // then get an iterator over all matching files
     let config_files = glob::glob(&pattern)?.flatten();
+
+    let mut contracts: HashMap<String, Vec<Contract>> = HashMap::new();
+
+    // read through all config files for the first time
+    // build up a collection of [contracts]
     for config_file in config_files {
         let file = config::File::from(config_file).format(FileFormat::Toml);
         cfg.merge(file)?;
     }
+
     // also merge in the environment (with a prefix of WEBB).
     cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
+
     // and finally deserialize the config and post-process it
-    let config = serde_path_to_error::deserialize(cfg);
+    let config: Result<
+        WebbRelayerConfig,
+        serde_path_to_error::Error<config::ConfigError>,
+    > = serde_path_to_error::deserialize(cfg);
     match config {
-        Ok(config) => postloading_process(config),
+        Ok(mut c) => {
+            // merge in all of the contracts into the config
+            for (network_name, network_chain) in c.evm.iter_mut() {
+                if let Some(stored_contracts) = contracts.get(network_name) {
+                    network_chain.contracts = stored_contracts.clone();
+                }
+            }
+
+            postloading_process(c)
+        }
         Err(e) => {
             tracing::error!("{}", e);
             anyhow::bail!("Error while loading config files")
@@ -460,6 +481,7 @@ fn postloading_process(
     mut config: WebbRelayerConfig,
 ) -> anyhow::Result<WebbRelayerConfig> {
     tracing::trace!("Checking configration sanity ...");
+    tracing::trace!("postloaded config: {:?}", config);
     // make all chain names lower case
     // 1. drain everything, and take enabled chains.
     let old_evm = config
