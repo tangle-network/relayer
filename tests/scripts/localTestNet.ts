@@ -1,5 +1,6 @@
 // This a simple script to start two local testnet chains and deploy the contracts on both of them
 
+import readline from 'readline';
 import { ethers } from 'ethers';
 import { GanacheAccounts, startGanacheServer } from '../startGanacheServer';
 import { fixedBridge, tokens, utils } from '@webb-tools/protocol-solidity';
@@ -83,16 +84,27 @@ class LocalChain {
 async function main() {
   const relayerPrivateKey =
     '0x0000000000000000000000000000000000000000000000000000000000000001';
+  const senderPrivateKey =
+    '0x0000000000000000000000000000000000000000000000000000000000000002';
+
   const chainA = new LocalChain('Hermes', 5001, [
     {
       balance: ethers.utils.parseEther('1000').toHexString(),
       secretKey: relayerPrivateKey,
+    },
+    {
+      balance: ethers.utils.parseEther('1000').toHexString(),
+      secretKey: senderPrivateKey,
     },
   ]);
   const chainB = new LocalChain('Athena', 5002, [
     {
       balance: ethers.utils.parseEther('1000').toHexString(),
       secretKey: relayerPrivateKey,
+    },
+    {
+      balance: ethers.utils.parseEther('1000').toHexString(),
+      secretKey: senderPrivateKey,
     },
   ]);
   const chainAWallet = new ethers.Wallet(relayerPrivateKey, chainA.provider());
@@ -120,11 +132,28 @@ async function main() {
     chainA.chainId,
     ethers.utils.parseEther('1')
   );
+  await chainAAnchor.setSigner(chainAWallet);
   // get the anchor on chainB
   const chainBAnchor = bridge.getAnchor(
     chainB.chainId,
     ethers.utils.parseEther('1')
   );
+  await chainBAnchor.setSigner(chainBWallet);
+  // approve token spending
+  const webbATokenAddress = bridge.getWebbTokenAddress(chainA.chainId)!;
+  const webbAToken = await MintableToken.tokenFromAddress(
+    webbATokenAddress,
+    chainAWallet
+  );
+  await webbAToken.approveSpending(chainAAnchor.contract.address);
+
+  const webbBTokenAddress = bridge.getWebbTokenAddress(chainB.chainId)!;
+  const webbBToken = await MintableToken.tokenFromAddress(
+    webbBTokenAddress,
+    chainBWallet
+  );
+  await webbBToken.approveSpending(chainBAnchor.contract.address);
+
   // stop the server on Ctrl+C or SIGINT singal
   process.on('SIGINT', () => {
     chainA.stop();
@@ -137,12 +166,42 @@ async function main() {
   console.log('ChainB token: ', chainBToken.contract.address);
   console.log('ChainA anchor (Hermes): ', chainAAnchor.contract.address);
   console.log('ChainB anchor (Athena): ', chainBAnchor.contract.address);
-  // send evm_mine every second to the chain
-  // to make sure the chain is still running
-  setInterval(async () => {
-    await chainA.provider().send('evm_mine', []);
-    await chainB.provider().send('evm_mine', []);
-  }, 1000);
+
+  // setup readline
+  const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  rl.on('line', async (cmdRaw) => {
+    const cmd = cmdRaw.trim();
+    if (cmd === 'exit') {
+      // shutdown the servers
+      await chainA.stop();
+      await chainB.stop();
+      rl.close();
+      return;
+    }
+    // check if cmd is deposit chainA
+    if (cmd.startsWith('deposit on chain a')) {
+      console.log('Depositing Chain A, please wait...');
+      const deposit = await chainAAnchor.deposit(chainB.chainId);
+      console.log('Deposit on chain A: ', deposit.deposit);
+      return;
+    }
+    if (cmd.startsWith('deposit on chain b')) {
+      console.log('Depositing Chain B, please wait...');
+      const deposit = await chainBAnchor.deposit(chainA.chainId);
+      console.log('Deposit on chain B: ', deposit.deposit);
+      return;
+    }
+
+    console.log('Unknown command: ', cmd);
+    console.log('Available commands:');
+    console.log('  deposit on chain a');
+    console.log('  deposit on chain b');
+    console.log('  exit');
+  });
 }
 
 main().catch(console.error);

@@ -2,7 +2,7 @@
 http-endpoint = "http://localhost:9933/"
 ws-endpoint = "ws://localhost:9944/"
 runtime = "DKG"
-suri = "//Charlie"
+suri = "//Eve"
 
 [[substrate.dkglocal.pallets]]
 pallet = "DKGProposals"

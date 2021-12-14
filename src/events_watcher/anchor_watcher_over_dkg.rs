@@ -164,6 +164,7 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             ))?;
             let resource_id =
                 create_resource_id(data.anchor_address, dest_chain_id)?;
+            tracing::trace!("r_id: 0x{}", hex::encode(&resource_id));
             // first we need to do some checks before sending the proposal.
             // 1. check if the origin_chain_id is whitleisted.
             let storage_api = self.api.storage().dkg_proposals();
