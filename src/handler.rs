@@ -23,7 +23,6 @@ use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::signers::LocalWallet;
 use webb::evm::ethers::signers::Signer;
 use webb::evm::ethers::types::Bytes;
-use webb::evm::ethers::types::{Address, H256, U256};
 
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;

@@ -7,8 +7,6 @@ use ethereum_types::{Address, Secret, U256};
 use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::subxt::sp_core::Pair;
-use webb::evm::ethers::types::{Address, H256, U256};
-type Secret = H256;
 
 const fn default_port() -> u16 {
     9955

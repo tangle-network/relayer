@@ -156,8 +156,8 @@ async function main() {
     chainBWallet
   );
   await webbBToken.approveSpending(chainBAnchor.contract.address);
-  await webbAToken.mintTokens(
-    chainAWallet.address,
+  await webbBToken.mintTokens(
+    chainBWallet.address,
     ethers.utils.parseEther('1000')
   );
   // stop the server on Ctrl+C or SIGINT singal
@@ -191,17 +191,13 @@ async function main() {
     // check if cmd is deposit chainA
     if (cmd.startsWith('deposit on chain a')) {
       console.log('Depositing Chain A, please wait...');
-      const deposit = await chainAAnchor.deposit(
-        chainB.chainId
-      );
+      const deposit = await chainAAnchor.deposit(chainB.chainId);
       console.log('Deposit on chain A: ', deposit.deposit);
       return;
     }
     if (cmd.startsWith('deposit on chain b')) {
       console.log('Depositing Chain B, please wait...');
-      const deposit = await chainBAnchor.deposit(
-        chainA.chainId
-      );
+      const deposit = await chainBAnchor.deposit(chainA.chainId);
       console.log('Deposit on chain B: ', deposit.deposit);
       return;
     }
