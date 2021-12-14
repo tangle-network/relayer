@@ -35,7 +35,6 @@ class LocalChain {
     symbol: string,
     wallet: ethers.Signer
   ): Promise<tokens.MintableToken> {
-    wallet.connect(this.provider());
     return MintableToken.createToken(name, symbol, wallet);
   }
 
@@ -192,8 +191,7 @@ async function main() {
     // check if cmd is deposit chainA
     if (cmd.startsWith('deposit on chain a')) {
       console.log('Depositing Chain A, please wait...');
-      const deposit = await chainAAnchor.wrapAndDeposit(
-        webbATokenAddress,
+      const deposit = await chainAAnchor.deposit(
         chainB.chainId
       );
       console.log('Deposit on chain A: ', deposit.deposit);
@@ -201,8 +199,7 @@ async function main() {
     }
     if (cmd.startsWith('deposit on chain b')) {
       console.log('Depositing Chain B, please wait...');
-      const deposit = await chainBAnchor.wrapAndDeposit(
-        webbBTokenAddress,
+      const deposit = await chainBAnchor.deposit(
         chainA.chainId
       );
       console.log('Deposit on chain B: ', deposit.deposit);
