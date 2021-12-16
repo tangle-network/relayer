@@ -1,11 +1,10 @@
-[evm.athena]
+[evm.athenadkg]
 http-endpoint = "http://localhost:5002"
 ws-endpoint = "ws://localhost:5002"
-explorer = "https://ropsten.etherscan.io"
 chain-id = 5002
 private-key = "$ATHENA_PRIVATE_KEY"
 
-[[evm.athena.contracts]]
+[[evm.athenadkg.contracts]]
 contract = "AnchorOverDKG"
 dkg-node = "dkglocal"
 address = "0xe69a847CD5BC0C9480adA0b339d7F0a8caC2B667"
@@ -15,10 +14,10 @@ events-watcher = { enabled = true, polling-interval = 7000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "hermes", address = "0xD30C8839c1145609E564b986F667b273Ddcb8496" },
+  { chain = "hermesdkg", address = "0xD30C8839c1145609E564b986F667b273Ddcb8496" },
 ]
 
-[[evm.hermes.contracts]]
+[[evm.athenadkg.contracts]]
 contract = "Bridge"
 address = "0x2946259E0334f33A064106302415aD3391BeD384"
 deployed-at = 1

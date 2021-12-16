@@ -110,20 +110,20 @@ pub trait TxQueueStore {
     /// Saves the transactions into the queue.
     fn enqueue_tx_with_key(
         &self,
-        key: &[u8],
-        tx: transaction::eip2718::TypedTransaction,
         chain_id: types::U256,
+        tx: transaction::eip2718::TypedTransaction,
+        key: &[u8],
     ) -> anyhow::Result<()>;
     /// Saves the transactions into the queue.
     ///
     /// the chain id is used to create the transaction hash.
     fn enqueue_tx(
         &self,
-        tx: transaction::eip2718::TypedTransaction,
         chain_id: types::U256,
+        tx: transaction::eip2718::TypedTransaction,
     ) -> anyhow::Result<()> {
         let key = tx.sighash(chain_id.as_u64());
-        self.enqueue_tx_with_key(key.as_bytes(), tx, chain_id)
+        self.enqueue_tx_with_key(chain_id, tx, key.as_bytes())
     }
     /// Polls a transaction from the queue.
     fn dequeue_tx(
@@ -135,11 +135,14 @@ pub trait TxQueueStore {
         &self,
         chain_id: types::U256,
     ) -> anyhow::Result<Option<transaction::eip2718::TypedTransaction>>;
+    /// Returns true if the tx is already in the queue.
+    fn has_tx(&self, chain_id: types::U256, key: &[u8])
+        -> anyhow::Result<bool>;
     /// Lookup for the transaction in the queue by transaction hash and removes it.
     fn remove_tx(
         &self,
-        key: &[u8],
         chain_id: types::U256,
+        key: &[u8],
     ) -> anyhow::Result<()>;
 }
 

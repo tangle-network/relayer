@@ -13,7 +13,7 @@ async-stream = "^0.3"
 tracing = { version = "^0.1", features = ["log"] }
 tracing-futures = "^0.2"
 tracing-subscriber = { version = "0.3.1", features = ["parking_lot", "env-filter"] }
-tracing-test = "0.1"
+tracing-test = "0.2"
 url = { version = "^2.2", features = ["serde"] }
 sled = { version = "^0.34", features = ["compression"] }
 futures = { version = "^0.3", default-features = false }

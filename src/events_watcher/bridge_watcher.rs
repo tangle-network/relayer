@@ -161,7 +161,7 @@ impl<M: Middleware> super::WatchableContract for BridgeContractWrapper<M> {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct BridgeContractWatcher;
 
 #[async_trait::async_trait]
@@ -297,13 +297,26 @@ where
             entity.resource_id,
             entity.data_hash,
         );
+        // check if we already have a vote tx in the queue
+        // if we do, we should not create a new one
+        if store.has_tx(dest_chain_id, &make_vote_proposal_key(&data_hash))? {
+            tracing::debug!(
+                "Skipping this vote for proposal 0x{} ... already in queue",
+                hex::encode(&data_hash)
+            );
+            return Ok(());
+        }
         tracing::debug!(
             "Voting for Proposal 0x{} with resourceID 0x{}",
             hex::encode(&data_hash),
             hex::encode(&entity.resource_id),
         );
         // enqueue the transaction.
-        store.enqueue_tx_with_key(&data_hash, call.tx, dest_chain_id)?;
+        store.enqueue_tx_with_key(
+            dest_chain_id,
+            call.tx,
+            &make_vote_proposal_key(&data_hash),
+        )?;
         // save the proposal for later updates.
         store.insert_proposal(entity)?;
         Ok(())
@@ -320,8 +333,24 @@ where
         store.remove_proposal(data_hash)?;
         // it is okay, if the proposal tx is not stored in
         // the queue, so it is okay to ignore the error in this case.
-        let _ = store.remove_tx(data_hash, chain_id);
-        tracing::debug!("Removed proposal 0x{}", hex::encode(&data_hash));
+        if store
+            .remove_tx(chain_id, &make_vote_proposal_key(data_hash))
+            .is_ok()
+        {
+            tracing::debug!(
+                "Removed Vote for proposal 0x{}",
+                hex::encode(&data_hash)
+            );
+        }
+        if store
+            .remove_tx(chain_id, &make_execute_proposal_key(data_hash))
+            .is_ok()
+        {
+            tracing::debug!(
+                "Removed Execute proposal 0x{}",
+                hex::encode(&data_hash)
+            );
+        }
         Ok(())
     }
 
@@ -333,7 +362,8 @@ where
         data_hash: &[u8],
     ) -> anyhow::Result<()> {
         let chain_id = contract.client().get_chainid().await?;
-        let entity = match store.remove_proposal(data_hash)? {
+        let maybe_entity = store.remove_proposal(data_hash)?;
+        let entity = match maybe_entity {
             Some(v) => v,
             None => {
                 tracing::warn!(
@@ -376,13 +406,26 @@ where
             entity.data,
             entity.resource_id,
         );
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        if store.has_tx(chain_id, &make_execute_proposal_key(data_hash))? {
+            tracing::debug!(
+                "Skipping execution of proposal 0x{} since it is already in queue",
+                hex::encode(data_hash)
+            );
+            return Ok(());
+        }
         tracing::debug!(
             "Executing proposal 0x{} with resourceID 0x{}",
             hex::encode(data_hash),
             hex::encode(&entity.resource_id),
         );
         // enqueue the transaction.
-        store.enqueue_tx_with_key(data_hash, call.tx, chain_id)?;
+        store.enqueue_tx_with_key(
+            chain_id,
+            call.tx,
+            &make_execute_proposal_key(data_hash),
+        )?;
         Ok(())
     }
 }
@@ -423,6 +466,20 @@ fn to_hex(value: impl LowerHex, padding: usize) -> String {
         hexed = String::from("0") + &hexed;
     }
     hexed
+}
+
+fn make_vote_proposal_key(data_hash: &[u8]) -> [u8; 64] {
+    let mut result = [0u8; 64];
+    result[0..32].copy_from_slice(b"vote_for_proposal_tx_key_prefix_");
+    result[32..64].copy_from_slice(data_hash);
+    result
+}
+
+fn make_execute_proposal_key(data_hash: &[u8]) -> [u8; 64] {
+    let mut result = [0u8; 64];
+    result[0..32].copy_from_slice(b"execute_proposal_txx_key_prefix_");
+    result[32..64].copy_from_slice(data_hash);
+    result
 }
 
 fn to_event_type(event: &BridgeContractEvents) -> &str {

@@ -134,13 +134,16 @@ impl LeafCacheStore for SledStore {
 impl TxQueueStore for SledStore {
     #[tracing::instrument(
         skip_all,
-        fields(chain_id = %chain_id, tx_key = %hex::encode(key))
+        fields(
+            chain_id = %chain_id,
+            tx_key = %hex::encode(key)
+        )
     )]
     fn enqueue_tx_with_key(
         &self,
-        key: &[u8],
-        tx: transaction::eip2718::TypedTransaction,
         chain_id: types::U256,
+        tx: transaction::eip2718::TypedTransaction,
+        key: &[u8],
     ) -> anyhow::Result<()> {
         let tree = self.db.open_tree(format!("tx_queue_chain_{}", chain_id))?;
         let tx_bytes = serde_json::to_vec(&tx)?;
@@ -217,15 +220,26 @@ impl TxQueueStore for SledStore {
         let tx = serde_json::from_slice(&value)?;
         Ok(Some(tx))
     }
-
+    #[tracing::instrument(
+        skip_all,
+        fields(chain_id = %chain_id, tx_key = %hex::encode(key))
+    )]
+    fn has_tx(
+        &self,
+        chain_id: types::U256,
+        key: &[u8],
+    ) -> anyhow::Result<bool> {
+        let tree = self.db.open_tree(format!("tx_queue_chain_{}", chain_id))?;
+        tree.contains_key(key).map_err(Into::into)
+    }
     #[tracing::instrument(
         skip_all,
         fields(chain_id = %chain_id, tx_key = %hex::encode(key))
     )]
     fn remove_tx(
         &self,
-        key: &[u8],
         chain_id: types::U256,
+        key: &[u8],
     ) -> anyhow::Result<()> {
         let tree = self.db.open_tree(format!("tx_queue_chain_{}", chain_id))?;
         match tree.get(key)? {
@@ -341,15 +355,14 @@ mod tests {
         )
         .from(types::Address::random())
         .into();
-        store.enqueue_tx(tx1.clone(), chain_id).unwrap();
-
+        store.enqueue_tx(chain_id, tx1.clone()).unwrap();
         let tx2: TypedTransaction = TransactionRequest::pay(
             types::Address::random(),
             types::U256::one(),
         )
         .from(types::Address::random())
         .into();
-        store.enqueue_tx(tx2.clone(), chain_id).unwrap();
+        store.enqueue_tx(chain_id, tx2.clone()).unwrap();
 
         // now let's dequeue transactions.
         assert_eq!(store.dequeue_tx(chain_id).unwrap(), Some(tx1));
@@ -361,11 +374,13 @@ mod tests {
         )
         .from(types::Address::random())
         .into();
-        store.enqueue_tx(tx3.clone(), chain_id).unwrap();
+        store.enqueue_tx(chain_id, tx3.clone()).unwrap();
         assert_eq!(store.peek_tx(chain_id).unwrap(), Some(tx3.clone()));
 
         let tx3hash = tx3.sighash(chain_id.as_u64());
-        store.remove_tx(tx3hash.as_bytes(), chain_id).unwrap();
+        assert!(store.has_tx(chain_id, tx3hash.as_bytes()).unwrap());
+        store.remove_tx(chain_id, tx3hash.as_bytes()).unwrap();
+        assert!(!store.has_tx(chain_id, tx3hash.as_bytes()).unwrap());
         assert_eq!(store.dequeue_tx(chain_id).unwrap(), None);
     }
 }

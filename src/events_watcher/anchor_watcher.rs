@@ -116,10 +116,19 @@ impl super::EventWatcher for AnchorWatcher<ForLeaves> {
                     value.1
                 );
             }
+            EdgeAdditionFilter(v) => {
+                tracing::debug!(
+                    "Edge Added of chain {} at index {} with root 0x{}",
+                    v.chain_id,
+                    v.latest_leaf_index,
+                    hex::encode(v.merkle_root)
+                );
+            }
             EdgeUpdateFilter(v) => {
                 tracing::debug!(
-                    "Edge Updated of chain {} with root 0x{}",
+                    "Edge Updated of chain {} at index {} with root 0x{}",
                     v.chain_id,
+                    v.latest_leaf_index,
                     hex::encode(v.merkle_root)
                 );
             }
