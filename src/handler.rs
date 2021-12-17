@@ -428,6 +428,7 @@ fn handle_anchor_relay_tx<'a>(
         let chain = match ctx.config.evm.get(&requested_chain) {
             Some(v) => v,
             None => {
+                tracing::warn!("Unsupported Chain: {}", requested_chain);
                 yield Network(NetworkStatus::UnsupportedChain);
                 return;
             }
@@ -435,6 +436,7 @@ fn handle_anchor_relay_tx<'a>(
         let supported_contracts: HashMap<_, _> = chain
             .contracts
             .iter()
+            .inspect(|c| tracing::debug!("Contract: {:?}", c))
             .cloned()
             .filter_map(|c| match c {
                 crate::config::Contract::Anchor(c) => Some(c),
@@ -446,6 +448,7 @@ fn handle_anchor_relay_tx<'a>(
         let contract_config = match supported_contracts.get(&cmd.contract) {
             Some(config) => config,
             None => {
+                tracing::warn!("Unsupported Contract: {:?}", cmd.contract);
                 yield Network(NetworkStatus::UnsupportedContract);
                 return;
             }
