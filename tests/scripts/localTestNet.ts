@@ -202,10 +202,32 @@ async function main() {
       return;
     }
 
+    if (cmd.startsWith('root on chain a')) {
+      console.log('Root on chain A, please wait...');
+      const root = await chainAAnchor.contract.getLastRoot();
+      const latestNeighborRoots =
+        await chainAAnchor.contract.getLatestNeighborRoots();
+      console.log('Root on chain A: ', root);
+      console.log('Latest neighbor roots on chain A: ', latestNeighborRoots);
+      return;
+    }
+
+    if (cmd.startsWith('root on chain b')) {
+      console.log('Root on chain B, please wait...');
+      const root = await chainBAnchor.contract.getLastRoot();
+      const latestNeighborRoots =
+        await chainBAnchor.contract.getLatestNeighborRoots();
+      console.log('Root on chain B: ', root);
+      console.log('Latest neighbor roots on chain B: ', latestNeighborRoots);
+      return;
+    }
+
     console.log('Unknown command: ', cmd);
     console.log('Available commands:');
     console.log('  deposit on chain a');
     console.log('  deposit on chain b');
+    console.log('  root on chain a');
+    console.log('  root on chain b');
     console.log('  exit');
   });
 }
