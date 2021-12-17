@@ -436,7 +436,6 @@ fn handle_anchor_relay_tx<'a>(
         let supported_contracts: HashMap<_, _> = chain
             .contracts
             .iter()
-            .inspect(|c| tracing::debug!("Contract: {:?}", c))
             .cloned()
             .filter_map(|c| match c {
                 crate::config::Contract::Anchor(c) => Some(c),
