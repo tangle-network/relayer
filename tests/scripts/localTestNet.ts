@@ -173,6 +173,8 @@ async function main() {
   console.log('ChainA anchor (Hermes): ', chainAAnchor.contract.address);
   console.log('ChainB anchor (Athena): ', chainBAnchor.contract.address);
 
+  printAvailableCommands();
+
   // setup readline
   const rl = readline.createInterface({
     input: process.stdin,
@@ -195,10 +197,31 @@ async function main() {
       console.log('Deposit on chain A: ', deposit.deposit);
       return;
     }
+
     if (cmd.startsWith('deposit on chain b')) {
       console.log('Depositing Chain B, please wait...');
       const deposit = await chainBAnchor.deposit(chainA.chainId);
       console.log('Deposit on chain B: ', deposit.deposit);
+      return;
+    }
+
+    if (cmd.match(/^spam chain a (\d+)$/)) {
+      const txs = parseInt(cmd.match(/^spam chain a (\d+)$/)?.[1] ?? '1');
+      console.log(`Spamming Chain A with ${txs} Tx, please wait...`);
+      for (let i = 0; i < txs; i++) {
+        const deposit = await chainAAnchor.deposit(chainB.chainId);
+        console.log('Deposit on chain A: ', deposit.deposit);
+      }
+      return;
+    }
+
+    if (cmd.match(/^spam chain b (\d+)$/)) {
+      const txs = parseInt(cmd.match(/^spam chain b (\d+)$/)?.[1] ?? '1');
+      console.log(`Spamming Chain B with ${txs}, please wait...`);
+      for (let i = 0; i < txs; i++) {
+        const deposit = await chainBAnchor.deposit(chainA.chainId);
+        console.log('Deposit on chain B: ', deposit.deposit);
+      }
       return;
     }
 
@@ -223,13 +246,19 @@ async function main() {
     }
 
     console.log('Unknown command: ', cmd);
-    console.log('Available commands:');
-    console.log('  deposit on chain a');
-    console.log('  deposit on chain b');
-    console.log('  root on chain a');
-    console.log('  root on chain b');
-    console.log('  exit');
+    printAvailableCommands();
   });
+}
+
+function printAvailableCommands() {
+  console.log('Available commands:');
+  console.log('  deposit on chain a');
+  console.log('  deposit on chain b');
+  console.log('  root on chain a');
+  console.log('  root on chain b');
+  console.log('  spam chain a <txs>');
+  console.log('  spam chain b <txs>');
+  console.log('  exit');
 }
 
 main().catch(console.error);

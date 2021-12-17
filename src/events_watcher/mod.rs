@@ -127,8 +127,9 @@ pub trait EventWatcher {
                                     "Error while handling event: {}",
                                     e
                                 );
+                                tracing::warn!("Restarting event watcher ...");
                                 // this a transient error, so we will retry again.
-                                return Err(backoff::Error::Transient(e));
+                                return Err(backoff::Error::transient(e));
                             }
                         }
                     }
@@ -211,9 +212,8 @@ where
             let my_chain_id =
                 client.get_chainid().map_err(anyhow::Error::from).await?;
             let my_key = BridgeKey::new(my_address, my_chain_id);
-            let rx = BridgeRegistry::register(my_key);
-            let mut rx_stream = tokio_stream::wrappers::ReceiverStream::new(rx);
-            while let Some(command) = rx_stream.next().await {
+            let mut rx = BridgeRegistry::register(my_key);
+            while let Ok(command) = rx.recv().await {
                 let result =
                     self.handle_cmd(store.clone(), &contract, command).await;
                 match result {
@@ -225,7 +225,8 @@ where
                         // this a transient error, so we will retry again.
                         // Internally it would use a queue so the value would be still in
                         // the queue.
-                        continue; // keep going...
+                        tracing::warn!("Restarting bridge event watcher ...");
+                        return Err(backoff::Error::transient(e));
                     }
                 }
             }
@@ -233,7 +234,7 @@ where
             BridgeRegistry::unregister(my_key);
             // whenever this loop stops, we will restart the whole task again.
             // that way we never have to worry about closed channels.
-            Err(backoff::Error::Transient(anyhow::anyhow!("Restarting")))
+            Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())

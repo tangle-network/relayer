@@ -220,15 +220,15 @@ impl super::EventWatcher for AnchorWatcher<ForBridge> {
                         dest_chain_id,
                         origin_chain_id,
                     );
-                    signal
-                        .send(BridgeCommand::CreateProposal(ProposalData {
+                    signal.send(BridgeCommand::CreateProposal(
+                        ProposalData {
                             anchor_address: dest_contract.address(),
                             anchor_handler_address: dest_handler,
                             origin_chain_id,
                             leaf_index,
                             merkle_root: root,
-                        }))
-                        .await?;
+                        },
+                    ))?;
                 }
                 None => {
                     tracing::warn!(

@@ -19,8 +19,8 @@ use crate::store::sled::SledStore;
 
 use super::{BridgeWatcher, EventWatcher, ProposalStore, TxQueueStore};
 
-type BridgeConnectionSender = tokio::sync::mpsc::Sender<BridgeCommand>;
-type BridgeConnectionReceiver = tokio::sync::mpsc::Receiver<BridgeCommand>;
+type BridgeConnectionSender = tokio::sync::broadcast::Sender<BridgeCommand>;
+type BridgeConnectionReceiver = tokio::sync::broadcast::Receiver<BridgeCommand>;
 type Registry = RwLock<HashMap<BridgeKey, BridgeConnectionSender>>;
 type HttpProvider = providers::Provider<providers::Http>;
 
@@ -103,7 +103,7 @@ impl BridgeRegistry {
     /// This returns a BridgeConnectionReceiver which will receive commands from whoever
     /// would lookup for this bridge.
     pub fn register(key: BridgeKey) -> BridgeConnectionReceiver {
-        let (tx, rx) = tokio::sync::mpsc::channel(50);
+        let (tx, rx) = tokio::sync::broadcast::channel(500);
         let registry = BRIDGE_REGISTRY.get_or_init(Self::init_registry);
         registry.write().insert(key, tx);
         rx

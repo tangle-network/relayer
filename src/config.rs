@@ -79,6 +79,8 @@ pub struct EvmChainConfig {
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
     pub contracts: Vec<Contract>,
+    #[serde(skip_serializing, default)]
+    pub tx_queue: TxQueueConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -137,6 +139,21 @@ pub struct SubstrateConfig {
     pub pallets: Vec<Pallet>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct TxQueueConfig {
+    /// Maximum number of milliseconds to wait before dequeuing a transaction from
+    /// the queue.
+    pub max_sleep_interval: u64,
+}
+
+impl Default for TxQueueConfig {
+    fn default() -> Self {
+        Self {
+            max_sleep_interval: 10_000,
+        }
+    }
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EventsWatcherConfig {

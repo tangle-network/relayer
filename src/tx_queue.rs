@@ -163,9 +163,12 @@ impl<S: TxQueueStore> TxQueue<S> {
                     };
                 }
                 // sleep for a random amount of time.
-                let s = rand::thread_rng().gen_range(1..=10);
-                tracing::trace!("next queue round after {} seconds", s);
-                tokio::time::sleep(Duration::from_secs(s)).await;
+                let max_sleep_interval =
+                    chain_config.tx_queue.max_sleep_interval;
+                let s =
+                    rand::thread_rng().gen_range(1_000..=max_sleep_interval);
+                tracing::trace!("next queue round after {} ms", s);
+                tokio::time::sleep(Duration::from_millis(s)).await;
             }
         };
         backoff::future::retry::<(), _, _, _, _>(backoff, task).await?;
