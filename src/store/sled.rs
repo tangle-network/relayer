@@ -177,6 +177,8 @@ impl TxQueueStore for SledStore {
             tracing::trace!("enqueue transaction with txhash = {:?}", tx_hash);
             Ok(())
         })?;
+        // flush the db to make sure we don't lose anything.
+        self.db.flush()?;
         Ok(())
     }
 
@@ -201,6 +203,8 @@ impl TxQueueStore for SledStore {
         let tx = serde_json::from_slice(&value)?;
         // now it is safe to remove it from the queue.
         tree.remove(key)?;
+        // flush db
+        self.db.flush()?;
         Ok(Some(tx))
     }
 
@@ -220,6 +224,7 @@ impl TxQueueStore for SledStore {
         let tx = serde_json::from_slice(&value)?;
         Ok(Some(tx))
     }
+
     #[tracing::instrument(
         skip_all,
         fields(chain_id = %chain_id, tx_key = %hex::encode(key))
@@ -232,6 +237,7 @@ impl TxQueueStore for SledStore {
         let tree = self.db.open_tree(format!("tx_queue_chain_{}", chain_id))?;
         tree.contains_key(key).map_err(Into::into)
     }
+
     #[tracing::instrument(
         skip_all,
         fields(chain_id = %chain_id, tx_key = %hex::encode(key))
@@ -244,8 +250,11 @@ impl TxQueueStore for SledStore {
         let tree = self.db.open_tree(format!("tx_queue_chain_{}", chain_id))?;
         match tree.get(key)? {
             Some(k) => {
-                tree.remove(k)?;
+                let exists = tree.remove(k)?;
+                debug_assert!(exists.is_some());
+                tree.remove(key)?;
                 tracing::trace!("removed tx from the queue..");
+                self.db.flush()?;
                 Ok(())
             }
             None => {
