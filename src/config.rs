@@ -16,6 +16,14 @@ const fn enable_leaves_watcher_default() -> bool {
     true
 }
 
+const fn max_events_per_step_default() -> u64 {
+    100
+}
+
+const fn print_progress_interval_default() -> u64 {
+    7_000
+}
+
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct WebbRelayerConfig {
@@ -163,6 +171,13 @@ pub struct EventsWatcherConfig {
     /// Polling interval in milliseconds
     #[serde(rename(serialize = "pollingInterval"))]
     pub polling_interval: u64,
+    /// The maximum number of events to fetch in one request.
+    #[serde(skip_serializing, default = "max_events_per_step_default")]
+    pub max_events_per_step: u64,
+    /// print sync progress frequency in milliseconds
+    /// if it is zero, means no progress will be printed.
+    #[serde(skip_serializing, default = "print_progress_interval_default")]
+    pub print_progress_interval: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

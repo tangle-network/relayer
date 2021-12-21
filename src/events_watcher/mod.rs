@@ -4,10 +4,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use futures::prelude::*;
+use webb::evm::ethers::prelude::transaction;
 use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::{contract, providers, types};
 
-use crate::store::{HistoryStore, ProposalStore, TxQueueStore};
+use crate::store::sled::SledQueueKey;
+use crate::store::{HistoryStore, ProposalStore, QueueStore};
 
 mod tornado_leaves_watcher;
 pub use tornado_leaves_watcher::*;
@@ -28,6 +30,12 @@ pub trait WatchableContract: Send + Sync {
 
     /// How often this contract should be polled for events.
     fn polling_interval(&self) -> Duration;
+
+    /// How many events to fetch at one request.
+    fn max_events_per_step(&self) -> types::U64;
+
+    /// The frequency of printing the sync progress.
+    fn print_progress_interval(&self) -> Duration;
 }
 
 #[async_trait::async_trait]
@@ -67,7 +75,7 @@ pub trait EventWatcher {
             ..Default::default()
         };
         let task = || async {
-            let step = types::U64::from(50);
+            let step = contract.max_events_per_step();
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
             let chain_id =
@@ -150,8 +158,11 @@ pub trait EventWatcher {
                     tokio::time::sleep(duration).await;
                 }
 
-                // only print the progress if 7 seconds is passed.
-                if instant.elapsed() > Duration::from_secs(7) {
+                // only print the progress if 7 seconds (by default) is passed.
+                if contract.print_progress_interval()
+                    != Duration::from_millis(0)
+                    && instant.elapsed() > contract.print_progress_interval()
+                {
                     // calculate sync progress.
                     let total = current_block_number.as_u64() as f64;
                     let current_value = dest_block.as_u64() as f64;
@@ -178,7 +189,9 @@ pub trait EventWatcher {
 #[async_trait::async_trait]
 pub trait BridgeWatcher: EventWatcher
 where
-    Self::Store: TxQueueStore + ProposalStore,
+    Self::Store: ProposalStore
+        + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
+        + QueueStore<bridge_watcher::BridgeCommand, Key = SledQueueKey>,
 {
     async fn handle_cmd(
         &self,
@@ -211,13 +224,14 @@ where
             let my_address = contract.address();
             let my_chain_id =
                 client.get_chainid().map_err(anyhow::Error::from).await?;
-            let my_key = BridgeKey::new(my_address, my_chain_id);
-            let mut rx = BridgeRegistry::register(my_key);
-            while let Ok(command) = rx.recv().await {
+            let bridge_key = BridgeKey::new(my_address, my_chain_id);
+            let key = SledQueueKey::from_bridge_key(bridge_key);
+            while let Some(command) = store.dequeue_item(key)? {
                 let result =
                     self.handle_cmd(store.clone(), &contract, command).await;
                 match result {
                     Ok(_) => {
+                        tokio::time::sleep(Duration::from_millis(500)).await;
                         continue;
                     }
                     Err(e) => {
@@ -229,9 +243,8 @@ where
                         return Err(backoff::Error::transient(e));
                     }
                 }
+                // sleep for a bit to avoid overloading the db.
             }
-            // loop ended, unregister.
-            BridgeRegistry::unregister(my_key);
             // whenever this loop stops, we will restart the whole task again.
             // that way we never have to worry about closed channels.
             Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))

@@ -1,6 +1,8 @@
 use std::fmt::{Debug, Display};
+use std::sync::Arc;
 
-use webb::evm::ethers::core::types::transaction;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use webb::evm::ethers::types;
 
 use crate::events_watcher::ProposalEntity;
@@ -103,47 +105,55 @@ pub trait LeafCacheStore: HistoryStore {
     ) -> anyhow::Result<types::U64>;
 }
 
-/// A Transaction Queue Store is used to store transactions that
-/// can be polled from a background task that is only responsible for
-/// signing the transactions and send it to the network.
-pub trait TxQueueStore {
-    /// Saves the transactions into the queue.
-    fn enqueue_tx_with_key(
-        &self,
-        chain_id: types::U256,
-        tx: transaction::eip2718::TypedTransaction,
-        key: &[u8],
-    ) -> anyhow::Result<()>;
-    /// Saves the transactions into the queue.
-    ///
-    /// the chain id is used to create the transaction hash.
-    fn enqueue_tx(
-        &self,
-        chain_id: types::U256,
-        tx: transaction::eip2718::TypedTransaction,
-    ) -> anyhow::Result<()> {
-        let key = tx.sighash(chain_id.as_u64());
-        self.enqueue_tx_with_key(chain_id, tx, key.as_bytes())
+pub trait QueueKey {
+    fn queue_name(&self) -> String;
+    fn item_key(&self) -> Option<[u8; 64]>;
+}
+
+/// A Queue Store is a simple trait that help storing items in a queue.
+/// The queue is a FIFO queue, that can be used to store anything that can be serialized.
+///
+/// There is a simple API to get the items from the queue, from a background task for example.
+pub trait QueueStore<Item: Serialize + DeserializeOwned> {
+    type Key: QueueKey;
+    /// Insert an item into the queue.
+    fn enqueue_item(&self, key: Self::Key, item: Item) -> anyhow::Result<()>;
+    /// Get an item from the queue, and removes it.
+    fn dequeue_item(&self, key: Self::Key) -> anyhow::Result<Option<Item>>;
+    /// Get an item from the queue, without removing it.
+    fn peek_item(&self, key: Self::Key) -> anyhow::Result<Option<Item>>;
+    /// Check if the item is in the queue.
+    fn has_item(&self, key: Self::Key) -> anyhow::Result<bool>;
+    /// Remove an item from the queue.
+    fn remove_item(&self, key: Self::Key) -> anyhow::Result<Option<Item>>;
+}
+
+impl<S, T> QueueStore<T> for Arc<S>
+where
+    S: QueueStore<T>,
+    T: Serialize + DeserializeOwned,
+{
+    type Key = S::Key;
+
+    fn enqueue_item(&self, key: Self::Key, item: T) -> anyhow::Result<()> {
+        S::enqueue_item(self, key, item)
     }
-    /// Polls a transaction from the queue.
-    fn dequeue_tx(
-        &self,
-        chain_id: types::U256,
-    ) -> anyhow::Result<Option<transaction::eip2718::TypedTransaction>>;
-    /// Reads a transaction from the queue, without actually removing it.
-    fn peek_tx(
-        &self,
-        chain_id: types::U256,
-    ) -> anyhow::Result<Option<transaction::eip2718::TypedTransaction>>;
-    /// Returns true if the tx is already in the queue.
-    fn has_tx(&self, chain_id: types::U256, key: &[u8])
-        -> anyhow::Result<bool>;
-    /// Lookup for the transaction in the queue by transaction hash and removes it.
-    fn remove_tx(
-        &self,
-        chain_id: types::U256,
-        key: &[u8],
-    ) -> anyhow::Result<()>;
+
+    fn dequeue_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+        S::dequeue_item(self, key)
+    }
+
+    fn peek_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+        S::peek_item(self, key)
+    }
+
+    fn has_item(&self, key: Self::Key) -> anyhow::Result<bool> {
+        S::has_item(self, key)
+    }
+
+    fn remove_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+        S::remove_item(self, key)
+    }
 }
 
 pub trait ProposalStore {

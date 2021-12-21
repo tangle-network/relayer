@@ -6,20 +6,25 @@ use ethereum_types::H256;
 use futures::TryFutureExt;
 use rand::Rng;
 use webb::evm::ethers::middleware::SignerMiddleware;
+use webb::evm::ethers::prelude::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::providers::Middleware;
 
 use crate::context::RelayerContext;
-use crate::store::TxQueueStore;
+use crate::store::sled::SledQueueKey;
+use crate::store::QueueStore;
 use crate::utils::ClickableLink;
 
 #[derive(Clone)]
-pub struct TxQueue<S: TxQueueStore> {
+pub struct TxQueue<S: QueueStore<TypedTransaction>> {
     ctx: RelayerContext,
     chain_name: String,
     store: Arc<S>,
 }
 
-impl<S: TxQueueStore> TxQueue<S> {
+impl<S> TxQueue<S>
+where
+    S: QueueStore<TypedTransaction, Key = SledQueueKey>,
+{
     pub fn new(ctx: RelayerContext, chain_name: String, store: Arc<S>) -> Self {
         Self {
             ctx,
@@ -48,7 +53,8 @@ impl<S: TxQueueStore> TxQueue<S> {
         let task = || async {
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
-                let maybe_tx = store.dequeue_tx(chain_id)?;
+                let maybe_tx = store
+                    .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))?;
                 let maybe_explorer = &chain_config.explorer;
                 let mut tx_hash: H256;
                 if let Some(tx) = maybe_tx {

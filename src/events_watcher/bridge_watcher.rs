@@ -1,37 +1,31 @@
 use core::fmt;
-use std::collections::HashMap;
 use std::fmt::LowerHex;
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
-use once_cell::sync::OnceCell;
-use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use webb::evm::contract::darkwebb::{BridgeContract, BridgeContractEvents};
+use webb::evm::ethers::prelude::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
 
 use crate::config;
-use crate::store::sled::SledStore;
+use crate::store::sled::{SledQueueKey, SledStore};
+use crate::store::QueueStore;
 
-use super::{BridgeWatcher, EventWatcher, ProposalStore, TxQueueStore};
+use super::{BridgeWatcher, EventWatcher, ProposalStore};
 
-type BridgeConnectionSender = tokio::sync::broadcast::Sender<BridgeCommand>;
-type BridgeConnectionReceiver = tokio::sync::broadcast::Receiver<BridgeCommand>;
-type Registry = RwLock<HashMap<BridgeKey, BridgeConnectionSender>>;
 type HttpProvider = providers::Provider<providers::Http>;
-
-static BRIDGE_REGISTRY: OnceCell<Registry> = OnceCell::new();
 
 /// A BridgeKey is used as a key in the registry.
 /// based on the bridge address and the chain id.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BridgeKey {
-    address: types::Address,
-    chain_id: types::U256,
+    pub address: types::Address,
+    pub chain_id: types::U256,
 }
 
 impl BridgeKey {
@@ -42,7 +36,7 @@ impl BridgeKey {
 
 impl fmt::Display for BridgeKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "Bridge {:?} on chain {}", self.address, self.chain_id)
+        write!(f, "{}, {}", self.address, self.chain_id)
     }
 }
 
@@ -70,7 +64,7 @@ impl From<u8> for ProposalStatus {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ProposalData {
     pub anchor_address: types::Address,
     pub anchor_handler_address: types::Address,
@@ -88,44 +82,9 @@ pub struct ProposalEntity {
     pub resource_id: [u8; 32],
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum BridgeCommand {
     CreateProposal(ProposalData),
-}
-
-/// A Bridge Registry is a simple Key-Value store, that provides an easy way to register
-/// and discover bridges. For easy communication between the Anchors that connect to that bridge.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct BridgeRegistry;
-
-impl BridgeRegistry {
-    /// Registers a new Bridge to the registry.
-    /// This returns a BridgeConnectionReceiver which will receive commands from whoever
-    /// would lookup for this bridge.
-    pub fn register(key: BridgeKey) -> BridgeConnectionReceiver {
-        let (tx, rx) = tokio::sync::broadcast::channel(500);
-        let registry = BRIDGE_REGISTRY.get_or_init(Self::init_registry);
-        registry.write().insert(key, tx);
-        rx
-    }
-
-    /// Unregisters a Bridge from the registry.
-    /// this will remove the bridge connection receiver from the registry and close any channels.
-    pub fn unregister(key: BridgeKey) {
-        let registry = BRIDGE_REGISTRY.get_or_init(Self::init_registry);
-        registry.write().remove(&key);
-    }
-
-    /// Lookup a bridge by key.
-    /// Returns the BridgeConnectionSender which can be used to send commands to the bridge.
-    pub fn lookup(key: BridgeKey) -> Option<BridgeConnectionSender> {
-        let registry = BRIDGE_REGISTRY.get_or_init(Self::init_registry);
-        registry.read().get(&key).cloned()
-    }
-
-    fn init_registry() -> Registry {
-        RwLock::new(Default::default())
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -158,6 +117,16 @@ impl<M: Middleware> super::WatchableContract for BridgeContractWrapper<M> {
 
     fn polling_interval(&self) -> Duration {
         Duration::from_millis(self.config.events_watcher.polling_interval)
+    }
+
+    fn max_events_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_events_per_step.into()
+    }
+
+    fn print_progress_interval(&self) -> Duration {
+        Duration::from_millis(
+            self.config.events_watcher.print_progress_interval,
+        )
     }
 }
 
@@ -299,7 +268,13 @@ where
         );
         // check if we already have a vote tx in the queue
         // if we do, we should not create a new one
-        if store.has_tx(dest_chain_id, &make_vote_proposal_key(&data_hash))? {
+        let key = SledQueueKey::from_evm_with_custom_key(
+            dest_chain_id,
+            make_vote_proposal_key(&data_hash),
+        );
+        let already_queued =
+            QueueStore::<TypedTransaction>::has_item(&store, key)?;
+        if already_queued {
             tracing::debug!(
                 "Skipping this vote for proposal 0x{} ... already in queue",
                 hex::encode(&data_hash)
@@ -312,11 +287,7 @@ where
             hex::encode(&entity.resource_id),
         );
         // enqueue the transaction.
-        store.enqueue_tx_with_key(
-            dest_chain_id,
-            call.tx,
-            &make_vote_proposal_key(&data_hash),
-        )?;
+        store.enqueue_item(key, call.tx)?;
         // save the proposal for later updates.
         store.insert_proposal(entity)?;
         Ok(())
@@ -333,19 +304,25 @@ where
         store.remove_proposal(data_hash)?;
         // it is okay, if the proposal tx is not stored in
         // the queue, so it is okay to ignore the error in this case.
-        if store
-            .remove_tx(chain_id, &make_vote_proposal_key(data_hash))
-            .is_ok()
-        {
+        let key = SledQueueKey::from_evm_with_custom_key(
+            chain_id,
+            make_vote_proposal_key(data_hash),
+        );
+        let removed: anyhow::Result<Option<TypedTransaction>> =
+            store.remove_item(key);
+        if removed.is_ok() {
             tracing::debug!(
                 "Removed Vote for proposal 0x{}",
                 hex::encode(&data_hash)
             );
         }
-        if store
-            .remove_tx(chain_id, &make_execute_proposal_key(data_hash))
-            .is_ok()
-        {
+        let key = SledQueueKey::from_evm_with_custom_key(
+            chain_id,
+            make_execute_proposal_key(data_hash),
+        );
+        let removed: anyhow::Result<Option<TypedTransaction>> =
+            store.remove_item(key);
+        if removed.is_ok() {
             tracing::debug!(
                 "Removed Execute proposal 0x{}",
                 hex::encode(&data_hash)
@@ -406,9 +383,15 @@ where
             entity.data,
             entity.resource_id,
         );
+        let key = SledQueueKey::from_evm_with_custom_key(
+            chain_id,
+            make_execute_proposal_key(data_hash),
+        );
         // check if we already have a queued tx for this proposal.
         // if we do, we should not enqueue it again.
-        if store.has_tx(chain_id, &make_execute_proposal_key(data_hash))? {
+        let already_queued =
+            QueueStore::<TypedTransaction>::has_item(&store, key)?;
+        if already_queued {
             tracing::debug!(
                 "Skipping execution of proposal 0x{} since it is already in queue",
                 hex::encode(data_hash)
@@ -421,11 +404,7 @@ where
             hex::encode(&entity.resource_id),
         );
         // enqueue the transaction.
-        store.enqueue_tx_with_key(
-            chain_id,
-            call.tx,
-            &make_execute_proposal_key(data_hash),
-        )?;
+        store.enqueue_item(key, call.tx)?;
         Ok(())
     }
 }

@@ -98,6 +98,16 @@ where
     fn polling_interval(&self) -> Duration {
         Duration::from_millis(self.config.events_watcher.polling_interval)
     }
+
+    fn max_events_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_events_per_step.into()
+    }
+
+    fn print_progress_interval(&self) -> Duration {
+        Duration::from_millis(
+            self.config.events_watcher.print_progress_interval,
+        )
+    }
 }
 
 #[async_trait::async_trait]
