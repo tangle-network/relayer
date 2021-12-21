@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use async_stream::stream;
+use ethereum_types::{Address, H256, U256, U64};
 use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
@@ -15,10 +16,13 @@ use warp::ws::Message;
 use webb::evm::contract::darkwebb::anchor::PublicInputs;
 use webb::evm::contract::darkwebb::AnchorContract;
 use webb::evm::contract::tornado::TornadoContract;
+use webb::evm::ethers::contract::ContractError;
 use webb::evm::ethers::core::k256::SecretKey;
-use webb::evm::ethers::prelude::*;
+use webb::evm::ethers::middleware::SignerMiddleware;
+use webb::evm::ethers::providers::Middleware;
+use webb::evm::ethers::signers::LocalWallet;
+use webb::evm::ethers::signers::Signer;
 use webb::evm::ethers::types::Bytes;
-use webb::evm::ethers::types::{Address, H256, U256};
 
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
@@ -424,6 +428,7 @@ fn handle_anchor_relay_tx<'a>(
         let chain = match ctx.config.evm.get(&requested_chain) {
             Some(v) => v,
             None => {
+                tracing::warn!("Unsupported Chain: {}", requested_chain);
                 yield Network(NetworkStatus::UnsupportedChain);
                 return;
             }
@@ -442,6 +447,7 @@ fn handle_anchor_relay_tx<'a>(
         let contract_config = match supported_contracts.get(&cmd.contract) {
             Some(config) => config,
             None => {
+                tracing::warn!("Unsupported Contract: {:?}", cmd.contract);
                 yield Network(NetworkStatus::UnsupportedContract);
                 return;
             }

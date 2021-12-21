@@ -3,9 +3,10 @@ use std::path::Path;
 use std::str::FromStr;
 
 use config::FileFormat;
+use ethereum_types::{Address, Secret, U256};
 use serde::{Deserialize, Serialize};
-use webb::evm::ethers::types::{Address, H256, U256};
-type Secret = H256;
+use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
+use webb::substrate::subxt::sp_core::Pair;
 
 const fn default_port() -> u16 {
     9955
@@ -13,6 +14,14 @@ const fn default_port() -> u16 {
 
 const fn enable_leaves_watcher_default() -> bool {
     true
+}
+
+const fn max_events_per_step_default() -> u64 {
+    100
+}
+
+const fn print_progress_interval_default() -> u64 {
+    7_000
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
@@ -26,12 +35,18 @@ pub struct WebbRelayerConfig {
     /// EVM based networks and the configuration.
     ///
     /// a map between chain name and its configuration.
-    pub evm: HashMap<String, ChainConfig>,
+    #[serde(default)]
+    pub evm: HashMap<String, EvmChainConfig>,
+    /// Substrate based networks and the configuration.
+    ///
+    /// a map between chain name and its configuration.
+    #[serde(default)]
+    pub substrate: HashMap<String, SubstrateConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct ChainConfig {
+pub struct EvmChainConfig {
     #[serde(default)]
     pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
@@ -72,8 +87,81 @@ pub struct ChainConfig {
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
     pub contracts: Vec<Contract>,
+    #[serde(skip_serializing, default)]
+    pub tx_queue: TxQueueConfig,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SubstrateConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    /// Http(s) Endpoint for quick Req/Res
+    #[serde(skip_serializing)]
+    pub http_endpoint: url::Url,
+    /// Websocket Endpoint for long living connections
+    #[serde(skip_serializing)]
+    pub ws_endpoint: url::Url,
+    /// Block Explorer for this Substrate node.
+    ///
+    /// Optional, and only used for printing a clickable links
+    /// for transactions and contracts.
+    #[serde(skip_serializing)]
+    pub explorer: Option<url::Url>,
+    /// Interprets the string in order to generate a key Pair. in the
+    /// case that the pair can be expressed as a direct derivation from a seed (some cases, such as Sr25519 derivations
+    /// with path components, cannot).
+    ///
+    /// This takes a helper function to do the key generation from a phrase, password and
+    /// junction iterator.
+    ///
+    /// - If `s` begins with a `$` character it is interpreted as an environment variable.
+    /// - If `s` is a possibly `0x` prefixed 64-digit hex string, then it will be interpreted
+    /// directly as a `MiniSecretKey` (aka "seed" in `subkey`).
+    /// - If `s` is a valid BIP-39 key phrase of 12, 15, 18, 21 or 24 words, then the key will
+    /// be derived from it. In this case:
+    ///   - the phrase may be followed by one or more items delimited by `/` characters.
+    ///   - the path may be followed by `///`, in which case everything after the `///` is treated
+    /// as a password.
+    /// - If `s` begins with a `/` character it is prefixed with the Substrate public `DEV_PHRASE` and
+    /// interpreted as above.
+    ///
+    /// In this case they are interpreted as HDKD junctions; purely numeric items are interpreted as
+    /// integers, non-numeric items as strings. Junctions prefixed with `/` are interpreted as soft
+    /// junctions, and with `//` as hard junctions.
+    ///
+    /// There is no correspondence mapping between SURI strings and the keys they represent.
+    /// Two different non-identical strings can actually lead to the same secret being derived.
+    /// Notably, integer junction indices may be legally prefixed with arbitrary number of zeros.
+    /// Similarly an empty password (ending the SURI with `///`) is perfectly valid and will generally
+    /// be equivalent to no password at all.
+    ///
+    /// `None` is returned if no matches are found.
+    #[serde(skip_serializing)]
+    pub suri: Suri,
+    /// Optionally, a user can specify an account to receive rewards for relaying
+    pub beneficiary: Option<Address>,
+    /// Which Substrate Runtime to use?
+    pub runtime: SubstrateRuntime,
+    /// Supported pallets over this substrate node.
+    pub pallets: Vec<Pallet>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct TxQueueConfig {
+    /// Maximum number of milliseconds to wait before dequeuing a transaction from
+    /// the queue.
+    pub max_sleep_interval: u64,
+}
+
+impl Default for TxQueueConfig {
+    fn default() -> Self {
+        Self {
+            max_sleep_interval: 10_000,
+        }
+    }
+}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EventsWatcherConfig {
@@ -83,6 +171,13 @@ pub struct EventsWatcherConfig {
     /// Polling interval in milliseconds
     #[serde(rename(serialize = "pollingInterval"))]
     pub polling_interval: u64,
+    /// The maximum number of events to fetch in one request.
+    #[serde(skip_serializing, default = "max_events_per_step_default")]
+    pub max_events_per_step: u64,
+    /// print sync progress frequency in milliseconds
+    /// if it is zero, means no progress will be printed.
+    #[serde(skip_serializing, default = "print_progress_interval_default")]
+    pub print_progress_interval: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,8 +207,22 @@ pub struct LinkedAnchorConfig {
 pub enum Contract {
     Tornado(TornadoContractConfig),
     Anchor(AnchorContractConfig),
+    AnchorOverDKG(AnchorContractOverDKGConfig),
     Bridge(BridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "pallet")]
+pub enum Pallet {
+    DKGProposals(DKGProposalsPalletConfig),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum SubstrateRuntime {
+    #[serde(rename = "DKG")]
+    Dkg,
+    WebbProtocol,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -161,6 +270,27 @@ pub struct AnchorContractConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
+pub struct AnchorContractOverDKGConfig {
+    #[serde(flatten)]
+    pub common: CommonContractConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+    /// The size of this contract
+    pub size: f64,
+    /// Anchor withdraw configuration.
+    #[serde(flatten)]
+    pub withdraw_config: AnchorWithdrawConfig,
+    /// The name of the DKG node that this contract will use.
+    ///
+    /// Must be defined in the config.
+    pub dkg_node: String,
+    /// A List of linked Anchor Contracts (on other chains) to this contract.
+    #[serde(rename(serialize = "linkedAnchors"))]
+    pub linked_anchors: Vec<LinkedAnchorConfig>,
+}
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
 pub struct BridgeContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
@@ -175,6 +305,14 @@ pub struct GovernanceBravoDelegateContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
     // TODO(@shekohex): add more fields here...
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct DKGProposalsPalletConfig {
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -245,6 +383,88 @@ impl<'de> Deserialize<'de> for PrivateKey {
     }
 }
 
+#[derive(Clone)]
+pub struct Suri(Sr25519Pair);
+
+impl std::fmt::Debug for Suri {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("SubstratePrivateKey").finish()
+    }
+}
+
+impl From<Suri> for Sr25519Pair {
+    fn from(suri: Suri) -> Self {
+        suri.0
+    }
+}
+
+impl std::ops::Deref for Suri {
+    type Target = Sr25519Pair;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<'de> Deserialize<'de> for Suri {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        struct PrivateKeyVistor;
+        impl<'de> serde::de::Visitor<'de> for PrivateKeyVistor {
+            type Value = Sr25519Pair;
+
+            fn expecting(
+                &self,
+                formatter: &mut std::fmt::Formatter,
+            ) -> std::fmt::Result {
+                formatter.write_str(
+                    "hex string, dervation path or an env var containing a hex string in it",
+                )
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                if value.starts_with('$') {
+                    // env
+                    let var = value.strip_prefix('$').unwrap_or(value);
+                    tracing::trace!("Reading {} from env", var);
+                    let val = std::env::var(var).map_err(|e| {
+                        serde::de::Error::custom(format!(
+                            "error while loading this env {}: {}",
+                            var, e,
+                        ))
+                    })?;
+                    let maybe_pair =
+                        Sr25519Pair::from_string_with_seed(&val, None);
+                    match maybe_pair {
+                        Ok((pair, _)) => Ok(pair),
+                        Err(e) => {
+                            Err(serde::de::Error::custom(format!("{:?}", e)))
+                        }
+                    }
+                } else if value.starts_with('>') {
+                    todo!("Implement command execution to extract the private key")
+                } else {
+                    let maybe_pair =
+                        Sr25519Pair::from_string_with_seed(value, None);
+                    match maybe_pair {
+                        Ok((pair, _)) => Ok(pair),
+                        Err(e) => {
+                            Err(serde::de::Error::custom(format!("{:?}", e)))
+                        }
+                    }
+                }
+            }
+        }
+
+        let secret = deserializer.deserialize_str(PrivateKeyVistor)?;
+        Ok(Self(secret))
+    }
+}
 pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
     // A pattern that covers all toml files in the config directory and subdirectories.
@@ -252,45 +472,13 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     // then get an iterator over all matching files
     let config_files = glob::glob(&pattern)?.flatten();
 
-    let mut contracts: HashMap<String, Vec<Contract>> = HashMap::new();
+    let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
 
     // read through all config files for the first time
     // build up a collection of [contracts]
     for config_file in config_files {
-        let base = config_file.display().to_string();
-        let file =
-            config::File::from(config_file.clone()).format(FileFormat::Toml);
-        let mut incremental_config = config::Config::new();
-        incremental_config.merge(file.clone())?;
-        let config: Result<
-            WebbRelayerConfig,
-            serde_path_to_error::Error<config::ConfigError>,
-        > = serde_path_to_error::deserialize(incremental_config);
-        match config {
-            Ok(c) => {
-                // merge the file into the cfg
-                for (network_name, network_chain) in c.evm.iter() {
-                    let mut new_contracts: Vec<Contract> = Vec::new();
-                    if let Some(existing_contracts) =
-                        contracts.get(network_name)
-                    {
-                        new_contracts.extend(existing_contracts.clone());
-                    }
-                    new_contracts.extend(network_chain.contracts.clone());
-                    contracts.insert(network_name.to_string(), new_contracts);
-                }
-                tracing::trace!("Merging the file {:?}", config_file);
-                cfg.merge(file)?;
-            }
-            Err(e) => {
-                // print the issue that occurred while deserializing, then skip that config
-                tracing::debug!(
-                    "Error {} while attempting to deserialize {}",
-                    e,
-                    base
-                );
-            }
-        };
+        let file = config::File::from(config_file).format(FileFormat::Toml);
+        cfg.merge(file)?;
     }
 
     // also merge in the environment (with a prefix of WEBB).
@@ -334,6 +522,15 @@ fn postloading_process(
     // 2. insert them again, as lowercased.
     for (k, v) in old_evm {
         config.evm.insert(k.to_lowercase(), v);
+    }
+    // do the same for substrate
+    let old_substrate = config
+        .substrate
+        .drain()
+        .filter(|(_, chain)| chain.enabled)
+        .collect::<HashMap<_, _>>();
+    for (k, v) in old_substrate {
+        config.substrate.insert(k.to_lowercase(), v);
     }
     // check that all required chains are already present in the config.
     for (chain_name, chain_config) in &config.evm {

@@ -23,9 +23,6 @@ mod store;
 mod tx_queue;
 mod utils;
 
-#[cfg(test)]
-mod test_utils;
-
 const PACKAGE_ID: [&str; 3] = ["tools", "webb", "webb-relayer"];
 /// The Webb Relayer Command-line tool
 ///

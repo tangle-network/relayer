@@ -1,0 +1,9 @@
+[substrate.dkglocal]
+http-endpoint = "http://localhost:9933/"
+ws-endpoint = "ws://localhost:9944/"
+runtime = "DKG"
+suri = "//Eve"
+
+[[substrate.dkglocal.pallets]]
+pallet = "DKGProposals"
+events-watcher = { enabled = true, polling-interval = 3000 }

@@ -1,11 +1,16 @@
 import ganache from 'ganache-cli';
 
-type GanacheAccounts = {
-  balance: string,
-  secretKey: string,
+export type GanacheAccounts = {
+  balance: string;
+  secretKey: string;
 };
 
-export function startGanacheServer(port: number, networkId: number, populatedAccounts: GanacheAccounts[]) {
+export function startGanacheServer(
+  port: number,
+  networkId: number,
+  populatedAccounts: GanacheAccounts[],
+  options: any = {}
+) {
   const ganacheServer = ganache.server({
     accounts: populatedAccounts,
     port: port,
@@ -13,6 +18,7 @@ export function startGanacheServer(port: number, networkId: number, populatedAcc
     _chainId: networkId,
     chainId: networkId,
     _chainIdRpc: networkId,
+    ...options,
   });
 
   ganacheServer.listen(port);

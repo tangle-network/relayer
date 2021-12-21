@@ -1,41 +1,42 @@
-use std::collections::HashMap;
+use core::fmt;
 use std::fmt::LowerHex;
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
-use once_cell::sync::OnceCell;
-use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use webb::evm::contract::darkwebb::{BridgeContract, BridgeContractEvents};
+use webb::evm::ethers::prelude::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
 
 use crate::config;
-use crate::store::sled::SledStore;
+use crate::store::sled::{SledQueueKey, SledStore};
+use crate::store::QueueStore;
 
-use super::{BridgeWatcher, EventWatcher, ProposalStore, TxQueueStore};
+use super::{BridgeWatcher, EventWatcher, ProposalStore};
 
-type BridgeConnectionSender = tokio::sync::mpsc::Sender<BridgeCommand>;
-type BridgeConnectionReceiver = tokio::sync::mpsc::Receiver<BridgeCommand>;
-type Registry = RwLock<HashMap<BridgeKey, BridgeConnectionSender>>;
 type HttpProvider = providers::Provider<providers::Http>;
-
-static BRIDGE_REGISTRY: OnceCell<Registry> = OnceCell::new();
 
 /// A BridgeKey is used as a key in the registry.
 /// based on the bridge address and the chain id.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct BridgeKey {
-    address: types::Address,
-    chain_id: types::U256,
+    pub address: types::Address,
+    pub chain_id: types::U256,
 }
 
 impl BridgeKey {
     pub fn new(address: types::Address, chain_id: types::U256) -> Self {
         Self { address, chain_id }
+    }
+}
+
+impl fmt::Display for BridgeKey {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}, {}", self.address, self.chain_id)
     }
 }
 
@@ -63,7 +64,7 @@ impl From<u8> for ProposalStatus {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ProposalData {
     pub anchor_address: types::Address,
     pub anchor_handler_address: types::Address,
@@ -81,45 +82,9 @@ pub struct ProposalEntity {
     pub resource_id: [u8; 32],
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum BridgeCommand {
     CreateProposal(ProposalData),
-}
-
-/// A Bridge Registry is a simple Key-Value store, that provides an easy way to register
-/// and discover bridges. For easy communication between the Anchors that connect to that bridge.
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct BridgeRegistry;
-
-impl BridgeRegistry {
-    /// Registers a new Bridge to the registry.
-    /// This returns a BridgeConnectionReceiver which will receive commands from whoever
-    /// would lookup for this bridge.
-    pub fn register(key: BridgeKey) -> BridgeConnectionReceiver {
-        let (tx, rx) = tokio::sync::mpsc::channel(50);
-        let registry = BRIDGE_REGISTRY.get_or_init(Self::init_registry);
-        registry.write().insert(key, tx);
-        rx
-    }
-
-    /// Unregisters a Bridge from the registry.
-    /// this will remove the bridge connection receiver from the registry and close any channels.
-    #[allow(dead_code)]
-    pub fn unregister(key: BridgeKey) {
-        let registry = BRIDGE_REGISTRY.get_or_init(Self::init_registry);
-        registry.write().remove(&key);
-    }
-
-    /// Lookup a bridge by key.
-    /// Returns the BridgeConnectionSender which can be used to send commands to the bridge.
-    pub fn lookup(key: BridgeKey) -> Option<BridgeConnectionSender> {
-        let registry = BRIDGE_REGISTRY.get_or_init(Self::init_registry);
-        registry.read().get(&key).cloned()
-    }
-
-    fn init_registry() -> Registry {
-        RwLock::new(Default::default())
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -153,9 +118,19 @@ impl<M: Middleware> super::WatchableContract for BridgeContractWrapper<M> {
     fn polling_interval(&self) -> Duration {
         Duration::from_millis(self.config.events_watcher.polling_interval)
     }
+
+    fn max_events_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_events_per_step.into()
+    }
+
+    fn print_progress_interval(&self) -> Duration {
+        Duration::from_millis(
+            self.config.events_watcher.print_progress_interval,
+        )
+    }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct BridgeContractWatcher;
 
 #[async_trait::async_trait]
@@ -291,13 +266,28 @@ where
             entity.resource_id,
             entity.data_hash,
         );
+        // check if we already have a vote tx in the queue
+        // if we do, we should not create a new one
+        let key = SledQueueKey::from_evm_with_custom_key(
+            dest_chain_id,
+            make_vote_proposal_key(&data_hash),
+        );
+        let already_queued =
+            QueueStore::<TypedTransaction>::has_item(&store, key)?;
+        if already_queued {
+            tracing::debug!(
+                "Skipping this vote for proposal 0x{} ... already in queue",
+                hex::encode(&data_hash)
+            );
+            return Ok(());
+        }
         tracing::debug!(
             "Voting for Proposal 0x{} with resourceID 0x{}",
             hex::encode(&data_hash),
             hex::encode(&entity.resource_id),
         );
         // enqueue the transaction.
-        store.enqueue_tx_with_key(&data_hash, call.tx, dest_chain_id)?;
+        store.enqueue_item(key, call.tx)?;
         // save the proposal for later updates.
         store.insert_proposal(entity)?;
         Ok(())
@@ -314,8 +304,30 @@ where
         store.remove_proposal(data_hash)?;
         // it is okay, if the proposal tx is not stored in
         // the queue, so it is okay to ignore the error in this case.
-        let _ = store.remove_tx(data_hash, chain_id);
-        tracing::debug!("Removed proposal 0x{}", hex::encode(&data_hash));
+        let key = SledQueueKey::from_evm_with_custom_key(
+            chain_id,
+            make_vote_proposal_key(data_hash),
+        );
+        let removed: anyhow::Result<Option<TypedTransaction>> =
+            store.remove_item(key);
+        if removed.is_ok() {
+            tracing::debug!(
+                "Removed Vote for proposal 0x{}",
+                hex::encode(&data_hash)
+            );
+        }
+        let key = SledQueueKey::from_evm_with_custom_key(
+            chain_id,
+            make_execute_proposal_key(data_hash),
+        );
+        let removed: anyhow::Result<Option<TypedTransaction>> =
+            store.remove_item(key);
+        if removed.is_ok() {
+            tracing::debug!(
+                "Removed Execute proposal 0x{}",
+                hex::encode(&data_hash)
+            );
+        }
         Ok(())
     }
 
@@ -327,7 +339,8 @@ where
         data_hash: &[u8],
     ) -> anyhow::Result<()> {
         let chain_id = contract.client().get_chainid().await?;
-        let entity = match store.remove_proposal(data_hash)? {
+        let maybe_entity = store.remove_proposal(data_hash)?;
+        let entity = match maybe_entity {
             Some(v) => v,
             None => {
                 tracing::warn!(
@@ -370,18 +383,33 @@ where
             entity.data,
             entity.resource_id,
         );
+        let key = SledQueueKey::from_evm_with_custom_key(
+            chain_id,
+            make_execute_proposal_key(data_hash),
+        );
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        let already_queued =
+            QueueStore::<TypedTransaction>::has_item(&store, key)?;
+        if already_queued {
+            tracing::debug!(
+                "Skipping execution of proposal 0x{} since it is already in queue",
+                hex::encode(data_hash)
+            );
+            return Ok(());
+        }
         tracing::debug!(
             "Executing proposal 0x{} with resourceID 0x{}",
             hex::encode(data_hash),
             hex::encode(&entity.resource_id),
         );
         // enqueue the transaction.
-        store.enqueue_tx_with_key(data_hash, call.tx, chain_id)?;
+        store.enqueue_item(key, call.tx)?;
         Ok(())
     }
 }
 
-fn create_update_proposal_data(
+pub fn create_update_proposal_data(
     chain_id: types::U256,
     leaf_index: u32,
     merkle_root: [u8; 32],
@@ -392,7 +420,7 @@ fn create_update_proposal_data(
     format!("{}{}{}", chain_id_hex, leaf_index_hex, merkle_root_hex)
 }
 
-fn create_resource_id(
+pub fn create_resource_id(
     anchor_address: types::Address,
     chain_id: types::U256,
 ) -> anyhow::Result<[u8; 32]> {
@@ -417,6 +445,20 @@ fn to_hex(value: impl LowerHex, padding: usize) -> String {
         hexed = String::from("0") + &hexed;
     }
     hexed
+}
+
+fn make_vote_proposal_key(data_hash: &[u8]) -> [u8; 64] {
+    let mut result = [0u8; 64];
+    result[0..32].copy_from_slice(b"vote_for_proposal_tx_key_prefix_");
+    result[32..64].copy_from_slice(data_hash);
+    result
+}
+
+fn make_execute_proposal_key(data_hash: &[u8]) -> [u8; 64] {
+    let mut result = [0u8; 64];
+    result[0..32].copy_from_slice(b"execute_proposal_txx_key_prefix_");
+    result[32..64].copy_from_slice(data_hash);
+    result
 }
 
 fn to_event_type(event: &BridgeContractEvents) -> &str {

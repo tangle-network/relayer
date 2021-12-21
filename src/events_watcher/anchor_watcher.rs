@@ -12,9 +12,9 @@ use webb::evm::ethers::types;
 
 use crate::config;
 use crate::events_watcher::ProposalData;
-use crate::events_watcher::{BridgeCommand, BridgeKey, BridgeRegistry};
-use crate::store::sled::SledStore;
-use crate::store::LeafCacheStore;
+use crate::events_watcher::{BridgeCommand, BridgeKey};
+use crate::store::sled::{SledQueueKey, SledStore};
+use crate::store::{LeafCacheStore, QueueStore};
 
 type HttpProvider = providers::Provider<providers::Http>;
 
@@ -70,6 +70,16 @@ impl<M: Middleware> super::WatchableContract for AnchorContractWrapper<M> {
     fn polling_interval(&self) -> Duration {
         Duration::from_millis(self.config.events_watcher.polling_interval)
     }
+
+    fn max_events_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_events_per_step.into()
+    }
+
+    fn print_progress_interval(&self) -> Duration {
+        Duration::from_millis(
+            self.config.events_watcher.print_progress_interval,
+        )
+    }
 }
 
 #[async_trait::async_trait]
@@ -116,10 +126,19 @@ impl super::EventWatcher for AnchorWatcher<ForLeaves> {
                     value.1
                 );
             }
+            EdgeAdditionFilter(v) => {
+                tracing::debug!(
+                    "Edge Added of chain {} at index {} with root 0x{}",
+                    v.chain_id,
+                    v.latest_leaf_index,
+                    hex::encode(v.merkle_root)
+                );
+            }
             EdgeUpdateFilter(v) => {
                 tracing::debug!(
-                    "Edge Updated of chain {} with root 0x{}",
+                    "Edge Updated of chain {} at index {} with root 0x{}",
                     v.chain_id,
+                    v.latest_leaf_index,
                     hex::encode(v.merkle_root)
                 );
             }
@@ -146,7 +165,7 @@ impl super::EventWatcher for AnchorWatcher<ForBridge> {
     #[tracing::instrument(skip_all)]
     async fn handle_event(
         &self,
-        _store: Arc<Self::Store>,
+        store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
@@ -203,31 +222,21 @@ impl super::EventWatcher for AnchorWatcher<ForBridge> {
             let dest_bridge = dest_contract.bridge().call().await?;
             let dest_handler = dest_contract.handler().call().await?;
             let key = BridgeKey::new(dest_bridge, dest_chain_id);
-            let bridge = BridgeRegistry::lookup(key);
-            match bridge {
-                Some(signal) => {
-                    tracing::debug!(
-                        "Signaling Bridge@{} to create a new proposal from Anchor@{}",
-                        dest_chain_id,
-                        origin_chain_id,
-                    );
-                    signal
-                        .send(BridgeCommand::CreateProposal(ProposalData {
-                            anchor_address: dest_contract.address(),
-                            anchor_handler_address: dest_handler,
-                            origin_chain_id,
-                            leaf_index,
-                            merkle_root: root,
-                        }))
-                        .await?;
-                }
-                None => {
-                    tracing::warn!(
-                        "Bridge {} not found in the BridgeRegistry",
-                        dest_bridge
-                    );
-                }
-            }
+            tracing::debug!(
+                "Signaling Bridge@{} to create a new proposal from Anchor@{}",
+                dest_chain_id,
+                origin_chain_id,
+            );
+            store.enqueue_item(
+                SledQueueKey::from_bridge_key(key),
+                BridgeCommand::CreateProposal(ProposalData {
+                    anchor_address: dest_contract.address(),
+                    anchor_handler_address: dest_handler,
+                    origin_chain_id,
+                    leaf_index,
+                    merkle_root: root,
+                }),
+            )?;
         }
         Ok(())
     }

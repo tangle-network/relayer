@@ -59,8 +59,8 @@ jobs:
         if: matrix.target == 'x86_64-apple-darwin'
         uses: actions/setup-node@v1
         with:
-          node-version: '14'
-          cache: 'npm'
+          node-version: "14"
+          cache: "npm"
       - run: npm install -g ganache-cli
         if: matrix.target == 'x86_64-apple-darwin'
         # Only test on macOS platforms since we can't simulate the others.
@@ -71,8 +71,7 @@ jobs:
         shell: bash
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-apple-darwin'
-        run: cd tests && yarn
-        run: git submodule update --init --recursive
+        run: cd tests && git submodule update --init --recursive && yarn
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-apple-darwin'
         run: cd tests && yarn test
@@ -117,8 +116,8 @@ jobs:
       - name: Use Node.js 14.x
         uses: actions/setup-node@v1
         with:
-          node-version: '14'
-          cache: 'npm'
+          node-version: "14"
+          cache: "npm"
       - run: npm install -g ganache-cli
       - run: ci/test.bash /tmp/cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-unknown-linux-gnu'
@@ -127,7 +126,7 @@ jobs:
         shell: bash
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-        run: cd tests && yarn
+        run: cd tests && git submodule update --init --recursive && yarn
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: cd tests && yarn test

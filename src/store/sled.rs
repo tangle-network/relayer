@@ -1,10 +1,15 @@
+use core::fmt;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use std::fmt::Debug;
 use std::path::Path;
-use webb::evm::ethers::core::types::transaction;
 use webb::evm::ethers::types;
 
+use crate::events_watcher::BridgeKey;
+use crate::store::QueueKey;
+
 use super::{ContractKey, ProposalEntity};
-use super::{HistoryStore, LeafCacheStore, ProposalStore, TxQueueStore};
+use super::{HistoryStore, LeafCacheStore, ProposalStore, QueueStore};
 
 #[derive(Clone)]
 pub struct SledStore {
@@ -131,62 +136,131 @@ impl LeafCacheStore for SledStore {
     }
 }
 
-impl TxQueueStore for SledStore {
-    #[tracing::instrument(
-        skip_all,
-        fields(chain_id = %chain_id, tx_key = %hex::encode(key))
-    )]
-    fn enqueue_tx_with_key(
-        &self,
-        key: &[u8],
-        tx: transaction::eip2718::TypedTransaction,
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub enum SledQueueKey {
+    EvmTx {
         chain_id: types::U256,
-    ) -> anyhow::Result<()> {
-        let tree = self.db.open_tree(format!("tx_queue_chain_{}", chain_id))?;
-        let tx_bytes = serde_json::to_vec(&tx)?;
+        optional_key: Option<[u8; 64]>,
+    },
+    BridgeCmd {
+        bridge_key: BridgeKey,
+    },
+}
+
+impl SledQueueKey {
+    pub fn from_evm_chain_id(chain_id: types::U256) -> Self {
+        Self::EvmTx {
+            chain_id,
+            optional_key: None,
+        }
+    }
+
+    pub fn from_evm_with_custom_key(
+        chain_id: types::U256,
+        key: [u8; 64],
+    ) -> Self {
+        Self::EvmTx {
+            chain_id,
+            optional_key: Some(key),
+        }
+    }
+
+    pub fn from_bridge_key(bridge_key: BridgeKey) -> Self {
+        Self::BridgeCmd { bridge_key }
+    }
+}
+
+impl fmt::Display for SledQueueKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::EvmTx {
+                chain_id,
+                optional_key,
+            } => write!(
+                f,
+                "EvmTx({}, {:?})",
+                chain_id,
+                optional_key.map(hex::encode)
+            ),
+            Self::BridgeCmd { bridge_key } => {
+                write!(f, "BridgeCmd({})", bridge_key)
+            }
+        }
+    }
+}
+
+impl QueueKey for SledQueueKey {
+    fn queue_name(&self) -> String {
+        match self {
+            Self::EvmTx { chain_id, .. } => format!("evm_tx_{}", chain_id),
+            Self::BridgeCmd { bridge_key, .. } => format!(
+                "bridge_cmd_{}_{}",
+                bridge_key.chain_id, bridge_key.address
+            ),
+        }
+    }
+
+    fn item_key(&self) -> Option<[u8; 64]> {
+        match self {
+            Self::EvmTx { optional_key, .. } => *optional_key,
+            Self::BridgeCmd { .. } => None,
+        }
+    }
+}
+
+impl<T> QueueStore<T> for SledStore
+where
+    T: Serialize + DeserializeOwned,
+{
+    type Key = SledQueueKey;
+    #[tracing::instrument(skip_all, fields(key = %key))]
+    fn enqueue_item(&self, key: Self::Key, item: T) -> anyhow::Result<()> {
+        let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
+        let item_bytes = serde_json::to_vec(&item)?;
         // we do everything inside a single transaction
         // so everything happens atomically and if anything fails
         // we revert everything back to the old state.
         tree.transaction::<_, _, std::io::Error>(|db| {
             // get the last id of the queue.
-            let last_tx_idx = match db.get("last_tx_idx")? {
+            let last_item_idx = match db.get("last_item_idx")? {
                 Some(v) => types::U64::from_big_endian(&v),
                 None => types::U64::zero(),
             };
             // increment it.
-            let next_idx = last_tx_idx + types::U64::one();
+            let next_idx = last_item_idx + types::U64::one();
             let mut idx_bytes = [0u8; std::mem::size_of::<types::U64>()];
             next_idx.to_big_endian(&mut idx_bytes);
             // then save it.
-            db.insert("last_tx_idx", &idx_bytes)?;
-            db.insert("key_prefix", "tx")?;
-            // we create a tx key like so
-            // tx_key = 2 bytes prefix ("tx") + 8 bytes of the index.
-            let mut tx_key = [0u8; 2 + std::mem::size_of::<types::U64>()];
-            let prefix = db.get("key_prefix")?.unwrap_or_else(|| b"tx".into());
-            tx_key[0..2].copy_from_slice(&prefix);
-            tx_key[2..].copy_from_slice(&idx_bytes);
+            db.insert("last_item_idx", &idx_bytes)?;
+            db.insert("key_prefix", "item")?;
+            // we create a item key like so
+            // tx_key = 4 bytes prefix ("item") + 8 bytes of the index.
+            let mut item_key = [0u8; 4 + std::mem::size_of::<types::U64>()];
+            let prefix =
+                db.get("key_prefix")?.unwrap_or_else(|| b"item".into());
+            item_key[0..4].copy_from_slice(&prefix);
+            item_key[4..].copy_from_slice(&idx_bytes);
             // then we save it.
-            db.insert(&tx_key, tx_bytes.as_slice())?;
-            // also save the key where we can find it by special key.
-            db.insert(key, &tx_key)?;
-            let tx_hash = tx.sighash(chain_id.as_u64());
-            tracing::trace!("enqueue transaction with txhash = {:?}", tx_hash);
+            db.insert(&item_key, item_bytes.as_slice())?;
+            if let Some(k) = key.item_key() {
+                // also save the key where we can find it by special key.
+                db.insert(&k[..], &item_key)?;
+            }
+            tracing::trace!("enqueue item under key = {}", key);
             Ok(())
         })?;
+        // flush the db to make sure we don't lose anything.
+        self.db.flush()?;
         Ok(())
     }
 
-    #[tracing::instrument(skip_all, fields(chain_id = %chain_id))]
-    fn dequeue_tx(
-        &self,
-        chain_id: types::U256,
-    ) -> anyhow::Result<Option<transaction::eip2718::TypedTransaction>> {
-        let tree = self.db.open_tree(format!("tx_queue_chain_{}", chain_id))?;
+    #[tracing::instrument(skip_all, fields(key = %key))]
+    fn dequeue_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+        let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
         // now we create a lazy iterator that will scan
-        // over all saved transactions in the queue
+        // over all saved items in the queue
         // with the specific key prefix.
-        let prefix = tree.get("key_prefix")?.unwrap_or_else(|| b"tx".into());
+        let prefix = tree.get("key_prefix")?.unwrap_or_else(|| b"item".into());
         let mut queue = tree.scan_prefix(prefix);
         let (key, value) = match queue.next() {
             Some(Ok(v)) => v,
@@ -195,51 +269,58 @@ impl TxQueueStore for SledStore {
                 return Ok(None);
             }
         };
-        let tx = serde_json::from_slice(&value)?;
+        let item = serde_json::from_slice(&value)?;
         // now it is safe to remove it from the queue.
         tree.remove(key)?;
-        Ok(Some(tx))
+        // flush db
+        self.db.flush()?;
+        Ok(Some(item))
     }
 
-    fn peek_tx(
-        &self,
-        chain_id: types::U256,
-    ) -> anyhow::Result<Option<transaction::eip2718::TypedTransaction>> {
+    #[tracing::instrument(skip_all, fields(key = %key))]
+    fn peek_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
         // this method, is similar to dequeue_tx, expect we don't
         // remove anything from the queue.
-        let tree = self.db.open_tree(format!("tx_queue_chain_{}", chain_id))?;
-        let prefix = tree.get("key_prefix")?.unwrap_or_else(|| b"tx".into());
+        let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
+        let prefix = tree.get("key_prefix")?.unwrap_or_else(|| b"item".into());
         let mut queue = tree.scan_prefix(prefix);
         let (_, value) = match queue.next() {
             Some(Ok(v)) => v,
             _ => return Ok(None),
         };
-        let tx = serde_json::from_slice(&value)?;
-        Ok(Some(tx))
+        let item = serde_json::from_slice(&value)?;
+        Ok(Some(item))
     }
 
-    #[tracing::instrument(
-        skip_all,
-        fields(chain_id = %chain_id, tx_key = %hex::encode(key))
-    )]
-    fn remove_tx(
-        &self,
-        key: &[u8],
-        chain_id: types::U256,
-    ) -> anyhow::Result<()> {
-        let tree = self.db.open_tree(format!("tx_queue_chain_{}", chain_id))?;
-        match tree.get(key)? {
+    #[tracing::instrument(skip_all, fields(key = %key))]
+    fn has_item(&self, key: Self::Key) -> anyhow::Result<bool> {
+        let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
+        if let Some(k) = key.item_key() {
+            tree.contains_key(&k[..]).map_err(Into::into)
+        } else {
+            Ok(false)
+        }
+    }
+
+    #[tracing::instrument(skip_all, fields(key = %key))]
+    fn remove_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+        let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
+        let inner_key = match key.item_key() {
+            Some(k) => k,
+            None => return Ok(None),
+        };
+        match tree.get(&inner_key[..])? {
             Some(k) => {
-                tree.remove(k)?;
-                tracing::trace!("removed tx from the queue..");
-                Ok(())
+                let exists = tree.remove(&k)?;
+                tree.remove(&inner_key)?;
+                let item = exists.and_then(|v| serde_json::from_slice(&v).ok());
+                tracing::trace!("removed item from the queue..");
+                self.db.flush()?;
+                Ok(item)
             }
             None => {
                 // not found!
-                anyhow::bail!(
-                    "tx with key 0x{} not found in txqueue",
-                    hex::encode(key)
-                );
+                anyhow::bail!("item with key {} not found in queue", key);
             }
         }
     }
@@ -299,6 +380,20 @@ mod tests {
     use webb::evm::ethers::prelude::transaction::eip2718::TypedTransaction;
     use webb::evm::ethers::types::transaction::request::TransactionRequest;
 
+    impl SledQueueKey {
+        pub fn from_evm_tx(
+            chain_id: types::U256,
+            tx: &TypedTransaction,
+        ) -> Self {
+            let key = {
+                let mut bytes = [0u8; 64];
+                let tx_hash = tx.sighash(chain_id.as_u64());
+                bytes[..32].copy_from_slice(tx_hash.as_fixed_bytes());
+                bytes
+            };
+            Self::from_evm_with_custom_key(chain_id, key)
+        }
+    }
     #[test]
     fn get_leaves_should_work() {
         let tmp = tempfile::tempdir().unwrap();
@@ -333,7 +428,12 @@ mod tests {
         let store = SledStore::open(tmp.path()).unwrap();
         let chain_id = types::U256::one();
         // it is now empty
-        assert_eq!(store.dequeue_tx(chain_id).unwrap(), None);
+        assert_eq!(
+            store
+                .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))
+                .unwrap(),
+            Option::<TypedTransaction>::None
+        );
 
         let tx1: TypedTransaction = TransactionRequest::pay(
             types::Address::random(),
@@ -341,19 +441,38 @@ mod tests {
         )
         .from(types::Address::random())
         .into();
-        store.enqueue_tx(tx1.clone(), chain_id).unwrap();
-
+        store
+            .enqueue_item(
+                SledQueueKey::from_evm_tx(chain_id, &tx1),
+                tx1.clone(),
+            )
+            .unwrap();
         let tx2: TypedTransaction = TransactionRequest::pay(
             types::Address::random(),
             types::U256::one(),
         )
         .from(types::Address::random())
         .into();
-        store.enqueue_tx(tx2.clone(), chain_id).unwrap();
+        store
+            .enqueue_item(
+                SledQueueKey::from_evm_tx(chain_id, &tx2),
+                tx2.clone(),
+            )
+            .unwrap();
 
         // now let's dequeue transactions.
-        assert_eq!(store.dequeue_tx(chain_id).unwrap(), Some(tx1));
-        assert_eq!(store.dequeue_tx(chain_id).unwrap(), Some(tx2));
+        assert_eq!(
+            store
+                .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))
+                .unwrap(),
+            Some(tx1)
+        );
+        assert_eq!(
+            store
+                .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))
+                .unwrap(),
+            Some(tx2)
+        );
 
         let tx3: TypedTransaction = TransactionRequest::pay(
             types::Address::random(),
@@ -361,11 +480,36 @@ mod tests {
         )
         .from(types::Address::random())
         .into();
-        store.enqueue_tx(tx3.clone(), chain_id).unwrap();
-        assert_eq!(store.peek_tx(chain_id).unwrap(), Some(tx3.clone()));
-
-        let tx3hash = tx3.sighash(chain_id.as_u64());
-        store.remove_tx(tx3hash.as_bytes(), chain_id).unwrap();
-        assert_eq!(store.dequeue_tx(chain_id).unwrap(), None);
+        store
+            .enqueue_item(
+                SledQueueKey::from_evm_tx(chain_id, &tx3),
+                tx3.clone(),
+            )
+            .unwrap();
+        assert_eq!(
+            store
+                .peek_item(SledQueueKey::from_evm_chain_id(chain_id))
+                .unwrap(),
+            Some(tx3.clone())
+        );
+        assert!(QueueStore::<TypedTransaction>::has_item(
+            &store,
+            SledQueueKey::from_evm_tx(chain_id, &tx3)
+        )
+        .unwrap());
+        let _: Option<TypedTransaction> = store
+            .remove_item(SledQueueKey::from_evm_tx(chain_id, &tx3))
+            .unwrap();
+        assert!(!QueueStore::<TypedTransaction>::has_item(
+            &store,
+            SledQueueKey::from_evm_tx(chain_id, &tx3)
+        )
+        .unwrap());
+        assert_eq!(
+            store
+                .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))
+                .unwrap(),
+            Option::<TypedTransaction>::None
+        );
     }
 }

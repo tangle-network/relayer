@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use webb::evm::ethers::providers;
+use webb::substrate::dkg_runtime;
+use webb::substrate::subxt::PairSigner;
 
 use crate::config::*;
 use crate::context::RelayerContext;
@@ -44,6 +46,15 @@ pub async fn ignite(
                         store.clone(),
                     )?;
                 }
+                Contract::AnchorOverDKG(config) => {
+                    start_anchor_over_dkg_events_watcher(
+                        ctx,
+                        config,
+                        client.clone(),
+                        store.clone(),
+                    )
+                    .await?;
+                }
                 Contract::Bridge(config) => {
                     start_bridge_watcher(
                         ctx,
@@ -57,6 +68,20 @@ pub async fn ignite(
         }
         // start the transaction queue after starting other tasks.
         start_tx_queue(ctx.clone(), chain_name.clone(), store.clone())?;
+    }
+    // now, we start substrate service/tasks
+    for (node_name, node_config) in &ctx.config.substrate {
+        if !node_config.enabled {
+            continue;
+        }
+        if let SubstrateRuntime::Dkg = node_config.runtime {
+            let _client = ctx
+                .substrate_provider::<dkg_runtime::api::DefaultConfig>(
+                    node_name,
+                )
+                .await?;
+            // TODO(@shekohex): start the dkg service
+        };
     }
     Ok(())
 }
@@ -122,25 +147,24 @@ fn start_anchor_events_watcher(
         ctx.config.clone(), // the original config to access all networks.
         client.clone(),
     );
-    tracing::debug!(
-        "Anchor events watcher for ({}) Started.",
-        config.common.address,
-    );
-
-    static LEAVES_WATCHER: AnchorLeavesWatcher = AnchorLeavesWatcher::new();
-    let leaves_watcher_task = EventWatcher::run(
-        &LEAVES_WATCHER,
-        client.clone(),
-        store.clone(),
-        wrapper.clone(),
-    );
-
-    static BRIDGE_WATCHER: AnchorBridgeWatcher = AnchorBridgeWatcher::new();
-    let bridge_watcher_task =
-        EventWatcher::run(&BRIDGE_WATCHER, client, store, wrapper);
     let mut shutdown_signal = ctx.shutdown_signal();
     let contract_address = config.common.address;
     let task = async move {
+        tracing::debug!(
+            "Anchor events watcher for ({}) Started.",
+            contract_address,
+        );
+
+        let anchor_leaves_watcher = AnchorLeavesWatcher::new();
+        let leaves_watcher_task = anchor_leaves_watcher.run(
+            client.clone(),
+            store.clone(),
+            wrapper.clone(),
+        );
+
+        let anchor_bridge_watcher = AnchorBridgeWatcher::new();
+        let anchor_bridge_watcher_task =
+            anchor_bridge_watcher.run(client, store, wrapper);
         tokio::select! {
             _ = leaves_watcher_task => {
                 tracing::warn!(
@@ -148,9 +172,63 @@ fn start_anchor_events_watcher(
                     contract_address,
                 );
             },
-            _ = bridge_watcher_task => {
+            _ = anchor_bridge_watcher_task => {
                 tracing::warn!(
                     "Anchor bridge watcher task stopped for ({})",
+                    contract_address,
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping Anchor watcher for ({})",
+                    contract_address,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
+
+    Ok(())
+}
+
+async fn start_anchor_over_dkg_events_watcher(
+    ctx: &RelayerContext,
+    config: &AnchorContractOverDKGConfig,
+    client: Arc<Client>,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "Anchor Over DKG events watcher is disabled for ({}).",
+            config.common.address,
+        );
+        return Ok(());
+    }
+    let wrapper = AnchorContractOverDKGWrapper::new(
+        config.clone(),
+        ctx.config.clone(), // the original config to access all networks.
+        client.clone(),
+    );
+
+    let dkg_client = ctx
+        .substrate_provider::<dkg_runtime::api::DefaultConfig>(&config.dkg_node)
+        .await?;
+    let pair = ctx.substrate_wallet(&config.dkg_node).await?;
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let contract_address = config.common.address;
+    let task = async move {
+        tracing::debug!(
+            "Anchor Over DKG events watcher for ({}) Started.",
+            contract_address,
+        );
+        let watcher =
+            AnchorWatcherOverDKG::new(dkg_client, PairSigner::new(pair));
+        let anchor_over_dkg_watcher_task = watcher.run(client, store, wrapper);
+        tokio::select! {
+            _ = anchor_over_dkg_watcher_task => {
+                tracing::warn!(
+                    "Anchor over dkg watcher task stopped for ({})",
                     contract_address,
                 );
             },
@@ -182,18 +260,23 @@ fn start_bridge_watcher(
         return Ok(());
     }
     let wrapper = BridgeContractWrapper::new(config.clone(), client.clone());
-    tracing::debug!("Bridge watcher for ({}) Started.", config.common.address,);
-    static WATCHER: BridgeContractWatcher = BridgeContractWatcher;
-    let events_watcher_task = EventWatcher::run(
-        &WATCHER,
-        client.clone(),
-        store.clone(),
-        wrapper.clone(),
-    );
-    let cmd_handler_task = BridgeWatcher::run(&WATCHER, client, store, wrapper);
     let mut shutdown_signal = ctx.shutdown_signal();
     let contract_address = config.common.address;
     let task = async move {
+        tracing::debug!("Bridge watcher for ({}) Started.", contract_address);
+        let bridge_contract_watcher = BridgeContractWatcher::default();
+        let events_watcher_task = EventWatcher::run(
+            &bridge_contract_watcher,
+            client.clone(),
+            store.clone(),
+            wrapper.clone(),
+        );
+        let cmd_handler_task = BridgeWatcher::run(
+            &bridge_contract_watcher,
+            client,
+            store,
+            wrapper,
+        );
         tokio::select! {
             _ = events_watcher_task => {
                 tracing::warn!(
