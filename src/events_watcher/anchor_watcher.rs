@@ -116,14 +116,15 @@ impl super::EventWatcher for AnchorWatcher<ForLeaves> {
                     (chain_id, wrapper.contract.address()),
                     log.block_number,
                 )?;
-                tracing::debug!(
+                tracing::trace!(
                     "detected log.block_number: {}",
                     log.block_number
                 );
                 tracing::debug!(
-                    "Saved Deposit Event ({}, {})",
+                    "Saved Deposit Event ({}, {}) at block {}",
                     value.0,
-                    value.1
+                    value.1,
+                    log.block_number
                 );
             }
             EdgeAdditionFilter(v) => {
@@ -203,7 +204,7 @@ impl super::EventWatcher for AnchorWatcher<ForBridge> {
         //      d. leaf_index (used as nonce, for creating proposal).
         //      e. merkle_root (the new merkle_root, used for creating proposal).
         //
-        for linked_anchor in &wrapper.config.linked_anchors {
+        'outer: for linked_anchor in &wrapper.config.linked_anchors {
             let dest_chain = linked_anchor.chain.to_lowercase();
             let maybe_chain = wrapper.webb_config.evm.get(&dest_chain);
             let dest_chain = match maybe_chain {
@@ -219,6 +220,44 @@ impl super::EventWatcher for AnchorWatcher<ForBridge> {
             let dest_chain_id = dest_client.get_chainid().await?;
             let dest_contract =
                 AnchorContract::new(linked_anchor.address, dest_client);
+            let experimental = wrapper.webb_config.experimental;
+            let retry_count = if experimental.smart_anchor_updates {
+                // this just a sane number of retries, before we actually issue the update proposal
+                experimental.smart_anchor_updates_retries
+            } else {
+                // if this is not an experimental smart anchor, we don't need to retry
+                // hence we skip the whole smart logic here.
+                0
+            };
+            for _ in 0..retry_count {
+                // we are going to query for the latest leaf index of the dest_chain
+                let dest_leaf_index = dest_contract.next_index().call().await?;
+                // now we compare this leaf index with the leaf index of the origin chain
+                // if the leaf index is greater than the leaf index of the origin chain,
+                // we skip this linked anchor.
+                if leaf_index < dest_leaf_index.saturating_sub(1) {
+                    tracing::debug!(
+                        "skipping linked anchor {} because leaf index {} is less than {}",
+                        linked_anchor.address,
+                        leaf_index,
+                        dest_leaf_index.saturating_sub(1)
+                    );
+                    // continue on the next anchor, from the outer loop.
+                    continue 'outer;
+                }
+                // if the leaf index is less than the leaf index of the origin chain,
+                // we should do the following:
+                // 1. sleep for a 10s to 30s (max).
+                // 2. re-query the leaf index of the dest chain.
+                // 3. if the leaf index is greater than the leaf index of the origin chain,
+                //    we skip this linked anchor.
+                // 4. if the leaf index is less than the leaf index of the origin chain,
+                //    we will continue to retry again for `retry_count`.
+                // 5. at the end, we will issue the proposal to the bridge.
+                let s = 10;
+                tracing::debug!("sleep for {}s before signaling the bridge", s);
+                tokio::time::sleep(Duration::from_secs(s)).await;
+            }
             let dest_bridge = dest_contract.bridge().call().await?;
             let dest_handler = dest_contract.handler().call().await?;
             let key = BridgeKey::new(dest_bridge, dest_chain_id);
