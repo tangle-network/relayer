@@ -42,6 +42,9 @@ pub struct WebbRelayerConfig {
     /// a map between chain name and its configuration.
     #[serde(default)]
     pub substrate: HashMap<String, SubstrateConfig>,
+    /// For Experimental Options
+    #[serde(default)]
+    pub experimental: ExperimentalConfig,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -145,6 +148,15 @@ pub struct SubstrateConfig {
     pub runtime: SubstrateRuntime,
     /// Supported pallets over this substrate node.
     pub pallets: Vec<Pallet>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct ExperimentalConfig {
+    /// Enable the Smart Anchor Updates when it comes to signaling
+    /// the bridge to create the proposals.
+    pub smart_anchor_updates: bool,
+    pub smart_anchor_updates_retries: u32,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

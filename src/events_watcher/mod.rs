@@ -141,12 +141,12 @@ pub trait EventWatcher {
                             }
                         }
                     }
-
                     // move forward.
                     store.set_last_block_number(
                         (chain_id, contract.address()),
                         dest_block,
                     )?;
+                    tracing::trace!("Last saved block number: #{}", dest_block);
                 }
                 tracing::trace!("Polled from #{} to #{}", block, dest_block);
                 if should_cooldown {
