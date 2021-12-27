@@ -149,7 +149,7 @@ fn build_relayer(
 ) -> anyhow::Result<(SocketAddr, impl Future<Output = ()> + 'static)> {
     let port = ctx.config.port;
     let ctx_arc = Arc::new(ctx.clone());
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc));
+    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
     // the websocket server.
     let ws_filter = warp::path("ws")
         .and(warp::ws())
@@ -158,7 +158,8 @@ fn build_relayer(
             ws.on_upgrade(|socket| async move {
                 let _ = handler::accept_connection(ctx.as_ref(), socket).await;
             })
-        });
+        })
+        .boxed();
 
     // get the ip of the caller.
     let proxy_addr = [127, 0, 0, 1].into();
@@ -171,24 +172,28 @@ fn build_relayer(
         .or(warp::path("ip")
             .and(warp::get())
             .and(warp::addr::remote())
-            .and_then(handler::handle_socket_info));
+            .and_then(handler::handle_socket_info))
+        .boxed();
 
     // relayer info
     let info_filter = warp::path("info")
         .and(warp::get())
         .and(ctx_filter)
-        .and_then(handler::handle_relayer_info);
+        .and_then(handler::handle_relayer_info)
+        .boxed();
 
     let store = Arc::new(store);
-    let store_filter = warp::any().map(move || Arc::clone(&store));
+    let store_filter = warp::any().map(move || Arc::clone(&store)).boxed();
     let leaves_cache_filter = warp::path("leaves")
         .and(store_filter)
         .and(warp::path::param())
         .and(warp::path::param())
-        .and_then(handler::handle_leaves_cache);
+        .and_then(handler::handle_leaves_cache)
+        .boxed();
 
-    let routes = ip_filter.or(info_filter).or(leaves_cache_filter); // will add more routes here.
-    let http_filter = warp::path("api").and(warp::path("v1")).and(routes);
+    let routes = ip_filter.or(info_filter).or(leaves_cache_filter).boxed(); // will add more routes here.
+    let http_filter =
+        warp::path("api").and(warp::path("v1")).and(routes).boxed();
 
     let cors = warp::cors().allow_any_origin();
     let service = http_filter
