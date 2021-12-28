@@ -13,8 +13,8 @@ use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 use warp::ws::Message;
-use webb::evm::contract::darkwebb::anchor::PublicInputs;
-use webb::evm::contract::darkwebb::AnchorContract;
+use webb::evm::contract::protocol_solidity::anchor::PublicInputs;
+use webb::evm::contract::protocol_solidity::AnchorContract;
 use webb::evm::contract::tornado::TornadoContract;
 use webb::evm::ethers::contract::ContractError;
 use webb::evm::ethers::core::k256::SecretKey;
@@ -24,6 +24,14 @@ use webb::evm::ethers::signers::LocalWallet;
 use webb::evm::ethers::signers::Signer;
 use webb::evm::ethers::types::Bytes;
 
+use webb::substrate::protocol_substrate_runtime::api::balances::events::BalanceSet;
+use webb::substrate::protocol_substrate_runtime::api::runtime_types::darkwebb_standalone_runtime::Element;
+use webb::substrate::protocol_substrate_runtime::api::{
+    AccountData, balances::storage::Account};
+
+use webb::substrate::subxt::{
+    ClientBuilder,
+};
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
 
@@ -148,7 +156,32 @@ pub enum Command {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SubstrateCommand {}
+pub enum SubstrateCommand {
+    MixerRelayTx(MixerRelayTransaction),
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MixerRelayTransaction {
+    /// one of the supported chains of this relayer
+    pub chain: String,
+    /// The tree id of the mixer's underlying tree
+    pub id: u32,
+    /// The zero-knowledge proof bytes
+    pub proof_bytes: Vec<u8>,
+    /// The target merkle root for the proof
+    pub root: Element,
+    /// The nullifier_hash for the proof
+    pub nullifier_hash: Element,
+    /// The receipient of the transaction
+    pub recipient: AccountData,
+    /// The relayer of the transaction
+    pub relayer: AccountData,
+    /// The relayer's fee for the transaction
+    pub fee: u128,
+    /// The refund for the transaction in native tokens
+    pub refund: u128,
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -160,7 +193,7 @@ pub enum EvmCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TornadoRelayTransaction {
-    /// one of the supported chains of this realyer
+    /// one of the supported chains of this relayer
     pub chain: String,
     /// The target contract.
     pub contract: Address,
@@ -240,10 +273,7 @@ pub fn handle_cmd<'a>(
 ) -> BoxStream<'a, CommandResponse> {
     use CommandResponse::*;
     match cmd {
-        Command::Substrate(_) => stream::once(async {
-            Unimplemented("Substrate based networks are not implemented yet.")
-        })
-        .boxed(),
+        Command::Substrate(sub) => handle_substrate(ctx, sub),
         Command::Evm(evm) => handle_evm(ctx, evm),
         Command::Ping() => stream::once(async { Pong() }).boxed(),
     }
@@ -632,6 +662,84 @@ fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
     let fee_u256: U256 = mill_u256 / (1_000_000);
     fee_u256
 }
+
+pub fn handle_substrate<'a>(
+    ctx: RelayerContext,
+    cmd: SubstrateCommand,
+) -> BoxStream<'a, CommandResponse> {
+    match cmd {
+        SubstrateCommand::MixerRelayTx(cmd) => handle_substrate_mixer_relay_tx(ctx, cmd),
+    }
+}
+
+fn handle_substrate_mixer_relay_tx<'a>(
+    ctx: RelayerContext,
+    cmd: MixerRelayTransaction,
+) -> BoxStream<'a, CommandResponse> {
+    use CommandResponse::*;
+    use webb::substrate::protocol_substrate_runtime::RuntimeApi;
+    use webb::substrate::protocol_substrate_runtime::DefaultConfig;
+
+    let s = stream! {
+        let requested_chain = cmd.chain.to_lowercase();
+        let chain: SubstrateConfig = match ctx.config.substrate.get(&requested_chain) {
+            Some(v) => v,
+            None => {
+                yield Network(NetworkStatus::UnsupportedChain);
+                return;
+            }
+        };
+
+        let api: RuntimeApi<DefaultConfig> = ClientBuilder::new()
+            .set_url(chain.http_endpoint)
+            .build()
+            .await?
+            .to_runtime_api::<RuntimeApi<DefaultConfig>>();
+    
+        let withdraw_progress = api
+            .tx()
+            .mixer_bn_254()
+            .withdraw(
+                cmd.id,
+                cmd.proof_bytes,
+                cmd.root,
+                cmd.nullifier_hash,
+                cmd.recipient,
+                cmd.relayer,
+                cmd.fee,
+                cmd.refund,
+            )
+            .sign_and_submit_then_watch(&signer)
+            .await?
+
+        while let Some(ev) = withdraw_progress.next().await? {
+            // Made it into a block, but not finalized.
+            if let InBlock(details) = ev {
+                println!(
+                    "Transaction {:?} made it into block {:?}",
+                    details.extrinsic_hash(),
+                    details.block_hash()
+                );
+
+                let _events = details.wait_for_success().await?;
+            }
+            else if let Finalized(details) = ev {
+                println!(
+                    "Transaction {:?} is finalized in block {:?}",
+                    details.extrinsic_hash(),
+                    details.block_hash()
+                );
+
+                let _events = details.wait_for_success().await?;
+            }
+            else {
+                println!("Current transaction status: {:?}", ev);
+            }
+        }
+    };
+    s.boxed()
+}
+
 
 #[cfg(test)]
 mod test {
