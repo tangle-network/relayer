@@ -168,7 +168,7 @@ pub struct MixerRelayTransaction {
     /// The tree id of the mixer's underlying tree
     pub id: u32,
     /// The zero-knowledge proof bytes
-    pub proof_bytes: Vec<u8>,
+    pub proof: Vec<u8>,
     /// The target merkle root for the proof
     pub root: Element,
     /// The nullifier_hash for the proof
@@ -701,7 +701,7 @@ fn handle_substrate_mixer_relay_tx<'a>(
             .mixer_bn_254()
             .withdraw(
                 cmd.id,
-                cmd.proof_bytes,
+                cmd.proof,
                 cmd.root,
                 cmd.nullifier_hash,
                 cmd.recipient,
