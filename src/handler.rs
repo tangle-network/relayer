@@ -179,7 +179,7 @@ pub struct MixerRelayTransaction {
     /// The relayer's fee for the transaction
     pub fee: U256,
     /// The refund for the transaction in native tokens
-    pub refund: u128,
+    pub refund: U256,
 }
 
 #[derive(Debug, Clone, Deserialize)]
