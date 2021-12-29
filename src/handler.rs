@@ -177,7 +177,7 @@ pub struct MixerRelayTransaction {
     /// The relayer of the transaction
     pub relayer: subxt::sp_core::crypto::AccountId32,
     /// The relayer's fee for the transaction
-    pub fee: u128,
+    pub fee: U256,
     /// The refund for the transaction in native tokens
     pub refund: u128,
 }
