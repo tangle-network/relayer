@@ -13,25 +13,24 @@ use futures::prelude::*;
 use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 use warp::ws::Message;
-use webb::evm::contract::protocol_solidity::anchor::PublicInputs;
-use webb::evm::contract::protocol_solidity::AnchorContract;
-use webb::evm::contract::tornado::TornadoContract;
-use webb::evm::ethers::contract::ContractError;
-use webb::evm::ethers::core::k256::SecretKey;
-use webb::evm::ethers::middleware::SignerMiddleware;
-use webb::evm::ethers::providers::Middleware;
-use webb::evm::ethers::signers::LocalWallet;
-use webb::evm::ethers::signers::Signer;
-use webb::evm::ethers::types::Bytes;
-
-use webb::substrate::protocol_substrate_runtime::api::balances::events::BalanceSet;
-use webb::substrate::protocol_substrate_runtime::api::runtime_types::darkwebb_standalone_runtime::Element;
-use webb::substrate::protocol_substrate_runtime::api::{
-    AccountData, balances::storage::Account};
-
-use webb::substrate::subxt::{
-    ClientBuilder,
+use webb::evm::contract::{
+    protocol_solidity::{anchor::PublicInputs, AnchorContract},
+    tornado::TornadoContract,
 };
+use webb::evm::ethers::{
+    contract::ContractError,
+    core::k256::SecretKey,
+    middleware::SignerMiddleware,
+    providers::Middleware,
+    signers::{LocalWallet, Signer},
+    types::Bytes,
+};
+use webb::substrate::protocol_substrate_runtime::api::{
+    balances::events::BalanceSet, balances::storage::Account,
+    runtime_types::darkwebb_standalone_runtime::Element, AccountData,
+};
+use webb::substrate::subxt;
+
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
 
@@ -668,7 +667,9 @@ pub fn handle_substrate<'a>(
     cmd: SubstrateCommand,
 ) -> BoxStream<'a, CommandResponse> {
     match cmd {
-        SubstrateCommand::MixerRelayTx(cmd) => handle_substrate_mixer_relay_tx(ctx, cmd),
+        SubstrateCommand::MixerRelayTx(cmd) => {
+            handle_substrate_mixer_relay_tx(ctx, cmd)
+        }
     }
 }
 
@@ -676,9 +677,9 @@ fn handle_substrate_mixer_relay_tx<'a>(
     ctx: RelayerContext,
     cmd: MixerRelayTransaction,
 ) -> BoxStream<'a, CommandResponse> {
-    use CommandResponse::*;
-    use webb::substrate::protocol_substrate_runtime::RuntimeApi;
     use webb::substrate::protocol_substrate_runtime::DefaultConfig;
+    use webb::substrate::protocol_substrate_runtime::RuntimeApi;
+    use CommandResponse::*;
 
     let s = stream! {
         let requested_chain = cmd.chain.to_lowercase();
@@ -690,12 +691,12 @@ fn handle_substrate_mixer_relay_tx<'a>(
             }
         };
 
-        let api: RuntimeApi<DefaultConfig> = ClientBuilder::new()
+        let api = subxt::ClientBuilder::new()
             .set_url(chain.http_endpoint)
             .build()
             .await?
             .to_runtime_api::<RuntimeApi<DefaultConfig>>();
-    
+
         let withdraw_progress = api
             .tx()
             .mixer_bn_254()
@@ -710,7 +711,7 @@ fn handle_substrate_mixer_relay_tx<'a>(
                 cmd.refund,
             )
             .sign_and_submit_then_watch(&signer)
-            .await?
+            .await?;
 
         while let Some(ev) = withdraw_progress.next().await? {
             // Made it into a block, but not finalized.
@@ -739,7 +740,6 @@ fn handle_substrate_mixer_relay_tx<'a>(
     };
     s.boxed()
 }
-
 
 #[cfg(test)]
 mod test {
