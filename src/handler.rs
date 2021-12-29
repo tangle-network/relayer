@@ -167,7 +167,7 @@ pub struct MixerRelayTransaction {
     /// The tree id of the mixer's underlying tree
     pub id: u32,
     /// The zero-knowledge proof bytes
-    pub proof: Vec<u8>,
+    pub proof: Bytes,
     /// The target merkle root for the proof
     pub root: Element,
     /// The nullifier_hash for the proof
