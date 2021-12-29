@@ -169,7 +169,7 @@ pub struct MixerRelayTransaction {
     /// The zero-knowledge proof bytes
     pub proof: Bytes,
     /// The target merkle root for the proof
-    pub root: Element,
+    pub root: H256,
     /// The nullifier_hash for the proof
     pub nullifier_hash: Element,
     /// The receipient of the transaction
