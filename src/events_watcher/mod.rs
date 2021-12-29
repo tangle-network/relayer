@@ -18,13 +18,13 @@ use webb::{
             self,
             sp_core::{storage::StorageKey, twox_128},
             sp_runtime::traits::Header,
-            Phase,
         },
     },
 };
 
 use crate::store::sled::SledQueueKey;
 use crate::store::{HistoryStore, ProposalStore, QueueStore};
+use crate::utils;
 
 mod tornado_leaves_watcher;
 pub use tornado_leaves_watcher::*;
@@ -315,17 +315,11 @@ pub trait SubstrateEventWatcher {
         // The storage Key, where all events are stored.
         struct SystemEvents(StorageKey);
 
-        impl SystemEvents {
-            fn new() -> Self {
+        impl Default for SystemEvents {
+            fn default() -> Self {
                 let mut storage_key = twox_128(b"System").to_vec();
                 storage_key.extend(twox_128(b"Events").to_vec());
                 Self(StorageKey(storage_key))
-            }
-        }
-
-        impl Default for SystemEvents {
-            fn default() -> Self {
-                Self::new()
             }
         }
 
@@ -377,11 +371,8 @@ pub trait SubstrateEventWatcher {
                 tracing::trace!("Reading from #{} to #{}", block, dest_block);
                 // Only handle events from found blocks if they are new
                 if dest_block != block {
-                    // TODO(@shekohex): we need to fetch the events here.
-                    let mut found_events = vec![];
                     // we need to query the node for the events that happened in the
-                    // range [block, dest_block]
-
+                    // range [block, dest_block].
                     // so first we get the hash of the block we want to start from.
                     let maybe_from = rpc
                         .block_hash(Some(block.as_u32().into()))
@@ -397,59 +388,12 @@ pub trait SubstrateEventWatcher {
                         .query_storage(keys.clone(), from, to)
                         .map_err(anyhow::Error::from)
                         .await?;
-                    // now we go through the changeset, and for every change we extract the raw events.
-                    for change_set in change_sets {
-                        let current_block_hash = change_set.block;
-                        let raw_events: Vec<_> = change_set
-                            .changes
-                            .into_iter()
-                            .filter_map(|(_key, change)| {
-                                let bytes = match change {
-                                    Some(change) => change.0,
-                                    None => return None,
-                                };
-                                let decoded = decoder
-                                    .decode_events(&mut bytes.as_slice());
-                                match decoded {
-                                    Ok(events) => Some(events),
-                                    Err(err) => {
-                                        tracing::warn!(
-                                            "Failed to decode events: {:?}",
-                                            err
-                                        );
-                                        None
-                                    }
-                                }
-                            })
-                            .flatten()
-                            .filter_map(|(phase, raw_event)| {
-                                let is_apply_extrinsic =
-                                    matches!(phase, Phase::ApplyExtrinsic(_));
-                                if is_apply_extrinsic {
-                                    Some((current_block_hash, raw_event))
-                                } else {
-                                    None
-                                }
-                            })
-                            .filter_map(|(block, raw)| {
-                                match raw.as_event::<Self::Event>() {
-                                    Ok(event) => {
-                                        event.map(|event| (block, event))
-                                    }
-                                    Err(err) => {
-                                        tracing::warn!(
-                                            "Failed to decode event: {:?}",
-                                            err
-                                        );
-                                        None
-                                    }
-                                }
-                            })
-                            .collect();
-                        // push all the events we found to the list of events we found.
-                        found_events.extend(raw_events);
-                    }
-
+                    // now we go through the changeset, and for every change we extract the events.
+                    let found_events = change_sets
+                        .into_iter()
+                        .map(|c| utils::change_set_to_events(c, decoder))
+                        .flatten()
+                        .collect::<Vec<_>>();
                     tracing::trace!("Found #{} events", found_events.len());
 
                     for (block_hash, event) in found_events {
@@ -477,9 +421,7 @@ pub trait SubstrateEventWatcher {
                         match result {
                             Ok(_) => {
                                 let current_block_number_bytes =
-                                    scale::Encode::encode(
-                                        &latest_header.number(),
-                                    );
+                                    scale::Encode::encode(&block_number);
                                 let current_block_number: u32 =
                                     scale::Decode::decode(
                                         &mut &current_block_number_bytes[..],
