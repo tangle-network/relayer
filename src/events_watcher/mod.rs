@@ -3,10 +3,25 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 
+use ethereum_types::{U256, U64};
 use futures::prelude::*;
-use webb::evm::ethers::prelude::transaction;
-use webb::evm::ethers::providers::Middleware;
-use webb::evm::ethers::{contract, providers, types};
+use webb::{
+    evm::ethers::{
+        contract,
+        prelude::transaction,
+        providers::{self, Middleware},
+        types,
+    },
+    substrate::{
+        scale,
+        subxt::{
+            self,
+            sp_core::{storage::StorageKey, twox_128},
+            sp_runtime::traits::Header,
+            Phase,
+        },
+    },
+};
 
 use crate::store::sled::SledQueueKey;
 use crate::store::{HistoryStore, ProposalStore, QueueStore};
@@ -22,6 +37,9 @@ pub use bridge_watcher::*;
 
 mod anchor_watcher_over_dkg;
 pub use anchor_watcher_over_dkg::*;
+
+mod proposal_handler_watcher;
+pub use proposal_handler_watcher::*;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
@@ -248,6 +266,257 @@ where
             // whenever this loop stops, we will restart the whole task again.
             // that way we never have to worry about closed channels.
             Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
+        };
+        backoff::future::retry(backoff, task).await?;
+        Ok(())
+    }
+}
+
+pub type BlockNumberOf<T> =
+    <<T as SubstrateEventWatcher>::RuntimeConfig as subxt::Config>::BlockNumber;
+
+#[async_trait::async_trait]
+pub trait SubstrateEventWatcher {
+    const TAG: &'static str;
+    type RuntimeConfig: subxt::Config
+        + subxt::ExtrinsicExtraData<Self::RuntimeConfig>;
+    type Api: From<subxt::Client<Self::RuntimeConfig>> + Send + Sync;
+    type Event: subxt::Event + Send + Sync;
+    type Store: HistoryStore;
+
+    async fn handle_event(
+        &self,
+        store: Arc<Self::Store>,
+        api: Arc<Self::Api>,
+        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+    ) -> anyhow::Result<()>;
+
+    /// Returns a task that should be running in the background
+    /// that will watch events
+    #[tracing::instrument(skip_all, fields(tag = %Self::TAG))]
+    async fn run(
+        &self,
+        node_name: String,
+        chain_id: U256,
+        client: subxt::Client<Self::RuntimeConfig>,
+        store: Arc<Self::Store>,
+    ) -> anyhow::Result<()> {
+        let backoff = backoff::ExponentialBackoff {
+            max_elapsed_time: None,
+            ..Default::default()
+        };
+        // The storage Key, where all events are stored.
+        struct SystemEvents(StorageKey);
+
+        impl SystemEvents {
+            fn new() -> Self {
+                let mut storage_key = twox_128(b"System").to_vec();
+                storage_key.extend(twox_128(b"Events").to_vec());
+                Self(StorageKey(storage_key))
+            }
+        }
+
+        impl Default for SystemEvents {
+            fn default() -> Self {
+                Self::new()
+            }
+        }
+
+        impl From<SystemEvents> for StorageKey {
+            fn from(key: SystemEvents) -> Self {
+                key.0
+            }
+        }
+
+        let task = || async {
+            let step = U64::from(50u64);
+            let client_api = client.clone();
+            let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
+            let rpc = client.rpc();
+            let decoder = client.events_decoder();
+            let keys = vec![StorageKey::from(SystemEvents::default())];
+            loop {
+                // now we start polling for new events.
+                // get the latest seen block number.
+                let block = store.get_last_block_number(
+                    (node_name.clone(), chain_id),
+                    1u64.into(),
+                )?;
+                let latest_head =
+                    rpc.finalized_head().map_err(anyhow::Error::from).await?;
+                let maybe_latest_header = rpc
+                    .header(Some(latest_head))
+                    .map_err(anyhow::Error::from)
+                    .await?;
+                let latest_header = if let Some(header) = maybe_latest_header {
+                    header
+                } else {
+                    tracing::warn!("No latest header found");
+                    continue;
+                };
+                let current_block_number_bytes =
+                    scale::Encode::encode(&latest_header.number());
+                let current_block_number: u32 =
+                    scale::Decode::decode(&mut &current_block_number_bytes[..])
+                        .map_err(anyhow::Error::from)?;
+                let current_block_number = U64::from(current_block_number);
+                tracing::trace!(
+                    "Latest block number: #{}",
+                    current_block_number
+                );
+                let dest_block = cmp::min(block + step, current_block_number);
+                // check if we are now on the latest block.
+                let should_cooldown = dest_block == current_block_number;
+                tracing::trace!("Reading from #{} to #{}", block, dest_block);
+                // Only handle events from found blocks if they are new
+                if dest_block != block {
+                    // TODO(@shekohex): we need to fetch the events here.
+                    let mut found_events = vec![];
+                    // we need to query the node for the events that happened in the
+                    // range [block, dest_block]
+
+                    // so first we get the hash of the block we want to start from.
+                    let maybe_from = rpc
+                        .block_hash(Some(block.as_u32().into()))
+                        .map_err(anyhow::Error::from)
+                        .await?;
+                    let from = maybe_from.unwrap_or(latest_head);
+                    let to = rpc
+                        .block_hash(Some(dest_block.as_u32().into()))
+                        .map_err(anyhow::Error::from)
+                        .await?;
+                    // then we query the storage set of the system events.
+                    let change_sets = rpc
+                        .query_storage(keys.clone(), from, to)
+                        .map_err(anyhow::Error::from)
+                        .await?;
+                    // now we go through the changeset, and for every change we extract the raw events.
+                    for change_set in change_sets {
+                        let current_block_hash = change_set.block;
+                        let raw_events: Vec<_> = change_set
+                            .changes
+                            .into_iter()
+                            .filter_map(|(_key, change)| {
+                                let bytes = match change {
+                                    Some(change) => change.0,
+                                    None => return None,
+                                };
+                                let decoded = decoder
+                                    .decode_events(&mut bytes.as_slice());
+                                match decoded {
+                                    Ok(events) => Some(events),
+                                    Err(err) => {
+                                        tracing::warn!(
+                                            "Failed to decode events: {:?}",
+                                            err
+                                        );
+                                        None
+                                    }
+                                }
+                            })
+                            .flatten()
+                            .filter_map(|(phase, raw_event)| {
+                                let is_apply_extrinsic =
+                                    matches!(phase, Phase::ApplyExtrinsic(_));
+                                if is_apply_extrinsic {
+                                    Some((current_block_hash, raw_event))
+                                } else {
+                                    None
+                                }
+                            })
+                            .filter_map(|(block, raw)| {
+                                match raw.as_event::<Self::Event>() {
+                                    Ok(event) => {
+                                        event.map(|event| (block, event))
+                                    }
+                                    Err(err) => {
+                                        tracing::warn!(
+                                            "Failed to decode event: {:?}",
+                                            err
+                                        );
+                                        None
+                                    }
+                                }
+                            })
+                            .collect();
+                        // push all the events we found to the list of events we found.
+                        found_events.extend(raw_events);
+                    }
+
+                    tracing::trace!("Found #{} events", found_events.len());
+
+                    for (block_hash, event) in found_events {
+                        let maybe_header = rpc
+                            .header(Some(block_hash))
+                            .map_err(anyhow::Error::from)
+                            .await?;
+                        let header = if let Some(header) = maybe_header {
+                            header
+                        } else {
+                            tracing::warn!(
+                                "No header found for block #{:?}",
+                                block_hash
+                            );
+                            continue;
+                        };
+                        let block_number = *header.number();
+                        let result = self
+                            .handle_event(
+                                store.clone(),
+                                api.clone(),
+                                (event, block_number),
+                            )
+                            .await;
+                        match result {
+                            Ok(_) => {
+                                let current_block_number_bytes =
+                                    scale::Encode::encode(
+                                        &latest_header.number(),
+                                    );
+                                let current_block_number: u32 =
+                                    scale::Decode::decode(
+                                        &mut &current_block_number_bytes[..],
+                                    )
+                                    .map_err(anyhow::Error::from)?;
+                                let current_block_number =
+                                    U64::from(current_block_number);
+                                store.set_last_block_number(
+                                    (node_name.clone(), chain_id),
+                                    current_block_number,
+                                )?;
+                                tracing::trace!(
+                                    "event handled successfully. at #{}",
+                                    current_block_number
+                                );
+                            }
+                            Err(e) => {
+                                tracing::error!(
+                                    "Error while handling event: {}",
+                                    e
+                                );
+                                tracing::warn!("Restarting event watcher ...");
+                                // this a transient error, so we will retry again.
+                                return Err(backoff::Error::transient(e));
+                            }
+                        }
+                    }
+                    // move forward.
+                    store.set_last_block_number(
+                        (node_name.clone(), chain_id),
+                        dest_block,
+                    )?;
+                    tracing::trace!("Last saved block number: #{}", dest_block);
+                }
+                tracing::trace!("Polled from #{} to #{}", block, dest_block);
+                if should_cooldown {
+                    let duration = Duration::from_secs(6);
+                    tracing::trace!(
+                        "Cooldown a bit for {}ms",
+                        duration.as_millis()
+                    );
+                    tokio::time::sleep(duration).await;
+                }
+            }
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())

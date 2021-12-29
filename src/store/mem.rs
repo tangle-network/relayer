@@ -5,14 +5,14 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use webb::evm::ethers::types;
 
-use super::{ContractKey, HistoryStore, LeafCacheStore};
+use super::{HistoryStore, HistoryStoreKey, LeafCacheStore};
 
-type MemStore = HashMap<ContractKey, Vec<(u32, types::H256)>>;
+type MemStore = HashMap<HistoryStoreKey, Vec<(u32, types::H256)>>;
 
 #[derive(Clone, Default)]
 pub struct InMemoryStore {
     store: Arc<RwLock<MemStore>>,
-    last_block_numbers: Arc<RwLock<HashMap<ContractKey, types::U64>>>,
+    last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, types::U64>>>,
 }
 
 impl std::fmt::Debug for InMemoryStore {
@@ -23,7 +23,7 @@ impl std::fmt::Debug for InMemoryStore {
 
 impl HistoryStore for InMemoryStore {
     #[tracing::instrument(skip(self))]
-    fn get_last_block_number<K: Into<ContractKey> + Debug>(
+    fn get_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         default_block_number: types::U64,
@@ -37,7 +37,7 @@ impl HistoryStore for InMemoryStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn set_last_block_number<K: Into<ContractKey> + Debug>(
+    fn set_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         block_number: types::U64,
@@ -54,7 +54,7 @@ impl LeafCacheStore for InMemoryStore {
     type Output = Vec<types::H256>;
 
     #[tracing::instrument(skip(self))]
-    fn get_leaves<K: Into<ContractKey> + Debug>(
+    fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
     ) -> anyhow::Result<Self::Output> {
@@ -70,7 +70,7 @@ impl LeafCacheStore for InMemoryStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn insert_leaves<K: Into<ContractKey> + Debug>(
+    fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         leaves: &[(u32, types::H256)],
@@ -84,7 +84,7 @@ impl LeafCacheStore for InMemoryStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn get_last_deposit_block_number<K: Into<ContractKey> + Debug>(
+    fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
     ) -> anyhow::Result<types::U64> {
@@ -92,7 +92,7 @@ impl LeafCacheStore for InMemoryStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn insert_last_deposit_block_number<K: Into<ContractKey> + Debug>(
+    fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         block_number: types::U64,

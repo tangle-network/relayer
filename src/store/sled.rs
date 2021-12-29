@@ -8,8 +8,8 @@ use webb::evm::ethers::types;
 use crate::events_watcher::BridgeKey;
 use crate::store::QueueKey;
 
-use super::{ContractKey, ProposalEntity};
 use super::{HistoryStore, LeafCacheStore, ProposalStore, QueueStore};
+use super::{HistoryStoreKey, ProposalEntity};
 
 #[derive(Clone)]
 pub struct SledStore {
@@ -36,7 +36,7 @@ impl SledStore {
 
 impl HistoryStore for SledStore {
     #[tracing::instrument(skip(self))]
-    fn set_last_block_number<K: Into<ContractKey> + Debug>(
+    fn set_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         block_number: types::U64,
@@ -44,7 +44,7 @@ impl HistoryStore for SledStore {
         let tree = self.db.open_tree("last_block_numbers")?;
         let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
         block_number.to_little_endian(&mut bytes);
-        let key: ContractKey = key.into();
+        let key: HistoryStoreKey = key.into();
         let old = tree.insert(key.to_bytes(), &bytes)?;
         match old {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
@@ -53,13 +53,13 @@ impl HistoryStore for SledStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn get_last_block_number<K: Into<ContractKey> + Debug>(
+    fn get_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         default_block_number: types::U64,
     ) -> anyhow::Result<types::U64> {
         let tree = self.db.open_tree("last_block_numbers")?;
-        let key: ContractKey = key.into();
+        let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
         match val {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
@@ -72,14 +72,16 @@ impl LeafCacheStore for SledStore {
     type Output = Vec<types::H256>;
 
     #[tracing::instrument(skip(self))]
-    fn get_leaves<K: Into<ContractKey> + Debug>(
+    fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
     ) -> anyhow::Result<Self::Output> {
-        let key: ContractKey = key.into();
-        let tree = self
-            .db
-            .open_tree(format!("leaves/{}/{}", key.chain_id, key.address))?;
+        let key: HistoryStoreKey = key.into();
+        let tree = self.db.open_tree(format!(
+            "leaves/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
         let leaves = tree
             .iter()
             .values()
@@ -90,28 +92,30 @@ impl LeafCacheStore for SledStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn insert_leaves<K: Into<ContractKey> + Debug>(
+    fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         leaves: &[(u32, types::H256)],
     ) -> anyhow::Result<()> {
-        let key: ContractKey = key.into();
+        let key: HistoryStoreKey = key.into();
 
-        let tree = self
-            .db
-            .open_tree(format!("leaves/{}/{}", key.chain_id, key.address))?;
+        let tree = self.db.open_tree(format!(
+            "leaves/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
         for (k, v) in leaves {
             tree.insert(k.to_le_bytes(), v.as_bytes())?;
         }
         Ok(())
     }
 
-    fn get_last_deposit_block_number<K: Into<ContractKey> + Debug>(
+    fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
     ) -> anyhow::Result<types::U64> {
         let tree = self.db.open_tree("last_deposit_block_number")?;
-        let key: ContractKey = key.into();
+        let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
         match val {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
@@ -119,7 +123,7 @@ impl LeafCacheStore for SledStore {
         }
     }
 
-    fn insert_last_deposit_block_number<K: Into<ContractKey> + Debug>(
+    fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         block_number: types::U64,
@@ -127,7 +131,7 @@ impl LeafCacheStore for SledStore {
         let tree = self.db.open_tree("last_deposit_block_number")?;
         let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
         block_number.to_little_endian(&mut bytes);
-        let key: ContractKey = key.into();
+        let key: HistoryStoreKey = key.into();
         let old = tree.insert(key.to_bytes(), &bytes)?;
         match old {
             Some(v) => Ok(types::U64::from_little_endian(&v)),
