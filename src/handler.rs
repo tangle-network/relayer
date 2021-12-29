@@ -171,7 +171,7 @@ pub struct MixerRelayTransaction {
     /// The target merkle root for the proof
     pub root: H256,
     /// The nullifier_hash for the proof
-    pub nullifier_hash: Element,
+    pub nullifier_hash: H256,
     /// The receipient of the transaction
     pub recipient: AccountData,
     /// The relayer of the transaction
