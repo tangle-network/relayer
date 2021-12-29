@@ -25,12 +25,10 @@ use webb::evm::ethers::{
     signers::{LocalWallet, Signer},
     types::Bytes,
 };
-use webb::substrate::protocol_substrate_runtime::api::{
-    balances::events::BalanceSet, balances::storage::Account,
-    runtime_types::darkwebb_standalone_runtime::Element, AccountData,
-};
-use webb::substrate::subxt;
 
+use webb::substrate::protocol_substrate_runtime::api::runtime_types::darkwebb_standalone_runtime::Element;
+use webb::substrate::subxt::{self, PairSigner, TransactionStatus::{Finalized, InBlock}};
+use webb::substrate::protocol_substrate_runtime::api::{DefaultConfig, RuntimeApi};
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
 
@@ -167,19 +165,19 @@ pub struct MixerRelayTransaction {
     /// The tree id of the mixer's underlying tree
     pub id: u32,
     /// The zero-knowledge proof bytes
-    pub proof: Bytes,
+    pub proof: Vec<u8>,
     /// The target merkle root for the proof
-    pub root: H256,
+    pub root: [u8; 32],
     /// The nullifier_hash for the proof
-    pub nullifier_hash: H256,
+    pub nullifier_hash: [u8; 32],
     /// The receipient of the transaction
     pub recipient: subxt::sp_core::crypto::AccountId32,
     /// The relayer of the transaction
     pub relayer: subxt::sp_core::crypto::AccountId32,
     /// The relayer's fee for the transaction
-    pub fee: U256,
+    pub fee: u128,
     /// The refund for the transaction in native tokens
-    pub refund: U256,
+    pub refund: u128,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -677,23 +675,35 @@ fn handle_substrate_mixer_relay_tx<'a>(
     ctx: RelayerContext,
     cmd: MixerRelayTransaction,
 ) -> BoxStream<'a, CommandResponse> {
-    use webb::substrate::protocol_substrate_runtime::DefaultConfig;
-    use webb::substrate::protocol_substrate_runtime::RuntimeApi;
     use CommandResponse::*;
+
+    let root_element = Element(cmd.root);
+    let nullifier_hash_element = Element(cmd.nullifier_hash);
 
     let s = stream! {
         let requested_chain = cmd.chain.to_lowercase();
         let client = ctx.substrate_provider::<DefaultConfig>(&requested_chain).await?;
         let api = client.to_runtime_api::<RuntimeApi<DefaultConfig>>();
 
+        let pair = match ctx.substrate_wallet(&cmd.chain).await {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!("Misconfigured Network: {}", e);
+                yield Error(format!("Misconfigured Network: {:?}", cmd.chain));
+                return;
+            }
+        };
+
+        let signer = PairSigner::new(pair);
+
         let withdraw_progress = api
             .tx()
-            .mixer_bn_254()
+            .mixer_bn254()
             .withdraw(
                 cmd.id,
                 cmd.proof,
-                cmd.root,
-                cmd.nullifier_hash,
+                root_element,
+                nullifier_hash_element,
                 cmd.recipient,
                 cmd.relayer,
                 cmd.fee,
