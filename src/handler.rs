@@ -27,7 +27,7 @@ use webb::evm::ethers::{
 };
 
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::darkwebb_standalone_runtime::Element;
-use webb::substrate::subxt::{self, PairSigner, TransactionStatus::{Finalized, InBlock}};
+use webb::substrate::subxt::{self, PairSigner, TransactionStatus::{Finalized, InBlock, Invalid, Dropped}};
 use webb::substrate::protocol_substrate_runtime::api::{DefaultConfig, RuntimeApi};
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
@@ -715,25 +715,34 @@ fn handle_substrate_mixer_relay_tx<'a>(
         while let Some(ev) = withdraw_progress.next().await? {
             // Made it into a block, but not finalized.
             if let InBlock(details) = ev {
-                println!(
+                tracing::debug!(
                     "Transaction {:?} made it into block {:?}",
                     details.extrinsic_hash(),
                     details.block_hash()
                 );
 
                 let _events = details.wait_for_success().await?;
-            }
-            else if let Finalized(details) = ev {
-                println!(
+                yield Withdraw(WithdrawStatus::Submitted);
+            } else if let Finalized(details) = ev {
+                tracing::debug!(
                     "Transaction {:?} is finalized in block {:?}",
                     details.extrinsic_hash(),
                     details.block_hash()
                 );
 
                 let _events = details.wait_for_success().await?;
-            }
-            else {
-                println!("Current transaction status: {:?}", ev);
+                yield Withdraw(WithdrawStatus::Finalized {
+                    tx_hash: details.extrinsic_hash(),
+                });
+                return Ok(());
+            } else if let Invalid = ev {
+                yield Withdraw(WithdrawStatus::Errored { reason: "Invalid".to_string(), code: 4 });
+                return;
+            } else if let Dropped = ev {
+                yield Withdraw(WithdrawStatus::DroppedFromMemPool);
+                return;
+            } else {
+                yield Withdraw(WithdrawStatus::Sent);
             }
         }
     };
