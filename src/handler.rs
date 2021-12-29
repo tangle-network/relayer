@@ -683,19 +683,8 @@ fn handle_substrate_mixer_relay_tx<'a>(
 
     let s = stream! {
         let requested_chain = cmd.chain.to_lowercase();
-        let chain: SubstrateConfig = match ctx.config.substrate.get(&requested_chain) {
-            Some(v) => v,
-            None => {
-                yield Network(NetworkStatus::UnsupportedChain);
-                return;
-            }
-        };
-
-        let api = subxt::ClientBuilder::new()
-            .set_url(chain.http_endpoint)
-            .build()
-            .await?
-            .to_runtime_api::<RuntimeApi<DefaultConfig>>();
+        let client = ctx.substrate_provider::<DefaultConfig>(&requested_chain).await?;
+        let api = client.to_runtime_api::<RuntimeApi<DefaultConfig>>();
 
         let withdraw_progress = api
             .tx()
