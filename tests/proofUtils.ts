@@ -13,6 +13,7 @@ import { ApiPromise, WsProvider } from "@polkadot/api";
 import { Note, NoteGenInput } from '@webb-tools/sdk-mixer';
 // import { ProvingManger, ProvingManagerWrapper } from '@webb-tools/sdk-core';
 // import Worker from "./mixer.worker.ts";
+import { Keyring } from "@polkadot/keyring";
 import { options } from '@webb-tools/api';
 
 // variable to hold groth16 and not reinitialize
@@ -241,7 +242,17 @@ export async function generateTornadoSnarkProof(
   return { proof, args };
 }
 
-async function createSubstrateDeposit() {
+export async function generateSubstrateMixerSnarkProof(
+  leaves: any,
+  deposit: any,
+  recipient: string,
+  relayer: string,
+  fee: string
+) {
+  return;
+}
+
+export async function createSubstrateDeposit() {
   const chainId = 1080;
   const noteInput: NoteGenInput = {
     prefix: 'webb.mix',
@@ -265,38 +276,67 @@ async function createSubstrateDeposit() {
 export const provider = new WsProvider('ws://127.0.0.1:9944');
 export const ALICE = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY';
 
+export async function getDepositLeavesFromSubstrateChain(treeId: string) {
+  const api = new ApiPromise(options({ provider }));
+  await api.isReady;
+}
+
 export async function depositSubstrateMixer(_treeId: string) {
   const deposit = await createSubstrateDeposit();
-  console.log('deposit created');
+  const keyring = new Keyring({ type: "sr25519" });
+	const alice = keyring.addFromUri("//Alice");
   const api = new ApiPromise(options({ provider }));
   await api.isReady;
   console.log(api);
-  // const toFixedHex = (number: number | Buffer, length = 32) =>
-  //   '0x' +
-  //   (number instanceof Buffer
-  //     ? number.toString('hex')
-  //     : snarkjs.bigInt(number).toString(16)
-  //   ).padStart(length * 2, '0');
+  const toFixedHex = (number: number | Buffer, length = 32) =>
+    '0x' +
+    (number instanceof Buffer
+      ? number.toString('hex')
+      : snarkjs.bigInt(number).toString(16)
+    ).padStart(length * 2, '0');
 
   // Gas limit values required for beresheet
-  // const depositTx = await api?.tx?.mixerBn254(deposit.getLeaf());
+  // @ts-ignore
+  const unsub = await api.tx.mixerBn254.deposit(
+    deposit.getLeaf()
+  ).signAndSend(alice, ({ events = [], status }) => {
+		console.log(`Current status is: ${status.type}`);
+
+		if (status.isFinalized) {
+			console.log(`Transaction included at blockHash ${status.asFinalized}`);
+
+			events.forEach(({ phase, event: { data, method, section } }) => {
+				console.log(`\t' ${phase}: ${section}.${method}:: ${data}`);
+			});
+
+			unsub();
+		}
+  });
   return deposit;
 }
 
-export async function withdrawSubstrateMixer(treeId: string, proof: any, args: any, wallet: ethers.Signer) {
-  const nativeTornadoInstance = new ethers.Contract(
-    treeId,
-    nativeTornadoContract.abi,
-    wallet
-  );
+export async function withdrawSubstrateMixer(treeId: string, proof: any, args: any) {
+  const keyring = new Keyring({ type: "sr25519" });
+	const alice = keyring.addFromUri("//Alice");
+  const api = new ApiPromise(options({ provider }));
+  await api.isReady;
 
-  const withdrawTx = await nativeTornadoInstance.withdraw(
+  // @ts-ignore
+	const unsub = await api.tx.mixerBn254.withdraw(
+    treeId,
     proof, 
-    ...args,
-    {
-      gasLimit: 6000000
-    }
-  );
-  const receipt = await withdrawTx.wait();
-  return receipt;
+    ...args
+  ).signAndSend(alice, ({ events = [], status }) => {
+		console.log(`Current status is: ${status.type}`);
+
+		if (status.isFinalized) {
+			console.log(`Transaction included at blockHash ${status.asFinalized}`);
+
+			events.forEach(({ phase, event: { data, method, section } }) => {
+				console.log(`\t' ${phase}: ${section}.${method}:: ${data}`);
+			});
+
+			unsub();
+		}
+  });
 }

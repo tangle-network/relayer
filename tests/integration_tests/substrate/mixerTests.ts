@@ -2,15 +2,13 @@ import { assert, expect } from 'chai';
 import { ethers } from 'ethers';
 import WebSocket from 'ws';
 import {
-  depositTornado,
-  generateTornadoSnarkProof,
-  getDepositLeavesFromChain,
+  generateSubstrateMixerSnarkProof,
+  getDepositLeavesFromSubstrateChain,
   calculateFee,
-  withdrawTornado,
+  withdrawSubstrateMixer,
   depositSubstrateMixer,
 } from '../../proofUtils';
 import {
-  generateTornadoWithdrawRequest,
   RelayerChainConfig,
   sleep,
   handleMessage,
@@ -20,6 +18,10 @@ import {
 } from '../../relayerUtils';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import fetch from 'node-fetch';
+import { ApiPromise, WsProvider } from "@polkadot/api";
+import { Keyring } from "@polkadot/keyring";
+import { options } from '@webb-tools/api';
+
 
 let relayer: ChildProcessWithoutNullStreams;
 let recipient: string;
@@ -33,12 +35,19 @@ let proof: string;
 let args: string[];
 let client: WebSocket;
 let relayerChainInfo: RelayerChainConfig;
+const keyring = new Keyring({ type: "sr25519" });
+const alice = keyring.addFromUri("//Alice");
 
 describe('Substrate Mixer Relayer Withdraw Tests', function () {
+  let api;
+  const treeId = '0';
   // increase the timeout for relayer tests
   this.timeout(30_000);
 
   before(async function () {
+    const provider = new WsProvider('ws://127.0.0.1:9944');
+    api = new ApiPromise(options({ provider }));
+    await api.isReady;
     console.log('Starting the Relayer ..');
     relayer = await startWebbRelayer();
     await sleep(1500); // wait for the relayer start-up
@@ -61,15 +70,14 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
 
   describe('Sunny day Mixer Relayed transaction', function () {
     before(async function () {
-      const treeId = '0';
       // make a deposit
       const depositArgs = await depositSubstrateMixer(treeId);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      const leaves = await getDepositLeavesFromSubstrateChain(treeId);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateSubstrateMixerSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -150,13 +158,13 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
   describe('invalid relayer address setup', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await depositTornado(tornadoContractAddress, wallet);
+      const depositArgs = await depositSubstrateMixer(treeId);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      const leaves = await getDepositLeavesFromSubstrateChain(treeId);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateSubstrateMixerSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -196,7 +204,7 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateTornadoWithdrawRequest(
+      const req = generateSubstrateWithdrawRequest(
         'ganache',
         tornadoContractAddress,
         proof,
@@ -227,13 +235,13 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
   describe('invalid fee setup', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await depositTornado(tornadoContractAddress, wallet);
+      const depositArgs = await depositSubstrateMixer(treeId);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      const leaves = await getDepositLeavesFromSubstrateChain(treeId);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateSubstrateMixerSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -276,7 +284,7 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateTornadoWithdrawRequest(
+      const req = generateSubstrateWithdrawRequest(
         'ganache',
         tornadoContractAddress,
         proof,
@@ -307,13 +315,13 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
   describe('bad proof (missing correct relayer address)', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await depositTornado(tornadoContractAddress, wallet);
+      const depositArgs = await depositSubstrateMixer(treeId);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      const leaves = await getDepositLeavesFromSubstrateChain(treeId);
 
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateSubstrateMixerSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -363,7 +371,7 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateTornadoWithdrawRequest(
+      const req = generateSubstrateWithdrawRequest(
         'ganache',
         tornadoContractAddress,
         proof,
@@ -394,13 +402,13 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
   describe('Already spent note', function () {
     before(async function () {
       // make a deposit
-      const depositArgs = await depositTornado(tornadoContractAddress, wallet);
+      const depositArgs = await depositSubstrateMixer(treeId);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      const leaves = await getDepositLeavesFromSubstrateChain(treeId);
       
       // generate the withdraw tx to send to relayer
-      const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
+      const { proof: zkProof, args: zkArgs } = await generateSubstrateMixerSnarkProof(
         leaves,
         depositArgs,
         recipient,
@@ -414,7 +422,7 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
       console.log(args);
 
       // withdraw the deposit
-      await withdrawTornado(tornadoContractAddress, proof, args, wallet);
+      await withdrawSubstrateMixer(treeId, proof, args);
 
       // setup relayer connections
       client = new WebSocket('ws://localhost:9955/ws');
@@ -453,9 +461,9 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
         done('Client connection errored unexpectedly');
       });
 
-      const req = generateTornadoWithdrawRequest(
-        'ganache',
-        tornadoContractAddress,
+      const req = generateSubstrateWithdrawRequest(
+        'substrate',
+        '0',
         proof,
         args
       );
