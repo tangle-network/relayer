@@ -59,7 +59,7 @@ describe('Substrate Mixer Relayer Withdraw Tests', function () {
     );
   });
 
-  describe('Sunny day Tornado Relayed transaction', function () {
+  describe('Sunny day Mixer Relayed transaction', function () {
     before(async function () {
       const treeId = '0';
       // make a deposit
