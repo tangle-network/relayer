@@ -293,7 +293,14 @@ pub trait SubstrateEventWatcher {
 
     /// Returns a task that should be running in the background
     /// that will watch events
-    #[tracing::instrument(skip_all, fields(tag = %Self::TAG))]
+    #[tracing::instrument(
+        skip_all,
+        fields(
+            node = %node_name,
+            chain_id = %chain_id,
+            tag = %Self::TAG
+        )
+    )]
     async fn run(
         &self,
         node_name: String,
