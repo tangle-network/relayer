@@ -173,7 +173,7 @@ pub struct MixerRelayTransaction {
     /// The nullifier_hash for the proof
     pub nullifier_hash: H256,
     /// The receipient of the transaction
-    pub recipient: AccountData,
+    pub recipient: subxt::sp_core::crypto::AccountId32,
     /// The relayer of the transaction
     pub relayer: AccountData,
     /// The relayer's fee for the transaction
