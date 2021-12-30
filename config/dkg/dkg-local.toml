@@ -5,5 +5,5 @@ runtime = "DKG"
 suri = "//Eve"
 
 [[substrate.dkglocal.pallets]]
-pallet = "DKGProposals"
+pallet = "DKGProposalHandler"
 events-watcher = { enabled = true, polling-interval = 3000 }

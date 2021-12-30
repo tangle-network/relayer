@@ -5,8 +5,8 @@ use anyhow::Context;
 use ethereum_types::H256;
 use futures::TryFutureExt;
 use rand::Rng;
+use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::middleware::SignerMiddleware;
-use webb::evm::ethers::prelude::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::providers::Middleware;
 
 use crate::context::RelayerContext;

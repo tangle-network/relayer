@@ -381,7 +381,7 @@ impl ProposalStore for SledStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use webb::evm::ethers::prelude::transaction::eip2718::TypedTransaction;
+    use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
     use webb::evm::ethers::types::transaction::request::TransactionRequest;
 
     impl SledQueueKey {

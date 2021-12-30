@@ -8,7 +8,7 @@ use futures::prelude::*;
 use webb::{
     evm::ethers::{
         contract,
-        prelude::transaction,
+        core::types::transaction,
         providers::{self, Middleware},
         types,
     },
@@ -330,6 +330,7 @@ pub trait SubstrateEventWatcher {
         }
 
         let task = || async {
+            let mut instant = std::time::Instant::now();
             let step = U64::from(50u64);
             let client_api = client.clone();
             let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
@@ -464,6 +465,24 @@ pub trait SubstrateEventWatcher {
                         duration.as_millis()
                     );
                     tokio::time::sleep(duration).await;
+                }
+                // only print the progress if 7 seconds (by default) is passed.
+                if instant.elapsed() > Duration::from_secs(7) {
+                    // calculate sync progress.
+                    let total = current_block_number.as_u64() as f64;
+                    let current_value = dest_block.as_u64() as f64;
+                    let diff = total - current_value;
+                    let percentage = (diff / current_value) * 100.0;
+                    // should be always less that 100.
+                    // and this would be our current progress.
+                    let sync_progress = 100.0 - percentage;
+                    tracing::info!(
+                        "🔄 #{} of #{} ({:.4}%)",
+                        dest_block,
+                        current_block_number,
+                        sync_progress
+                    );
+                    instant = std::time::Instant::now();
                 }
             }
         };

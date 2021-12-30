@@ -1,8 +1,9 @@
 use std::sync::Arc;
 
+use ethereum_types::U256;
 use webb::evm::ethers::providers;
-use webb::substrate::dkg_runtime;
 use webb::substrate::subxt::PairSigner;
+use webb::substrate::{dkg_runtime, subxt};
 
 use crate::config::*;
 use crate::context::RelayerContext;
@@ -10,6 +11,7 @@ use crate::events_watcher::*;
 use crate::tx_queue::TxQueue;
 
 type Client = providers::Provider<providers::Http>;
+type DkgClient = subxt::Client<dkg_runtime::api::DefaultConfig>;
 type Store = crate::store::sled::SledStore;
 
 pub async fn ignite(
@@ -74,15 +76,89 @@ pub async fn ignite(
         if !node_config.enabled {
             continue;
         }
-        if let SubstrateRuntime::Dkg = node_config.runtime {
-            let _client = ctx
-                .substrate_provider::<dkg_runtime::api::DefaultConfig>(
-                    node_name,
-                )
-                .await?;
-            // TODO(@shekohex): start the dkg service
+        match node_config.runtime {
+            SubstrateRuntime::Dkg => {
+                let client = ctx
+                    .substrate_provider::<dkg_runtime::api::DefaultConfig>(
+                        node_name,
+                    )
+                    .await?;
+                let metadata = client.metadata();
+                let chain_identifier = metadata
+                    .pallet("DKGProposals")?
+                    .constant("ChainIdentifier")?;
+                let mut chain_id_bytes = [0u8; 4];
+                chain_id_bytes.copy_from_slice(&chain_identifier.value[0..4]);
+                let chain_id = U256::from(u32::from_le_bytes(chain_id_bytes));
+                // TODO(@shekohex): start the dkg service
+                for pallet in &node_config.pallets {
+                    match pallet {
+                        Pallet::DKGProposalHandler(config) => {
+                            start_dkg_proposal_handler(
+                                ctx,
+                                config,
+                                client.clone(),
+                                node_name.clone(),
+                                chain_id,
+                                store.clone(),
+                            )?;
+                        }
+                        Pallet::DKGProposals(_) => {
+                            // TODO(@shekohex): start the dkg proposals service
+                        }
+                    }
+                }
+            }
+            SubstrateRuntime::WebbProtocol => {
+                // Handle Webb Protocol here
+            }
         };
     }
+    Ok(())
+}
+
+fn start_dkg_proposal_handler(
+    ctx: &RelayerContext,
+    config: &DKGProposalHandlerPalletConfig,
+    client: DkgClient,
+    node_name: String,
+    chain_id: U256,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    // check first if we should start the events watcher for this contract.
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "DKG Proposal Handler events watcher is disabled for ({}).",
+            node_name,
+        );
+        return Ok(());
+    }
+    tracing::debug!(
+        "DKG Proposal Handler events watcher for ({}) Started.",
+        node_name,
+    );
+    let node_name2 = node_name.clone();
+    let watcher =
+        ProposalHandlerWatcher.run(node_name, chain_id, client, store);
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let task = async move {
+        tokio::select! {
+            _ = watcher => {
+                tracing::warn!(
+                    "DKG Proposal Handler events watcher stopped for ({})",
+                    node_name2,
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping DKG Proposal Handler events watcher for ({})",
+                    node_name2,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
     Ok(())
 }
 
