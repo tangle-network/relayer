@@ -210,6 +210,12 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
                 continue;
             }
             let tx_api = self.api.tx().dkg_proposals();
+            tracing::debug!(
+                "sending proposal = nonce: {}, r_id: 0x{}, proposal_data: 0x{}",
+                data.leaf_index,
+                hex::encode(resource_id),
+                hex::encode(&proposal_data),
+            );
             let xt = tx_api.acknowledge_proposal(
                 data.leaf_index as _,
                 data.origin_chain_id.as_u32(),

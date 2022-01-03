@@ -60,10 +60,7 @@ pub fn change_set_to_events<C: subxt::Config, E: subxt::Event>(
         })
         .filter_map(|(block, raw)| match raw.as_event::<E>() {
             Ok(event) => event.map(|event| (block, event)),
-            Err(err) => {
-                tracing::warn!("Failed to decode event: {:?}", err);
-                None
-            }
+            Err(_) => None,
         })
         .collect()
 }
