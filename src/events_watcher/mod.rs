@@ -392,8 +392,7 @@ pub trait SubstrateEventWatcher {
                     // now we go through the changeset, and for every change we extract the events.
                     let found_events = change_sets
                         .into_iter()
-                        .map(|c| utils::change_set_to_events(c, decoder))
-                        .flatten()
+                        .flat_map(|c| utils::change_set_to_events(c, decoder))
                         .collect::<Vec<_>>();
                     tracing::trace!("Found #{} events", found_events.len());
 
