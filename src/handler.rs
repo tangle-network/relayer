@@ -7,11 +7,11 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use std::time::Duration;
 
-use async_stream::stream;
 use ethereum_types::{Address, H256, U256, U64};
 use futures::prelude::*;
-use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
 use warp::ws::Message;
 use webb::evm::contract::{
     protocol_solidity::{anchor::PublicInputs, AnchorContract},
@@ -31,6 +31,8 @@ use webb::substrate::subxt::{self, PairSigner, TransactionStatus::{Finalized, In
 use webb::substrate::protocol_substrate_runtime::api::{DefaultConfig, RuntimeApi};
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
+
+type CommandStream = mpsc::Sender<CommandResponse>;
 
 pub async fn accept_connection(
     ctx: &RelayerContext,
@@ -54,9 +56,14 @@ where
     TX: Sink<Message> + Unpin,
     TX::Error: Error + Send + Sync + 'static,
 {
+    // for every connection, we create a new channel, where we will use to send messages
+    // over it.
+    let (my_tx, my_rx) = mpsc::channel(50);
+    let res_stream = ReceiverStream::new(my_rx);
     match serde_json::from_str(v) {
         Ok(cmd) => {
-            handle_cmd(ctx.clone(), cmd)
+            handle_cmd(ctx.clone(), cmd, my_tx).await;
+            res_stream
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
                 .inspect(|v| tracing::trace!("Sending: {}", v))
@@ -250,7 +257,10 @@ pub enum NetworkStatus {
 #[serde(rename_all = "camelCase")]
 pub enum WithdrawStatus {
     Sent,
-    Submitted,
+    Submitted {
+        #[serde(rename = "txHash")]
+        tx_hash: H256,
+    },
     Finalized {
         #[serde(rename = "txHash")]
         tx_hash: H256,
@@ -264,361 +274,402 @@ pub enum WithdrawStatus {
     },
 }
 
-pub fn handle_cmd<'a>(
+pub async fn handle_cmd(
     ctx: RelayerContext,
     cmd: Command,
-) -> BoxStream<'a, CommandResponse> {
+    stream: CommandStream,
+) {
     use CommandResponse::*;
     match cmd {
-        Command::Substrate(sub) => handle_substrate(ctx, sub),
-        Command::Evm(evm) => handle_evm(ctx, evm),
-        Command::Ping() => stream::once(async { Pong() }).boxed(),
+        Command::Substrate(sub) => handle_substrate(ctx, sub, stream).await,
+        Command::Evm(evm) => handle_evm(ctx, evm, stream).await,
+        Command::Ping() => {
+            let _ = stream.send(Pong()).await;
+        }
     }
 }
 
-pub fn handle_evm<'a>(
+pub async fn handle_evm(
     ctx: RelayerContext,
     cmd: EvmCommand,
-) -> BoxStream<'a, CommandResponse> {
+    stream: CommandStream,
+) {
     match cmd {
-        EvmCommand::TornadoRelayTx(cmd) => handle_tornado_relay_tx(ctx, cmd),
-        EvmCommand::AnchorRelayTx(cmd) => handle_anchor_relay_tx(ctx, cmd),
+        EvmCommand::TornadoRelayTx(cmd) => {
+            handle_tornado_relay_tx(ctx, cmd, stream).await
+        }
+        EvmCommand::AnchorRelayTx(cmd) => {
+            handle_anchor_relay_tx(ctx, cmd, stream).await
+        }
     }
 }
 
-fn handle_tornado_relay_tx<'a>(
+async fn handle_tornado_relay_tx<'a>(
     ctx: RelayerContext,
     cmd: TornadoRelayTransaction,
-) -> BoxStream<'a, CommandResponse> {
+    stream: CommandStream,
+) {
     use CommandResponse::*;
-    let s = stream! {
-        let requested_chain = cmd.chain.to_lowercase();
-        let chain = match ctx.config.evm.get(&requested_chain) {
-            Some(v) => v,
-            None => {
-                yield Network(NetworkStatus::UnsupportedChain);
-                return;
-            }
-        };
-        let supported_contracts: HashMap<_, _> = chain
-            .contracts
-            .iter()
-            .cloned()
-            .filter_map(|c| match c {
-                crate::config::Contract::Tornado(c) => Some(c),
-                _ => None,
-            })
-            .map(|c| (c.common.address, c))
-            .collect();
-        // get the contract configuration
-        let contract_config = match supported_contracts.get(&cmd.contract) {
-            Some(config) => config,
-            None => {
-                yield Network(NetworkStatus::UnsupportedContract);
-                return;
-            }
-        };
-
-        let wallet = match ctx.evm_wallet(&cmd.chain).await {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!("Misconfigured Network: {}", e);
-                yield Error(format!("Misconfigured Network: {:?}", cmd.chain));
-                return;
-            }
-        };
-        // validate the relayer address first before trying
-        // send the transaction.
-        let reward_address = match chain.beneficiary {
-            Some(account) => account,
-            None => wallet.address()
-        };
-
-        if cmd.relayer != reward_address {
-            yield Network(NetworkStatus::InvalidRelayerAddress);
+    let requested_chain = cmd.chain.to_lowercase();
+    let chain = match ctx.config.evm.get(&requested_chain) {
+        Some(v) => v,
+        None => {
+            let _ = stream.send(Network(NetworkStatus::UnsupportedChain)).await;
             return;
         }
-
-        tracing::debug!(
-            "Connecting to chain {:?} .. at {}",
-            cmd.chain,
-            chain.http_endpoint
-        );
-        yield Network(NetworkStatus::Connecting);
-        let provider = match ctx.evm_provider(&cmd.chain).await {
-            Ok(value) => {
-                yield Network(NetworkStatus::Connected);
-                value
-            }
-            Err(e) => {
-                let reason = e.to_string();
-                yield Network(NetworkStatus::Failed { reason });
-                yield Network(NetworkStatus::Disconnected);
-                return;
-            }
-        };
-
-        let client = SignerMiddleware::new(provider, wallet);
-        let client = Arc::new(client);
-        let contract = TornadoContract::new(cmd.contract, client);
-        let denomination = match contract.denomination().call().await {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!("Misconfigured Contract Denomination: {}", e);
-                yield Error(format!("Misconfigured Contract: {:?}", cmd.contract));
-                return;
-            }
-        };
-        // check the fee
-        let expected_fee = calculate_fee(
-            contract_config.withdraw_config.withdraw_fee_percentage,
-            denomination,
-        );
-        let (_, unacceptable_fee) = U256::overflowing_sub(cmd.fee, expected_fee);
-        if unacceptable_fee {
-            tracing::error!("Received a fee lower than configuration");
-            let msg = format!(
-                "User sent a fee that is too low {} but expected {}",
-                cmd.fee, expected_fee,
-            );
-            yield Error(msg);
-            return;
-        }
-
-        let call = contract.withdraw(
-            cmd.proof.to_vec(),
-            cmd.root.to_fixed_bytes(),
-            cmd.nullifier_hash.to_fixed_bytes(),
-            cmd.recipient,
-            cmd.relayer,
-            cmd.fee,
-            cmd.refund,
-        );
-        // Make a dry call, to make sure the transaction will go through successfully
-        // to avoid wasting fees on invalid calls.
-        match call.call().await {
-            Ok(_) => {
-                yield Withdraw(WithdrawStatus::Valid);
-                tracing::debug!("Proof is valid");
-            }
-            Err(e) => {
-                tracing::error!("Error Client sent an invalid proof: {}", e);
-                let err = into_withdraw_error(e);
-                yield Withdraw(err);
-                return;
-            }
-        };
-        tracing::trace!("About to send Tx to {:?} Chain", cmd.chain);
-        let tx = match call.send().await {
-            Ok(pending) => {
-                yield Withdraw(WithdrawStatus::Sent);
-                tracing::debug!("Tx is submitted and pending! {}", *pending);
-                let result = pending.interval(Duration::from_millis(7000)).await;
-                yield Withdraw(WithdrawStatus::Submitted);
-                result
-            }
-            Err(e) => {
-                tracing::error!("Error while sending Tx: {}", e);
-                let err = into_withdraw_error(e);
-                yield Withdraw(err);
-                return;
-            }
-        };
-        match tx {
-            Ok(Some(receipt)) => {
-                tracing::debug!("Finalized Tx #{}", receipt.transaction_hash);
-                yield Withdraw(WithdrawStatus::Finalized {
-                    tx_hash: receipt.transaction_hash,
-                });
-            }
-            Ok(None) => {
-                tracing::warn!("Transaction Dropped from Mempool!!");
-                yield Withdraw(WithdrawStatus::DroppedFromMemPool);
-            }
-            Err(e) => {
-                let reason = e.to_string();
-                tracing::error!("Transaction Errored: {}", reason);
-                yield Withdraw(WithdrawStatus::Errored { reason, code: 4 });
-            }
-        };
     };
-    s.boxed()
+    let supported_contracts: HashMap<_, _> = chain
+        .contracts
+        .iter()
+        .cloned()
+        .filter_map(|c| match c {
+            crate::config::Contract::Tornado(c) => Some(c),
+            _ => None,
+        })
+        .map(|c| (c.common.address, c))
+        .collect();
+    // get the contract configuration
+    let contract_config = match supported_contracts.get(&cmd.contract) {
+        Some(config) => config,
+        None => {
+            let _ = stream
+                .send(Network(NetworkStatus::UnsupportedContract))
+                .await;
+            return;
+        }
+    };
+
+    let wallet = match ctx.evm_wallet(&cmd.chain).await {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Misconfigured Network: {}", e);
+            let _ = stream
+                .send(Error(format!("Misconfigured Network: {:?}", cmd.chain)))
+                .await;
+            return;
+        }
+    };
+    // validate the relayer address first before trying
+    // send the transaction.
+    let reward_address = match chain.beneficiary {
+        Some(account) => account,
+        None => wallet.address(),
+    };
+
+    if cmd.relayer != reward_address {
+        let _ = stream
+            .send(Network(NetworkStatus::InvalidRelayerAddress))
+            .await;
+        return;
+    }
+
+    tracing::debug!(
+        "Connecting to chain {:?} .. at {}",
+        cmd.chain,
+        chain.http_endpoint
+    );
+    let _ = stream.send(Network(NetworkStatus::Connecting)).await;
+    let provider = match ctx.evm_provider(&cmd.chain).await {
+        Ok(value) => {
+            let _ = stream.send(Network(NetworkStatus::Connected)).await;
+            value
+        }
+        Err(e) => {
+            let reason = e.to_string();
+            let _ =
+                stream.send(Network(NetworkStatus::Failed { reason })).await;
+            let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
+            return;
+        }
+    };
+
+    let client = SignerMiddleware::new(provider, wallet);
+    let client = Arc::new(client);
+    let contract = TornadoContract::new(cmd.contract, client);
+    let denomination = match contract.denomination().call().await {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Misconfigured Contract Denomination: {}", e);
+            let _ = stream
+                .send(Error(format!(
+                    "Misconfigured Contract Denomination: {:?}",
+                    e
+                )))
+                .await;
+            return;
+        }
+    };
+    // check the fee
+    let expected_fee = calculate_fee(
+        contract_config.withdraw_config.withdraw_fee_percentage,
+        denomination,
+    );
+    let (_, unacceptable_fee) = U256::overflowing_sub(cmd.fee, expected_fee);
+    if unacceptable_fee {
+        tracing::error!("Received a fee lower than configuration");
+        let msg = format!(
+            "User sent a fee that is too low {} but expected {}",
+            cmd.fee, expected_fee,
+        );
+        let _ = stream.send(Error(msg)).await;
+        return;
+    }
+
+    let call = contract.withdraw(
+        cmd.proof.to_vec(),
+        cmd.root.to_fixed_bytes(),
+        cmd.nullifier_hash.to_fixed_bytes(),
+        cmd.recipient,
+        cmd.relayer,
+        cmd.fee,
+        cmd.refund,
+    );
+    // Make a dry call, to make sure the transaction will go through successfully
+    // to avoid wasting fees on invalid calls.
+    match call.call().await {
+        Ok(_) => {
+            let _ = stream.send(Withdraw(WithdrawStatus::Valid)).await;
+            tracing::debug!("Proof is valid");
+        }
+        Err(e) => {
+            tracing::error!("Error Client sent an invalid proof: {}", e);
+            let err = into_withdraw_error(e);
+            let _ = stream.send(Withdraw(err)).await;
+            return;
+        }
+    };
+    tracing::trace!("About to send Tx to {:?} Chain", cmd.chain);
+    let tx = match call.send().await {
+        Ok(pending) => {
+            let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
+            let tx_hash = *pending;
+            tracing::debug!("Tx is submitted and pending! {}", tx_hash);
+            let result = pending.interval(Duration::from_millis(7000)).await;
+            let _ = stream
+                .send(Withdraw(WithdrawStatus::Submitted { tx_hash }))
+                .await;
+            result
+        }
+        Err(e) => {
+            tracing::error!("Error while sending Tx: {}", e);
+            let err = into_withdraw_error(e);
+            let _ = stream.send(Withdraw(err)).await;
+            return;
+        }
+    };
+    match tx {
+        Ok(Some(receipt)) => {
+            tracing::debug!("Finalized Tx #{}", receipt.transaction_hash);
+            let _ = stream
+                .send(Withdraw(WithdrawStatus::Finalized {
+                    tx_hash: receipt.transaction_hash,
+                }))
+                .await;
+        }
+        Ok(None) => {
+            tracing::warn!("Transaction Dropped from Mempool!!");
+            let _ = stream
+                .send(Withdraw(WithdrawStatus::DroppedFromMemPool))
+                .await;
+        }
+        Err(e) => {
+            let reason = e.to_string();
+            tracing::error!("Transaction Errored: {}", reason);
+            let _ = stream
+                .send(Withdraw(WithdrawStatus::Errored { reason, code: 4 }))
+                .await;
+        }
+    };
 }
 
-fn handle_anchor_relay_tx<'a>(
+async fn handle_anchor_relay_tx<'a>(
     ctx: RelayerContext,
     cmd: AnchorRelayTransaction,
-) -> BoxStream<'a, CommandResponse> {
+    stream: CommandStream,
+) {
     use CommandResponse::*;
-    let s = stream! {
-        let requested_chain = cmd.chain.to_lowercase();
-        let chain = match ctx.config.evm.get(&requested_chain) {
-            Some(v) => v,
-            None => {
-                tracing::warn!("Unsupported Chain: {}", requested_chain);
-                yield Network(NetworkStatus::UnsupportedChain);
-                return;
-            }
-        };
-        let supported_contracts: HashMap<_, _> = chain
-            .contracts
-            .iter()
-            .cloned()
-            .filter_map(|c| match c {
-                crate::config::Contract::Anchor(c) => Some(c),
-                _ => None,
-            })
-            .map(|c| (c.common.address, c))
-            .collect();
-        // get the contract configuration
-        let contract_config = match supported_contracts.get(&cmd.contract) {
-            Some(config) => config,
-            None => {
-                tracing::warn!("Unsupported Contract: {:?}", cmd.contract);
-                yield Network(NetworkStatus::UnsupportedContract);
-                return;
-            }
-        };
-
-        let wallet = match ctx.evm_wallet(&cmd.chain).await {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!("Misconfigured Network: {}", e);
-                yield Error(format!("Misconfigured Network: {:?}", cmd.chain));
-                return;
-            }
-        };
-        // validate the relayer address first before trying
-        // send the transaction.
-        let reward_address = match chain.beneficiary {
-            Some(account) => account,
-            None => wallet.address()
-        };
-
-        if cmd.relayer != reward_address {
-            yield Network(NetworkStatus::InvalidRelayerAddress);
+    let requested_chain = cmd.chain.to_lowercase();
+    let chain = match ctx.config.evm.get(&requested_chain) {
+        Some(v) => v,
+        None => {
+            tracing::warn!("Unsupported Chain: {}", requested_chain);
+            let _ = stream.send(Network(NetworkStatus::UnsupportedChain)).await;
             return;
         }
-
-        // validate that the roots are multiple of 32s
-        if cmd.roots.len() % 32 != 0 {
-            yield Withdraw(WithdrawStatus::InvalidMerkleRoots);
-            return;
-        }
-
-        tracing::debug!(
-            "Connecting to chain {:?} .. at {}",
-            cmd.chain,
-            chain.http_endpoint
-        );
-        yield Network(NetworkStatus::Connecting);
-        let provider = match ctx.evm_provider(&cmd.chain).await {
-            Ok(value) => {
-                yield Network(NetworkStatus::Connected);
-                value
-            }
-            Err(e) => {
-                let reason = e.to_string();
-                yield Network(NetworkStatus::Failed { reason });
-                yield Network(NetworkStatus::Disconnected);
-                return;
-            }
-        };
-
-        let client = SignerMiddleware::new(provider, wallet);
-        let client = Arc::new(client);
-        let contract = AnchorContract::new(cmd.contract, client);
-        let denomination = match contract.denomination().call().await {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!("Misconfigured Contract Denomination: {}", e);
-                yield Error(format!("Misconfigured Contract: {:?}", cmd.contract));
-                return;
-            }
-        };
-        // check the fee
-        let expected_fee = calculate_fee(
-            contract_config.withdraw_config.withdraw_fee_percentage,
-            denomination,
-        );
-        let (_, unacceptable_fee) = U256::overflowing_sub(cmd.fee, expected_fee);
-        if unacceptable_fee {
-            tracing::error!("Received a fee lower than configuration");
-            let msg = format!(
-                "User sent a fee that is too low {} but expected {}",
-                cmd.fee, expected_fee,
-            );
-            yield Error(msg);
-            return;
-        }
-
-        // pub struct PublicInputs { pub roots : Vec < u8 > , pub nullifier_hash : [u8 ; 32] , pub
-        // refresh_commitment : [u8 ; 32] , pub recipient : ethers :: core :: types :: Address , pub relayer
-        // : ethers :: core :: types :: Address , pub fee : ethers :: core :: types :: U256 , pub refund :
-        // ethers :: core :: types :: U256 } }
-        let inputs = PublicInputs {
-            roots: cmd.roots,
-            refresh_commitment: cmd.refresh_commitment.to_fixed_bytes(),
-            nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
-            recipient: cmd.recipient,
-            relayer: cmd.relayer,
-            fee: cmd.fee,
-            refund: cmd.refund,
-        };
-
-        let call = contract.withdraw(
-            cmd.proof.to_vec(),
-            inputs,
-        );
-        // Make a dry call, to make sure the transaction will go through successfully
-        // to avoid wasting fees on invalid calls.
-        match call.call().await {
-            Ok(_) => {
-                yield Withdraw(WithdrawStatus::Valid);
-                tracing::debug!("Proof is valid");
-            }
-            Err(e) => {
-                tracing::error!("Error Client sent an invalid proof: {}", e);
-                let err = into_withdraw_error(e);
-                yield Withdraw(err);
-                return;
-            }
-        };
-        tracing::trace!("About to send Tx to {:?} Chain", cmd.chain);
-        let tx = match call.send().await {
-            Ok(pending) => {
-                yield Withdraw(WithdrawStatus::Sent);
-                tracing::debug!("Tx is submitted and pending! {}", *pending);
-                let result = pending.interval(Duration::from_millis(7000)).await;
-                yield Withdraw(WithdrawStatus::Submitted);
-                result
-            }
-            Err(e) => {
-                tracing::error!("Error while sending Tx: {}", e);
-                let err = into_withdraw_error(e);
-                yield Withdraw(err);
-                return;
-            }
-        };
-        match tx {
-            Ok(Some(receipt)) => {
-                tracing::debug!("Finalized Tx #{}", receipt.transaction_hash);
-                yield Withdraw(WithdrawStatus::Finalized {
-                    tx_hash: receipt.transaction_hash,
-                });
-            }
-            Ok(None) => {
-                tracing::warn!("Transaction Dropped from Mempool!!");
-                yield Withdraw(WithdrawStatus::DroppedFromMemPool);
-            }
-            Err(e) => {
-                let reason = e.to_string();
-                tracing::error!("Transaction Errored: {}", reason);
-                yield Withdraw(WithdrawStatus::Errored { reason, code: 4 });
-            }
-        };
     };
-    s.boxed()
+    let supported_contracts: HashMap<_, _> = chain
+        .contracts
+        .iter()
+        .cloned()
+        .filter_map(|c| match c {
+            crate::config::Contract::Anchor(c) => Some(c),
+            _ => None,
+        })
+        .map(|c| (c.common.address, c))
+        .collect();
+    // get the contract configuration
+    let contract_config = match supported_contracts.get(&cmd.contract) {
+        Some(config) => config,
+        None => {
+            tracing::warn!("Unsupported Contract: {:?}", cmd.contract);
+            let _ = stream
+                .send(Network(NetworkStatus::UnsupportedContract))
+                .await;
+            return;
+        }
+    };
+
+    let wallet = match ctx.evm_wallet(&cmd.chain).await {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Misconfigured Network: {}", e);
+            let _ = stream
+                .send(Error(format!("Misconfigured Network: {:?}", cmd.chain)))
+                .await;
+            return;
+        }
+    };
+    // validate the relayer address first before trying
+    // send the transaction.
+    let reward_address = match chain.beneficiary {
+        Some(account) => account,
+        None => wallet.address(),
+    };
+
+    if cmd.relayer != reward_address {
+        let _ = stream
+            .send(Network(NetworkStatus::InvalidRelayerAddress))
+            .await;
+        return;
+    }
+
+    // validate that the roots are multiple of 32s
+    if cmd.roots.len() % 32 != 0 {
+        let _ = stream
+            .send(Withdraw(WithdrawStatus::InvalidMerkleRoots))
+            .await;
+        return;
+    }
+
+    tracing::debug!(
+        "Connecting to chain {:?} .. at {}",
+        cmd.chain,
+        chain.http_endpoint
+    );
+    let _ = stream.send(Network(NetworkStatus::Connecting)).await;
+    let provider = match ctx.evm_provider(&cmd.chain).await {
+        Ok(value) => {
+            let _ = stream.send(Network(NetworkStatus::Connected)).await;
+            value
+        }
+        Err(e) => {
+            let reason = e.to_string();
+            let _ =
+                stream.send(Network(NetworkStatus::Failed { reason })).await;
+            let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
+            return;
+        }
+    };
+
+    let client = SignerMiddleware::new(provider, wallet);
+    let client = Arc::new(client);
+    let contract = AnchorContract::new(cmd.contract, client);
+    let denomination = match contract.denomination().call().await {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Misconfigured Contract Denomination: {}", e);
+            let _ = stream
+                .send(Error(format!(
+                    "Misconfigured Contract: {:?}",
+                    cmd.contract
+                )))
+                .await;
+            return;
+        }
+    };
+    // check the fee
+    let expected_fee = calculate_fee(
+        contract_config.withdraw_config.withdraw_fee_percentage,
+        denomination,
+    );
+    let (_, unacceptable_fee) = U256::overflowing_sub(cmd.fee, expected_fee);
+    if unacceptable_fee {
+        tracing::error!("Received a fee lower than configuration");
+        let msg = format!(
+            "User sent a fee that is too low {} but expected {}",
+            cmd.fee, expected_fee,
+        );
+        let _ = stream.send(Error(msg)).await;
+        return;
+    }
+
+    let inputs = PublicInputs {
+        roots: cmd.roots,
+        refresh_commitment: cmd.refresh_commitment.to_fixed_bytes(),
+        nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
+        recipient: cmd.recipient,
+        relayer: cmd.relayer,
+        fee: cmd.fee,
+        refund: cmd.refund,
+    };
+
+    let call = contract.withdraw(cmd.proof.to_vec(), inputs);
+    // Make a dry call, to make sure the transaction will go through successfully
+    // to avoid wasting fees on invalid calls.
+    match call.call().await {
+        Ok(_) => {
+            let _ = stream.send(Withdraw(WithdrawStatus::Valid)).await;
+            tracing::debug!("Proof is valid");
+        }
+        Err(e) => {
+            tracing::error!("Error Client sent an invalid proof: {}", e);
+            let err = into_withdraw_error(e);
+            let _ = stream.send(Withdraw(err)).await;
+            return;
+        }
+    };
+    tracing::trace!("About to send Tx to {:?} Chain", cmd.chain);
+    let tx = match call.send().await {
+        Ok(pending) => {
+            let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
+            let tx_hash = *pending;
+            tracing::debug!(%tx_hash, "Tx is submitted and pending!");
+            let result = pending.interval(Duration::from_millis(7000)).await;
+            let _ = stream
+                .send(Withdraw(WithdrawStatus::Submitted { tx_hash }))
+                .await;
+            result
+        }
+        Err(e) => {
+            tracing::error!("Error while sending Tx: {}", e);
+            let err = into_withdraw_error(e);
+            let _ = stream.send(Withdraw(err)).await;
+            return;
+        }
+    };
+    match tx {
+        Ok(Some(receipt)) => {
+            tracing::debug!("Finalized Tx #{}", receipt.transaction_hash);
+            let _ = stream
+                .send(Withdraw(WithdrawStatus::Finalized {
+                    tx_hash: receipt.transaction_hash,
+                }))
+                .await;
+        }
+        Ok(None) => {
+            tracing::warn!("Transaction Dropped from Mempool!!");
+            let _ = stream
+                .send(Withdraw(WithdrawStatus::DroppedFromMemPool))
+                .await;
+        }
+        Err(e) => {
+            let reason = e.to_string();
+            tracing::error!("Transaction Errored: {}", reason);
+            let _ = stream
+                .send(Withdraw(WithdrawStatus::Errored { reason, code: 4 }))
+                .await;
+        }
+    };
 }
 
 fn into_withdraw_error<M: Middleware>(e: ContractError<M>) -> WithdrawStatus {
@@ -653,77 +704,91 @@ fn into_withdraw_error<M: Middleware>(e: ContractError<M>) -> WithdrawStatus {
     WithdrawStatus::Errored { reason, code }
 }
 
-fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
-    let mill_fee = (fee_percent * 1_000_000.0) as u32;
-    let mill_u256: U256 = principle * (mill_fee);
-    let fee_u256: U256 = mill_u256 / (1_000_000);
-    fee_u256
-}
-
-pub fn handle_substrate<'a>(
+pub async fn handle_substrate<'a>(
     ctx: RelayerContext,
     cmd: SubstrateCommand,
-) -> BoxStream<'a, CommandResponse> {
+    stream: CommandStream,
+) {
     match cmd {
         SubstrateCommand::MixerRelayTx(cmd) => {
-            handle_substrate_mixer_relay_tx(ctx, cmd)
+            handle_substrate_mixer_relay_tx(ctx, cmd, stream).await;
         }
     }
 }
 
-fn handle_substrate_mixer_relay_tx<'a>(
+async fn handle_substrate_mixer_relay_tx<'a>(
     ctx: RelayerContext,
     cmd: MixerRelayTransaction,
-) -> BoxStream<'a, CommandResponse> {
+    stream: CommandStream,
+) {
     use CommandResponse::*;
 
     let root_element = Element(cmd.root);
     let nullifier_hash_element = Element(cmd.nullifier_hash);
 
-    let s = stream! {
-        let requested_chain = cmd.chain.to_lowercase();
-        let client = ctx.substrate_provider::<DefaultConfig>(&requested_chain).await?;
-        let api = client.to_runtime_api::<RuntimeApi<DefaultConfig>>();
+    let requested_chain = cmd.chain.to_lowercase();
+    let client = match ctx
+        .substrate_provider::<DefaultConfig>(&requested_chain)
+        .await
+    {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!("Error while getting Substrate client: {}", e);
+            let _ = stream.send(Error(format!("{}", e))).await;
+            return;
+        }
+    };
+    let api = client.to_runtime_api::<RuntimeApi<DefaultConfig>>();
 
-        let pair = match ctx.substrate_wallet(&cmd.chain).await {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!("Misconfigured Network: {}", e);
-                yield Error(format!("Misconfigured Network: {:?}", cmd.chain));
-                return;
-            }
-        };
+    let pair = match ctx.substrate_wallet(&cmd.chain).await {
+        Ok(v) => v,
+        Err(e) => {
+            tracing::error!("Misconfigured Network: {}", e);
+            let _ = stream
+                .send(Error(format!("Misconfigured Network: {:?}", cmd.chain)))
+                .await;
+            return;
+        }
+    };
 
-        let signer = PairSigner::new(pair);
+    let signer = PairSigner::new(pair);
 
-        let withdraw_progress = api
-            .tx()
-            .mixer_bn254()
-            .withdraw(
-                cmd.id,
-                cmd.proof,
-                root_element,
-                nullifier_hash_element,
-                cmd.recipient,
-                cmd.relayer,
-                cmd.fee,
-                cmd.refund,
-            )
-            .sign_and_submit_then_watch(&signer)
-            .await?;
+    let withdraw_progress = api
+        .tx()
+        .mixer_bn254()
+        .withdraw(
+            cmd.id,
+            cmd.proof,
+            root_element,
+            nullifier_hash_element,
+            cmd.recipient,
+            cmd.relayer,
+            cmd.fee,
+            cmd.refund,
+        )
+        .sign_and_submit_then_watch(&signer)
+        .await;
 
-        while let Some(ev) = withdraw_progress.next().await? {
-            // Made it into a block, but not finalized.
-            if let InBlock(details) = ev {
+    while let Ok(Some(ev)) = withdraw_progress.next().await {
+        // Made it into a block, but not finalized.
+        match ev {
+            InBlock(details) => {
                 tracing::debug!(
                     "Transaction {:?} made it into block {:?}",
                     details.extrinsic_hash(),
                     details.block_hash()
                 );
 
-                let _events = details.wait_for_success().await?;
-                yield Withdraw(WithdrawStatus::Submitted);
-            } else if let Finalized(details) = ev {
+                let _events = details.wait_for_success().await;
+                let _ = stream
+                    .send(Withdraw(WithdrawStatus::Submitted {
+                        tx_hash: H256::from_slice(
+                            details.extrinsic_hash().as_bytes(),
+                        ),
+                    }))
+                    .await;
+            }
+            Finalized(details) => {
                 tracing::debug!(
                     "Transaction {:?} is finalized in block {:?}",
                     details.extrinsic_hash(),
@@ -731,22 +796,37 @@ fn handle_substrate_mixer_relay_tx<'a>(
                 );
 
                 let _events = details.wait_for_success().await?;
-                yield Withdraw(WithdrawStatus::Finalized {
-                    tx_hash: details.extrinsic_hash(),
-                });
-                return Ok(());
-            } else if let Invalid = ev {
-                yield Withdraw(WithdrawStatus::Errored { reason: "Invalid".to_string(), code: 4 });
-                return;
-            } else if let Dropped = ev {
-                yield Withdraw(WithdrawStatus::DroppedFromMemPool);
-                return;
-            } else {
-                yield Withdraw(WithdrawStatus::Sent);
+                let _ = stream
+                    .send(Withdraw(WithdrawStatus::Finalized {
+                        tx_hash: details.extrinsic_hash(),
+                    }))
+                    .await;
+            }
+            Invalid => {
+                let _ = stream
+                    .send(Withdraw(WithdrawStatus::Errored {
+                        reason: "Invalid".to_string(),
+                        code: 4,
+                    }))
+                    .await;
+            }
+            Dropped => {
+                let _ = stream
+                    .send(Withdraw(WithdrawStatus::DroppedFromMemPool))
+                    .await;
+            }
+            _ => {
+                let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
             }
         }
-    };
-    s.boxed()
+    }
+}
+
+fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
+    let mill_fee = (fee_percent * 1_000_000.0) as u32;
+    let mill_u256: U256 = principle * (mill_fee);
+    let fee_u256: U256 = mill_u256 / (1_000_000);
+    fee_u256
 }
 
 #[cfg(test)]
