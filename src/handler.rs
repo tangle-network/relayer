@@ -577,10 +577,6 @@ async fn handle_anchor_relay_tx<'a>(
         return;
     }
 
-    // pub struct PublicInputs { pub roots : Vec < u8 > , pub nullifier_hash : [u8 ; 32] , pub
-    // refresh_commitment : [u8 ; 32] , pub recipient : ethers :: core :: types :: Address , pub relayer
-    // : ethers :: core :: types :: Address , pub fee : ethers :: core :: types :: U256 , pub refund :
-    // ethers :: core :: types :: U256 } }
     let inputs = PublicInputs {
         roots: cmd.roots,
         refresh_commitment: cmd.refresh_commitment.to_fixed_bytes(),
