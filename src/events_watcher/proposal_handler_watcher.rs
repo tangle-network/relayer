@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use webb::substrate::dkg_runtime;
 use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
-use webb::substrate::dkg_runtime::api::runtime_types::dkg_runtime_primitives::proposal::DKGPayloadKey;
 
 use crate::store::sled::SledStore;
 
@@ -28,37 +27,9 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         _api: Arc<Self::Api>,
         (event, block_number): (Self::Event, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
-        // TODO: handle every type of these proposals
-        let key = match event.key {
-            DKGPayloadKey::EVMProposal(n) => format!("EVMProposal({})", n),
-            DKGPayloadKey::RefreshVote(n) => format!("RefreshVote({})", n),
-            DKGPayloadKey::AnchorUpdateProposal(n) => {
-                format!("AnchorUpdateProposal({})", n)
-            }
-            DKGPayloadKey::TokenAddProposal(n) => {
-                format!("TokenAddProposal({})", n)
-            }
-            DKGPayloadKey::TokenRemoveProposal(n) => {
-                format!("TokenRemoveProposal({})", n)
-            }
-            DKGPayloadKey::WrappingFeeUpdateProposal(n) => {
-                format!("WrappingFeeUpdateProposal({})", n)
-            }
-            DKGPayloadKey::ResourceIdUpdateProposal(n) => {
-                format!("ResourceIdUpdateProposal({})", n)
-            }
-        };
         tracing::debug!(
-            "Received `ProposalSigned` Event:
-            - `chain_id`: {},
-            - `key`: {},
-            - `data`: 0x{},
-            - `signature`: 0x{},
-            at block: #{}",
-            event.chain_id,
-            key,
-            hex::encode(&event.data),
-            hex::encode(&event.signature),
+            "Received `ProposalSigned` Event: {:?} at block number: #{}",
+            event,
             block_number
         );
         Ok(())
