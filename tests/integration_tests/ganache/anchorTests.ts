@@ -53,7 +53,7 @@ let startingRecipientBalance: ethers.BigNumber;
 
 describe('Ganache Anchor Tests', function () {
   // increase the timeout for relayer tests
-  this.timeout(60_000);
+  this.timeout(120_000);
 
   before(async function () {
     // Ganache setup accounts and servers
@@ -166,7 +166,7 @@ describe('Ganache Anchor Tests', function () {
 
   describe('Sunny day Anchor withdraw relayed transaction same chain', function () {
     before(async function () {
-      this.timeout(60_000);
+      this.timeout(120_000);
 
       sourceWallet = new ethers.Wallet(senderPrivateKey, provider1);
       const srcAnchor = await bridge.getAnchor(chainId1, '1000000000000000000');
@@ -211,6 +211,7 @@ describe('Ganache Anchor Tests', function () {
     });
 
     it('should relay successfully', function (done) {
+      this.timeout(120_000);
       // Setup relayer interaction with logging
       client.on('message', async (data) => {
         console.log('Received data from the relayer');
@@ -276,8 +277,9 @@ describe('Ganache Anchor Tests', function () {
   });
 
   describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+    this.timeout(120_000);
     before(async function () {
-      this.timeout(50_000);
+      this.timeout(120_000);
 
       sourceWallet = new ethers.Wallet(senderPrivateKey, provider1);
       destWallet = new ethers.Wallet(senderPrivateKey, provider2);
@@ -353,6 +355,7 @@ describe('Ganache Anchor Tests', function () {
     });
 
     it('should relay successfully', function (done) {
+      this.timeout(120_000);
       // Setup relayer interaction with logging
       client.on('message', async (data) => {
         console.log('Received data from the relayer');

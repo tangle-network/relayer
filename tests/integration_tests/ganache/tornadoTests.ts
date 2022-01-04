@@ -98,7 +98,7 @@ let relayerChainInfo: RelayerChainConfig;
 
 describe('Ganache Tornado Relayer Withdraw Tests', function () {
   // increase the timeout for relayer tests
-  this.timeout(30_000);
+  this.timeout(60_000);
 
   before(async function () {
     const ganacheAccount = [
@@ -145,12 +145,16 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
   });
 
   describe('Sunny day Tornado Relayed transaction', function () {
+    this.timeout(60_000);
     before(async function () {
       // make a deposit
       const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(
+        tornadoContractAddress,
+        provider
+      );
 
       // generate the withdraw tx to send to relayer
       const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
@@ -171,6 +175,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
     });
 
     it('should work in sunny day scenario', function (done) {
+      this.timeout(60_000);
       // Setup relayer interaction with logging
       client.on('message', async (data) => {
         console.log('Received data from the relayer');
@@ -231,12 +236,16 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
   });
 
   describe('invalid relayer address setup', function () {
+    this.timeout(60_000);
     before(async function () {
       // make a deposit
       const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(
+        tornadoContractAddress,
+        provider
+      );
 
       // generate the withdraw tx to send to relayer
       const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
@@ -308,12 +317,16 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
   });
 
   describe('invalid fee setup', function () {
+    this.timeout(60_000);
     before(async function () {
       // make a deposit
       const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(
+        tornadoContractAddress,
+        provider
+      );
 
       // generate the withdraw tx to send to relayer
       const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
@@ -334,6 +347,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
     });
 
     it('should not relay a transaction with a fee that is too low', function (done) {
+      this.timeout(60_000);
       // Setup relayer interaction with logging
       client.on('message', async (data) => {
         console.log('Received data from the relayer');
@@ -388,12 +402,16 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
   });
 
   describe('bad proof (missing correct relayer address)', function () {
+    this.timeout(60_000);
     before(async function () {
       // make a deposit
       const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
+      const leaves = await getDepositLeavesFromChain(
+        tornadoContractAddress,
+        provider
+      );
 
       // generate the withdraw tx to send to relayer
       const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
@@ -416,6 +434,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
     });
 
     it('should not relay a transaction with a bad proof', function (done) {
+      this.timeout(60_000);
       // Setup relayer interaction with logging
       client.on('message', async (data) => {
         console.log('Received data from the relayer');
@@ -425,7 +444,11 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
         if (result === Result.Errored) {
           expect(msg).to.deep.equal({
             withdraw: {
-              errored: { code: -32000, reason: 'VM Exception while processing transaction: revert Invalid withdraw proof' },
+              errored: {
+                code: -32000,
+                reason:
+                  'VM Exception while processing transaction: revert Invalid withdraw proof',
+              },
             },
           });
           done();
@@ -475,13 +498,17 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
   });
 
   describe('Already spent note', function () {
+    this.timeout(60_000);
     before(async function () {
       // make a deposit
       const depositArgs = await depositTornado(tornadoContractAddress, wallet);
 
       // get the leaves
-      const leaves = await getDepositLeavesFromChain(tornadoContractAddress, provider);
-      
+      const leaves = await getDepositLeavesFromChain(
+        tornadoContractAddress,
+        provider
+      );
+
       // generate the withdraw tx to send to relayer
       const { proof: zkProof, args: zkArgs } = await generateTornadoSnarkProof(
         leaves,
@@ -506,6 +533,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
     });
 
     it('should not relay a transaction from an already spent note', function (done) {
+      this.timeout(60_000);
       // Setup relayer interaction with logging
       client.on('message', async (data) => {
         console.log('Received data from the relayer');
@@ -515,7 +543,11 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
         if (result === Result.Errored) {
           expect(msg).to.deep.equal({
             withdraw: {
-              errored: { code: -32000, reason: 'VM Exception while processing transaction: revert The note has been already spent' },
+              errored: {
+                code: -32000,
+                reason:
+                  'VM Exception while processing transaction: revert The note has been already spent',
+              },
             },
           });
           done();
