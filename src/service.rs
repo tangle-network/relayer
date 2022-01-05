@@ -225,22 +225,22 @@ fn start_anchor_events_watcher(
     );
     let mut shutdown_signal = ctx.shutdown_signal();
     let contract_address = config.common.address;
-    let task = async move {
+    let anchor_leaves_store = store.clone();
+    let anchor_leaves_client = client.clone();
+    let anchor_leaves_wrapper = wrapper.clone();
+    let anchor_leaves_watcher_task = async move {
         tracing::debug!(
-            "Anchor events watcher for ({}) Started.",
+            "Anchor leaves events watcher for ({}) Started.",
             contract_address,
         );
 
         let anchor_leaves_watcher = AnchorLeavesWatcher::new();
         let leaves_watcher_task = anchor_leaves_watcher.run(
-            client.clone(),
-            store.clone(),
-            wrapper.clone(),
+            anchor_leaves_client,
+            anchor_leaves_store,
+            anchor_leaves_wrapper,
         );
 
-        let anchor_bridge_watcher = AnchorBridgeWatcher::new();
-        let anchor_bridge_watcher_task =
-            anchor_bridge_watcher.run(client, store, wrapper);
         tokio::select! {
             _ = leaves_watcher_task => {
                 tracing::warn!(
@@ -248,6 +248,27 @@ fn start_anchor_events_watcher(
                     contract_address,
                 );
             },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping Anchor watcher for ({})",
+                    contract_address,
+                );
+            },
+        }
+    };
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let contract_address = config.common.address;
+    let anchor_bridge_watcher_task = async move {
+        tracing::debug!(
+            "Anchor bridge events watcher for ({}) Started.",
+            contract_address,
+        );
+
+        let anchor_bridge_watcher = AnchorBridgeWatcher::new();
+        let anchor_bridge_watcher_task =
+            anchor_bridge_watcher.run(client, store, wrapper);
+
+        tokio::select! {
             _ = anchor_bridge_watcher_task => {
                 tracing::warn!(
                     "Anchor bridge watcher task stopped for ({})",
@@ -263,7 +284,8 @@ fn start_anchor_events_watcher(
         }
     };
     // kick off the watcher.
-    tokio::task::spawn(task);
+    tokio::task::spawn(anchor_leaves_watcher_task);
+    tokio::task::spawn(anchor_bridge_watcher_task);
 
     Ok(())
 }

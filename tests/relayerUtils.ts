@@ -1,5 +1,5 @@
 import fetch from 'node-fetch';
-import { spawn } from 'child_process';
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 require('dotenv').config({ path: '.env' });
 
 export type RelayerChainConfig = {
@@ -88,12 +88,19 @@ export const getRelayerConfig = async (
   };
 };
 
-export function startWebbRelayer() {
-  const proc = spawn('../target/debug/webb-relayer', [
-    '-vvv',
-    '-c',
-    './config',
-  ]);
+export function startWebbRelayer(portNumber: number = 9955): [ChildProcessWithoutNullStreams, string] {
+  const proc = spawn(`../target/debug/webb-relayer`, [
+      '-vvv',
+      '-c',
+      './config',
+    ],
+    {
+      env: {
+        ...process.env,
+        WEBB_PORT: `${portNumber}`
+      }
+    }
+  );
   proc.stdout.on('data', (data) => {
     console.log(data.toString());
   });
@@ -106,7 +113,10 @@ export function startWebbRelayer() {
     console.log(`relayer process exited with code ${code}`);
   });
 
-  return proc;
+  return [
+    proc,
+    `http://localhost:${portNumber}`
+  ];
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

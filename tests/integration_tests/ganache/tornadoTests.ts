@@ -84,6 +84,7 @@ const PORT = 8545;
 const ENDPOINT = 'http://127.0.0.1:8545';
 let ganacheServer: any;
 let relayer: ChildProcessWithoutNullStreams;
+let relayerEndpoint: string;
 let recipient: string;
 let wallet: ethers.Wallet;
 let provider: ethers.providers.Provider;
@@ -96,7 +97,7 @@ let args: string[];
 let client: WebSocket;
 let relayerChainInfo: RelayerChainConfig;
 
-describe('Ganache Tornado Relayer Withdraw Tests', function () {
+describe('Tornado Relayer Withdraw Tests', function () {
   // increase the timeout for relayer tests
   this.timeout(60_000);
 
@@ -109,7 +110,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
     ];
     ganacheServer = startGanacheServer(PORT, 1337, ganacheAccount);
     console.log('Starting the Relayer ..');
-    relayer = await startWebbRelayer();
+    [relayer, relayerEndpoint] = await startWebbRelayer(9955);
     await sleep(1500); // wait for the relayer start-up
 
     provider = new ethers.providers.WebSocketProvider(ENDPOINT);
@@ -129,7 +130,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
     // get the info from the relayer
     relayerChainInfo = await getRelayerConfig(
       'ganache',
-      'http://localhost:9955'
+      relayerEndpoint
     );
     console.log(JSON.stringify(relayerChainInfo));
 
@@ -169,7 +170,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
       args = zkArgs;
 
       // setup relayer connections
-      client = new WebSocket('ws://localhost:9955/ws');
+      client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
       await new Promise((resolve) => client.on('open', resolve));
       console.log('Connected to Relayer!');
     });
@@ -260,7 +261,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
       args = zkArgs;
 
       // setup relayer connections
-      client = new WebSocket('ws://localhost:9955/ws');
+      client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
       await new Promise((resolve) => client.on('open', resolve));
       console.log('Connected to Relayer!');
     });
@@ -341,7 +342,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
       args = zkArgs;
 
       // setup relayer connections
-      client = new WebSocket('ws://localhost:9955/ws');
+      client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
       await new Promise((resolve) => client.on('open', resolve));
       console.log('Connected to Relayer!');
     });
@@ -428,7 +429,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
       console.log(args);
 
       // setup relayer connections
-      client = new WebSocket('ws://localhost:9955/ws');
+      client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
       await new Promise((resolve) => client.on('open', resolve));
       console.log('Connected to Relayer!');
     });
@@ -527,7 +528,7 @@ describe('Ganache Tornado Relayer Withdraw Tests', function () {
       await withdrawTornado(tornadoContractAddress, proof, args, wallet);
 
       // setup relayer connections
-      client = new WebSocket('ws://localhost:9955/ws');
+      client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
       await new Promise((resolve) => client.on('open', resolve));
       console.log('Connected to Relayer!');
     });

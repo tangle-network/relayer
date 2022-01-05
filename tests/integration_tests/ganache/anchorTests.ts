@@ -37,6 +37,7 @@ let provider2: ethers.providers.Provider;
 
 // variables intended to be consistent across all tests
 let relayer: ChildProcessWithoutNullStreams;
+let relayerEndpoint: string;
 let recipient: string;
 let bridge: fixedBridge.Bridge;
 let relayerChain1Info: RelayerChainConfig;
@@ -51,7 +52,7 @@ let args: string[];
 let client: WebSocket;
 let startingRecipientBalance: ethers.BigNumber;
 
-describe('Ganache Anchor Tests', function () {
+describe('Anchor Tests', function () {
   // increase the timeout for relayer tests
   this.timeout(120_000);
 
@@ -150,16 +151,16 @@ describe('Ganache Anchor Tests', function () {
 
     // Setup webb relayer
     console.log('Starting the Relayer ..');
-    relayer = await startWebbRelayer();
+    [relayer, relayerEndpoint] = await startWebbRelayer(8888);
     await sleep(1500); // wait for the relayer start-up
 
     relayerChain1Info = await getRelayerConfig(
       'testa',
-      'http://localhost:9955'
+      relayerEndpoint
     );
     relayerChain2Info = await getRelayerConfig(
       'testb',
-      'http://localhost:9955'
+      relayerEndpoint
     );
     recipient = '0xe8f999AC5DAa08e134735016FAcE0D6439baFF94';
   });
@@ -205,7 +206,8 @@ describe('Ganache Anchor Tests', function () {
       console.log(`proof: ${proof} \n args: ${args}`);
 
       // setup relayer connections
-      client = new WebSocket('ws://localhost:9955/ws');
+
+      client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
       await new Promise((resolve) => client.on('open', resolve));
       console.log('Connected to Relayer!');
     });
@@ -276,7 +278,7 @@ describe('Ganache Anchor Tests', function () {
     });
   });
 
-  describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+  describe.only('Sunny day Anchor withdraw relayed transaction across bridge', function () {
     this.timeout(120_000);
     before(async function () {
       this.timeout(120_000);
@@ -306,7 +308,7 @@ describe('Ganache Anchor Tests', function () {
 
       // allow time for the bridge proposal and execution
       console.log('waiting for bridge proposal and execution');
-      await sleep(30_000);
+      await sleep(50_000);
 
       // generate the merkle proof from the source anchor
       await srcAnchor.checkKnownRoot();
@@ -349,7 +351,7 @@ describe('Ganache Anchor Tests', function () {
       args = proofArgs;
 
       // setup relayer connections
-      client = new WebSocket('ws://localhost:9955/ws');
+      client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
       await new Promise((resolve) => client.on('open', resolve));
       console.log('Connected to Relayer!');
     });
@@ -414,14 +416,14 @@ describe('Ganache Anchor Tests', function () {
     });
 
     after(function () {
-      client.terminate();
+      client?.terminate();
     });
   });
 
   after(function () {
     ganacheServer1.close(console.error);
     ganacheServer2.close(console.error);
-    client.terminate();
+    client?.terminate();
     relayer.kill('SIGINT');
   });
 });
