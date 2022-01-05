@@ -27,7 +27,7 @@ use webb::evm::ethers::{
 };
 
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::darkwebb_standalone_runtime::Element;
-use webb::substrate::subxt::{self, PairSigner, TransactionStatus::{Finalized, InBlock, Invalid, Dropped}};
+use webb::substrate::subxt::{self, PairSigner, TransactionStatus};
 use webb::substrate::protocol_substrate_runtime::api::{DefaultConfig, RuntimeApi};
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
@@ -238,6 +238,7 @@ pub enum CommandResponse {
     Network(NetworkStatus),
     Withdraw(WithdrawStatus),
     Error(String),
+    #[allow(unused)]
     Unimplemented(&'static str),
 }
 
@@ -727,10 +728,10 @@ async fn handle_substrate_mixer_relay_tx<'a>(
     let nullifier_hash_element = Element(cmd.nullifier_hash);
 
     let requested_chain = cmd.chain.to_lowercase();
-    let client = match ctx
+    let maybe_client = ctx
         .substrate_provider::<DefaultConfig>(&requested_chain)
-        .await
-    {
+        .await;
+    let client = match maybe_client {
         Ok(c) => c,
         Err(e) => {
             tracing::error!("Error while getting Substrate client: {}", e);
@@ -753,7 +754,7 @@ async fn handle_substrate_mixer_relay_tx<'a>(
 
     let signer = PairSigner::new(pair);
 
-    let withdraw_progress = api
+    let withdraw_tx = api
         .tx()
         .mixer_bn254()
         .withdraw(
@@ -768,41 +769,75 @@ async fn handle_substrate_mixer_relay_tx<'a>(
         )
         .sign_and_submit_then_watch(&signer)
         .await;
-
-    while let Ok(Some(ev)) = withdraw_progress.next().await {
-        // Made it into a block, but not finalized.
-        match ev {
-            InBlock(details) => {
+    let mut event_stream = match withdraw_tx {
+        Ok(s) => s,
+        Err(e) => {
+            tracing::error!("Error while sending Tx: {}", e);
+            let _ = stream.send(Error(format!("{}", e))).await;
+            return;
+        }
+    };
+    loop {
+        let maybe_event = event_stream.next().await;
+        let event = match maybe_event {
+            Ok(Some(v)) => v,
+            Ok(None) => break,
+            Err(e) => {
+                tracing::error!("Error while watching Tx: {}", e);
+                let _ = stream.send(Error(format!("{}", e))).await;
+                return;
+            }
+        };
+        match event {
+            TransactionStatus::Broadcast(_) => {
+                let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
+            }
+            TransactionStatus::InBlock(info) => {
                 tracing::debug!(
                     "Transaction {:?} made it into block {:?}",
-                    details.extrinsic_hash(),
-                    details.block_hash()
+                    info.extrinsic_hash(),
+                    info.block_hash()
                 );
-
-                let _events = details.wait_for_success().await;
                 let _ = stream
                     .send(Withdraw(WithdrawStatus::Submitted {
                         tx_hash: H256::from_slice(
-                            details.extrinsic_hash().as_bytes(),
+                            info.extrinsic_hash().as_bytes(),
                         ),
                     }))
                     .await;
             }
-            Finalized(details) => {
+            TransactionStatus::Finalized(info) => {
                 tracing::debug!(
-                    "Transaction {:?} is finalized in block {:?}",
-                    details.extrinsic_hash(),
-                    details.block_hash()
+                    "Transaction {:?} finalized in block {:?}",
+                    info.extrinsic_hash(),
+                    info.block_hash()
                 );
-
-                let _events = details.wait_for_success().await?;
+                let _has_event = match info.wait_for_success().await {
+                    Ok(_) => {
+                        // TODO: check if the event is actually a withdraw event
+                        true
+                    }
+                    Err(e) => {
+                        tracing::error!("Error while watching Tx: {}", e);
+                        let _ = stream.send(Error(format!("{}", e))).await;
+                        false
+                    }
+                };
                 let _ = stream
                     .send(Withdraw(WithdrawStatus::Finalized {
-                        tx_hash: details.extrinsic_hash(),
+                        tx_hash: H256::from_slice(
+                            info.extrinsic_hash().as_bytes(),
+                        ),
                     }))
                     .await;
             }
-            Invalid => {
+            TransactionStatus::Dropped => {
+                tracing::warn!("Transaction dropped from the pool");
+                let _ = stream
+                    .send(Withdraw(WithdrawStatus::DroppedFromMemPool))
+                    .await;
+            }
+            TransactionStatus::Invalid => {
                 let _ = stream
                     .send(Withdraw(WithdrawStatus::Errored {
                         reason: "Invalid".to_string(),
@@ -810,14 +845,7 @@ async fn handle_substrate_mixer_relay_tx<'a>(
                     }))
                     .await;
             }
-            Dropped => {
-                let _ = stream
-                    .send(Withdraw(WithdrawStatus::DroppedFromMemPool))
-                    .await;
-            }
-            _ => {
-                let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
-            }
+            _ => continue,
         }
     }
 }
