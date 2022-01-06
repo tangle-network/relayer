@@ -3,8 +3,8 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
-use webb::evm::contract::darkwebb::AnchorContract;
-use webb::evm::contract::darkwebb::AnchorContractEvents;
+use webb::evm::contract::protocol_solidity::AnchorContract;
+use webb::evm::contract::protocol_solidity::AnchorContractEvents;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
@@ -210,7 +210,11 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             );
             let mut signer = self.pair.clone();
             signer.increment_nonce();
-            let result = xt.sign_and_submit_then_watch(&signer).await;
+            let result = xt
+                .sign_and_submit_then_watch(&signer)
+                .await?
+                .wait_for_finalized()
+                .await?;
             tracing::debug!("sent proposal to dkg: {:?}", result);
         }
         Ok(())

@@ -29,6 +29,27 @@ export const generateTornadoWithdrawRequest = (
   },
 });
 
+export const generateSubstrateWithdrawRequest = (
+  chainName: string,
+  treeId: string,
+  proof: string,
+  args: string[]
+) => ({
+  sub: {
+    mixerRelayTx: {
+      chain: chainName,
+      id: treeId,
+      proof,
+      root: args[0],
+      nullifierHash: args[1],
+      recipient: args[2],
+      relayer: args[3],
+      fee: args[4],
+      refund: args[5],
+    },
+  },
+});
+
 // Convert a hex string to a byte array
 function hexStringToByte(str) {
   if (!str) {

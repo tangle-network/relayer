@@ -5,7 +5,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
-use webb::evm::contract::darkwebb::{BridgeContract, BridgeContractEvents};
+use webb::evm::contract::protocol_solidity::{
+    BridgeContract, BridgeContractEvents,
+};
 use webb::evm::ethers::prelude::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
