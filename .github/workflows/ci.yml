@@ -73,7 +73,7 @@ jobs:
         if: matrix.target == 'x86_64-apple-darwin'
         run: cd tests && git submodule update --init --recursive && yarn
       - name: Create test env file
-        run: echo "WEBB_PORT=9955; RINKEBY_PRIVATE_KEY=0x8c21e6dc9d5e89a6bfeae445466a45d520f5c288984b0786cd7f0a18a9155ff1" > tests/.env
+        run: echo "RINKEBY_PRIVATE_KEY=0x8c21e6dc9d5e89a6bfeae445466a45d520f5c288984b0786cd7f0a18a9155ff1" > tests/.env
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-apple-darwin'
         run: cd tests && yarn test
