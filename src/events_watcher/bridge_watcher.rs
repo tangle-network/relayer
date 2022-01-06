@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use webb::evm::contract::protocol_solidity::{
-    BridgeContract, BridgeContractEvents,
+    BridgeContract, BridgeContractEvents, Proposal,
 };
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::prelude::*;
@@ -253,7 +253,7 @@ where
             .await?;
         // sanity check
         assert_eq!(contract_handler_address, data.anchor_handler_address);
-        let (status, ..) = contract
+        let Proposal { status, .. } = contract
             .get_proposal(data.origin_chain_id, data.leaf_index as _, data_hash)
             .call()
             .await?;
@@ -360,7 +360,7 @@ where
         // that this proposal is passed (from the events as it sync) but in the current
         // time, this proposal is already executed (since this event is from the past).
         // that's why we need to do this check here.
-        let (status, ..) = contract
+        let Proposal { status, .. } = contract
             .get_proposal(
                 entity.origin_chain_id,
                 entity.nonce.as_u64(),
@@ -382,7 +382,7 @@ where
         let call = contract.execute_proposal(
             entity.origin_chain_id,
             entity.nonce.as_u64(),
-            entity.data,
+            entity.data.into(),
             entity.resource_id,
         );
         let key = SledQueueKey::from_evm_with_custom_key(

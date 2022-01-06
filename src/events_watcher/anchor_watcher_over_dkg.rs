@@ -3,8 +3,9 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
-use webb::evm::contract::protocol_solidity::AnchorContract;
-use webb::evm::contract::protocol_solidity::AnchorContractEvents;
+use webb::evm::contract::protocol_solidity::{
+    FixedDepositAnchorContract, FixedDepositAnchorContractEvents,
+};
 use webb::evm::ethers::prelude::{Contract, LogMeta, Middleware};
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
@@ -54,7 +55,7 @@ where
 {
     config: config::AnchorContractOverDKGConfig,
     webb_config: config::WebbRelayerConfig,
-    contract: AnchorContract<M>,
+    contract: FixedDepositAnchorContract<M>,
 }
 
 impl<M> AnchorContractOverDKGWrapper<M>
@@ -67,7 +68,10 @@ where
         client: Arc<M>,
     ) -> Self {
         Self {
-            contract: AnchorContract::new(config.common.address, client),
+            contract: FixedDepositAnchorContract::new(
+                config.common.address,
+                client,
+            ),
             config,
             webb_config,
         }
@@ -115,7 +119,7 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
 
     type Contract = AnchorContractOverDKGWrapper<Self::Middleware>;
 
-    type Events = AnchorContractEvents;
+    type Events = FixedDepositAnchorContractEvents;
 
     type Store = SledStore;
 
@@ -126,7 +130,7 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
         wrapper: &Self::Contract,
         (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
-        use AnchorContractEvents::*;
+        use FixedDepositAnchorContractEvents::*;
         // only process anchor deposit events.
         let event_data = match event {
             DepositFilter(data) => data,
@@ -151,8 +155,10 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
                     .interval(Duration::from_millis(6u64));
             let dest_client = Arc::new(provider);
             let dest_chain_id = dest_client.get_chainid().await?;
-            let dest_contract =
-                AnchorContract::new(linked_anchor.address, dest_client);
+            let dest_contract = FixedDepositAnchorContract::new(
+                linked_anchor.address,
+                dest_client,
+            );
             let dest_handler = dest_contract.handler().call().await?;
             let data = ProposalData {
                 anchor_address: dest_contract.address(),
