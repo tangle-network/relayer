@@ -275,10 +275,14 @@ describe('Anchor Tests', function () {
     this.timeout(120_000);
     before(async function () {
       this.timeout(120_000);
-
       sourceWallet = new ethers.Wallet(senderPrivateKey, provider1);
       destWallet = new ethers.Wallet(senderPrivateKey, provider2);
+      const chainABridge = bridge.getBridgeSide(chainId1);
+      const chainBBridge = bridge.getBridgeSide(chainId2);
+      console.log('chainABridge: ', chainABridge.contract.address);
+      console.log('chainBBridge: ', chainBBridge.contract.address);
       const srcAnchor = await bridge.getAnchor(chainId1, '1000000000000000000');
+      console.log('Chain A Anchor Address: ', srcAnchor.contract.address);
       await srcAnchor.setSigner(sourceWallet);
 
       // approve token spending
@@ -312,6 +316,7 @@ describe('Anchor Tests', function () {
         chainId2,
         '1000000000000000000'
       );
+      console.log('Chain B Anchor Address: ', destAnchor.contract.address);
       anchorContractAddress = destAnchor.contract.address;
 
       const destRoots = await destAnchor.populateRootsForProof();
