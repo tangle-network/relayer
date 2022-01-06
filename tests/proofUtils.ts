@@ -9,6 +9,12 @@ import tornadoContract from './build/contracts/Anchor.json';
 import nativeTornadoContract from './build/contracts/NativeAnchor.json';
 import MerkleTree from './lib/MerkleTree';
 import fetch from 'node-fetch';
+import { ApiPromise, WsProvider } from "@polkadot/api";
+import { Note, NoteGenInput } from '@webb-tools/sdk-mixer';
+// import { ProvingManger, ProvingManagerWrapper } from '@webb-tools/sdk-core';
+// import Worker from "./mixer.worker.ts";
+import { Keyring } from "@polkadot/keyring";
+import { options } from '@webb-tools/api';
 
 // variable to hold groth16 and not reinitialize
 let groth16;
@@ -161,7 +167,7 @@ export async function getDepositLeavesFromRelayer(
 ): Promise<string[]> {
   const relayerResponse = await fetch(`${endpoint}/api/v1/leaves/${contractAddress}`);
 
-  const jsonResponse = await relayerResponse.json();
+  const jsonResponse: any = await relayerResponse.json();
   let leaves = jsonResponse.leaves;
 
   return leaves;
@@ -234,4 +240,103 @@ export async function generateTornadoSnarkProof(
   ];
 
   return { proof, args };
+}
+
+export async function generateSubstrateMixerSnarkProof(
+  leaves: any,
+  deposit: any,
+  recipient: string,
+  relayer: string,
+  fee: string
+) {
+  return;
+}
+
+export async function createSubstrateDeposit() {
+  const chainId = 1080;
+  const noteInput: NoteGenInput = {
+    prefix: 'webb.mix',
+    version: 'v1',
+    exponentiation: '5',
+    width: '3',
+    backend: 'Arkworks',
+    hashFunction: 'Poseidon',
+    curve: 'Bn254',
+    denomination: `18`,
+
+    amount: String(10),
+    chain: String(chainId),
+    sourceChain: String(chainId),
+    tokenSymbol: 'WEBB',
+  };
+  const depositNote = await Note.generateNote(noteInput);
+  return depositNote;
+}
+
+export const provider = new WsProvider('ws://127.0.0.1:9944');
+export const ALICE = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY';
+
+export async function getDepositLeavesFromSubstrateChain(treeId: string) {
+  const api = new ApiPromise(options({ provider }));
+  await api.isReady;
+}
+
+export async function depositSubstrateMixer(_treeId: string) {
+  const deposit = await createSubstrateDeposit();
+  const keyring = new Keyring({ type: "sr25519" });
+	const alice = keyring.addFromUri("//Alice");
+  const api = new ApiPromise(options({ provider }));
+  await api.isReady;
+  console.log(api);
+  const toFixedHex = (number: number | Buffer, length = 32) =>
+    '0x' +
+    (number instanceof Buffer
+      ? number.toString('hex')
+      : snarkjs.bigInt(number).toString(16)
+    ).padStart(length * 2, '0');
+
+  // Gas limit values required for beresheet
+  // @ts-ignore
+  const unsub = await api.tx.mixerBn254.deposit(
+    deposit.getLeaf()
+  ).signAndSend(alice, ({ events = [], status }) => {
+		console.log(`Current status is: ${status.type}`);
+
+		if (status.isFinalized) {
+			console.log(`Transaction included at blockHash ${status.asFinalized}`);
+
+			events.forEach(({ phase, event: { data, method, section } }) => {
+				console.log(`\t' ${phase}: ${section}.${method}:: ${data}`);
+			});
+
+			unsub();
+		}
+  });
+  return deposit;
+}
+
+export async function withdrawSubstrateMixer(treeId: string, proof: any, args: any) {
+  const keyring = new Keyring({ type: "sr25519" });
+	const alice = keyring.addFromUri("//Alice");
+  const api = new ApiPromise(options({ provider }));
+  await api.isReady;
+
+  // @ts-ignore
+	const unsub = await api.tx.mixerBn254.withdraw(
+    treeId,
+    proof, 
+    ...args
+  ).signAndSend(alice, ({ events = [], status }) => {
+		console.log(`Current status is: ${status.type}`);
+
+		if (status.isFinalized) {
+			console.log(`Transaction included at blockHash ${status.asFinalized}`);
+
+			events.forEach(({ phase, event: { data, method, section } }) => {
+				console.log(`\t' ${phase}: ${section}.${method}:: ${data}`);
+			});
+
+			unsub();
+		}
+  });
 }
