@@ -228,6 +228,7 @@ pub enum Contract {
 #[serde(tag = "pallet")]
 pub enum Pallet {
     DKGProposals(DKGProposalsPalletConfig),
+    DKGProposalHandler(DKGProposalHandlerPalletConfig),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -327,6 +328,13 @@ pub struct DKGProposalsPalletConfig {
     pub events_watcher: EventsWatcherConfig,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct DKGProposalHandlerPalletConfig {
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+}
 #[derive(Debug, Clone)]
 pub struct PrivateKey(Secret);
 
