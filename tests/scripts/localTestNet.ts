@@ -3,11 +3,10 @@
 import readline from 'readline';
 import { ethers } from 'ethers';
 import { GanacheAccounts, startGanacheServer } from '../startGanacheServer';
-import { fixedBridge, tokens, utils } from '@webb-tools/protocol-solidity';
+import { Bridge } from '@webb-tools/fixed-bridge';
+import { MintableToken } from '@webb-tools/tokens';
+import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import path from 'path';
-const { Bridge } = fixedBridge;
-const { MintableToken } = tokens;
-const { fetchComponentsFromFilePaths } = utils;
 
 // Let's first define a localchain
 class LocalChain {
@@ -34,17 +33,17 @@ class LocalChain {
     name: string,
     symbol: string,
     wallet: ethers.Signer
-  ): Promise<tokens.MintableToken> {
+  ): Promise<MintableToken> {
     return MintableToken.createToken(name, symbol, wallet);
   }
 
   public async deployBridge(
     otherChain: LocalChain,
-    localToken: tokens.MintableToken,
-    otherToken: tokens.MintableToken,
+    localToken: MintableToken,
+    otherToken: MintableToken,
     localWallet: ethers.Signer,
     otherWallet: ethers.Signer
-  ): Promise<fixedBridge.Bridge> {
+  ): Promise<Bridge> {
     localWallet.connect(this.provider());
     otherWallet.connect(otherChain.provider());
     const bridgeInput = {
@@ -126,6 +125,10 @@ async function main() {
     chainAWallet,
     chainBWallet
   );
+  // get chainA bridge
+  const chainABridge = bridge.getBridgeSide(chainA.chainId);
+  // get chainB bridge
+  const chainBBridge = bridge.getBridgeSide(chainB.chainId);
   // get the anhor on chainA
   const chainAAnchor = bridge.getAnchor(
     chainA.chainId,
@@ -168,8 +171,10 @@ async function main() {
 
   console.log('Chain A (Hermes):', chainA.endpoint);
   console.log('Chain B (Athena):', chainB.endpoint);
-  console.log('ChainA token: ', chainAToken.contract.address);
-  console.log('ChainB token: ', chainBToken.contract.address);
+  console.log('ChainA token (Hermes): ', chainAToken.contract.address);
+  console.log('ChainB token (Athena): ', chainBToken.contract.address);
+  console.log('ChainA bridge (Hermes): ', chainABridge.contract.address);
+  console.log('ChainB bridge (Athena): ', chainBBridge.contract.address);
   console.log('ChainA anchor (Hermes): ', chainAAnchor.contract.address);
   console.log('ChainB anchor (Athena): ', chainBAnchor.contract.address);
 
