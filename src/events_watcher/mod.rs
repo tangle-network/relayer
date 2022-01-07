@@ -489,3 +489,29 @@ pub trait SubstrateEventWatcher {
         Ok(())
     }
 }
+
+pub type ResourceId = [u8; 32];
+pub type ProposalNonce = u64;
+
+#[derive(Debug, Clone, Copy)]
+pub struct ProposalHeader {
+    pub resource_id: ResourceId,
+    pub chain_id: u32,
+    pub function_sig: [u8; 4],
+    pub nonce: ProposalNonce,
+}
+
+impl ProposalHeader {
+    fn encode(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        // resource_id contains the chain id already.
+        buf.extend_from_slice(&self.resource_id); // 32 bytes
+        buf.extend_from_slice(&self.function_sig); // 4 bytes
+        buf.extend_from_slice(&(self.nonce as u32).to_be_bytes()); // 4 bytes
+        buf
+    }
+
+    fn encoded_to(&self, buf: &mut Vec<u8>) {
+        buf.extend_from_slice(&self.encode());
+    }
+}

@@ -19,7 +19,7 @@
     "@openzeppelin/contracts": "^4.2.0",
     "@truffle/hdwallet-provider": "^1.4.1",
     "@types/mocha": "^9.0.0",
-    "@webb-tools/protocol-solidity": "0.0.2",
+    "@webb-tools/protocol-solidity": "^0.0.3",
     "circom": "^0.5.45",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
     "dotenv": "^10.0.0",
@@ -44,7 +44,7 @@
     "chai-as-promised": "^7.1.1",
     "prettier": "^2.5.1",
     "source-map-support": "^0.5.19",
-    "ts-node": "^10.0.0",
+    "ts-node": "^10.4.0",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^4.3.5"
   }

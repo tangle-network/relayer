@@ -7,14 +7,14 @@ tx-queue = { max-sleep-interval = 1500 }
 
 [[evm.athena.contracts]]
 contract = "Anchor"
-address = "0xe69a847CD5BC0C9480adA0b339d7F0a8caC2B667"
+address = "0xD30C8839c1145609E564b986F667b273Ddcb8496"
 deployed-at = 1
 size = 1
 events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 0 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "hermes", address = "0xD30C8839c1145609E564b986F667b273Ddcb8496" },
+  { chain = "hermes", address = "0xD24260C102B5D128cbEFA0F655E5be3c2370677C" },
 ]
 
 [[evm.athena.contracts]]

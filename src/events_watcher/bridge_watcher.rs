@@ -1,12 +1,12 @@
 use core::fmt;
 use std::fmt::LowerHex;
-use std::ops;
+use std::ops::{self, Add};
 use std::sync::Arc;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use webb::evm::contract::protocol_solidity::{
-    BridgeContract, BridgeContractEvents,
+    BridgeContract, BridgeContractEvents, Proposal,
 };
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::prelude::*;
@@ -15,6 +15,7 @@ use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
 
 use crate::config;
+use crate::events_watcher::{ProposalHeader, ProposalNonce};
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::QueueStore;
 
@@ -70,14 +71,15 @@ impl From<u8> for ProposalStatus {
 pub struct ProposalData {
     pub anchor_address: types::Address,
     pub anchor_handler_address: types::Address,
-    pub origin_chain_id: types::U256,
+    pub src_chain_id: types::U256,
     pub leaf_index: u32,
+    pub function_sig: [u8; 4],
     pub merkle_root: [u8; 32],
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub struct ProposalEntity {
-    pub origin_chain_id: types::U256,
+    pub src_chain_id: types::U256,
     pub nonce: types::U64,
     pub data: Vec<u8>,
     pub data_hash: [u8; 32],
@@ -149,7 +151,7 @@ impl EventWatcher for BridgeContractWatcher {
 
     #[tracing::instrument(
         skip_all,
-        fields(ty = %to_event_type(&e.0)),
+        fields(event_type = %to_event_type(&e.0)),
     )]
     async fn handle_event(
         &self,
@@ -228,21 +230,37 @@ where
         data: ProposalData,
     ) -> anyhow::Result<()> {
         let dest_chain_id = contract.client().get_chainid().await?;
-        let update_data = create_update_proposal_data(
-            data.origin_chain_id,
-            data.leaf_index,
-            data.merkle_root,
-        );
-        let data_bytes = hex::decode(&update_data)?;
-        let pre_hashed =
-            format!("{:x}{}", data.anchor_handler_address, update_data);
-        let data_to_be_hashed = hex::decode(pre_hashed)?;
-        let data_hash = utils::keccak256(data_to_be_hashed);
+        let mut proposal_data = Vec::with_capacity(80);
         let resource_id =
             create_resource_id(data.anchor_address, dest_chain_id)?;
+        tracing::trace!("r_id: 0x{}", hex::encode(&resource_id));
+        let header = ProposalHeader {
+            resource_id,
+            function_sig: data.function_sig,
+            chain_id: dest_chain_id.as_u32(),
+            nonce: ProposalNonce::from(data.leaf_index),
+        };
+        // first the header (40 bytes)
+        header.encoded_to(&mut proposal_data);
+        // next, the origin chain id (4 bytes)
+        proposal_data
+            .extend_from_slice(&data.src_chain_id.as_u32().to_be_bytes());
+        // next, the leaf index (4 bytes)
+        proposal_data.extend_from_slice(&data.leaf_index.to_be_bytes());
+        // next, the merkle root (32 bytes)
+        proposal_data.extend_from_slice(&data.merkle_root);
+        // sanity check
+        assert_eq!(proposal_data.len(), 80);
+        // data to be hashed are the anchor handler address (20 bytes) + the proposal data (80 bytes)
+        // then keccak256 is used to hash the data.
+        let mut data_to_be_hashed = Vec::with_capacity(20 + 80);
+        data_to_be_hashed
+            .extend_from_slice(&data.anchor_handler_address.to_fixed_bytes());
+        data_to_be_hashed.extend_from_slice(&proposal_data);
+        let data_hash = utils::keccak256(data_to_be_hashed);
         let entity = ProposalEntity {
-            origin_chain_id: data.origin_chain_id,
-            data: data_bytes,
+            src_chain_id: data.src_chain_id,
+            data: proposal_data,
             data_hash,
             nonce: types::U64::from(data.leaf_index),
             resource_id,
@@ -253,8 +271,8 @@ where
             .await?;
         // sanity check
         assert_eq!(contract_handler_address, data.anchor_handler_address);
-        let (status, ..) = contract
-            .get_proposal(data.origin_chain_id, data.leaf_index as _, data_hash)
+        let Proposal { status, .. } = contract
+            .get_proposal(data.src_chain_id, data.leaf_index as _, data_hash)
             .call()
             .await?;
         let status = ProposalStatus::from(status);
@@ -263,7 +281,7 @@ where
             return Ok(());
         }
         let call = contract.vote_proposal(
-            entity.origin_chain_id,
+            entity.src_chain_id,
             entity.nonce.as_u64(),
             entity.resource_id,
             entity.data_hash,
@@ -360,15 +378,16 @@ where
         // that this proposal is passed (from the events as it sync) but in the current
         // time, this proposal is already executed (since this event is from the past).
         // that's why we need to do this check here.
-        let (status, ..) = contract
+        let proposal = contract
             .get_proposal(
-                entity.origin_chain_id,
+                entity.src_chain_id,
                 entity.nonce.as_u64(),
                 entity.data_hash,
             )
             .call()
             .await?;
-        let status = ProposalStatus::from(status);
+        tracing::debug!(?proposal, "Proposal from the contract");
+        let status = ProposalStatus::from(proposal.status);
         if status >= ProposalStatus::Executed {
             tracing::debug!(
                 "Skipping execution of proposal 0x{} since it is already {:?}",
@@ -379,12 +398,17 @@ where
         }
         // and also assert it is passed.
         assert_eq!(status, ProposalStatus::Passed);
-        let call = contract.execute_proposal(
-            entity.origin_chain_id,
-            entity.nonce.as_u64(),
-            entity.data,
-            entity.resource_id,
-        );
+        // to make sure, the proposal passed, we will not send the execute tx right away
+        // instead, we will enqueue it with condition that it will be sent only when at least 1 more block confirmed.
+        let current_block_number = contract.client().get_block_number().await?;
+        let call = contract
+            .execute_proposal(
+                entity.src_chain_id,
+                entity.nonce.as_u64(),
+                entity.data.into(),
+                entity.resource_id,
+            )
+            .block(current_block_number.add(1u64));
         let key = SledQueueKey::from_evm_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),
@@ -401,7 +425,7 @@ where
             return Ok(());
         }
         tracing::debug!(
-            "Executing proposal 0x{} with resourceID 0x{}",
+            "Queue tx to Execute proposal 0x{} with resourceID 0x{}",
             hex::encode(data_hash),
             hex::encode(&entity.resource_id),
         );
@@ -409,17 +433,6 @@ where
         store.enqueue_item(key, call.tx)?;
         Ok(())
     }
-}
-
-pub fn create_update_proposal_data(
-    chain_id: types::U256,
-    leaf_index: u32,
-    merkle_root: [u8; 32],
-) -> String {
-    let chain_id_hex = to_hex(chain_id, 32);
-    let leaf_index_hex = to_hex(leaf_index, 32);
-    let merkle_root_hex = hex::encode(&merkle_root);
-    format!("{}{}{}", chain_id_hex, leaf_index_hex, merkle_root_hex)
 }
 
 pub fn create_resource_id(
@@ -485,31 +498,6 @@ mod tests {
     use std::str::FromStr;
 
     use super::*;
-
-    #[test]
-    fn should_create_update_proposal() {
-        let chain_id = types::U256::from(4);
-        let leaf_index = 1u32;
-        let merkle_root = [
-            0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
-            19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31,
-        ];
-        let result =
-            create_update_proposal_data(chain_id, leaf_index, merkle_root);
-        let expected = include_str!("../../tests/fixtures/proposal_data.txt")
-            .trim_end_matches('\n');
-        assert_eq!(result, expected);
-        let dest_handler = types::Address::from_str(
-            "0x7Bb1Af8D06495E85DDC1e0c49111C9E0Ab50266E",
-        )
-        .unwrap();
-        let pre_hashed = format!("{:x}{}", dest_handler, result);
-        let data_to_be_hashed = hex::decode(pre_hashed).unwrap();
-        let data_hash = hex::encode(utils::keccak256(data_to_be_hashed));
-        let expected_data_hash =
-            "45822e043e5735fc2485e52dd71403d140f3a755cd59dc02539eaef3bcfd4bcb";
-        assert_eq!(data_hash, expected_data_hash);
-    }
 
     #[test]
     fn should_create_resouce_id() {

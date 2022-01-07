@@ -1,10 +1,9 @@
 import { assert } from 'chai';
 import { ethers } from 'ethers';
 import WebSocket from 'ws';
-import { fixedBridge, tokens, utils } from '@webb-tools/protocol-solidity';
-const { Bridge } = fixedBridge;
-const { MintableToken } = tokens;
-const { toFixedHex, fetchComponentsFromFilePaths } = utils;
+import { Bridge, Anchor } from '@webb-tools/fixed-bridge';
+import { MintableToken } from '@webb-tools/tokens';
+import { fetchComponentsFromFilePaths, toFixedHex } from '@webb-tools/utils';
 import {
   RelayerChainConfig,
   sleep,
@@ -39,7 +38,7 @@ let provider2: ethers.providers.Provider;
 let relayer: ChildProcessWithoutNullStreams;
 let relayerEndpoint: string;
 let recipient: string;
-let bridge: fixedBridge.Bridge;
+let bridge: Bridge;
 let relayerChain1Info: RelayerChainConfig;
 let relayerChain2Info: RelayerChainConfig;
 
@@ -154,14 +153,8 @@ describe('Anchor Tests', function () {
     [relayer, relayerEndpoint] = await startWebbRelayer(8888);
     await sleep(1500); // wait for the relayer start-up
 
-    relayerChain1Info = await getRelayerConfig(
-      'testa',
-      relayerEndpoint
-    );
-    relayerChain2Info = await getRelayerConfig(
-      'testb',
-      relayerEndpoint
-    );
+    relayerChain1Info = await getRelayerConfig('testa', relayerEndpoint);
+    relayerChain2Info = await getRelayerConfig('testb', relayerEndpoint);
     recipient = '0xe8f999AC5DAa08e134735016FAcE0D6439baFF94';
   });
 
@@ -278,14 +271,18 @@ describe('Anchor Tests', function () {
     });
   });
 
-  describe.only('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+  describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
     this.timeout(120_000);
     before(async function () {
       this.timeout(120_000);
-
       sourceWallet = new ethers.Wallet(senderPrivateKey, provider1);
       destWallet = new ethers.Wallet(senderPrivateKey, provider2);
+      const chainABridge = bridge.getBridgeSide(chainId1);
+      const chainBBridge = bridge.getBridgeSide(chainId2);
+      console.log('chainABridge: ', chainABridge.contract.address);
+      console.log('chainBBridge: ', chainBBridge.contract.address);
       const srcAnchor = await bridge.getAnchor(chainId1, '1000000000000000000');
+      console.log('Chain A Anchor Address: ', srcAnchor.contract.address);
       await srcAnchor.setSigner(sourceWallet);
 
       // approve token spending
@@ -308,7 +305,7 @@ describe('Anchor Tests', function () {
 
       // allow time for the bridge proposal and execution
       console.log('waiting for bridge proposal and execution');
-      await sleep(50_000);
+      await sleep(20_000);
 
       // generate the merkle proof from the source anchor
       await srcAnchor.checkKnownRoot();
@@ -319,6 +316,7 @@ describe('Anchor Tests', function () {
         chainId2,
         '1000000000000000000'
       );
+      console.log('Chain B Anchor Address: ', destAnchor.contract.address);
       anchorContractAddress = destAnchor.contract.address;
 
       const destRoots = await destAnchor.populateRootsForProof();
@@ -338,7 +336,7 @@ describe('Anchor Tests', function () {
       const wtns = await destAnchor.createWitness(input);
       const proofEncoded = await destAnchor.proveAndVerify(wtns);
       const proofArgs = [
-        fixedBridge.Anchor.createRootsBytes(input.roots),
+        Anchor.createRootsBytes(input.roots),
         toFixedHex(input.nullifierHash),
         toFixedHex(input.refreshCommitment, 32),
         toFixedHex(input.recipient, 20),

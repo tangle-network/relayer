@@ -164,6 +164,18 @@
     "@babel/helper-validator-identifier" "^7.14.5"
     to-fast-properties "^2.0.0"
 
+"@cspotcode/source-map-consumer@0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@cspotcode/source-map-consumer/-/source-map-consumer-0.8.0.tgz#33bf4b7b39c178821606f669bbc447a6a629786b"
+  integrity sha512-41qniHzTU8yAGbCp04ohlmSrZf8bkf/iJsl3V0dRGsQN/5GFfx+LbCSsCpp2gqrqjTVg/K6O8ycoV35JIwAzAg==
+
+"@cspotcode/source-map-support@0.7.0":
+  version "0.7.0"
+  resolved "https://registry.yarnpkg.com/@cspotcode/source-map-support/-/source-map-support-0.7.0.tgz#4789840aa859e46d2f3173727ab707c66bf344f5"
+  integrity sha512-X4xqRHqN8ACt2aHVe51OxeA2HjbcL4MqFqXkrmQszJ1NOUuUu5u6Vqx/0lZSVNku7velL5FC/s5uEAj1lsBMhA==
+  dependencies:
+    "@cspotcode/source-map-consumer" "0.8.0"
+
 "@ethereumjs/common@^2.5.0", "@ethereumjs/common@^2.6.0":
   version "2.6.0"
   resolved "https://registry.yarnpkg.com/@ethereumjs/common/-/common-2.6.0.tgz#feb96fb154da41ee2cc2c5df667621a440f36348"
@@ -886,10 +898,10 @@
   resolved "https://registry.yarnpkg.com/@tsconfig/node14/-/node14-1.0.1.tgz#95f2d167ffb9b8d2068b0b235302fafd4df711f2"
   integrity sha512-509r2+yARFfHHE7T6Puu2jjkoycftovhXRqW328PDXTVGKihlb1P8Z9mMZH04ebyajfRY7dedfGynlrFHJUQCg==
 
-"@tsconfig/node16@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@tsconfig/node16/-/node16-1.0.1.tgz#a6ca6a9a0ff366af433f42f5f0e124794ff6b8f1"
-  integrity sha512-FTgBI767POY/lKNDNbIzgAX6miIDBs6NTCbdlDb8TrWovHsSvaVIZDlTqym29C6UqhzwcJx4CYr+AlrMywA0cA==
+"@tsconfig/node16@^1.0.2":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@tsconfig/node16/-/node16-1.0.2.tgz#423c77877d0569db20e1fc80885ac4118314010e"
+  integrity sha512-eZxlbI8GZscaGS7kkc/trHTT5xgrjH3/1n2JDwusC9iahPKWMRvRjJSAN5mCXviuTGQ/lHnhvv8Q1YTpnfz9gA==
 
 "@typechain/ethers-v5@^7.0.1":
   version "7.2.0"
@@ -984,50 +996,50 @@
   resolved "https://registry.yarnpkg.com/@ungap/promise-all-settled/-/promise-all-settled-1.1.2.tgz#aa58042711d6e3275dd37dc597e5d31e8c290a44"
   integrity sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==
 
-"@webb-tools/contracts@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@webb-tools/contracts/-/contracts-0.0.1.tgz#b21cd6dc62a2f79f1b5f480bdb9c8dbe85a17b73"
-  integrity sha512-Z6kGdOXcKq9u2g3N9HIRkP7ih5f7o6Q6wf3408dZVP9HyF2G4QS3A2jYlEslD78RPFPdYJRV0KNRw/aGD+P+5A==
+"@webb-tools/contracts@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@webb-tools/contracts/-/contracts-0.0.2.tgz#f23643716d5ce76bc82fe0b14195fdc5b42ef3cb"
+  integrity sha512-2cW5bhsmjRI+dK+sc/AV9EX8LR+9s16TqNlciBsQzITZJ5fqKLPZ5YXbUz84P4b5XdMMY39m9m18NcXnLCgC5Q==
   dependencies:
     "@typechain/ethers-v5" "^7.0.1"
     "@typechain/hardhat" "^2.3.0"
     ethers "5.5.1"
 
-"@webb-tools/fixed-bridge@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@webb-tools/fixed-bridge/-/fixed-bridge-0.0.1.tgz#f09a19440fd20b4036b02cbbd7ed033a3c514569"
-  integrity sha512-G2FCLsiF27hN5sKxFqef8aP63AWHIxx0348Hv3FaiBjRQGfpIOtUTdnj0694H3EnUk1VoibhEETO3L10Bqz4ew==
+"@webb-tools/fixed-bridge@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@webb-tools/fixed-bridge/-/fixed-bridge-0.0.2.tgz#89a0748e4b927cfab75276c7759f7f75aae46705"
+  integrity sha512-dkwTSP6ZZBHaixyukYO/5vbiC41CuHSEKPMRZ8zntY8YxNTz5p9dm2cSbb3ipOw1XHQiH0A9VBQE6GqwitqK9g==
   dependencies:
-    "@webb-tools/contracts" "^0.0.1"
-    "@webb-tools/tokens" "^0.0.1"
-    "@webb-tools/utils" "^0.0.1"
+    "@webb-tools/contracts" "^0.0.2"
+    "@webb-tools/tokens" "^0.0.2"
+    "@webb-tools/utils" "^0.0.2"
     circomlibjs "^0.0.8"
     ethers "5.5.1"
     ffjavascript "^0.2.38"
     snarkjs "0.4.10"
 
-"@webb-tools/protocol-solidity@0.0.2":
-  version "0.0.2"
-  resolved "https://registry.yarnpkg.com/@webb-tools/protocol-solidity/-/protocol-solidity-0.0.2.tgz#e9fee26db38178758daccb23daf24200dd8beba7"
-  integrity sha512-3xlLUt482I467Ztru5A2GQZO8HhNaUObrHFKAJh+wZfXy/TK1g3+w5BGT+rqjvoKK2LUytoYh3JwOa6u+jUs7w==
+"@webb-tools/protocol-solidity@^0.0.3":
+  version "0.0.3"
+  resolved "https://registry.yarnpkg.com/@webb-tools/protocol-solidity/-/protocol-solidity-0.0.3.tgz#bbc708322c8d3a9181b7d34f65e68c8a328db6c4"
+  integrity sha512-AtOWz817ueWkPhuJAERKBf0EspafTiDLZvXlyJ1s5kYj/YGgMFUePWt5xf2tPV6Y5hWSslBkwgrTFX/mzz1JHw==
   dependencies:
-    "@webb-tools/contracts" "^0.0.1"
-    "@webb-tools/fixed-bridge" "^0.0.1"
-    "@webb-tools/tokens" "^0.0.1"
-    "@webb-tools/utils" "^0.0.1"
+    "@webb-tools/contracts" "^0.0.2"
+    "@webb-tools/fixed-bridge" "^0.0.2"
+    "@webb-tools/tokens" "^0.0.2"
+    "@webb-tools/utils" "^0.0.2"
 
-"@webb-tools/tokens@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@webb-tools/tokens/-/tokens-0.0.1.tgz#4b6dbfdad834220861300079a164c1e373352f4e"
-  integrity sha512-s1laAquhD3moNSKWpDqlN1UWSsnqnWnJSzlZE/aNe7UrbWryxQptW9N8PKDJFt0WW0/rN1v4pMy/gUJZuo/Arg==
+"@webb-tools/tokens@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@webb-tools/tokens/-/tokens-0.0.2.tgz#5ab32b4efe2470b94c5986dd37fadf7864f08690"
+  integrity sha512-7tokZasf9Q5YayEyOU5TBkzNctbdxR+e3p1ghrWdDNi9m7bbA4IOcKmWvFzZIQotiD3O7XUcPKO9OBSW/iyCYg==
   dependencies:
-    "@webb-tools/contracts" "^0.0.1"
+    "@webb-tools/contracts" "^0.0.2"
     ethers "5.5.1"
 
-"@webb-tools/utils@^0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@webb-tools/utils/-/utils-0.0.1.tgz#3d23df00201cf61d3a82b4f522c57411cb0af0fe"
-  integrity sha512-4R/IhpMQJKKtMh1+QsIZUZL+jb0Ff/NsJtcw61AonXInP4GILc9RRsjgOwU3Ig7QdV05OPqHunoXdDNtcetc2Q==
+"@webb-tools/utils@^0.0.2":
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/@webb-tools/utils/-/utils-0.0.2.tgz#382f0eee88a82705c0819108faa52bbdad971c18"
+  integrity sha512-IpY5e0uSo5B4odgH3CZFpPgcTMRx8k94pSq9oJRvrdJmIypMRr8L9idyOSlIfRcFINunUSpncu8ad4TbmX65ow==
   dependencies:
     circomlibjs "^0.0.8"
     ethers "5.5.1"
@@ -1061,10 +1073,20 @@ acorn-jsx@^5.0.0:
   resolved "https://registry.yarnpkg.com/acorn-jsx/-/acorn-jsx-5.3.1.tgz#fc8661e11b7ac1539c47dbfea2e72b3af34d267b"
   integrity sha512-K0Ptm/47OKfQRpNQ2J/oIN/3QYiK6FwW+eJbILhsdxh2WTLdl+30o8aGdTbm5JbffpFFAg/g+zi1E+jvJha5ng==
 
+acorn-walk@^8.1.1:
+  version "8.2.0"
+  resolved "https://registry.yarnpkg.com/acorn-walk/-/acorn-walk-8.2.0.tgz#741210f2e2426454508853a2f44d0ab83b7f69c1"
+  integrity sha512-k+iyHEuPgSw6SbuDpGQM+06HQUa04DZ3o+F6CSzXMvvI5KMvnaEqXe+YVe555R9nn6GPt404fos4wcgpw12SDA==
+
 acorn@^6.0.7:
   version "6.4.2"
   resolved "https://registry.yarnpkg.com/acorn/-/acorn-6.4.2.tgz#35866fd710528e92de10cf06016498e47e39e1e6"
   integrity sha512-XtGIhXwF8YM8bJhGxG5kXgjkEuNGLTkoYqVE+KMR+aspr4KGYmKYg7yUe3KghyQ9yheNwLnjmzh/7+gfDBmHCQ==
+
+acorn@^8.4.1:
+  version "8.7.0"
+  resolved "https://registry.yarnpkg.com/acorn/-/acorn-8.7.0.tgz#90951fde0f8f09df93549481e5fc141445b791cf"
+  integrity sha512-V/LGr1APy+PXIwKebEWrkZPwoeoF+w1jiOBUmuxuiUIaOHtob8Qc9BTrYo7VuI5fR8tqsy+buA2WFooR5olqvQ==
 
 aes-js@3.0.0:
   version "3.0.0"
@@ -5461,7 +5483,7 @@ source-map-support@0.5.12:
     buffer-from "^1.0.0"
     source-map "^0.6.0"
 
-source-map-support@^0.5.17, source-map-support@^0.5.19:
+source-map-support@^0.5.19:
   version "0.5.19"
   resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.19.tgz#a98b62f86dcaf4f67399648c085291ab9e8fed61"
   integrity sha512-Wonm7zOCIJzBGQdB+thsPar0kYuCIzYvxZwlBa87yi/Mdjv7Tip2cyVbLj5o0cFPN4EVkuTwb3GDDyUx2DGnGw==
@@ -5766,20 +5788,22 @@ ts-essentials@^7.0.1:
   resolved "https://registry.yarnpkg.com/ts-essentials/-/ts-essentials-7.0.3.tgz#686fd155a02133eedcc5362dc8b5056cde3e5a38"
   integrity sha512-8+gr5+lqO3G84KdiTSMRLtuyJ+nTBVRKuCrK4lidMPdVeEp0uqC875uE5NMcaA7YYMN7XsNiFQuMvasF8HT/xQ==
 
-ts-node@^10.0.0:
-  version "10.0.0"
-  resolved "https://registry.yarnpkg.com/ts-node/-/ts-node-10.0.0.tgz#05f10b9a716b0b624129ad44f0ea05dac84ba3be"
-  integrity sha512-ROWeOIUvfFbPZkoDis0L/55Fk+6gFQNZwwKPLinacRl6tsxstTF1DbAcLKkovwnpKMVvOMHP1TIbnwXwtLg1gg==
+ts-node@^10.4.0:
+  version "10.4.0"
+  resolved "https://registry.yarnpkg.com/ts-node/-/ts-node-10.4.0.tgz#680f88945885f4e6cf450e7f0d6223dd404895f7"
+  integrity sha512-g0FlPvvCXSIO1JDF6S232P5jPYqBkRL9qly81ZgAOSU7rwI0stphCgd2kLiCrU9DjQCrJMWEqcNSjQL02s6d8A==
   dependencies:
+    "@cspotcode/source-map-support" "0.7.0"
     "@tsconfig/node10" "^1.0.7"
     "@tsconfig/node12" "^1.0.7"
     "@tsconfig/node14" "^1.0.0"
-    "@tsconfig/node16" "^1.0.1"
+    "@tsconfig/node16" "^1.0.2"
+    acorn "^8.4.1"
+    acorn-walk "^8.1.1"
     arg "^4.1.0"
     create-require "^1.1.0"
     diff "^4.0.1"
     make-error "^1.1.1"
-    source-map-support "^0.5.17"
     yn "3.1.1"
 
 tsconfig-paths@^3.9.0:
