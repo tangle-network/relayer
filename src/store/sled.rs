@@ -343,7 +343,7 @@ impl ProposalStore for SledStore {
         )?;
         tracing::trace!(
             "Saved Proposal @{} with resource_id = 0x{}",
-            proposal.origin_chain_id,
+            proposal.src_chain_id,
             hex::encode(proposal.resource_id)
         );
         Ok(())
@@ -363,7 +363,7 @@ impl ProposalStore for SledStore {
                 let proposal: ProposalEntity = serde_json::from_slice(&bytes)?;
                 tracing::trace!(
                     "Removed Proposal @{} with resource_id = 0x{}",
-                    proposal.origin_chain_id,
+                    proposal.src_chain_id,
                     hex::encode(proposal.resource_id)
                 );
                 Ok(Some(proposal))

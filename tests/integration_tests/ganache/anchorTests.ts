@@ -271,7 +271,7 @@ describe('Anchor Tests', function () {
     });
   });
 
-  describe.only('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+  describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
     this.timeout(120_000);
     before(async function () {
       this.timeout(120_000);
@@ -305,7 +305,7 @@ describe('Anchor Tests', function () {
 
       // allow time for the bridge proposal and execution
       console.log('waiting for bridge proposal and execution');
-      await sleep(50_000);
+      await sleep(20_000);
 
       // generate the merkle proof from the source anchor
       await srcAnchor.checkKnownRoot();

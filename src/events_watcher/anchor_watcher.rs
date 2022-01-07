@@ -182,7 +182,7 @@ impl super::EventWatcher for AnchorWatcher<ForBridge> {
             _ => return Ok(()),
         };
         let client = wrapper.contract.client();
-        let origin_chain_id = client.get_chainid().await?;
+        let src_chain_id = client.get_chainid().await?;
         let root = wrapper.contract.get_last_root().call().await?;
         let leaf_index = event_data.leaf_index;
         // the correct way for getting the other linked anchors
@@ -265,6 +265,11 @@ impl super::EventWatcher for AnchorWatcher<ForBridge> {
                 tracing::debug!("sleep for {}s before signaling the bridge", s);
                 tokio::time::sleep(Duration::from_secs(s)).await;
             }
+            // we don't hard-code the function signature here, instead we get it from the generated contract.
+            let function_sig = dest_contract
+                .update_edge(src_chain_id, root, types::U256::from(leaf_index))
+                .function
+                .short_signature();
             // to get the bridge address, we need to get the anchor handler address first, and from there
             // we can get the bridge address.
             let dest_handler = dest_contract.handler().call().await?;
@@ -277,15 +282,16 @@ impl super::EventWatcher for AnchorWatcher<ForBridge> {
             tracing::debug!(
                 "Signaling Bridge@{} to create a new proposal from Anchor@{}",
                 dest_chain_id,
-                origin_chain_id,
+                src_chain_id,
             );
             store.enqueue_item(
                 SledQueueKey::from_bridge_key(key),
                 BridgeCommand::CreateProposal(ProposalData {
                     anchor_address: dest_contract.address(),
                     anchor_handler_address: dest_handler,
-                    origin_chain_id,
+                    src_chain_id,
                     leaf_index,
+                    function_sig,
                     merkle_root: root,
                 }),
             )?;
