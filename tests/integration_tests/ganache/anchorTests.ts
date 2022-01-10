@@ -271,10 +271,10 @@ describe('Anchor Tests', function () {
     });
   });
 
-  describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
-    this.timeout(120_000);
+  describe.only('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+    this.timeout(150_000);
     before(async function () {
-      this.timeout(120_000);
+      this.timeout(150_000);
       sourceWallet = new ethers.Wallet(senderPrivateKey, provider1);
       destWallet = new ethers.Wallet(senderPrivateKey, provider2);
       const chainABridge = bridge.getBridgeSide(chainId1);
@@ -301,11 +301,19 @@ describe('Anchor Tests', function () {
       startingRecipientBalance = await webbToken2.getBalance(recipient);
 
       // deposit
-      const deposit = await srcAnchor.deposit(chainId2);
+      await srcAnchor.deposit(chainId2);
 
       // allow time for the bridge proposal and execution
       console.log('waiting for bridge proposal and execution');
-      await sleep(20_000);
+      await sleep(40_000);
+
+      const deposit = await srcAnchor.deposit(chainId2);
+      console.log('waiting for another bridge proposal and execution');
+      await sleep(40_000);
+
+      await srcAnchor.deposit(chainId2);
+      console.log('waiting for another bridge proposal and execution');
+      await sleep(40_000);
 
       // generate the merkle proof from the source anchor
       await srcAnchor.checkKnownRoot();
