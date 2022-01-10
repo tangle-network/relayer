@@ -3,6 +3,7 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
+use futures::StreamExt;
 use webb::evm::contract::protocol_solidity::{
     FixedDepositAnchorContract, FixedDepositAnchorContractEvents,
 };
@@ -23,20 +24,20 @@ type HttpProvider = providers::Provider<providers::Http>;
 pub struct AnchorWatcherWithSubstrate<R, C>
 where
     R: From<subxt::Client<C>>,
-    C: subxt::Config + subxt::ExtrinsicExtraData<C>,
+    C: subxt::Config,
 {
     api: R,
-    pair: subxt::PairSigner<C, Sr25519Pair>,
+    pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
 }
 
 impl<R, C> AnchorWatcherWithSubstrate<R, C>
 where
     R: From<subxt::Client<C>>,
-    C: subxt::Config + subxt::ExtrinsicExtraData<C>,
+    C: subxt::Config,
 {
     pub fn new(
         client: subxt::Client<C>,
-        pair: subxt::PairSigner<C, Sr25519Pair>,
+        pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
     ) -> Self {
         Self {
             api: client.to_runtime_api(),
@@ -45,8 +46,9 @@ where
     }
 }
 
-type DKGConfig = dkg_runtime::api::DefaultConfig;
-type DKGRuntimeApi = dkg_runtime::api::RuntimeApi<DKGConfig>;
+type DKGConfig = subxt::DefaultConfig;
+type DKGRuntimeApi =
+    dkg_runtime::api::RuntimeApi<DKGConfig, subxt::DefaultExtra<DKGConfig>>;
 pub type AnchorWatcherOverDKG =
     AnchorWatcherWithSubstrate<DKGRuntimeApi, DKGConfig>;
 
@@ -237,7 +239,7 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             let mut signer = self.pair.clone();
             signer.increment_nonce();
             let mut progress = xt.sign_and_submit_then_watch(&signer).await?;
-            while let Some(event) = progress.next().await? {
+            while let Some(event) = progress.next().await {
                 tracing::debug!("Tx Progress: {:?}", event);
             }
         }
