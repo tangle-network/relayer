@@ -30,7 +30,8 @@ use webb::evm::ethers::{
 
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::darkwebb_standalone_runtime::Element;
 use webb::substrate::subxt::{self, PairSigner, TransactionStatus};
-use webb::substrate::protocol_substrate_runtime::api::{DefaultConfig, RuntimeApi};
+use webb::substrate::subxt::{DefaultConfig};
+use webb::substrate::protocol_substrate_runtime::api::RuntimeApi;
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
 
@@ -741,7 +742,7 @@ async fn handle_substrate_mixer_relay_tx<'a>(
             return;
         }
     };
-    let api = client.to_runtime_api::<RuntimeApi<DefaultConfig>>();
+    let api = client.to_runtime_api::<RuntimeApi<DefaultConfig, subxt::DefaultExtra<DefaultConfig>>>();
 
     let pair = match ctx.substrate_wallet(&cmd.chain).await {
         Ok(v) => v,
@@ -782,13 +783,13 @@ async fn handle_substrate_mixer_relay_tx<'a>(
     loop {
         let maybe_event = event_stream.next().await;
         let event = match maybe_event {
-            Ok(Some(v)) => v,
-            Ok(None) => break,
-            Err(e) => {
+            Some(Ok(v)) => v,
+            Some(Err(e)) => {
                 tracing::error!("Error while watching Tx: {}", e);
                 let _ = stream.send(Error(format!("{}", e))).await;
                 return;
             }
+            None => break,
         };
         match event {
             TransactionStatus::Broadcast(_) => {

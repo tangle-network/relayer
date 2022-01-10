@@ -305,7 +305,7 @@ describe('Anchor Tests', function () {
 
       // allow time for the bridge proposal and execution
       console.log('waiting for bridge proposal and execution');
-      await sleep(20_000);
+      await sleep(30_000);
 
       // generate the merkle proof from the source anchor
       await srcAnchor.checkKnownRoot();
