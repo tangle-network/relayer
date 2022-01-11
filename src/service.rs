@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use ethereum_types::U256;
 use webb::evm::ethers::providers;
+use webb::substrate::subxt;
 use webb::substrate::subxt::PairSigner;
-use webb::substrate::{dkg_runtime, subxt};
 
 use crate::config::*;
 use crate::context::RelayerContext;
@@ -11,7 +11,7 @@ use crate::events_watcher::*;
 use crate::tx_queue::TxQueue;
 
 type Client = providers::Provider<providers::Http>;
-type DkgClient = subxt::Client<dkg_runtime::api::DefaultConfig>;
+type DkgClient = subxt::Client<subxt::DefaultConfig>;
 type Store = crate::store::sled::SledStore;
 
 pub async fn ignite(
@@ -79,9 +79,7 @@ pub async fn ignite(
         match node_config.runtime {
             SubstrateRuntime::Dkg => {
                 let client = ctx
-                    .substrate_provider::<dkg_runtime::api::DefaultConfig>(
-                        node_name,
-                    )
+                    .substrate_provider::<subxt::DefaultConfig>(node_name)
                     .await?;
                 let metadata = client.metadata();
                 let chain_identifier = metadata
@@ -310,7 +308,7 @@ async fn start_anchor_over_dkg_events_watcher(
     );
 
     let dkg_client = ctx
-        .substrate_provider::<dkg_runtime::api::DefaultConfig>(&config.dkg_node)
+        .substrate_provider::<subxt::DefaultConfig>(&config.dkg_node)
         .await?;
     let pair = ctx.substrate_wallet(&config.dkg_node).await?;
     let mut shutdown_signal = ctx.shutdown_signal();

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use webb::substrate::dkg_runtime;
 use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
+use webb::substrate::{dkg_runtime, subxt};
 
 use crate::store::sled::SledStore;
 
@@ -13,9 +13,12 @@ pub struct ProposalHandlerWatcher;
 impl SubstrateEventWatcher for ProposalHandlerWatcher {
     const TAG: &'static str = "DKG Signed Proposal Watcher";
 
-    type RuntimeConfig = dkg_runtime::api::DefaultConfig;
+    type RuntimeConfig = subxt::DefaultConfig;
 
-    type Api = dkg_runtime::api::RuntimeApi<Self::RuntimeConfig>;
+    type Api = dkg_runtime::api::RuntimeApi<
+        Self::RuntimeConfig,
+        subxt::DefaultExtra<Self::RuntimeConfig>,
+    >;
 
     type Event = dkg_proposal_handler::events::ProposalSigned;
 

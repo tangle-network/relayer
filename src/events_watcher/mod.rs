@@ -278,8 +278,7 @@ pub type BlockNumberOf<T> =
 #[async_trait::async_trait]
 pub trait SubstrateEventWatcher {
     const TAG: &'static str;
-    type RuntimeConfig: subxt::Config
-        + subxt::ExtrinsicExtraData<Self::RuntimeConfig>;
+    type RuntimeConfig: subxt::Config;
     type Api: From<subxt::Client<Self::RuntimeConfig>> + Send + Sync;
     type Event: subxt::Event + Send + Sync;
     type Store: HistoryStore;

@@ -2052,42 +2052,86 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee"
-version = "0.5.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e5b02d34b7d70caa454dcf79914d70d9ef6edecef84b9261f499a9f3521b7935"
+checksum = "726b6cb76e568aefc4cc127fdb39cb9d92c176f4df0385eaf8053f770351719c"
 dependencies = [
+ "jsonrpsee-client-transport",
+ "jsonrpsee-core",
  "jsonrpsee-http-client",
  "jsonrpsee-proc-macros",
  "jsonrpsee-types",
- "jsonrpsee-utils",
  "jsonrpsee-ws-client",
 ]
 
 [[package]]
-name = "jsonrpsee-http-client"
-version = "0.5.1"
+name = "jsonrpsee-client-transport"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ea17b6d6da182fc4b293e0bebea5cc72e194d9392f485fb4051488af3edd1cd"
+checksum = "6bc39096d2bd470ecbd5ed96c8464e2b2c2ef7ec6f8cb9611604255608624773"
+dependencies = [
+ "futures",
+ "http",
+ "jsonrpsee-core",
+ "jsonrpsee-types",
+ "pin-project",
+ "rustls-native-certs",
+ "soketto",
+ "thiserror",
+ "tokio",
+ "tokio-rustls 0.23.2",
+ "tokio-util",
+ "tracing",
+ "webpki-roots",
+]
+
+[[package]]
+name = "jsonrpsee-core"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b863e5e86a11bfaf46bb3ab5aba184671bd62058e8e3ab741c3395904c7afbf3"
+dependencies = [
+ "anyhow",
+ "arrayvec 0.7.2",
+ "async-trait",
+ "beef",
+ "futures-channel",
+ "futures-util",
+ "hyper",
+ "jsonrpsee-types",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "soketto",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "jsonrpsee-http-client"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7ca9f9028b3a9cd3c7c5b876f037def9368c6ba6498fd2d3162bdbece1d0ef9"
 dependencies = [
  "async-trait",
- "fnv",
  "hyper",
  "hyper-rustls",
+ "jsonrpsee-core",
  "jsonrpsee-types",
- "jsonrpsee-utils",
+ "rustc-hash",
  "serde",
  "serde_json",
  "thiserror",
  "tokio",
  "tracing",
- "url",
 ]
 
 [[package]]
 name = "jsonrpsee-proc-macros"
-version = "0.5.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3dfdf283c6c3403ce9969700177bbcf35a695576fc2d993f38ab32a690631a96"
+checksum = "1a74ecebba6051b2f745bdc286d3b5ae7c5ff4a71828f7285662acc79cdc113c"
 dependencies = [
  "proc-macro-crate 1.1.0",
  "proc-macro2",
@@ -2097,58 +2141,27 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-types"
-version = "0.5.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4d822e0fc7be95e5085da5d61508bf5e3d5c1614dd235402086ec5c1cb15bdfa"
+checksum = "e169725e476234f3f96079fb9d8a6d00226db602d3fa056f044994239a490d78"
 dependencies = [
  "anyhow",
- "async-trait",
  "beef",
- "futures-channel",
- "futures-util",
- "hyper",
  "serde",
  "serde_json",
- "soketto",
  "thiserror",
  "tracing",
-]
-
-[[package]]
-name = "jsonrpsee-utils"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e722316d556c5228624fb1cc7ea672f6ed163e60183e93f11d3ee979417331cb"
-dependencies = [
- "arrayvec 0.7.2",
- "beef",
- "futures-util",
- "hyper",
- "jsonrpsee-types",
 ]
 
 [[package]]
 name = "jsonrpsee-ws-client"
-version = "0.5.1"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "664d2c9443cb1171e2414c66e0f0b44040eb2cff073455a0d168984eee178159"
+checksum = "c97f67449d58b8d90ad57986d12dacab8fd594759ff64eb5e6b6e84e470db977"
 dependencies = [
- "async-trait",
- "fnv",
- "futures",
- "http",
+ "jsonrpsee-client-transport",
+ "jsonrpsee-core",
  "jsonrpsee-types",
- "pin-project",
- "rustls-native-certs",
- "serde",
- "serde_json",
- "soketto",
- "thiserror",
- "tokio",
- "tokio-rustls 0.23.2",
- "tokio-util",
- "tracing",
- "webpki-roots",
 ]
 
 [[package]]
@@ -4081,7 +4094,7 @@ checksum = "6bdef32e8150c2a081110b42772ffe7d7c9032b606bc226c8260fd97e0976601"
 [[package]]
 name = "subxt"
 version = "0.15.0"
-source = "git+https://github.com/paritytech/subxt.git?rev=7aac7dfec#7aac7dfecf720f965b902f15c25576a5ceb1c2ce"
+source = "git+https://github.com/paritytech/subxt.git?rev=ca5345c#ca5345c47eb987febb3b424355c352b467ae31fc"
 dependencies = [
  "async-trait",
  "bitvec 0.20.4",
@@ -4107,7 +4120,7 @@ dependencies = [
 [[package]]
 name = "subxt-codegen"
 version = "0.2.0"
-source = "git+https://github.com/paritytech/subxt.git?rev=7aac7dfec#7aac7dfecf720f965b902f15c25576a5ceb1c2ce"
+source = "git+https://github.com/paritytech/subxt.git?rev=ca5345c#ca5345c47eb987febb3b424355c352b467ae31fc"
 dependencies = [
  "async-trait",
  "darling",
@@ -4125,7 +4138,7 @@ dependencies = [
 [[package]]
 name = "subxt-macro"
 version = "0.1.0"
-source = "git+https://github.com/paritytech/subxt.git?rev=7aac7dfec#7aac7dfecf720f965b902f15c25576a5ceb1c2ce"
+source = "git+https://github.com/paritytech/subxt.git?rev=ca5345c#ca5345c47eb987febb3b424355c352b467ae31fc"
 dependencies = [
  "async-trait",
  "darling",
@@ -4896,7 +4909,7 @@ dependencies = [
 [[package]]
 name = "webb"
 version = "0.2.5"
-source = "git+https://github.com/webb-tools/webb-rs?rev=0061410db#0061410dba2aa4bcb9e6e001755eba4f7df593ed"
+source = "git+https://github.com/webb-tools/webb-rs?rev=62340f36#62340f36fa733db168ac6ff0c303abdfebe4ca09"
 dependencies = [
  "async-trait",
  "ethers",
@@ -4914,7 +4927,7 @@ dependencies = [
 [[package]]
 name = "webb-pedersen-hash"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/webb-rs?rev=0061410db#0061410dba2aa4bcb9e6e001755eba4f7df593ed"
+source = "git+https://github.com/webb-tools/webb-rs?rev=62340f36#62340f36fa733db168ac6ff0c303abdfebe4ca09"
 dependencies = [
  "ark-crypto-primitives",
  "ark-ed-on-bn254",
