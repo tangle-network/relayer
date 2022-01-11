@@ -271,10 +271,10 @@ describe('Anchor Tests', function () {
     });
   });
 
-  describe.only('Sunny day Anchor withdraw relayed transaction across bridge', function () {
-    this.timeout(120_000);
+  describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+    this.timeout(150_000);
     before(async function () {
-      this.timeout(120_000);
+      this.timeout(150_000);
       sourceWallet = new ethers.Wallet(senderPrivateKey, provider1);
       destWallet = new ethers.Wallet(senderPrivateKey, provider2);
       const chainABridge = bridge.getBridgeSide(chainId1);
@@ -284,6 +284,7 @@ describe('Anchor Tests', function () {
       const srcAnchor = await bridge.getAnchor(chainId1, '1000000000000000000');
       console.log('Chain A Anchor Address: ', srcAnchor.contract.address);
       await srcAnchor.setSigner(sourceWallet);
+      console.log(`before deposits, there are ${srcAnchor.tree.totalElements} leaves in the tree`);
 
       // approve token spending
       const webbToken1Address = await bridge.getWebbTokenAddress(chainId1)!;
@@ -306,17 +307,17 @@ describe('Anchor Tests', function () {
 
       // allow time for the bridge proposal and execution
       console.log('waiting for bridge proposal and execution');
-      await sleep(20_000);
+      await sleep(40_000);
 
       console.log('before the second deposit');
       const deposit = await srcAnchor.deposit(chainId2);
       console.log('waiting for another bridge proposal and execution');
-      await sleep(20_000);
+      await sleep(40_000);
 
       console.log('before the third deposit');
       await srcAnchor.deposit(chainId2);
       console.log('waiting for another bridge proposal and execution');
-      await sleep(20_000);
+      await sleep(40_000);
 
       // generate the merkle proof from the source anchor
       await srcAnchor.checkKnownRoot();
