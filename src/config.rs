@@ -221,6 +221,7 @@ pub enum Contract {
     Anchor(AnchorContractConfig),
     AnchorOverDKG(AnchorContractOverDKGConfig),
     Bridge(BridgeContractConfig),
+    SignatureBridge(SignatureBridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
 
@@ -305,6 +306,16 @@ pub struct AnchorContractOverDKGConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct BridgeContractConfig {
+    #[serde(flatten)]
+    pub common: CommonContractConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SignatureBridgeContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher

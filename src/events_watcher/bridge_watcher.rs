@@ -199,7 +199,7 @@ impl EventWatcher for BridgeContractWatcher {
 }
 
 #[async_trait::async_trait]
-impl BridgeWatcher for BridgeContractWatcher {
+impl BridgeWatcher<BridgeCommand> for BridgeContractWatcher {
     #[tracing::instrument(skip_all)]
     async fn handle_cmd(
         &self,
@@ -220,7 +220,7 @@ impl BridgeWatcher for BridgeContractWatcher {
 
 impl BridgeContractWatcher
 where
-    Self: BridgeWatcher,
+    Self: BridgeWatcher<BridgeCommand>,
 {
     #[tracing::instrument(skip_all)]
     async fn create_proposal(

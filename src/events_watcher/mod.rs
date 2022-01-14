@@ -8,7 +8,6 @@ use futures::prelude::*;
 use webb::{
     evm::ethers::{
         contract,
-        core::types::transaction,
         providers::{self, Middleware},
         types,
     },
@@ -34,6 +33,9 @@ pub use anchor_watcher::*;
 
 mod bridge_watcher;
 pub use bridge_watcher::*;
+
+mod signature_bridge_watcher;
+pub use signature_bridge_watcher::*;
 
 mod anchor_watcher_over_dkg;
 pub use anchor_watcher_over_dkg::*;
@@ -205,17 +207,21 @@ pub trait EventWatcher {
 }
 
 #[async_trait::async_trait]
-pub trait BridgeWatcher: EventWatcher
+pub trait BridgeWatcher<C>: EventWatcher
 where
-    Self::Store: ProposalStore
-        + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
-        + QueueStore<bridge_watcher::BridgeCommand, Key = SledQueueKey>,
+    Self::Store: ProposalStore + QueueStore<C, Key = SledQueueKey>,
+    C: serde::Serialize
+        + serde::de::DeserializeOwned
+        + Clone
+        + Send
+        + Sync
+        + 'static,
 {
     async fn handle_cmd(
         &self,
         store: Arc<Self::Store>,
         contract: &Self::Contract,
-        cmd: BridgeCommand,
+        cmd: C,
     ) -> anyhow::Result<()>;
 
     /// Returns a task that should be running in the background

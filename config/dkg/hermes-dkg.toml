@@ -6,20 +6,53 @@ private-key = "$HERMES_PRIVATE_KEY"
 tx-queue = { max-sleep-interval = 1500 }
 
 [[evm.hermesdkg.contracts]]
+contract = "Bridge"
+address = "0xDe09E74d4888Bc4e65F589e8c13Bce9F71DdF4c7"
+deployed-at = 1
+
+  [evm.hermesdkg.contracts.events-watcher]
+  enabled = true
+  polling-interval = 1_000
+
+[[evm.hermesdkg.contracts]]
 contract = "AnchorOverDKG"
 dkg-node = "dkglocal"
 address = "0xD24260C102B5D128cbEFA0F655E5be3c2370677C"
 deployed-at = 1
 size = 1
-events-watcher = { enabled = true, polling-interval = 1000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
-linked-anchors = [
-  { chain = "athenadkg", address = "0xD30C8839c1145609E564b986F667b273Ddcb8496" },
-]
+
+  [evm.hermesdkg.contracts.events-watcher]
+  enabled = true
+  polling-interval = 1_000
+
+  [[evm.hermesdkg.contracts.linked-anchors]]
+  chain = "athenadkg"
+  address = "0xD30C8839c1145609E564b986F667b273Ddcb8496"
 
 [[evm.hermesdkg.contracts]]
-contract = "Bridge"
-address = "0xDe09E74d4888Bc4e65F589e8c13Bce9F71DdF4c7"
+contract = "SignatureBridge"
+address = "0xcd75Ad7AC9C9325105f798c476E84176648F391A"
 deployed-at = 1
-events-watcher = { enabled = true, polling-interval = 1000 }
+
+  [evm.hermesdkg.contracts.events-watcher]
+  enabled = true
+  polling-interval = 1_000
+
+[[evm.hermesdkg.contracts]]
+contract = "AnchorOverDKG"
+dkg-node = "dkglocal"
+address = "0xa28aFDa14Be5789564aE5fA03665c4180e3c680b"
+deployed-at = 1
+size = 1
+withdraw-fee-percentage = 0
+withdraw-gaslimit = "0x350000"
+
+  [evm.hermesdkg.contracts.events-watcher]
+  enabled = true
+  polling-interval = 1_000
+
+  [[evm.hermesdkg.contracts.linked-anchors]]
+  chain = "athenadkg"
+  address = "0xe3a0c8943356982867FC2b93739BD0f70C4B3a70"
