@@ -159,7 +159,7 @@ where
             proposal.signature.clone().into(),
         );
         let data_hash = utils::keccak256(proposal.data.as_slice());
-        // check if we already have a vote tx in the queue
+        // check if we already have a execute tx in the queue
         // if we do, we should not create a new one
         let key = SledQueueKey::from_evm_with_custom_key(
             dest_chain_id,
