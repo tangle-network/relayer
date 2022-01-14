@@ -179,20 +179,19 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             let mut proposal_data = Vec::with_capacity(80);
             let resource_id =
                 create_resource_id(data.anchor_address, dest_chain_id)?;
-            tracing::trace!("r_id: 0x{}", hex::encode(&resource_id));
             let header = ProposalHeader {
                 resource_id,
-                function_sig,
+                function_sig: data.function_sig,
                 chain_id: dest_chain_id.as_u32(),
-                nonce: ProposalNonce::from(leaf_index),
+                nonce: ProposalNonce::from(data.leaf_index),
             };
             // first the header (40 bytes)
             header.encoded_to(&mut proposal_data);
             // next, the origin chain id (4 bytes)
             proposal_data
-                .extend_from_slice(&data.src_chain_id.as_u32().to_le_bytes());
+                .extend_from_slice(&data.src_chain_id.as_u32().to_be_bytes());
             // next, the leaf index (4 bytes)
-            proposal_data.extend_from_slice(&data.leaf_index.to_le_bytes());
+            proposal_data.extend_from_slice(&data.leaf_index.to_be_bytes());
             // next, the merkle root (32 bytes)
             proposal_data.extend_from_slice(&data.merkle_root);
             // sanity check
@@ -203,14 +202,27 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             let maybe_whitelisted = storage_api
                 .chain_nonces(data.src_chain_id.as_u32(), None)
                 .await?;
-            if maybe_whitelisted.is_none() {
-                // chain is not whitelisted.
-                tracing::warn!(
-                    "chain {} is not whitelisted, skipping proposal",
-                    data.src_chain_id
-                );
-                continue;
-            }
+            match maybe_whitelisted {
+                Some(last_seen_nonce) => {
+                    // check if the proposal nonce is greater than the last seen nonce.
+                    if last_seen_nonce > header.nonce {
+                        // we skip this proposal, already seen.
+                        tracing::warn!(
+                            last_seen_nonce,
+                            header.nonce,
+                            "skipping proposal, already sent",
+                        );
+                        continue;
+                    }
+                }
+                None => {
+                    tracing::warn!(
+                        %data.src_chain_id,
+                        "Chain is not whitelisted, skipping proposal",
+                    );
+                    continue;
+                }
+            };
             // 2. check for the resource id if it exists or not.
             // if not, we need to skip the proposal.
             let maybe_resource_id =
@@ -218,17 +230,17 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             if maybe_resource_id.is_none() {
                 // resource id doesn't exist.
                 tracing::warn!(
-                    "resource id 0x{} doesn't exist, skipping proposal",
-                    hex::encode(resource_id),
+                    r_id = ?hex::encode(resource_id),
+                    "resource id doesn't exist, skipping proposal",
                 );
                 continue;
             }
             let tx_api = self.api.tx().dkg_proposals();
             tracing::debug!(
-                "sending proposal = nonce: {}, r_id: 0x{}, proposal_data: 0x{}",
                 data.leaf_index,
-                hex::encode(resource_id),
-                hex::encode(&proposal_data),
+                r_id = ?hex::encode(resource_id),
+                data = ?hex::encode(&proposal_data),
+                "sending proposal",
             );
             let xt = tx_api.acknowledge_proposal(
                 data.leaf_index as _,
@@ -240,7 +252,7 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             signer.increment_nonce();
             let mut progress = xt.sign_and_submit_then_watch(&signer).await?;
             while let Some(event) = progress.next().await {
-                tracing::debug!("Tx Progress: {:?}", event);
+                tracing::debug!(?event, "Tx Progress");
             }
         }
         Ok(())
