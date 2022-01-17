@@ -84,7 +84,7 @@ where
                                 );
                             }
                             let result = pending
-                                .interval(Duration::from_millis(7000))
+                                .interval(Duration::from_millis(1000))
                                 .await;
                             result
                         }

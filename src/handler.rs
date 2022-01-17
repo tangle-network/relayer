@@ -448,7 +448,7 @@ async fn handle_tornado_relay_tx<'a>(
             let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
             let tx_hash = *pending;
             tracing::debug!("Tx is submitted and pending! {}", tx_hash);
-            let result = pending.interval(Duration::from_millis(7000)).await;
+            let result = pending.interval(Duration::from_millis(1000)).await;
             let _ = stream
                 .send(Withdraw(WithdrawStatus::Submitted { tx_hash }))
                 .await;
@@ -638,7 +638,7 @@ async fn handle_anchor_relay_tx<'a>(
             let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
             let tx_hash = *pending;
             tracing::debug!(%tx_hash, "Tx is submitted and pending!");
-            let result = pending.interval(Duration::from_millis(7000)).await;
+            let result = pending.interval(Duration::from_millis(1000)).await;
             let _ = stream
                 .send(Withdraw(WithdrawStatus::Submitted { tx_hash }))
                 .await;
