@@ -43,13 +43,15 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         &self,
         store: Arc<Self::Store>,
         _api: Arc<Self::Api>,
-        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        (mut event, block_number): (Self::Event, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
         tracing::debug!(
             "Received `ProposalSigned` Event: {:?} at block number: #{}",
             event,
             block_number
         );
+        // try to fixup the signature and make it EVM compatible (if needed).
+        make_signature_evm_compatible_in_place(&mut event.signature);
         // now we need to signal signature bridge.
         // the way we are going to get the signature bridge contract address
         // is simply through these steps:
@@ -87,5 +89,21 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
             ),
         )?;
         Ok(())
+    }
+}
+
+/// Try to make the provided signature EVM compatible by checking the `v` value.
+/// if it is less than 27, it adds 27 to it and replace it (without any allocation).
+/// if not, it does nothing.
+fn make_signature_evm_compatible_in_place(sig: &mut [u8]) {
+    // the v value is the last byte of the signature.
+    match sig.last_mut() {
+        Some(v) if *v < 27 => {
+            // we should mutate it to be `v + 27`
+            *v += 27;
+        }
+        _ => {
+            // we don't care.
+        }
     }
 }
