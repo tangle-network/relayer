@@ -27,8 +27,15 @@ pub struct ProposalDataWithSignature {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct TransferOwnershipWithSignature {
+    pub public_key: Vec<u8>,
+    pub signature: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum SignatureBridgeCommand {
     ExecuteProposal(ProposalDataWithSignature),
+    TransferOwnership(TransferOwnershipWithSignature),
 }
 
 #[derive(Clone, Debug)]
@@ -128,6 +135,7 @@ impl BridgeWatcher<SignatureBridgeCommand> for SignatureBridgeWatcher {
                 self.execute_proposal(store, &wrapper.contract, proposal)
                     .await?;
             }
+            TransferOwnership(_) => {}
         };
         Ok(())
     }
@@ -145,6 +153,11 @@ where
         proposal: ProposalDataWithSignature,
     ) -> anyhow::Result<()> {
         let dest_chain_id = contract.client().get_chainid().await?;
+        tracing::debug!(
+            proposal = ?hex::encode(&proposal.data),
+            sig = ?hex::encode(&proposal.signature),
+            "dry run execute proposal with signature"
+        );
         // do a quick check to see if we can execute this proposal or not.
         contract
             .execute_proposal_with_signature(

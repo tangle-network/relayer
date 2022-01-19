@@ -144,10 +144,11 @@ fn start_dkg_proposal_handler(
         node_name,
     );
     let node_name2 = node_name.clone();
-    let watcher =
-        ProposalHandlerWatcher.run(node_name, chain_id, client, store);
+    let ctx2 = ctx.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
     let task = async move {
+        let handler = ProposalHandlerWatcher::new(ctx2);
+        let watcher = handler.run(node_name, chain_id, client, store);
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(

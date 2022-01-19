@@ -15,7 +15,7 @@ use webb::substrate::{dkg_runtime, subxt};
 
 use crate::config;
 use crate::events_watcher::{
-    create_resource_id, ProposalData, ProposalHeader, ProposalNonce,
+    encode_resource_id, ProposalData, ProposalHeader, ProposalNonce,
 };
 use crate::store::sled::SledStore;
 
@@ -178,7 +178,7 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             };
             let mut proposal_data = Vec::with_capacity(80);
             let resource_id =
-                create_resource_id(data.anchor_address, dest_chain_id)?;
+                encode_resource_id(data.anchor_handler_address, dest_chain_id)?;
             let header = ProposalHeader {
                 resource_id,
                 function_sig: data.function_sig,
@@ -196,6 +196,7 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             proposal_data.extend_from_slice(&data.merkle_root);
             // sanity check
             assert_eq!(proposal_data.len(), 80);
+            tracing::debug!(data = ?hex::encode(&proposal_data), "Proposal is ready to be sent to DKG");
             // first we need to do some checks before sending the proposal.
             // 1. check if the origin_chain_id is whitleisted.
             let storage_api = self.api.storage().dkg_proposals();
@@ -248,9 +249,8 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
                 resource_id,
                 proposal_data,
             );
-            let mut signer = self.pair.clone();
-            signer.increment_nonce();
-            let mut progress = xt.sign_and_submit_then_watch(&signer).await?;
+            let signer = &self.pair;
+            let mut progress = xt.sign_and_submit_then_watch(signer).await?;
             while let Some(event) = progress.next().await {
                 tracing::debug!(?event, "Tx Progress");
             }

@@ -5,10 +5,13 @@ import { ethers } from 'ethers';
 import { GanacheAccounts, startGanacheServer } from '../startGanacheServer';
 import { Bridge } from '@webb-tools/fixed-bridge';
 import { SignatureBridge } from '@webb-tools/fixed-bridge/lib/packages/fixed-bridge/src/SignatureBridge';
+import { SignatureBridge as SignatureBridgeContract } from '@webb-tools/contracts/lib/SignatureBridge';
 import { MintableToken } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
+import publicKeyToAddress from 'ethereum-public-key-to-address';
 import path from 'path';
 import toml from '@iarna/toml';
+
 
 // Let's first define a localchain
 class LocalChain {
@@ -339,18 +342,20 @@ async function main() {
     chainAWallet.address,
     ethers.utils.parseEther('1000')
   );
+
+  const webbBSignatureTokenAddress = signatureBridge.getWebbTokenAddress(chainB.chainId)!;
+  const webbBSignatureToken = await MintableToken.tokenFromAddress(
+    webbBSignatureTokenAddress,
+    chainBWallet
+  );
+  await webbBSignatureToken.approveSpending(chainBSignatureAnchor.contract.address);
+  await webbBSignatureToken.mintTokens(
+    chainBWallet.address,
+    ethers.utils.parseEther('1000')
+  );
+
   // push the contracts to athena
   athenaContracts.evm.athenadkg.contracts.push({
-    contract: 'SignatureBridge',
-    address: chainASignatureBridge.contract.address,
-    'deployed-at': 1,
-    'events-watcher': {
-      enabled: true,
-      'polling-interval': 1000,
-    },
-  });
-  // push the contracts to hermes
-  hermesContracts.evm.hermesdkg.contracts.push({
     contract: 'SignatureBridge',
     address: chainBSignatureBridge.contract.address,
     'deployed-at': 1,
@@ -359,28 +364,18 @@ async function main() {
       'polling-interval': 1000,
     },
   });
-  // push the contracts to athena
-  athenaContracts.evm.athenadkg.contracts.push({
-    contract: 'AnchorOverDKG',
-    'dkg-node': 'dkglocal',
-    address: chainASignatureAnchor.contract.address,
+  // push the contracts to hermes
+  hermesContracts.evm.hermesdkg.contracts.push({
+    contract: 'SignatureBridge',
+    address: chainASignatureBridge.contract.address,
     'deployed-at': 1,
-    size: 1,
     'events-watcher': {
       enabled: true,
       'polling-interval': 1000,
     },
-    'withdraw-fee-percentage': 0,
-    'withdraw-gaslimit': '0x350000',
-    'linked-anchors': [
-      {
-        chain: 'hermesdkg',
-        address: chainBSignatureAnchor.contract.address,
-      },
-    ],
   });
-  // push the contracts to hermes
-  hermesContracts.evm.hermesdkg.contracts.push({
+  // push the contracts to athena
+  athenaContracts.evm.athenadkg.contracts.push({
     contract: 'AnchorOverDKG',
     'dkg-node': 'dkglocal',
     address: chainBSignatureAnchor.contract.address,
@@ -394,11 +389,32 @@ async function main() {
     'withdraw-gaslimit': '0x350000',
     'linked-anchors': [
       {
-        chain: 'athenadkg',
+        chain: 'hermesdkg',
         address: chainASignatureAnchor.contract.address,
       },
     ],
   });
+  // push the contracts to hermes
+  hermesContracts.evm.hermesdkg.contracts.push({
+    contract: 'AnchorOverDKG',
+    'dkg-node': 'dkglocal',
+    address: chainASignatureAnchor.contract.address,
+    'deployed-at': 1,
+    size: 1,
+    'events-watcher': {
+      enabled: true,
+      'polling-interval': 1000,
+    },
+    'withdraw-fee-percentage': 0,
+    'withdraw-gaslimit': '0x350000',
+    'linked-anchors': [
+      {
+        chain: 'athenadkg',
+        address: chainBSignatureAnchor.contract.address,
+      },
+    ],
+  });
+
   console.log(
     'ChainA signature bridge (Hermes): ',
     chainASignatureBridge.contract.address
@@ -490,6 +506,23 @@ async function main() {
       return;
     }
 
+    if (cmd.match(/^transfer ownership to ([0-9a-f]+)$/i)) {
+      let addr = cmd.match(/^transfer ownership to ([0-9a-f]+)$/i)?.[1];
+      addr = publicKeyToAddress(addr);
+      console.log('Setting the Signature Bridge Governer to', addr);
+      if (!addr) {
+        console.log('Invalid Public Key');
+        return;
+      }
+      let contract: SignatureBridgeContract;
+      contract = chainASignatureBridge.contract;
+      await contract.transferOwnership(addr, 1);
+      contract = chainBSignatureBridge.contract;
+      await contract.transferOwnership(addr, 1);
+      console.log('New Signature Bridge Owner (on both chains) is now set to', addr);
+      return;
+    }
+
     if (cmd.startsWith('root on chain a')) {
       console.log('Root on chain A, please wait...');
       const root = await chainAAnchor.contract.getLastRoot();
@@ -543,6 +576,7 @@ function printAvailableCommands() {
   console.log('  root on chain b');
   console.log('  spam chain a <txs>');
   console.log('  spam chain b <txs>');
+  console.log('  transfer ownership to <pubkey>');
   console.log('  exit');
 }
 

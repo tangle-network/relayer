@@ -89,6 +89,7 @@ pub struct EvmChainConfig {
     /// Optionally, a user can specify an account to receive rewards for relaying
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
+    #[serde(default)]
     pub contracts: Vec<Contract>,
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
@@ -147,6 +148,7 @@ pub struct SubstrateConfig {
     /// Which Substrate Runtime to use?
     pub runtime: SubstrateRuntime,
     /// Supported pallets over this substrate node.
+    #[serde(default)]
     pub pallets: Vec<Pallet>,
 }
 
@@ -278,7 +280,7 @@ pub struct AnchorContractConfig {
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
-    #[serde(rename(serialize = "linkedAnchors"))]
+    #[serde(rename(serialize = "linkedAnchors"), default)]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
 }
 
@@ -300,7 +302,7 @@ pub struct AnchorContractOverDKGConfig {
     /// Must be defined in the config.
     pub dkg_node: String,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
-    #[serde(rename(serialize = "linkedAnchors"))]
+    #[serde(rename(serialize = "linkedAnchors"), default)]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -346,6 +348,7 @@ pub struct DKGProposalHandlerPalletConfig {
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }
+
 #[derive(Debug, Clone)]
 pub struct PrivateKey(Secret);
 

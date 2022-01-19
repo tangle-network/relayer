@@ -284,7 +284,7 @@ pub type BlockNumberOf<T> =
 #[async_trait::async_trait]
 pub trait SubstrateEventWatcher {
     const TAG: &'static str;
-    type RuntimeConfig: subxt::Config;
+    type RuntimeConfig: subxt::Config + Send + Sync;
     type Api: From<subxt::Client<Self::RuntimeConfig>> + Send + Sync;
     type Event: subxt::Event + Send + Sync;
     type Store: HistoryStore;
@@ -518,5 +518,41 @@ impl ProposalHeader {
 
     fn encoded_to(&self, buf: &mut Vec<u8>) {
         buf.extend_from_slice(&self.encode());
+    }
+
+    fn decode(buf: &[u8]) -> anyhow::Result<Self> {
+        let mut data = [0u8; 40];
+        if data.len() < 40 {
+            anyhow::bail!(
+                "input bytes are less than the header size (40 bytes)"
+            );
+        }
+
+        data.copy_from_slice(&buf[0..40]);
+
+        // _NOTE_: rustc won't generate bounds check for the following slice
+        // since we know the length of the slice is at least 40 bytes already.
+
+        // decode the resourceId is the first 32 bytes
+        let mut resource_id = [0u8; 32];
+        resource_id.copy_from_slice(&data[0..32]);
+        // the chain id is the last 4 bytes of the **resourceId**
+        let mut chain_id_bytes = [0u8; 4];
+        chain_id_bytes.copy_from_slice(&resource_id[28..32]);
+        let chain_id = u32::from_be_bytes(chain_id_bytes);
+        // the function signature is the next first 4 bytes after the resourceId.
+        let mut function_sig = [0u8; 4];
+        function_sig.copy_from_slice(&data[32..36]);
+        // the nonce is the last 4 bytes of the header (also considered as the first arg).
+        let mut nonce_bytes = [0u8; 4];
+        nonce_bytes.copy_from_slice(&data[36..40]);
+        let nonce = u32::from_le_bytes(nonce_bytes);
+        let header = ProposalHeader {
+            resource_id,
+            chain_id,
+            function_sig,
+            nonce: ProposalNonce::from(nonce),
+        };
+        Ok(header)
     }
 }

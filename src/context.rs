@@ -55,6 +55,21 @@ impl RelayerContext {
         Ok(provider)
     }
 
+    pub async fn evm_provider_by_chain_id(
+        &self,
+        chain_id: U256,
+    ) -> anyhow::Result<Provider<Http>> {
+        let chain_config = self
+            .config
+            .evm
+            .values()
+            .find(|v| v.chain_id == chain_id.as_u64())
+            .context("this chain not configured")?;
+        let provider = Provider::try_from(chain_config.http_endpoint.as_str())?
+            .interval(Duration::from_millis(5u64));
+        Ok(provider)
+    }
+
     pub async fn evm_wallet(
         &self,
         chain_name: &str,

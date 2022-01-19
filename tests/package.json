@@ -24,6 +24,7 @@
     "circom": "^0.5.45",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
     "dotenv": "^10.0.0",
+    "ethereum-public-key-to-address": "^0.0.5",
     "ethers": "5.5.1",
     "ganache-cli": "^6.12.2",
     "keccak": "^3.0.1",

@@ -277,7 +277,6 @@ impl super::EventWatcher for AnchorWatcher<ForBridge> {
                 AnchorHandlerContract::new(dest_handler, dest_client);
             let dest_bridge =
                 dest_handler_contract.bridge_address().call().await?;
-            let dest_handler = dest_contract.handler().call().await?;
             let key = BridgeKey::new(dest_bridge, dest_chain_id);
             tracing::debug!(
                 "Signaling Bridge@{} to create a new proposal from Anchor@{}",
