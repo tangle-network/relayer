@@ -122,7 +122,7 @@ pub trait EventWatcher {
                 if dest_block != block {
                     let events_filter = contract
                         .event_with_filter::<Self::Events>(Default::default())
-                        .from_block(block)
+                        .from_block(block + 1)
                         .to_block(dest_block);
                     let found_events = events_filter
                         .query_with_meta()
