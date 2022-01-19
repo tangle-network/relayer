@@ -516,9 +516,13 @@ async function main() {
       }
       let contract: SignatureBridgeContract;
       contract = chainASignatureBridge.contract;
-      await contract.transferOwnership(addr, 1);
+      let tx = await contract.transferOwnership(addr, 1);
+      let result = await tx.wait();
+      console.log(result);
       contract = chainBSignatureBridge.contract;
-      await contract.transferOwnership(addr, 1);
+      tx = await contract.transferOwnership(addr, 1);
+      result = await tx.wait();
+      console.log(result);
       console.log('New Signature Bridge Owner (on both chains) is now set to', addr);
       return;
     }
