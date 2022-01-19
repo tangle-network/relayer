@@ -1,0 +1,70 @@
+/// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.209.6/containers/ubuntu
+{
+	"name": "Ubuntu",
+	"build": {
+		"dockerfile": "Dockerfile",
+		// Update 'VARIANT' to pick an Ubuntu version: hirsute, focal, bionic
+		// Use hirsute or bionic on local arm64/Apple Silicon.
+		"args": { "VARIANT": "focal" }
+	},
+  "runArgs": ["--cap-add=SYS_PTRACE", "--security-opt", "seccomp=unconfined"],
+	// Set *default* container specific settings.json values on container create.
+	"settings": {
+		"lldb.executable": "/usr/bin/lldb",
+    // VS Code don't watch files under ./target
+    "files.watcherExclude": {
+      "**/target/**": true
+    },
+    "rust-analyzer.assist.importPrefix": "crate",
+    "rust-analyzer.highlighting.strings": true,
+    "rust-analyzer.assist.importGranularity": "module",
+    "rust-analyzer.hover.linksInHover": true,
+    "rust-analyzer.callInfo.full": true,
+    "rust-analyzer.assist.importGroup": true,
+    "rust-analyzer.diagnostics.enableExperimental": true,
+    "rust-analyzer.checkOnSave.command": "clippy",
+    "rust-analyzer.checkOnSave.extraArgs": ["--tests"],
+    "rust-analyzer.runnableEnv": {
+      "SKIP_WASM_BUILD": "1"
+    },
+    "rust-analyzer.cargo.useRustcWrapperForBuildScripts": true,
+    "rust-analyzer.checkOnSave.enable": true,
+    "rust-analyzer.completion.autoimport.enable": true,
+    "rust-analyzer.lens.enable": true,
+    "rust-analyzer.hoverActions.enable": true,
+    "rust-analyzer.completion.postfix.enable": true,
+    "rust-analyzer.inlayHints.enable": true,
+    "rust-analyzer.inlayHints.chainingHints": true,
+    "rust-analyzer.inlayHints.typeHints": true,
+    "rust-analyzer.inlayHints.maxLength": 3,
+    "rust-analyzer.cargo.autoreload": true,
+    "rust-analyzer.assist.importEnforceGranularity": true,
+    "terminal.integrated.defaultProfile.linux": "zsh"
+	},
+
+
+	// Add the IDs of extensions you want installed when the container is created.
+	"extensions": [
+		"vadimcn.vscode-lldb",
+    "mutantdino.resourcemonitor",
+    "matklad.rust-analyzer",
+    "tamasfe.even-better-toml",
+    "serayuzgur.crates",
+    "mikestead.dotenv"
+	],
+
+	// Use 'forwardPorts' to make a list of ports inside the container available locally.
+	// "forwardPorts": [],
+
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "rustup update",
+
+	// Comment out connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	"remoteUser": "vscode",
+	"features": {
+		"git": "latest",
+		"node": "16",
+		"rust": "latest"
+	}
+}
