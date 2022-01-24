@@ -127,7 +127,7 @@ export async function fetchTreeLeaves(
 
 export async function depositMixerBnX5_5(
   api: ApiPromise,
-  depositer: KeyringPair
+  depositor: KeyringPair
 ) {
   console.log(`Depositing to tree id = 0 ; mixer bn254`);
   let noteBuilder = new JsNoteBuilder();
@@ -152,7 +152,7 @@ export async function depositMixerBnX5_5(
   console.log(`Deposit note ${note.serialize()}`);
   //@ts-ignore
   const depositTx = api.tx.mixerBn254.deposit(0, leaf);
-  await depositTx.signAndSend(depositer);
+  await depositTx.signAndSend(depositor);
   return note;
 }
 
