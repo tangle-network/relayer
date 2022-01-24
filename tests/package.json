@@ -8,6 +8,7 @@
   "private": true,
   "scripts": {
     "test": "rm -rf store && mocha --require ts-node/register 'integration_tests/**/*.ts' --exit",
+    "test:sub": "rm -rf store && mocha --require ts-node/register 'integration_tests/substrate/**/*.ts' --exit",
     "validateSetup": "ts-node scripts/validateTestSetup.ts",
     "sanity": "ts-node scripts/networkSanity.ts",
     "cron": "ts-node stability/cronTaskManager.ts",
@@ -17,9 +18,11 @@
   "dependencies": {
     "@ethersproject/experimental": "^5.5.0",
     "@openzeppelin/contracts": "^4.2.0",
+    "@polkadot/api": "^7.5.1",
     "@truffle/hdwallet-provider": "^1.4.1",
     "@types/mocha": "^9.0.0",
     "@webb-tools/protocol-solidity": "^0.0.3",
+    "@webb-tools/wasm-utils": "0.1.4-21",
     "circom": "^0.5.45",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
     "dotenv": "^10.0.0",

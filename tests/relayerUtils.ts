@@ -1,5 +1,6 @@
 import fetch from 'node-fetch';
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
+
 require('dotenv').config({ path: '.env' });
 
 export type RelayerChainConfig = {
@@ -57,21 +58,46 @@ function hexStringToByte(str) {
   }
 
   var a = [];
-  for (var i = 0, len = str.length; i < len; i+=2) {
+  for (var i = 0, len = str.length; i < len; i += 2) {
     // @ts-ignore
-    a.push(parseInt(str.substr(i,2),16));
+    a.push(parseInt(str.substr(i, 2), 16));
   }
 
   return new Uint8Array(a);
 }
 
+export const generateSubstrateMixerWithdrawRequest = (
+  fee: number,
+  refund: number,
+  nullifierHash: string,
+  recipient: string,
+  relayer: string,
+  treeId: number,
+  root: string,
+  proof: string
+) => {
+  return {
+    substrate: {
+      mixerRelayTx: {
+        chain: 'localnode',
+        fee,
+        nullifierHash: Array.from(hexStringToByte(nullifierHash)),
+        recipient,
+        relayer,
+        id: treeId,
+        refund,
+        root: Array.from(hexStringToByte(root)),
+        proof: Array.from(hexStringToByte(proof)),
+      },
+    },
+  };
+};
 export const generateAnchorWithdrawRequest = (
   chainName: string,
   contractAddress: string,
   proof: string,
   args: string[]
 ) => {
-
   let roots = args[0]!.substr(2);
   let rootsBytes = hexStringToByte(roots);
   let rootsArray = Array.from(rootsBytes);
@@ -109,17 +135,17 @@ export const getRelayerConfig = async (
   };
 };
 
-export function startWebbRelayer(portNumber: number = 9955): [ChildProcessWithoutNullStreams, string] {
-  const proc = spawn(`../target/debug/webb-relayer`, [
-      '-vvv',
-      '-c',
-      './config',
-    ],
+export function startWebbRelayer(
+  portNumber: number = 9955
+): [ChildProcessWithoutNullStreams, string] {
+  const proc = spawn(
+    `../target/debug/webb-relayer`,
+    ['-vvv', '-c', './config'],
     {
       env: {
         ...process.env,
-        WEBB_PORT: `${portNumber}`
-      }
+        WEBB_PORT: `${portNumber}`,
+      },
     }
   );
   proc.stdout.on('data', (data) => {
@@ -134,10 +160,7 @@ export function startWebbRelayer(portNumber: number = 9955): [ChildProcessWithou
     console.log(`relayer process exited with code ${code}`);
   });
 
-  return [
-    proc,
-    `http://localhost:${portNumber}`
-  ];
+  return [proc, `http://localhost:${portNumber}`];
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
