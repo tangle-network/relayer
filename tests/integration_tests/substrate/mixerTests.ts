@@ -11,12 +11,16 @@ import { hexToU8a, u8aToHex } from '@polkadot/util';
 import {
   generateSubstrateMixerWithdrawRequest,
   getRelayerSubstrateConfig,
+  handleMessage,
   RelayerChainConfig,
+  Result,
   sleep,
   startWebbRelayer,
 } from '../../relayerUtils';
 import { ChildProcessWithoutNullStreams } from 'child_process';
 import WebSocket from 'ws';
+import path from 'path';
+import * as fs from 'fs';
 
 let apiPromise: ApiPromise | null = null;
 let keyring: {
@@ -207,6 +211,11 @@ async function withdrawMixerBnX5_5(
   proofInputBuilder.setNote(note);
   proofInputBuilder.setLeaves(leaves);
   const leafIndex = leaves.findIndex((l) => u8aToHex(l) === leafHex);
+  console.log(
+    leafHex,
+    leafIndex,
+    leaves.map((i) => u8aToHex(i))
+  );
   proofInputBuilder.setLeafIndex(String(leafIndex));
 
   proofInputBuilder.setFee('0');
@@ -214,8 +223,19 @@ async function withdrawMixerBnX5_5(
 
   proofInputBuilder.setRecipient(addressHex.replace('0x', ''));
   proofInputBuilder.setRelayer(relayerAddressHex.replace('0x', ''));
-  // TODO: add the Proving key from the protocol-substrate-fixtures
-  proofInputBuilder.setPk('');
+  const pkPath = path.join(
+    // tests path
+    process.cwd(),
+    '..',
+    'protocol-substrate-fixtures',
+    'mixer',
+    'bn254',
+    'x5',
+    'proving_key_uncompresed.bin'
+  );
+  const pk = fs.readFileSync(pkPath);
+
+  proofInputBuilder.setPk(pk.toString('hex'));
 
   const proofInput = proofInputBuilder.build_js();
   console.log('Generating Zero knowledge proof');
@@ -256,22 +276,21 @@ describe('Mixer tests', function () {
     await new Promise((resolve) => client.on('open', resolve));
     console.log('Connected to Relayer!');
   });
-  it('should relay successfully', async function (done) {
+  it('should relay successfully', async function () {
     const { bob } = getKerings();
-    try {
-      await transfareBalance(apiPromise!);
-    } catch (e) {
-      console.log(e);
-      done('Failed to transfer balances');
-    }
-    try {
-      await sendWebbtoken(apiPromise!, bob);
-    } catch (e) {
-      console.log(e);
-      done('Failed to transfer Webb balances');
-    }
-    const note = await depositMixerBnX5_5(apiPromise!, bob);
-    const req = await withdrawMixerBnX5_5(apiPromise!, bob, note);
+
+    await transfareBalance(apiPromise!);
+
+    await sendWebbtoken(apiPromise!, bob);
+
+    let note: JsNote;
+    let req: any;
+
+    note = await depositMixerBnX5_5(apiPromise!, bob);
+
+    await sleep(10_000);
+
+    req = await withdrawMixerBnX5_5(apiPromise!, bob, note!);
 
     if (client.readyState === client.OPEN) {
       const data = JSON.stringify(req);
@@ -281,13 +300,31 @@ describe('Mixer tests', function () {
         console.log('Proof Sent!');
         if (err !== undefined) {
           console.log('!!Error!!', err);
-          done('Client error sending proof');
+          throw new Error('Client error sending proof');
         }
       });
     } else {
       console.error('Relayer Connection closed!');
-      done('Client error, not OPEN');
+      throw new Error('Client error, not OPEN');
     }
+
+    await new Promise((resolve, reject) => {
+      client.on('message', async (data) => {
+        console.log('Received data from the relayer');
+        console.log('<==', data);
+        const msg = JSON.parse(data as string);
+        const result = handleMessage(msg);
+        if (result === Result.Errored) {
+          reject(msg);
+        } else if (result === Result.Continue) {
+          // all good.
+          return;
+        } else if (result === Result.CleanExit) {
+          console.log('Transaction Done and Relayed Successfully!');
+          resolve(msg);
+        }
+      });
+    });
   });
 
   after(function () {
