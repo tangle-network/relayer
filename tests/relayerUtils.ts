@@ -159,7 +159,12 @@ export function startWebbRelayer(
 ): [ChildProcessWithoutNullStreams, string] {
   const proc = spawn(
     `../target/debug/webb-relayer`,
-    ['-vvv', '-c', './config'],
+    [
+      '-vvv',
+      '-c',
+      './config',
+      '--tmp', // use tmp dir for the database
+    ],
     {
       env: {
         ...process.env,
