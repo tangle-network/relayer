@@ -89,31 +89,26 @@ function getKerings() {
 }
 
 async function transfareBalance(api: ApiPromise) {
+  console.log('Transfer balances');
+  const amount = '1_000_000_000_000';
   const { charlie, bob, alice } = getKerings();
   // transfer to alice
   // @ts-ignore
-  const aliceTransfer = api.tx.balances.transfer(
-    alice.address,
-    100_000_000_000_000_000
+  const aliceTransfer = api.tx.balances.transfer(alice.address, amount);
+  console.log(
+    'Transferring native funds to Alice ',
+    aliceTransfer.hash.toString()
   );
-  console.log('Transferring native funds to Alice ', aliceTransfer.hash);
-  await aliceTransfer.signAndSend(charlie, {
-    nonce: -1,
-  });
+  await aliceTransfer.signAndSend(charlie, { nonce: -1 });
   // transfer to test accounts
   // @ts-ignore
-  const bobTransfer = api.tx.balances.transfer(
-    bob.address,
-    100_000_000_000_000_000
-  );
+  const bobTransfer = api.tx.balances.transfer(bob.address, amount);
   console.log(
     'Transferring native funds to Bob ',
     bob.address,
-    ` ${bobTransfer.hash}`
+    ` ${bobTransfer.hash.toString()}`
   );
-  bobTransfer.signAndSend(charlie, {
-    nonce: -1,
-  });
+  await bobTransfer.signAndSend(charlie, { nonce: -1 });
 }
 
 // @ts-ignore
@@ -168,6 +163,7 @@ async function depositMixerBnX5_5(api: ApiPromise, depositer: KeyringPair) {
   await depositTx.signAndSend(depositer);
   return note;
 }
+
 async function fetchTreeLeaves(
   api: ApiPromise,
   treeId: string | number
@@ -193,6 +189,7 @@ async function fetchTreeLeaves(
   }
   return leaves;
 }
+
 async function withdrawMixerBnX5_5(
   api: ApiPromise,
   signer: KeyringPair,
@@ -217,10 +214,13 @@ async function withdrawMixerBnX5_5(
 
   proofInputBuilder.setRecipient(addressHex.replace('0x', ''));
   proofInputBuilder.setRelayer(relayerAddressHex.replace('0x', ''));
-
+  // TODO: add the Proving key from the protocol-substrate-fixtures
   proofInputBuilder.setPk('');
+
   const proofInput = proofInputBuilder.build_js();
+  console.log('Generating Zero knowledge proof');
   const proofPayload = generate_proof_js(proofInput);
+
   const req = generateSubstrateMixerWithdrawRequest(
     0,
     0,
@@ -251,14 +251,25 @@ describe('Mixer tests', function () {
     );
 
     apiPromise = await preparePolkadotApi();
+
     client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
     await new Promise((resolve) => client.on('open', resolve));
     console.log('Connected to Relayer!');
   });
   it('should relay successfully', async function (done) {
     const { bob } = getKerings();
-    await transfareBalance(apiPromise!);
-    await sendWebbtoken(apiPromise!, bob);
+    try {
+      await transfareBalance(apiPromise!);
+    } catch (e) {
+      console.log(e);
+      done('Failed to transfer balances');
+    }
+    try {
+      await sendWebbtoken(apiPromise!, bob);
+    } catch (e) {
+      console.log(e);
+      done('Failed to transfer Webb balances');
+    }
     const note = await depositMixerBnX5_5(apiPromise!, bob);
     const req = await withdrawMixerBnX5_5(apiPromise!, bob, note);
 
