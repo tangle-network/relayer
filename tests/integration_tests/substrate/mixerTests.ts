@@ -76,7 +76,7 @@ async function preparePolkadotApi() {
 const BOBPhrase =
   'asthma early danger glue satisfy spatial decade wing organ bean census announce';
 
-function getKerings() {
+function getKeyring() {
   if (keyring) {
     return keyring;
   }
@@ -92,10 +92,10 @@ function getKerings() {
   return keyring;
 }
 
-async function transfareBalance(api: ApiPromise) {
+async function transferBalance(api: ApiPromise) {
   console.log('Transfer balances');
   const amount = '1_000_000_000_000';
-  const { charlie, bob, alice } = getKerings();
+  const { charlie, bob, alice } = getKeyring();
   // transfer to alice
   // @ts-ignore
   const aliceTransfer = api.tx.balances.transfer(alice.address, amount);
@@ -115,9 +115,8 @@ async function transfareBalance(api: ApiPromise) {
   await bobTransfer.signAndSend(charlie, { nonce: -1 });
 }
 
-// @ts-ignore
-async function sendWebbtoken(api: ApiPromise, receiver: KeyringPair) {
-  const { alice: sudoPair } = getKerings();
+async function sendWebbToken(api: ApiPromise, receiver: KeyringPair) {
+  const { alice: sudoPair } = getKeyring();
   console.log(
     `Setting Bob ${receiver.address} balance to ${100_000_000_000_000} `
   );
@@ -277,11 +276,11 @@ describe('Mixer tests', function () {
     console.log('Connected to Relayer!');
   });
   it('should relay successfully', async function () {
-    const { bob } = getKerings();
+    const { bob } = getKeyring();
 
-    await transfareBalance(apiPromise!);
+    await transferBalance(apiPromise!);
 
-    await sendWebbtoken(apiPromise!, bob);
+    await sendWebbToken(apiPromise!, bob);
 
     let note: JsNote;
     let req: any;
