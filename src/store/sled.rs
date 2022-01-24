@@ -32,6 +32,11 @@ impl SledStore {
             .open()?;
         Ok(Self { db })
     }
+
+    pub fn temporary() -> anyhow::Result<Self> {
+        let dir = tempfile::tempdir()?;
+        Self::open(dir.path())
+    }
 }
 
 impl HistoryStore for SledStore {
