@@ -28,7 +28,7 @@ let relayer: ChildProcessWithoutNullStreams;
 let relayerEndpoint: string;
 
 let relayerChain1Info: RelayerChainConfig;
-let relayerChain2Info: RelayerChainConfig;
+
 let client: WebSocket;
 
 async function preparePolkadotApi() {
@@ -92,23 +92,36 @@ async function transfareBalance(api: ApiPromise) {
   const { charlie, bob, alice } = getKerings();
   // transfer to alice
   // @ts-ignore
-  await api.tx.balances
-    .transfer(alice.address, 100_000_000_000_000)
-    .signAndSend(charlie, {
-      nonce: -1,
-    });
+  const aliceTransfer = api.tx.balances.transfer(
+    alice.address,
+    100_000_000_000_000_000
+  );
+  console.log('Transferring native funds to Alice ', aliceTransfer.hash);
+  await aliceTransfer.signAndSend(charlie, {
+    nonce: -1,
+  });
   // transfer to test accounts
   // @ts-ignore
-  await api.tx.balances
-    .transfer(bob.address, 100_000_000_000_000)
-    .signAndSend(charlie, {
-      nonce: -1,
-    });
+  const bobTransfer = api.tx.balances.transfer(
+    bob.address,
+    100_000_000_000_000_000
+  );
+  console.log(
+    'Transferring native funds to Bob ',
+    bob.address,
+    ` ${bobTransfer.hash}`
+  );
+  bobTransfer.signAndSend(charlie, {
+    nonce: -1,
+  });
 }
 
 // @ts-ignore
 async function sendWebbtoken(api: ApiPromise, receiver: KeyringPair) {
   const { alice: sudoPair } = getKerings();
+  console.log(
+    `Setting Bob ${receiver.address} balance to ${100_000_000_000_000} `
+  );
   return new Promise((resolve, reject) => {
     const address = api.createType('MultiAddress', { Id: receiver.address });
     // @ts-ignore
@@ -129,6 +142,7 @@ async function sendWebbtoken(api: ApiPromise, receiver: KeyringPair) {
 }
 
 async function depositMixerBnX5_5(api: ApiPromise, depositer: KeyringPair) {
+  console.log(`Depositing to tree id = 0 ; mixer bn254`);
   let noteBuilder = new JsNoteBuilder();
   noteBuilder.prefix('webb.mixer');
   noteBuilder.version('v1');
@@ -147,6 +161,8 @@ async function depositMixerBnX5_5(api: ApiPromise, depositer: KeyringPair) {
   noteBuilder.exponentiation('5');
   const note = noteBuilder.build();
   const leaf = note.getLeafCommitment();
+  console.log(`deposited leaf ${u8aToHex(leaf)}`);
+  console.log(`Deposit note ${note.serialize()}`);
   //@ts-ignore
   const depositTx = api.tx.mixerBn254.deposit(0, leaf);
   await depositTx.signAndSend(depositer);
@@ -183,7 +199,10 @@ async function withdrawMixerBnX5_5(
   note: JsNote
 ) {
   const accountId = signer.address;
+  const relayerAccountId = relayerChain1Info.beneficiary;
+
   const addressHex = u8aToHex(decodeAddress(accountId));
+  const relayerAddressHex = u8aToHex(decodeAddress(relayerAccountId));
   // fetch leaves
   const leaves = await fetchTreeLeaves(api, 0);
   const proofInputBuilder = new ProofInputBuilder();
@@ -197,19 +216,18 @@ async function withdrawMixerBnX5_5(
   proofInputBuilder.setRefund('0');
 
   proofInputBuilder.setRecipient(addressHex.replace('0x', ''));
-  proofInputBuilder.setRelayer(addressHex.replace('0x', ''));
+  proofInputBuilder.setRelayer(relayerAddressHex.replace('0x', ''));
 
   proofInputBuilder.setPk('');
   const proofInput = proofInputBuilder.build_js();
   const proofPayload = generate_proof_js(proofInput);
-
   const req = generateSubstrateMixerWithdrawRequest(
     0,
     0,
     0,
 
     signer.address,
-    signer.address,
+    relayerAccountId,
 
     hexToU8a(`0x${proofPayload.nullifierHash}`),
     hexToU8a(`0x${proofPayload.root}`),
@@ -225,15 +243,13 @@ describe('Mixer tests', function () {
 
   before(async function () {
     [relayer, relayerEndpoint] = await startWebbRelayer(8888);
+    console.log(relayer.pid);
     await sleep(1500); // wait for the relayer start-up
     relayerChain1Info = await getRelayerSubstrateConfig(
       'localnode',
       relayerEndpoint
     );
-    relayerChain2Info = await getRelayerSubstrateConfig(
-      'localnode',
-      relayerEndpoint
-    );
+
     apiPromise = await preparePolkadotApi();
     client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
     await new Promise((resolve) => client.on('open', resolve));
@@ -261,5 +277,10 @@ describe('Mixer tests', function () {
       console.error('Relayer Connection closed!');
       done('Client error, not OPEN');
     }
+  });
+
+  after(function () {
+    client?.terminate();
+    relayer.kill('SIGINT');
   });
 });
