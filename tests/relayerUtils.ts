@@ -69,25 +69,29 @@ function hexStringToByte(str) {
 export const generateSubstrateMixerWithdrawRequest = (
   fee: number,
   refund: number,
-  nullifierHash: string,
+  treeId: number,
+
   recipient: string,
   relayer: string,
-  treeId: number,
-  root: string,
-  proof: string
+
+  nullifierHash: Uint8Array,
+  root: Uint8Array,
+  proof: Uint8Array
 ) => {
   return {
     substrate: {
       mixerRelayTx: {
+        id: treeId,
         chain: 'localnode',
-        fee,
-        nullifierHash: Array.from(hexStringToByte(nullifierHash)),
         recipient,
         relayer,
-        id: treeId,
+
         refund,
-        root: Array.from(hexStringToByte(root)),
-        proof: Array.from(hexStringToByte(proof)),
+        fee,
+
+        nullifierHash: Array.from(nullifierHash),
+        root: Array.from(root),
+        proof: Array.from(proof),
       },
     },
   };
@@ -119,6 +123,21 @@ export const generateAnchorWithdrawRequest = (
     },
   };
 };
+export const getRelayerSubstrateConfig = async (
+	chainName: string,
+	endpoint: string
+): Promise<RelayerChainConfig> => {
+	const relayerInfoRes = await fetch(`${endpoint}/api/v1/info`);
+	console.log(relayerInfoRes);
+	const relayerInfo: any = await relayerInfoRes.json();
+
+	return {
+		chainName: chainName,
+		beneficiary: relayerInfo.substrate[chainName].beneficiary,
+		contracts: relayerInfo.substrate[chainName].contracts,
+	};
+};
+
 
 export const getRelayerConfig = async (
   chainName: string,

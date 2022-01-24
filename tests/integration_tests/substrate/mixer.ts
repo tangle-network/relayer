@@ -1,14 +1,16 @@
 import {
-  JsNoteBuilder,
+  generate_proof_js,
   JsNote,
+  JsNoteBuilder,
   ProofInputBuilder,
 } from '@webb-tools/wasm-utils/njs/wasm-utils';
 import { ApiPromise, WsProvider } from '@polkadot/api';
-import { Keyring, decodeAddress } from '@polkadot/keyring';
+import { decodeAddress, Keyring } from '@polkadot/keyring';
 import { KeyringPair } from '@polkadot/keyring/types';
-import { u8aToHex } from '@polkadot/util';
+import { hexToU8a, u8aToHex } from '@polkadot/util';
 import {
-  getRelayerConfig,
+  generateSubstrateMixerWithdrawRequest,
+  getRelayerSubstrateConfig,
   RelayerChainConfig,
   sleep,
   startWebbRelayer,
@@ -184,21 +186,37 @@ async function withdrawMixerBnX5_5(
   const addressHex = u8aToHex(decodeAddress(accountId));
   // fetch leaves
   const leaves = await fetchTreeLeaves(api, 0);
-  const proofBuilder = new ProofInputBuilder();
+  const proofInputBuilder = new ProofInputBuilder();
   const leafHex = u8aToHex(note.getLeafCommitment());
-  proofBuilder.setNote(note);
-  proofBuilder.setLeaves(leaves);
+  proofInputBuilder.setNote(note);
+  proofInputBuilder.setLeaves(leaves);
   const leafIndex = leaves.findIndex((l) => u8aToHex(l) === leafHex);
-  proofBuilder.setLeafIndex(String(leafIndex));
+  proofInputBuilder.setLeafIndex(String(leafIndex));
 
-  proofBuilder.setFee('0');
-  proofBuilder.setRefund('0');
+  proofInputBuilder.setFee('0');
+  proofInputBuilder.setRefund('0');
 
-  proofBuilder.setRecipient(addressHex.replace('0x', ''));
-  proofBuilder.setRelayer(addressHex.replace('0x', ''));
+  proofInputBuilder.setRecipient(addressHex.replace('0x', ''));
+  proofInputBuilder.setRelayer(addressHex.replace('0x', ''));
 
-  proofBuilder.setPk('');
-  const proof = proofBuilder.build_js();
+  proofInputBuilder.setPk('');
+  const proofInput = proofInputBuilder.build_js();
+  const proofPayload = generate_proof_js(proofInput);
+
+  const req = generateSubstrateMixerWithdrawRequest(
+    0,
+    0,
+    0,
+
+    signer.address,
+    signer.address,
+
+    hexToU8a(`0x${proofPayload.nullifierHash}`),
+    hexToU8a(`0x${proofPayload.root}`),
+    hexToU8a(`0x${proofPayload.proof}`)
+  );
+
+  return req;
 }
 
 describe('Mixer tests', function () {
@@ -208,18 +226,40 @@ describe('Mixer tests', function () {
   before(async function () {
     [relayer, relayerEndpoint] = await startWebbRelayer(8888);
     await sleep(1500); // wait for the relayer start-up
-    relayerChain1Info = await getRelayerConfig('testa', relayerEndpoint);
-    relayerChain2Info = await getRelayerConfig('testb', relayerEndpoint);
+    relayerChain1Info = await getRelayerSubstrateConfig(
+      'localnode',
+      relayerEndpoint
+    );
+    relayerChain2Info = await getRelayerSubstrateConfig(
+      'localnode',
+      relayerEndpoint
+    );
     apiPromise = await preparePolkadotApi();
     client = new WebSocket(`${relayerEndpoint.replace('http', 'ws')}/ws`);
     await new Promise((resolve) => client.on('open', resolve));
     console.log('Connected to Relayer!');
   });
-  it('should relay successfully', async function () {
+  it('should relay successfully', async function (done) {
     const { bob } = getKerings();
     await transfareBalance(apiPromise!);
     await sendWebbtoken(apiPromise!, bob);
     const note = await depositMixerBnX5_5(apiPromise!, bob);
-    await withdrawMixerBnX5_5(apiPromise!, bob, note);
+    const req = await withdrawMixerBnX5_5(apiPromise!, bob, note);
+
+    if (client.readyState === client.OPEN) {
+      const data = JSON.stringify(req);
+      console.log('Sending Proof to the Relayer ..');
+      console.log('=>', data);
+      client.send(data, (err) => {
+        console.log('Proof Sent!');
+        if (err !== undefined) {
+          console.log('!!Error!!', err);
+          done('Client error sending proof');
+        }
+      });
+    } else {
+      console.error('Relayer Connection closed!');
+      done('Client error, not OPEN');
+    }
   });
 });
