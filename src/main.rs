@@ -43,6 +43,10 @@ struct Opts {
         parse(from_os_str)
     )]
     config_dir: Option<PathBuf>,
+    /// Create the Database Store in a temporary directory.
+    /// and will be deleted when the process exits.
+    #[structopt(long)]
+    tmp: bool,
 }
 
 #[paw::main]
@@ -59,7 +63,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     }
     let config = load_config(args.config_dir.clone())?;
     let ctx = RelayerContext::new(config);
-    let store = create_store(args.config_dir).await?;
+    let store = create_store(&args).await?;
     let (addr, server) = build_relayer(ctx.clone(), store.clone())?;
     tracing::info!("Starting the server on {}", addr);
     // fire the server.
@@ -209,23 +213,24 @@ fn build_relayer(
         .map_err(Into::into)
 }
 
-async fn create_store<P>(
-    path: Option<P>,
-) -> anyhow::Result<store::sled::SledStore>
-where
-    P: AsRef<Path>,
-{
+async fn create_store(opts: &Opts) -> anyhow::Result<store::sled::SledStore> {
+    // check if we shall use the temp dir.
+    if opts.tmp {
+        tracing::debug!("Using temp dir for store");
+        let store = store::sled::SledStore::temporary()?;
+        return Ok(store);
+    }
     let dirs = ProjectDirs::from(
         crate::PACKAGE_ID[0],
         crate::PACKAGE_ID[1],
         crate::PACKAGE_ID[2],
     )
     .context("failed to get config")?;
-    let p = match path.as_ref() {
-        Some(p) => p.as_ref().to_path_buf(),
+    let p = match opts.config_dir.as_ref() {
+        Some(p) => p.to_path_buf(),
         None => dirs.data_local_dir().to_path_buf(),
     };
-    let db_path = match path.zip(p.parent()) {
+    let db_path = match opts.config_dir.as_ref().zip(p.parent()) {
         Some((_, parent)) => parent.join("store"),
         None => p.join("store"),
     };
