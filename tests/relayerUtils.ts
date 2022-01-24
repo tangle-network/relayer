@@ -57,9 +57,9 @@ function hexStringToByte(str) {
   }
 
   var a = [];
-  for (var i = 0, len = str.length; i < len; i+=2) {
+  for (var i = 0, len = str.length; i < len; i += 2) {
     // @ts-ignore
-    a.push(parseInt(str.substr(i,2),16));
+    a.push(parseInt(str.substr(i, 2), 16));
   }
 
   return new Uint8Array(a);
@@ -71,7 +71,6 @@ export const generateAnchorWithdrawRequest = (
   proof: string,
   args: string[]
 ) => {
-
   let roots = args[0]!.substr(2);
   let rootsBytes = hexStringToByte(roots);
   let rootsArray = Array.from(rootsBytes);
@@ -109,17 +108,22 @@ export const getRelayerConfig = async (
   };
 };
 
-export function startWebbRelayer(portNumber: number = 9955): [ChildProcessWithoutNullStreams, string] {
-  const proc = spawn(`../target/debug/webb-relayer`, [
+export function startWebbRelayer(
+  portNumber: number = 9955
+): [ChildProcessWithoutNullStreams, string] {
+  const proc = spawn(
+    `../target/debug/webb-relayer`,
+    [
       '-vvv',
       '-c',
       './config',
+      '--tmp', // use tmp dir for the database
     ],
     {
       env: {
         ...process.env,
-        WEBB_PORT: `${portNumber}`
-      }
+        WEBB_PORT: `${portNumber}`,
+      },
     }
   );
   proc.stdout.on('data', (data) => {
@@ -134,10 +138,7 @@ export function startWebbRelayer(portNumber: number = 9955): [ChildProcessWithou
     console.log(`relayer process exited with code ${code}`);
   });
 
-  return [
-    proc,
-    `http://localhost:${portNumber}`
-  ];
+  return [proc, `http://localhost:${portNumber}`];
 }
 
 export const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
