@@ -14,11 +14,11 @@ use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::{dkg_runtime, subxt};
 
 use crate::config;
+use crate::events_watcher::ChainIdType;
 use crate::events_watcher::{
     create_resource_id, ProposalData, ProposalHeader, ProposalNonce,
 };
 use crate::store::sled::SledStore;
-
 type HttpProvider = providers::Provider<providers::Http>;
 
 pub struct AnchorWatcherWithSubstrate<R, C>
@@ -177,13 +177,16 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
                 merkle_root: root,
             };
             let mut proposal_data = Vec::with_capacity(80);
-            let resource_id =
-                create_resource_id(data.anchor_address, dest_chain_id)?;
+            let resource_id = create_resource_id(
+                data.anchor_address,
+                ChainIdType::EVM(0),
+                dest_chain_id,
+            )?;
             tracing::trace!("r_id: 0x{}", hex::encode(&resource_id));
             let header = ProposalHeader {
                 resource_id,
                 function_sig,
-                chain_id: dest_chain_id.as_u32(),
+                chain_id: ChainIdType::EVM(dest_chain_id.as_u32()),
                 nonce: ProposalNonce::from(leaf_index),
             };
             // first the header (40 bytes)

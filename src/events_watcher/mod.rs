@@ -492,10 +492,27 @@ pub trait SubstrateEventWatcher {
 pub type ResourceId = [u8; 32];
 pub type ProposalNonce = u64;
 
-#[derive(Debug, Clone, Copy)]
+// TODO: Use the type from dkg-runtime-primitives or organize in another single location.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ChainIdType {
+    // EVM(chain_identifier)
+    EVM(u32),
+    // Substrate(chain_identifier)
+    Substrate(u32),
+    // Relay chain(relay_chain_identifier, chain_identifier)
+    RelayChain(Vec<u8>, u32),
+    // Parachain(relay_chain_identifier, para_id)
+    Parachain(Vec<u8>, u32),
+    // Cosmos
+    CosmosSDK(u32),
+    // Solana
+    Solana(u32),
+}
+
+#[derive(Debug, Clone)]
 pub struct ProposalHeader {
     pub resource_id: ResourceId,
-    pub chain_id: u32,
+    pub chain_id: ChainIdType,
     pub function_sig: [u8; 4],
     pub nonce: ProposalNonce,
 }

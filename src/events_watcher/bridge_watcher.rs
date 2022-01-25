@@ -4,6 +4,11 @@ use std::ops::{self, Add};
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::config;
+use crate::events_watcher::ChainIdType;
+use crate::events_watcher::{ProposalHeader, ProposalNonce};
+use crate::store::sled::{SledQueueKey, SledStore};
+use crate::store::QueueStore;
 use serde::{Deserialize, Serialize};
 use webb::evm::contract::protocol_solidity::{
     BridgeContract, BridgeContractEvents, Proposal,
@@ -13,11 +18,6 @@ use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
-
-use crate::config;
-use crate::events_watcher::{ProposalHeader, ProposalNonce};
-use crate::store::sled::{SledQueueKey, SledStore};
-use crate::store::QueueStore;
 
 use super::{BridgeWatcher, EventWatcher, ProposalStore};
 
@@ -231,13 +231,16 @@ where
     ) -> anyhow::Result<()> {
         let dest_chain_id = contract.client().get_chainid().await?;
         let mut proposal_data = Vec::with_capacity(80);
-        let resource_id =
-            create_resource_id(data.anchor_address, dest_chain_id)?;
+        let resource_id = create_resource_id(
+            data.anchor_address,
+            ChainIdType::EVM(0),
+            dest_chain_id,
+        )?;
         tracing::trace!("r_id: 0x{}", hex::encode(&resource_id));
         let header = ProposalHeader {
             resource_id,
             function_sig: data.function_sig,
-            chain_id: dest_chain_id.as_u32(),
+            chain_id: ChainIdType::EVM(dest_chain_id.as_u32()),
             nonce: ProposalNonce::from(data.leaf_index),
         };
         // first the header (40 bytes)
@@ -437,8 +440,14 @@ where
 
 pub fn create_resource_id(
     anchor_address: types::Address,
+    chain_type: ChainIdType,
     chain_id: types::U256,
 ) -> anyhow::Result<[u8; 32]> {
+    let chain_type_bytes = match chain_type {
+        ChainIdType::EVM(_) => ChainIdType::EVM(chain_id.low_u32()),
+        ChainIdType::Substrate(_) => ChainIdType::Substrate(chain_id.low_u32()),
+        _ => panic!("Unknown chain type"),
+    };
     let truncated = to_hex(chain_id, 4);
     let result = format!("{:x}{}", anchor_address, truncated);
     let hash = hex::decode(result)?;
@@ -506,7 +515,9 @@ mod tests {
             "0xB42139fFcEF02dC85db12aC9416a19A12381167D",
         )
         .unwrap();
-        let resource_id = create_resource_id(anchor_address, chain_id).unwrap();
+        let resource_id =
+            create_resource_id(anchor_address, ChainIdType::EVM(0), chain_id)
+                .unwrap();
         let expected = hex::decode(
             "0000000000000000b42139ffcef02dc85db12ac9416a19a12381167d00000004",
         )
