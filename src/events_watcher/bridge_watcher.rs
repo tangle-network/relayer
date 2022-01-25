@@ -4,11 +4,6 @@ use std::ops::{self, Add};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::config;
-use crate::events_watcher::ChainIdType;
-use crate::events_watcher::{ProposalHeader, ProposalNonce};
-use crate::store::sled::{SledQueueKey, SledStore};
-use crate::store::QueueStore;
 use serde::{Deserialize, Serialize};
 use webb::evm::contract::protocol_solidity::{
     BridgeContract, BridgeContractEvents, Proposal,
@@ -18,6 +13,11 @@ use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
+use crate::events_watcher::ChainIdType;
+use crate::config;
+use crate::events_watcher::{ProposalHeader, ProposalNonce};
+use crate::store::sled::{SledQueueKey, SledStore};
+use crate::store::QueueStore;
 
 use super::{BridgeWatcher, EventWatcher, ProposalStore};
 
@@ -231,11 +231,8 @@ where
     ) -> anyhow::Result<()> {
         let dest_chain_id = contract.client().get_chainid().await?;
         let mut proposal_data = Vec::with_capacity(80);
-        let resource_id = create_resource_id(
-            data.anchor_address,
-            ChainIdType::EVM(0),
-            dest_chain_id,
-        )?;
+        let resource_id =
+            create_resource_id(data.anchor_address, ChainIdType::EVM(0), dest_chain_id)?;
         tracing::trace!("r_id: 0x{}", hex::encode(&resource_id));
         let header = ProposalHeader {
             resource_id,
@@ -444,12 +441,12 @@ pub fn create_resource_id(
     chain_id: types::U256,
 ) -> anyhow::Result<[u8; 32]> {
     let chain_type_bytes = match chain_type {
-        ChainIdType::EVM(_) => ChainIdType::EVM(chain_id.low_u32()),
-        ChainIdType::Substrate(_) => ChainIdType::Substrate(chain_id.low_u32()),
+        ChainIdType::EVM(_) => [1u32,0],
+        ChainIdType::Substrate(_) => [2u32,0],
         _ => panic!("Unknown chain type"),
     };
     let truncated = to_hex(chain_id, 4);
-    let result = format!("{:x}{}", anchor_address, truncated);
+    let result = format!("{:x}{}{}", anchor_address, chain_type_bytes, truncated);
     let hash = hex::decode(result)?;
     let mut result_bytes = [0u8; 32];
     result_bytes
@@ -511,13 +508,11 @@ mod tests {
     #[test]
     fn should_create_resouce_id() {
         let chain_id = types::U256::from(4);
-        let anchor_address = types::Address::from_str(
+        let anchor_address = types::gca::from_str(
             "0xB42139fFcEF02dC85db12aC9416a19A12381167D",
         )
         .unwrap();
-        let resource_id =
-            create_resource_id(anchor_address, ChainIdType::EVM(0), chain_id)
-                .unwrap();
+        let resource_id = create_resource_id(anchor_address, ChainIdType::EVM(0), chain_id).unwrap();
         let expected = hex::decode(
             "0000000000000000b42139ffcef02dc85db12ac9416a19a12381167d00000004",
         )

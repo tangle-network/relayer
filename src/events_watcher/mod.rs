@@ -492,6 +492,7 @@ pub trait SubstrateEventWatcher {
 pub type ResourceId = [u8; 32];
 pub type ProposalNonce = u64;
 
+#[allow(clippy::dead_code)]
 // TODO: Use the type from dkg-runtime-primitives or organize in another single location.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ChainIdType {
