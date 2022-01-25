@@ -3709,7 +3709,7 @@ dependencies = [
  "schnorrkel",
  "secrecy",
  "serde",
- "sha2 0.9.8",
+ "sha2 0.9.9",
  "sp-core-hashing",
  "sp-debug-derive",
  "sp-externalities",
@@ -3734,7 +3734,7 @@ checksum = "ec864a6a67249f0c8dd3d5acab43623a61677e85ff4f2f9b04b802d2fe780e83"
 dependencies = [
  "blake2-rfc",
  "byteorder",
- "sha2 0.9.8",
+ "sha2 0.9.9",
  "sp-std",
  "tiny-keccak",
  "twox-hash",

@@ -5,7 +5,7 @@ use std::str::FromStr;
 use config::FileFormat;
 use ethereum_types::{Address, Secret, U256};
 use serde::{Deserialize, Serialize};
-use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
+use webb::substrate::subxt::sp_core::sr25519::{Pair as Sr25519Pair, Public};
 use webb::substrate::subxt::sp_core::Pair;
 
 const fn default_port() -> u16 {
@@ -144,7 +144,7 @@ pub struct SubstrateConfig {
     #[serde(skip_serializing)]
     pub suri: Suri,
     /// Optionally, a user can specify an account to receive rewards for relaying
-    pub beneficiary: Option<Address>,
+    pub beneficiary: Option<Public>,
     /// Which Substrate Runtime to use?
     pub runtime: SubstrateRuntime,
     /// Supported pallets over this substrate node.
