@@ -34,6 +34,7 @@ use webb::substrate::subxt::{DefaultConfig};
 use webb::substrate::protocol_substrate_runtime::api::RuntimeApi;
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
+use webb::substrate::subxt::sp_core::Pair;
 
 type CommandStream = mpsc::Sender<CommandResponse>;
 
@@ -127,6 +128,14 @@ pub async fn handle_relayer_info(
             let key = SecretKey::from_bytes(v.private_key.as_bytes())?;
             let wallet = LocalWallet::from(key);
             v.beneficiary = Some(wallet.address());
+            Result::<_, anyhow::Error>::Ok(())
+        });
+    let _ = config
+        .substrate
+        .values_mut()
+        .filter(|v| v.beneficiary.is_none())
+        .try_for_each(|v| {
+            v.beneficiary = Some(v.suri.public());
             Result::<_, anyhow::Error>::Ok(())
         });
     Ok(warp::reply::json(&RelayerInformationResponse { config }))

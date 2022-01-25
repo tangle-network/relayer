@@ -45,11 +45,10 @@ impl RelayerContext {
         &self,
         chain_name: &str,
     ) -> anyhow::Result<Provider<Http>> {
-        let chain_config = self
-            .config
-            .evm
-            .get(chain_name)
-            .context("this chain not configured")?;
+        let chain_config = self.config.evm.get(chain_name).context(format!(
+            "Chain {} not configured or enabled",
+            chain_name
+        ))?;
         let provider = Provider::try_from(chain_config.http_endpoint.as_str())?
             .interval(Duration::from_millis(5u64));
         Ok(provider)
@@ -59,11 +58,10 @@ impl RelayerContext {
         &self,
         chain_name: &str,
     ) -> anyhow::Result<LocalWallet> {
-        let chain_config = self
-            .config
-            .evm
-            .get(chain_name)
-            .context("this chain not configured")?;
+        let chain_config = self.config.evm.get(chain_name).context(format!(
+            "Chain {} not configured or enabled",
+            chain_name
+        ))?;
         let key = SecretKey::from_bytes(chain_config.private_key.as_bytes())?;
         let chain_id = chain_config.chain_id;
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
@@ -78,7 +76,7 @@ impl RelayerContext {
             .config
             .substrate
             .get(node_name)
-            .context("this node not configured")?;
+            .context(format!("Node {} not configured or enabled", node_name))?;
         let client = subxt::ClientBuilder::new()
             .set_url(node_config.ws_endpoint.as_str())
             .build()
@@ -99,7 +97,7 @@ impl RelayerContext {
             .substrate
             .get(node_name)
             .cloned()
-            .context("this node not configured")?;
+            .context(format!("Node {} not configured or enabled", node_name))?;
         Ok(node_config.suri.into())
     }
 }
