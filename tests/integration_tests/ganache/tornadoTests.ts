@@ -80,8 +80,8 @@ async function deployNativeTornado(wallet: ethers.Wallet) {
 
 const PRIVATE_KEY =
   '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
-const PORT = 8545;
-const ENDPOINT = 'http://127.0.0.1:8545';
+const PORT = 1337;
+const ENDPOINT = 'http://127.0.0.1:1337';
 let ganacheServer: any;
 let relayer: ChildProcessWithoutNullStreams;
 let relayerEndpoint: string;
@@ -108,7 +108,7 @@ describe('Tornado Relayer Withdraw Tests', function () {
         secretKey: PRIVATE_KEY,
       },
     ];
-    ganacheServer = startGanacheServer(PORT, 1337, ganacheAccount);
+    ganacheServer = await startGanacheServer(PORT, 1337, ganacheAccount);
     console.log('Starting the Relayer ..');
     [relayer, relayerEndpoint] = await startWebbRelayer(9955);
     await sleep(1500); // wait for the relayer start-up
@@ -597,8 +597,8 @@ describe('Tornado Relayer Withdraw Tests', function () {
     });
   });
 
-  after(function () {
-    ganacheServer.close(console.error);
+  after(async function () {
+    await ganacheServer.close();
     client.terminate();
     relayer.kill('SIGINT');
   });

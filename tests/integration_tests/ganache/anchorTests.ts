@@ -28,11 +28,11 @@ let senderPrivateKey =
 
 let chainId1 = 3333;
 let ganacheServer1: any;
-let provider1: ethers.providers.Provider;
+let provider1: ethers.providers.JsonRpcProvider;
 
 let chainId2 = 4444;
 let ganacheServer2: any;
-let provider2: ethers.providers.Provider;
+let provider2: ethers.providers.JsonRpcProvider;
 
 // variables intended to be consistent across all tests
 let relayer: ChildProcessWithoutNullStreams;
@@ -72,11 +72,13 @@ describe('Anchor Tests', function () {
       },
     ];
 
-    ganacheServer1 = startGanacheServer(3333, chainId1, ganacheAccounts);
-    provider1 = new ethers.providers.WebSocketProvider('http://localhost:3333');
+    ganacheServer1 = await startGanacheServer(3333, chainId1, ganacheAccounts);
+    provider1 = new ethers.providers.JsonRpcProvider('http://localhost:3333');
+    provider1.pollingInterval = 1;
 
-    ganacheServer2 = startGanacheServer(4444, chainId2, ganacheAccounts);
-    provider2 = new ethers.providers.WebSocketProvider('http://localhost:4444');
+    ganacheServer2 = await startGanacheServer(4444, chainId2, ganacheAccounts);
+    provider2 = new ethers.providers.JsonRpcProvider('http://localhost:4444');
+    provider2.pollingInterval = 1;
 
     // Deploy token contracts
     const wallet1 = new ethers.Wallet(deployerPrivateKey, provider1);
@@ -173,7 +175,8 @@ describe('Anchor Tests', function () {
         webbTokenAddress,
         sourceWallet
       );
-      await webbToken.approveSpending(srcAnchor.contract.address);
+      const tx = await webbToken.approveSpending(srcAnchor.contract.address);
+      await tx.wait();
       startingRecipientBalance = await webbToken.getBalance(recipient);
 
       // deposit
@@ -181,7 +184,7 @@ describe('Anchor Tests', function () {
 
       // allow time for the bridge proposal and execution
       console.log('waiting for bridge proposal and execution');
-      await sleep(20_000);
+      await sleep(5_000);
 
       // generate the withdraw
       const withdrawInfo = await srcAnchor.setupWithdraw(
@@ -271,10 +274,10 @@ describe('Anchor Tests', function () {
     });
   });
 
-  describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
-    this.timeout(150_000);
+  describe.only('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+    this.timeout(100_000);
     before(async function () {
-      this.timeout(150_000);
+      this.timeout(100_000);
       sourceWallet = new ethers.Wallet(senderPrivateKey, provider1);
       destWallet = new ethers.Wallet(senderPrivateKey, provider2);
       const chainABridge = bridge.getBridgeSide(chainId1);
@@ -292,7 +295,8 @@ describe('Anchor Tests', function () {
         webbToken1Address,
         sourceWallet
       );
-      await webbToken1.approveSpending(srcAnchor.contract.address);
+      const tx = await webbToken1.approveSpending(srcAnchor.contract.address);
+      await tx.wait();
 
       const webbToken2Address = await bridge.getWebbTokenAddress(chainId2)!;
       const webbToken2 = await MintableToken.tokenFromAddress(
@@ -307,17 +311,17 @@ describe('Anchor Tests', function () {
 
       // allow time for the bridge proposal and execution
       console.log('waiting for bridge proposal and execution');
-      await sleep(40_000);
+      await sleep(20_000);
 
       console.log('before the second deposit');
       const deposit = await srcAnchor.deposit(chainId2);
       console.log('waiting for another bridge proposal and execution');
-      await sleep(40_000);
+      await sleep(20_000);
 
       console.log('before the third deposit');
       await srcAnchor.deposit(chainId2);
       console.log('waiting for another bridge proposal and execution');
-      await sleep(40_000);
+      await sleep(20_000);
 
       // generate the merkle proof from the source anchor
       await srcAnchor.checkKnownRoot();
@@ -430,9 +434,9 @@ describe('Anchor Tests', function () {
     });
   });
 
-  after(function () {
-    ganacheServer1.close(console.error);
-    ganacheServer2.close(console.error);
+  after(async function () {
+    await ganacheServer1.close();
+    await ganacheServer2.close();
     client?.terminate();
     relayer.kill('SIGINT');
   });
