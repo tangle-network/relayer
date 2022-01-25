@@ -71,6 +71,7 @@ describe('Mixer tests', function () {
     await new Promise((resolve) => client.on('open', resolve));
     console.log('Connected to Relayer!');
   });
+
   it('should relay successfully', async function () {
     const { bob, charlie, alice } = getKeyring();
     // transfer some funds to sudo & test account

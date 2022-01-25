@@ -124,18 +124,17 @@ export const generateAnchorWithdrawRequest = (
   };
 };
 export const getRelayerSubstrateConfig = async (
-	chainName: string,
-	endpoint: string
+  chainName: string,
+  endpoint: string
 ): Promise<RelayerChainConfig> => {
-	const relayerInfoRes = await fetch(`${endpoint}/api/v1/info`);
-	console.log(relayerInfoRes);
-	const relayerInfo: any = await relayerInfoRes.json();
-
-	return {
-		chainName: chainName,
-		beneficiary: relayerInfo.substrate[chainName].beneficiary,
-		contracts: relayerInfo.substrate[chainName].contracts,
-	};
+  const relayerInfoRes = await fetch(`${endpoint}/api/v1/info`);
+  const relayerInfo: any = await relayerInfoRes.json();
+  console.log(relayerInfo);
+  return {
+    chainName: chainName,
+    beneficiary: relayerInfo.substrate[chainName].beneficiary,
+    contracts: relayerInfo.substrate[chainName].contracts,
+  };
 };
 
 
@@ -144,7 +143,6 @@ export const getRelayerConfig = async (
   endpoint: string
 ): Promise<RelayerChainConfig> => {
   const relayerInfoRes = await fetch(`${endpoint}/api/v1/info`);
-  console.log(relayerInfoRes);
   const relayerInfo: any = await relayerInfoRes.json();
 
   return {
