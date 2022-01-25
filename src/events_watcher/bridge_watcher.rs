@@ -441,8 +441,8 @@ pub fn create_resource_id(
     chain_id: types::U256,
 ) -> anyhow::Result<[u8; 32]> {
     let chain_type_bytes = match chain_type {
-        ChainIdType::EVM(_) => [1u32,0],
-        ChainIdType::Substrate(_) => [2u32,0],
+        ChainIdType::EVM(_) => to_hex(1u32, 2),
+        ChainIdType::Substrate(_) => to_hex(2u32, 2),
         _ => panic!("Unknown chain type"),
     };
     let truncated = to_hex(chain_id, 4);
