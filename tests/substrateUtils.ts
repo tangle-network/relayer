@@ -11,6 +11,7 @@ import { decodeAddress } from '@polkadot/keyring';
 import path from 'path';
 import fs from 'fs';
 import { generateSubstrateMixerWithdrawRequest } from './relayerUtils';
+import { SubmittableExtrinsic } from '@polkadot/api/promise/types';
 
 export async function preparePolkadotApi() {
   const wsProvider = new WsProvider('ws://127.0.0.1:9944');
@@ -50,6 +51,22 @@ export async function preparePolkadotApi() {
   return api.isReady;
 }
 
+export function awaitPolkadotTxFinalization(
+  tx: SubmittableExtrinsic,
+  signer: KeyringPair
+) {
+  return new Promise((resolve, reject) => {
+    tx.signAndSend(signer, { nonce: -1 }, (status) => {
+      if (status.isFinalized || status.isCompleted) {
+        resolve(tx.hash);
+      }
+      if (status.isError) {
+        reject(status.dispatchError);
+      }
+    }).catch((e) => reject(e));
+  });
+}
+
 export async function transferBalance(
   api: ApiPromise,
   source: KeyringPair,
@@ -61,10 +78,8 @@ export async function transferBalance(
   for (const receiverPair of receiverPairs) {
     // @ts-ignore
     const tx = api.tx.balances.transfer(receiverPair.address, amount);
-
     console.log(`Transferring native funds to ${receiverPair.address} `);
-    console.log(tx.hash.toString());
-    await tx.signAndSend(source, { nonce: -1 });
+    await awaitPolkadotTxFinalization(tx, source);
   }
 }
 
