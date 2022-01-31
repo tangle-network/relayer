@@ -287,7 +287,9 @@ describe('Anchor Tests', function () {
       const srcAnchor = await bridge.getAnchor(chainId1, '1000000000000000000');
       console.log('Chain A Anchor Address: ', srcAnchor.contract.address);
       await srcAnchor.setSigner(sourceWallet);
-      console.log(`before deposits, there are ${srcAnchor.tree.totalElements} leaves in the tree`);
+      console.log(
+        `before deposits, there are ${srcAnchor.tree.totalElements} leaves in the tree`
+      );
 
       // approve token spending
       const webbToken1Address = await bridge.getWebbTokenAddress(chainId1)!;

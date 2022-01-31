@@ -137,7 +137,6 @@ export const getRelayerSubstrateConfig = async (
   };
 };
 
-
 export const getRelayerConfig = async (
   chainName: string,
   endpoint: string
