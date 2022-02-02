@@ -1,5 +1,10 @@
 import fetch from 'node-fetch';
-import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
+import {
+  ChildProcessWithoutNullStreams,
+  execSync,
+  spawn,
+  SpawnOptionsWithoutStdio,
+} from 'child_process';
 
 require('dotenv').config({ path: '.env' });
 
@@ -150,6 +155,51 @@ export const getRelayerConfig = async (
     contracts: relayerInfo.evm[chainName].contracts,
   };
 };
+function spawnWithLogger(command: string, options?: SpawnOptionsWithoutStdio) {
+  const process = spawn(command, options);
+  process.stdout.on('data', (data) => {
+    console.log(data.toString());
+  });
+
+  process.stderr.on('data', (data) => {
+    console.error(data.toString());
+  });
+
+  process.on('close', (code) => {
+    console.log(` process ${process.pid} exited with code ${code}`);
+  });
+
+  return process;
+}
+export function startDarkWebbNode(): ChildProcessWithoutNullStreams {
+  execSync(
+    'docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:edge',
+    { stdio: 'inherit' }
+  );
+  const node1 =
+    'darkwebb-standalone-node --dev --alice --node-key 0000000000000000000000000000000000000000000000000000000000000001';
+  const node2 =
+    'darkwebb-standalone-node --dev --bob --port 33334 --tmp   --bootnodes /ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp';
+
+  const getDockerCmd = (cmd: string, ports: number[]) => {
+    return `docker run --rm  ${ports.reduce(
+      (acc, port) => `${acc} -p ${port}:${port}`,
+      ''
+    )} ghcr.io/webb-tools/protocol-substrate-standalone-node:edge  ${cmd}`;
+  };
+
+  const proc = spawnWithLogger(
+    `${getDockerCmd(node1, [9944, 30333])} & ${getDockerCmd(
+      node2,
+      [33334, 33334]
+    )}`,
+    {
+      shell: true,
+    }
+  );
+
+  return proc;
+}
 
 export function startWebbRelayer(
   portNumber: number = 9955
