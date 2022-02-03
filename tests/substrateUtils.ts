@@ -208,7 +208,7 @@ export async function withdrawMixerBnX5_5(
     'mixer',
     'bn254',
     'x5',
-    'proving_key_uncompresed.bin'
+    'proving_key_uncompressed.bin'
   );
   const pk = fs.readFileSync(pkPath);
 
