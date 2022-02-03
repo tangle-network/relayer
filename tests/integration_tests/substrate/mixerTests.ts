@@ -4,7 +4,7 @@ import { Keyring } from '@polkadot/keyring';
 import { KeyringPair } from '@polkadot/keyring/types';
 import {
   getRelayerSubstrateConfig,
-  handleMessage,
+  handleMessage, KillTask,
   RelayerChainConfig,
   Result,
   sleep,
@@ -28,7 +28,7 @@ let keyring: {
   charlie: KeyringPair;
 } | null = null;
 let relayer: ChildProcessWithoutNullStreams;
-let nodes: ChildProcessWithoutNullStreams | undefined;
+let nodes: KillTask | undefined;
 let relayerEndpoint: string;
 
 let relayerChain1Info: RelayerChainConfig;
@@ -62,7 +62,6 @@ describe('Mixer tests', function () {
   	// If LOCAL_NODE is set the tests will continue  to use the already running node
     if (process.env.LOCAL_NODE !== 'ture') {
       nodes = startDarkWebbNode();
-      console.log(`nodes PID ${nodes?.pid}`);
     }
 
     [relayer, relayerEndpoint] = await startWebbRelayer(8888);
@@ -139,6 +138,6 @@ describe('Mixer tests', function () {
   after(function () {
     client?.terminate();
     relayer.kill('SIGINT');
-    nodes?.kill('SIGINT');
+    nodes?.();
   });
 });
