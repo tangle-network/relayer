@@ -22,7 +22,7 @@
     "@truffle/hdwallet-provider": "^1.4.1",
     "@types/mocha": "^9.0.0",
     "@webb-tools/protocol-solidity": "^0.0.4",
-    "@webb-tools/wasm-utils": "0.1.4-21",
+    "@webb-tools/wasm-utils": "0.1.4-30",
     "circom": "^0.5.45",
     "circomlib": "git+https://github.com/tornadocash/circomlib.git#c372f14d324d57339c88451834bf2824e73bbdbc",
     "dotenv": "^10.0.0",

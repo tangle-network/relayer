@@ -211,8 +211,8 @@ export async function withdrawMixerBnX5_5(
     'proving_key_uncompressed.bin'
   );
   const pk = fs.readFileSync(pkPath);
-
   proofInputBuilder.setPk(pk.toString('hex'));
+  console.log(pk);
 
   const proofInput = proofInputBuilder.build_js();
   console.log('Generating Zero knowledge proof');
