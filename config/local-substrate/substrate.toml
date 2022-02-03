@@ -5,5 +5,5 @@ enabled=true
 http-endpoint = "http://localhost:9933/"
 ws-endpoint = "ws://localhost:9944/"
 runtime = "WebbProtocol"
-suri = "//Alice"
+suri = "//Alice//stash"
 pallets = []
