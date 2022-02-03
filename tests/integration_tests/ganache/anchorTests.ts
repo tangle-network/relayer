@@ -274,7 +274,7 @@ describe('Anchor Tests', function () {
     });
   });
 
-  describe.only('Sunny day Anchor withdraw relayed transaction across bridge', function () {
+  describe('Sunny day Anchor withdraw relayed transaction across bridge', function () {
     this.timeout(100_000);
     before(async function () {
       this.timeout(100_000);
