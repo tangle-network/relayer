@@ -12,7 +12,7 @@ import {
   startDarkWebbNode,
   startWebbRelayer,
 } from '../../relayerUtils';
-import { ChildProcessWithoutNullStreams } from 'child_process';
+import { ChildProcessWithoutNullStreams, execSync } from 'child_process';
 import WebSocket from 'ws';
 import {
   depositMixerBnX5_5,
@@ -54,16 +54,22 @@ function getKeyring() {
   };
   return keyring;
 }
-
+let skip = true;
 describe('Mixer tests', function () {
   // increase the timeout for relayer tests
   this.timeout(220_000);
-
+  try {
+    execSync('docker version');
+  } catch (e) {
+  	console.log(` Docker not installed -> skipping`);
+    skip = true;
+  }
   before(async function () {
     // If LOCAL_NODE is set the tests will continue  to use the already running node
-
-      nodes = startDarkWebbNode();
-
+    if (skip) {
+      this.skip();
+    }
+    nodes = startDarkWebbNode();
 
     [relayer, relayerEndpoint] = await startWebbRelayer(8888);
     console.log(`Relayer PID ${relayer.pid}`);
@@ -81,6 +87,9 @@ describe('Mixer tests', function () {
   });
 
   it('should relay successfully', async function () {
+    if (skip) {
+      this.skip();
+    }
     const { bob, charlie, alice } = getKeyring();
     // transfer some funds to sudo & test account
     await transferBalance(apiPromise!, charlie, [alice, bob], 10_000);
@@ -138,7 +147,7 @@ describe('Mixer tests', function () {
 
   after(function () {
     client?.terminate();
-    relayer.kill('SIGINT');
+    relayer?.kill('SIGINT');
     nodes?.();
   });
 });
