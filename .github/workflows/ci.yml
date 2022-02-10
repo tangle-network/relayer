@@ -122,9 +122,9 @@ jobs:
           cache: "npm"
       - run: npm install -g ganache-cli
       - run: ci/test.bash /tmp/cross ${{ matrix.target }}
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-unknown-linux-musl'
       - run: cargo build
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-unknown-linux-musl'
         shell: bash
       - name: pull docker image
         uses: nick-invision/retry@v2
@@ -134,10 +134,10 @@ jobs:
           retry_on: error
           command: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:edge
       - name: Install NPM Packages.
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-unknown-linux-musl'
         run: cd tests && git submodule update --init --recursive && yarn
       - name: Webb Relayer Integration tests.
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'aarch64-unknown-linux-musl'
         run: cd tests && yarn test
 
     strategy:
