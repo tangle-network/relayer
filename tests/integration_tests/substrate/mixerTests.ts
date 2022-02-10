@@ -54,7 +54,7 @@ function getKeyring() {
   };
   return keyring;
 }
-let skip = true;
+let skip = false;
 describe('Mixer tests', function () {
   // increase the timeout for relayer tests
   this.timeout(220_000);
