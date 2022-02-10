@@ -126,6 +126,13 @@ jobs:
       - run: cargo build
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         shell: bash
+      - name: pull docker image
+        uses: nick-invision/retry@v2
+        with:
+          timeout_seconds: 90
+          max_attempts: 3
+          retry_on: error
+          command: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:edge
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         run: cd tests && git submodule update --init --recursive && yarn

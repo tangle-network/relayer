@@ -61,9 +61,9 @@ describe('Mixer tests', function () {
 
   before(async function () {
     // If LOCAL_NODE is set the tests will continue  to use the already running node
-    if (true) {
+
       nodes = startDarkWebbNode();
-    }
+
 
     [relayer, relayerEndpoint] = await startWebbRelayer(8888);
     console.log(`Relayer PID ${relayer.pid}`);
