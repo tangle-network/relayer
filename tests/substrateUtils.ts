@@ -11,7 +11,12 @@ import { decodeAddress } from '@polkadot/keyring';
 import path from 'path';
 import fs from 'fs';
 import { generateSubstrateMixerWithdrawRequest } from './relayerUtils';
-import { SubmittableExtrinsic } from '@polkadot/api/promise/types';
+import { BigNumber } from 'ethers';
+
+export function currencyToUnitI128(currencyAmount: number) {
+  let bn = BigNumber.from(currencyAmount);
+  return bn.mul(1_000_000_000_000);
+}
 
 export async function preparePolkadotApi() {
   const wsProvider = new WsProvider('ws://127.0.0.1:9944');
@@ -50,18 +55,52 @@ export async function preparePolkadotApi() {
   });
   return api.isReady;
 }
-
-export function awaitPolkadotTxFinalization(
-  tx: SubmittableExtrinsic,
+type MethodPath = {
+  section: string;
+  method: string;
+};
+export function polkadotTx(
+  api: ApiPromise,
+  path: MethodPath,
+  params: any[],
   signer: KeyringPair
 ) {
-  return new Promise((resolve, reject) => {
-    tx.signAndSend(signer, { nonce: -1 }, (status) => {
-      if (status.isFinalized || status.isCompleted) {
-        resolve(tx.hash);
-      }
-      if (status.isError) {
-        reject(status.dispatchError);
+  // @ts-ignore
+  const tx = api.tx[path.section][path.method](...params);
+  return new Promise<string>((resolve, reject) => {
+    tx.signAndSend(signer, (result) => {
+      const status = result.status;
+      const events = result.events.filter(
+        ({ event: { section } }) => section === 'system'
+      );
+      if (status.isInBlock || status.isFinalized) {
+        for (const event of events) {
+          const {
+            event: { data, method },
+          } = event;
+          const [dispatchError] = data as any;
+
+          if (method === 'ExtrinsicFailed') {
+            let message = dispatchError.type;
+
+            if (dispatchError.isModule) {
+              try {
+                const mod = dispatchError.asModule;
+                const error = dispatchError.registry.findMetaError(mod);
+
+                message = `${error.section}.${error.name}`;
+              } catch (error) {
+                reject(message);
+              }
+            } else if (dispatchError.isToken) {
+              message = `${dispatchError.type}.${dispatchError.asToken.type}`;
+            }
+
+            reject(message);
+          } else if (method === 'ExtrinsicSuccess') {
+            resolve(tx.hash.toString());
+          }
+        }
       }
     }).catch((e) => reject(e));
   });
@@ -71,15 +110,22 @@ export async function transferBalance(
   api: ApiPromise,
   source: KeyringPair,
   receiverPairs: KeyringPair[],
-  amount: string = '1_000_000_000_000'
+  number: number = 1000
 ) {
   console.log('Transfer balances');
   // transfer to alice
   for (const receiverPair of receiverPairs) {
-    // @ts-ignore
-    const tx = api.tx.balances.transfer(receiverPair.address, amount);
-    console.log(`Transferring native funds to ${receiverPair.address} `);
-    await awaitPolkadotTxFinalization(tx, source);
+    console.log(
+      `Transferring native funds to ${
+        receiverPair.address
+      } amount ${currencyToUnitI128(number).toString()} `
+    );
+    await polkadotTx(
+      api,
+      { section: 'balances', method: 'transfer' },
+      [receiverPair.address, currencyToUnitI128(number).toString()],
+      source
+    );
   }
 }
 
@@ -88,10 +134,10 @@ export async function setORMLTokenBalance(
   sudoPair: KeyringPair,
   receiverPair: KeyringPair,
   ORMLCurrencyId: number = 0,
-  amount: number = 100_000_000_000_000
+  amount: number = 1000
 ) {
   console.log(
-    `Setting  ${receiverPair.address} balance to ${100_000_000_000_000} `
+    `Setting  ${receiverPair.address} balance to ${currencyToUnitI128(amount)} `
   );
   return new Promise((resolve, reject) => {
     const address = api.createType('MultiAddress', {
@@ -101,7 +147,11 @@ export async function setORMLTokenBalance(
     api.tx.sudo
       .sudo(
         // @ts-ignore
-        api.tx.currencies.updateBalance(address, ORMLCurrencyId, amount)
+        api.tx.currencies.updateBalance(
+          address,
+          ORMLCurrencyId,
+          currencyToUnitI128(amount)
+        )
       )
       .signAndSend(sudoPair, (res) => {
         if (res.isFinalized || res.isCompleted) {
@@ -165,9 +215,13 @@ export async function depositMixerBnX5_5(
   const leaf = note.getLeafCommitment();
   console.log(`deposited leaf ${u8aToHex(leaf)}`);
   console.log(`Deposit note ${note.serialize()}`);
-  //@ts-ignore
-  const depositTx = api.tx.mixerBn254.deposit(0, leaf);
-  await depositTx.signAndSend(depositor);
+
+  await polkadotTx(
+    api,
+    { section: 'mixerBn254', method: 'deposit' },
+    [0, leaf],
+    depositor
+  );
   return note;
 }
 

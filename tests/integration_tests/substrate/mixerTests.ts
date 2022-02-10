@@ -4,7 +4,8 @@ import { Keyring } from '@polkadot/keyring';
 import { KeyringPair } from '@polkadot/keyring/types';
 import {
   getRelayerSubstrateConfig,
-  handleMessage, KillTask,
+  handleMessage,
+  KillTask,
   RelayerChainConfig,
   Result,
   sleep,
@@ -56,11 +57,11 @@ function getKeyring() {
 
 describe('Mixer tests', function () {
   // increase the timeout for relayer tests
-  this.timeout(120_000);
+  this.timeout(220_000);
 
   before(async function () {
-  	// If LOCAL_NODE is set the tests will continue  to use the already running node
-    if (process.env.LOCAL_NODE !== 'ture') {
+    // If LOCAL_NODE is set the tests will continue  to use the already running node
+    if (true) {
       nodes = startDarkWebbNode();
     }
 
@@ -82,7 +83,7 @@ describe('Mixer tests', function () {
   it('should relay successfully', async function () {
     const { bob, charlie, alice } = getKeyring();
     // transfer some funds to sudo & test account
-    await transferBalance(apiPromise!, charlie, [alice, bob]);
+    await transferBalance(apiPromise!, charlie, [alice, bob], 10_000);
     // set the test account ORML balance of the mixer asset
     await setORMLTokenBalance(apiPromise!, alice, bob);
 
