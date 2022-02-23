@@ -4508,12 +4508,15 @@ dependencies = [
  "matchers 0.1.0",
  "parking_lot",
  "regex",
+ "serde",
+ "serde_json",
  "sharded-slab",
  "smallvec",
  "thread_local",
  "tracing",
  "tracing-core",
  "tracing-log",
+ "tracing-serde",
 ]
 
 [[package]]
@@ -4960,6 +4963,7 @@ dependencies = [
  "async-trait",
  "backoff",
  "config",
+ "derive_more",
  "directories-next",
  "dotenv",
  "ethereum-types",

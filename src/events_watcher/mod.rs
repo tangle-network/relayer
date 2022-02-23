@@ -195,6 +195,14 @@ pub trait EventWatcher {
                         current_block_number,
                         sync_progress
                     );
+                    tracing::event!(
+                        target: crate::probe::TARGET,
+                        tracing::Level::DEBUG,
+                        kind = %crate::probe::Kind::Sync,
+                        %block,
+                        %dest_block,
+                        %sync_progress,
+                    );
                     instant = std::time::Instant::now();
                 }
             }

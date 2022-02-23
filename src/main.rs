@@ -18,6 +18,7 @@ mod config;
 mod context;
 mod events_watcher;
 mod handler;
+mod probe;
 mod service;
 mod store;
 mod tx_queue;
@@ -71,11 +72,23 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // start all background services.
     // this does not block, will fire the services on background tasks.
     service::ignite(&ctx, Arc::new(store)).await?;
+    tracing::event!(
+        target: crate::probe::TARGET,
+        tracing::Level::DEBUG,
+        kind = %crate::probe::Kind::Lifecycle,
+        started = true
+    );
     // watch for signals
     let mut ctrlc_signal = unix::signal(unix::SignalKind::interrupt())?;
     let mut termination_signal = unix::signal(unix::SignalKind::terminate())?;
     let mut quit_signal = unix::signal(unix::SignalKind::quit())?;
     let shutdown = || {
+        tracing::event!(
+            target: crate::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %crate::probe::Kind::Lifecycle,
+            shutdown = true
+        );
         tracing::warn!("Shutting down...");
         // send shutdown signal to all of the application.
         ctx.shutdown();
@@ -113,12 +126,18 @@ fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
 
     let env_filter = tracing_subscriber::EnvFilter::from_default_env()
         .add_directive(format!("webb_relayer={}", log_level).parse()?);
-    tracing_subscriber::fmt()
-        .pretty()
+    let logger = tracing_subscriber::fmt()
         .with_target(true)
         .with_max_level(log_level)
-        .with_env_filter(env_filter)
-        .init();
+        .with_env_filter(env_filter);
+    // if we are not compiling for integration tests, we should use pretty logs
+    #[cfg(not(feature = "integration-tests"))]
+    let logger = logger.pretty();
+    // otherwise, we should use json, which is easy to parse.
+    #[cfg(feature = "integration-tests")]
+    let logger = logger.json();
+
+    logger.init();
     Ok(())
 }
 
