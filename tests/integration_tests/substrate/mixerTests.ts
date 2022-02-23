@@ -61,7 +61,7 @@ describe.only('Mixer tests', function () {
   try {
     execSync('docker version');
   } catch (e) {
-  	console.log(` Docker not installed -> skipping`);
+    console.log(` Docker not installed -> skipping`);
     skip = true;
   }
   before(async function () {
@@ -69,7 +69,11 @@ describe.only('Mixer tests', function () {
     if (skip) {
       this.skip();
     }
-    nodes = startWebbNode();
+
+
+    if (!process.env.LOCAL_NODE) {
+      nodes = startWebbNode();
+    }
 
     [relayer, relayerEndpoint] = await startWebbRelayer(8888);
     console.log(`Relayer PID ${relayer.pid}`);

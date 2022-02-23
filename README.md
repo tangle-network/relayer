@@ -42,6 +42,22 @@ webb-relayer -vvv -c ./config
 
 > Hot Tip 🌶️: you could also use the json format for the config files if you prefer that, and it would work!
 
+## Running integration tests
+To run substrate tests , our current docker image, or maybe the relayer has issue with events from a node running inside docker
+you will need pulling the `protocol-substrate` node [repo](https://github.com/webb-tools/protocol-substrate).
+then
+create a `.evn` file on `/tests/`
+```
+LOCAL_NODE=true
+```
+```bash
+# Move to tests folder tests
+ cd ./tests
+# Run the tests
+yarn test
+```
+this will make the tests use the local node instead of the docker setup
+
 ## Using Docker 🐳
 
 To Use Docker in and to run the relayer on any cloud provider, all you need is to create your configuration and .env files
