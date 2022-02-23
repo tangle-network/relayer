@@ -59,14 +59,15 @@ jobs:
         if: matrix.target == 'x86_64-apple-darwin'
         uses: actions/setup-node@v1
         with:
-          node-version: "14"
-          cache: "npm"
+          node-version-file: "./tests/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "./tests/yarn.lock"
       - run: npm install -g ganache-cli
         if: matrix.target == 'x86_64-apple-darwin'
         # Only test on macOS platforms since we can't simulate the others.
       - run: ci/test.bash cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-apple-darwin'
-      - run: cargo build
+      - run: cargo build --features integration-tests
         if: matrix.target == 'x86_64-apple-darwin'
         shell: bash
       - name: Install NPM Packages.
@@ -118,12 +119,13 @@ jobs:
       - name: Use Node.js 14.x
         uses: actions/setup-node@v1
         with:
-          node-version: "14"
-          cache: "npm"
+          node-version-file: "./tests/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "./tests/yarn.lock"
       - run: npm install -g ganache-cli
       - run: ci/test.bash /tmp/cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-unknown-linux-gnu'
-      - run: cargo build
+      - run: cargo build --features integration-tests
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         shell: bash
       - name: Install NPM Packages.
