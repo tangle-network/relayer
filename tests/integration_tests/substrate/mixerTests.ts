@@ -9,7 +9,7 @@ import {
   RelayerChainConfig,
   Result,
   sleep,
-  startDarkWebbNode,
+  startWebbNode,
   startWebbRelayer,
 } from '../../relayerUtils';
 import { ChildProcessWithoutNullStreams, execSync } from 'child_process';
@@ -55,7 +55,7 @@ function getKeyring() {
   return keyring;
 }
 let skip = false;
-describe('Mixer tests', function () {
+describe.only('Mixer tests', function () {
   // increase the timeout for relayer tests
   this.timeout(220_000);
   try {
@@ -69,7 +69,7 @@ describe('Mixer tests', function () {
     if (skip) {
       this.skip();
     }
-    nodes = startDarkWebbNode();
+    nodes = startWebbNode();
 
     [relayer, relayerEndpoint] = await startWebbRelayer(8888);
     console.log(`Relayer PID ${relayer.pid}`);

@@ -112,14 +112,9 @@ export async function transferBalance(
   receiverPairs: KeyringPair[],
   number: number = 1000
 ) {
-  console.log('Transfer balances');
   // transfer to alice
   for (const receiverPair of receiverPairs) {
-    console.log(
-      `Transferring native funds to ${
-        receiverPair.address
-      } amount ${currencyToUnitI128(number).toString()} `
-    );
+
     await polkadotTx(
       api,
       { section: 'balances', method: 'transfer' },
@@ -136,9 +131,7 @@ export async function setORMLTokenBalance(
   ORMLCurrencyId: number = 0,
   amount: number = 1000
 ) {
-  console.log(
-    `Setting  ${receiverPair.address} balance to ${currencyToUnitI128(amount)} `
-  );
+
   return new Promise((resolve, reject) => {
     const address = api.createType('MultiAddress', {
       Id: receiverPair.address,
@@ -194,7 +187,6 @@ export async function depositMixerBnX5_5(
   api: ApiPromise,
   depositor: KeyringPair
 ) {
-  console.log(`Depositing to tree id = 0 ; mixer bn254`);
   let noteBuilder = new JsNoteBuilder();
   noteBuilder.prefix('webb.mixer');
   noteBuilder.version('v1');
@@ -213,8 +205,6 @@ export async function depositMixerBnX5_5(
   noteBuilder.exponentiation('5');
   const note = noteBuilder.build();
   const leaf = note.getLeafCommitment();
-  console.log(`deposited leaf ${u8aToHex(leaf)}`);
-  console.log(`Deposit note ${note.serialize()}`);
 
   await polkadotTx(
     api,
@@ -242,11 +232,6 @@ export async function withdrawMixerBnX5_5(
   proofInputBuilder.setNote(note);
   proofInputBuilder.setLeaves(leaves);
   const leafIndex = leaves.findIndex((l) => u8aToHex(l) === leafHex);
-  console.log(
-    leafHex,
-    leafIndex,
-    leaves.map((i) => u8aToHex(i))
-  );
   proofInputBuilder.setLeafIndex(String(leafIndex));
 
   proofInputBuilder.setFee('0');
@@ -266,10 +251,8 @@ export async function withdrawMixerBnX5_5(
   );
   const pk = fs.readFileSync(pkPath);
   proofInputBuilder.setPk(pk.toString('hex'));
-  console.log(pk);
 
   const proofInput = proofInputBuilder.build_js();
-  console.log('Generating Zero knowledge proof');
   const proofPayload = generate_proof_js(proofInput);
 
   const req = generateSubstrateMixerWithdrawRequest(
