@@ -135,7 +135,7 @@ fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
     let logger = logger.pretty();
     // otherwise, we should use json, which is easy to parse.
     #[cfg(feature = "integration-tests")]
-    let logger = logger.json();
+    let logger = logger.json().flatten_event(true).with_current_span(false);
 
     logger.init();
     Ok(())
