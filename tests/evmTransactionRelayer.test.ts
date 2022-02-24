@@ -5,11 +5,12 @@ import { jest } from '@jest/globals';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
+import getPort, { portNumbers } from 'get-port';
 import { LocalChain } from './lib/localTestnet';
 import { WebbRelayer } from './lib/webbRelayer';
 
 describe('EVM Transaction Relayer', () => {
-  const tmp = temp.track(true);
+  const tmp = temp.track();
   jest.setTimeout(40_000);
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
   let localChain1: LocalChain;
@@ -27,14 +28,16 @@ describe('EVM Transaction Relayer', () => {
 
   beforeAll(async () => {
     // first we need to start local evm node.
-    localChain1 = new LocalChain('TestA', 3333, [
+    const localChain1Port = await getPort({ port: portNumbers(3333, 4444) });
+    localChain1 = new LocalChain('TestA', localChain1Port, [
       {
         secretKey: wallet1.privateKey,
         balance: ethers.utils.parseEther('10').toHexString(),
       },
     ]);
 
-    localChain2 = new LocalChain('TestB', 4444, [
+    const localChain2Port = await getPort({ port: portNumbers(3333, 4444) });
+    localChain2 = new LocalChain('TestB', localChain2Port, [
       {
         secretKey: wallet2.privateKey,
         balance: ethers.utils.parseEther('10').toHexString(),
@@ -106,8 +109,9 @@ describe('EVM Transaction Relayer', () => {
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
     // now start the relayer
+    const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
-      port: 9955,
+      port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
     });
