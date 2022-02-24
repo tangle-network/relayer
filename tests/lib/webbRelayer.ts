@@ -1,3 +1,5 @@
+import WebSocket from 'ws';
+import fetch from 'node-fetch';
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
@@ -96,6 +98,103 @@ export class WebbRelayer {
       }
     });
   }
+
+  public async ping(): Promise<void> {
+    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
+    const ws = new WebSocket(wsEndpoint);
+    await new Promise((resolve) => ws.once('open', resolve));
+    return new Promise(async (resolve, reject) => {
+      ws.on('error', reject);
+      ws.on('message', (data) => {
+        const o = JSON.parse(data.toString());
+        const msg = parseRelayTxMessage(o);
+        if (msg.kind === 'pong') {
+          resolve();
+        } else {
+          reject(new Error(`Unexpected message: ${msg.kind}`));
+        }
+      });
+      ws.send(JSON.stringify({ ping: '' }));
+    });
+  }
+
+  public async anchorWithdraw(
+    chainName: string,
+    anchorAddress: string,
+    proof: string,
+    args: [string, string, string, string, string, string, string, string]
+  ): Promise<{ txHash: string }> {
+    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
+    // create a new websocket connection to the relayer.
+    const ws = new WebSocket(wsEndpoint);
+    await new Promise((resolve) => ws.once('open', resolve));
+    return new Promise(async (resolve, reject) => {
+      ws.on('error', reject);
+      ws.on('message', (data) => {
+        const o = JSON.parse(data.toString());
+        const msg = parseRelayTxMessage(o);
+        if (msg.kind === 'error') {
+          ws.close();
+          reject(msg.message);
+        } else if (msg.kind === 'pong') {
+          ws.close();
+          // unreachable.
+          reject('unreachable');
+        } else if (msg.kind === 'network') {
+          const networkError =
+            msg.network === 'unsupportedChain' ||
+            msg.network === 'unsupportedContract' ||
+            msg.network === 'disconnected' ||
+            msg.network === 'invalidRelayerAddress';
+          const maybeFailed = msg.network as { failed: { reason: string } };
+          if (networkError) {
+            ws.close();
+            reject(msg.network);
+          } else if (maybeFailed.failed) {
+            ws.close();
+            reject(maybeFailed.failed.reason);
+          }
+        } else if (msg.kind === 'unimplemented') {
+          ws.close();
+          reject(msg.message);
+        } else if (msg.kind === 'unknown') {
+          ws.close();
+          console.log(o);
+          reject('Got unknown response from the relayer!');
+        } else if (msg.kind === 'withdraw') {
+          const isError =
+            msg.withdraw === 'invalidMerkleRoots' ||
+            msg.withdraw === 'droppedFromMemPool' ||
+            (msg.withdraw as { errored: any }).errored;
+          const success = msg.withdraw as { finalized: { txHash: string } };
+          if (isError) {
+            ws.close();
+            reject(msg.withdraw);
+          } else if (success.finalized) {
+            ws.close();
+            resolve({ txHash: success.finalized.txHash });
+          }
+        }
+      });
+      const cmd = {
+        evm: {
+          anchorRelayTx: {
+            chain: chainName,
+            contract: anchorAddress,
+            proof,
+            roots: args[0],
+            nullifierHash: args[1],
+            refreshCommitment: args[2],
+            recipient: args[3],
+            relayer: args[4],
+            fee: args[5],
+            refund: args[6],
+          },
+        },
+      };
+      ws.send(JSON.stringify(cmd));
+    });
+  }
 }
 
 interface UnparsedRawEvent {
@@ -182,3 +281,77 @@ type ContractKind =
   | 'GovernanceBravoDelegate';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind = 'DKGProposals' | 'DKGProposalHandler';
+
+type PongMessage = {
+  kind: 'pong';
+};
+
+type NetworkMessage = {
+  kind: 'network';
+} & {
+  network:
+    | 'connecting'
+    | 'connected'
+    | { failed: { reason: string } }
+    | 'disconnected'
+    | 'unsupportedContract'
+    | 'unsupportedChain'
+    | 'invalidRelayerAddress';
+};
+
+type WithdrawMessage = {
+  kind: 'withdraw';
+} & {
+  withdraw:
+    | 'sent'
+    | { submitted: { txHash: string } }
+    | { finalized: { txHash: string } }
+    | 'valid'
+    | 'invalidMerkleRoots'
+    | 'droppedFromMemPool'
+    | { errored: { code: number; reason: string } };
+};
+
+type ErrorMessage = {
+  kind: 'error';
+} & { message: string };
+
+type UnimplementedMessage = {
+  kind: 'unimplemented';
+} & { message: string };
+
+type ParsedRelayerMessage =
+  | PongMessage
+  | NetworkMessage
+  | WithdrawMessage
+  | ErrorMessage
+  | UnimplementedMessage
+  | { kind: 'unknown' };
+
+function parseRelayTxMessage(o: any): ParsedRelayerMessage {
+  if (o.pong) {
+    return { kind: 'pong' };
+  } else if (o.network) {
+    return {
+      kind: 'network',
+      network: o.network,
+    };
+  } else if (o.withdraw) {
+    return {
+      kind: 'withdraw',
+      withdraw: o.withdraw,
+    };
+  } else if (o.error) {
+    return {
+      kind: 'error',
+      message: o.error,
+    };
+  } else if (o.unimplemented) {
+    return {
+      kind: 'unimplemented',
+      message: o.unimplemented,
+    };
+  } else {
+    return { kind: 'unknown' };
+  }
+}

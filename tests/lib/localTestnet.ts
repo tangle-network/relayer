@@ -175,7 +175,7 @@ export class LocalChain {
           })),
         },
         // Next is the signature bridge contract.
-        // TODO: add signature bridge to the config.
+        // TODO: add signature bridge to the config when the relayer get it.
       ],
     };
     return chainInfo;

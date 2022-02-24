@@ -2,7 +2,8 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { jest } from '@jest/globals';
-import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
+import 'jest-extended';
+import { Anchors, Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import getPort, { portNumbers } from 'get-port';
@@ -32,7 +33,7 @@ describe('EVM Transaction Relayer', () => {
     localChain1 = new LocalChain('TestA', localChain1Port, [
       {
         secretKey: wallet1.privateKey,
-        balance: ethers.utils.parseEther('10').toHexString(),
+        balance: ethers.utils.parseEther('1000').toHexString(),
       },
     ]);
 
@@ -40,7 +41,7 @@ describe('EVM Transaction Relayer', () => {
     localChain2 = new LocalChain('TestB', localChain2Port, [
       {
         secretKey: wallet2.privateKey,
-        balance: ethers.utils.parseEther('10').toHexString(),
+        balance: ethers.utils.parseEther('1000').toHexString(),
       },
     ]);
 
@@ -105,6 +106,7 @@ describe('EVM Transaction Relayer', () => {
       tokenAddress2,
       wallet2
     );
+
     await token2.approveSpending(anchor2.contract.address);
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
@@ -118,7 +120,57 @@ describe('EVM Transaction Relayer', () => {
     await webbRelayer.waitUntilReady();
   });
 
-  test.todo('it should relay transaction');
+  test('Same Chain Relay Transaction', async () => {
+    // we will use chain1 as an example here.
+    const anchor1 = signatureBridge.getAnchor(
+      localChain1.chainId,
+      ethers.utils.parseEther('1')
+    )! as Anchors.Anchor;
+
+    // create a random account
+    const sender = ethers.Wallet.createRandom().connect(localChain1.provider());
+    // send them some ether.
+    const tx1 = await wallet1.sendTransaction({
+      to: sender.address,
+      value: ethers.utils.parseEther('10'),
+    });
+    expect(tx1.wait()).toResolve();
+    const relayerInfo = await webbRelayer.info();
+    const localChain1Info = relayerInfo.evm[localChain1.chainId];
+    const relayerFeePercentage =
+      localChain1Info?.contracts.find(
+        (c) => c.address === anchor1.contract.address
+      )?.withdrawFeePercentage ?? 0n;
+    // now we are ready to do the deposit.
+    anchor1.setSigner(sender);
+    const depositInfo = await anchor1.deposit(localChain1.chainId);
+
+    // now we need to generate the proof and send it to the relayer!.
+    const recipient = ethers.Wallet.createRandom().connect(
+      localChain1.provider()
+    );
+    const withdrawalInfo = await anchor1.setupWithdraw(
+      depositInfo.deposit,
+      depositInfo.index,
+      recipient.address,
+      wallet1.address,
+      relayerFeePercentage as bigint,
+      0
+    );
+
+    // ping the relayer!
+    await webbRelayer.ping();
+    // now send the withdrawal request.
+    const txHash = await webbRelayer.anchorWithdraw(
+      localChain1.chainId.toString(),
+      anchor1.getAddress(),
+      withdrawalInfo.proofEncoded,
+      //@ts-ignore
+      withdrawalInfo.args
+    );
+    anchor1.setSigner(wallet1);
+    expect(txHash).toBeDefined();
+  });
 
   afterAll(async () => {
     await localChain1.stop();
