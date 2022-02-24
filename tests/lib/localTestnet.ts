@@ -1,12 +1,18 @@
+import fs from 'fs';
 import ganache from 'ganache';
 import { ethers } from 'ethers';
 import { Server } from 'ganache';
-import { Bridges } from '@webb-tools/protocol-solidity';
-import { BridgeInput, DeployerConfig, GovernorConfig } from '@webb-tools/interfaces';
+import { Anchors, Bridges } from '@webb-tools/protocol-solidity';
+import {
+  BridgeInput,
+  DeployerConfig,
+  GovernorConfig,
+} from '@webb-tools/interfaces';
 import { MintableToken } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import path from 'path';
 import child from 'child_process';
+import { ChainInfo, Contract } from './webbRelayer';
 
 export type GanacheAccounts = {
   balance: string;
@@ -37,6 +43,7 @@ export function startGanacheServer(
 export class LocalChain {
   public readonly endpoint: string;
   private readonly server: Server<'ethereum'>;
+  private signatureBridge: Bridges.SignatureBridge | null = null;
   constructor(
     public readonly name: string,
     public readonly chainId: number,
@@ -58,7 +65,7 @@ export class LocalChain {
   public async deployToken(
     name: string,
     symbol: string,
-    wallet: ethers.Wallet,
+    wallet: ethers.Wallet
   ): Promise<MintableToken> {
     return MintableToken.createToken(name, symbol, wallet);
   }
@@ -68,9 +75,12 @@ export class LocalChain {
     localToken: MintableToken,
     otherToken: MintableToken,
     localWallet: ethers.Wallet,
-    otherWallet: ethers.Wallet,
+    otherWallet: ethers.Wallet
   ): Promise<Bridges.SignatureBridge> {
-    const gitRoot = child.execSync('git rev-parse --show-toplevel').toString().trim();
+    const gitRoot = child
+      .execSync('git rev-parse --show-toplevel')
+      .toString()
+      .trim();
     localWallet.connect(this.provider());
     otherWallet.connect(otherChain.provider());
     const bridgeInput: BridgeInput = {
@@ -94,26 +104,141 @@ export class LocalChain {
     const zkComponents = await fetchComponentsFromFilePaths(
       path.resolve(
         gitRoot,
-        'dkg-test-suite',
+        'tests',
         'protocol-solidity-fixtures/fixtures/bridge/2/poseidon_bridge_2.wasm'
       ),
       path.resolve(
         gitRoot,
-        'dkg-test-suite',
+        'tests',
         'protocol-solidity-fixtures/fixtures/bridge/2/witness_calculator.js'
       ),
       path.resolve(
         gitRoot,
-        'dkg-test-suite',
+        'tests',
         'protocol-solidity-fixtures/fixtures/bridge/2/circuit_final.zkey'
       )
     );
 
-    return Bridges.SignatureBridge.deployFixedDepositBridge(
+    const val = await Bridges.SignatureBridge.deployFixedDepositBridge(
       bridgeInput,
       deployerConfig,
       initialGovernors,
       zkComponents
     );
+    this.signatureBridge = val;
+    return val;
+  }
+
+  public async exportConfig(
+    signatureBridge?: Bridges.SignatureBridge
+  ): Promise<FullChainInfo> {
+    const bridge = signatureBridge ?? this.signatureBridge;
+    if (!bridge) {
+      throw new Error('Signature bridge not deployed yet');
+    }
+    const localAnchor = bridge.getAnchor(
+      this.chainId,
+      ethers.utils.parseEther('1')
+    );
+    const side = bridge.getBridgeSide(this.chainId);
+    const wallet = side.governor;
+    const otherChainIds = Array.from(bridge.bridgeSides.keys()).filter(
+      (chainId) => chainId !== this.chainId
+    );
+    const otherAnchors = otherChainIds.map(
+      (chainId) =>
+        [chainId, bridge.getAnchor(chainId, ethers.utils.parseEther('1'))] as [
+          number,
+          Anchors.Anchor
+        ]
+    );
+
+    const chainInfo: FullChainInfo = {
+      enabled: true,
+      httpEndpoint: this.endpoint,
+      wsEndpoint: this.endpoint.replace('http', 'ws'),
+      chainId: this.chainId,
+      beneficiary: wallet.address,
+      privateKey: wallet.privateKey,
+      contracts: [
+        // first the local Anchor
+        {
+          contract: 'Anchor',
+          address: localAnchor.getAddress(),
+          deployedAt: 1,
+          size: 1, // Ethers
+          withdrawFeePercentage: 0,
+          eventsWatcher: { enabled: true, pollingInterval: 1000 },
+          linkedAnchors: otherAnchors.map(([chainId, anchor]) => ({
+            chain: chainId.toString(),
+            address: anchor.getAddress(),
+          })),
+        },
+        // Next is the signature bridge contract.
+        // TODO: add signature bridge to the config.
+      ],
+    };
+    return chainInfo;
+  }
+
+  public async writeConfig(
+    path: string,
+    signatureBridge?: Bridges.SignatureBridge
+  ): Promise<void> {
+    const config = await this.exportConfig(signatureBridge);
+    type ConvertedConfig = Omit<
+      ConvertToKebabCase<typeof config>,
+      'contracts'
+    > & {
+      contracts: ConvertToKebabCase<Contract>[];
+    };
+    type FullConfigFile = {
+      webb: {
+        evm: {
+          // chainId as the chain identifier
+          [key: number]: ConvertedConfig;
+        };
+      };
+    };
+    const convertedConfig: ConvertedConfig = {
+      enabled: config.enabled,
+      'http-endpoint': config.httpEndpoint,
+      'ws-endpoint': config.wsEndpoint,
+      'chain-id': config.chainId,
+      beneficiary: config.beneficiary,
+      'private-key': config.privateKey,
+      contracts: config.contracts.map((contract) => ({
+        contract: contract.contract,
+        address: contract.address,
+        'deployed-at': contract.deployedAt,
+        size: contract.size,
+        'withdraw-fee-percentage': contract.withdrawFeePercentage,
+        'events-watcher': contract.eventsWatcher,
+        'linked-anchors': contract.linkedAnchors,
+      })),
+    };
+    const fullConfigFile: FullConfigFile = {
+      webb: {
+        evm: {
+          [this.chainId]: convertedConfig,
+        },
+      },
+    };
+    const configString = JSON.stringify(fullConfigFile, null, 2);
+    fs.writeFileSync(path, configString);
   }
 }
+
+type CamelToKebabCase<S extends string> = S extends `${infer T}${infer U}`
+  ? `${T extends Capitalize<T> ? '-' : ''}${Lowercase<T>}${CamelToKebabCase<U>}`
+  : S;
+
+type ConvertToKebabCase<T> = {
+  [P in keyof T as Lowercase<CamelToKebabCase<string & P>>]: T[P];
+};
+
+export type FullChainInfo = ChainInfo & {
+  httpEndpoint: string;
+  wsEndpoint: string;
+  privateKey: string;
+};

@@ -2,28 +2,34 @@ import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 
+export type WebbRelayerOptions = {
+  port: number;
+  tmp: boolean;
+  configDir: string;
+  buildDir?: 'debug' | 'release';
+};
 export class WebbRelayer {
   readonly #process: ChildProcess;
   readonly #logs: RawEvent[] = [];
   readonly #eventEmitter = new EventEmitter();
-  constructor(private readonly port: number, tmp: boolean = true) {
+  constructor(private readonly opts: WebbRelayerOptions) {
     const gitRoot = execSync('git rev-parse --show-toplevel').toString().trim();
-    const buildDir = process.env.RELAYER_BUILD ?? 'debug';
+    const buildDir = opts.buildDir ?? 'debug';
     const relayerPath = `${gitRoot}/target/${buildDir}/webb-relayer`;
     this.#process = spawn(
       relayerPath,
-      ['-c', `${gitRoot}/tests/config`, tmp ? '--tmp' : '', '-vvv'],
+      ['-c', opts.configDir, opts.tmp ? '--tmp' : '', '-vvv'],
       {
         env: {
           ...process.env,
-          WEBB_PORT: `${this.port}`,
+          WEBB_PORT: `${this.opts.port}`,
           RUST_LOG: `webb_probe=trace`,
         },
         killSignal: 'SIGILL',
       }
     );
     // log that we started
-    process.stdout.write(`Webb relayer started on port ${this.port}\n`);
+    process.stdout.write(`Webb relayer started on port ${this.opts.port}\n`);
     this.#process.stdout
       ?.pipe(JSONStream.parse())
       .on('data', (parsedLog: UnparsedRawEvent) => {
@@ -38,12 +44,14 @@ export class WebbRelayer {
       });
 
     this.#process.on('close', (code) => {
-      process.stdout.write(`Relayer ${this.port} exited with code: ${code}\n`);
+      process.stdout.write(
+        `Relayer ${this.opts.port} exited with code: ${code}\n`
+      );
     });
   }
 
   public async info(): Promise<WebbRelayerInfo> {
-    const endpoint = `http://127.0.0.1:${this.port}/api/v1/info`;
+    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/info`;
     const response = await fetch(endpoint);
     return response.json();
   }
@@ -125,7 +133,7 @@ export interface Evm {
 export interface ChainInfo {
   enabled: boolean;
   chainId: number;
-  beneficiary: string;
+  beneficiary?: string;
   contracts: Contract[];
 }
 
@@ -134,7 +142,7 @@ export interface Contract {
   address: string;
   deployedAt: number;
   eventsWatcher: EventsWatcher;
-  size?: number;
+  size: number;
   withdrawFeePercentage?: number;
   'dkg-node'?: string;
   linkedAnchors?: LinkedAnchor[];

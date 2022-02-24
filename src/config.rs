@@ -487,8 +487,8 @@ impl<'de> Deserialize<'de> for Suri {
 }
 pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
-    // A pattern that covers all toml files in the config directory and subdirectories.
-    let pattern = format!("{}/**/*.toml", path.as_ref().display());
+    // A pattern that covers all toml or json files in the config directory and subdirectories.
+    let pattern = format!("{}/**/*.{{toml,json}}", path.as_ref().display());
     // then get an iterator over all matching files
     let config_files = glob::glob(&pattern)?.flatten();
 
@@ -497,7 +497,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     // read through all config files for the first time
     // build up a collection of [contracts]
     for config_file in config_files {
-        let file = config::File::from(config_file).format(FileFormat::Toml);
+        let file = config::File::from(config_file);
         cfg.merge(file)?;
     }
 

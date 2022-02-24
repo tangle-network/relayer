@@ -31,6 +31,7 @@
     "node-fetch": "^2.6.1",
     "opsgenie-sdk": "^0.5.0",
     "snarkjs": "git+https://github.com/tornadocash/snarkjs.git#869181cfaf7526fe8972073d31655493a04326d5",
+    "temp": "^0.9.4",
     "websnark": "git+https://github.com/tornadocash/websnark.git#4c0af6a8b65aabea3c09f377f63c44e7a58afa6d",
     "ws": "^7.5.1"
   },
@@ -38,6 +39,7 @@
     "@types/jest": "^27.4.0",
     "@types/node": "v17",
     "@types/node-fetch": "^2.5.11",
+    "@types/temp": "^0.9.1",
     "@types/ws": "^7.4.5",
     "jest-extended": "^2.0.0",
     "prettier": "^2.5.1",
