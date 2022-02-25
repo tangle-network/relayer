@@ -12,7 +12,7 @@ import { MintableToken } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import path from 'path';
 import child from 'child_process';
-import { ChainInfo, Contract } from './webbRelayer';
+import { ChainInfo, Contract, EventsWatcher } from './webbRelayer';
 
 export type GanacheAccounts = {
   balance: string;
@@ -186,18 +186,23 @@ export class LocalChain {
     signatureBridge?: Bridges.SignatureBridge
   ): Promise<void> {
     const config = await this.exportConfig(signatureBridge);
+    // don't mind my typescript typing here XD
+    type ConvertedContract = Omit<
+      ConvertToKebabCase<Contract>,
+      'events-watcher'
+    > & {
+      'events-watcher': ConvertToKebabCase<EventsWatcher>;
+    };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
       'contracts'
     > & {
-      contracts: ConvertToKebabCase<Contract>[];
+      contracts: ConvertedContract[];
     };
     type FullConfigFile = {
-      webb: {
-        evm: {
-          // chainId as the chain identifier
-          [key: number]: ConvertedConfig;
-        };
+      evm: {
+        // chainId as the chain identifier
+        [key: number]: ConvertedConfig;
       };
     };
     const convertedConfig: ConvertedConfig = {
@@ -212,16 +217,18 @@ export class LocalChain {
         address: contract.address,
         'deployed-at': contract.deployedAt,
         size: contract.size,
+        'withdraw-gaslimit': '0x5B8D80',
         'withdraw-fee-percentage': contract.withdrawFeePercentage,
-        'events-watcher': contract.eventsWatcher,
+        'events-watcher': {
+          enabled: contract.eventsWatcher.enabled,
+          'polling-interval': contract.eventsWatcher.pollingInterval,
+        },
         'linked-anchors': contract.linkedAnchors,
       })),
     };
     const fullConfigFile: FullConfigFile = {
-      webb: {
-        evm: {
-          [this.chainId]: convertedConfig,
-        },
+      evm: {
+        [this.chainId]: convertedConfig,
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);

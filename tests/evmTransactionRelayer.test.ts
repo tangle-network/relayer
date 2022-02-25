@@ -158,15 +158,21 @@ describe('EVM Transaction Relayer', () => {
       0
     );
 
+    // ok, lets try to do a withdraw!
+    const tx2 = await anchor1.contract.withdraw(
+      `0x${withdrawalInfo.proofEncoded}`,
+      withdrawalInfo.publicInputs
+    );
+    await expect(tx2.wait()).toResolve();
+
     // ping the relayer!
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
       localChain1.chainId.toString(),
       anchor1.getAddress(),
-      withdrawalInfo.proofEncoded,
-      //@ts-ignore
-      withdrawalInfo.args
+      `0x${withdrawalInfo.proofEncoded}`,
+      withdrawalInfo.publicInputs
     );
     anchor1.setSigner(wallet1);
     expect(txHash).toBeDefined();

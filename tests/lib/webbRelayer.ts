@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import fetch from 'node-fetch';
+import { IFixedAnchorPublicInputs } from '@webb-tools/interfaces';
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
@@ -9,6 +10,7 @@ export type WebbRelayerOptions = {
   tmp: boolean;
   configDir: string;
   buildDir?: 'debug' | 'release';
+  showLogs?: boolean;
 };
 export class WebbRelayer {
   readonly #process: ChildProcess;
@@ -20,7 +22,7 @@ export class WebbRelayer {
     const relayerPath = `${gitRoot}/target/${buildDir}/webb-relayer`;
     this.#process = spawn(
       relayerPath,
-      ['-c', opts.configDir, opts.tmp ? '--tmp' : '', '-vvv'],
+      ['-c', opts.configDir, opts.tmp ? '--tmp' : '', '-vvvv'],
       {
         env: {
           ...process.env,
@@ -31,10 +33,17 @@ export class WebbRelayer {
       }
     );
     // log that we started
-    process.stdout.write(`Webb relayer started on port ${this.opts.port}\n`);
+    process.stdout.write(
+      `Webb relayer started on port ${
+        this.opts.port
+      } with args: ${this.#process.spawnargs.join(' ')}\n`
+    );
     this.#process.stdout
       ?.pipe(JSONStream.parse())
       .on('data', (parsedLog: UnparsedRawEvent) => {
+        if (this.opts.showLogs) {
+          process.stdout.write(`${JSON.stringify(parsedLog)}\n`);
+        }
         if (parsedLog.target === 'webb_probe') {
           const rawEvent = {
             timestamp: new Date(parsedLog.timestamp),
@@ -60,6 +69,10 @@ export class WebbRelayer {
 
   public async stop(): Promise<void> {
     this.#process.kill('SIGINT');
+  }
+
+  public dumpLogs(): RawEvent[] {
+    return this.#logs;
   }
 
   public async waitUntilReady(): Promise<void> {
@@ -111,10 +124,10 @@ export class WebbRelayer {
         if (msg.kind === 'pong') {
           resolve();
         } else {
-          reject(new Error(`Unexpected message: ${msg.kind}`));
+          reject(new Error(`Unexpected message: ${msg.kind}: ${data}`));
         }
       });
-      ws.send(JSON.stringify({ ping: '' }));
+      ws.send(JSON.stringify({ ping: [] }));
     });
   }
 
@@ -122,7 +135,7 @@ export class WebbRelayer {
     chainName: string,
     anchorAddress: string,
     proof: string,
-    args: [string, string, string, string, string, string, string, string]
+    publicInputs: IFixedAnchorPublicInputs
   ): Promise<{ txHash: string }> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
     // create a new websocket connection to the relayer.
@@ -182,13 +195,13 @@ export class WebbRelayer {
             chain: chainName,
             contract: anchorAddress,
             proof,
-            roots: args[0],
-            nullifierHash: args[1],
-            refreshCommitment: args[2],
-            recipient: args[3],
-            relayer: args[4],
-            fee: args[5],
-            refund: args[6],
+            roots: publicInputs._roots,
+            nullifierHash: publicInputs._nullifierHash,
+            refreshCommitment: publicInputs._refreshCommitment,
+            recipient: publicInputs._recipient,
+            relayer: publicInputs._relayer,
+            fee: publicInputs._fee,
+            refund: publicInputs._refund,
           },
         },
       };
@@ -212,7 +225,7 @@ export interface RawEvent {
   [key: string]: any;
 }
 
-type EventKind = 'lifecycle' | 'sync';
+type EventKind = 'lifecycle' | 'sync' | 'relay_tx';
 type EventTarget = 'webb_probe';
 
 export type EventSelector = {
@@ -242,6 +255,7 @@ export interface Contract {
   deployedAt: number;
   eventsWatcher: EventsWatcher;
   size: number;
+  withdrawGaslimit?: `0x${string}`;
   withdrawFeePercentage?: number;
   'dkg-node'?: string;
   linkedAnchors?: LinkedAnchor[];

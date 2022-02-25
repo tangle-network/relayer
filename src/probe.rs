@@ -10,4 +10,7 @@ pub enum Kind {
     /// Relayer Sync state on a specific chain/node.
     #[display(fmt = "sync")]
     Sync,
+    /// Relaying a transaction state.
+    #[display(fmt = "relay_tx")]
+    RelayTx,
 }
