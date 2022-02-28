@@ -62,7 +62,7 @@ export class WebbRelayer {
   public async info(): Promise<WebbRelayerInfo> {
     const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/info`;
     const response = await fetch(endpoint);
-    return response.json();
+    return response.json() as Promise<WebbRelayerInfo>;
   }
 
   public async stop(): Promise<void> {

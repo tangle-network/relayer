@@ -9,6 +9,7 @@ import temp from 'temp';
 import getPort, { portNumbers } from 'get-port';
 import { LocalChain } from './lib/localTestnet';
 import { calcualteRelayerFees, WebbRelayer } from './lib/webbRelayer';
+import { LocalDkg } from './lib/localDkg';
 
 describe('EVM Transaction Relayer', () => {
   const PK1 =
@@ -16,18 +17,36 @@ describe('EVM Transaction Relayer', () => {
   const PK2 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmp = temp.track();
-  jest.setTimeout(90_000);
+  jest.setTimeout(120_000);
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
   let localChain1: LocalChain;
   let localChain2: LocalChain;
   let signatureBridge: Bridges.SignatureBridge;
-
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
+
+  let aliceNode: LocalDkg;
+  let bobNode: LocalDkg;
+  let charlieNode: LocalDkg;
 
   let webbRelayer: WebbRelayer;
 
   beforeAll(async () => {
+    aliceNode = await LocalDkg.start({
+      ports: 'auto',
+      usageMode: { mode: 'docker', forcePullImage: false },
+      authority: 'alice',
+    });
+    bobNode = await LocalDkg.start({
+      ports: 'auto',
+      usageMode: { mode: 'docker', forcePullImage: false },
+      authority: 'bob',
+    });
+    charlieNode = await LocalDkg.start({
+      ports: 'auto',
+      usageMode: { mode: 'docker', forcePullImage: false },
+      authority: 'charlie',
+    });
     // first we need to start local evm node.
     const localChain1Port = await getPort({ port: portNumbers(3333, 4444) });
     localChain1 = new LocalChain('TestA', localChain1Port, [
@@ -176,6 +195,9 @@ describe('EVM Transaction Relayer', () => {
   });
 
   afterAll(async () => {
+    await aliceNode.stop();
+    await bobNode.stop();
+    await charlieNode.stop();
     await localChain1.stop();
     await localChain2.stop();
     await webbRelayer.stop();
