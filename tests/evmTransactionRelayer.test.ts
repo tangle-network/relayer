@@ -16,7 +16,7 @@ describe('EVM Transaction Relayer', () => {
   const PK2 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmp = temp.track();
-  jest.setTimeout(40_000);
+  jest.setTimeout(90_000);
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
   let localChain1: LocalChain;
   let localChain2: LocalChain;

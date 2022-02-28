@@ -35,11 +35,7 @@ export class WebbRelayer {
       }
     );
     // log that we started
-    process.stdout.write(
-      `Webb relayer started on port ${
-        this.opts.port
-      } with args: ${this.#process.spawnargs.join(' ')}\n`
-    );
+    process.stdout.write(`Webb relayer started on port ${this.opts.port}\n`);
     this.#process.stdout
       ?.pipe(JSONStream.parse())
       .on('data', (parsedLog: UnparsedRawEvent) => {
@@ -136,79 +132,15 @@ export class WebbRelayer {
   public async anchorWithdraw(
     chainName: string,
     anchorAddress: string,
-    proof: string,
+    proof: `0x${string}`,
     publicInputs: IFixedAnchorPublicInputs
-  ): Promise<{ txHash: string }> {
+  ): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-    return new Promise(async (resolve, reject) => {
-      ws.on('error', reject);
-      ws.on('message', (data) => {
-        const o = JSON.parse(data.toString());
-        const msg = parseRelayTxMessage(o);
-        if (msg.kind === 'error') {
-          ws.close();
-          reject(msg.message);
-        } else if (msg.kind === 'pong') {
-          ws.close();
-          // unreachable.
-          reject('unreachable');
-        } else if (msg.kind === 'network') {
-          const networkError =
-            msg.network === 'unsupportedChain' ||
-            msg.network === 'unsupportedContract' ||
-            msg.network === 'disconnected' ||
-            msg.network === 'invalidRelayerAddress';
-          const maybeFailed = msg.network as { failed: { reason: string } };
-          if (networkError) {
-            ws.close();
-            reject(msg.network);
-          } else if (maybeFailed.failed) {
-            ws.close();
-            reject(maybeFailed.failed.reason);
-          }
-        } else if (msg.kind === 'unimplemented') {
-          ws.close();
-          reject(msg.message);
-        } else if (msg.kind === 'unknown') {
-          ws.close();
-          console.log(o);
-          reject('Got unknown response from the relayer!');
-        } else if (msg.kind === 'withdraw') {
-          const isError =
-            msg.withdraw === 'invalidMerkleRoots' ||
-            msg.withdraw === 'droppedFromMemPool' ||
-            (msg.withdraw as { errored: any }).errored;
-          const success = msg.withdraw as { finalized: { txHash: string } };
-          if (isError) {
-            ws.close();
-            reject(msg.withdraw);
-          } else if (success.finalized) {
-            ws.close();
-            resolve({ txHash: success.finalized.txHash });
-          }
-        }
-      });
-      const cmd = {
-        evm: {
-          anchorRelayTx: {
-            chain: chainName,
-            contract: anchorAddress,
-            proof,
-            roots: publicInputs._roots,
-            nullifierHash: publicInputs._nullifierHash,
-            refreshCommitment: publicInputs._refreshCommitment,
-            recipient: publicInputs._recipient,
-            relayer: publicInputs._relayer,
-            fee: publicInputs._fee,
-            refund: publicInputs._refund,
-          },
-        },
-      };
-      ws.send(JSON.stringify(cmd));
-    });
+    const input = { chainName, anchorAddress, proof, publicInputs };
+    return txHashOrReject(ws, input);
   }
 }
 
@@ -222,6 +154,90 @@ export function calcualteRelayerFees(
   const feeBigMill = principleBig.mul(withdrawFeeMillBig);
   const feeBig = feeBigMill.div(BigNumber.from(1000000));
   return feeBig;
+}
+
+async function txHashOrReject(
+  ws: WebSocket,
+  {
+    chainName,
+    anchorAddress,
+    proof,
+    publicInputs,
+  }: {
+    chainName: string;
+    anchorAddress: string;
+    proof: `0x${string}`;
+    publicInputs: IFixedAnchorPublicInputs;
+  }
+): Promise<`0x${string}`> {
+  return new Promise((resolve, reject) => {
+    ws.on('error', reject);
+    ws.on('message', (data) => {
+      const o = JSON.parse(data.toString());
+      const msg = parseRelayTxMessage(o);
+      if (msg.kind === 'error') {
+        ws.close();
+        reject(msg.message);
+      } else if (msg.kind === 'pong') {
+        ws.close();
+        // unreachable.
+        reject('unreachable');
+      } else if (msg.kind === 'network') {
+        const networkError =
+          msg.network === 'unsupportedChain' ||
+          msg.network === 'unsupportedContract' ||
+          msg.network === 'disconnected' ||
+          msg.network === 'invalidRelayerAddress';
+        const maybeFailed = msg.network as { failed: { reason: string } };
+        if (networkError) {
+          ws.close();
+          reject(msg.network);
+        } else if (maybeFailed.failed) {
+          ws.close();
+          reject(maybeFailed.failed.reason);
+        }
+      } else if (msg.kind === 'unimplemented') {
+        ws.close();
+        reject(msg.message);
+      } else if (msg.kind === 'unknown') {
+        ws.close();
+        console.log(o);
+        reject('Got unknown response from the relayer!');
+      } else if (msg.kind === 'withdraw') {
+        const isError =
+          msg.withdraw === 'invalidMerkleRoots' ||
+          msg.withdraw === 'droppedFromMemPool' ||
+          (msg.withdraw as { errored: any }).errored;
+        const success = msg.withdraw as {
+          finalized: { txHash: `0x${string}` };
+        };
+        if (isError) {
+          ws.close();
+          reject(msg.withdraw);
+        } else if (success.finalized) {
+          ws.close();
+          resolve(success.finalized.txHash);
+        }
+      }
+    });
+    const cmd = {
+      evm: {
+        anchorRelayTx: {
+          chain: chainName,
+          contract: anchorAddress,
+          proof,
+          roots: publicInputs._roots,
+          nullifierHash: publicInputs._nullifierHash,
+          refreshCommitment: publicInputs._refreshCommitment,
+          recipient: publicInputs._recipient,
+          relayer: publicInputs._relayer,
+          fee: publicInputs._fee,
+          refund: publicInputs._refund,
+        },
+      },
+    };
+    ws.send(JSON.stringify(cmd));
+  });
 }
 
 interface UnparsedRawEvent {
