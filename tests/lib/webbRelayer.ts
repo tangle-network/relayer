@@ -4,6 +4,7 @@ import { IFixedAnchorPublicInputs } from '@webb-tools/interfaces';
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
+import { BigNumber } from 'ethers';
 
 export type WebbRelayerOptions = {
   port: number;
@@ -12,6 +13,7 @@ export type WebbRelayerOptions = {
   buildDir?: 'debug' | 'release';
   showLogs?: boolean;
 };
+
 export class WebbRelayer {
   readonly #process: ChildProcess;
   readonly #logs: RawEvent[] = [];
@@ -208,6 +210,18 @@ export class WebbRelayer {
       ws.send(JSON.stringify(cmd));
     });
   }
+}
+
+export function calcualteRelayerFees(
+  denomination: string,
+  feePercentage: number
+): BigNumber {
+  const principleBig = BigNumber.from(denomination);
+  const withdrawFeeMill = feePercentage * 1000000;
+  const withdrawFeeMillBig = BigNumber.from(withdrawFeeMill);
+  const feeBigMill = principleBig.mul(withdrawFeeMillBig);
+  const feeBig = feeBigMill.div(BigNumber.from(1000000));
+  return feeBig;
 }
 
 interface UnparsedRawEvent {

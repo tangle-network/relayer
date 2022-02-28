@@ -8,9 +8,13 @@ import { ethers } from 'ethers';
 import temp from 'temp';
 import getPort, { portNumbers } from 'get-port';
 import { LocalChain } from './lib/localTestnet';
-import { WebbRelayer } from './lib/webbRelayer';
+import { calcualteRelayerFees, WebbRelayer } from './lib/webbRelayer';
 
 describe('EVM Transaction Relayer', () => {
+  const PK1 =
+    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
+  const PK2 =
+    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmp = temp.track();
   jest.setTimeout(40_000);
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
@@ -18,12 +22,8 @@ describe('EVM Transaction Relayer', () => {
   let localChain2: LocalChain;
   let signatureBridge: Bridges.SignatureBridge;
 
-  let wallet1 = new ethers.Wallet(
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e'
-  );
-  let wallet2 = new ethers.Wallet(
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f'
-  );
+  let wallet1: ethers.Wallet;
+  let wallet2: ethers.Wallet;
 
   let webbRelayer: WebbRelayer;
 
@@ -32,7 +32,7 @@ describe('EVM Transaction Relayer', () => {
     const localChain1Port = await getPort({ port: portNumbers(3333, 4444) });
     localChain1 = new LocalChain('TestA', localChain1Port, [
       {
-        secretKey: wallet1.privateKey,
+        secretKey: PK1,
         balance: ethers.utils.parseEther('1000').toHexString(),
       },
     ]);
@@ -40,13 +40,13 @@ describe('EVM Transaction Relayer', () => {
     const localChain2Port = await getPort({ port: portNumbers(3333, 4444) });
     localChain2 = new LocalChain('TestB', localChain2Port, [
       {
-        secretKey: wallet2.privateKey,
+        secretKey: PK2,
         balance: ethers.utils.parseEther('1000').toHexString(),
       },
     ]);
 
-    wallet1 = wallet1.connect(localChain1.provider());
-    wallet2 = wallet2.connect(localChain2.provider());
+    wallet1 = new ethers.Wallet(PK1, localChain1.provider());
+    wallet2 = new ethers.Wallet(PK2, localChain2.provider());
     // Deploy the token.
     const localToken1 = await localChain2.deployToken(
       'Webb Token',
@@ -126,44 +126,42 @@ describe('EVM Transaction Relayer', () => {
       localChain1.chainId,
       ethers.utils.parseEther('1')
     )! as Anchors.Anchor;
+    await anchor1.setSigner(wallet1);
+    const tokenAddress = signatureBridge.getWebbTokenAddress(
+      localChain1.chainId
+    )!;
+    const token = await Tokens.MintableToken.tokenFromAddress(
+      tokenAddress,
+      wallet1
+    );
+    const webbBalance = await token.getBalance(wallet1.address);
+    expect(webbBalance.toBigInt()).toEqual(
+      ethers.utils.parseEther('1000').toBigInt()
+    );
+    // now we are ready to do the deposit.
+    const depositInfo = await anchor1.deposit();
+    const recipient = new ethers.Wallet(
+      ethers.utils.randomBytes(32),
+      localChain1.provider()
+    );
 
-    // create a random account
-    const sender = ethers.Wallet.createRandom().connect(localChain1.provider());
-    // send them some ether.
-    const tx1 = await wallet1.sendTransaction({
-      to: sender.address,
-      value: ethers.utils.parseEther('10'),
-    });
-    expect(tx1.wait()).toResolve();
     const relayerInfo = await webbRelayer.info();
     const localChain1Info = relayerInfo.evm[localChain1.chainId];
     const relayerFeePercentage =
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
-      )?.withdrawFeePercentage ?? 0n;
-    // now we are ready to do the deposit.
-    anchor1.setSigner(sender);
-    const depositInfo = await anchor1.deposit(localChain1.chainId);
-
-    // now we need to generate the proof and send it to the relayer!.
-    const recipient = ethers.Wallet.createRandom().connect(
-      localChain1.provider()
-    );
+      )?.withdrawFeePercentage ?? 0;
     const withdrawalInfo = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
       recipient.address,
       wallet1.address,
-      relayerFeePercentage as bigint,
+      calcualteRelayerFees(
+        anchor1.denomination!,
+        relayerFeePercentage
+      ).toBigInt(),
       0
     );
-
-    // ok, lets try to do a withdraw!
-    const tx2 = await anchor1.contract.withdraw(
-      `0x${withdrawalInfo.proofEncoded}`,
-      withdrawalInfo.publicInputs
-    );
-    await expect(tx2.wait()).toResolve();
 
     // ping the relayer!
     await webbRelayer.ping();
@@ -174,7 +172,6 @@ describe('EVM Transaction Relayer', () => {
       `0x${withdrawalInfo.proofEncoded}`,
       withdrawalInfo.publicInputs
     );
-    anchor1.setSigner(wallet1);
     expect(txHash).toBeDefined();
   });
 
