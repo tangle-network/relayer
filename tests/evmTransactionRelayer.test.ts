@@ -47,7 +47,7 @@ describe('EVM Transaction Relayer', () => {
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
     // Deploy the token.
-    const localToken1 = await localChain2.deployToken(
+    const localToken1 = await localChain1.deployToken(
       'Webb Token',
       'WEBB',
       wallet1
