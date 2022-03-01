@@ -30,7 +30,7 @@ use webb::evm::ethers::{
 
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::darkwebb_standalone_runtime::Element;
 use webb::substrate::subxt::{self, PairSigner, TransactionStatus};
-use webb::substrate::subxt::{DefaultConfig};
+use webb::substrate::subxt::DefaultConfig;
 use webb::substrate::protocol_substrate_runtime::api::RuntimeApi;
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
@@ -234,7 +234,7 @@ pub struct AnchorRelayTransaction {
     /// Proof bytes
     pub proof: Bytes,
     /// Args...
-    pub roots: Vec<u8>,
+    pub roots: Bytes,
     pub refresh_commitment: H256,
     pub nullifier_hash: H256,
     pub recipient: Address, // H160 ([u8; 20])
@@ -263,6 +263,7 @@ pub enum NetworkStatus {
     Disconnected,
     UnsupportedContract,
     UnsupportedChain,
+    Misconfigured,
     InvalidRelayerAddress,
 }
 
@@ -327,6 +328,12 @@ async fn handle_tornado_relay_tx<'a>(
     let chain = match ctx.config.evm.get(&requested_chain) {
         Some(v) => v,
         None => {
+            tracing::event!(
+                target: crate::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %crate::probe::Kind::RelayTx,
+                network = ?NetworkStatus::UnsupportedChain,
+            );
             let _ = stream.send(Network(NetworkStatus::UnsupportedChain)).await;
             return;
         }
@@ -345,6 +352,12 @@ async fn handle_tornado_relay_tx<'a>(
     let contract_config = match supported_contracts.get(&cmd.contract) {
         Some(config) => config,
         None => {
+            tracing::event!(
+                target: crate::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %crate::probe::Kind::RelayTx,
+                network = ?NetworkStatus::UnsupportedContract,
+            );
             let _ = stream
                 .send(Network(NetworkStatus::UnsupportedContract))
                 .await;
@@ -356,6 +369,12 @@ async fn handle_tornado_relay_tx<'a>(
         Ok(v) => v,
         Err(e) => {
             tracing::error!("Misconfigured Network: {}", e);
+            tracing::event!(
+                target: crate::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %crate::probe::Kind::RelayTx,
+                network = ?NetworkStatus::Misconfigured,
+            );
             let _ = stream
                 .send(Error(format!("Misconfigured Network: {:?}", cmd.chain)))
                 .await;
@@ -370,6 +389,12 @@ async fn handle_tornado_relay_tx<'a>(
     };
 
     if cmd.relayer != reward_address {
+        tracing::event!(
+            target: crate::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %crate::probe::Kind::RelayTx,
+            network = ?NetworkStatus::InvalidRelayerAddress,
+        );
         let _ = stream
             .send(Network(NetworkStatus::InvalidRelayerAddress))
             .await;
@@ -381,16 +406,41 @@ async fn handle_tornado_relay_tx<'a>(
         cmd.chain,
         chain.http_endpoint
     );
+    tracing::event!(
+        target: crate::probe::TARGET,
+        tracing::Level::DEBUG,
+        kind = %crate::probe::Kind::RelayTx,
+        network = ?NetworkStatus::Connecting,
+    );
     let _ = stream.send(Network(NetworkStatus::Connecting)).await;
     let provider = match ctx.evm_provider(&cmd.chain).await {
         Ok(value) => {
+            tracing::event!(
+                target: crate::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %crate::probe::Kind::RelayTx,
+                network = ?NetworkStatus::Connected,
+            );
             let _ = stream.send(Network(NetworkStatus::Connected)).await;
             value
         }
         Err(e) => {
             let reason = e.to_string();
+            tracing::event!(
+                target: crate::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %crate::probe::Kind::RelayTx,
+                network = "Failed",
+                %reason,
+            );
             let _ =
                 stream.send(Network(NetworkStatus::Failed { reason })).await;
+            tracing::event!(
+                target: crate::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %crate::probe::Kind::RelayTx,
+                network = ?NetworkStatus::Disconnected,
+            );
             let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
             return;
         }
@@ -402,6 +452,13 @@ async fn handle_tornado_relay_tx<'a>(
     let denomination = match contract.denomination().call().await {
         Ok(v) => v,
         Err(e) => {
+            tracing::event!(
+                target: crate::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %crate::probe::Kind::RelayTx,
+                network = "Failed",
+                reason = "Failed to get denomination from contract",
+            );
             tracing::error!("Misconfigured Contract Denomination: {}", e);
             let _ = stream
                 .send(Error(format!(
@@ -557,7 +614,8 @@ async fn handle_anchor_relay_tx<'a>(
     }
 
     // validate that the roots are multiple of 32s
-    if cmd.roots.len() % 32 != 0 {
+    let roots = cmd.roots.to_vec();
+    if roots.len() % 32 != 0 {
         let _ = stream
             .send(Withdraw(WithdrawStatus::InvalidMerkleRoots))
             .await;
@@ -617,7 +675,7 @@ async fn handle_anchor_relay_tx<'a>(
     }
 
     let inputs = PublicInputs {
-        roots: cmd.roots.into(),
+        roots: cmd.roots,
         refresh_commitment: cmd.refresh_commitment.to_fixed_bytes(),
         nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
         recipient: cmd.recipient,
@@ -625,7 +683,7 @@ async fn handle_anchor_relay_tx<'a>(
         fee: cmd.fee,
         refund: cmd.refund,
     };
-
+    tracing::trace!(%cmd.proof, ?inputs, "Client Proof");
     let call = contract.withdraw(cmd.proof, inputs);
     // Make a dry call, to make sure the transaction will go through successfully
     // to avoid wasting fees on invalid calls.

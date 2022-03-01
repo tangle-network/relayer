@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
 
-use config::FileFormat;
 use ethereum_types::{Address, Secret, U256};
 use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::{Pair as Sr25519Pair, Public};
@@ -487,23 +486,46 @@ impl<'de> Deserialize<'de> for Suri {
 }
 pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
-    // A pattern that covers all toml files in the config directory and subdirectories.
-    let pattern = format!("{}/**/*.toml", path.as_ref().display());
+    // A pattern that covers all toml or json files in the config directory and subdirectories.
+    let toml_pattern = format!("{}/**/*.toml", path.as_ref().display());
+    let json_pattern = format!("{}/**/*.json", path.as_ref().display());
+    tracing::trace!(
+        "Loading config files from {} and {}",
+        toml_pattern,
+        json_pattern
+    );
     // then get an iterator over all matching files
-    let config_files = glob::glob(&pattern)?.flatten();
-
+    let config_files = glob::glob(&toml_pattern)?
+        .flatten()
+        .chain(glob::glob(&json_pattern)?.flatten());
     let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
 
     // read through all config files for the first time
     // build up a collection of [contracts]
     for config_file in config_files {
-        let file = config::File::from(config_file).format(FileFormat::Toml);
-        cfg.merge(file)?;
+        tracing::trace!("Loading config file: {}", config_file.display());
+        // get file extension
+        let ext = config_file
+            .extension()
+            .map(|e| e.to_str().unwrap_or(""))
+            .unwrap_or("");
+        let format = match ext {
+            "toml" => config::FileFormat::Toml,
+            "json" => config::FileFormat::Json,
+            _ => {
+                tracing::warn!("Unknown file extension: {}", ext);
+                continue;
+            }
+        };
+        let file = config::File::from(config_file).format(format);
+        if let Err(e) = cfg.merge(file) {
+            tracing::warn!("Error while loading config file: {} skipping!", e);
+            continue;
+        }
     }
 
     // also merge in the environment (with a prefix of WEBB).
     cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
-
     // and finally deserialize the config and post-process it
     let config: Result<
         WebbRelayerConfig,
