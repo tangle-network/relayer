@@ -101,18 +101,30 @@ export class LocalChain {
       [this.chainId]: localWallet,
       [otherChain.chainId]: otherWallet,
     };
+    // copy the witness_calculator.js file to @webb-tools/utils, but use the .cjs extension
+    // to avoid the babel compiler to compile it.
+    const witnessCalculatorPath = path.join(
+      gitRoot,
+      'tests',
+      'protocol-solidity-fixtures/fixtures/bridge/2/witness_calculator.js'
+    );
+    const witnessCalculatorCjsPath = path.join(
+      gitRoot,
+      'tests',
+      'node_modules/@webb-tools/utils/witness_calculator.cjs'
+    );
+    // check if the cjs file exists, if not, copy the js file to the cjs file
+    if (!fs.existsSync(witnessCalculatorCjsPath)) {
+      fs.copyFileSync(witnessCalculatorPath, witnessCalculatorCjsPath);
+    }
     const zkComponents = await fetchComponentsFromFilePaths(
-      path.resolve(
+      path.join(
         gitRoot,
         'tests',
         'protocol-solidity-fixtures/fixtures/bridge/2/poseidon_bridge_2.wasm'
       ),
-      path.resolve(
-        gitRoot,
-        'tests',
-        'protocol-solidity-fixtures/fixtures/bridge/2/witness_calculator.js'
-      ),
-      path.resolve(
+      witnessCalculatorCjsPath,
+      path.join(
         gitRoot,
         'tests',
         'protocol-solidity-fixtures/fixtures/bridge/2/circuit_final.zkey'

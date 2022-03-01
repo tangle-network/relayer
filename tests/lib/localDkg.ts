@@ -3,8 +3,7 @@
 
 import getPort, { portNumbers } from 'get-port';
 import { ChildProcess, execSync, spawn } from 'child_process';
-import { ApiPromise } from '@polkadot/api/promise';
-import { WsProvider } from '@polkadot/rpc-provider/ws';
+import { ApiPromise, WsProvider } from '@polkadot/api';
 
 const DKG_STANDALONE_DOCKER_IMAGE_URL =
   'ghcr.io/webb-tools/dkg-standalone-node:edge';
