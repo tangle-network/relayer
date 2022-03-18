@@ -150,9 +150,8 @@ pub enum SledQueueKey {
         chain_id: types::U256,
         optional_key: Option<[u8; 64]>,
     },
-    BridgeCmd {
-        bridge_key: BridgeKey,
-    },
+    #[allow(dead_code)]
+    BridgeCmd { bridge_key: BridgeKey },
 }
 
 impl SledQueueKey {
@@ -163,6 +162,7 @@ impl SledQueueKey {
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_evm_with_custom_key(
         chain_id: types::U256,
         key: [u8; 64],
@@ -173,6 +173,7 @@ impl SledQueueKey {
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_bridge_key(bridge_key: BridgeKey) -> Self {
         Self::BridgeCmd { bridge_key }
     }
