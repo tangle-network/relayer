@@ -13,7 +13,14 @@
 #### Unix (Linux, macOS, WSL2, ..)
 
 ```
-curl -fsSL https://git.io/get-webb-relayer.sh | sh
+git clone https://github.com/webb-tools/relayer.git
+
+cargo build --release
+```
+
+## Local Substrate Mixer
+```
+Ideal for development,
 ```
 
 ## Running and Configuring 🚀
