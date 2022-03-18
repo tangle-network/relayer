@@ -41,7 +41,7 @@ hex = { version = "0.4", default-features = false }
 # just to make it compile on linux where the openssl is not available.
 # until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
 native-tls = { version = "^0.2", features = ["vendored"] }
-webb = { git = 'https://github.com/webb-tools/webb-rs', rev = "62340f36", default-features = false }
+webb = { version = "0.3.0", default-features = false }
 ethereum-types = "0.12"
 thiserror = "^1.0"
 glob = "^0.3"
