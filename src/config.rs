@@ -217,9 +217,7 @@ pub struct LinkedAnchorConfig {
 #[serde(tag = "contract")]
 pub enum Contract {
     Tornado(TornadoContractConfig),
-    Anchor(AnchorContractConfig),
     AnchorOverDKG(AnchorContractOverDKGConfig),
-    Bridge(BridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
 
@@ -264,24 +262,6 @@ pub struct TornadoContractConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct AnchorContractConfig {
-    #[serde(flatten)]
-    pub common: CommonContractConfig,
-    /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
-    pub events_watcher: EventsWatcherConfig,
-    /// The size of this contract
-    pub size: f64,
-    /// Anchor withdraw configuration.
-    #[serde(flatten)]
-    pub withdraw_config: AnchorWithdrawConfig,
-    /// A List of linked Anchor Contracts (on other chains) to this contract.
-    #[serde(rename(serialize = "linkedAnchors"))]
-    pub linked_anchors: Vec<LinkedAnchorConfig>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
 pub struct AnchorContractOverDKGConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
@@ -300,15 +280,6 @@ pub struct AnchorContractOverDKGConfig {
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"))]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
-}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct BridgeContractConfig {
-    #[serde(flatten)]
-    pub common: CommonContractConfig,
-    /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
-    pub events_watcher: EventsWatcherConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -577,7 +548,7 @@ fn postloading_process(
     // check that all required chains are already present in the config.
     for (chain_name, chain_config) in &config.evm {
         let anchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::Anchor(cfg) => Some(cfg),
+            Contract::AnchorOverDKG(cfg) => Some(cfg),
             _ => None,
         });
         for anchor in anchors {

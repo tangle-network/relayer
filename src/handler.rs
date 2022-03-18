@@ -13,9 +13,10 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use warp::ws::Message;
+use webb::evm::contract::protocol_solidity::fixed_deposit_anchor::Proof;
 use webb::evm::contract::{
     protocol_solidity::{
-        fixed_deposit_anchor::PublicInputs, FixedDepositAnchorContract,
+        fixed_deposit_anchor::ExtData, FixedDepositAnchorContract,
     },
     tornado::TornadoContract,
 };
@@ -27,14 +28,14 @@ use webb::evm::ethers::{
     signers::{LocalWallet, Signer},
     types::Bytes,
 };
+use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standalone_runtime::Element;
 
-use webb::substrate::protocol_substrate_runtime::api::runtime_types::darkwebb_standalone_runtime::Element;
-use webb::substrate::subxt::{self, PairSigner, TransactionStatus};
-use webb::substrate::subxt::DefaultConfig;
-use webb::substrate::protocol_substrate_runtime::api::RuntimeApi;
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
+use webb::substrate::protocol_substrate_runtime::api::RuntimeApi;
 use webb::substrate::subxt::sp_core::Pair;
+use webb::substrate::subxt::DefaultConfig;
+use webb::substrate::subxt::{self, PairSigner, TransactionStatus};
 
 type CommandStream = mpsc::Sender<CommandResponse>;
 
@@ -237,6 +238,7 @@ pub struct AnchorRelayTransaction {
     pub roots: Bytes,
     pub refresh_commitment: H256,
     pub nullifier_hash: H256,
+    pub ext_data_hash: H256,
     pub recipient: Address, // H160 ([u8; 20])
     pub relayer: Address,   // H160 (should be this realyer account)
     pub fee: U256,
@@ -572,7 +574,7 @@ async fn handle_anchor_relay_tx<'a>(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            crate::config::Contract::Anchor(c) => Some(c),
+            crate::config::Contract::AnchorOverDKG(c) => Some(c),
             _ => None,
         })
         .map(|c| (c.common.address, c))
@@ -674,17 +676,21 @@ async fn handle_anchor_relay_tx<'a>(
         return;
     }
 
-    let inputs = PublicInputs {
-        roots: cmd.roots,
+    let ext_data = ExtData {
         refresh_commitment: cmd.refresh_commitment.to_fixed_bytes(),
-        nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
         recipient: cmd.recipient,
         relayer: cmd.relayer,
         fee: cmd.fee,
         refund: cmd.refund,
     };
-    tracing::trace!(%cmd.proof, ?inputs, "Client Proof");
-    let call = contract.withdraw(cmd.proof, inputs);
+    let proof = Proof {
+        roots: roots.into(),
+        proof: cmd.proof,
+        nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
+        ext_data_hash: cmd.ext_data_hash.to_fixed_bytes(),
+    };
+    tracing::trace!(?proof, ?ext_data, "Client Proof");
+    let call = contract.withdraw(proof, ext_data);
     // Make a dry call, to make sure the transaction will go through successfully
     // to avoid wasting fees on invalid calls.
     match call.call().await {

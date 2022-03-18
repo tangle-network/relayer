@@ -5,8 +5,6 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use webb::evm::ethers::types;
 
-use crate::events_watcher::ProposalEntity;
-
 pub mod mem;
 pub mod sled;
 
@@ -21,6 +19,10 @@ pub enum HistoryStoreKey {
         node_name: String,
     },
 }
+
+// TODO: implement Bridges.
+#[derive(Debug, Copy, Clone, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BridgeKey;
 
 impl HistoryStoreKey {
     pub fn chain_id(&self) -> types::U256 {
@@ -216,9 +218,10 @@ where
 }
 
 pub trait ProposalStore {
-    fn insert_proposal(&self, proposal: ProposalEntity) -> anyhow::Result<()>;
+    type Proposal: Serialize + DeserializeOwned;
+    fn insert_proposal(&self, proposal: Self::Proposal) -> anyhow::Result<()>;
     fn remove_proposal(
         &self,
         data_hash: &[u8],
-    ) -> anyhow::Result<Option<ProposalEntity>>;
+    ) -> anyhow::Result<Option<Self::Proposal>>;
 }

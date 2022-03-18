@@ -8,7 +8,6 @@ use futures::prelude::*;
 use webb::{
     evm::ethers::{
         contract,
-        core::types::transaction,
         providers::{self, Middleware},
         types,
     },
@@ -22,18 +21,11 @@ use webb::{
     },
 };
 
-use crate::store::sled::SledQueueKey;
-use crate::store::{HistoryStore, ProposalStore, QueueStore};
+use crate::store::HistoryStore;
 use crate::utils;
 
 mod tornado_leaves_watcher;
 pub use tornado_leaves_watcher::*;
-
-mod anchor_watcher;
-pub use anchor_watcher::*;
-
-mod bridge_watcher;
-pub use bridge_watcher::*;
 
 mod anchor_watcher_over_dkg;
 pub use anchor_watcher_over_dkg::*;
@@ -212,81 +204,13 @@ pub trait EventWatcher {
     }
 }
 
-#[async_trait::async_trait]
-pub trait BridgeWatcher: EventWatcher
-where
-    Self::Store: ProposalStore
-        + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
-        + QueueStore<bridge_watcher::BridgeCommand, Key = SledQueueKey>,
-{
-    async fn handle_cmd(
-        &self,
-        store: Arc<Self::Store>,
-        contract: &Self::Contract,
-        cmd: BridgeCommand,
-    ) -> anyhow::Result<()>;
-
-    /// Returns a task that should be running in the background
-    /// that will watch for all commands
-    #[tracing::instrument(
-        skip_all,
-        fields(
-            chain_id = %client.get_chainid().await?,
-            address = %contract.address(),
-            tag = %Self::TAG,
-        ),
-    )]
-    async fn run(
-        &self,
-        client: Arc<Self::Middleware>,
-        store: Arc<Self::Store>,
-        contract: Self::Contract,
-    ) -> anyhow::Result<()> {
-        let backoff = backoff::ExponentialBackoff {
-            max_elapsed_time: None,
-            ..Default::default()
-        };
-        let task = || async {
-            let my_address = contract.address();
-            let my_chain_id =
-                client.get_chainid().map_err(anyhow::Error::from).await?;
-            let bridge_key = BridgeKey::new(my_address, my_chain_id);
-            let key = SledQueueKey::from_bridge_key(bridge_key);
-            while let Some(command) = store.dequeue_item(key)? {
-                let result =
-                    self.handle_cmd(store.clone(), &contract, command).await;
-                match result {
-                    Ok(_) => {
-                        tokio::time::sleep(Duration::from_millis(500)).await;
-                        continue;
-                    }
-                    Err(e) => {
-                        tracing::error!("Error while handle_cmd {}", e);
-                        // this a transient error, so we will retry again.
-                        // Internally it would use a queue so the value would be still in
-                        // the queue.
-                        tracing::warn!("Restarting bridge event watcher ...");
-                        return Err(backoff::Error::transient(e));
-                    }
-                }
-                // sleep for a bit to avoid overloading the db.
-            }
-            // whenever this loop stops, we will restart the whole task again.
-            // that way we never have to worry about closed channels.
-            Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
-        };
-        backoff::future::retry(backoff, task).await?;
-        Ok(())
-    }
-}
-
 pub type BlockNumberOf<T> =
     <<T as SubstrateEventWatcher>::RuntimeConfig as subxt::Config>::BlockNumber;
 
 #[async_trait::async_trait]
 pub trait SubstrateEventWatcher {
     const TAG: &'static str;
-    type RuntimeConfig: subxt::Config;
+    type RuntimeConfig: subxt::Config + Send + Sync + 'static;
     type Api: From<subxt::Client<Self::RuntimeConfig>> + Send + Sync;
     type Event: subxt::Event + Send + Sync;
     type Store: HistoryStore;
@@ -494,31 +418,5 @@ pub trait SubstrateEventWatcher {
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())
-    }
-}
-
-pub type ResourceId = [u8; 32];
-pub type ProposalNonce = u64;
-
-#[derive(Debug, Clone, Copy)]
-pub struct ProposalHeader {
-    pub resource_id: ResourceId,
-    pub chain_id: u32,
-    pub function_sig: [u8; 4],
-    pub nonce: ProposalNonce,
-}
-
-impl ProposalHeader {
-    fn encode(&self) -> Vec<u8> {
-        let mut buf = Vec::new();
-        // resource_id contains the chain id already.
-        buf.extend_from_slice(&self.resource_id); // 32 bytes
-        buf.extend_from_slice(&self.function_sig); // 4 bytes
-        buf.extend_from_slice(&(self.nonce as u32).to_be_bytes()); // 4 bytes
-        buf
-    }
-
-    fn encoded_to(&self, buf: &mut Vec<u8>) {
-        buf.extend_from_slice(&self.encode());
     }
 }

@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use ethereum_types::U256;
 use webb::evm::ethers::providers;
+use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
+use webb::substrate::dkg_runtime::api::RuntimeApi as DkgRuntimeApi;
 use webb::substrate::subxt;
 use webb::substrate::subxt::PairSigner;
 
@@ -12,6 +14,10 @@ use crate::tx_queue::TxQueue;
 
 type Client = providers::Provider<providers::Http>;
 type DkgClient = subxt::Client<subxt::DefaultConfig>;
+type DkgRuntime = DkgRuntimeApi<
+    subxt::DefaultConfig,
+    subxt::DefaultExtra<subxt::DefaultConfig>,
+>;
 type Store = crate::store::sled::SledStore;
 
 pub async fn ignite(
@@ -40,14 +46,6 @@ pub async fn ignite(
                         store.clone(),
                     )?;
                 }
-                Contract::Anchor(config) => {
-                    start_anchor_events_watcher(
-                        ctx,
-                        config,
-                        client.clone(),
-                        store.clone(),
-                    )?;
-                }
                 Contract::AnchorOverDKG(config) => {
                     start_anchor_over_dkg_events_watcher(
                         ctx,
@@ -56,14 +54,6 @@ pub async fn ignite(
                         store.clone(),
                     )
                     .await?;
-                }
-                Contract::Bridge(config) => {
-                    start_bridge_watcher(
-                        ctx,
-                        config,
-                        client.clone(),
-                        store.clone(),
-                    )?;
                 }
                 Contract::GovernanceBravoDelegate(_) => {}
             }
@@ -81,13 +71,20 @@ pub async fn ignite(
                 let client = ctx
                     .substrate_provider::<subxt::DefaultConfig>(node_name)
                     .await?;
-                let metadata = client.metadata();
-                let chain_identifier = metadata
-                    .pallet("DKGProposals")?
-                    .constant("ChainIdentifier")?;
-                let mut chain_id_bytes = [0u8; 4];
-                chain_id_bytes.copy_from_slice(&chain_identifier.value[0..4]);
-                let chain_id = U256::from(u32::from_le_bytes(chain_id_bytes));
+                let api = client.clone().to_runtime_api::<DkgRuntime>();
+                let chain_id =
+                    api.constants().dkg_proposals().chain_identifier()?;
+                let chain_id = match chain_id {
+                    TypedChainId::None => 0,
+                    TypedChainId::Evm(id) => id,
+                    TypedChainId::Substrate(id) => id,
+                    TypedChainId::PolkadotParachain(id) => id,
+                    TypedChainId::KusamaParachain(id) => id,
+                    TypedChainId::RococoParachain(id) => id,
+                    TypedChainId::Cosmos(id) => id,
+                    TypedChainId::Solana(id) => id,
+                };
+                let chain_id = U256::from(chain_id);
                 // TODO(@shekohex): start the dkg service
                 for pallet in &node_config.pallets {
                     match pallet {
@@ -203,91 +200,6 @@ fn start_tornado_events_watcher(
     Ok(())
 }
 
-fn start_anchor_events_watcher(
-    ctx: &RelayerContext,
-    config: &AnchorContractConfig,
-    client: Arc<Client>,
-    store: Arc<Store>,
-) -> anyhow::Result<()> {
-    if !config.events_watcher.enabled {
-        tracing::warn!(
-            "Anchor events watcher is disabled for ({}).",
-            config.common.address,
-        );
-        return Ok(());
-    }
-    let wrapper = AnchorContractWrapper::new(
-        config.clone(),
-        ctx.config.clone(), // the original config to access all networks.
-        client.clone(),
-    );
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let contract_address = config.common.address;
-    let anchor_leaves_store = store.clone();
-    let anchor_leaves_client = client.clone();
-    let anchor_leaves_wrapper = wrapper.clone();
-    let anchor_leaves_watcher_task = async move {
-        tracing::debug!(
-            "Anchor leaves events watcher for ({}) Started.",
-            contract_address,
-        );
-
-        let anchor_leaves_watcher = AnchorLeavesWatcher::new();
-        let leaves_watcher_task = anchor_leaves_watcher.run(
-            anchor_leaves_client,
-            anchor_leaves_store,
-            anchor_leaves_wrapper,
-        );
-
-        tokio::select! {
-            _ = leaves_watcher_task => {
-                tracing::warn!(
-                    "Anchor leaves watcher task stopped for ({})",
-                    contract_address,
-                );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping Anchor watcher for ({})",
-                    contract_address,
-                );
-            },
-        }
-    };
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let contract_address = config.common.address;
-    let anchor_bridge_watcher_task = async move {
-        tracing::debug!(
-            "Anchor bridge events watcher for ({}) Started.",
-            contract_address,
-        );
-
-        let anchor_bridge_watcher = AnchorBridgeWatcher::new();
-        let anchor_bridge_watcher_task =
-            anchor_bridge_watcher.run(client, store, wrapper);
-
-        tokio::select! {
-            _ = anchor_bridge_watcher_task => {
-                tracing::warn!(
-                    "Anchor bridge watcher task stopped for ({})",
-                    contract_address,
-                );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping Anchor watcher for ({})",
-                    contract_address,
-                );
-            },
-        }
-    };
-    // kick off the watcher.
-    tokio::task::spawn(anchor_leaves_watcher_task);
-    tokio::task::spawn(anchor_bridge_watcher_task);
-
-    Ok(())
-}
-
 async fn start_anchor_over_dkg_events_watcher(
     ctx: &RelayerContext,
     config: &AnchorContractOverDKGConfig,
@@ -339,63 +251,6 @@ async fn start_anchor_over_dkg_events_watcher(
     // kick off the watcher.
     tokio::task::spawn(task);
 
-    Ok(())
-}
-
-fn start_bridge_watcher(
-    ctx: &RelayerContext,
-    config: &BridgeContractConfig,
-    client: Arc<Client>,
-    store: Arc<Store>,
-) -> anyhow::Result<()> {
-    if !config.events_watcher.enabled {
-        tracing::warn!(
-            "Bridge events watcher is disabled for ({}).",
-            config.common.address,
-        );
-        return Ok(());
-    }
-    let wrapper = BridgeContractWrapper::new(config.clone(), client.clone());
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let contract_address = config.common.address;
-    let task = async move {
-        tracing::debug!("Bridge watcher for ({}) Started.", contract_address);
-        let bridge_contract_watcher = BridgeContractWatcher::default();
-        let events_watcher_task = EventWatcher::run(
-            &bridge_contract_watcher,
-            client.clone(),
-            store.clone(),
-            wrapper.clone(),
-        );
-        let cmd_handler_task = BridgeWatcher::run(
-            &bridge_contract_watcher,
-            client,
-            store,
-            wrapper,
-        );
-        tokio::select! {
-            _ = events_watcher_task => {
-                tracing::warn!(
-                    "bridge events watcher task stopped for ({})",
-                    contract_address
-                );
-            },
-            _ = cmd_handler_task => {
-                tracing::warn!(
-                    "bridge cmd handler task stopped for ({})",
-                    contract_address
-                );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping Bridge watcher for ({})",
-                    contract_address,
-                );
-            },
-        }
-    };
-    // kick off the watcher.
-    tokio::task::spawn(task);
     Ok(())
 }
 

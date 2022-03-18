@@ -10,7 +10,7 @@ import getPort, { portNumbers } from 'get-port';
 import { LocalChain } from './lib/localTestnet';
 import { calcualteRelayerFees, WebbRelayer } from './lib/webbRelayer';
 
-describe('EVM Transaction Relayer', () => {
+describe.skip('EVM Transaction Relayer', () => {
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
   const PK2 =
