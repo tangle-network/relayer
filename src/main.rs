@@ -62,12 +62,23 @@ async fn main(args: Opts) -> anyhow::Result<()> {
             tracing::warn!("Failed to load .env file: {}", e);
         }
     }
+
+    // The configuration is validated and configured from the given directory
     let config = load_config(args.config_dir.clone())?;
+
+    // The RelayerContext takes a configuration, and populates objects that are needed
+    // throughout the lifetime of the relayer. Items such as wallets and providers, as well
+    // as a convenient place to access the configuration.
     let ctx = RelayerContext::new(config);
+    
+    // persistent storage for the relayer
     let store = create_store(&args).await?;
+
+    // the build_relayer command sets up routing (endpoint queries / requests mapped to handled code) 
+    // so clients can interact with the relayer
     let (addr, server) = build_relayer(ctx.clone(), store.clone())?;
     tracing::info!("Starting the server on {}", addr);
-    // fire the server.
+    // start the server.
     let server_handle = tokio::spawn(server);
     // start all background services.
     // this does not block, will fire the services on background tasks.
@@ -173,7 +184,8 @@ fn build_relayer(
     let port = ctx.config.port;
     let ctx_arc = Arc::new(ctx.clone());
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
-    // the websocket server.
+    
+    // the websocket server for users to submit relay transaction requests
     let ws_filter = warp::path("ws")
         .and(warp::ws())
         .and(ctx_filter.clone())
@@ -188,6 +200,7 @@ fn build_relayer(
     let proxy_addr = [127, 0, 0, 1].into();
 
     // First check the x-forwarded-for with 'real_ip' for reverse proxy setups
+    // This code identifies the client's ip address and sends it back to them
     let ip_filter = warp::path("ip")
         .and(warp::get())
         .and(real_ip(vec![proxy_addr]))
@@ -198,13 +211,15 @@ fn build_relayer(
             .and_then(handler::handle_socket_info))
         .boxed();
 
-    // relayer info
+    // Define the handling of a request for this relayer's information (supported networks)
     let info_filter = warp::path("info")
         .and(warp::get())
         .and(ctx_filter)
         .and_then(handler::handle_relayer_info)
         .boxed();
 
+    // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
+    // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
     let store = Arc::new(store);
     let store_filter = warp::any().map(move || Arc::clone(&store)).boxed();
     let leaves_cache_filter = warp::path("leaves")
@@ -214,6 +229,7 @@ fn build_relayer(
         .and_then(handler::handle_leaves_cache)
         .boxed();
 
+    // Code that will map the request handlers above to a defined http endpoint.
     let routes = ip_filter.or(info_filter).or(leaves_cache_filter).boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();

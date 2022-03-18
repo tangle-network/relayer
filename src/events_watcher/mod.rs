@@ -1,3 +1,10 @@
+// Event watcher traits handle the syncing and listening of events for a given network.
+// The event watcher calls into a storage for handling of important state.
+//
+// The run implementation of an event watcher polls for blocks.
+// Implementations of the event watcher trait define an action to take when
+// the specified event is found in a block at the `handle_event` api. 
+
 use std::cmp;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -48,6 +55,7 @@ pub trait WatchableContract: Send + Sync {
     fn print_progress_interval(&self) -> Duration;
 }
 
+// This EventWatcher trait exists for deployments that are smart-contract / EVM based
 #[async_trait::async_trait]
 pub trait EventWatcher {
     const TAG: &'static str;
@@ -207,6 +215,7 @@ pub trait EventWatcher {
 pub type BlockNumberOf<T> =
     <<T as SubstrateEventWatcher>::RuntimeConfig as subxt::Config>::BlockNumber;
 
+// 
 #[async_trait::async_trait]
 pub trait SubstrateEventWatcher {
     const TAG: &'static str;

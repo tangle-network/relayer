@@ -1,3 +1,6 @@
+// Services are tasks which the relayer constantly runs throughout its lifetime.
+// Services handle keeping up to date with the configured chains.
+
 use std::sync::Arc;
 
 use ethereum_types::U256;

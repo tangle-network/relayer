@@ -1,3 +1,6 @@
+// Handlers are a collection of routines which are executed when they are requested
+// from a client. 
+
 #![allow(clippy::large_enum_variant)]
 
 use std::collections::HashMap;
@@ -39,11 +42,14 @@ use webb::substrate::subxt::{self, PairSigner, TransactionStatus};
 
 type CommandStream = mpsc::Sender<CommandResponse>;
 
+// Accept the incoming websocket connection
 pub async fn accept_connection(
     ctx: &RelayerContext,
     stream: warp::ws::WebSocket,
 ) -> anyhow::Result<()> {
     let (mut tx, mut rx) = stream.split();
+    
+    // Wait for client to send over text (such as relay transaction requests)
     while let Some(msg) = rx.try_next().await? {
         if let Ok(text) = msg.to_str() {
             handle_text(ctx, text, &mut tx).await?;
@@ -830,6 +836,7 @@ async fn handle_substrate_mixer_relay_tx<'a>(
 
     let signer = PairSigner::new(pair);
 
+    // Make a call to create the withdraw transaction
     let withdraw_tx = api
         .tx()
         .mixer_bn254()
@@ -853,6 +860,8 @@ async fn handle_substrate_mixer_relay_tx<'a>(
             return;
         }
     };
+
+    // Listen to the withdraw transaction, and send information back to the client
     loop {
         let maybe_event = event_stream.next().await;
         let event = match maybe_event {

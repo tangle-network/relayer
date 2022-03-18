@@ -520,6 +520,8 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     }
 }
 
+// The postloading_process exists to validate configuration and standardize
+// the format of the configuration
 fn postloading_process(
     mut config: WebbRelayerConfig,
 ) -> anyhow::Result<WebbRelayerConfig> {

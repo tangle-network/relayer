@@ -14,6 +14,10 @@ use crate::store::sled::SledQueueKey;
 use crate::store::QueueStore;
 use crate::utils::ClickableLink;
 
+// The TxQueue stores transaction requests so the relayer can process them later. 
+// This prevents issues such as creating transactions with the same nonce.
+// Randomized sleep intervals are used to prevent relayers from submitting
+// the same transaction. 
 #[derive(Clone)]
 pub struct TxQueue<S: QueueStore<TypedTransaction>> {
     ctx: RelayerContext,

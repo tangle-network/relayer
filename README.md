@@ -19,8 +19,12 @@ cargo build --release
 ```
 
 ## Local Substrate Mixer
+Ideal for development, Run a relayer for a local substrate node that integrates our pallets:
+(webb-standalone-node)[https://github.com/webb-tools/protocol-substrate/]
+
+Run the relayer with our preset configuration like so: 
 ```
-Ideal for development,
+./target/release/webb-relayer -c config/local-substrate -vvvv
 ```
 
 ## Running and Configuring 🚀
@@ -62,6 +66,17 @@ docker run --rm -v "<ABSOLUTE_PATH_TO_CONFIGS_DIRECTORY>:/config" --env-file .en
 
 This will mount a configuration files at the `/config` directory inside the container so it would allow it to read the configuration you added.
 
+## Overview
+
+    - src/
+        - events_watcher/: Sync to different network types (EVM, Substrate), and act on different events. 
+        - store/: Logic for storing information with different backends.
+        - config.rs: Functionality related to parsing of configurable values.
+        - context.rs: Access the parsed configuration and generate providers and wallets.
+        - handler.rs: Logic for what to do when a client is interacting with this relayer.
+        - main.rs: Build and start the relayer.
+        - service.rs: The entry for tasks once the relayer is operating.
+        - tx_queue.rs: A transaction queue for orderly handling of transactions.
 
 ## Safety ⚡
 
@@ -81,14 +96,14 @@ Want to join us? take a look at some of these issues:
 ## License
 
 <sup>
-Licensed under <a href="LICENSE">GPLV3 license</a>.
+Licensed under <a href="LICENSE">Apache 2.0 license</a>.
 </sup>
 
 <br/>
 
 <sub>
 Unless you explicitly state otherwise, any contribution intentionally submitted
-for inclusion in this crate by you, as defined in the GPLV3 license, shall
+for inclusion in this crate by you, as defined in the Apache 2.0 license, shall
 be licensed as above, without any additional terms or conditions.
 </sub>
 
