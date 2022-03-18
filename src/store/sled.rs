@@ -5,11 +5,10 @@ use std::fmt::Debug;
 use std::path::Path;
 use webb::evm::ethers::types;
 
-use crate::events_watcher::BridgeKey;
-use crate::store::QueueKey;
+use crate::store::{BridgeKey, QueueKey};
 
+use super::HistoryStoreKey;
 use super::{HistoryStore, LeafCacheStore, ProposalStore, QueueStore};
-use super::{HistoryStoreKey, ProposalEntity};
 
 #[derive(Clone)]
 pub struct SledStore {
@@ -151,9 +150,8 @@ pub enum SledQueueKey {
         chain_id: types::U256,
         optional_key: Option<[u8; 64]>,
     },
-    BridgeCmd {
-        bridge_key: BridgeKey,
-    },
+    #[allow(dead_code)]
+    BridgeCmd { bridge_key: BridgeKey },
 }
 
 impl SledQueueKey {
@@ -164,6 +162,7 @@ impl SledQueueKey {
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_evm_with_custom_key(
         chain_id: types::U256,
         key: [u8; 64],
@@ -174,6 +173,7 @@ impl SledQueueKey {
         }
     }
 
+    #[allow(dead_code)]
     pub fn from_bridge_key(bridge_key: BridgeKey) -> Self {
         Self::BridgeCmd { bridge_key }
     }
@@ -191,8 +191,8 @@ impl fmt::Display for SledQueueKey {
                 chain_id,
                 optional_key.map(hex::encode)
             ),
-            Self::BridgeCmd { bridge_key } => {
-                write!(f, "BridgeCmd({})", bridge_key)
+            Self::BridgeCmd { bridge_key: _ } => {
+                todo!()
             }
         }
     }
@@ -202,10 +202,7 @@ impl QueueKey for SledQueueKey {
     fn queue_name(&self) -> String {
         match self {
             Self::EvmTx { chain_id, .. } => format!("evm_tx_{}", chain_id),
-            Self::BridgeCmd { bridge_key, .. } => format!(
-                "bridge_cmd_{}_{}",
-                bridge_key.chain_id, bridge_key.address
-            ),
+            Self::BridgeCmd { bridge_key: _, .. } => todo!(),
         }
     }
 
@@ -336,21 +333,11 @@ where
 }
 
 impl ProposalStore for SledStore {
-    #[tracing::instrument(
-        skip_all,
-        fields(data_hash = %hex::encode(&proposal.data_hash))
-    )]
-    fn insert_proposal(&self, proposal: ProposalEntity) -> anyhow::Result<()> {
+    type Proposal = ();
+    #[tracing::instrument(skip_all)]
+    fn insert_proposal(&self, proposal: Self::Proposal) -> anyhow::Result<()> {
         let tree = self.db.open_tree("proposal_store")?;
-        tree.insert(
-            &proposal.data_hash,
-            serde_json::to_vec(&proposal)?.as_slice(),
-        )?;
-        tracing::trace!(
-            "Saved Proposal @{} with resource_id = 0x{}",
-            proposal.src_chain_id,
-            hex::encode(proposal.resource_id)
-        );
+        tree.insert(&"TODO", serde_json::to_vec(&proposal)?.as_slice())?;
         Ok(())
     }
 
@@ -361,16 +348,11 @@ impl ProposalStore for SledStore {
     fn remove_proposal(
         &self,
         data_hash: &[u8],
-    ) -> anyhow::Result<Option<ProposalEntity>> {
+    ) -> anyhow::Result<Option<Self::Proposal>> {
         let tree = self.db.open_tree("proposal_store")?;
         match tree.get(&data_hash)? {
             Some(bytes) => {
-                let proposal: ProposalEntity = serde_json::from_slice(&bytes)?;
-                tracing::trace!(
-                    "Removed Proposal @{} with resource_id = 0x{}",
-                    proposal.src_chain_id,
-                    hex::encode(proposal.resource_id)
-                );
+                let proposal: Self::Proposal = serde_json::from_slice(&bytes)?;
                 Ok(Some(proposal))
             }
             None => {
