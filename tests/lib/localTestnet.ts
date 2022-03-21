@@ -13,6 +13,7 @@ import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import path from 'path';
 import child from 'child_process';
 import { ChainInfo, Contract, EventsWatcher } from './webbRelayer';
+import { ConvertToKebabCase } from './tsHacks';
 
 export type GanacheAccounts = {
   balance: string;
@@ -247,14 +248,6 @@ export class LocalChain {
     fs.writeFileSync(path, configString);
   }
 }
-
-type CamelToKebabCase<S extends string> = S extends `${infer T}${infer U}`
-  ? `${T extends Capitalize<T> ? '-' : ''}${Lowercase<T>}${CamelToKebabCase<U>}`
-  : S;
-
-type ConvertToKebabCase<T> = {
-  [P in keyof T as Lowercase<CamelToKebabCase<string & P>>]: T[P];
-};
 
 export type FullChainInfo = ChainInfo & {
   httpEndpoint: string;

@@ -2179,6 +2179,11 @@
     ffjavascript "^0.2.38"
     snarkjs "0.4.10"
 
+"@webb-tools/wasm-utils@^0.1.4-41":
+  version "0.1.4-41"
+  resolved "https://registry.yarnpkg.com/@webb-tools/wasm-utils/-/wasm-utils-0.1.4-41.tgz#d73209af25fd9d86b88eb53633e9827595ceb653"
+  integrity sha512-51rVvkw+620a6Nf8DPH6H5PuCWfL3qXhOhr0SZaILaQc24mq9YDIlgthdzSbMENWvVShRqxCbY7zvHvHbRFCow==
+
 JSONStream@^1.3.5:
   version "1.3.5"
   resolved "https://registry.yarnpkg.com/JSONStream/-/JSONStream-1.3.5.tgz#3208c1f08d3a4d99261ab64f92302bc15e111ca0"
