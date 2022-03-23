@@ -64,7 +64,7 @@ export class LocalProtocolSubstrate {
         'run',
         '--rm',
         '--name',
-        `${opts.authority}-node`,
+        `${opts.authority}-node-${opts.ports.ws}`,
         '-p',
         `${opts.ports.ws}:9944`,
         '-p',
@@ -104,8 +104,38 @@ export class LocalProtocolSubstrate {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     this.#api = await ApiPromise.create({
       provider: new WsProvider(`ws://127.0.0.1:${ports.ws}`),
+      rpc: {
+        mt: {
+          getLeaves: {
+            description: 'Query for the tree leaves',
+            params: [
+              {
+                name: 'tree_id',
+                type: 'u32',
+                isOptional: false,
+              },
+              {
+                name: 'from',
+                type: 'u32',
+                isOptional: false,
+              },
+              {
+                name: 'to',
+                type: 'u32',
+                isOptional: false,
+              },
+              {
+                name: 'at',
+                type: 'Hash',
+                isOptional: true,
+              },
+            ],
+            type: 'Vec<[u8; 32]>',
+          },
+        },
+      },
     });
-    await this.#api.isReady;
+    // await this.#api.isReady;
     return this.#api;
   }
 

@@ -23,7 +23,7 @@ import {
 
 describe('Substrate Transaction Relayer', () => {
   const tmp = temp.track();
-  jest.setTimeout(120_000);
+  jest.setTimeout(100_000);
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -68,6 +68,7 @@ describe('Substrate Transaction Relayer', () => {
     const alice = keyring.addFromUri('//Alice');
     // send the deposit transaction.
     await tx.signAndSend(alice, { nonce: -1 }, (res) => {
+      console.log(res.status.toHuman());
       if (res.status.isFinalized) {
         expect(res.isError).toBeFalsy();
       }

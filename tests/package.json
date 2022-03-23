@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint . --ext .ts",
-    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --forceExit --runInBand"
+    "test": "cross-env NODE_OPTIONS=--experimental-vm-modules jest --forceExit"
   },
   "engines": {
     "node": "17.x.x"
