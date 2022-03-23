@@ -1,0 +1,6 @@
+{
+  "extension": ["ts"],
+  "require": ["babel-register.cjs"],
+  "exit": true,
+  "spec": ["**/*.test.ts"]
+}

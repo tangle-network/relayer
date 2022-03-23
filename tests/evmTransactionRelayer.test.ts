@@ -1,22 +1,22 @@
 // This our basic EVM Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
-import { jest } from '@jest/globals';
-import 'jest-extended';
+import { expect } from 'chai';
 import { Anchors, Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import getPort, { portNumbers } from 'get-port';
-import { LocalChain } from './lib/localTestnet';
-import { calcualteRelayerFees, WebbRelayer } from './lib/webbRelayer';
+import { LocalChain } from './lib/localTestnet.js';
+import { calcualteRelayerFees, WebbRelayer } from './lib/webbRelayer.js';
 
-describe.skip('EVM Transaction Relayer', () => {
+describe.skip('EVM Transaction Relayer', function () {
+  this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
   const PK2 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmp = temp.track();
-  jest.setTimeout(120_000);
+
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -26,7 +26,7 @@ describe.skip('EVM Transaction Relayer', () => {
 
   let webbRelayer: WebbRelayer;
 
-  beforeAll(async () => {
+  before(async () => {
     // first we need to start local evm node.
     const localChain1Port = await getPort({ port: portNumbers(3333, 4444) });
     localChain1 = new LocalChain('TestA', localChain1Port, [
@@ -119,7 +119,7 @@ describe.skip('EVM Transaction Relayer', () => {
     await webbRelayer.waitUntilReady();
   });
 
-  test('Same Chain Relay Transaction', async () => {
+  it('should relay same transaction on same chain', async () => {
     // we will use chain1 as an example here.
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
@@ -134,7 +134,7 @@ describe.skip('EVM Transaction Relayer', () => {
       wallet1
     );
     const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt()).toEqual(
+    expect(webbBalance.toBigInt()).to.equal(
       ethers.utils.parseEther('1000').toBigInt()
     );
     // now we are ready to do the deposit.
@@ -171,10 +171,10 @@ describe.skip('EVM Transaction Relayer', () => {
       `0x${withdrawalInfo.proofEncoded}`,
       withdrawalInfo.publicInputs
     );
-    expect(txHash).toBeDefined();
+    expect(txHash).to.be.string;
   });
 
-  afterAll(async () => {
+  after(async () => {
     await localChain1.stop();
     await localChain2.stop();
     await webbRelayer.stop();

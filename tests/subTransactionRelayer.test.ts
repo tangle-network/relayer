@@ -1,8 +1,7 @@
 // This our basic Substrate Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
-import { jest } from '@jest/globals';
-import 'jest-extended';
+import { expect } from 'chai';
 import temp from 'temp';
 import path from 'path';
 import fs from 'fs';
@@ -21,20 +20,19 @@ import {
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Transaction Relayer', () => {
+describe('Substrate Transaction Relayer', function () {
   const tmp = temp.track();
-  jest.setTimeout(100_000);
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
 
   let webbRelayer: WebbRelayer;
 
-  beforeAll(async () => {
+  before(async () => {
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode: { mode: 'docker', forcePullImage: false },
+      usageMode: { mode: 'host', nodePath: '' },
       ports: 'auto',
     });
 
@@ -70,7 +68,7 @@ describe('Substrate Transaction Relayer', () => {
     await tx.signAndSend(alice, { nonce: -1 }, (res) => {
       console.log(res.status.toHuman());
       if (res.status.isFinalized) {
-        expect(res.isError).toBeFalsy();
+        expect(res.isError).to.be.false;
       }
     });
     await aliceNode.waitForEvent({ section: 'mixerBn254', method: 'Deposit' });
@@ -95,10 +93,10 @@ describe('Substrate Transaction Relayer', () => {
       recipient: withdrawalProof.recipient,
       relayer: withdrawalProof.relayer,
     });
-    expect(txHash).toBeDefined();
+    expect(txHash).to.be.not.null;
   });
 
-  afterAll(async () => {
+  after(async () => {
     await aliceNode.stop();
     await bobNode.stop();
     await webbRelayer.stop();
@@ -167,7 +165,7 @@ async function createMixerWithdrawProof(
   const pm = new ProvingManagerWrapper();
   const leafHex = u8aToHex(note.getLeaf());
   const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
-  expect(leafIndex).toBeGreaterThan(-1);
+  expect(leafIndex).to.be.greaterThan(-1);
   const gitRoot = child
     .execSync('git rev-parse --show-toplevel')
     .toString()
