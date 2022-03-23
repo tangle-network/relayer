@@ -1,5 +1,5 @@
 export default {
-  preset: 'ts-jest/presets/default-esm',
+  preset: 'ts-jest/presets/js-with-babel-esm',
   globals: {
     'ts-jest': {
       useESM: true,

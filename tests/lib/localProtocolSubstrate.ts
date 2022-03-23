@@ -63,7 +63,6 @@ export class LocalProtocolSubstrate {
       startArgs.push(
         'run',
         '--rm',
-        '-it',
         '--name',
         `${opts.authority}-node`,
         '-p',
@@ -80,7 +79,7 @@ export class LocalProtocolSubstrate {
         '--ws-external',
         `--${opts.authority}`
       );
-      const proc = spawn('docker', startArgs);
+      const proc = spawn('docker', startArgs, {});
       return new LocalProtocolSubstrate(opts, proc);
     } else {
       startArgs.push(
@@ -102,9 +101,9 @@ export class LocalProtocolSubstrate {
     if (this.#api) {
       return this.#api;
     }
-    const wsPort = (this.opts.ports as { ws: number }).ws;
+    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     this.#api = await ApiPromise.create({
-      provider: new WsProvider(`ws://localhost:${wsPort}`),
+      provider: new WsProvider(`ws://127.0.0.1:${ports.ws}`),
     });
     await this.#api.isReady;
     return this.#api;
@@ -142,8 +141,8 @@ export class LocalProtocolSubstrate {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     const nodeInfo: FullNodeInfo = {
       enabled: true,
-      httpEndpoint: `http://localhost:${ports.http}`,
-      wsEndpoint: `ws://localhost:${ports.ws}`,
+      httpEndpoint: `http://127.0.0.1:${ports.http}`,
+      wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
       runtime: 'WebbProtocol',
       pallets: [],
       suri,

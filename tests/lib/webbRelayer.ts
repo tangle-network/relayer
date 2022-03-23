@@ -31,7 +31,6 @@ export class WebbRelayer {
           WEBB_PORT: `${this.opts.port}`,
           RUST_LOG: `webb_probe=trace`,
         },
-        killSignal: 'SIGILL',
       }
     );
     // log that we started
@@ -407,12 +406,7 @@ export interface Pallet {
   eventsWatcher: EventsWatcher;
 }
 
-type ContractKind =
-  | 'Tornado'
-  | 'Anchor'
-  | 'AnchorOverDKG'
-  | 'Bridge'
-  | 'GovernanceBravoDelegate';
+type ContractKind = 'Tornado' | 'AnchorOverDKG' | 'GovernanceBravoDelegate';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind = 'DKGProposals' | 'DKGProposalHandler';
 

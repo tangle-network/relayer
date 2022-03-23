@@ -1,4 +1,4 @@
-// This our basic EVM Transaction Relayer Tests.
+// This our basic Substrate Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { jest } from '@jest/globals';
@@ -10,16 +10,16 @@ import child from 'child_process';
 import getPort, { portNumbers } from 'get-port';
 import { WebbRelayer } from './lib/webbRelayer';
 import { LocalProtocolSubstrate } from './lib/localProtocolSubstrate';
-import {
-  generate_proof_js,
-  JsNote,
-  JsNoteBuilder,
-  ProofInputBuilder,
-} from '@webb-tools/wasm-utils/njs';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { decodeAddress } from '@polkadot/util-crypto';
+import {
+  Note,
+  NoteGenInput,
+  ProvingManagerSetupInput,
+  ProvingManagerWrapper,
+} from '@webb-tools/sdk-core';
 
 describe('Substrate Transaction Relayer', () => {
   const tmp = temp.track();
@@ -51,18 +51,19 @@ describe('Substrate Transaction Relayer', () => {
     });
 
     // now start the relayer
-    const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
+    const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
 
   test('Simple Mixer Transaction', async () => {
     const api = await aliceNode.api();
-    const { tx, note } = createMixerDepositTx(api);
+    const { tx, note } = await createMixerDepositTx(api);
     const keyring = new Keyring({ type: 'sr25519' });
     const alice = keyring.addFromUri('//Alice');
     // send the deposit transaction.
@@ -106,31 +107,29 @@ describe('Substrate Transaction Relayer', () => {
 
 // Helper methods, we can move them somewhere if we end up using them again.
 
-function createMixerDepositTx(api: ApiPromise): {
+async function createMixerDepositTx(api: ApiPromise): Promise<{
   tx: SubmittableExtrinsic<'promise'>;
-  note: JsNote;
-} {
-  const noteBuilder = new JsNoteBuilder();
-  noteBuilder.protocol('mixer');
-  noteBuilder.version('v2');
-
-  noteBuilder.sourceChainId('1');
-  noteBuilder.targetChainId('1');
-  noteBuilder.sourceIdentifyingData('3');
-  noteBuilder.targetIdentifyingData('3');
-
-  noteBuilder.tokenSymbol('WEBB');
-  noteBuilder.amount('1');
-  noteBuilder.denomination('18');
-
-  noteBuilder.backend('Arkworks');
-  noteBuilder.hashFunction('Poseidon');
-  noteBuilder.curve('Bn254');
-  noteBuilder.width('3');
-  noteBuilder.exponentiation('5');
-  const note = noteBuilder.build();
-  const leaf = note.getLeafCommitment();
+  note: Note;
+}> {
+  const noteInput: NoteGenInput = {
+    protocol: 'mixer',
+    version: 'v2',
+    sourceChain: '5',
+    targetChain: '5',
+    sourceIdentifyingData: '3',
+    targetIdentifyingData: '3',
+    tokenSymbol: 'WEBB',
+    amount: '1',
+    denomination: '18',
+    backend: 'Arkworks',
+    hashFunction: 'Poseidon',
+    curve: 'Bn254',
+    width: '3',
+    exponentiation: '5',
+  };
+  const note = await Note.generateNote(noteInput);
   const treeId = 0;
+  const leaf = note.getLeaf();
   const tx = api.tx.mixerBn254!.deposit!(treeId, leaf);
   return { tx, note };
 }
@@ -155,7 +154,7 @@ type WithdrawalProof = {
 
 async function createMixerWithdrawProof(
   api: ApiPromise,
-  note: JsNote,
+  note: Note,
   opts: WithdrawalOpts
 ): Promise<WithdrawalProof> {
   const recipientAddressHex = u8aToHex(decodeAddress(opts.recipient));
@@ -164,17 +163,10 @@ async function createMixerWithdrawProof(
   //@ts-ignore
   const getLeaves = api.rpc.mt.getLeaves;
   const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
-  const proofInputBuilder = new ProofInputBuilder();
-  const leafHex = u8aToHex(note.getLeafCommitment());
+  const pm = new ProvingManagerWrapper();
+  const leafHex = u8aToHex(note.getLeaf());
   const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
   expect(leafIndex).toBeGreaterThan(-1);
-  proofInputBuilder.setNote(note);
-  proofInputBuilder.setLeaves(treeLeaves);
-  proofInputBuilder.setLeafIndex(leafIndex.toString());
-  proofInputBuilder.setFee(opts.fee.toString());
-  proofInputBuilder.setRefund(opts.refund.toString());
-  proofInputBuilder.setRecipient(recipientAddressHex.replace('0x', ''));
-  proofInputBuilder.setRelayer(relayerAddressHex.replace('0x', ''));
   const gitRoot = child
     .execSync('git rev-parse --show-toplevel')
     .toString()
@@ -189,15 +181,23 @@ async function createMixerWithdrawProof(
     'proving_key_uncompressed.bin'
   );
   const provingKey = fs.readFileSync(provingKeyPath);
-  proofInputBuilder.setPk(provingKey.toString('hex'));
 
-  const proofInput = proofInputBuilder.build_js();
-  const zkProofMetadata = generate_proof_js(proofInput);
+  const proofInput: ProvingManagerSetupInput = {
+    note: note.serialize(),
+    relayer: relayerAddressHex,
+    recipient: recipientAddressHex,
+    leaves: treeLeaves,
+    leafIndex,
+    fee: opts.fee,
+    refund: opts.refund,
+    provingKey,
+  };
+  const zkProof = await pm.proof(proofInput);
   return {
     id: treeId,
-    proofBytes: `0x${zkProofMetadata.proof}`,
-    root: `0x${zkProofMetadata.root}`,
-    nullifierHash: `0x${zkProofMetadata.nullifierHash}`,
+    proofBytes: zkProof.proof,
+    root: zkProof.root,
+    nullifierHash: zkProof.nullifierHash,
     recipient: opts.recipient,
     relayer: opts.relayer,
     fee: opts.fee,
