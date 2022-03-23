@@ -1,6 +1,8 @@
 {
-  "extension": ["ts"],
-  "require": ["babel-register.cjs"],
-  "exit": true,
-  "spec": ["**/*.test.ts"]
+  "loader": "ts-node/esm",
+  "extensions": ["ts"],
+  "spec": [
+    "**/*.test.ts"
+  ],
+  "exit": true
 }
