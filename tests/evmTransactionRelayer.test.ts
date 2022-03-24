@@ -2,7 +2,7 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { Anchors, Bridges, Tokens } from '@webb-tools/protocol-solidity';
+import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import getPort, { portNumbers } from 'get-port';
@@ -124,7 +124,7 @@ describe.skip('EVM Transaction Relayer', function () {
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
       ethers.utils.parseEther('1')
-    )! as Anchors.Anchor;
+    );
     await anchor1.setSigner(wallet1);
     const tokenAddress = signatureBridge.getWebbTokenAddress(
       localChain1.chainId
@@ -138,7 +138,7 @@ describe.skip('EVM Transaction Relayer', function () {
       ethers.utils.parseEther('1000').toBigInt()
     );
     // now we are ready to do the deposit.
-    const depositInfo = await anchor1.deposit();
+    const depositInfo = await anchor1.deposit(localChain1.chainId);
     const recipient = new ethers.Wallet(
       ethers.utils.randomBytes(32),
       localChain1.provider()
@@ -169,7 +169,8 @@ describe.skip('EVM Transaction Relayer', function () {
       localChain1.chainId.toString(),
       anchor1.getAddress(),
       `0x${withdrawalInfo.proofEncoded}`,
-      withdrawalInfo.publicInputs
+      withdrawalInfo.publicInputs,
+      withdrawalInfo.extData
     );
     expect(txHash).to.be.string;
   });

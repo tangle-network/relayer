@@ -1,6 +1,9 @@
 import WebSocket from 'ws';
 import fetch from 'node-fetch';
-import { IFixedAnchorPublicInputs } from '@webb-tools/interfaces';
+import {
+  IFixedAnchorPublicInputs,
+  IFixedAnchorExtData,
+} from '@webb-tools/interfaces';
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
@@ -132,13 +135,14 @@ export class WebbRelayer {
     chainName: string,
     anchorAddress: string,
     proof: `0x${string}`,
-    publicInputs: IFixedAnchorPublicInputs
+    publicInputs: IFixedAnchorPublicInputs,
+    extData: IFixedAnchorExtData
   ): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-    const input = { chainName, anchorAddress, proof, publicInputs };
+    const input = { chainName, anchorAddress, proof, publicInputs, extData };
     return txHashOrReject(ws, input);
   }
 
@@ -180,11 +184,13 @@ async function txHashOrReject(
     anchorAddress,
     proof,
     publicInputs,
+    extData,
   }: {
     chainName: string;
     anchorAddress: string;
     proof: `0x${string}`;
     publicInputs: IFixedAnchorPublicInputs;
+    extData: IFixedAnchorExtData;
   }
 ): Promise<`0x${string}`> {
   return new Promise((resolve, reject) => {
@@ -245,11 +251,12 @@ async function txHashOrReject(
           proof,
           roots: publicInputs._roots,
           nullifierHash: publicInputs._nullifierHash,
-          refreshCommitment: publicInputs._refreshCommitment,
-          recipient: publicInputs._recipient,
-          relayer: publicInputs._relayer,
-          fee: publicInputs._fee,
-          refund: publicInputs._refund,
+          extDataHash: publicInputs._extDataHash,
+          refreshCommitment: extData._refreshCommitment,
+          recipient: extData._recipient,
+          relayer: extData._relayer,
+          fee: extData._fee,
+          refund: extData._refund,
         },
       },
     };

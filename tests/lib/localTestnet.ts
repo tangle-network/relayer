@@ -2,7 +2,7 @@ import fs from 'fs';
 import ganache from 'ganache';
 import { ethers } from 'ethers';
 import { Server } from 'ganache';
-import { Anchors, Bridges } from '@webb-tools/protocol-solidity';
+import { Bridges, Interfaces } from '@webb-tools/protocol-solidity';
 import {
   BridgeInput,
   DeployerConfig,
@@ -162,7 +162,7 @@ export class LocalChain {
       (chainId) =>
         [chainId, bridge.getAnchor(chainId, ethers.utils.parseEther('1'))] as [
           number,
-          Anchors.Anchor
+          Interfaces.IAnchor
         ]
     );
 
