@@ -7,8 +7,8 @@ import path from 'path';
 import fs from 'fs';
 import child from 'child_process';
 import getPort, { portNumbers } from 'get-port';
-import { WebbRelayer } from './lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from './lib/localProtocolSubstrate.js';
+import { WebbRelayer } from '../lib/webbRelayer.js';
+import { LocalProtocolSubstrate } from '../lib/localProtocolSubstrate.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -19,6 +19,8 @@ import {
   ProvingManagerSetupInput,
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
+// const sdk = require('@webb-tools/sdk-core');
+// const { Note, NoteGenInput, ProvingManagerSetupInput, ProvingManagerWrapper } = sdk;
 
 describe('Substrate Transaction Relayer', function () {
   const tmp = temp.track();

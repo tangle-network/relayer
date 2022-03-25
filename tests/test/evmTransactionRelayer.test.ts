@@ -6,8 +6,8 @@ import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import getPort, { portNumbers } from 'get-port';
-import { LocalChain } from './lib/localTestnet.js';
-import { calcualteRelayerFees, WebbRelayer } from './lib/webbRelayer.js';
+import { LocalChain } from '../lib/localTestnet.js';
+import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 
 describe.skip('EVM Transaction Relayer', function () {
   this.timeout(120_000);

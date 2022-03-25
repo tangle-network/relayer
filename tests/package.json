@@ -7,9 +7,9 @@
   "license": "MIT",
   "type": "module",
   "private": true,
-  "scripts": {
+  "scripts": {  
     "lint": "eslint . --ext .ts",
-    "test": "mocha"
+    "test": "mocha --experimental-specifier-resolution=node"
   },
   "engines": {
     "node": "17.x.x"
