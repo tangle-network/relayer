@@ -5,9 +5,9 @@ import { expect } from 'chai';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
-import getPort, { portNumbers } from 'get-port';
-import { LocalChain } from './lib/localTestnet.js';
-import { calcualteRelayerFees, WebbRelayer } from './lib/webbRelayer.js';
+import getPort from 'get-port';
+import { LocalChain } from './lib/localTestnet';
+import { calcualteRelayerFees, WebbRelayer } from './lib/webbRelayer';
 
 describe.skip('EVM Transaction Relayer', function () {
   this.timeout(120_000);
@@ -28,7 +28,9 @@ describe.skip('EVM Transaction Relayer', function () {
 
   before(async () => {
     // first we need to start local evm node.
-    const localChain1Port = await getPort({ port: portNumbers(3333, 4444) });
+    const localChain1Port = await getPort({
+      port: getPort.makeRange(3333, 4444),
+    });
     localChain1 = new LocalChain('TestA', localChain1Port, [
       {
         secretKey: PK1,
@@ -36,7 +38,9 @@ describe.skip('EVM Transaction Relayer', function () {
       },
     ]);
 
-    const localChain2Port = await getPort({ port: portNumbers(3333, 4444) });
+    const localChain2Port = await getPort({
+      port: getPort.makeRange(3333, 4444),
+    });
     localChain2 = new LocalChain('TestB', localChain2Port, [
       {
         secretKey: PK2,
@@ -110,7 +114,7 @@ describe.skip('EVM Transaction Relayer', function () {
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
     // now start the relayer
-    const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
+    const relayerPort = await getPort({ port: getPort.makeRange(9955, 9999) });
     webbRelayer = new WebbRelayer({
       port: relayerPort,
       tmp: true,

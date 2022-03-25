@@ -135,7 +135,7 @@ export class LocalProtocolSubstrate {
         },
       },
     });
-    // await this.#api.isReady;
+    await this.#api.isReady;
     return this.#api;
   }
 

@@ -1,7 +1,7 @@
 {
-  "loader": "ts-node/esm",
+  "require": "ts-node/register",
   "extensions": ["ts"],
-  "spec": ["**/*.test.ts"],
+  "spec": ["**/*.test.*"],
   "exit": true,
   "ignore": ["node_modules/**"]
 }

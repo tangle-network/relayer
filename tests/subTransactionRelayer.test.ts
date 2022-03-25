@@ -6,9 +6,9 @@ import temp from 'temp';
 import path from 'path';
 import fs from 'fs';
 import child from 'child_process';
-import getPort, { portNumbers } from 'get-port';
-import { WebbRelayer } from './lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from './lib/localProtocolSubstrate.js';
+import getPort from 'get-port';
+import { WebbRelayer } from './lib/webbRelayer';
+import { LocalProtocolSubstrate } from './lib/localProtocolSubstrate';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -49,7 +49,7 @@ describe('Substrate Transaction Relayer', function () {
     });
 
     // now start the relayer
-    const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
+    const relayerPort = await getPort({ port: getPort.makeRange(8000, 8888) });
     webbRelayer = new WebbRelayer({
       port: relayerPort,
       tmp: true,
