@@ -41,7 +41,7 @@ where
     S: QueueStore<TypedTransaction, Key = SledQueueKey>,
 {
     /// Creates a new TxQueue instance.
-    /// 
+    ///
     /// Returns a TxQueue instance.
     ///
     /// # Arguments
@@ -49,7 +49,7 @@ where
     /// * `ctx` - RelayContext reference that holds the configuration
     /// * `chain_name` - The name of the chain that this queue is for
     /// * `store` - Store reference that holds the database
-    /// 
+    ///
     /// # Examples
     ///
     /// ```
@@ -64,9 +64,9 @@ where
         }
     }
     /// Starts the TxQueue service.
-    /// 
+    ///
     /// Returns a future that resolves `Ok(())` on success, otherwise returns an error.
-    /// 
+    ///
     /// # Examples
     ///
     /// ```

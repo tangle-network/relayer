@@ -34,7 +34,7 @@ type DkgRuntime = DkgRuntimeApi<
 >;
 type Store = crate::store::sled::SledStore;
 /// Starts all background services for all chains configured in the config file.
-/// 
+///
 /// Returns a future that resolves when all services are started successfully.
 ///
 /// # Arguments

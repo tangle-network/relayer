@@ -54,7 +54,7 @@ use webb::substrate::subxt::{self, PairSigner, TransactionStatus};
 type CommandStream = mpsc::Sender<CommandResponse>;
 
 /// Sets up a websocket connection.
-/// 
+///
 /// Returns `Ok(())` on success
 ///
 /// # Arguments
@@ -80,14 +80,14 @@ pub async fn accept_connection(
     Ok(())
 }
 /// Sets u websocket channels for message sending.
-/// 
+///
 /// Returns `Ok(())` on success
 ///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `v` - A vector of bytes
-/// * `tx` - A mutable Trait implementation of the `warp::ws::Sender` trait 
+/// * `tx` - A mutable Trait implementation of the `warp::ws::Sender` trait
 ///
 /// # Examples
 ///
@@ -129,14 +129,14 @@ where
     Ok(())
 }
 
-/// Representation for IP address response 
+/// Representation for IP address response
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IpInformationResponse {
     ip: String,
 }
 /// Handles the `ip` address response
-/// 
+///
 /// Returns a Result with the `IpInformationResponse` on success
 ///
 /// # Arguments
@@ -156,7 +156,7 @@ pub async fn handle_ip_info(
     }))
 }
 /// Handles the socket address response
-/// 
+///
 /// Returns a Result with the `IpInformationResponse` on success
 ///
 /// # Arguments
