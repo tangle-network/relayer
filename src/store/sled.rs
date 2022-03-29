@@ -1,3 +1,17 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 use core::fmt;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -9,7 +23,7 @@ use crate::store::{BridgeKey, QueueKey};
 
 use super::HistoryStoreKey;
 use super::{HistoryStore, LeafCacheStore, ProposalStore, QueueStore};
-
+/// SledStore is a store that stores the history of events in Sled.
 #[derive(Clone)]
 pub struct SledStore {
     db: sled::Db,
@@ -22,6 +36,7 @@ impl std::fmt::Debug for SledStore {
 }
 
 impl SledStore {
+    /// Create a new SledStore.
     pub fn open<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
         let db = sled::Config::new()
             .path(path)
@@ -31,7 +46,7 @@ impl SledStore {
             .open()?;
         Ok(Self { db })
     }
-
+    /// Creates a temporary SledStore.
     pub fn temporary() -> anyhow::Result<Self> {
         let dir = tempfile::tempdir()?;
         Self::open(dir.path())
@@ -143,7 +158,7 @@ impl LeafCacheStore for SledStore {
         }
     }
 }
-
+/// SledQueueKey is a key for a queue in Sled.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SledQueueKey {
     EvmTx {
@@ -155,13 +170,14 @@ pub enum SledQueueKey {
 }
 
 impl SledQueueKey {
+    /// Create a new SledQueueKey from an evm chain id.
     pub fn from_evm_chain_id(chain_id: types::U256) -> Self {
         Self::EvmTx {
             chain_id,
             optional_key: None,
         }
     }
-
+    /// from_evm_with_custom_key returns an EVM specific SledQueueKey.
     #[allow(dead_code)]
     pub fn from_evm_with_custom_key(
         chain_id: types::U256,
@@ -172,7 +188,7 @@ impl SledQueueKey {
             optional_key: Some(key),
         }
     }
-
+    /// from_bridge_key returns a Bridge specific SledQueueKey.
     #[allow(dead_code)]
     pub fn from_bridge_key(bridge_key: BridgeKey) -> Self {
         Self::BridgeCmd { bridge_key }

@@ -1,3 +1,17 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
@@ -22,7 +36,7 @@ const fn max_events_per_step_default() -> u64 {
 const fn print_progress_interval_default() -> u64 {
     7_000
 }
-
+/// WebbRelayerConfig is the configuration for the webb relayer.
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct WebbRelayerConfig {
@@ -45,7 +59,7 @@ pub struct WebbRelayerConfig {
     #[serde(default)]
     pub experimental: ExperimentalConfig,
 }
-
+/// EvmChainConfig is the configuration for the EVM based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EvmChainConfig {
@@ -92,7 +106,7 @@ pub struct EvmChainConfig {
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
 }
-
+/// SubstrateConfig is the configuration for the Substrate based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SubstrateConfig {
@@ -157,7 +171,7 @@ pub struct ExperimentalConfig {
     pub smart_anchor_updates: bool,
     pub smart_anchor_updates_retries: u32,
 }
-
+/// TxQueueConfig is the configuration for the TxQueue.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct TxQueueConfig {
@@ -173,6 +187,7 @@ impl Default for TxQueueConfig {
         }
     }
 }
+/// EventsWatchConfig is the configuration for the events watch.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EventsWatcherConfig {
@@ -202,7 +217,7 @@ pub struct AnchorWithdrawConfig {
     #[serde(skip_serializing)]
     pub withdraw_gaslimit: U256,
 }
-
+/// LinkedAnchorConfig is the configuration for the linked anchor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct LinkedAnchorConfig {
@@ -212,7 +227,7 @@ pub struct LinkedAnchorConfig {
     /// The Anchor Contract Address.
     pub address: Address,
 }
-
+/// Enumerates the supported contract configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
 pub enum Contract {
@@ -220,21 +235,21 @@ pub enum Contract {
     AnchorOverDKG(AnchorContractOverDKGConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
-
+/// Enumerates the supported pallets configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "pallet")]
 pub enum Pallet {
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
 }
-
+/// Enumerates the supported Substrate runtimes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SubstrateRuntime {
     #[serde(rename = "DKG")]
     Dkg,
     WebbProtocol,
 }
-
+/// CommonContractConfig represents the common configuration for contracts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct CommonContractConfig {
@@ -244,7 +259,7 @@ pub struct CommonContractConfig {
     #[serde(rename(serialize = "deployedAt"))]
     pub deployed_at: u64,
 }
-
+/// TornadoContractConfig represents the configuration for the Tornado contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct TornadoContractConfig {
@@ -259,7 +274,7 @@ pub struct TornadoContractConfig {
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
 }
-
+/// AnchorContractOverDKGConfig represents the configuration for the Anchor contract over DKG.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct AnchorContractOverDKGConfig {
@@ -281,7 +296,7 @@ pub struct AnchorContractOverDKGConfig {
     #[serde(rename(serialize = "linkedAnchors"))]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
 }
-
+/// GovernanceBravoDelegateContractConfig represents the configuration for the GovernanceBravoDelegate contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct GovernanceBravoDelegateContractConfig {
@@ -289,7 +304,7 @@ pub struct GovernanceBravoDelegateContractConfig {
     pub common: CommonContractConfig,
     // TODO(@shekohex): add more fields here...
 }
-
+/// DKGProposalsPalletConfig represents the configuration for the DKGProposals pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct DKGProposalsPalletConfig {
@@ -297,7 +312,7 @@ pub struct DKGProposalsPalletConfig {
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }
-
+/// DKGProposalHandlerPalletConfig represents the configuration for the DKGProposalHandler pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct DKGProposalHandlerPalletConfig {
@@ -455,6 +470,7 @@ impl<'de> Deserialize<'de> for Suri {
         Ok(Self(secret))
     }
 }
+/// load the private key from the environment variable
 pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
     // A pattern that covers all toml or json files in the config directory and subdirectories.

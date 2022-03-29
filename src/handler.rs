@@ -1,3 +1,19 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// -----------------------------------------------
+//
 // Handlers are a collection of routines which are executed when they are requested
 // from a client. 
 
@@ -42,7 +58,20 @@ use webb::substrate::subxt::{self, PairSigner, TransactionStatus};
 
 type CommandStream = mpsc::Sender<CommandResponse>;
 
-// Accept the incoming websocket connection
+/// Sets up a websocket connection.
+///
+/// Returns `Ok(())` on success
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `stream` - Websocket stream
+///
+/// # Examples
+///
+/// ```
+/// let _ = handler::accept_connection(ctx.as_ref(), socket).await;
+/// ```
 pub async fn accept_connection(
     ctx: &RelayerContext,
     stream: warp::ws::WebSocket,
@@ -57,7 +86,21 @@ pub async fn accept_connection(
     }
     Ok(())
 }
-
+/// Sets u websocket channels for message sending.
+///
+/// Returns `Ok(())` on success
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `v` - A vector of bytes
+/// * `tx` - A mutable Trait implementation of the `warp::ws::Sender` trait
+///
+/// # Examples
+///
+/// ```
+/// let _ = handle_text(ctx, text, &mut tx).await?;;
+/// ```
 pub async fn handle_text<TX>(
     ctx: &RelayerContext,
     v: &str,
@@ -93,12 +136,25 @@ where
     Ok(())
 }
 
+/// Representation for IP address response
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IpInformationResponse {
     ip: String,
 }
-
+/// Handles the `ip` address response
+///
+/// Returns a Result with the `IpInformationResponse` on success
+///
+/// # Arguments
+///
+/// * `ip` - Option containing the IP address
+///
+/// # Examples
+///
+/// ```
+/// let _ = handler::handle_ip_info
+/// ```
 pub async fn handle_ip_info(
     ip: Option<IpAddr>,
 ) -> Result<impl warp::Reply, Infallible> {
@@ -106,7 +162,19 @@ pub async fn handle_ip_info(
         ip: ip.unwrap().to_string(),
     }))
 }
-
+/// Handles the socket address response
+///
+/// Returns a Result with the `IpInformationResponse` on success
+///
+/// # Arguments
+///
+/// * `ip` - Option containing the socket address
+///
+/// # Examples
+///
+/// ```
+/// let _ = handler::handle_ip_info
+/// ```
 pub async fn handle_socket_info(
     ip: Option<SocketAddr>,
 ) -> Result<impl warp::Reply, Infallible> {
@@ -196,7 +264,7 @@ pub struct MixerRelayTransaction {
     pub root: [u8; 32],
     /// The nullifier_hash for the proof
     pub nullifier_hash: [u8; 32],
-    /// The receipient of the transaction
+    /// The recipient of the transaction
     pub recipient: subxt::sp_core::crypto::AccountId32,
     /// The relayer of the transaction
     pub relayer: subxt::sp_core::crypto::AccountId32,
