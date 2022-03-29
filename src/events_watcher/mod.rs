@@ -215,7 +215,6 @@ pub trait EventWatcher {
 pub type BlockNumberOf<T> =
     <<T as SubstrateEventWatcher>::RuntimeConfig as subxt::Config>::BlockNumber;
 
-// 
 #[async_trait::async_trait]
 pub trait SubstrateEventWatcher {
     const TAG: &'static str;

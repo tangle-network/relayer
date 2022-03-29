@@ -836,7 +836,6 @@ async fn handle_substrate_mixer_relay_tx<'a>(
 
     let signer = PairSigner::new(pair);
 
-    // Make a call to create the withdraw transaction
     let withdraw_tx = api
         .tx()
         .mixer_bn254()
