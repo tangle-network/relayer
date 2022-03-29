@@ -5,9 +5,8 @@ import { expect } from 'chai';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
-import getPort, { portNumbers } from 'get-port';
-import { LocalChain } from '../lib/localTestnet.js';
-import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
+import { LocalChain } from '../lib/localTestnet';
+import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer';
 
 describe.skip('EVM Transaction Relayer', function () {
   this.timeout(120_000);
@@ -27,6 +26,10 @@ describe.skip('EVM Transaction Relayer', function () {
   let webbRelayer: WebbRelayer;
 
   before(async () => {
+    const pkg = await import('get-port');
+    const getPort = pkg.default;
+    const portNumbers = pkg.portNumbers;
+
     // first we need to start local evm node.
     const localChain1Port = await getPort({ port: portNumbers(3333, 4444) });
     localChain1 = new LocalChain('TestA', localChain1Port, [

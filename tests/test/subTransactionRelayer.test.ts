@@ -6,9 +6,8 @@ import temp from 'temp';
 import path from 'path';
 import fs from 'fs';
 import child from 'child_process';
-import getPort, { portNumbers } from 'get-port';
-import { WebbRelayer } from '../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../lib/localProtocolSubstrate.js';
+import { WebbRelayer } from '../lib/webbRelayer';
+import { LocalProtocolSubstrate } from '../lib/localProtocolSubstrate';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -19,8 +18,6 @@ import {
   ProvingManagerSetupInput,
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
-// const sdk = require('@webb-tools/sdk-core');
-// const { Note, NoteGenInput, ProvingManagerSetupInput, ProvingManagerWrapper } = sdk;
 
 describe('Substrate Transaction Relayer', function () {
   const tmp = temp.track();
@@ -50,6 +47,10 @@ describe('Substrate Transaction Relayer', function () {
       suri: '//Alice',
     });
 
+    const pkg = await import('get-port');
+    const getPort = pkg.default;
+    const portNumbers = pkg.portNumbers;
+
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
@@ -61,7 +62,7 @@ describe('Substrate Transaction Relayer', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  test('Simple Mixer Transaction', async () => {
+  it('Simple Mixer Transaction', async () => {
     const api = await aliceNode.api();
     const { tx, note } = await createMixerDepositTx(api);
     const keyring = new Keyring({ type: 'sr25519' });
@@ -110,7 +111,7 @@ describe('Substrate Transaction Relayer', function () {
 
 async function createMixerDepositTx(api: ApiPromise): Promise<{
   tx: SubmittableExtrinsic<'promise'>;
-  note: Note;
+  note: Note
 }> {
   const noteInput: NoteGenInput = {
     protocol: 'mixer',
@@ -128,6 +129,7 @@ async function createMixerDepositTx(api: ApiPromise): Promise<{
     width: '3',
     exponentiation: '5',
   };
+  // @ts-ignore
   const note = await Note.generateNote(noteInput);
   const treeId = 0;
   const leaf = note.getLeaf();
@@ -155,7 +157,7 @@ type WithdrawalProof = {
 
 async function createMixerWithdrawProof(
   api: ApiPromise,
-  note: Note,
+  note: any,
   opts: WithdrawalOpts
 ): Promise<WithdrawalProof> {
   const recipientAddressHex = u8aToHex(decodeAddress(opts.recipient));

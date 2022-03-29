@@ -3,6 +3,10 @@ export default function (api) {
   api.cache(false);
 
   const presets = ['@babel/preset-typescript', '@babel/preset-env'];
+  const plugins = ['@babel/plugin-transform-modules-commonjs']
 
-  return { presets };
+  return { 
+    presets,
+    plugins,
+  };
 }
