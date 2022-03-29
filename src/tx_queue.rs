@@ -57,11 +57,11 @@ where
                     .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))?;
                 let maybe_explorer = &chain_config.explorer;
                 let mut tx_hash: H256;
-                if let Some(tx) = maybe_tx {
-                    let my_tx_hash = tx.sighash(chain_id.as_u64());
+                if let Some(raw_tx) = maybe_tx {
+                    let my_tx_hash = raw_tx.sighash(chain_id.as_u64());
                     tx_hash = my_tx_hash;
                     let pending_tx = client
-                        .send_transaction(tx, None)
+                        .send_transaction(raw_tx.clone(), None)
                         .map_err(anyhow::Error::from);
                     let tx = match pending_tx.await {
                         Ok(pending) => {
@@ -143,6 +143,11 @@ where
                                 "Tx {} Dropped from Mempool!!",
                                 tx_hash_string
                             );
+                            // enquing the tx again
+                            store.enqueue_item(
+                                SledQueueKey::from_evm_chain_id(chain_id),
+                                raw_tx,
+                            )?;
                         }
                         Err(e) => {
                             let reason = e.to_string();

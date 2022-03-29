@@ -150,8 +150,9 @@ pub enum SledQueueKey {
         chain_id: types::U256,
         optional_key: Option<[u8; 64]>,
     },
-    #[allow(dead_code)]
-    BridgeCmd { bridge_key: BridgeKey },
+    BridgeCmd {
+        bridge_key: BridgeKey,
+    },
 }
 
 impl SledQueueKey {
@@ -173,7 +174,6 @@ impl SledQueueKey {
         }
     }
 
-    #[allow(dead_code)]
     pub fn from_bridge_key(bridge_key: BridgeKey) -> Self {
         Self::BridgeCmd { bridge_key }
     }
@@ -191,8 +191,8 @@ impl fmt::Display for SledQueueKey {
                 chain_id,
                 optional_key.map(hex::encode)
             ),
-            Self::BridgeCmd { bridge_key: _ } => {
-                todo!()
+            Self::BridgeCmd { bridge_key } => {
+                write!(f, "BridgeCmd({})", bridge_key)
             }
         }
     }
@@ -202,7 +202,10 @@ impl QueueKey for SledQueueKey {
     fn queue_name(&self) -> String {
         match self {
             Self::EvmTx { chain_id, .. } => format!("evm_tx_{}", chain_id),
-            Self::BridgeCmd { bridge_key: _, .. } => todo!(),
+            Self::BridgeCmd { bridge_key, .. } => format!(
+                "bridge_cmd_{}_{}",
+                bridge_key.chain_id, bridge_key.address
+            ),
         }
     }
 
@@ -219,6 +222,7 @@ where
     T: Serialize + DeserializeOwned,
 {
     type Key = SledQueueKey;
+
     #[tracing::instrument(skip_all, fields(key = %key))]
     fn enqueue_item(&self, key: Self::Key, item: T) -> anyhow::Result<()> {
         let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
@@ -334,6 +338,7 @@ where
 
 impl ProposalStore for SledStore {
     type Proposal = ();
+
     #[tracing::instrument(skip_all)]
     fn insert_proposal(&self, proposal: Self::Proposal) -> anyhow::Result<()> {
         let tree = self.db.open_tree("proposal_store")?;

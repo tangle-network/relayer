@@ -55,6 +55,15 @@ pub async fn ignite(
                     )
                     .await?;
                 }
+                Contract::SignatureBridge(config) => {
+                    start_signature_bridge_events_watcher(
+                        ctx,
+                        config,
+                        client.clone(),
+                        store.clone(),
+                    )
+                    .await?;
+                }
                 Contract::GovernanceBravoDelegate(_) => {}
             }
         }
@@ -251,6 +260,64 @@ async fn start_anchor_over_dkg_events_watcher(
     // kick off the watcher.
     tokio::task::spawn(task);
 
+    Ok(())
+}
+
+fn start_signature_bridge_events_watcher(
+    ctx: &RelayerContext,
+    config: &SignatureBridgeContractConfig,
+    client: Arc<Client>,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "Signature Bridge events watcher is disabled for ({}).",
+            config.common.address,
+        );
+        return Ok(());
+    }
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let contract_address = config.common.address;
+    let task = async move {
+        tracing::debug!("Bridge watcher for ({}) Started.", contract_address);
+        let bridge_contract_watcher = SignatureBridgeContractWatcher::default();
+        let wrapper =
+            SignatureBridgeContractWrapper::new(config.clone(), client.clone());
+        let events_watcher_task = EventWatcher::run(
+            &bridge_contract_watcher,
+            client.clone(),
+            store.clone(),
+            wrapper.clone(),
+        );
+        let cmd_handler_task = BridgeWatcher::run(
+            &bridge_contract_watcher,
+            client,
+            store,
+            wrapper,
+        );
+        tokio::select! {
+            _ = events_watcher_task => {
+                tracing::warn!(
+                    "signature bridge events watcher task stopped for ({})",
+                    contract_address
+                );
+            },
+            _ = cmd_handler_task => {
+                tracing::warn!(
+                    "signature bridge cmd handler task stopped for ({})",
+                    contract_address
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping Signature Bridge watcher for ({})",
+                    contract_address,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
     Ok(())
 }
 

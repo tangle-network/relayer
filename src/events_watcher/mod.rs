@@ -5,11 +5,13 @@ use std::time::Duration;
 
 use ethereum_types::{U256, U64};
 use futures::prelude::*;
+
 use webb::{
     evm::ethers::{
         contract,
         providers::{self, Middleware},
         types,
+        types::transaction,
     },
     substrate::{
         scale,
@@ -21,7 +23,10 @@ use webb::{
     },
 };
 
-use crate::store::HistoryStore;
+use crate::store::sled::SledQueueKey;
+use crate::store::{
+    BridgeCommand, BridgeKey, HistoryStore, ProposalStore, QueueStore,
+};
 use crate::utils;
 
 mod tornado_leaves_watcher;
@@ -32,6 +37,9 @@ pub use anchor_watcher_over_dkg::*;
 
 mod proposal_handler_watcher;
 pub use proposal_handler_watcher::*;
+
+mod signature_bridge_watcher;
+pub use signature_bridge_watcher::*;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
@@ -198,6 +206,75 @@ pub trait EventWatcher {
                     instant = std::time::Instant::now();
                 }
             }
+        };
+        backoff::future::retry(backoff, task).await?;
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+pub trait BridgeWatcher: EventWatcher
+where
+    Self::Store: ProposalStore<Proposal = ()>
+        + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
+        + QueueStore<BridgeCommand, Key = SledQueueKey>,
+{
+    async fn handle_cmd(
+        &self,
+        store: Arc<Self::Store>,
+        contract: &Self::Contract,
+        cmd: BridgeCommand,
+    ) -> anyhow::Result<()>;
+
+    /// Returns a task that should be running in the background
+    /// that will watch for all commands
+    #[tracing::instrument(
+        skip_all,
+        fields(
+            chain_id = %client.get_chainid().await?,
+            address = %contract.address(),
+            tag = %Self::TAG,
+        ),
+    )]
+    async fn run(
+        &self,
+        client: Arc<Self::Middleware>,
+        store: Arc<Self::Store>,
+        contract: Self::Contract,
+    ) -> anyhow::Result<()> {
+        let backoff = backoff::ExponentialBackoff {
+            max_elapsed_time: None,
+            ..Default::default()
+        };
+        let task = || async {
+            let my_address = contract.address();
+            let my_chain_id =
+                client.get_chainid().map_err(anyhow::Error::from).await?;
+            let bridge_key = BridgeKey::new(my_address, my_chain_id);
+            let key = SledQueueKey::from_bridge_key(bridge_key);
+            while let Some(command) = store.dequeue_item(key)? {
+                let result = self
+                    .handle_cmd(store.clone(), &contract, command.clone())
+                    .await;
+                match result {
+                    Ok(_) => {
+                        tokio::time::sleep(Duration::from_millis(500)).await;
+                        continue;
+                    }
+                    Err(e) => {
+                        tracing::error!("Error while handle_cmd {}", e);
+                        // this a transient error, so we will retry again.
+                        // by enqueueing the command again.
+                        store.enqueue_item(key, command)?;
+                        tracing::warn!("Restarting bridge event watcher ...");
+                        return Err(backoff::Error::transient(e));
+                    }
+                }
+                // sleep for a bit to avoid overloading the db.
+            }
+            // whenever this loop stops, we will restart the whole task again.
+            // that way we never have to worry about closed channels.
+            Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())
