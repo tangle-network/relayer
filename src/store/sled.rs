@@ -219,7 +219,7 @@ impl QueueKey for SledQueueKey {
 
 impl<T> QueueStore<T> for SledStore
 where
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Clone,
 {
     type Key = SledQueueKey;
 

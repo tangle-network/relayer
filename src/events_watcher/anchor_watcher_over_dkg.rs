@@ -2,6 +2,7 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
+use ethereum_types::H256;
 use futures::StreamExt;
 use webb::evm::contract::protocol_solidity::{
     FixedDepositAnchorContract, FixedDepositAnchorContractEvents,
@@ -15,6 +16,7 @@ use webb::substrate::{dkg_runtime, subxt};
 
 use crate::config;
 use crate::store::sled::SledStore;
+use crate::store::LeafCacheStore;
 
 type HttpProvider = providers::Provider<providers::Http>;
 
@@ -112,6 +114,9 @@ where
         )
     }
 }
+
+#[derive(Copy, Clone, Debug, Default)]
+pub struct AnchorLeavesWatcher;
 
 #[async_trait::async_trait]
 impl super::EventWatcher for AnchorWatcherOverDKG {
@@ -215,6 +220,76 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
                 tracing::debug!("Tx Progress: {:?}", event);
             }
         }
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl super::EventWatcher for AnchorLeavesWatcher {
+    const TAG: &'static str = "Anchor Watcher For Leaves";
+
+    type Middleware = HttpProvider;
+
+    type Contract = AnchorContractOverDKGWrapper<Self::Middleware>;
+
+    type Events = FixedDepositAnchorContractEvents;
+
+    type Store = SledStore;
+
+    #[tracing::instrument(skip_all)]
+    async fn handle_event(
+        &self,
+        store: Arc<Self::Store>,
+        wrapper: &Self::Contract,
+        (event, log): (Self::Events, LogMeta),
+    ) -> anyhow::Result<()> {
+        use FixedDepositAnchorContractEvents::*;
+        match event {
+            DepositFilter(deposit) => {
+                let commitment = deposit.commitment;
+                let leaf_index = deposit.leaf_index;
+                let value = (leaf_index, H256::from_slice(&commitment));
+                let chain_id = wrapper.contract.client().get_chainid().await?;
+                store.insert_leaves(
+                    (chain_id, wrapper.contract.address()),
+                    &[value],
+                )?;
+                store.insert_last_deposit_block_number(
+                    (chain_id, wrapper.contract.address()),
+                    log.block_number,
+                )?;
+                tracing::trace!(
+                    %log.block_number,
+                    "detected block number",
+                );
+                tracing::debug!(
+                    "Saved Deposit Event ({}, {}) at block {}",
+                    value.0,
+                    value.1,
+                    log.block_number
+                );
+            }
+            EdgeAdditionFilter(v) => {
+                tracing::debug!(
+                    "Edge Added of chain {} at index {} with root 0x{}",
+                    v.chain_id,
+                    v.latest_leaf_index,
+                    hex::encode(v.merkle_root)
+                );
+            }
+            EdgeUpdateFilter(v) => {
+                tracing::debug!(
+                    "Edge Updated of chain {} at index {} with root 0x{}",
+                    v.chain_id,
+                    v.latest_leaf_index,
+                    hex::encode(v.merkle_root)
+                );
+            }
+            _ => {
+                tracing::trace!("Unhandled event {:?}", event);
+            }
+        };
+
         Ok(())
     }
 }

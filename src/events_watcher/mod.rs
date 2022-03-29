@@ -253,9 +253,8 @@ where
             let bridge_key = BridgeKey::new(my_address, my_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             while let Some(command) = store.dequeue_item(key)? {
-                let result = self
-                    .handle_cmd(store.clone(), &contract, command.clone())
-                    .await;
+                let result =
+                    self.handle_cmd(store.clone(), &contract, command).await;
                 match result {
                     Ok(_) => {
                         tokio::time::sleep(Duration::from_millis(500)).await;
@@ -264,8 +263,6 @@ where
                     Err(e) => {
                         tracing::error!("Error while handle_cmd {}", e);
                         // this a transient error, so we will retry again.
-                        // by enqueueing the command again.
-                        store.enqueue_item(key, command)?;
                         tracing::warn!("Restarting bridge event watcher ...");
                         return Err(backoff::Error::transient(e));
                     }

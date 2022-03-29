@@ -142,10 +142,11 @@ fn start_dkg_proposal_handler(
         node_name,
     );
     let node_name2 = node_name.clone();
-    let watcher =
-        ProposalHandlerWatcher.run(node_name, chain_id, client, store);
     let mut shutdown_signal = ctx.shutdown_signal();
+    let webb_config = ctx.config.clone();
     let task = async move {
+        let proposal_handler = ProposalHandlerWatcher::new(webb_config);
+        let watcher = proposal_handler.run(node_name, chain_id, client, store);
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -241,11 +242,20 @@ async fn start_anchor_over_dkg_events_watcher(
         );
         let watcher =
             AnchorWatcherOverDKG::new(dkg_client, PairSigner::new(pair));
+        let leaves_watcher = AnchorLeavesWatcher::default();
+        let anchor_leaves_watcher =
+            leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
         let anchor_over_dkg_watcher_task = watcher.run(client, store, wrapper);
         tokio::select! {
             _ = anchor_over_dkg_watcher_task => {
                 tracing::warn!(
                     "Anchor over dkg watcher task stopped for ({})",
+                    contract_address,
+                );
+            },
+            _ = anchor_leaves_watcher => {
+                tracing::warn!(
+                    "Anchor leaves watcher stopped for ({})",
                     contract_address,
                 );
             },
@@ -263,7 +273,7 @@ async fn start_anchor_over_dkg_events_watcher(
     Ok(())
 }
 
-fn start_signature_bridge_events_watcher(
+async fn start_signature_bridge_events_watcher(
     ctx: &RelayerContext,
     config: &SignatureBridgeContractConfig,
     client: Arc<Client>,
@@ -278,11 +288,11 @@ fn start_signature_bridge_events_watcher(
     }
     let mut shutdown_signal = ctx.shutdown_signal();
     let contract_address = config.common.address;
+    let wrapper =
+        SignatureBridgeContractWrapper::new(config.clone(), client.clone());
     let task = async move {
         tracing::debug!("Bridge watcher for ({}) Started.", contract_address);
         let bridge_contract_watcher = SignatureBridgeContractWatcher::default();
-        let wrapper =
-            SignatureBridgeContractWrapper::new(config.clone(), client.clone());
         let events_watcher_task = EventWatcher::run(
             &bridge_contract_watcher,
             client.clone(),
