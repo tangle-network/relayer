@@ -13,6 +13,78 @@
 // limitations under the License.
 //
 #![deny(unsafe_code)]
+#![warn(missing_docs)]
+
+//! # Webb Relayer Crate 🕸️
+//!
+//! A crate used to relaying updates and transactions for the Webb Anchor protocol.
+//!
+//! ## Overview
+//!
+//! In the Webb Protocol, the relayer is a multi-faceted oracle, data relayer, and protocol
+//! governance participant. Relayers fulfill the role of an oracle where the external data sources that
+//! they listen to are the state of the anchors for a bridge. Relayers, as their name entails, relay
+//! information for a connected set of Anchors on a bridge. This information is then used to update
+//! the state of each Anchor and allow applications to reference, both privately and potentially not,
+//! properties of data stored across the other connected Anchors.
+//!
+//! The relayer system is composed of three main components. Each of these components should be thought of as entirely
+//! separate because they could be handled by different entities entirely.
+//!
+//!   1. Private transaction relaying (of user bridge transactions like Tornado Cash’s relayer)
+//!   2. Data querying (for zero-knowledge proof generation)
+//!   3. Data proposing and signature relaying (of DKG proposals)
+//!
+//! #### Private Transaction Relaying
+//!
+//! The relayer allows for submitting proofs for privacy-preserving transactions against the Mixer, Anchor and
+//! VAnchor protocols. The users generate zero-knowledge proof data, format a proper payload, and submit
+//! it to a compatible relayer for submission.
+//!
+//! #### Data Querying
+//!
+//! The relayer also supplements users who need to generate witness data for their zero-knowledge proofs.
+//! The relayers cache the leaves of the trees of Mixer, Anchor or VAnchor that they are supporting.
+//! This allows users to query for the leaf data faster than querying from a chain directly.
+//!
+//! #### Data Proposing and Signature Relaying
+//!
+//! The relayer is tasked with relaying signed data payloads from the DKG's activities and plays an important
+//! role as it pertains to the Anchor Protocol. The relayer is responsible for submitting the unsigned and
+//! signed anchor update proposals to and from the DKG before and after signing occurs.
+//!
+//! This role can be divided into two areas:
+//! 1. Proposing
+//! 2. Relaying
+//!
+//! The relayer is the main agent in the system who proposes anchor updates to the DKG for signing. That is,
+//! the relayer acts as an oracle over the merkle trees of the Anchors and VAnchors. When new insertions into
+//! the merkle trees occur, the relayer crafts an update proposal that is eventually proposed to the DKG for signing.
+//!
+//! The relayer is also responsible for relaying signed proposals. When anchor updates are signed, relayers are
+//! tasked with submitting these signed payloads to the smart contract SignatureBridges that verify and handle
+//! valid signed proposals. For all other signed proposals, the relayer is tasked with relaying these payloads
+//! to the SignatureBridge instances and/or Governable instances.
+//!
+//! **The responsibility for a relayer to the DKG (governance system) can be summarized as follows:**
+//!
+//! The relayers act as proposers of proposals intended to be signed by the distributed key generation
+//! protocol (DKG).
+//!
+//!  1. The relayers are listening to and proposing updates.
+//!  2. The DKG is signing these updates using a threshold-signature scheme.
+//!
+//! We require a threshold of relayers (*really proposers*) to agree on the update in order to move the update
+//! into a queue for the DKG to sign from.
+//!
+//! # Features
+//!
+//! There are several feature flags that control how much is available as part of the crate, both
+//! `evm-runtime`, `substrate-runtime` are enabled by default.
+//!
+//! * `evm-runtime`: Enables the EVM runtime. By default, this is enabled.
+//! * `substrate-runtime`: Enables the substrate runtime. By default, this is enabled.
+//! * `integration-tests`: Enables integration tests. By default, this is disabled.
 
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -27,23 +99,33 @@ use warp::Filter;
 use warp_real_ip::real_ip;
 
 use crate::context::RelayerContext;
-
+/// A module for configuring the relayer.
 mod config;
+/// A module for managing the context of the relayer.
 mod context;
+/// A module that listens for events on a given chain.
 mod events_watcher;
+/// A module containing a collection of executable routines.
 mod handler;
+/// A module used for debugging relayer lifecycle, sync state, or other relayer state.
 mod probe;
+/// A module for starting long-running tasks for event watching.
 mod service;
+/// A module for managing the storage of the relayer.
 mod store;
+/// A module for managing the transaction queue for the relayer.
 mod tx_queue;
+/// A module for common functionality.
 mod utils;
-
+/// Package identifier, where the default configuration & database are defined.
+/// If the user does not start the relayer with the `--config-dir`
+/// it will default to read from the default location depending on the OS.
 const PACKAGE_ID: [&str; 3] = ["tools", "webb", "webb-relayer"];
 /// The Webb Relayer Command-line tool
 ///
 /// Start the relayer from a config file:
 ///
-///     $ webb-relayer -vvv -c <CONFIG_FILE_PATH>
+/// $ webb-relayer -vvv -c <CONFIG_FILE_PATH>
 #[derive(StructOpt)]
 #[structopt(name = "Webb Relayer")]
 struct Opts {
@@ -63,7 +145,11 @@ struct Opts {
     #[structopt(long)]
     tmp: bool,
 }
-
+/// The main entry point for the relayer.
+///
+/// # Arguments
+///
+/// * `args` - The command line arguments.
 #[paw::main]
 #[tokio::main]
 async fn main(args: Opts) -> anyhow::Result<()> {
@@ -84,11 +170,11 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // throughout the lifetime of the relayer. Items such as wallets and providers, as well
     // as a convenient place to access the configuration.
     let ctx = RelayerContext::new(config);
-    
+
     // persistent storage for the relayer
     let store = create_store(&args).await?;
 
-    // the build_relayer command sets up routing (endpoint queries / requests mapped to handled code) 
+    // the build_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
     let (addr, server) = build_relayer(ctx.clone(), store.clone())?;
     tracing::info!("Starting the server on {}", addr);
@@ -138,7 +224,20 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     }
     Ok(())
 }
-
+/// Sets up the logger for the relayer, based on the verbosity level passed in.
+///
+/// Returns `Ok(())` on success, or `Err(anyhow::Error)` on failure.
+///
+/// # Arguments
+///
+/// * `verbosity` - An i32 integer representing the verbosity level.
+///
+/// # Examples
+///
+/// ```
+/// let arg = 3;
+/// setup_logger(arg)?;
+/// ```
 fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
     use tracing::Level;
     let log_level = match verbosity {
@@ -165,7 +264,20 @@ fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
     logger.init();
     Ok(())
 }
-
+/// Loads the configuration from the given directory.
+///
+/// Returns `Ok(Config)` on success, or `Err(anyhow::Error)` on failure.
+///
+/// # Arguments
+///
+/// * `config_dir` - An optional `PathBuf` representing the directory that contains the configuration.
+///
+/// # Example
+///
+/// ```
+/// let arg = Some(PathBuf::from("/tmp/config"));
+/// let config = load_config(arg)?;
+/// ```
 fn load_config<P>(
     config_dir: Option<P>,
 ) -> anyhow::Result<config::WebbRelayerConfig>
@@ -190,7 +302,23 @@ where
     tracing::trace!("Loading Config from {} ..", path.display());
     config::load(path)
 }
-
+/// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
+/// instantiates the database store. Allows clients to interact with the relayer.
+///
+/// Returns `Ok((addr, server))` on success, or `Err(anyhow::Error)` on failure.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `store` - [Sled](https://sled.rs)-based database store
+///
+/// # Examples
+///
+/// ```
+/// let ctx = RelayerContext::new(config);
+/// let store = create_store(&args).await?;
+/// let (addr, server) = build_relayer(ctx.clone(), store.clone())?;
+/// ```
 fn build_relayer(
     ctx: RelayerContext,
     store: store::sled::SledStore,
@@ -198,7 +326,7 @@ fn build_relayer(
     let port = ctx.config.port;
     let ctx_arc = Arc::new(ctx.clone());
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
-    
+
     // the websocket server for users to submit relay transaction requests
     let ws_filter = warp::path("ws")
         .and(warp::ws())
@@ -261,7 +389,20 @@ fn build_relayer(
         .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), shutdown_signal)
         .map_err(Into::into)
 }
-
+/// Creates a database store for the relayer based on the configuration passed in.
+///
+/// Returns `Ok(store::sled::SledStore)` on success, or `Err(anyhow::Error)` on failure.
+///
+/// # Arguments
+///
+/// * `opts` - The configuration options for the database store.
+///
+/// # Examples
+///
+/// ```
+/// let args = Args::default();
+/// let store = create_store(&args).await?;
+/// ```
 async fn create_store(opts: &Opts) -> anyhow::Result<store::sled::SledStore> {
     // check if we shall use the temp dir.
     if opts.tmp {

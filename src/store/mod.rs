@@ -12,14 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+//! # Relayer Store Module 🕸️
+//!
+//! A module for managing the storage of the relayer.
+//!
+//! ## Overview
+//!
+//! The relayer store module stores the history of events. Manages the setting
+//! and retrieving operations of events.
+//!
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
 
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use webb::evm::ethers::types;
-
+/// A module for managing in-memory storage of the relayer.
 pub mod mem;
+/// A module for setting up and managing a [Sled](https://sled.rs)-based database.
 pub mod sled;
 /// HistoryStoreKey contains the keys used to store the history of events.
 #[derive(Eq, PartialEq, Hash)]
@@ -60,7 +70,7 @@ impl HistoryStoreKey {
             }
         }
     }
-    /// to_bytes returns the bytes of the key.
+    /// Returns the bytes of the key.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut vec = vec![];
         match self {
@@ -181,7 +191,7 @@ pub trait LeafCacheStore: HistoryStore {
         block_number: types::U64,
     ) -> anyhow::Result<types::U64>;
 }
-
+/// A trait for retrieving queue keys
 pub trait QueueKey {
     fn queue_name(&self) -> String;
     fn item_key(&self) -> Option<[u8; 64]>;

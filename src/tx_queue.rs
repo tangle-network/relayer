@@ -28,10 +28,10 @@ use crate::store::sled::SledQueueKey;
 use crate::store::QueueStore;
 use crate::utils::ClickableLink;
 
-// The TxQueue stores transaction requests so the relayer can process them later. 
-// This prevents issues such as creating transactions with the same nonce.
-// Randomized sleep intervals are used to prevent relayers from submitting
-// the same transaction. 
+/// The TxQueue stores transaction requests so the relayer can process them later.
+/// This prevents issues such as creating transactions with the same nonce.
+/// Randomized sleep intervals are used to prevent relayers from submitting
+/// the same transaction.
 #[derive(Clone)]
 pub struct TxQueue<S: QueueStore<TypedTransaction>> {
     ctx: RelayerContext,
@@ -51,7 +51,7 @@ where
     ///
     /// * `ctx` - RelayContext reference that holds the configuration
     /// * `chain_name` - The name of the chain that this queue is for
-    /// * `store` - Store reference that holds the database
+    /// * `store` - [Sled](https://sled.rs)-based database store
     ///
     /// # Examples
     ///

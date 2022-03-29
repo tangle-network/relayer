@@ -12,10 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// -----------------------
-//
-// Services are tasks which the relayer constantly runs throughout its lifetime.
-// Services handle keeping up to date with the configured chains.
+//! # Relayer Service Module 🕸️
+//!
+//! A module for starting long-running tasks for event watching.
+//!
+//! ## Overview
+//!
+//! Services are tasks which the relayer constantly runs throughout its lifetime.
+//! Services handle keeping up to date with the configured chains.
 
 use std::sync::Arc;
 
@@ -30,13 +34,16 @@ use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::*;
 use crate::tx_queue::TxQueue;
-
+/// Type alias for providers
 type Client = providers::Provider<providers::Http>;
+/// Type alias for the DKG DefaultConfig
 type DkgClient = subxt::Client<subxt::DefaultConfig>;
+/// Type alias for the DKG RuntimeApi
 type DkgRuntime = DkgRuntimeApi<
     subxt::DefaultConfig,
     subxt::DefaultExtra<subxt::DefaultConfig>,
 >;
+/// Type alias for [Sled](https://sled.rs)-based database store
 type Store = crate::store::sled::SledStore;
 /// Starts all background services for all chains configured in the config file.
 ///
@@ -45,7 +52,7 @@ type Store = crate::store::sled::SledStore;
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
-/// * `store` - Store reference that holds the database
+/// * `store` -[Sled](https://sled.rs)-based database store
 ///
 /// # Examples
 ///
@@ -143,7 +150,18 @@ pub async fn ignite(
     }
     Ok(())
 }
-
+/// Starts the event watcher for DKG proposal handler events.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - DKG proposal handler configuration
+/// * `client` - DKG client
+/// * `node_name` - Name of the node
+/// * `chain_id` - An U256 representing the chain id of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
 fn start_dkg_proposal_handler(
     ctx: &RelayerContext,
     config: &DKGProposalHandlerPalletConfig,
@@ -188,7 +206,16 @@ fn start_dkg_proposal_handler(
     tokio::task::spawn(task);
     Ok(())
 }
-
+/// Starts the event watcher for tornado events.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - Tornado contract configuration
+/// * `client` - Tornado client
+/// * `store` -[Sled](https://sled.rs)-based database store
 fn start_tornado_events_watcher(
     ctx: &RelayerContext,
     config: &TornadoContractConfig,
@@ -231,7 +258,16 @@ fn start_tornado_events_watcher(
     tokio::task::spawn(task);
     Ok(())
 }
-
+/// Starts the event watcher for DKG events.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - Anchor contract configuration
+/// * `client` - DKG client
+/// * `store` -[Sled](https://sled.rs)-based database store
 async fn start_anchor_over_dkg_events_watcher(
     ctx: &RelayerContext,
     config: &AnchorContractOverDKGConfig,
@@ -285,7 +321,15 @@ async fn start_anchor_over_dkg_events_watcher(
 
     Ok(())
 }
-
+/// Starts the transaction queue task
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `chain_name` - Name of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
 fn start_tx_queue(
     ctx: RelayerContext,
     chain_name: String,

@@ -16,7 +16,7 @@ use std::fmt;
 
 use webb::substrate::subxt;
 use webb::substrate::subxt::sp_core::storage::StorageChangeSet;
-
+/// Represents a clickable link containing text and url
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ClickableLink<'a> {
     text: &'a str,
@@ -39,7 +39,7 @@ impl fmt::Display for ClickableLink<'_> {
         )
     }
 }
-
+/// change_set_to_events converts a StorageChangeSet to a Vec of events.
 pub fn change_set_to_events<C: subxt::Config, E: subxt::Event>(
     change_set: StorageChangeSet<C::Hash>,
     decoder: &subxt::EventsDecoder<C>,

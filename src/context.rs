@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
+#![warn(missing_docs)]
+
+//! # Relayer Context Module 🕸️
+//!
+//! A module for managing the context of the relayer.
 use std::convert::TryFrom;
 use std::time::Duration;
 
@@ -55,7 +61,18 @@ impl RelayerContext {
     pub fn shutdown(&self) {
         let _ = self.notify_shutdown.send(());
     }
-    /// evm_provider returns an Ethers provider for the configured EVM chain.
+    /// Returns a new `EthereumProvider` for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_name` - A string representing the chain name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let chain_name = "mainnet".to_string();
+    /// let provider = ctx.evm_provider(chain_name).await?;
+    /// ```
     pub async fn evm_provider(
         &self,
         chain_name: &str,
@@ -68,7 +85,18 @@ impl RelayerContext {
             .interval(Duration::from_millis(5u64));
         Ok(provider)
     }
-    /// evm_wallet returns an Ethers wallet for the configured EVM chain.
+    /// Sets up and returns an EVM wallet for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_name` - A string representing the chain name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let chain_name = "mainnet".to_string();
+    /// let wallet = self.ctx.evm_wallet(&self.chain_name).await?;
+    /// ```
     pub async fn evm_wallet(
         &self,
         chain_name: &str,
@@ -82,7 +110,18 @@ impl RelayerContext {
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
     }
-    /// substrate_provider returns a Substrate provider for the configured
+    /// Sets up and returns a Substrate client for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `node_name` - A string representing the node name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let node_name = "dkg_node".to_string();
+    /// let client = ctx.substrate_provider::<subxt::DefaultConfig>(node_name).await?;
+    /// ```
     pub async fn substrate_provider<C: subxt::Config>(
         &self,
         node_name: &str,
@@ -102,7 +141,18 @@ impl RelayerContext {
             ))?;
         Ok(client)
     }
-    /// substrate_wallet returns a Substrate wallet for the configured Substrate chain.
+    /// Sets up and returns a Substrate wallet for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `node_name` - A string representing the node name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let node_name = "dkg_node".to_string();
+    /// let pair = ctx.substrate_wallet(node_name).await?;
+    /// ```
     pub async fn substrate_wallet(
         &self,
         node_name: &str,

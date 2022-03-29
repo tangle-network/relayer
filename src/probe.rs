@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 use derive_more::Display;
+/// Target for logger
 pub const TARGET: &str = "webb_probe";
 
 /// The Kind of the Probe.

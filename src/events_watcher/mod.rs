@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// ---------------------
-//
-// Event watcher traits handle the syncing and listening of events for a given network.
-// The event watcher calls into a storage for handling of important state.
-//
-// The run implementation of an event watcher polls for blocks.
-// Implementations of the event watcher trait define an action to take when
-// the specified event is found in a block at the `handle_event` api. 
-
+#![warn(missing_docs)]
+//! # Relayer Events Watcher Module 🕸️
+//!
+//! A module that listens for events on a given chain.
+//!
+//! ## Overview
+//!
+//! Event watcher traits handle the syncing and listening of events for a given network.
+//! The event watcher calls into a storage for handling of important state. The run implementation
+//! of an event watcher polls for blocks. Implementations of the event watcher trait define an
+//! action to take when the specified event is found in a block at the `handle_event` api.
 use std::cmp;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -47,13 +49,17 @@ use webb::{
 use crate::store::HistoryStore;
 use crate::utils;
 
+/// A module for listening on tornado events.
 mod tornado_leaves_watcher;
+#[doc(hidden)]
 pub use tornado_leaves_watcher::*;
-
+/// A module for listening on anchor events over the DKG.
 mod anchor_watcher_over_dkg;
+#[doc(hidden)]
 pub use anchor_watcher_over_dkg::*;
-
+/// A module for listening on proposal events.
 mod proposal_handler_watcher;
+#[doc(hidden)]
 pub use proposal_handler_watcher::*;
 
 /// A watchable contract is a contract used in the [EventWatcher]

@@ -12,6 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
+#![warn(missing_docs)]
+
+//! # Relayer Configuration Module 🕸️
+//!
+//! A module for configuring the relayer.
+//!
+//! ## Overview
+//!
+//! The relayer configuration module is responsible for configuring the relayer.
+//! Possible configuration include:
+//! * `port`: The port the relayer will listen on. Defaults to 9955
+//! * `evm`: EVM based networks and the configuration. See [config/config-6sided-eth-bridge](./config/config-6sided-eth-bridge)
+//! for an example.
+//! * `substrate`: Substrate based networks and the configuration. See [config/local-substrate](./config/local-substrate) for an example.
+//!
+//! Checkout [config](./config) for useful default configurations for many networks.
+//! These config files can be changed to your preferences.
 use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
@@ -21,18 +39,19 @@ use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::{Pair as Sr25519Pair, Public};
 use webb::substrate::subxt::sp_core::Pair;
 
+/// The default port the relayer will listen on. Defaults to 9955.
 const fn default_port() -> u16 {
     9955
 }
-
+/// Leaves watcher is set to `true` by default.
 const fn enable_leaves_watcher_default() -> bool {
     true
 }
-
+/// The maximum events per step is set to `100` by default.
 const fn max_events_per_step_default() -> u64 {
     100
 }
-
+/// The print progress interval is set to `7_000` by default.
 const fn print_progress_interval_default() -> u64 {
     7_000
 }
@@ -63,6 +82,7 @@ pub struct WebbRelayerConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EvmChainConfig {
+    /// Boolean indicating EVM based networks are enabled or not.
     #[serde(default)]
     pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
@@ -103,6 +123,7 @@ pub struct EvmChainConfig {
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
     pub contracts: Vec<Contract>,
+    /// TxQueue configuration
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
 }
@@ -110,6 +131,7 @@ pub struct EvmChainConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SubstrateConfig {
+    /// Boolean indicating Substrate networks are enabled or not.
     #[serde(default)]
     pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
@@ -162,7 +184,7 @@ pub struct SubstrateConfig {
     /// Supported pallets over this substrate node.
     pub pallets: Vec<Pallet>,
 }
-
+/// ExperimentalConfig is the configuration for the Experimental Options.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct ExperimentalConfig {
@@ -205,7 +227,7 @@ pub struct EventsWatcherConfig {
     #[serde(skip_serializing, default = "print_progress_interval_default")]
     pub print_progress_interval: u64,
 }
-
+/// AnchorWithdrawConfig is the configuration for the Anchor Withdraw.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct AnchorWithdrawConfig {
@@ -320,6 +342,7 @@ pub struct DKGProposalHandlerPalletConfig {
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }
+/// PrivateKey represents a private key.
 #[derive(Debug, Clone)]
 pub struct PrivateKey(Secret);
 
@@ -470,7 +493,20 @@ impl<'de> Deserialize<'de> for Suri {
         Ok(Self(secret))
     }
 }
-/// load the private key from the environment variable
+/// Load the configuration files and
+///
+/// Returns `Ok(WebbRelayerConfig)` on success, or `Err(anyhow::Error)` on failure.
+///
+/// # Arguments
+///
+/// * `path` - The path to the configuration file
+///
+/// # Example
+///
+/// ```
+/// let path = "/path/to/config.toml";
+/// config::load(path);
+/// ```
 pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
     // A pattern that covers all toml or json files in the config directory and subdirectories.
@@ -536,8 +572,8 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
     }
 }
 
-// The postloading_process exists to validate configuration and standardize
-// the format of the configuration
+/// The postloading_process exists to validate configuration and standardize
+/// the format of the configuration
 fn postloading_process(
     mut config: WebbRelayerConfig,
 ) -> anyhow::Result<WebbRelayerConfig> {
