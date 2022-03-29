@@ -93,7 +93,7 @@ pub async fn accept_connection(
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
-/// * `v` - A vector of bytes
+/// * `v` - The text (usually in a JSON form) message to be handled.
 /// * `tx` - A mutable Trait implementation of the `warp::ws::Sender` trait
 ///
 /// # Examples

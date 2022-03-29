@@ -31,7 +31,7 @@ use crate::config;
 use crate::store::sled::SledStore;
 
 type HttpProvider = providers::Provider<providers::Http>;
-/// Represents a Substrate specific watcher for Anchor events.
+/// Represents an Anchor Contract Watcher which will use the DKG Substrate nodes for signing.
 pub struct AnchorWatcherWithSubstrate<R, C>
 where
     R: From<subxt::Client<C>>,

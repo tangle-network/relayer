@@ -23,7 +23,7 @@ use crate::store::{BridgeKey, QueueKey};
 
 use super::HistoryStoreKey;
 use super::{HistoryStore, LeafCacheStore, ProposalStore, QueueStore};
-/// SledStore is a store that stores the history of events in Sled.
+/// SledStore is a store that stores the history of events in  a [Sled](https://sled.rs)-based database.
 #[derive(Clone)]
 pub struct SledStore {
     db: sled::Db,

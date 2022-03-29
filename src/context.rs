@@ -51,7 +51,7 @@ impl RelayerContext {
     pub fn shutdown_signal(&self) -> Shutdown {
         Shutdown::new(self.notify_shutdown.subscribe())
     }
-    /// Sends a shutdown signal to all active connections.
+    /// Sends a shutdown signal to all subscribed tasks/connections.
     pub fn shutdown(&self) {
         let _ = self.notify_shutdown.send(());
     }
