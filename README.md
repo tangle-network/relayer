@@ -1,9 +1,9 @@
 <h1 align="center">Webb Relayer</h1>
 <div align="center">
-<a href="https://www.webb.tools/">
+  <a href="https://www.webb.tools/">
     <img alt="Webb Logo" src="./assets/webb-icon.svg" width="15%" height="30%" />
   </a>
-  </div>
+</div>
 <p align="center">
     <strong>🕸️  The Webb Relayer  🧑‍✈️</strong>
     <br />

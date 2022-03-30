@@ -81,7 +81,7 @@ pub async fn accept_connection(
     }
     Ok(())
 }
-/// Sets u websocket channels for message sending.
+/// Sets up a websocket channels for message sending.
 ///
 /// Returns `Ok(())` on success
 ///

@@ -24,7 +24,7 @@ pub struct ClickableLink<'a> {
 }
 
 impl<'a> ClickableLink<'a> {
-    /// Create a new link with a name and target url.
+    /// Create a new link with a name and target URL, helpful to print clickable links in the terminal.
     pub fn new(text: &'a str, url: &'a str) -> Self {
         Self { text, url }
     }
