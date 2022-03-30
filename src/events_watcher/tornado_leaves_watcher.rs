@@ -1,3 +1,17 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
@@ -15,7 +29,7 @@ use crate::store::LeafCacheStore;
 
 #[derive(Copy, Clone, Debug)]
 pub struct TornadoLeavesWatcher;
-
+/// Represents a Tornado leaves watcher.
 #[derive(Clone, Debug)]
 pub struct TornadoContractWrapper<M: Middleware> {
     config: config::TornadoContractConfig,
@@ -23,6 +37,7 @@ pub struct TornadoContractWrapper<M: Middleware> {
 }
 
 impl<M: Middleware> TornadoContractWrapper<M> {
+    /// Creates a new TornadoContractWrapper.
     pub fn new(config: config::TornadoContractConfig, client: Arc<M>) -> Self {
         Self {
             contract: TornadoContract::new(config.common.address, client),

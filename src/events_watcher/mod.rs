@@ -1,3 +1,28 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+#![warn(missing_docs)]
+//! # Relayer Events Watcher Module 🕸️
+//!
+//! A module that listens for events on a given chain.
+//!
+//! ## Overview
+//!
+//! Event watcher traits handle the syncing and listening of events for a given network.
+//! The event watcher calls into a storage for handling of important state. The run implementation
+//! of an event watcher polls for blocks. Implementations of the event watcher trait define an
+//! action to take when the specified event is found in a block at the `handle_event` api.
 use std::cmp;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -24,13 +49,17 @@ use webb::{
 use crate::store::HistoryStore;
 use crate::utils;
 
+/// A module for listening on tornado events.
 mod tornado_leaves_watcher;
+#[doc(hidden)]
 pub use tornado_leaves_watcher::*;
-
+/// A module for listening on anchor events over the DKG.
 mod anchor_watcher_over_dkg;
+#[doc(hidden)]
 pub use anchor_watcher_over_dkg::*;
-
+/// A module for listening on proposal events.
 mod proposal_handler_watcher;
+#[doc(hidden)]
 pub use proposal_handler_watcher::*;
 
 /// A watchable contract is a contract used in the [EventWatcher]
@@ -48,6 +77,8 @@ pub trait WatchableContract: Send + Sync {
     fn print_progress_interval(&self) -> Duration;
 }
 
+/// A trait for watching events from a watchable contract.
+/// EventWatcher trait exists for deployments that are smart-contract / EVM based
 #[async_trait::async_trait]
 pub trait EventWatcher {
     const TAG: &'static str;
@@ -203,10 +234,10 @@ pub trait EventWatcher {
         Ok(())
     }
 }
-
+/// Type alias for Substrate block number.
 pub type BlockNumberOf<T> =
     <<T as SubstrateEventWatcher>::RuntimeConfig as subxt::Config>::BlockNumber;
-
+/// Represents a Substrate event watcher.
 #[async_trait::async_trait]
 pub trait SubstrateEventWatcher {
     const TAG: &'static str;
