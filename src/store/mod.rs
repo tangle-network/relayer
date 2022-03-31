@@ -1,13 +1,37 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+//! # Relayer Store Module 🕸️
+//!
+//! A module for managing the storage of the relayer.
+//!
+//! ## Overview
+//!
+//! The relayer store module stores the history of events. Manages the setting
+//! and retrieving operations of events.
+//!
 use std::fmt::{Debug, Display};
 use std::sync::Arc;
 
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use webb::evm::ethers::types;
-
+/// A module for managing in-memory storage of the relayer.
 pub mod mem;
+/// A module for setting up and managing a [Sled](https://sled.rs)-based database.
 pub mod sled;
-
+/// HistoryStoreKey contains the keys used to store the history of events.
 #[derive(Eq, PartialEq, Hash)]
 pub enum HistoryStoreKey {
     Evm {
@@ -35,13 +59,14 @@ impl BridgeKey {
 }
 
 impl HistoryStoreKey {
+    /// Returns the chain id of the chain this key is for.
     pub fn chain_id(&self) -> types::U256 {
         match self {
             HistoryStoreKey::Evm { chain_id, .. } => *chain_id,
             HistoryStoreKey::Substrate { chain_id, .. } => *chain_id,
         }
     }
-
+    /// Returns the address of the chain this key is for.
     pub fn address(&self) -> types::H160 {
         match self {
             HistoryStoreKey::Evm { address, .. } => *address,
@@ -56,6 +81,7 @@ impl HistoryStoreKey {
         }
     }
 
+    /// Returns the bytes of the key.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut vec = vec![];
         match self {
@@ -188,6 +214,7 @@ pub enum BridgeCommand {
     ExecuteProposalWithSignature { data: Vec<u8>, signature: Vec<u8> },
 }
 
+/// A trait for retrieving queue keys
 pub trait QueueKey {
     fn queue_name(&self) -> String;
     fn item_key(&self) -> Option<[u8; 64]>;
@@ -241,7 +268,7 @@ where
         S::remove_item(self, key)
     }
 }
-
+/// ProposalStore is a simple trait for inserting and removing proposals.
 pub trait ProposalStore {
     type Proposal: Serialize + DeserializeOwned;
     fn insert_proposal(&self, proposal: Self::Proposal) -> anyhow::Result<()>;

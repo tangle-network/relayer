@@ -1,3 +1,18 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+#![warn(missing_docs)]
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
@@ -19,7 +34,7 @@ use crate::store::sled::SledStore;
 use crate::store::LeafCacheStore;
 
 type HttpProvider = providers::Provider<providers::Http>;
-
+/// Represents an Anchor Contract Watcher which will use the DKG Substrate nodes for signing.
 pub struct AnchorWatcherWithSubstrate<R, C>
 where
     R: From<subxt::Client<C>>,
@@ -34,6 +49,7 @@ where
     R: From<subxt::Client<C>>,
     C: subxt::Config,
 {
+    /// Creates a new AnchorWatcherWithSubstrate.
     pub fn new(
         client: subxt::Client<C>,
         pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
@@ -48,9 +64,11 @@ where
 type DKGConfig = subxt::DefaultConfig;
 type DKGRuntimeApi =
     dkg_runtime::api::RuntimeApi<DKGConfig, subxt::DefaultExtra<DKGConfig>>;
+/// Type alias for the AnchorWatcherWithSubstrate.
 pub type AnchorWatcherOverDKG =
     AnchorWatcherWithSubstrate<DKGRuntimeApi, DKGConfig>;
 
+/// AnchorContractOverDKGWrapper contains FixedDepositAnchorContract contract along with configurations for Anchor contract over DKG, and Relayer.  
 #[derive(Clone, Debug)]
 pub struct AnchorContractOverDKGWrapper<M>
 where
@@ -65,6 +83,7 @@ impl<M> AnchorContractOverDKGWrapper<M>
 where
     M: Middleware,
 {
+    /// Creates a new AnchorContractOverDKGWrapper.
     pub fn new(
         config: config::AnchorContractOverDKGConfig,
         webb_config: config::WebbRelayerConfig,

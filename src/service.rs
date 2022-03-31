@@ -1,3 +1,26 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+//! # Relayer Service Module 🕸️
+//!
+//! A module for starting long-running tasks for event watching.
+//!
+//! ## Overview
+//!
+//! Services are tasks which the relayer constantly runs throughout its lifetime.
+//! Services handle keeping up to date with the configured chains.
+
 use std::sync::Arc;
 
 use ethereum_types::U256;
@@ -11,15 +34,31 @@ use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::*;
 use crate::tx_queue::TxQueue;
-
+/// Type alias for providers
 type Client = providers::Provider<providers::Http>;
+/// Type alias for the DKG DefaultConfig
 type DkgClient = subxt::Client<subxt::DefaultConfig>;
+/// Type alias for the DKG RuntimeApi
 type DkgRuntime = DkgRuntimeApi<
     subxt::DefaultConfig,
     subxt::DefaultExtra<subxt::DefaultConfig>,
 >;
+/// Type alias for [Sled](https://sled.rs)-based database store
 type Store = crate::store::sled::SledStore;
-
+/// Starts all background services for all chains configured in the config file.
+///
+/// Returns a future that resolves when all services are started successfully.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `store` -[Sled](https://sled.rs)-based database store
+///
+/// # Examples
+///
+/// ```
+/// let _ = service::ignite(&ctx, Arc::new(store)).await?;
+/// ```
 pub async fn ignite(
     ctx: &RelayerContext,
     store: Arc<Store>,
@@ -120,7 +159,18 @@ pub async fn ignite(
     }
     Ok(())
 }
-
+/// Starts the event watcher for DKG proposal handler events.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - DKG proposal handler configuration
+/// * `client` - DKG client
+/// * `node_name` - Name of the node
+/// * `chain_id` - An U256 representing the chain id of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
 fn start_dkg_proposal_handler(
     ctx: &RelayerContext,
     config: &DKGProposalHandlerPalletConfig,
@@ -166,7 +216,16 @@ fn start_dkg_proposal_handler(
     tokio::task::spawn(task);
     Ok(())
 }
-
+/// Starts the event watcher for tornado events.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - Tornado contract configuration
+/// * `client` - Tornado client
+/// * `store` -[Sled](https://sled.rs)-based database store
 fn start_tornado_events_watcher(
     ctx: &RelayerContext,
     config: &TornadoContractConfig,
@@ -209,7 +268,16 @@ fn start_tornado_events_watcher(
     tokio::task::spawn(task);
     Ok(())
 }
-
+/// Starts the event watcher for DKG events.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - Anchor contract configuration
+/// * `client` - DKG client
+/// * `store` -[Sled](https://sled.rs)-based database store
 async fn start_anchor_over_dkg_events_watcher(
     ctx: &RelayerContext,
     config: &AnchorContractOverDKGConfig,
@@ -331,6 +399,15 @@ async fn start_signature_bridge_events_watcher(
     Ok(())
 }
 
+/// Starts the transaction queue task
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `chain_name` - Name of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
 fn start_tx_queue(
     ctx: RelayerContext,
     chain_name: String,

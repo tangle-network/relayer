@@ -1,3 +1,23 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+#![warn(missing_docs)]
+
+//! # Relayer Context Module 🕸️
+//!
+//! A module for managing the context of the relayer.
 use std::convert::TryFrom;
 use std::time::Duration;
 
@@ -9,7 +29,7 @@ use webb::substrate::subxt;
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 
 use crate::config;
-
+/// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
 pub struct RelayerContext {
     pub config: config::WebbRelayerConfig,
@@ -25,6 +45,7 @@ pub struct RelayerContext {
 }
 
 impl RelayerContext {
+    /// Creates a new RelayerContext.
     pub fn new(config: config::WebbRelayerConfig) -> Self {
         let (notify_shutdown, _) = broadcast::channel(2);
         Self {
@@ -32,15 +53,26 @@ impl RelayerContext {
             notify_shutdown,
         }
     }
-
+    /// Returns a broadcast receiver handle for the shutdown signal.
     pub fn shutdown_signal(&self) -> Shutdown {
         Shutdown::new(self.notify_shutdown.subscribe())
     }
-
+    /// Sends a shutdown signal to all subscribed tasks/connections.
     pub fn shutdown(&self) {
         let _ = self.notify_shutdown.send(());
     }
-
+    /// Returns a new `EthereumProvider` for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_name` - A string representing the chain name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let chain_name = "mainnet".to_string();
+    /// let provider = ctx.evm_provider(chain_name).await?;
+    /// ```
     pub async fn evm_provider(
         &self,
         chain_name: &str,
@@ -53,7 +85,18 @@ impl RelayerContext {
             .interval(Duration::from_millis(5u64));
         Ok(provider)
     }
-
+    /// Sets up and returns an EVM wallet for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_name` - A string representing the chain name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let chain_name = "mainnet".to_string();
+    /// let wallet = self.ctx.evm_wallet(&self.chain_name).await?;
+    /// ```
     pub async fn evm_wallet(
         &self,
         chain_name: &str,
@@ -67,7 +110,18 @@ impl RelayerContext {
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
     }
-
+    /// Sets up and returns a Substrate client for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `node_name` - A string representing the node name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let node_name = "dkg_node".to_string();
+    /// let client = ctx.substrate_provider::<subxt::DefaultConfig>(node_name).await?;
+    /// ```
     pub async fn substrate_provider<C: subxt::Config>(
         &self,
         node_name: &str,
@@ -87,7 +141,18 @@ impl RelayerContext {
             ))?;
         Ok(client)
     }
-
+    /// Sets up and returns a Substrate wallet for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `node_name` - A string representing the node name.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let node_name = "dkg_node".to_string();
+    /// let pair = ctx.substrate_wallet(node_name).await?;
+    /// ```
     pub async fn substrate_wallet(
         &self,
         node_name: &str,
