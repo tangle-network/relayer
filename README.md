@@ -70,17 +70,39 @@ docker run --rm -v "<ABSOLUTE_PATH_TO_CONFIGS_DIRECTORY>:/config" --env-file .en
 
 This will mount a configuration files at the `/config` directory inside the container so it would allow it to read the configuration you added.
 
-## Overview
+## How to run tests
 
-    - src/
-        - events_watcher/: Sync to different network types (EVM, Substrate), and act on different events. 
-        - store/: Logic for storing information with different backends.
-        - config.rs: Functionality related to parsing of configurable values.
-        - context.rs: Access the parsed configuration and generate providers and wallets.
-        - handler.rs: Logic for what to do when a client is interacting with this relayer.
-        - main.rs: Build and start the relayer.
-        - service.rs: The entry for tasks once the relayer is operating.
-        - tx_queue.rs: A transaction queue for orderly handling of transactions.
+The following instructions outlines how to run the relayer base test suite and E2E test suite.
+
+### To run base tests
+
+```
+cargo test 
+```
+
+### To run E2E tests
+
+1. Run `cargo build --release --features integration-tests`
+2. Run `cd tests && git submodule update --init --recursive`
+3. Run `yarn install` (in `tests` dir)
+4. `yarn test`
+
+## Top-level directory layout
+
+```
+src/
+  |____tx_queue.rs          # A queue for orderly handling of transactions.
+  |____handler.rs           # Logic for what to do when a client is interacting with this relayer.
+  |____config.rs            # Functionality related to parsing of configurable values.
+  |____events_watcher       # Sync to different network types (EVM, Substrate), and act on different events. 
+  |____service.rs           # The entry for tasks once the relayer is operating.
+  |____main.rs              # Build and start the relayer.
+  |____probe.rs             # Debugging relayer lifecycle, sync state, or other relayer state.          
+  |____utils.rs             # Common functionality.
+  |____context.rs           # Access the parsed configuration and generate providers and wallets.
+  |____store                # Logic for storing information with different backends.
+
+```
 
 ## Safety ⚡
 
