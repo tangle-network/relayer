@@ -85,7 +85,7 @@ pub async fn ignite(
                         store.clone(),
                     )?;
                 }
-                Contract::AnchorOverDKG(config) => {
+                Contract::Anchor(config) => {
                     start_anchor_over_dkg_events_watcher(
                         ctx,
                         config,
@@ -280,7 +280,7 @@ fn start_tornado_events_watcher(
 /// * `store` -[Sled](https://sled.rs)-based database store
 async fn start_anchor_over_dkg_events_watcher(
     ctx: &RelayerContext,
-    config: &AnchorContractOverDKGConfig,
+    config: &AnchorContractConfig,
     client: Arc<Client>,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
@@ -291,7 +291,7 @@ async fn start_anchor_over_dkg_events_watcher(
         );
         return Ok(());
     }
-    let wrapper = AnchorContractOverDKGWrapper::new(
+    let wrapper = AnchorContractWrapper::new(
         config.clone(),
         ctx.config.clone(), // the original config to access all networks.
         client.clone(),

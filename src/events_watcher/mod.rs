@@ -59,9 +59,9 @@ mod tornado_leaves_watcher;
 #[doc(hidden)]
 pub use tornado_leaves_watcher::*;
 /// A module for listening on anchor events over the DKG.
-mod anchor_watcher_over_dkg;
+mod anchor_watcher;
 #[doc(hidden)]
-pub use anchor_watcher_over_dkg::*;
+pub use anchor_watcher::*;
 /// A module for listening on proposal events.
 mod proposal_handler_watcher;
 #[doc(hidden)]

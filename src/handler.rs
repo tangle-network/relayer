@@ -681,7 +681,7 @@ async fn handle_anchor_relay_tx<'a>(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            crate::config::Contract::AnchorOverDKG(c) => Some(c),
+            crate::config::Contract::Anchor(c) => Some(c),
             _ => None,
         })
         .map(|c| (c.common.address, c))

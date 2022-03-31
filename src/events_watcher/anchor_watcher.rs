@@ -35,7 +35,7 @@ use crate::store::LeafCacheStore;
 
 type HttpProvider = providers::Provider<providers::Http>;
 /// Represents an Anchor Contract Watcher which will use the DKG Substrate nodes for signing.
-pub struct AnchorWatcherWithSubstrate<R, C>
+pub struct AnchorWatcher<R, C>
 where
     R: From<subxt::Client<C>>,
     C: subxt::Config,
@@ -44,7 +44,7 @@ where
     pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
 }
 
-impl<R, C> AnchorWatcherWithSubstrate<R, C>
+impl<R, C> AnchorWatcher<R, C>
 where
     R: From<subxt::Client<C>>,
     C: subxt::Config,
@@ -65,27 +65,26 @@ type DKGConfig = subxt::DefaultConfig;
 type DKGRuntimeApi =
     dkg_runtime::api::RuntimeApi<DKGConfig, subxt::DefaultExtra<DKGConfig>>;
 /// Type alias for the AnchorWatcherWithSubstrate.
-pub type AnchorWatcherOverDKG =
-    AnchorWatcherWithSubstrate<DKGRuntimeApi, DKGConfig>;
+pub type AnchorWatcherOverDKG = AnchorWatcher<DKGRuntimeApi, DKGConfig>;
 
 /// AnchorContractOverDKGWrapper contains FixedDepositAnchorContract contract along with configurations for Anchor contract over DKG, and Relayer.  
 #[derive(Clone, Debug)]
-pub struct AnchorContractOverDKGWrapper<M>
+pub struct AnchorContractWrapper<M>
 where
     M: Middleware,
 {
-    config: config::AnchorContractOverDKGConfig,
+    config: config::AnchorContractConfig,
     webb_config: config::WebbRelayerConfig,
     contract: FixedDepositAnchorContract<M>,
 }
 
-impl<M> AnchorContractOverDKGWrapper<M>
+impl<M> AnchorContractWrapper<M>
 where
     M: Middleware,
 {
     /// Creates a new AnchorContractOverDKGWrapper.
     pub fn new(
-        config: config::AnchorContractOverDKGConfig,
+        config: config::AnchorContractConfig,
         webb_config: config::WebbRelayerConfig,
         client: Arc<M>,
     ) -> Self {
@@ -100,7 +99,7 @@ where
     }
 }
 
-impl<M> ops::Deref for AnchorContractOverDKGWrapper<M>
+impl<M> ops::Deref for AnchorContractWrapper<M>
 where
     M: Middleware,
 {
@@ -111,7 +110,7 @@ where
     }
 }
 
-impl<M> super::WatchableContract for AnchorContractOverDKGWrapper<M>
+impl<M> super::WatchableContract for AnchorContractWrapper<M>
 where
     M: Middleware,
 {
@@ -139,10 +138,10 @@ pub struct AnchorLeavesWatcher;
 
 #[async_trait::async_trait]
 impl super::EventWatcher for AnchorWatcherOverDKG {
-    const TAG: &'static str = "Anchor Watcher Over DKG";
+    const TAG: &'static str = "Anchor Watcher";
     type Middleware = HttpProvider;
 
-    type Contract = AnchorContractOverDKGWrapper<Self::Middleware>;
+    type Contract = AnchorContractWrapper<Self::Middleware>;
 
     type Events = FixedDepositAnchorContractEvents;
 
@@ -249,7 +248,7 @@ impl super::EventWatcher for AnchorLeavesWatcher {
 
     type Middleware = HttpProvider;
 
-    type Contract = AnchorContractOverDKGWrapper<Self::Middleware>;
+    type Contract = AnchorContractWrapper<Self::Middleware>;
 
     type Events = FixedDepositAnchorContractEvents;
 

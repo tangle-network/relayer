@@ -256,7 +256,7 @@ pub struct LinkedAnchorConfig {
 #[serde(tag = "contract")]
 pub enum Contract {
     Tornado(TornadoContractConfig),
-    AnchorOverDKG(AnchorContractOverDKGConfig),
+    Anchor(AnchorContractConfig),
     SignatureBridge(SignatureBridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
@@ -299,10 +299,11 @@ pub struct TornadoContractConfig {
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
 }
+
 /// AnchorContractOverDKGConfig represents the configuration for the Anchor contract over DKG.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct AnchorContractOverDKGConfig {
+pub struct AnchorContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
@@ -615,7 +616,7 @@ fn postloading_process(
     // check that all required chains are already present in the config.
     for (chain_name, chain_config) in &config.evm {
         let anchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::AnchorOverDKG(cfg) => Some(cfg),
+            Contract::Anchor(cfg) => Some(cfg),
             _ => None,
         });
         for anchor in anchors {
