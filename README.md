@@ -188,7 +188,7 @@ TODO: @dutterbutter inquire about `leaves` endpoint
 ```
 
 <details>
-  <summary>Response</summary>
+  <summary>Expected Response</summary>
   
   ```json
 {
@@ -203,7 +203,7 @@ TODO: @dutterbutter inquire about `leaves` endpoint
 /api/v1/info
 ```
 <details>
-  <summary>Response</summary>
+  <summary>Expected Response</summary>
   
   ```json
   {
@@ -240,7 +240,7 @@ TODO: @dutterbutter inquire about `leaves` endpoint
 /api/v1/leaves
 ```
 <details>
-  <summary>Response</summary>
+  <summary>Expected Response</summary>
   
   ```
    
