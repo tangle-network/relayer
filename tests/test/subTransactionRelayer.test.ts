@@ -2,6 +2,7 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
+import getPort, { portNumbers } from 'get-port'
 import temp from 'temp';
 import path from 'path';
 import fs from 'fs';
@@ -20,6 +21,7 @@ import {
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Transaction Relayer', function () {
+  this.timeout(60000);
   const tmp = temp.track();
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
   let aliceNode: LocalProtocolSubstrate;
@@ -31,14 +33,16 @@ describe('Substrate Transaction Relayer', function () {
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode: { mode: 'host', nodePath: '' },
+      // usageMode: { mode: 'docker', forcePullImage: false },
+      usageMode: { mode: 'host', nodePath: path.resolve('../../protocol-substrate/target/release/webb-standalone-node') },
       ports: 'auto',
     });
 
     bobNode = await LocalProtocolSubstrate.start({
       name: 'substrate-bob',
       authority: 'bob',
-      usageMode: { mode: 'docker', forcePullImage: false },
+      // usageMode: { mode: 'docker', forcePullImage: false },
+      usageMode: { mode: 'host', nodePath: path.resolve('../../protocol-substrate/target/release/webb-standalone-node') },
       ports: 'auto',
     });
 
@@ -46,10 +50,6 @@ describe('Substrate Transaction Relayer', function () {
       path: `${tmpDirPath}/${aliceNode.name}.json`,
       suri: '//Alice',
     });
-
-    const pkg = await import('get-port');
-    const getPort = pkg.default;
-    const portNumbers = pkg.portNumbers;
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });

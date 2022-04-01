@@ -2,6 +2,7 @@
 /// This Could be through a Docker Container or a Local Compiled node.
 
 import fs from 'fs';
+import getPort, { portNumbers } from 'get-port';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { ApiPromise, WsProvider } from '@polkadot/api';
 import { EventsWatcher, NodeInfo, Pallet } from './webbRelayer';
@@ -47,10 +48,6 @@ export class LocalProtocolSubstrate {
   public static async start(
     opts: NodeOptions
   ): Promise<LocalProtocolSubstrate> {
-    const pkg = await import('get-port');
-    const getPort = pkg.default;
-    const portNumbers = pkg.portNumbers;
-    
     if (opts.ports === 'auto') {
       opts.ports = {
         ws: await getPort({ port: portNumbers(9944, 9999) }),
