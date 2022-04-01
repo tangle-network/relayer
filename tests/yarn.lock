@@ -2542,7 +2542,7 @@
     "@webb-tools/utils" "^0.1.6"
     "@webb-tools/vbridge" "^0.1.9"
 
-"@webb-tools/sdk-core@file:../../webb.js/packages/sdk-core/build":
+"@webb-tools/sdk-core@file:../../test/webb.js/packages/sdk-core/build":
   version "0.1.4-45"
   dependencies:
     "@types/events" "^3.0.0"

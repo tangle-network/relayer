@@ -24,7 +24,7 @@
     "@polkadot/api": "7.13.1",
     "@truffle/hdwallet-provider": "^2.0.3",
     "@webb-tools/protocol-solidity": "^0.1.6",
-    "@webb-tools/sdk-core": "file:../../webb.js/packages/sdk-core/build",
+    "@webb-tools/sdk-core": "file:../../test/webb.js/packages/sdk-core/build",
     "JSONStream": "^1.3.5",
     "dotenv": "^16.0.0",
     "ecpair": "^2.0.1",
