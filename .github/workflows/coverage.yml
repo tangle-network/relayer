@@ -25,9 +25,8 @@ jobs:
       - name: Install Toolchain
         uses: actions-rs/toolchain@v1
         with:
+          profile: minimal
           toolchain: stable
-          target: wasm32-unknown-unknown
-          override: true
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v1.3.0
