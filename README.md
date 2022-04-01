@@ -72,7 +72,7 @@ rustup update nightly
 
 Great! Now your rust environment is ready! 🚀🚀
 
-### Installation
+### Installation 💻
 
 #### Unix (Linux, macOS, WSL2, ..)
 
@@ -96,7 +96,7 @@ Eager to try out the Webb Relayer, or need something quick for development? Run 
  ./target/release/webb-relayer -c config/local-substrate -vv
 ```
 
-TODO: @dutterbutter ask Nathan for additional clarity here.
+TODO: @dutterbutter add more context to above command
 
  Run a relayer for a local substrate node that integrates our pallets:
 [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/)
@@ -111,7 +111,7 @@ Run a relayer with our preset EVM Anchor configuration to get up and running imm
 
 ### Run 🏃
 
-TODO: @dutterbutter clear up requirements for .env and config file
+TODO: @dutterbutter clear up requirements for .env and config file, mention logger verbosity
 
 Webb Relayer is easy to run and with flexible config 👌, to test it out first you have to create a config file
 
@@ -141,7 +141,7 @@ webb-relayer -vv -c ./config
 
 The table below documents all the configuration options available for both chain and contract set ups. For a completed example, check out [Harmony's testnet configuration](./config/config-tornados/harmony/testnet1.toml). 
 
-TODO: @dutterbutter outline evm / substrate specific config options
+TODO: @dutterbutter outline evm / substrate specific config options (some are missing e.g. `runtime`)
 
 #### Chain Configuration
 | Field | Description | Optionality |
@@ -179,7 +179,7 @@ This will mount a configuration files at the `/config` directory inside the cont
 
 ## API
 
-TODO: @dutterbutter add response examples
+TODO: @dutterbutter inquire about `leaves` endpoint
 
 **Retrieving nodes IP address:**
 
