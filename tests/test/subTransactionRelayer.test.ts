@@ -2,13 +2,13 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
+import getPort, { portNumbers } from 'get-port'
 import temp from 'temp';
 import path from 'path';
 import fs from 'fs';
 import child from 'child_process';
-import getPort from 'get-port';
-import { WebbRelayer } from './lib/webbRelayer';
-import { LocalProtocolSubstrate } from './lib/localProtocolSubstrate';
+import { WebbRelayer } from '../lib/webbRelayer.js';
+import { LocalProtocolSubstrate } from '../lib/localProtocolSubstrate.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -21,6 +21,7 @@ import {
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Transaction Relayer', function () {
+  this.timeout(60000);
   const tmp = temp.track();
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
   let aliceNode: LocalProtocolSubstrate;
@@ -32,14 +33,16 @@ describe('Substrate Transaction Relayer', function () {
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode: { mode: 'host', nodePath: '' },
+      // usageMode: { mode: 'docker', forcePullImage: false },
+      usageMode: { mode: 'host', nodePath: path.resolve('../../protocol-substrate/target/release/webb-standalone-node') },
       ports: 'auto',
     });
 
     bobNode = await LocalProtocolSubstrate.start({
       name: 'substrate-bob',
       authority: 'bob',
-      usageMode: { mode: 'docker', forcePullImage: false },
+      // usageMode: { mode: 'docker', forcePullImage: false },
+      usageMode: { mode: 'host', nodePath: path.resolve('../../protocol-substrate/target/release/webb-standalone-node') },
       ports: 'auto',
     });
 
@@ -49,7 +52,7 @@ describe('Substrate Transaction Relayer', function () {
     });
 
     // now start the relayer
-    const relayerPort = await getPort({ port: getPort.makeRange(8000, 8888) });
+    const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
       port: relayerPort,
       tmp: true,
@@ -59,7 +62,7 @@ describe('Substrate Transaction Relayer', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  test('Simple Mixer Transaction', async () => {
+  it('Simple Mixer Transaction', async () => {
     const api = await aliceNode.api();
     const { tx, note } = await createMixerDepositTx(api);
     const keyring = new Keyring({ type: 'sr25519' });
@@ -108,7 +111,7 @@ describe('Substrate Transaction Relayer', function () {
 
 async function createMixerDepositTx(api: ApiPromise): Promise<{
   tx: SubmittableExtrinsic<'promise'>;
-  note: Note;
+  note: Note
 }> {
   const noteInput: NoteGenInput = {
     protocol: 'mixer',
@@ -126,6 +129,7 @@ async function createMixerDepositTx(api: ApiPromise): Promise<{
     width: '3',
     exponentiation: '5',
   };
+  // @ts-ignore
   const note = await Note.generateNote(noteInput);
   const treeId = 0;
   const leaf = note.getLeaf();
@@ -153,7 +157,7 @@ type WithdrawalProof = {
 
 async function createMixerWithdrawProof(
   api: ApiPromise,
-  note: Note,
+  note: any,
   opts: WithdrawalOpts
 ): Promise<WithdrawalProof> {
   const recipientAddressHex = u8aToHex(decodeAddress(opts.recipient));
