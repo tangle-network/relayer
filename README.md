@@ -10,8 +10,6 @@
     <sub> ⚠️ Beta Software ⚠️ </sub>
 </p>
 
-</br>
-
 <div align="center" >
 
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/webb-tools/relayer?style=flat-square)](https://github.com/webb-tools/relayer/releases/latest)
@@ -23,7 +21,20 @@
 
 </div>
 
-## Getting Started  🎉
+<!-- TABLE OF CONTENTS -->
+<h2 id="table-of-contents"> 📖 Table of Contents</h2>
+
+<details open="open">
+  <summary>Table of Contents</summary>
+  <ul>
+    <li><a href="#start"> Getting Started</a></li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#config"> Configuration</a></li>
+		<li><a href="#api">API</a></li>
+		<li><a href="#test">Testing</a></li>
+</details>
+
+<h2 id="start"> Getting Started  🎉 </h2>
 
 In the Webb Protocol, the relayer is a multi-faceted oracle, data relayer, and protocol governance participant. Relayers fulfill the role of an oracle where the external data sources that they listen to are the state of the anchors for a bridge. Relayers, as their name entails, relay information for a connected set of Anchors on a bridge. This information is then used to update the state of each Anchor and allow applications to reference, both privately and potentially not, properties of data stored across the other connected Anchors.
 
@@ -82,66 +93,58 @@ git clone https://github.com/webb-tools/relayer.git
 cargo build --release
 ```
 
-## Usage
+<h2 id="usage"> Usage </h2>
 
 ### Quick Start ⚡
 
-#### Local Substrate Mixer
-
-Eager to try out the Webb Relayer, or need something quick for development? Run a relayer with our preset Substrate mixer configuration to get up and running immediately. 
-
-```
- ./target/release/webb-relayer -c config/local-substrate -vv
-```
-
-TODO: @dutterbutter add more context to above command
-
- Run a relayer for a local substrate node that integrates our pallets:
-[webb-standalone-node](https://github.com/webb-tools/protocol-substrate/)
-
 #### Local EVM Tornado
 
-Run a relayer with our preset EVM Tornado configuration to get up and running immediately.
+Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM tornado configuration to get up and running immediately. 
 
 ```
 ./target/release/webb-relayer -c config/config-tornados/ethereum -vv
 ```
 
 > Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
+#### Local Substrate Mixer
 
+To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer.
+
+```
+ ./target/release/webb-relayer -c config/local-substrate -vv
+```
 ### Run 🏃
 
-TODO: @dutterbutter clear up requirements for .env and config file, mention logger verbosity
-
-Webb Relayer is easy to run and with flexible config 👌, to test it out first you have to create a config file
+Webb Relayer is easy to run and with flexible config 👌. The first step is to create a config file. 
 
 Example:
 
-* Create a .env file with the following values for the networks you wish to support
+* Create an `.env` file with the following values for the networks you wish to support.
 
 ```
 WEBB_EVM_<network>_ENABLED=true
 WEBB_EVM_<network>_PRIVATE_KEY=<0X_PREFIXED_PRIVATE_KEY>
 
 WEBB_EVM_<network>_BENEFICIARY=<0X_PREFIXED_ADDRESS>
-
 ```
 
 > Checkout [config](./config) for useful default configurations for many networks. These config files can be changed to your preferences, and are enabled with the .env configuration listed above.
 
-Then Simply run
+Then run:
 
 ```
 webb-relayer -vv -c ./config
 ```
 
-> Hot Tip 🌶️: you could also use the json format for the config files if you prefer that, and it would work!
+> Hot Tip 🌶️: you could also use the `json` format for the config files if you prefer that!
 
-### Configuration
+<h2 id="config"> Configuration </h2>
 
 The table below documents all the configuration options available for both chain and contract set ups. For a completed example, check out [Harmony's testnet configuration](./config/config-tornados/harmony/testnet1.toml). 
 
-TODO: @dutterbutter outline evm / substrate specific config options (some are missing e.g. `runtime`)
+**Note:** You can also review the different chain configurations for EVM and Substrate.
+- [`SubstrateConfig`](https://docs.webb.tools/relayer/webb_relayer/config/struct.SubstrateConfig.html)
+- [`EvmChainConfig`](https://docs.webb.tools/relayer/webb_relayer/config/struct.EvmChainConfig.html)
 
 #### Chain Configuration
 | Field | Description | Optionality |
@@ -152,6 +155,9 @@ TODO: @dutterbutter outline evm / substrate specific config options (some are mi
 | `chain-id`  | Chain specific id. | Required |
 | `private-key`  | The Private Key of this account on this network. See [PrivateKey Docs for secure setup]()| Required | 
 | `beneficiary`  | The address of the account that will receive relayer fees. | Optional | 
+| `runtime`  | Indicates Substrate runtime to use | Required for Substrate | 
+| `suri`  | Interprets a string in order to generate a key Pair. In the case that the pair can be expressed as a direct derivation from a seed | Required for Substrate | 
+| `pallets`  | Supported pallets for a particular Substrate node | Optional | 
 
 #### Contract Configuration
 | Field | Description | Optionality |
@@ -177,9 +183,9 @@ docker run --rm -v "<ABSOLUTE_PATH_TO_CONFIGS_DIRECTORY>:/config" --env-file .en
 
 This will mount a configuration files at the `/config` directory inside the container so it would allow it to read the configuration you added.
 
-## API
+<h2 id="api"> API  📡</h2>
 
-TODO: @dutterbutter inquire about `leaves` endpoint
+The relayer has 3 endpoints available to query from. They are outlined below for your convenience. 
 
 **Retrieving nodes IP address:**
 
@@ -235,19 +241,25 @@ TODO: @dutterbutter inquire about `leaves` endpoint
 </details> 
 
 **Retrieve historical leaves cache**
+##### Parameters
+- `chain_id`
+- `contract address`
 
 ```
-/api/v1/leaves
+/api/v1/leaves/4/0x626fec5ffa7bf1ee8ced7dabde545630473e3abb
 ```
 <details>
   <summary>Expected Response</summary>
   
-  ```
-   
+  ```json
+   {
+    "leaves": ["0x2e5c62af48845c095bfa9b90b8ec9f6b7bd98fb3ac2dd3039050a64b919951dd", "0x0f89f0ef52120b8db99f5bdbbdd4019b5ea4bcfef14b0c19d261268da8afdc24", "0x3007c62f678a503e568534487bc5b0bc651f37bbe1f34668b4c8a360f15ba3c3"],
+    "lastQueriedBlock": "0x9f30a8"
+}
   ```
 </details>
 
-## How to run tests
+<h2 id="test"> Testing 🧪 </h2>
 
 The following instructions outlines how to run the relayer base test suite and E2E test suite.
 
@@ -268,7 +280,7 @@ cargo test
 
 Interested in contributing to the Webb Relayer Network? Thank you so much for your interest! We are always appreciative for contributions from the open-source community!  
 
-If you have a contribution in mind, please check out our [Contribution Guide](https://github.com/webb-tools/relayer/blob/main/.github/CONTRIBUTING.md) for information on how to do so. We are excited for your first contribution!
+If you have a contribution in mind, please check out our [Contribution Guide](./.github/CONTRIBUTING.md) for information on how to do so. We are excited for your first contribution!
 
 ## License
 
