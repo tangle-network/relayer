@@ -343,8 +343,14 @@ pub struct DKGProposalHandlerPalletConfig {
     pub events_watcher: EventsWatcherConfig,
 }
 /// PrivateKey represents a private key.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PrivateKey(Secret);
+
+impl std::fmt::Debug for PrivateKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("PrivateKey").finish()
+    }
+}
 
 impl std::ops::Deref for PrivateKey {
     type Target = Secret;
