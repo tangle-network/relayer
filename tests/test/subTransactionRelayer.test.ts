@@ -2,7 +2,7 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import getPort, { portNumbers } from 'get-port'
+import getPort from 'get-port';
 import temp from 'temp';
 import path from 'path';
 import fs from 'fs';
@@ -34,7 +34,12 @@ describe('Substrate Transaction Relayer', function () {
       name: 'substrate-alice',
       authority: 'alice',
       // usageMode: { mode: 'docker', forcePullImage: false },
-      usageMode: { mode: 'host', nodePath: path.resolve('../../protocol-substrate/target/release/webb-standalone-node') },
+      usageMode: {
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../protocol-substrate/target/release/webb-standalone-node'
+        ),
+      },
       ports: 'auto',
     });
 
@@ -42,7 +47,12 @@ describe('Substrate Transaction Relayer', function () {
       name: 'substrate-bob',
       authority: 'bob',
       // usageMode: { mode: 'docker', forcePullImage: false },
-      usageMode: { mode: 'host', nodePath: path.resolve('../../protocol-substrate/target/release/webb-standalone-node') },
+      usageMode: {
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../protocol-substrate/target/release/webb-standalone-node'
+        ),
+      },
       ports: 'auto',
     });
 
@@ -52,7 +62,7 @@ describe('Substrate Transaction Relayer', function () {
     });
 
     // now start the relayer
-    const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
+    const relayerPort = await getPort({ port: getPort.makeRange(8000, 8888) });
     webbRelayer = new WebbRelayer({
       port: relayerPort,
       tmp: true,
@@ -111,7 +121,7 @@ describe('Substrate Transaction Relayer', function () {
 
 async function createMixerDepositTx(api: ApiPromise): Promise<{
   tx: SubmittableExtrinsic<'promise'>;
-  note: Note
+  note: Note;
 }> {
   const noteInput: NoteGenInput = {
     protocol: 'mixer',
