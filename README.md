@@ -32,6 +32,7 @@
     <li><a href="#config"> Configuration</a></li>
 		<li><a href="#api">API</a></li>
 		<li><a href="#test">Testing</a></li>
+  </ul>  
 </details>
 
 <h2 id="start"> Getting Started  🎉 </h2>
