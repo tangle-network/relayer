@@ -14,12 +14,12 @@
 
 <div align="center" >
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/webb-tools/relayer?style=for-the-badge)](https://github.com/webb-tools/relayer/releases/latest)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/webb-tools/relayer/CI?style=for-the-badge)](https://github.com/webb-tools/relayer/actions)
-[![Codecov](https://img.shields.io/codecov/c/gh/webb-tools/relayer?style=for-the-badge&token=AFS375VWRS)](https://codecov.io/gh/webb-tools/relayer)
-[![License Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=for-the-badge)](https://opensource.org/licenses/Apache-2.0)
-[![Twitter](https://img.shields.io/twitter/follow/webbprotocol.svg?style=for-the-badge&label=Twitter&color=1DA1F2)](https://twitter.com/webbprotocol)
-[![Discord](https://img.shields.io/discord/593655374469660673.svg?style=for-the-badge&label=Discord&logo=discord)](https://discord.gg/cv8EfJu3Tn)
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/webb-tools/relayer?style=flat-square)](https://github.com/webb-tools/relayer/releases/latest)
+[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/webb-tools/relayer/CI?style=flat-square)](https://github.com/webb-tools/relayer/actions)
+[![Codecov](https://img.shields.io/codecov/c/gh/webb-tools/relayer?style=flat-square&token=AFS375VWRS)](https://codecov.io/gh/webb-tools/relayer)
+[![License Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
+[![Twitter](https://img.shields.io/twitter/follow/webbprotocol.svg?style=flat-square&label=Twitter&color=1DA1F2)](https://twitter.com/webbprotocol)
+[![Discord](https://img.shields.io/discord/833784453251596298.svg?style=flat-square&label=Discord&logo=discord)](https://discord.gg/cv8EfJu3Tn)
 
 </div>
 
@@ -70,7 +70,7 @@ rustup update
 rustup update nightly
 ```
 
-Great! Now your rust environment is ready! 🚀🚀
+Great! Now your Rust environment is ready! 🚀🚀
 
 ### Installation 💻
 
@@ -85,8 +85,6 @@ cargo build --release
 ## Usage
 
 ### Quick Start ⚡
-
-TODO: @dutterbutter create a task for someone to update outdated preset configs
 
 #### Local Substrate Mixer
 
@@ -103,11 +101,13 @@ TODO: @dutterbutter add more context to above command
 
 #### Local EVM Tornado
 
-Run a relayer with our preset EVM Anchor configuration to get up and running immediately.  
+Run a relayer with our preset EVM Tornado configuration to get up and running immediately.
 
 ```
 ./target/release/webb-relayer -c config/config-tornados/ethereum -vv
 ```
+
+> Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
 
 ### Run 🏃
 
