@@ -165,9 +165,9 @@ export class WebbRelayer {
   public async substrateMixerWithdraw(inputs: {
     chain: string;
     id: number;
-    proof: `0x${string}`;
-    root: Uint8Array;
-    nullifierHash: Uint8Array;
+    proof: number[];
+    root: number[];
+    nullifierHash: number[];
     recipient: string;
     relayer: string;
     fee: number;
@@ -338,7 +338,7 @@ async function substrateTxHashOrReject(
       substrate: {
         mixerRelayTx: {
           chain: input.chain,
-          id: input.name,
+          id: input.id,
           proof: input.proof,
           root: input.root,
           nullifierHash: input.nullifierHash,

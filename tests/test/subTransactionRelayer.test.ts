@@ -102,9 +102,9 @@ describe('Substrate Transaction Relayer', function () {
     const txHash = await webbRelayer.substrateMixerWithdraw({
       chain: aliceNode.name,
       id: withdrawalProof.id,
-      proof: withdrawalProof.proofBytes as any,
-      root: hexToU8a(withdrawalProof.root),
-      nullifierHash: hexToU8a(withdrawalProof.nullifierHash),
+      proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+      root: Array.from(hexToU8a(withdrawalProof.root)),
+      nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
       refund: withdrawalProof.refund,
       fee: withdrawalProof.fee,
       recipient: withdrawalProof.recipient,
@@ -143,7 +143,6 @@ async function createMixerDepositTx(api: ApiPromise): Promise<{
     width: '3',
     exponentiation: '5',
   };
-  // @ts-ignore
   const note = await Note.generateNote(noteInput);
   const treeId = 0;
   const leaf = note.getLeaf();
@@ -174,50 +173,64 @@ async function createMixerWithdrawProof(
   note: any,
   opts: WithdrawalOpts
 ): Promise<WithdrawalProof> {
-  const recipientAddressHex = u8aToHex(decodeAddress(opts.recipient));
-  const relayerAddressHex = u8aToHex(decodeAddress(opts.relayer));
-  const treeId = 0;
-  //@ts-ignore
-  const getLeaves = api.rpc.mt.getLeaves;
-  const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
-  const pm = new ProvingManagerWrapper('direct-call');
-  const leafHex = u8aToHex(note.getLeaf());
-  const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
-  expect(leafIndex).to.be.greaterThan(-1);
-  const gitRoot = child
-    .execSync('git rev-parse --show-toplevel')
-    .toString()
-    .trim();
-  const provingKeyPath = path.join(
-    gitRoot,
-    'tests',
-    'protocol-substrate-fixtures',
-    'mixer',
-    'bn254',
-    'x5',
-    'proving_key_uncompressed.bin'
-  );
-  const provingKey = fs.readFileSync(provingKeyPath);
+  try {
+    const recipientAddressHex = u8aToHex(decodeAddress(opts.recipient)).replace(
+      '0x',
+      ''
+    );
+    const relayerAddressHex = u8aToHex(decodeAddress(opts.relayer)).replace(
+      '0x',
+      ''
+    );
+    const treeId = 0;
+    //@ts-ignore
+    const getLeaves = api.rpc.mt.getLeaves;
+    const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
+    const pm = new ProvingManagerWrapper('direct-call');
+    const leafHex = u8aToHex(note.getLeaf());
+    const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
+    expect(leafIndex).to.be.greaterThan(-1);
+    const gitRoot = child
+      .execSync('git rev-parse --show-toplevel')
+      .toString()
+      .trim();
+    const provingKeyPath = path.join(
+      gitRoot,
+      'tests',
+      'protocol-substrate-fixtures',
+      'mixer',
+      'bn254',
+      'x5',
+      'proving_key_uncompressed.bin'
+    );
+    const provingKey = fs.readFileSync(provingKeyPath);
 
-  const proofInput: ProvingManagerSetupInput = {
-    note: note.serialize(),
-    relayer: relayerAddressHex,
-    recipient: recipientAddressHex,
-    leaves: treeLeaves,
-    leafIndex,
-    fee: opts.fee,
-    refund: opts.refund,
-    provingKey,
-  };
-  const zkProof = await pm.proof(proofInput);
-  return {
-    id: treeId,
-    proofBytes: zkProof.proof,
-    root: zkProof.root,
-    nullifierHash: zkProof.nullifierHash,
-    recipient: opts.recipient,
-    relayer: opts.relayer,
-    fee: opts.fee,
-    refund: opts.refund,
-  };
+    const proofInput: ProvingManagerSetupInput = {
+      note: note.serialize(),
+      relayer: relayerAddressHex,
+      recipient: recipientAddressHex,
+      leaves: treeLeaves,
+      leafIndex,
+      fee: opts.fee,
+      refund: opts.refund,
+      provingKey,
+    };
+    const zkProof = await pm.proof(proofInput);
+    return {
+      id: treeId,
+      proofBytes: `0x${zkProof.proof}`,
+      root: `0x${zkProof.root}`,
+      nullifierHash: `0x${zkProof.nullifierHash}`,
+      recipient: opts.recipient,
+      relayer: opts.relayer,
+      fee: opts.fee,
+      refund: opts.refund,
+    };
+  } catch (error) {
+    //@ts-ignore
+    console.error(error.error_message);
+    //@ts-ignore
+    console.error(error.code);
+    throw error;
+  }
 }
