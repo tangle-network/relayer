@@ -180,7 +180,7 @@ async function createMixerWithdrawProof(
   //@ts-ignore
   const getLeaves = api.rpc.mt.getLeaves;
   const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
-  const pm = new ProvingManagerWrapper();
+  const pm = new ProvingManagerWrapper('direct-call');
   const leafHex = u8aToHex(note.getLeaf());
   const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
   expect(leafIndex).to.be.greaterThan(-1);
