@@ -23,7 +23,7 @@ import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../lib/localTestnet.js';
 import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
-import getPort from 'get-port';
+import getPort, { portNumbers } from 'get-port';
 
 describe.skip('EVM Transaction Relayer', function () {
   this.timeout(120_000);
@@ -45,7 +45,7 @@ describe.skip('EVM Transaction Relayer', function () {
   before(async () => {
     // first we need to start local evm node.
     const localChain1Port = await getPort({
-      port: getPort.makeRange(3333, 4444),
+      port: portNumbers(3333, 4444),
     });
     localChain1 = new LocalChain('TestA', localChain1Port, [
       {
@@ -55,7 +55,7 @@ describe.skip('EVM Transaction Relayer', function () {
     ]);
 
     const localChain2Port = await getPort({
-      port: getPort.makeRange(3333, 4444),
+      port: portNumbers(3333, 4444),
     });
     localChain2 = new LocalChain('TestB', localChain2Port, [
       {
@@ -130,7 +130,7 @@ describe.skip('EVM Transaction Relayer', function () {
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
     // now start the relayer
-    const relayerPort = await getPort({ port: getPort.makeRange(9955, 9999) });
+    const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
       port: relayerPort,
       tmp: true,

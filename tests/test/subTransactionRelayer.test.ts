@@ -2,7 +2,7 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import getPort from 'get-port';
+import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
 import fs from 'fs';
@@ -62,7 +62,7 @@ describe('Substrate Transaction Relayer', function () {
     });
 
     // now start the relayer
-    const relayerPort = await getPort({ port: getPort.makeRange(8000, 8888) });
+    const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
       port: relayerPort,
       tmp: true,
