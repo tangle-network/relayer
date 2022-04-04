@@ -30,7 +30,7 @@
     <li><a href="#start"> Getting Started</a></li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#config"> Configuration</a></li>
-		<li><a href="#api">API</a></li>
+    <li><a href="#api">API</a></li>
 		<li><a href="#test">Testing</a></li>
   </ul>  
 </details>
@@ -54,10 +54,10 @@ src/
   |____tx_queue.rs          # A queue for orderly handling of transactions.
   |____handler.rs           # Logic for what to do when a client is interacting with this relayer.
   |____config.rs            # Functionality related to parsing of configurable values.
-  |____events_watcher       # Sync to different network types (EVM, Substrate), and act on different events. 
+  |____events_watcher       # Sync to different network types (EVM, Substrate), and act on different events.
   |____service.rs           # The entry for tasks once the relayer is operating.
   |____main.rs              # Build and start the relayer.
-  |____probe.rs             # Debugging relayer lifecycle, sync state, or other relayer state.          
+  |____probe.rs             # Debugging relayer lifecycle, sync state, or other relayer state.
   |____utils.rs             # Common functionality.
   |____context.rs           # Access the parsed configuration and generate providers and wallets.
   |____store                # Logic for storing information with different backends.
@@ -68,12 +68,13 @@ src/
 
 This repo uses Rust so it is required to have a Rust developer environment set up. First install and configure rustup:
 
-  ```bash
+```bash
 # Install
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 # Configure
 source ~/.cargo/env
-  ```
+```
+
 Configure the Rust toolchain to default to the latest stable version, add nightly:
 
 ```bash
@@ -100,13 +101,14 @@ cargo build --release
 
 #### Local EVM Tornado
 
-Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM tornado configuration to get up and running immediately. 
+Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM tornado configuration to get up and running immediately.
 
 ```
 ./target/release/webb-relayer -c config/config-tornados/ethereum -vv
 ```
 
 > Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
+
 #### Local Substrate Mixer
 
 To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer.
@@ -114,13 +116,14 @@ To use the relayer for our Substrate mixer, you will first need to start a local
 ```
  ./target/release/webb-relayer -c config/local-substrate -vv
 ```
+
 ### Run 🏃
 
-Webb Relayer is easy to run and with flexible config 👌. The first step is to create a config file. 
+Webb Relayer is easy to run and with flexible config 👌. The first step is to create a config file.
 
 Example:
 
-* Create an `.env` file with the following values for the networks you wish to support.
+- Create an `.env` file with the following values for the networks you wish to support.
 
 ```
 WEBB_EVM_<network>_ENABLED=true
@@ -141,35 +144,38 @@ webb-relayer -vv -c ./config
 
 <h2 id="config"> Configuration </h2>
 
-The table below documents all the configuration options available for both chain and contract set ups. For a completed example, check out [Harmony's testnet configuration](./config/config-tornados/harmony/testnet1.toml). 
+The table below documents all the configuration options available for both chain and contract set ups. For a completed example, check out [Harmony's testnet configuration](./config/config-tornados/harmony/testnet1.toml).
 
 **Note:** You can also review the different chain configurations for EVM and Substrate.
+
 - [`SubstrateConfig`](https://docs.webb.tools/relayer/webb_relayer/config/struct.SubstrateConfig.html)
 - [`EvmChainConfig`](https://docs.webb.tools/relayer/webb_relayer/config/struct.EvmChainConfig.html)
 
 #### Chain Configuration
-| Field | Description | Optionality |
-| --- | --- | --- |
-| `http-endpoint` | Http(s) Endpoint for quick Req/Res | Required |
-| `ws-endpoint`  | Websocket Endpoint for long living connections | Required |
-| `explorer`  | Block explorer, used for generating clickable links for transactions that happens on this chain. | Optional |
-| `chain-id`  | Chain specific id. | Required |
-| `private-key`  | The Private Key of this account on this network. See [PrivateKey Docs for secure setup]()| Required | 
-| `beneficiary`  | The address of the account that will receive relayer fees. | Optional | 
-| `runtime`  | Indicates Substrate runtime to use | Required for Substrate | 
-| `suri`  | Interprets a string in order to generate a key Pair. In the case that the pair can be expressed as a direct derivation from a seed | Required for Substrate | 
-| `pallets`  | Supported pallets for a particular Substrate node | Optional | 
+
+| Field           | Description                                                                                                                        | Optionality            |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `http-endpoint` | Http(s) Endpoint for quick Req/Res                                                                                                 | Required               |
+| `ws-endpoint`   | Websocket Endpoint for long living connections                                                                                     | Required               |
+| `explorer`      | Block explorer, used for generating clickable links for transactions that happens on this chain.                                   | Optional               |
+| `chain-id`      | Chain specific id.                                                                                                                 | Required               |
+| `private-key`   | The Private Key of this account on this network. See [PrivateKey Docs for secure setup]()                                          | Required               |
+| `beneficiary`   | The address of the account that will receive relayer fees.                                                                         | Optional               |
+| `runtime`       | Indicates Substrate runtime to use                                                                                                 | Required for Substrate |
+| `suri`          | Interprets a string in order to generate a key Pair. In the case that the pair can be expressed as a direct derivation from a seed | Required for Substrate |
+| `pallets`       | Supported pallets for a particular Substrate node                                                                                  | Optional               |
 
 #### Contract Configuration
-| Field | Description | Optionality |
-| --- | --- | --- |
-| `contract `  | Chain contract. Must be either: </br> - Anchor (tornado protocol) </br>  - Anchor2 (darkwebb protocol) </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required |
-| `address`  | The address of this contract on this chain. | Required |
-| `deployed-at`  | The block number where this contract got deployed at. | Required |
-| `size`  | The size of this contract. **Note**: only available for `Anchor` and `Anchor2` contracts. | Optional |
-| `events-watcher`  | Control the events watcher for this contract. | Optional |
-| `withdraw-fee-percentage`  | The fee percentage that your account will receive when you relay a transaction over this chain.| Optional |
-| `withdraw-gaslimit`  | A hex value of the gaslimit when doing a withdraw relay transaction on this chain. | Optional |
+
+| Field                     | Description                                                                                                                                                   | Optionality |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `contract`                | Chain contract. Must be either: </br> - Anchor (tornado protocol) </br> - Anchor2 (darkwebb protocol) </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required    |
+| `address`                 | The address of this contract on this chain.                                                                                                                   | Required    |
+| `deployed-at`             | The block number where this contract got deployed at.                                                                                                         | Required    |
+| `size`                    | The size of this contract. **Note**: only available for `Anchor` and `Anchor2` contracts.                                                                     | Optional    |
+| `events-watcher`          | Control the events watcher for this contract.                                                                                                                 | Optional    |
+| `withdraw-fee-percentage` | The fee percentage that your account will receive when you relay a transaction over this chain.                                                               | Optional    |
+| `withdraw-gaslimit`       | A hex value of the gaslimit when doing a withdraw relay transaction on this chain.                                                                            | Optional    |
 
 ### Docker 🐳
 
@@ -186,7 +192,7 @@ This will mount a configuration files at the `/config` directory inside the cont
 
 <h2 id="api"> API  📡</h2>
 
-The relayer has 3 endpoints available to query from. They are outlined below for your convenience. 
+The relayer has 3 endpoints available to query from. They are outlined below for your convenience.
 
 **Retrieving nodes IP address:**
 
@@ -209,6 +215,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 ```
 /api/v1/info
 ```
+
 <details>
   <summary>Expected Response</summary>
   
@@ -239,16 +246,19 @@ The relayer has 3 endpoints available to query from. They are outlined below for
     }
 }
   ```
-</details> 
+</details>
 
 **Retrieve historical leaves cache**
+
 ##### Parameters
+
 - `chain_id`
 - `contract address`
 
 ```
 /api/v1/leaves/4/0x626fec5ffa7bf1ee8ced7dabde545630473e3abb
 ```
+
 <details>
   <summary>Expected Response</summary>
   
@@ -267,7 +277,7 @@ The following instructions outlines how to run the relayer base test suite and E
 ### To run base tests
 
 ```
-cargo test 
+cargo test
 ```
 
 ### To run E2E tests
@@ -279,7 +289,7 @@ cargo test
 
 ## Contributing
 
-Interested in contributing to the Webb Relayer Network? Thank you so much for your interest! We are always appreciative for contributions from the open-source community!  
+Interested in contributing to the Webb Relayer Network? Thank you so much for your interest! We are always appreciative for contributions from the open-source community!
 
 If you have a contribution in mind, please check out our [Contribution Guide](./.github/CONTRIBUTING.md) for information on how to do so. We are excited for your first contribution!
 
@@ -290,4 +300,3 @@ Licensed under <a href="LICENSE">Apache 2.0 license</a>.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in this crate by you, as defined in the Apache 2.0 license, shall
 be licensed as above, without any additional terms or conditions.
-
