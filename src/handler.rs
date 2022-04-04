@@ -1,5 +1,19 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 #![allow(clippy::large_enum_variant)]
-
+#![warn(missing_docs)]
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::error::Error;
@@ -36,14 +50,30 @@ use webb::substrate::protocol_substrate_runtime::api::RuntimeApi;
 use webb::substrate::subxt::sp_core::Pair;
 use webb::substrate::subxt::DefaultConfig;
 use webb::substrate::subxt::{self, PairSigner, TransactionStatus};
-
+/// Type alias for mpsc::Sender<CommandResponse>
 type CommandStream = mpsc::Sender<CommandResponse>;
 
+/// Sets up a websocket connection.
+///
+/// Returns `Ok(())` on success
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `stream` - Websocket stream
+///
+/// # Examples
+///
+/// ```
+/// let _ = handler::accept_connection(ctx.as_ref(), socket).await;
+/// ```
 pub async fn accept_connection(
     ctx: &RelayerContext,
     stream: warp::ws::WebSocket,
 ) -> anyhow::Result<()> {
     let (mut tx, mut rx) = stream.split();
+
+    // Wait for client to send over text (such as relay transaction requests)
     while let Some(msg) = rx.try_next().await? {
         if let Ok(text) = msg.to_str() {
             handle_text(ctx, text, &mut tx).await?;
@@ -51,7 +81,21 @@ pub async fn accept_connection(
     }
     Ok(())
 }
-
+/// Sets up a websocket channels for message sending.
+///
+/// Returns `Ok(())` on success
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `v` - The text (usually in a JSON form) message to be handled.
+/// * `tx` - A mutable Trait implementation of the `warp::ws::Sender` trait
+///
+/// # Examples
+///
+/// ```
+/// let _ = handle_text(ctx, text, &mut tx).await?;;
+/// ```
 pub async fn handle_text<TX>(
     ctx: &RelayerContext,
     v: &str,
@@ -87,12 +131,25 @@ where
     Ok(())
 }
 
+/// Representation for IP address response
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IpInformationResponse {
     ip: String,
 }
-
+/// Handles the `ip` address response
+///
+/// Returns a Result with the `IpInformationResponse` on success
+///
+/// # Arguments
+///
+/// * `ip` - Option containing the IP address
+///
+/// # Examples
+///
+/// ```
+/// let _ = handler::handle_ip_info
+/// ```
 pub async fn handle_ip_info(
     ip: Option<IpAddr>,
 ) -> Result<impl warp::Reply, Infallible> {
@@ -100,7 +157,19 @@ pub async fn handle_ip_info(
         ip: ip.unwrap().to_string(),
     }))
 }
-
+/// Handles the socket address response
+///
+/// Returns a Result with the `IpInformationResponse` on success
+///
+/// # Arguments
+///
+/// * `ip` - Option containing the socket address
+///
+/// # Examples
+///
+/// ```
+/// let _ = handler::handle_ip_info
+/// ```
 pub async fn handle_socket_info(
     ip: Option<SocketAddr>,
 ) -> Result<impl warp::Reply, Infallible> {
@@ -108,7 +177,13 @@ pub async fn handle_socket_info(
         ip: ip.unwrap().ip().to_string(),
     }))
 }
-
+/// Handles relayer configuration requests
+///
+/// Returns a Result with the `RelayerConfigurationResponse` on success
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_relayer_info(
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
@@ -141,7 +216,15 @@ pub async fn handle_relayer_info(
         });
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
 }
-
+/// Handles leaf data requests
+///
+/// Returns a Result with the `LeafDataResponse` on success
+///
+/// # Arguments
+///
+/// * `store` - [Sled](https://sled.rs)-based database store
+/// * `chain_id` - An U256 representing the chain id of the chain to query
+/// * `contract` - An address of the contract to query
 pub async fn handle_leaves_cache(
     store: Arc<crate::store::sled::SledStore>,
     chain_id: U256,
@@ -162,7 +245,7 @@ pub async fn handle_leaves_cache(
         last_queried_block,
     }))
 }
-
+/// Enumerates the supported commands for chain specific relayers
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Command {
@@ -170,13 +253,13 @@ pub enum Command {
     Evm(EvmCommand),
     Ping(),
 }
-
+/// Enumerates the supported commands for the substrate relayer
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateCommand {
     MixerRelayTx(MixerRelayTransaction),
 }
-
+/// Contains data that is relayed to the Mixers
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MixerRelayTransaction {
@@ -190,7 +273,7 @@ pub struct MixerRelayTransaction {
     pub root: [u8; 32],
     /// The nullifier_hash for the proof
     pub nullifier_hash: [u8; 32],
-    /// The receipient of the transaction
+    /// The recipient of the transaction
     pub recipient: subxt::sp_core::crypto::AccountId32,
     /// The relayer of the transaction
     pub relayer: subxt::sp_core::crypto::AccountId32,
@@ -199,14 +282,14 @@ pub struct MixerRelayTransaction {
     /// The refund for the transaction in native tokens
     pub refund: u128,
 }
-
+/// Enumerates the supported EVM commands for relaying transactions
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmCommand {
     TornadoRelayTx(TornadoRelayTransaction),
     AnchorRelayTx(AnchorRelayTransaction),
 }
-
+/// Contains the data for tornado relay transactions
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TornadoRelayTransaction {
@@ -224,11 +307,11 @@ pub struct TornadoRelayTransaction {
     pub fee: U256,
     pub refund: U256,
 }
-
+/// Contains transaction data that is relayed to Anchors
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnchorRelayTransaction {
-    /// one of the supported chains of this realyer
+    /// one of the supported chains of this relayer
     pub chain: String,
     /// The target contract.
     pub contract: Address,
@@ -244,7 +327,7 @@ pub struct AnchorRelayTransaction {
     pub fee: U256,
     pub refund: U256,
 }
-
+/// Enumerates the command responses
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CommandResponse {
@@ -255,7 +338,7 @@ pub enum CommandResponse {
     #[allow(unused)]
     Unimplemented(&'static str),
 }
-
+/// Enumerates the network status response of the relayer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NetworkStatus {
@@ -268,7 +351,7 @@ pub enum NetworkStatus {
     Misconfigured,
     InvalidRelayerAddress,
 }
-
+/// Enumerates the withdraw status response of the relayer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WithdrawStatus {
@@ -289,7 +372,13 @@ pub enum WithdrawStatus {
         reason: String,
     },
 }
-
+/// Handles the command prompts for EVM and Substrate chains
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `cmd` - The command to execute
+/// * `stream` - The stream to write the response to
 pub async fn handle_cmd(
     ctx: RelayerContext,
     cmd: Command,
@@ -304,7 +393,13 @@ pub async fn handle_cmd(
         }
     }
 }
-
+/// Handler for EVM commands
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `cmd` - The command to execute
+/// * `stream` - The stream to write the response to
 pub async fn handle_evm(
     ctx: RelayerContext,
     cmd: EvmCommand,
@@ -319,7 +414,13 @@ pub async fn handle_evm(
         }
     }
 }
-
+/// Handler for tornado commands
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `cmd` - The command to execute
+/// * `stream` - The stream to write the response to
 async fn handle_tornado_relay_tx<'a>(
     ctx: RelayerContext,
     cmd: TornadoRelayTransaction,
@@ -553,7 +654,13 @@ async fn handle_tornado_relay_tx<'a>(
         }
     };
 }
-
+/// Handler for Anchor commands
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `cmd` - The command to execute
+/// * `stream` - The stream to write the response to
 async fn handle_anchor_relay_tx<'a>(
     ctx: RelayerContext,
     cmd: AnchorRelayTransaction,
@@ -780,7 +887,13 @@ fn into_withdraw_error<M: Middleware>(e: ContractError<M>) -> WithdrawStatus {
 
     WithdrawStatus::Errored { reason, code }
 }
-
+/// Handler for Substrate commands
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `cmd` - The command to execute
+/// * `stream` - The stream to write the response to
 pub async fn handle_substrate<'a>(
     ctx: RelayerContext,
     cmd: SubstrateCommand,
@@ -792,7 +905,13 @@ pub async fn handle_substrate<'a>(
         }
     }
 }
-
+/// Handler for Substrate Mixer commands
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `cmd` - The command to execute
+/// * `stream` - The stream to write the response to
 async fn handle_substrate_mixer_relay_tx<'a>(
     ctx: RelayerContext,
     cmd: MixerRelayTransaction,
@@ -853,6 +972,8 @@ async fn handle_substrate_mixer_relay_tx<'a>(
             return;
         }
     };
+
+    // Listen to the withdraw transaction, and send information back to the client
     loop {
         let maybe_event = event_stream.next().await;
         let event = match maybe_event {
@@ -925,7 +1046,7 @@ async fn handle_substrate_mixer_relay_tx<'a>(
         }
     }
 }
-
+/// Calculates the fee for a given transaction
 fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
     let mill_fee = (fee_percent * 1_000_000.0) as u32;
     let mill_u256: U256 = principle * (mill_fee);
