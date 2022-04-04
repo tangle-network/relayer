@@ -18,7 +18,7 @@ import fs from 'fs';
 import ganache from 'ganache';
 import { ethers } from 'ethers';
 import { Server } from 'ganache';
-import { Anchors, Bridges } from '@webb-tools/protocol-solidity';
+import { Bridges, Interfaces } from '@webb-tools/protocol-solidity';
 import {
   BridgeInput,
   DeployerConfig,
@@ -29,6 +29,7 @@ import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import path from 'path';
 import child from 'child_process';
 import { ChainInfo, Contract, EventsWatcher } from './webbRelayer';
+import { ConvertToKebabCase } from './tsHacks';
 
 export type GanacheAccounts = {
   balance: string;
@@ -177,7 +178,7 @@ export class LocalChain {
       (chainId) =>
         [chainId, bridge.getAnchor(chainId, ethers.utils.parseEther('1'))] as [
           number,
-          Anchors.Anchor
+          Interfaces.IAnchor
         ]
     );
 
@@ -191,7 +192,7 @@ export class LocalChain {
       contracts: [
         // first the local Anchor
         {
-          contract: 'Anchor',
+          contract: 'AnchorOverDKG',
           address: localAnchor.getAddress(),
           deployedAt: 1,
           size: 1, // Ethers
@@ -263,14 +264,6 @@ export class LocalChain {
     fs.writeFileSync(path, configString);
   }
 }
-
-type CamelToKebabCase<S extends string> = S extends `${infer T}${infer U}`
-  ? `${T extends Capitalize<T> ? '-' : ''}${Lowercase<T>}${CamelToKebabCase<U>}`
-  : S;
-
-type ConvertToKebabCase<T> = {
-  [P in keyof T as Lowercase<CamelToKebabCase<string & P>>]: T[P];
-};
 
 export type FullChainInfo = ChainInfo & {
   httpEndpoint: string;
