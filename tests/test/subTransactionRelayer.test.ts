@@ -6,9 +6,13 @@ import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
 import fs from 'fs';
+import isCi from 'is-ci';
 import child from 'child_process';
 import { WebbRelayer } from '../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../lib/localProtocolSubstrate.js';
+import {
+  LocalProtocolSubstrate,
+  UsageMode,
+} from '../lib/localProtocolSubstrate.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -30,35 +34,31 @@ describe('Substrate Transaction Relayer', function () {
   let webbRelayer: WebbRelayer;
 
   before(async () => {
+    const usageMode: UsageMode = isCi
+      ? { mode: 'docker', forcePullImage: false }
+      : {
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../protocol-substrate/target/release/webb-standalone-node'
+          ),
+        };
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
-      // usageMode: { mode: 'docker', forcePullImage: false },
-      usageMode: {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../protocol-substrate/target/release/webb-standalone-node'
-        ),
-      },
+      usageMode,
       ports: 'auto',
     });
 
     bobNode = await LocalProtocolSubstrate.start({
       name: 'substrate-bob',
       authority: 'bob',
-      // usageMode: { mode: 'docker', forcePullImage: false },
-      usageMode: {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../protocol-substrate/target/release/webb-standalone-node'
-        ),
-      },
+      usageMode,
       ports: 'auto',
     });
 
     await aliceNode.writeConfig({
       path: `${tmpDirPath}/${aliceNode.name}.json`,
-      suri: '//Alice',
+      suri: '//Charlie',
     });
 
     // now start the relayer
@@ -76,19 +76,23 @@ describe('Substrate Transaction Relayer', function () {
     const api = await aliceNode.api();
     const { tx, note } = await createMixerDepositTx(api);
     const keyring = new Keyring({ type: 'sr25519' });
-    const alice = keyring.addFromUri('//Alice');
+    const charlie = keyring.addFromUri('//Charlie');
     // send the deposit transaction.
-    await tx.signAndSend(alice, { nonce: -1 }, (res) => {
-      console.log(res.status.toHuman());
-      if (res.status.isFinalized) {
-        expect(res.isError).to.be.false;
-      }
+    console.log('Waiting for the deposit');
+    const txPromise = new Promise((resolve, _reject) => {
+      tx.signAndSend(charlie, { nonce: -1 }, (res) => {
+        if (res.status.isFinalized) {
+          expect(res.isError).to.be.false;
+          resolve(0);
+        }
+      });
     });
-    await aliceNode.waitForEvent({ section: 'mixerBn254', method: 'Deposit' });
+    await txPromise;
+    console.log('Deposit done.');
     // next we need to prepare the withdrawal transaction.
     const withdrawalProof = await createMixerWithdrawProof(api, note, {
-      recipient: alice.address,
-      relayer: alice.address,
+      recipient: charlie.address,
+      relayer: charlie.address,
       fee: 0,
       refund: 0,
     });

@@ -21,6 +21,7 @@ export type HostMode = {
   nodePath: string;
 };
 
+export type UsageMode = DockerMode | HostMode;
 export type NodeOptions = {
   name: string;
   ports:
@@ -31,7 +32,7 @@ export type NodeOptions = {
       }
     | 'auto';
   authority: 'alice' | 'bob' | 'charlie';
-  usageMode: DockerMode | HostMode;
+  usageMode: UsageMode;
 };
 
 export class LocalProtocolSubstrate {
