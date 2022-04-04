@@ -55,29 +55,8 @@ jobs:
       - run: chmod +x /usr/local/bin/cross
       - run: ci/set_rust_version.bash ${{ matrix.channel }} ${{ matrix.target }}
       - run: ci/build.bash cross ${{ matrix.target }}
-      - name: Use Node.js
-        if: matrix.target == 'x86_64-apple-darwin'
-        uses: actions/setup-node@v2
-        with:
-          node-version-file: "./tests/.nvmrc"
-          cache: "yarn"
-          cache-dependency-path: "./tests/yarn.lock"
-      - run: npm install -g ganache-cli
-        if: matrix.target == 'x86_64-apple-darwin'
         # Only test on macOS platforms since we can't simulate the others.
       - run: ci/test.bash cross ${{ matrix.target }}
-        if: matrix.target == 'x86_64-apple-darwin'
-      - run: cargo build --features integration-tests
-        if: matrix.target == 'x86_64-apple-darwin'
-        shell: bash
-      - name: Install NPM Packages.
-        if: matrix.target == 'x86_64-apple-darwin'
-        run: cd tests && git submodule update --init --recursive && yarn
-      - name: Create test env file
-        run: echo "RINKEBY_PRIVATE_KEY=0x8c21e6dc9d5e89a6bfeae445466a45d520f5c288984b0786cd7f0a18a9155ff1" > tests/.env
-      - name: Webb Relayer Integration tests.
-        if: matrix.target == 'x86_64-apple-darwin'
-        run: cd tests && yarn test
 
     strategy:
       fail-fast: true
@@ -124,15 +103,15 @@ jobs:
           cache-dependency-path: "./tests/yarn.lock"
       - run: npm install -g ganache-cli
       - run: ci/test.bash /tmp/cross ${{ matrix.target }}
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'x86_64-unknown-linux-musl'
       - run: cargo build --features integration-tests
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'x86_64-unknown-linux-musl'
         shell: bash
       - name: Install NPM Packages.
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && git submodule update --init --recursive && yarn
       - name: Webb Relayer Integration tests.
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && yarn test
 
     strategy:
