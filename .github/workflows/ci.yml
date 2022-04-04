@@ -1,7 +1,12 @@
 name: CI
 
-on: [push, pull_request]
-
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
 jobs:
   # This job downloads and stores `cross` as an artifact, so that it can be
   # redownloaded across all of the jobs. Currently this copied pasted between
