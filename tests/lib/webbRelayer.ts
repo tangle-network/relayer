@@ -16,7 +16,10 @@
  */
 import WebSocket from 'ws';
 import fetch from 'node-fetch';
-import { IFixedAnchorPublicInputs } from '@webb-tools/interfaces';
+import {
+  IFixedAnchorPublicInputs,
+  IFixedAnchorExtData,
+} from '@webb-tools/interfaces';
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
@@ -47,7 +50,6 @@ export class WebbRelayer {
           WEBB_PORT: `${this.opts.port}`,
           RUST_LOG: `webb_probe=trace`,
         },
-        killSignal: 'SIGILL',
       }
     );
     // log that we started
@@ -149,14 +151,33 @@ export class WebbRelayer {
     chainName: string,
     anchorAddress: string,
     proof: `0x${string}`,
-    publicInputs: IFixedAnchorPublicInputs
+    publicInputs: IFixedAnchorPublicInputs,
+    extData: IFixedAnchorExtData
   ): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-    const input = { chainName, anchorAddress, proof, publicInputs };
+    const input = { chainName, anchorAddress, proof, publicInputs, extData };
     return txHashOrReject(ws, input);
+  }
+
+  public async substrateMixerWithdraw(inputs: {
+    chain: string;
+    id: number;
+    proof: number[];
+    root: number[];
+    nullifierHash: number[];
+    recipient: string;
+    relayer: string;
+    fee: number;
+    refund: number;
+  }): Promise<`0x${string}`> {
+    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
+    // create a new websocket connection to the relayer.
+    const ws = new WebSocket(wsEndpoint);
+    await new Promise((resolve) => ws.once('open', resolve));
+    return substrateTxHashOrReject(ws, inputs);
   }
 }
 
@@ -179,11 +200,13 @@ async function txHashOrReject(
     anchorAddress,
     proof,
     publicInputs,
+    extData,
   }: {
     chainName: string;
     anchorAddress: string;
     proof: `0x${string}`;
     publicInputs: IFixedAnchorPublicInputs;
+    extData: IFixedAnchorExtData;
   }
 ): Promise<`0x${string}`> {
   return new Promise((resolve, reject) => {
@@ -244,11 +267,85 @@ async function txHashOrReject(
           proof,
           roots: publicInputs._roots,
           nullifierHash: publicInputs._nullifierHash,
-          refreshCommitment: publicInputs._refreshCommitment,
-          recipient: publicInputs._recipient,
-          relayer: publicInputs._relayer,
-          fee: publicInputs._fee,
-          refund: publicInputs._refund,
+          extDataHash: publicInputs._extDataHash,
+          refreshCommitment: extData._refreshCommitment,
+          recipient: extData._recipient,
+          relayer: extData._relayer,
+          fee: extData._fee,
+          refund: extData._refund,
+        },
+      },
+    };
+    ws.send(JSON.stringify(cmd));
+  });
+}
+
+async function substrateTxHashOrReject(
+  ws: WebSocket,
+  input: any
+): Promise<`0x${string}`> {
+  return new Promise((resolve, reject) => {
+    ws.on('error', reject);
+    ws.on('message', (data) => {
+      const o = JSON.parse(data.toString());
+      const msg = parseRelayTxMessage(o);
+      if (msg.kind === 'error') {
+        ws.close();
+        reject(msg.message);
+      } else if (msg.kind === 'pong') {
+        ws.close();
+        // unreachable.
+        reject('unreachable');
+      } else if (msg.kind === 'network') {
+        const networkError =
+          msg.network === 'unsupportedChain' ||
+          msg.network === 'unsupportedContract' ||
+          msg.network === 'disconnected' ||
+          msg.network === 'invalidRelayerAddress';
+        const maybeFailed = msg.network as { failed: { reason: string } };
+        if (networkError) {
+          ws.close();
+          reject(msg.network);
+        } else if (maybeFailed.failed) {
+          ws.close();
+          reject(maybeFailed.failed.reason);
+        }
+      } else if (msg.kind === 'unimplemented') {
+        ws.close();
+        reject(msg.message);
+      } else if (msg.kind === 'unknown') {
+        ws.close();
+        console.log(o);
+        reject('Got unknown response from the relayer!');
+      } else if (msg.kind === 'withdraw') {
+        const isError =
+          msg.withdraw === 'invalidMerkleRoots' ||
+          msg.withdraw === 'droppedFromMemPool' ||
+          (msg.withdraw as { errored: any }).errored;
+        const success = msg.withdraw as {
+          finalized: { txHash: `0x${string}` };
+        };
+        if (isError) {
+          ws.close();
+          reject(msg.withdraw);
+        } else if (success.finalized) {
+          ws.close();
+          resolve(success.finalized.txHash);
+        }
+      }
+    });
+    const cmd = {
+      substrate: {
+        mixerRelayTx: {
+          chain: input.chain,
+          id: input.id,
+          proof: input.proof,
+          root: input.root,
+          nullifierHash: input.nullifierHash,
+          recipient: input.recipient,
+          relayer: input.relayer,
+          fee: input.fee,
+          refund: input.refund,
         },
       },
     };
@@ -323,7 +420,6 @@ export interface Substrate {
 
 export interface NodeInfo {
   enabled: boolean;
-  beneficiary: string;
   runtime: RuntimeKind;
   pallets: Pallet[];
 }
@@ -333,12 +429,7 @@ export interface Pallet {
   eventsWatcher: EventsWatcher;
 }
 
-type ContractKind =
-  | 'Tornado'
-  | 'Anchor'
-  | 'AnchorOverDKG'
-  | 'Bridge'
-  | 'GovernanceBravoDelegate';
+type ContractKind = 'Tornado' | 'AnchorOverDKG' | 'GovernanceBravoDelegate';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind = 'DKGProposals' | 'DKGProposalHandler';
 

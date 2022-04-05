@@ -1,0 +1,7 @@
+{
+  "loader": "ts-node/esm",
+  "extensions": ["ts"],
+  "spec": ["**/*.test.*"],
+  "exit": true,
+  "ignore": ["node_modules/**"]
+}
