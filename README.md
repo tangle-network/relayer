@@ -180,8 +180,9 @@ The table below documents all the configuration options available for both chain
 
 ### Docker 🐳
 
-To Use Docker in and to run the relayer on any cloud provider, all you need is to create your configuration and `.env` files
-as it is shown above, save it into a `config` directory then you run the following command:
+To use Docker to run the relayer, you will need to specify a config file and provide an `.env` file as described above. Then proceed to save it into the `config` directory.
+
+To run docker image:
 
 ```sh
 docker run --rm -v "<ABSOLUTE_PATH_TO_CONFIGS_DIRECTORY>:/config" --env-file .env -p 9955:9955 ghcr.io/webb-tools/relayer:edge
