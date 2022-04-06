@@ -212,7 +212,7 @@ export class LocalChain {
       contracts: [
         // first the local Anchor
         {
-          contract: 'Anchor',
+          contract: 'AnchorOverDKG',
           address: localAnchor.getAddress(),
           deployedAt: 1,
           size: 1, // Ethers
