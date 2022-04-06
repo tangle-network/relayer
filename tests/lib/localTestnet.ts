@@ -28,7 +28,12 @@ import { MintableToken } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import path from 'path';
 import child from 'child_process';
-import { ChainInfo, Contract, EventsWatcher } from './webbRelayer';
+import {
+  ChainInfo,
+  Contract,
+  EventsWatcher,
+  SigningBackend,
+} from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
 
 export type GanacheAccounts = {
@@ -57,17 +62,32 @@ export function startGanacheServer(
   return ganacheServer;
 }
 
+type LocalChainOpts = {
+  name: string;
+  port: number;
+  chainId: number;
+  populatedAccounts: GanacheAccounts[];
+};
+
 export class LocalChain {
   public readonly endpoint: string;
   private readonly server: Server<'ethereum'>;
   private signatureBridge: Bridges.SignatureBridge | null = null;
-  constructor(
-    public readonly name: string,
-    public readonly chainId: number,
-    readonly initalBalances: GanacheAccounts[]
-  ) {
-    this.endpoint = `http://localhost:${chainId}`;
-    this.server = startGanacheServer(chainId, chainId, initalBalances);
+  constructor(public readonly opts: LocalChainOpts) {
+    this.endpoint = `http://127.0.0.1:${opts.port}`;
+    this.server = startGanacheServer(
+      opts.port,
+      opts.chainId,
+      opts.populatedAccounts
+    );
+  }
+
+  public get name(): string {
+    return this.opts.name;
+  }
+
+  public get chainId(): number {
+    return this.opts.chainId;
   }
 
   public provider(): ethers.providers.WebSocketProvider {
@@ -76,7 +96,6 @@ export class LocalChain {
 
   public async stop() {
     await this.server.close();
-    process.stdout.write(`${this.name} ${this.chainId} stopped.\n`);
   }
 
   public async deployToken(
@@ -103,20 +122,20 @@ export class LocalChain {
     const bridgeInput: BridgeInput = {
       anchorInputs: {
         asset: {
-          [this.chainId]: [localToken.contract.address],
-          [otherChain.chainId]: [otherToken.contract.address],
+          [this.opts.chainId]: [localToken.contract.address],
+          [otherChain.opts.chainId]: [otherToken.contract.address],
         },
         anchorSizes: [ethers.utils.parseEther('1')],
       },
-      chainIDs: [this.chainId, otherChain.chainId],
+      chainIDs: [this.opts.chainId, otherChain.opts.chainId],
     };
     const deployerConfig: DeployerConfig = {
-      [this.chainId]: localWallet,
-      [otherChain.chainId]: otherWallet,
+      [this.opts.chainId]: localWallet,
+      [otherChain.opts.chainId]: otherWallet,
     };
     const initialGovernors: GovernorConfig = {
-      [this.chainId]: localWallet,
-      [otherChain.chainId]: otherWallet,
+      [this.opts.chainId]: localWallet,
+      [otherChain.opts.chainId]: otherWallet,
     };
     // copy the witness_calculator.js file to @webb-tools/utils, but use the .cjs extension
     // to avoid the babel compiler to compile it.
@@ -159,20 +178,21 @@ export class LocalChain {
   }
 
   public async exportConfig(
-    signatureBridge?: Bridges.SignatureBridge
+    signatureBridge?: Bridges.SignatureBridge,
+    signingBackend?: SigningBackend
   ): Promise<FullChainInfo> {
     const bridge = signatureBridge ?? this.signatureBridge;
     if (!bridge) {
       throw new Error('Signature bridge not deployed yet');
     }
     const localAnchor = bridge.getAnchor(
-      this.chainId,
+      this.opts.chainId,
       ethers.utils.parseEther('1')
     );
-    const side = bridge.getBridgeSide(this.chainId);
+    const side = bridge.getBridgeSide(this.opts.chainId);
     const wallet = side.governor;
     const otherChainIds = Array.from(bridge.bridgeSides.keys()).filter(
-      (chainId) => chainId !== this.chainId
+      (chainId) => chainId !== this.opts.chainId
     );
     const otherAnchors = otherChainIds.map(
       (chainId) =>
@@ -186,25 +206,30 @@ export class LocalChain {
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
-      chainId: this.chainId,
+      chainId: this.opts.chainId,
       beneficiary: wallet.address,
       privateKey: wallet.privateKey,
       contracts: [
         // first the local Anchor
         {
-          contract: 'AnchorOverDKG',
+          contract: 'Anchor',
           address: localAnchor.getAddress(),
           deployedAt: 1,
           size: 1, // Ethers
           withdrawFeePercentage: 0,
+          'dkg-node': signingBackend ?? undefined,
           eventsWatcher: { enabled: true, pollingInterval: 1000 },
           linkedAnchors: otherAnchors.map(([chainId, anchor]) => ({
             chain: chainId.toString(),
             address: anchor.getAddress(),
           })),
         },
-        // Next is the signature bridge contract.
-        // TODO: add signature bridge to the config when the relayer get it.
+        {
+          contract: 'SignatureBridge',
+          address: side.contract.address,
+          deployedAt: 1,
+          eventsWatcher: { enabled: true, pollingInterval: 1000 },
+        },
       ],
     };
     return chainInfo;
@@ -212,9 +237,10 @@ export class LocalChain {
 
   public async writeConfig(
     path: string,
-    signatureBridge?: Bridges.SignatureBridge
+    signatureBridge?: Bridges.SignatureBridge,
+    signingBackend?: SigningBackend
   ): Promise<void> {
-    const config = await this.exportConfig(signatureBridge);
+    const config = await this.exportConfig(signatureBridge, signingBackend);
     // don't mind my typescript typing here XD
     type ConvertedContract = Omit<
       ConvertToKebabCase<Contract>,
@@ -234,6 +260,7 @@ export class LocalChain {
         [key: number]: ConvertedConfig;
       };
     };
+
     const convertedConfig: ConvertedConfig = {
       enabled: config.enabled,
       'http-endpoint': config.httpEndpoint,
@@ -246,6 +273,7 @@ export class LocalChain {
         address: contract.address,
         'deployed-at': contract.deployedAt,
         size: contract.size,
+        'dkg-node': contract['dkg-node'],
         'withdraw-gaslimit': '0x5B8D80',
         'withdraw-fee-percentage': contract.withdrawFeePercentage,
         'events-watcher': {
@@ -257,7 +285,7 @@ export class LocalChain {
     };
     const fullConfigFile: FullConfigFile = {
       evm: {
-        [this.chainId]: convertedConfig,
+        [this.opts.chainId]: convertedConfig,
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);

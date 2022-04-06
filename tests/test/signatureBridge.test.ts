@@ -14,18 +14,21 @@
  * limitations under the License.
  *
  */
-// This our basic EVM Transaction Relayer Tests.
-// These are for testing the basic relayer functionality. which is just relay transactions for us.
+// A simple test for the Signature Bridge with the Relayer and the DKG.
 
 import { expect } from 'chai';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../lib/localTestnet.js';
-import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
+import { WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
+import { LocalDkg, UsageMode } from '../lib/localDkg.js';
+import isCi from 'is-ci';
+import path from 'path';
+import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
 
-describe.skip('EVM Transaction Relayer', function () {
+describe('Signature Bridge <> DKG', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
@@ -40,13 +43,60 @@ describe.skip('EVM Transaction Relayer', function () {
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
 
+  // dkg nodes
+  let aliceNode: LocalDkg;
+  let bobNode: LocalDkg;
+  let charlieNode: LocalDkg;
+
   let webbRelayer: WebbRelayer;
 
   before(async () => {
-    // first we need to start local evm node.
+    const usageMode: UsageMode = isCi
+      ? { mode: 'docker', forcePullImage: false }
+      : {
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../dkg-substrate/target/release/dkg-standalone-node'
+          ),
+        };
+    aliceNode = await LocalDkg.start({
+      name: 'substrate-alice',
+      authority: 'alice',
+      usageMode,
+      ports: 'auto',
+    });
+
+    bobNode = await LocalDkg.start({
+      name: 'substrate-bob',
+      authority: 'bob',
+      usageMode,
+      ports: 'auto',
+    });
+
+    charlieNode = await LocalDkg.start({
+      name: 'substrate-charlie',
+      authority: 'charlie',
+      usageMode,
+      ports: 'auto',
+      enableLogging: false,
+    });
+
+    await charlieNode.writeConfig({
+      path: `${tmpDirPath}/${charlieNode.name}.json`,
+      suri: '//Charlie',
+    });
+
+    // we need to wait until the public key is on chain.
+    await charlieNode.waitForEvent({
+      section: 'dkg',
+      method: 'PublicKeySubmitted',
+    });
+
+    // next we need to start local evm node.
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
+
     localChain1 = new LocalChain({
       port: localChain1Port,
       chainId: 5001,
@@ -62,6 +112,7 @@ describe.skip('EVM Transaction Relayer', function () {
     const localChain2Port = await getPort({
       port: portNumbers(3333, 4444),
     });
+
     localChain2 = new LocalChain({
       port: localChain2Port,
       chainId: 5002,
@@ -98,13 +149,29 @@ describe.skip('EVM Transaction Relayer', function () {
     // save the chain configs.
     await localChain1.writeConfig(
       `${tmpDirPath}/${localChain1.name}.json`,
-      signatureBridge
+      signatureBridge,
+      /** Signing Backend */ charlieNode.name
     );
     await localChain2.writeConfig(
       `${tmpDirPath}/${localChain2.name}.json`,
-      signatureBridge
+      signatureBridge,
+      /** Signing Backend */ charlieNode.name
     );
-
+    // fetch the dkg public key.
+    const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
+    expect(dkgPublicKey).to.not.be.null;
+    const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey!);
+    // transfer ownership to the DKG.
+    const sides = signatureBridge.bridgeSides.values();
+    for (const signatureSide of sides) {
+      const contract = signatureSide.contract;
+      // now we transferOwnership, forcefully.
+      const tx = await contract.transferOwnership(governorAddress, 1);
+      await tx.wait();
+      // check that the new governor is the same as the one we just set.
+      const currentGovernor = await contract.governor();
+      expect(currentGovernor).to.eq(governorAddress);
+    }
     // get the anhor on localchain1
     const anchor = signatureBridge.getAnchor(
       localChain1.chainId,
@@ -145,11 +212,12 @@ describe.skip('EVM Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
 
-  it('should relay same transaction on same chain', async () => {
+  it('should handle AnchorUpdateProposal when a deposit happens', async () => {
     // we will use chain1 as an example here.
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
@@ -168,44 +236,13 @@ describe.skip('EVM Transaction Relayer', function () {
       ethers.utils.parseEther('1000').toBigInt()
     );
     // now we are ready to do the deposit.
-    const depositInfo = await anchor1.deposit(localChain1.chainId);
-    const recipient = new ethers.Wallet(
-      ethers.utils.randomBytes(32),
-      localChain1.provider()
-    );
-
-    const relayerInfo = await webbRelayer.info();
-    const localChain1Info = relayerInfo.evm[localChain1.chainId];
-    const relayerFeePercentage =
-      localChain1Info?.contracts.find(
-        (c) => c.address === anchor1.contract.address
-      )?.withdrawFeePercentage ?? 0;
-    const withdrawalInfo = await anchor1.setupWithdraw(
-      depositInfo.deposit,
-      depositInfo.index,
-      recipient.address,
-      wallet1.address,
-      calcualteRelayerFees(
-        anchor1.denomination!,
-        relayerFeePercentage
-      ).toBigInt(),
-      0
-    );
-
-    // ping the relayer!
-    await webbRelayer.ping();
-    // now send the withdrawal request.
-    const txHash = await webbRelayer.anchorWithdraw(
-      localChain1.chainId.toString(),
-      anchor1.getAddress(),
-      `0x${withdrawalInfo.proofEncoded}`,
-      withdrawalInfo.publicInputs,
-      withdrawalInfo.extData
-    );
-    expect(txHash).to.be.string;
+    const depositInfo = await anchor1.deposit(localChain2.chainId);
   });
 
   after(async () => {
+    await aliceNode.stop();
+    await bobNode.stop();
+    await charlieNode.stop();
     await localChain1.stop();
     await localChain2.stop();
     await webbRelayer.stop();

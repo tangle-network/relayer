@@ -17,9 +17,14 @@
 /// A Helper Class to Start and Manage a Local DKG Node.
 /// This Could be through a Docker Container or a Local Compiled node.
 
+import fs from 'fs';
 import getPort, { portNumbers } from 'get-port';
 import { ChildProcess, execSync, spawn } from 'child_process';
 import { ApiPromise, WsProvider } from '@polkadot/api';
+import { EventsWatcher, NodeInfo, Pallet } from './webbRelayer.js';
+import { ConvertToKebabCase } from './tsHacks.js';
+import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
+import * as TinySecp256k1 from 'tiny-secp256k1';
 
 const DKG_STANDALONE_DOCKER_IMAGE_URL =
   'ghcr.io/webb-tools/dkg-standalone-node:edge';
@@ -34,7 +39,10 @@ export type HostMode = {
   nodePath: string;
 };
 
+export type UsageMode = DockerMode | HostMode;
+
 export type LocalDkgOptions = {
+  name: string;
   ports:
     | {
         ws: number;
@@ -43,7 +51,8 @@ export type LocalDkgOptions = {
       }
     | 'auto';
   authority: 'alice' | 'bob' | 'charlie';
-  usageMode: DockerMode | HostMode;
+  usageMode: UsageMode;
+  enableLogging?: boolean;
 };
 
 export class LocalDkg {
@@ -52,6 +61,10 @@ export class LocalDkg {
     private readonly opts: LocalDkgOptions,
     private readonly process: ChildProcess
   ) {}
+
+  public get name(): string {
+    return this.opts.name;
+  }
 
   public static async start(opts: LocalDkgOptions): Promise<LocalDkg> {
     if (opts.ports === 'auto') {
@@ -73,7 +86,7 @@ export class LocalDkg {
         'run',
         '--rm',
         '--name',
-        `${opts.authority}-node`,
+        `${opts.authority}-node-${opts.ports.ws}`,
         '-p',
         `${opts.ports.ws}:9944`,
         '-p',
@@ -102,6 +115,14 @@ export class LocalDkg {
         `--${opts.authority}`
       );
       const proc = spawn(opts.usageMode.nodePath, startArgs);
+      if (opts.enableLogging) {
+        proc.stdout.on('data', (data: Buffer) => {
+          console.log(data.toString());
+        });
+        proc.stderr.on('data', (data: Buffer) => {
+          console.error(data.toString());
+        });
+      }
       return new LocalDkg(opts, proc);
     }
   }
@@ -110,9 +131,9 @@ export class LocalDkg {
     if (this.#api) {
       return this.#api;
     }
-    const wsPort = (this.opts.ports as { ws: number }).ws;
+    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     this.#api = await ApiPromise.create({
-      provider: new WsProvider(`ws://localhost:${wsPort}`),
+      provider: new WsProvider(`ws://127.0.0.1:${ports.ws}`),
     });
     await this.#api.isReady;
     return this.#api;
@@ -146,6 +167,93 @@ export class LocalDkg {
     });
   }
 
+  public async fetchDkgPublicKey(): Promise<`0x${string}` | null> {
+    const api = await this.api();
+    const res = await api.query.dkg!.dkgPublicKey!();
+    const json = res.toJSON() as [number, string];
+    const tinysecp: TinySecp256k1Interface = TinySecp256k1;
+    const ECPair: ECPairAPI = ECPairFactory(tinysecp);
+    if (json && json[1] !== '0x') {
+      const key = json[1];
+      const dkgPubKey = ECPair.fromPublicKey(Buffer.from(key.slice(2), 'hex'), {
+        compressed: false,
+      }).publicKey.toString('hex');
+      // now we remove the `04` prefix byte and return it.
+      return `0x${dkgPubKey.slice(2)}`;
+    } else {
+      return null;
+    }
+  }
+
+  public async exportConfig(suri: string): Promise<FullNodeInfo> {
+    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
+    const nodeInfo: FullNodeInfo = {
+      enabled: true,
+      httpEndpoint: `http://127.0.0.1:${ports.http}`,
+      wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
+      runtime: 'DKG',
+      pallets: [
+        {
+          pallet: 'DKGProposalHandler',
+          eventsWatcher: { enabled: true, pollingInterval: 3000 },
+        },
+      ],
+      suri,
+    };
+    return nodeInfo;
+  }
+
+  public async writeConfig({
+    path,
+    suri,
+  }: {
+    path: string;
+    suri: string;
+  }): Promise<void> {
+    const config = await this.exportConfig(suri);
+    // don't mind my typescript typing here XD
+    type ConvertedPallet = Omit<
+      ConvertToKebabCase<Pallet>,
+      'events-watcher'
+    > & {
+      'events-watcher': ConvertToKebabCase<EventsWatcher>;
+    };
+    type ConvertedConfig = Omit<
+      ConvertToKebabCase<typeof config>,
+      'pallets'
+    > & {
+      pallets: ConvertedPallet[];
+    };
+    type FullConfigFile = {
+      substrate: {
+        [key: string]: ConvertedConfig;
+      };
+    };
+    const convertedConfig: ConvertedConfig = {
+      enabled: config.enabled,
+      'http-endpoint': config.httpEndpoint,
+      'ws-endpoint': config.wsEndpoint,
+      runtime: config.runtime,
+      suri: config.suri,
+      pallets: config.pallets.map((c: Pallet) => {
+        const convertedPallet: ConvertedPallet = {
+          pallet: c.pallet,
+          'events-watcher': {
+            enabled: c.eventsWatcher.enabled,
+            'polling-interval': c.eventsWatcher.pollingInterval,
+          },
+        };
+        return convertedPallet;
+      }),
+    };
+    const fullConfigFile: FullConfigFile = {
+      substrate: {
+        [this.opts.name]: convertedConfig,
+      },
+    };
+    const configString = JSON.stringify(fullConfigFile, null, 2);
+    fs.writeFileSync(path, configString);
+  }
   private static checkIfDkgImageExists(): boolean {
     const result = execSync('docker images', { encoding: 'utf8' });
     return result.includes(DKG_STANDALONE_DOCKER_IMAGE_URL);
@@ -161,6 +269,12 @@ export class LocalDkg {
     }
   }
 }
+
+export type FullNodeInfo = NodeInfo & {
+  httpEndpoint: string;
+  wsEndpoint: string;
+  suri: string;
+};
 
 export type TypedEvent =
   | NewSession

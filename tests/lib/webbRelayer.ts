@@ -397,10 +397,10 @@ export interface Contract {
   address: string;
   deployedAt: number;
   eventsWatcher: EventsWatcher;
-  size: number;
+  size?: number;
   withdrawGaslimit?: `0x${string}`;
   withdrawFeePercentage?: number;
-  'dkg-node'?: string;
+  'dkg-node'?: any;
   linkedAnchors?: LinkedAnchor[];
 }
 
@@ -429,7 +429,11 @@ export interface Pallet {
   eventsWatcher: EventsWatcher;
 }
 
-type ContractKind = 'Tornado' | 'AnchorOverDKG' | 'GovernanceBravoDelegate';
+type ContractKind =
+  | 'Tornado'
+  | 'Anchor'
+  | 'SignatureBridge'
+  | 'GovernanceBravoDelegate';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind = 'DKGProposals' | 'DKGProposalHandler';
 
@@ -479,6 +483,9 @@ type ParsedRelayerMessage =
   | UnimplementedMessage
   | { kind: 'unknown' };
 
+export type DKGSigningBackend = string; /** DKG Node name in the config */
+export type MockedSigningBackend = { signer: string }; /** Signer private key */
+export type SigningBackend = DKGSigningBackend | MockedSigningBackend;
 function parseRelayTxMessage(o: any): ParsedRelayerMessage {
   if (o.pong) {
     return { kind: 'pong' };
