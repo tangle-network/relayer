@@ -46,7 +46,7 @@ The relayer system is composed of three main components. Each of these component
 2. Data querying (for zero-knowledge proof generation)
 3. Data proposing and signature relaying (of DKG proposals)
 
-For additional information, please refer to the [Webb Relayer Rust Docs](docs.webb.tools/relayer/) 📝. Have feedback on how to improve the relayer network? Or have a specific question to ask? Checkout the [Relayer Feedback Discussion](https://github.com/webb-tools/feedback/discussions/categories/webb-relayer-feedback) 💬.
+For additional information, please refer to the [Webb Relayer Rust Docs](https://webb-tools.github.io/relayer/) 📝. Have feedback on how to improve the relayer network? Or have a specific question to ask? Checkout the [Relayer Feedback Discussion](https://github.com/webb-tools/feedback/discussions/categories/webb-relayer-feedback) 💬.
 
 ### Top-level directory layout
 
