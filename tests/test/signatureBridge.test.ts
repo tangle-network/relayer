@@ -173,7 +173,7 @@ describe.only('Signature Bridge <> DKG', function () {
       const contract = signatureSide.contract;
       // now we transferOwnership, forcefully.
       const tx = await contract.transferOwnership(governorAddress, 1);
-      await expect(tx.wait()).to.be.fulfilled;
+      await tx.wait();
       // check that the new governor is the same as the one we just set.
       const currentGovernor = await contract.governor();
       expect(currentGovernor).to.eq(governorAddress);
@@ -243,15 +243,23 @@ describe.only('Signature Bridge <> DKG', function () {
     );
     // now we are ready to do the deposit.
     const depositInfo = await anchor1.deposit(localChain2.chainId);
+    setInterval(() => {
+      const logs = webbRelayer.dumpLogs();
+      console.log(logs);
+    }, 10_000);
+    await webbRelayer.waitForEvent({
+      kind: 'signature_bridge',
+      event: { chain_id: localChain2.chainId },
+    });
   });
 
   after(async () => {
-    await aliceNode.stop();
-    await bobNode.stop();
-    await charlieNode.stop();
-    await localChain1.stop();
-    await localChain2.stop();
-    await webbRelayer.stop();
+    await aliceNode?.stop();
+    await bobNode?.stop();
+    await charlieNode?.stop();
+    await localChain1?.stop();
+    await localChain2?.stop();
+    await webbRelayer?.stop();
     tmp.cleanupSync(); // clean up the temp dir.
   });
 });

@@ -228,7 +228,7 @@ pub trait EventWatcher {
                     );
                     tracing::event!(
                         target: crate::probe::TARGET,
-                        tracing::Level::DEBUG,
+                        tracing::Level::TRACE,
                         kind = %crate::probe::Kind::Sync,
                         %block,
                         %dest_block,

@@ -31,6 +31,7 @@ export type WebbRelayerOptions = {
   configDir: string;
   buildDir?: 'debug' | 'release';
   showLogs?: boolean;
+  verbosity?: number;
 };
 
 export class WebbRelayer {
@@ -40,15 +41,23 @@ export class WebbRelayer {
   constructor(private readonly opts: WebbRelayerOptions) {
     const gitRoot = execSync('git rev-parse --show-toplevel').toString().trim();
     const buildDir = opts.buildDir ?? 'debug';
+    const verbosity = opts.verbosity ?? 3;
+    const levels = ['error', 'warn', 'info', 'debug', 'trace'];
+    const logLevel = levels[verbosity] ?? 'debug';
     const relayerPath = `${gitRoot}/target/${buildDir}/webb-relayer`;
     this.#process = spawn(
       relayerPath,
-      ['-c', opts.configDir, opts.tmp ? '--tmp' : '', '-vvvv'],
+      [
+        '-c',
+        opts.configDir,
+        opts.tmp ? '--tmp' : '',
+        `-${'v'.repeat(verbosity)}`,
+      ],
       {
         env: {
           ...process.env,
           WEBB_PORT: `${this.opts.port}`,
-          RUST_LOG: `webb_probe=trace`,
+          RUST_LOG: `webb_probe=${logLevel}`,
         },
       }
     );
@@ -368,7 +377,13 @@ export interface RawEvent {
   [key: string]: any;
 }
 
-type EventKind = 'lifecycle' | 'sync' | 'relay_tx';
+type EventKind =
+  | 'lifecycle'
+  | 'sync'
+  | 'relay_tx'
+  | 'signing_backend'
+  | 'signature_bridge'
+  | 'tx_queue';
 type EventTarget = 'webb_probe';
 
 export type EventSelector = {
