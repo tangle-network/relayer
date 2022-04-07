@@ -166,9 +166,10 @@ where
             )
             .call()
             .await?;
+
+        let data_hex = hex::encode(&data);
+        let signature_hex = hex::encode(&signature);
         if !is_signature_valid {
-            let data_hex = hex::encode(&data);
-            let signature_hex = hex::encode(&signature);
             tracing::warn!(
                 data = ?data_hex,
                 signature = ?signature_hex,
@@ -177,6 +178,16 @@ where
             return Ok(());
         }
 
+        tracing::event!(
+            target: crate::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %crate::probe::Kind::SignatureBridge,
+            call = "execute_proposal_with_signature",
+            chain_id = %chain_id.as_u64(),
+            data = ?data_hex,
+            signature = ?signature_hex,
+            data_hash = ?hex::encode(data_hash),
+        );
         // I guess now we are ready to enqueue the transaction.
         let call = contract
             .execute_proposal_with_signature(data.into(), signature.into());
@@ -191,7 +202,8 @@ where
 
 fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
     let mut result = [0u8; 64];
-    result[0..32].copy_from_slice(b"execute_proposal_txx_key_prefix_");
+    let prefix = b"execute_proposal_with_signature_";
+    result[0..32].copy_from_slice(prefix);
     result[32..64].copy_from_slice(&data_hash);
     result
 }

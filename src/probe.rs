@@ -28,4 +28,13 @@ pub enum Kind {
     /// Relaying a transaction state.
     #[display(fmt = "relay_tx")]
     RelayTx,
+    /// Signing Backend updates.
+    #[display(fmt = "signing_backend")]
+    SigningBackend,
+    /// Signature Bridge on a specific chain/node.
+    #[display(fmt = "signature_bridge")]
+    SignatureBridge,
+    /// Relayer Transaction Queue state on a specific chain/node.
+    #[display(fmt = "tx_queue")]
+    TxQueue,
 }

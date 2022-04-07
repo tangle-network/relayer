@@ -103,6 +103,15 @@ where
             max_elapsed_time: None,
             ..Default::default()
         };
+        tracing::event!(
+            target: crate::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %crate::probe::Kind::TxQueue,
+            ty = "EVM",
+            chain_id = %chain_id.as_u64(),
+            starting = true,
+        );
+
         let task = || async {
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
@@ -119,6 +128,16 @@ where
                     let tx = match pending_tx.await {
                         Ok(pending) => {
                             tx_hash = *pending;
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "EVM",
+                                chain_id = %chain_id.as_u64(),
+                                pending = true,
+                                %tx_hash,
+                            );
+
                             let tx_hash_string = format!("0x{:x}", tx_hash);
                             if let Some(mut url) = maybe_explorer.clone() {
                                 url.set_path(&format!("tx/{}", tx_hash_string));
@@ -161,6 +180,17 @@ where
                                     e
                                 );
                             }
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "EVM",
+                                chain_id = %chain_id.as_u64(),
+                                errored = true,
+                                %tx_hash,
+                                error = %e,
+                            );
+
                             continue; // keep going.
                         }
                     };
@@ -184,6 +214,15 @@ where
                                     tx_hash_string,
                                 );
                             }
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "EVM",
+                                chain_id = %chain_id.as_u64(),
+                                finalized = true,
+                                %tx_hash,
+                            );
                         }
                         Ok(None) => {
                             // this should never happen
@@ -223,6 +262,17 @@ where
                                     reason,
                                 );
                             }
+
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "EVM",
+                                chain_id = %chain_id.as_u64(),
+                                errored = true,
+                                %tx_hash,
+                                error = %e,
+                            );
                         }
                     };
                 }

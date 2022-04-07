@@ -60,6 +60,15 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
             event,
             block_number
         );
+        tracing::event!(
+            target: crate::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %crate::probe::Kind::SigningBackend,
+            backend = "DKG",
+            ty = "ProposalSigned",
+            ?block_number,
+            ?event,
+        );
         // we need to signal all the signature bridges in our system with this proposal.
         let bridge_keys = self.webb_config.evm.values().flat_map(|c| {
             c.contracts
@@ -79,6 +88,15 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
                 %bridge_key,
                 proposal = ?event,
                 "Signaling Signature Bridge to execute proposal",
+            );
+            tracing::event!(
+                target: crate::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %crate::probe::Kind::SigningBackend,
+                backend = "DKG",
+                signal_bridge = %bridge_key,
+                data = ?hex::encode(&event.data),
+                signature = ?hex::encode(&event.signature),
             );
             store.enqueue_item(
                 SledQueueKey::from_bridge_key(bridge_key),
