@@ -16,7 +16,8 @@
  */
 // A simple test for the Signature Bridge with the Relayer and the DKG.
 
-import { expect } from 'chai';
+import Chai, { expect } from 'chai';
+import ChaiAsPromised from 'chai-as-promised';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
@@ -28,7 +29,10 @@ import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
 
-describe('Signature Bridge <> DKG', function () {
+// to support chai-as-promised
+Chai.use(ChaiAsPromised);
+
+describe.only('Signature Bridge <> DKG', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
@@ -36,7 +40,7 @@ describe('Signature Bridge <> DKG', function () {
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmp = temp.track();
 
-  const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
+  const tmpDirPath = tmp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
   let signatureBridge: Bridges.SignatureBridge;
@@ -161,13 +165,15 @@ describe('Signature Bridge <> DKG', function () {
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
     expect(dkgPublicKey).to.not.be.null;
     const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey!);
+    // verify the governor address is a valid ethereum address.
+    expect(ethers.utils.isAddress(governorAddress)).to.be.true;
     // transfer ownership to the DKG.
     const sides = signatureBridge.bridgeSides.values();
     for (const signatureSide of sides) {
       const contract = signatureSide.contract;
       // now we transferOwnership, forcefully.
       const tx = await contract.transferOwnership(governorAddress, 1);
-      await tx.wait();
+      await expect(tx.wait()).to.be.fulfilled;
       // check that the new governor is the same as the one we just set.
       const currentGovernor = await contract.governor();
       expect(currentGovernor).to.eq(governorAddress);

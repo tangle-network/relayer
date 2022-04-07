@@ -27,7 +27,7 @@ import {
 describe('Substrate Transaction Relayer', function () {
   this.timeout(60000);
   const tmp = temp.track();
-  const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
+  const tmpDirPath = tmp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
 

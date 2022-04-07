@@ -25,6 +25,7 @@ import { LocalChain } from '../lib/localTestnet.js';
 import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 
+// @FIXME: this needs a mocked signing backend to be implemented first.
 describe.skip('EVM Transaction Relayer', function () {
   this.timeout(120_000);
   const PK1 =
@@ -33,7 +34,7 @@ describe.skip('EVM Transaction Relayer', function () {
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmp = temp.track();
 
-  const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
+  const tmpDirPath = tmp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
   let signatureBridge: Bridges.SignatureBridge;
@@ -98,11 +99,13 @@ describe.skip('EVM Transaction Relayer', function () {
     // save the chain configs.
     await localChain1.writeConfig(
       `${tmpDirPath}/${localChain1.name}.json`,
-      signatureBridge
+      signatureBridge,
+      /** Signing Backend */ 'none'
     );
     await localChain2.writeConfig(
       `${tmpDirPath}/${localChain2.name}.json`,
-      signatureBridge
+      signatureBridge,
+      /** Signing Backend */ 'none'
     );
 
     // get the anhor on localchain1
@@ -145,6 +148,7 @@ describe.skip('EVM Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
