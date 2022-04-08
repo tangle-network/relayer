@@ -11,8 +11,8 @@ import child from 'child_process';
 import { WebbRelayer } from '../lib/webbRelayer.js';
 import {
   LocalProtocolSubstrate,
-  UsageMode,
 } from '../lib/localProtocolSubstrate.js';
+import { UsageMode } from '../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -78,17 +78,8 @@ describe('Substrate Transaction Relayer', function () {
     const keyring = new Keyring({ type: 'sr25519' });
     const charlie = keyring.addFromUri('//Charlie');
     // send the deposit transaction.
-    console.log('Waiting for the deposit');
-    const txPromise = new Promise((resolve, _reject) => {
-      tx.signAndSend(charlie, { nonce: -1 }, (res) => {
-        if (res.status.isFinalized) {
-          expect(res.isError).to.be.false;
-          resolve(0);
-        }
-      });
-    });
-    await txPromise;
-    console.log('Deposit done.');
+    const txSigned = tx.sign(charlie);
+    await aliceNode.executeTransaction(txSigned);
     // next we need to prepare the withdrawal transaction.
     const withdrawalProof = await createMixerWithdrawProof(api, note, {
       recipient: charlie.address,

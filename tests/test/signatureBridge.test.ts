@@ -24,10 +24,11 @@ import temp from 'temp';
 import { LocalChain } from '../lib/localTestnet.js';
 import { WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { LocalDkg, UsageMode } from '../lib/localDkg.js';
+import { LocalDkg } from '../lib/localDkg.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
+import { UsageMode } from '../lib/substrateNodeBase.js';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -212,6 +213,14 @@ describe.only('Signature Bridge <> DKG', function () {
     await token2.approveSpending(anchor2.contract.address);
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
+    const api = await charlieNode.api();
+    const resourceId1 = await anchor.createResourceId();
+    const resourceId2 = await anchor2.createResourceId();
+
+    const call = (resourceId: string) => api.tx.dkgProposals!.setResource(resourceId, "0x00");
+    for rid of [resourceId1, resourceId2] {
+      await call(rid);
+    }
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
@@ -243,10 +252,6 @@ describe.only('Signature Bridge <> DKG', function () {
     );
     // now we are ready to do the deposit.
     const depositInfo = await anchor1.deposit(localChain2.chainId);
-    setInterval(() => {
-      const logs = webbRelayer.dumpLogs();
-      console.log(logs);
-    }, 10_000);
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
       event: { chain_id: localChain2.chainId },

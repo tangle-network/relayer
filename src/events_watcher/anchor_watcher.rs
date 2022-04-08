@@ -160,6 +160,10 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             DepositFilter(data) => data,
             _ => return Ok(()),
         };
+        tracing::debug!(
+            event = ?event_data,
+            "Anchor deposit event",
+        );
         let client = wrapper.contract.client();
         let src_chain_id = client.get_chainid().await?;
         let root = wrapper.contract.get_last_root().call().await?;
@@ -221,10 +225,10 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             );
             let tx_api = self.api.tx().dkg_proposals();
             tracing::debug!(
-                "sending proposal = nonce: {}, r_id: 0x{}, proposal_data: 0x{}",
-                leaf_index,
-                hex::encode(resource_id.into_bytes()),
-                hex::encode(&proposal.to_bytes())
+                %leaf_index,
+                resource_id = ?hex::encode(resource_id.into_bytes()),
+                proposal = ?proposal,
+                "sending proposal",
             );
             let xt = tx_api.acknowledge_proposal(
                 Nonce(leaf_index),

@@ -17,63 +17,21 @@
 /// A Helper Class to Start and Manage a Local DKG Node.
 /// This Could be through a Docker Container or a Local Compiled node.
 
-import fs from 'fs';
-import getPort, { portNumbers } from 'get-port';
-import { ChildProcess, execSync, spawn } from 'child_process';
-import { ApiPromise, WsProvider } from '@polkadot/api';
-import { EventsWatcher, NodeInfo, Pallet } from './webbRelayer.js';
-import { ConvertToKebabCase } from './tsHacks.js';
+import { spawn } from 'child_process';
 import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import * as TinySecp256k1 from 'tiny-secp256k1';
+import {
+  FullNodeInfo,
+  LocalNodeOpts,
+  SubstrateNodeBase,
+} from './substrateNodeBase.js';
 
 const DKG_STANDALONE_DOCKER_IMAGE_URL =
   'ghcr.io/webb-tools/dkg-standalone-node:edge';
 
-export type DockerMode = {
-  mode: 'docker';
-  forcePullImage: boolean;
-};
-
-export type HostMode = {
-  mode: 'host';
-  nodePath: string;
-};
-
-export type UsageMode = DockerMode | HostMode;
-
-export type LocalDkgOptions = {
-  name: string;
-  ports:
-    | {
-        ws: number;
-        http: number;
-        p2p: number;
-      }
-    | 'auto';
-  authority: 'alice' | 'bob' | 'charlie';
-  usageMode: UsageMode;
-  enableLogging?: boolean;
-};
-
-export class LocalDkg {
-  #api: ApiPromise | null = null;
-  private constructor(
-    private readonly opts: LocalDkgOptions,
-    private readonly process: ChildProcess
-  ) {}
-
-  public get name(): string {
-    return this.opts.name;
-  }
-
-  public static async start(opts: LocalDkgOptions): Promise<LocalDkg> {
-    if (opts.ports === 'auto') {
-      opts.ports = {
-        ws: await getPort({ port: portNumbers(9944, 9999) }),
-        http: await getPort({ port: portNumbers(9933, 9999) }),
-        p2p: await getPort({ port: portNumbers(30333, 30399) }),
-      };
-    }
+export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
+  public static async start(opts: LocalNodeOpts): Promise<LocalDkg> {
+    opts.ports = await SubstrateNodeBase.makePorts(opts);
     const startArgs: string[] = [
       '-ldkg=debug',
       '-ldkg_metadata=debug',
@@ -81,7 +39,10 @@ export class LocalDkg {
       '-ldkg_proposal_handler=debug',
     ];
     if (opts.usageMode.mode === 'docker') {
-      LocalDkg.pullDkgImage({ frocePull: opts.usageMode.forcePullImage });
+      super.pullDkgImage({
+        frocePull: opts.usageMode.forcePullImage,
+        image: DKG_STANDALONE_DOCKER_IMAGE_URL,
+      });
       startArgs.push(
         'run',
         '--rm',
@@ -127,48 +88,8 @@ export class LocalDkg {
     }
   }
 
-  public async api(): Promise<ApiPromise> {
-    if (this.#api) {
-      return this.#api;
-    }
-    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
-    this.#api = await ApiPromise.create({
-      provider: new WsProvider(`ws://127.0.0.1:${ports.ws}`),
-    });
-    await this.#api.isReady;
-    return this.#api;
-  }
-
-  public async stop(): Promise<void> {
-    await this.#api?.disconnect();
-    this.#api = null;
-    this.process.kill('SIGINT');
-  }
-
-  public async waitForEvent(typedEvent: TypedEvent): Promise<void> {
-    const api = await this.api();
-    return new Promise(async (resolve, _) => {
-      // Subscribe to system events via storage
-      const unsub: any = await api.query.system!.events!((events: any[]) => {
-        // Loop through the Vec<EventRecord>
-        events.forEach((record: any) => {
-          const { event } = record;
-          if (
-            event.section === typedEvent.section &&
-            event.method === typedEvent.method
-          ) {
-            // Unsubscribe from the storage
-            unsub();
-            // Resolve the promise
-            resolve();
-          }
-        });
-      });
-    });
-  }
-
   public async fetchDkgPublicKey(): Promise<`0x${string}` | null> {
-    const api = await this.api();
+    const api = await super.api();
     const res = await api.query.dkg!.dkgPublicKey!();
     const json = res.toJSON() as [number, string];
     const tinysecp: TinySecp256k1Interface = TinySecp256k1;
@@ -202,79 +123,7 @@ export class LocalDkg {
     };
     return nodeInfo;
   }
-
-  public async writeConfig({
-    path,
-    suri,
-  }: {
-    path: string;
-    suri: string;
-  }): Promise<void> {
-    const config = await this.exportConfig(suri);
-    // don't mind my typescript typing here XD
-    type ConvertedPallet = Omit<
-      ConvertToKebabCase<Pallet>,
-      'events-watcher'
-    > & {
-      'events-watcher': ConvertToKebabCase<EventsWatcher>;
-    };
-    type ConvertedConfig = Omit<
-      ConvertToKebabCase<typeof config>,
-      'pallets'
-    > & {
-      pallets: ConvertedPallet[];
-    };
-    type FullConfigFile = {
-      substrate: {
-        [key: string]: ConvertedConfig;
-      };
-    };
-    const convertedConfig: ConvertedConfig = {
-      enabled: config.enabled,
-      'http-endpoint': config.httpEndpoint,
-      'ws-endpoint': config.wsEndpoint,
-      runtime: config.runtime,
-      suri: config.suri,
-      pallets: config.pallets.map((c: Pallet) => {
-        const convertedPallet: ConvertedPallet = {
-          pallet: c.pallet,
-          'events-watcher': {
-            enabled: c.eventsWatcher.enabled,
-            'polling-interval': c.eventsWatcher.pollingInterval,
-          },
-        };
-        return convertedPallet;
-      }),
-    };
-    const fullConfigFile: FullConfigFile = {
-      substrate: {
-        [this.opts.name]: convertedConfig,
-      },
-    };
-    const configString = JSON.stringify(fullConfigFile, null, 2);
-    fs.writeFileSync(path, configString);
-  }
-  private static checkIfDkgImageExists(): boolean {
-    const result = execSync('docker images', { encoding: 'utf8' });
-    return result.includes(DKG_STANDALONE_DOCKER_IMAGE_URL);
-  }
-
-  private static pullDkgImage(
-    opts: { frocePull: boolean } = { frocePull: false }
-  ): void {
-    if (!this.checkIfDkgImageExists() || opts.frocePull) {
-      execSync(`docker pull ${DKG_STANDALONE_DOCKER_IMAGE_URL}`, {
-        encoding: 'utf8',
-      });
-    }
-  }
 }
-
-export type FullNodeInfo = NodeInfo & {
-  httpEndpoint: string;
-  wsEndpoint: string;
-  suri: string;
-};
 
 export type TypedEvent =
   | NewSession
