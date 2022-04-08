@@ -184,6 +184,17 @@ describe.skip('EVM Transaction Relayer', function () {
 
     // ping the relayer!
     await webbRelayer.ping();
+
+    // check balance before withdraw
+    const tokenForRecipient = await Tokens.MintableToken.tokenFromAddress(
+        recipient.address,
+        recipient
+    );
+    let webbBalanceForRecipient = await tokenForRecipient.getBalance(wallet1.address);
+    console.log(`webb balance for recipient before withdraw is ${webbBalanceForRecipient.toBigInt()}`);
+    expect( webbBalanceForRecipient.toBigInt()).to.equal(
+        ethers.utils.parseEther('1000').toBigInt()
+    );
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
       localChain1.chainId.toString(),
@@ -193,6 +204,13 @@ describe.skip('EVM Transaction Relayer', function () {
       withdrawalInfo.extData
     );
     expect(txHash).to.be.string;
+
+    // check recipient balance after withdraw
+    webbBalanceForRecipient = await tokenForRecipient.getBalance(wallet1.address);
+    console.log(`webb balance for recipient after withdraw is ${webbBalanceForRecipient.toBigInt()}`);
+    expect( webbBalanceForRecipient.toBigInt()).to.equal(
+        ethers.utils.parseEther('1000').toBigInt()
+    );
   });
 
   after(async () => {
