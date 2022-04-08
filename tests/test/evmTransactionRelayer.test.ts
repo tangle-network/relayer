@@ -17,22 +17,22 @@
 // This our basic EVM Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
-import { jest } from '@jest/globals';
-import 'jest-extended';
-import { Anchors, Bridges, Tokens } from '@webb-tools/protocol-solidity';
+import { expect } from 'chai';
+import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
+import { LocalChain } from '../lib/localTestnet.js';
+import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { LocalChain } from './lib/localTestnet';
-import { calcualteRelayerFees, WebbRelayer } from './lib/webbRelayer';
 
-describe.skip('EVM Transaction Relayer', () => {
+describe.skip('EVM Transaction Relayer', function () {
+  this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
   const PK2 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmp = temp.track();
-  jest.setTimeout(120_000);
+
   const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -42,9 +42,11 @@ describe.skip('EVM Transaction Relayer', () => {
 
   let webbRelayer: WebbRelayer;
 
-  beforeAll(async () => {
+  before(async () => {
     // first we need to start local evm node.
-    const localChain1Port = await getPort({ port: portNumbers(3333, 4444) });
+    const localChain1Port = await getPort({
+      port: portNumbers(3333, 4444),
+    });
     localChain1 = new LocalChain('TestA', localChain1Port, [
       {
         secretKey: PK1,
@@ -52,7 +54,9 @@ describe.skip('EVM Transaction Relayer', () => {
       },
     ]);
 
-    const localChain2Port = await getPort({ port: portNumbers(3333, 4444) });
+    const localChain2Port = await getPort({
+      port: portNumbers(3333, 4444),
+    });
     localChain2 = new LocalChain('TestB', localChain2Port, [
       {
         secretKey: PK2,
@@ -135,12 +139,12 @@ describe.skip('EVM Transaction Relayer', () => {
     await webbRelayer.waitUntilReady();
   });
 
-  test('Same Chain Relay Transaction', async () => {
+  it('should relay same transaction on same chain', async () => {
     // we will use chain1 as an example here.
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
       ethers.utils.parseEther('1')
-    )! as Anchors.Anchor;
+    );
     await anchor1.setSigner(wallet1);
     const tokenAddress = signatureBridge.getWebbTokenAddress(
       localChain1.chainId
@@ -150,11 +154,11 @@ describe.skip('EVM Transaction Relayer', () => {
       wallet1
     );
     const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt()).toEqual(
+    expect(webbBalance.toBigInt()).to.equal(
       ethers.utils.parseEther('1000').toBigInt()
     );
     // now we are ready to do the deposit.
-    const depositInfo = await anchor1.deposit();
+    const depositInfo = await anchor1.deposit(localChain1.chainId);
     const recipient = new ethers.Wallet(
       ethers.utils.randomBytes(32),
       localChain1.provider()
@@ -166,7 +170,6 @@ describe.skip('EVM Transaction Relayer', () => {
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
       )?.withdrawFeePercentage ?? 0;
-
     const withdrawalInfo = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
@@ -178,38 +181,21 @@ describe.skip('EVM Transaction Relayer', () => {
       ).toBigInt(),
       0
     );
+
     // ping the relayer!
     await webbRelayer.ping();
-
-    // check balance before withdraw
-    const tokenForRecipient = await Tokens.MintableToken.tokenFromAddress(
-        recipient.address,
-        recipient
-    );
-    let webbBalanceForRecipient = await tokenForRecipient.getBalance(wallet1.address);
-    console.log(`webb balance for recipient before withdraw is ${webbBalanceForRecipient.toBigInt()}`);
-    expect( webbBalanceForRecipient.toBigInt()).toEqual(
-        ethers.utils.parseEther('1000').toBigInt()
-    );
-
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
       localChain1.chainId.toString(),
       anchor1.getAddress(),
       `0x${withdrawalInfo.proofEncoded}`,
-      withdrawalInfo.publicInputs
+      withdrawalInfo.publicInputs,
+      withdrawalInfo.extData
     );
-    expect(txHash).toBeDefined();
-
-    // check recipient balance after withdraw
-    webbBalanceForRecipient = await tokenForRecipient.getBalance(wallet1.address);
-    console.log(`webb balance for recipient after withdraw is ${webbBalanceForRecipient.toBigInt()}`);
-    expect( webbBalanceForRecipient.toBigInt()).toEqual(
-        ethers.utils.parseEther('1000').toBigInt()
-    );
+    expect(txHash).to.be.string;
   });
 
-  afterAll(async () => {
+  after(async () => {
     await localChain1.stop();
     await localChain2.stop();
     await webbRelayer.stop();

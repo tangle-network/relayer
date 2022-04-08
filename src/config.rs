@@ -343,8 +343,14 @@ pub struct DKGProposalHandlerPalletConfig {
     pub events_watcher: EventsWatcherConfig,
 }
 /// PrivateKey represents a private key.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct PrivateKey(Secret);
+
+impl std::fmt::Debug for PrivateKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("PrivateKey").finish()
+    }
+}
 
 impl std::ops::Deref for PrivateKey {
     type Target = Secret;
@@ -381,7 +387,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     let maybe_hex = Secret::from_str(value);
                     match maybe_hex {
                         Ok(val) => Ok(val),
-                        Err(e) => Err(serde::de::Error::custom(format!("{}\n got {} but expected a 66 string (including the 0x prefix)", e, value))),
+                        Err(e) => Err(serde::de::Error::custom(format!("{}\n got {} but expected a 66 string (including the 0x prefix)", e, value.len()))),
                     }
                 } else if value.starts_with('$') {
                     // env
@@ -396,7 +402,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     let maybe_hex = Secret::from_str(&val);
                     match maybe_hex {
                         Ok(val) => Ok(val),
-                        Err(e) => Err(serde::de::Error::custom(format!("{}\n got {} but expected a 66 chars string (including the 0x prefix) but found {} char", e, val, val.len()))),
+                        Err(e) => Err(serde::de::Error::custom(format!("{}\n expected a 66 chars string (including the 0x prefix) but found {} char", e,  val.len()))),
                     }
                 } else if value.starts_with('>') {
                     todo!("Implement command execution to extract the private key")

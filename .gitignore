@@ -8,3 +8,4 @@
 tests/node_modules
 store/
 .cargo/
+.DS_Store

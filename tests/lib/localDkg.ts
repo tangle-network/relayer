@@ -72,7 +72,6 @@ export class LocalDkg {
       startArgs.push(
         'run',
         '--rm',
-        '-it',
         '--name',
         `${opts.authority}-node`,
         '-p',
