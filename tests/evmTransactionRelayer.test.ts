@@ -166,6 +166,7 @@ describe.skip('EVM Transaction Relayer', () => {
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
       )?.withdrawFeePercentage ?? 0;
+
     const withdrawalInfo = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
@@ -177,9 +178,20 @@ describe.skip('EVM Transaction Relayer', () => {
       ).toBigInt(),
       0
     );
-
     // ping the relayer!
     await webbRelayer.ping();
+
+    // check balance before withdraw
+    const tokenForRecipient = await Tokens.MintableToken.tokenFromAddress(
+        recipient.address,
+        recipient
+    );
+    let webbBalanceForRecipient = await tokenForRecipient.getBalance(wallet1.address);
+    console.log(`webb balance for recipient before withdraw is ${webbBalanceForRecipient.toBigInt()}`);
+    expect( webbBalanceForRecipient.toBigInt()).toEqual(
+        ethers.utils.parseEther('1000').toBigInt()
+    );
+
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
       localChain1.chainId.toString(),
@@ -188,6 +200,13 @@ describe.skip('EVM Transaction Relayer', () => {
       withdrawalInfo.publicInputs
     );
     expect(txHash).toBeDefined();
+
+    // check recipient balance after withdraw
+    webbBalanceForRecipient = await tokenForRecipient.getBalance(wallet1.address);
+    console.log(`webb balance for recipient after withdraw is ${webbBalanceForRecipient.toBigInt()}`);
+    expect( webbBalanceForRecipient.toBigInt()).toEqual(
+        ethers.utils.parseEther('1000').toBigInt()
+    );
   });
 
   afterAll(async () => {
