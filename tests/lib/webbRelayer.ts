@@ -422,6 +422,7 @@ export interface Contract {
 export interface EventsWatcher {
   enabled: boolean;
   pollingInterval: number;
+  printProgressInterval?: number;
 }
 
 export interface LinkedAnchor {

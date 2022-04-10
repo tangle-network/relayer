@@ -19,6 +19,7 @@
 
 import { spawn } from 'child_process';
 import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
+import isCI from 'is-ci';
 import * as TinySecp256k1 from 'tiny-secp256k1';
 import {
   FullNodeInfo,
@@ -108,10 +109,11 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
 
   public async exportConfig(suri: string): Promise<FullNodeInfo> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
+    const host = isCI ? 'localhost' : '127.0.0.1';
     const nodeInfo: FullNodeInfo = {
       enabled: true,
-      httpEndpoint: `http://127.0.0.1:${ports.http}`,
-      wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
+      httpEndpoint: `http://${host}:${ports.http}`,
+      wsEndpoint: `ws://${host}:${ports.ws}`,
       runtime: 'DKG',
       pallets: [
         {

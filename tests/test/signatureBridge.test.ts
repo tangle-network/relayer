@@ -217,9 +217,11 @@ describe.only('Signature Bridge <> DKG', function () {
     const resourceId1 = await anchor.createResourceId();
     const resourceId2 = await anchor2.createResourceId();
 
-    const call = (resourceId: string) => api.tx.dkgProposals!.setResource(resourceId, "0x00");
-    for rid of [resourceId1, resourceId2] {
-      await call(rid);
+    const call = (resourceId: string) =>
+      api.tx.dkgProposals!.setResource!(resourceId, '0x00');
+    // register the resource on DKG node.
+    for (const rid of [resourceId1, resourceId2]) {
+      await charlieNode.sudoExecuteTransaction(call(rid));
     }
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
@@ -228,6 +230,7 @@ describe.only('Signature Bridge <> DKG', function () {
       tmp: true,
       configDir: tmpDirPath,
       showLogs: true,
+      verbosity: 4,
     });
     await webbRelayer.waitUntilReady();
   });

@@ -218,7 +218,11 @@ export class LocalChain {
           size: 1, // Ethers
           withdrawFeePercentage: 0,
           'dkg-node': signingBackend ?? undefined,
-          eventsWatcher: { enabled: true, pollingInterval: 1000 },
+          eventsWatcher: {
+            enabled: true,
+            pollingInterval: 1000,
+            printProgressInterval: 20_000,
+          },
           linkedAnchors: otherAnchors.map(([chainId, anchor]) => ({
             chain: chainId.toString(),
             address: anchor.getAddress(),
@@ -228,7 +232,11 @@ export class LocalChain {
           contract: 'SignatureBridge',
           address: side.contract.address,
           deployedAt: 1,
-          eventsWatcher: { enabled: true, pollingInterval: 1000 },
+          eventsWatcher: {
+            enabled: true,
+            pollingInterval: 1000,
+            printProgressInterval: 20_000,
+          },
         },
       ],
     };
@@ -279,6 +287,8 @@ export class LocalChain {
         'events-watcher': {
           enabled: contract.eventsWatcher.enabled,
           'polling-interval': contract.eventsWatcher.pollingInterval,
+          'print-progress-interval':
+            contract.eventsWatcher.printProgressInterval,
         },
         'linked-anchors': contract.linkedAnchors,
       })),

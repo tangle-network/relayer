@@ -22,6 +22,7 @@ import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { EventsWatcher, NodeInfo, Pallet } from './webbRelayer.js';
 import { ConvertToKebabCase } from './tsHacks.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
+import isCI from 'is-ci';
 
 export type DockerMode = {
   mode: 'docker';
@@ -82,8 +83,10 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
       return this.#api;
     }
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
+    // for some reason, github CI and docker does not resolve 127.0.0.1 as valid host.
+    const host = isCI ? 'localhost' : '127.0.0.1';
     this.#api = await ApiPromise.create({
-      provider: new WsProvider(`ws://127.0.0.1:${ports.ws}`),
+      provider: new WsProvider(`ws://${host}:${ports.ws}`),
       rpc: {
         mt: {
           getLeaves: {
@@ -181,24 +184,30 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     const sudoKey = keyring.addFromUri(`//Alice`);
     const sudoCall = api.tx.sudo!.sudo!(tx);
     return new Promise((resolve, reject) => {
-      sudoCall.signAndSend(sudoKey, { nonce: -1 }, ({ status, dispatchError }) => {
-        // status would still be set, but in the case of error we can shortcut
-        // to just check it (so an error would indicate InBlock or Finalized)
-        if (dispatchError) {
-          if (dispatchError.isModule) {
-            // for module errors, we have the section indexed, lookup
-            const decoded = api.registry.findMetaError(dispatchError.asModule);
-            const { docs, name, section } = decoded;
-            reject(`${section}.${name}: ${docs.join(' ')}`);
-          } else {
-            // Other, CannotLookup, BadOrigin, no extra info
-            reject(dispatchError.toString());
+      sudoCall.signAndSend(
+        sudoKey,
+        { nonce: -1 },
+        ({ status, dispatchError }) => {
+          // status would still be set, but in the case of error we can shortcut
+          // to just check it (so an error would indicate InBlock or Finalized)
+          if (dispatchError) {
+            if (dispatchError.isModule) {
+              // for module errors, we have the section indexed, lookup
+              const decoded = api.registry.findMetaError(
+                dispatchError.asModule
+              );
+              const { docs, name, section } = decoded;
+              reject(`${section}.${name}: ${docs.join(' ')}`);
+            } else {
+              // Other, CannotLookup, BadOrigin, no extra info
+              reject(dispatchError.toString());
+            }
+          }
+          if (status.isFinalized && !dispatchError) {
+            resolve(status.asFinalized.toString());
           }
         }
-        if (status.isFinalized && !dispatchError) {
-          resolve(status.asFinalized.toString());
-        }
-      });
+      );
     });
   }
 

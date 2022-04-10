@@ -124,16 +124,15 @@ pub async fn ignite(
                     api.constants().dkg_proposals().chain_identifier()?;
                 let chain_id = match chain_id {
                     TypedChainId::None => 0,
-                    TypedChainId::Evm(id) => id,
-                    TypedChainId::Substrate(id) => id,
-                    TypedChainId::PolkadotParachain(id) => id,
-                    TypedChainId::KusamaParachain(id) => id,
-                    TypedChainId::RococoParachain(id) => id,
-                    TypedChainId::Cosmos(id) => id,
-                    TypedChainId::Solana(id) => id,
+                    TypedChainId::Evm(id)
+                    | TypedChainId::Substrate(id)
+                    | TypedChainId::PolkadotParachain(id)
+                    | TypedChainId::KusamaParachain(id)
+                    | TypedChainId::RococoParachain(id)
+                    | TypedChainId::Cosmos(id)
+                    | TypedChainId::Solana(id) => id,
                 };
                 let chain_id = U256::from(chain_id);
-                // TODO(@shekohex): start the dkg service
                 for pallet in &node_config.pallets {
                     match pallet {
                         Pallet::DKGProposalHandler(config) => {
@@ -224,8 +223,7 @@ fn start_dkg_proposal_handler(
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - Tornado contract configuration
-/// * `client` - Tornado client
-/// * `store` -[Sled](https://sled.rs)-based database store
+/// * `client` - Tornado client * `store` -[Sled](https://sled.rs)-based database store
 fn start_tornado_events_watcher(
     ctx: &RelayerContext,
     config: &TornadoContractConfig,
