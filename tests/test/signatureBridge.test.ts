@@ -83,7 +83,7 @@ describe.only('Signature Bridge <> DKG', function () {
       authority: 'charlie',
       usageMode,
       ports: 'auto',
-      enableLogging: false,
+      enableLogging: true,
     });
 
     await charlieNode.writeConfig({
