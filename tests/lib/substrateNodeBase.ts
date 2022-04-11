@@ -118,7 +118,6 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
         },
       },
     });
-    await this.#api.isReady;
     return this.#api;
   }
 
