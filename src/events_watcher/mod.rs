@@ -526,3 +526,76 @@ pub trait SubstrateEventWatcher {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use webb::substrate::dkg_runtime;
+    use webb::substrate::dkg_runtime::api::system;
+
+    use crate::store::sled::SledStore;
+
+    use super::*;
+
+    #[derive(Debug, Clone, Default)]
+    struct RemarkedEventWatcher;
+
+    #[async_trait::async_trait]
+    impl SubstrateEventWatcher for RemarkedEventWatcher {
+        const TAG: &'static str = "Remarked Event Watcher";
+
+        type RuntimeConfig = subxt::DefaultConfig;
+
+        type Api = dkg_runtime::api::RuntimeApi<
+            Self::RuntimeConfig,
+            subxt::DefaultExtra<Self::RuntimeConfig>,
+        >;
+
+        type Event = system::events::Remarked;
+
+        type Store = SledStore;
+
+        async fn handle_event(
+            &self,
+            _store: Arc<Self::Store>,
+            _api: Arc<Self::Api>,
+            (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        ) -> anyhow::Result<()> {
+            tracing::debug!(
+                "Received `Remarked` Event: {:?} at block number: #{}",
+                event,
+                block_number
+            );
+            Ok(())
+        }
+    }
+
+    fn setup_logger() -> anyhow::Result<()> {
+        let log_level = tracing::Level::TRACE;
+        let env_filter = tracing_subscriber::EnvFilter::from_default_env()
+            .add_directive(format!("webb_relayer={}", log_level).parse()?);
+        tracing_subscriber::fmt()
+            .with_target(true)
+            .without_time()
+            .with_max_level(log_level)
+            .with_env_filter(env_filter)
+            .with_test_writer()
+            .compact()
+            .init();
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore = "need to be run manually"]
+    async fn substrate_event_watcher_should_work() -> anyhow::Result<()> {
+        setup_logger()?;
+        let node_name = String::from("test-node");
+        let chain_id = U256::from(5u32);
+        let store = Arc::new(SledStore::temporary()?);
+        let client = subxt::ClientBuilder::new().build().await?;
+        let watcher = RemarkedEventWatcher::default();
+        watcher.run(node_name, chain_id, client, store).await?;
+        Ok(())
+    }
+}
