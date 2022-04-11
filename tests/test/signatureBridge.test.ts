@@ -18,7 +18,7 @@
 
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
-import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
+import { Anchors, Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../lib/localTestnet.js';
@@ -230,7 +230,7 @@ describe.only('Signature Bridge <> DKG', function () {
       tmp: true,
       configDir: tmpDirPath,
       showLogs: true,
-      verbosity: 4,
+      verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -239,6 +239,10 @@ describe.only('Signature Bridge <> DKG', function () {
     // we will use chain1 as an example here.
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
+      ethers.utils.parseEther('1')
+    );
+    const anchor2 = signatureBridge.getAnchor(
+      localChain2.chainId,
       ethers.utils.parseEther('1')
     );
     await anchor1.setSigner(wallet1);
@@ -254,11 +258,35 @@ describe.only('Signature Bridge <> DKG', function () {
       ethers.utils.parseEther('1000').toBigInt()
     );
     // now we are ready to do the deposit.
-    const depositInfo = await anchor1.deposit(localChain2.chainId);
+    await anchor1.deposit(localChain2.chainId);
+    // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { chain_id: localChain2.chainId },
+      event: { chain_id: localChain2.chainId.toString() },
     });
+    // now we wait for the tx queue on that chain to execute the transaction.
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain2.chainId.toString(),
+        finalized: true,
+      },
+    });
+    // all is good, last thing is to check for the roots.
+    const srcChainRoot = await anchor1.contract.getLastRoot();
+    const neigborRoots = await anchor2.contract.getLatestNeighborRoots();
+    const edges = await anchor2.contract.getLatestNeighborEdges();
+    const isKnownNeighborRoot = neigborRoots.some(
+      (root: string) => root === srcChainRoot
+    );
+    console.log({
+      srcChainRoot,
+      neigborRoots,
+      edges,
+      isKnownNeighborRoot,
+    });
+    expect(isKnownNeighborRoot).to.be.true;
   });
 
   after(async () => {

@@ -61,6 +61,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
         '--rpc-cors',
         'all',
         '--ws-external',
+        '--rpc-methods=unsafe',
         `--${opts.authority}`
       );
       const proc = spawn('docker', startArgs);
@@ -70,6 +71,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
         '--tmp',
         '--rpc-cors',
         'all',
+        '--rpc-methods=unsafe',
         '--ws-external',
         `--ws-port=${opts.ports.ws}`,
         `--rpc-port=${opts.ports.http}`,

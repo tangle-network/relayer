@@ -239,7 +239,12 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             let signer = &self.pair;
             let mut progress = xt.sign_and_submit_then_watch(signer).await?;
             while let Some(event) = progress.next().await {
-                tracing::debug!("Tx Progress: {:?}", event);
+                match event {
+                    Ok(status) => {
+                        tracing::debug!(?status, "tx event")
+                    }
+                    Err(error) => tracing::error!(%error, "tx event error"),
+                }
             }
         }
         Ok(())

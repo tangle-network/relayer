@@ -421,16 +421,30 @@ pub trait SubstrateEventWatcher {
                         .block_hash(Some(dest_block.as_u32().into()))
                         .map_err(anyhow::Error::from)
                         .await?;
+                    tracing::trace!(?from, ?to, "Querying events");
                     // then we query the storage set of the system events.
-                    let change_sets = rpc
+                    let maybe_change_sets = rpc
                         .query_storage(keys.clone(), from, to)
                         .map_err(anyhow::Error::from)
-                        .await?;
-                    // now we go through the changeset, and for every change we extract the events.
-                    let found_events = change_sets
-                        .into_iter()
-                        .flat_map(|c| utils::change_set_to_events(c, decoder))
-                        .collect::<Vec<_>>();
+                        .await;
+                    let found_events = match maybe_change_sets {
+                        Ok(change_sets) => {
+                            tracing::trace!(?change_sets, "Queried events");
+                            // now we go through the changeset, and for every change we extract the events.
+                            change_sets
+                                .into_iter()
+                                .flat_map(|c| {
+                                    utils::change_set_to_events(c, decoder)
+                                })
+                                .collect::<Vec<_>>()
+                        }
+                        Err(e) => {
+                            tracing::error!(error = %e, "Failed to query events");
+                            // sleep for a bit to avoid spamming the node.
+                            tokio::time::sleep(Duration::from_secs(3)).await;
+                            continue;
+                        }
+                    };
                     tracing::trace!("Found #{} events", found_events.len());
 
                     for (block_hash, event) in found_events {
