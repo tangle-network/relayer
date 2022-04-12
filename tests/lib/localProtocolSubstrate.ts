@@ -33,13 +33,15 @@ export type NodeOptions = {
     | 'auto';
   authority: 'alice' | 'bob' | 'charlie';
   usageMode: UsageMode;
+  enableLogging?: boolean;
+  isManual?: boolean; // for manual connection to the substrate node using 9944
 };
 
 export class LocalProtocolSubstrate {
   #api: ApiPromise | null = null;
   private constructor(
     private readonly opts: NodeOptions,
-    private readonly process: ChildProcess
+    private readonly process?: ChildProcess,
   ) {}
 
   public get name(): string {
@@ -52,6 +54,14 @@ export class LocalProtocolSubstrate {
     if (opts.ports === 'auto') {
       opts.ports = {
         ws: await getPort({ port: portNumbers(9944, 9999) }),
+        http: await getPort({ port: portNumbers(9933, 9999) }),
+        p2p: await getPort({ port: portNumbers(30333, 30399) }),
+      };
+    }
+
+    if(opts.isManual) {
+      opts.ports = {
+        ws: 9944,
         http: await getPort({ port: portNumbers(9933, 9999) }),
         p2p: await getPort({ port: portNumbers(30333, 30399) }),
       };
@@ -93,49 +103,35 @@ export class LocalProtocolSubstrate {
         `--port=${opts.ports.p2p}`,
         `--${opts.authority}`
       );
-      const proc = spawn(opts.usageMode.nodePath, startArgs);
-      return new LocalProtocolSubstrate(opts, proc);
+
+      if(!opts.isManual) {
+        const proc = spawn(opts.usageMode.nodePath, startArgs);
+        if (opts.enableLogging) {
+          proc.stdout.on('data', (data: Buffer) => {
+            console.log(data.toString());
+          });
+          proc.stderr.on('data', (data: Buffer) => {
+            console.error(data.toString());
+          });
+        }
+
+        return new LocalProtocolSubstrate(opts, proc);
+      }
+
+      return new LocalProtocolSubstrate(opts);
+
     }
   }
 
   public async api(): Promise<ApiPromise> {
+    if(this.opts.isManual) {
+      return await createApiPromise(`ws://127.0.0.1:9944`); // for manual connection to the substrate node using 9944
+    }
     if (this.#api) {
       return this.#api;
     }
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
-    this.#api = await ApiPromise.create({
-      provider: new WsProvider(`ws://127.0.0.1:${ports.ws}`),
-      rpc: {
-        mt: {
-          getLeaves: {
-            description: 'Query for the tree leaves',
-            params: [
-              {
-                name: 'tree_id',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'from',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'to',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'at',
-                type: 'Hash',
-                isOptional: true,
-              },
-            ],
-            type: 'Vec<[u8; 32]>',
-          },
-        },
-      },
-    });
+    this.#api = await createApiPromise(`ws://127.0.0.1:${ports.ws}`);
     await this.#api.isReady;
     return this.#api;
   }
@@ -143,7 +139,9 @@ export class LocalProtocolSubstrate {
   public async stop(): Promise<void> {
     await this.#api?.disconnect();
     this.#api = null;
-    this.process.kill('SIGINT');
+
+    if(this.process)
+      this.process.kill('SIGINT');
   }
 
   public async waitForEvent(typedEvent: TypedEvent): Promise<void> {
@@ -247,6 +245,43 @@ export class LocalProtocolSubstrate {
       });
     }
   }
+
+}
+
+async function createApiPromise(endpoint: string) {
+  return await ApiPromise.create({
+    provider: new WsProvider(endpoint),
+    rpc: {
+      mt: {
+        getLeaves: {
+          description: 'Query for the tree leaves',
+          params: [
+            {
+              name: 'tree_id',
+              type: 'u32',
+              isOptional: false,
+            },
+            {
+              name: 'from',
+              type: 'u32',
+              isOptional: false,
+            },
+            {
+              name: 'to',
+              type: 'u32',
+              isOptional: false,
+            },
+            {
+              name: 'at',
+              type: 'Hash',
+              isOptional: true,
+            },
+          ],
+          type: 'Vec<[u8; 32]>',
+        },
+      },
+    },
+  });
 }
 
 export type FullNodeInfo = NodeInfo & {
