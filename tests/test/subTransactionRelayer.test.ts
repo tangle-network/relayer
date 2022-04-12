@@ -58,16 +58,14 @@ describe('Substrate Transaction Relayer', function () {
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
-      ports: aliceManualPorts,
-      isManual: true
+      ports: 'auto',
     });
 
     bobNode = await LocalProtocolSubstrate.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
-      ports: bobManualPorts,
-      isManual: true
+      ports: 'auto'
     });
 
     await aliceNode.writeConfig({
