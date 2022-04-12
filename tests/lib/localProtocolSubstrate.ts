@@ -59,13 +59,6 @@ export class LocalProtocolSubstrate {
       };
     }
 
-    if(opts.isManual) {
-      opts.ports = {
-        ws: 9944,
-        http: await getPort({ port: portNumbers(9933, 9999) }),
-        p2p: await getPort({ port: portNumbers(30333, 30399) }),
-      };
-    }
     const startArgs: string[] = [];
     if (opts.usageMode.mode === 'docker') {
       LocalProtocolSubstrate.pullDkgImage({
@@ -124,13 +117,13 @@ export class LocalProtocolSubstrate {
   }
 
   public async api(): Promise<ApiPromise> {
+    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     if(this.opts.isManual) {
-      return await createApiPromise(`ws://127.0.0.1:9944`); // for manual connection to the substrate node using 9944
+      return await createApiPromise(`ws://127.0.0.1:${ports.ws}`); // for manual connection to the substrate node using 9944
     }
     if (this.#api) {
       return this.#api;
     }
-    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     this.#api = await createApiPromise(`ws://127.0.0.1:${ports.ws}`);
     await this.#api.isReady;
     return this.#api;

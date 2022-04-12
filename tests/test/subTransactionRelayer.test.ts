@@ -10,7 +10,7 @@ import isCi from 'is-ci';
 import child from 'child_process';
 import { WebbRelayer } from '../lib/webbRelayer.js';
 import {
-  LocalProtocolSubstrate,
+  LocalProtocolSubstrate, NodeOptions,
   UsageMode,
 } from '../lib/localProtocolSubstrate.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
@@ -42,11 +42,24 @@ describe('Substrate Transaction Relayer', function () {
             '../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
+
+    const aliceManualPorts = {
+      ws: 9944,
+      http: 9933,
+      p2p: 30333
+    }
+
+    const bobManualPorts = {
+      ws: 9945,
+      http: 9934,
+      p2p: 30334
+    }
+
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
-      ports: 'auto',
+      ports: aliceManualPorts,
       isManual: true
     });
 
@@ -54,7 +67,7 @@ describe('Substrate Transaction Relayer', function () {
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
-      ports: 'auto',
+      ports: bobManualPorts,
       isManual: true
     });
 
