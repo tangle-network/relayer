@@ -133,6 +133,8 @@ where
     }
 }
 
+/// An Anchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
+/// It serves as a cache for leaves that could be used by dApp for proof generation.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct AnchorLeavesWatcher;
 

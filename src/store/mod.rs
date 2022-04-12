@@ -209,6 +209,7 @@ pub trait LeafCacheStore: HistoryStore {
     ) -> anyhow::Result<types::U64>;
 }
 
+/// A Command sent to the Bridge to execute different actions.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum BridgeCommand {
     ExecuteProposalWithSignature { data: Vec<u8>, signature: Vec<u8> },

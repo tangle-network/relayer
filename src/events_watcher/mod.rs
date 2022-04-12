@@ -67,7 +67,9 @@ mod proposal_handler_watcher;
 #[doc(hidden)]
 pub use proposal_handler_watcher::*;
 
+/// A module for listening on Signature Bridge commands and events.
 mod signature_bridge_watcher;
+#[doc(hidden)]
 pub use signature_bridge_watcher::*;
 
 /// A watchable contract is a contract used in the [EventWatcher]
@@ -243,6 +245,9 @@ pub trait EventWatcher {
     }
 }
 
+/// A Bridge Watcher is a trait for Bridge contracts that not specific for watching events from that contract,
+/// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers
+/// from the actual action that should be taken depending on the event.
 #[async_trait::async_trait]
 pub trait BridgeWatcher: EventWatcher
 where

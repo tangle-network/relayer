@@ -24,6 +24,8 @@ use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 
 use super::{BlockNumberOf, SubstrateEventWatcher};
 
+/// A ProposalHandler watcher for the DKG Substrate runtime.
+/// It watches for the `ProposalSigned` event and sends the proposal to the signature bridge.
 #[derive(Clone, Debug)]
 pub struct ProposalHandlerWatcher {
     webb_config: config::WebbRelayerConfig,

@@ -339,6 +339,7 @@ async fn start_anchor_over_dkg_events_watcher(
     Ok(())
 }
 
+/// Starts the event watcher for Signature Bridge contract.
 async fn start_signature_bridge_events_watcher(
     ctx: &RelayerContext,
     config: &SignatureBridgeContractConfig,
