@@ -22,7 +22,6 @@ import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { EventsWatcher, NodeInfo, Pallet } from './webbRelayer.js';
 import { ConvertToKebabCase } from './tsHacks.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import isCI from 'is-ci';
 
 export type DockerMode = {
   mode: 'docker';
@@ -83,8 +82,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
       return this.#api;
     }
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
-    // for some reason, github CI and docker does not resolve 127.0.0.1 as valid host.
-    const host = isCI ? 'localhost' : '127.0.0.1';
+    const host = '127.0.0.1';
     this.#api = await ApiPromise.create({
       provider: new WsProvider(`ws://${host}:${ports.ws}`),
       rpc: {

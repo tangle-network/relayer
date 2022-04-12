@@ -2,7 +2,11 @@
 /// This Could be through a Docker Container or a Local Compiled node.
 
 import { spawn } from 'child_process';
-import { FullNodeInfo, LocalNodeOpts, SubstrateNodeBase } from './substrateNodeBase.js';
+import {
+  FullNodeInfo,
+  LocalNodeOpts,
+  SubstrateNodeBase,
+} from './substrateNodeBase.js';
 
 const STANDALONE_DOCKER_IMAGE_URL =
   'ghcr.io/webb-tools/protocol-substrate-standalone-node:edge';
@@ -38,6 +42,14 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
         `--${opts.authority}`
       );
       const proc = spawn('docker', startArgs, {});
+      if (opts.enableLogging) {
+        proc.stdout.on('data', (data: Buffer) => {
+          console.log(data.toString());
+        });
+        proc.stderr.on('data', (data: Buffer) => {
+          console.error(data.toString());
+        });
+      }
       return new LocalProtocolSubstrate(opts, proc);
     } else {
       startArgs.push(
@@ -73,5 +85,3 @@ export type TypedEvent = MixerBn254DepositEvent | MixerBn254WithdrawEvent;
 
 type MixerBn254DepositEvent = { section: 'mixerBn254'; method: 'Deposit' };
 type MixerBn254WithdrawEvent = { section: 'mixerBn254'; method: 'Withdraw' };
-
-

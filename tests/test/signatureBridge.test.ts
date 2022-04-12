@@ -21,6 +21,7 @@ import ChaiAsPromised from 'chai-as-promised';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
+import retry from 'async-retry';
 import { LocalChain } from '../lib/localTestnet.js';
 import { WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
@@ -33,15 +34,13 @@ import { UsageMode } from '../lib/substrateNodeBase.js';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe.only('Signature Bridge <> DKG', function () {
+describe('Signature Bridge <> DKG', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
   const PK2 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
-  const tmp = temp.track();
-
-  const tmpDirPath = tmp.mkdirSync();
+  const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
   let signatureBridge: Bridges.SignatureBridge;
@@ -83,7 +82,7 @@ describe.only('Signature Bridge <> DKG', function () {
       authority: 'charlie',
       usageMode,
       ports: 'auto',
-      enableLogging: true,
+      enableLogging: false,
     });
 
     await charlieNode.writeConfig({
@@ -174,7 +173,18 @@ describe.only('Signature Bridge <> DKG', function () {
       const contract = signatureSide.contract;
       // now we transferOwnership, forcefully.
       const tx = await contract.transferOwnership(governorAddress, 1);
-      await tx.wait();
+      await retry(
+        async () => {
+          await tx.wait();
+        },
+        {
+          retries: 10,
+          minTimeout: 1000,
+          onRetry: (error) => {
+            console.error('transferOwnership retry', error);
+          },
+        }
+      );
       // check that the new governor is the same as the one we just set.
       const currentGovernor = await contract.governor();
       expect(currentGovernor).to.eq(governorAddress);
@@ -280,12 +290,14 @@ describe.only('Signature Bridge <> DKG', function () {
     const isKnownNeighborRoot = neigborRoots.some(
       (root: string) => root === srcChainRoot
     );
-    console.log({
-      srcChainRoot,
-      neigborRoots,
-      edges,
-      isKnownNeighborRoot,
-    });
+    if (!isKnownNeighborRoot) {
+      console.log({
+        srcChainRoot,
+        neigborRoots,
+        edges,
+        isKnownNeighborRoot,
+      });
+    }
     expect(isKnownNeighborRoot).to.be.true;
   });
 
@@ -296,6 +308,5 @@ describe.only('Signature Bridge <> DKG', function () {
     await localChain1?.stop();
     await localChain2?.stop();
     await webbRelayer?.stop();
-    tmp.cleanupSync(); // clean up the temp dir.
   });
 });

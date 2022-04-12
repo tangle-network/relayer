@@ -9,9 +9,7 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { WebbRelayer } from '../lib/webbRelayer.js';
-import {
-  LocalProtocolSubstrate,
-} from '../lib/localProtocolSubstrate.js';
+import { LocalProtocolSubstrate } from '../lib/localProtocolSubstrate.js';
 import { UsageMode } from '../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
@@ -26,8 +24,7 @@ import {
 
 describe('Substrate Transaction Relayer', function () {
   this.timeout(60000);
-  const tmp = temp.track();
-  const tmpDirPath = tmp.mkdirSync();
+  const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
 
@@ -105,10 +102,9 @@ describe('Substrate Transaction Relayer', function () {
   });
 
   after(async () => {
-    await aliceNode.stop();
-    await bobNode.stop();
-    await webbRelayer.stop();
-    tmp.cleanupSync(); // clean up the temp dir.
+    await aliceNode?.stop();
+    await bobNode?.stop();
+    await webbRelayer?.stop();
   });
 });
 

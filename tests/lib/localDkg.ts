@@ -44,7 +44,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
         frocePull: opts.usageMode.forcePullImage,
         image: DKG_STANDALONE_DOCKER_IMAGE_URL,
       });
-      startArgs.push(
+      const dockerArgs = [
         'run',
         '--rm',
         '--name',
@@ -62,9 +62,18 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
         'all',
         '--ws-external',
         '--rpc-methods=unsafe',
-        `--${opts.authority}`
-      );
-      const proc = spawn('docker', startArgs);
+        `--${opts.authority}`,
+        ...startArgs,
+      ];
+      const proc = spawn('docker', dockerArgs);
+      if (opts.enableLogging) {
+        proc.stdout.on('data', (data: Buffer) => {
+          console.log(data.toString());
+        });
+        proc.stderr.on('data', (data: Buffer) => {
+          console.error(data.toString());
+        });
+      }
       return new LocalDkg(opts, proc);
     } else {
       startArgs.push(
