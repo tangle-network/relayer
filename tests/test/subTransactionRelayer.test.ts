@@ -23,6 +23,7 @@ import {
   ProvingManagerSetupInput,
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
+import {ethers} from "ethers";
 
 describe('Substrate Transaction Relayer', function () {
   this.timeout(60000);
@@ -61,16 +62,16 @@ describe('Substrate Transaction Relayer', function () {
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
-      ports: 'auto',
-      isManual: false
+      ports: aliceManualPorts,
+      isManual: true
     });
 
     bobNode = await LocalProtocolSubstrate.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
-      ports: 'auto',
-      isManual: false
+      ports: bobManualPorts,
+      isManual: true
     });
 
     await aliceNode.writeConfig({
@@ -115,6 +116,12 @@ describe('Substrate Transaction Relayer', function () {
     });
     // ping the relayer!
     await webbRelayer.ping();
+
+    // @ts-ignore
+    let { nonce, data: balance } = await api.query.system.account(charlie.address);
+    let initialBalance = balance.free.toBigInt();
+    console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
+
     // now we need to submit the withdrawal transaction.
     const txHash = await webbRelayer.substrateMixerWithdraw({
       chain: aliceNode.name,
@@ -128,6 +135,13 @@ describe('Substrate Transaction Relayer', function () {
       relayer: withdrawalProof.relayer,
     });
     expect(txHash).to.be.not.null;
+
+    // @ts-ignore
+    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(charlie.address);
+    let balanceAfterWithdraw = balanceAfter.free.toBigInt();
+    console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
+    expect(balanceAfterWithdraw > initialBalance).true;
+
   });
 
   after(async () => {
