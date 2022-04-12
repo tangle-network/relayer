@@ -17,50 +17,22 @@
 /// A Helper Class to Start and Manage a Local DKG Node.
 /// This Could be through a Docker Container or a Local Compiled node.
 
-import getPort, { portNumbers } from 'get-port';
-import { ChildProcess, execSync, spawn } from 'child_process';
-import { ApiPromise, WsProvider } from '@polkadot/api';
+import { spawn } from 'child_process';
+import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
+import isCI from 'is-ci';
+import * as TinySecp256k1 from 'tiny-secp256k1';
+import {
+  FullNodeInfo,
+  LocalNodeOpts,
+  SubstrateNodeBase,
+} from './substrateNodeBase.js';
 
 const DKG_STANDALONE_DOCKER_IMAGE_URL =
   'ghcr.io/webb-tools/dkg-standalone-node:edge';
 
-export type DockerMode = {
-  mode: 'docker';
-  forcePullImage: boolean;
-};
-
-export type HostMode = {
-  mode: 'host';
-  nodePath: string;
-};
-
-export type LocalDkgOptions = {
-  ports:
-    | {
-        ws: number;
-        http: number;
-        p2p: number;
-      }
-    | 'auto';
-  authority: 'alice' | 'bob' | 'charlie';
-  usageMode: DockerMode | HostMode;
-};
-
-export class LocalDkg {
-  #api: ApiPromise | null = null;
-  private constructor(
-    private readonly opts: LocalDkgOptions,
-    private readonly process: ChildProcess
-  ) {}
-
-  public static async start(opts: LocalDkgOptions): Promise<LocalDkg> {
-    if (opts.ports === 'auto') {
-      opts.ports = {
-        ws: await getPort({ port: portNumbers(9944, 9999) }),
-        http: await getPort({ port: portNumbers(9933, 9999) }),
-        p2p: await getPort({ port: portNumbers(30333, 30399) }),
-      };
-    }
+export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
+  public static async start(opts: LocalNodeOpts): Promise<LocalDkg> {
+    opts.ports = await SubstrateNodeBase.makePorts(opts);
     const startArgs: string[] = [
       '-ldkg=debug',
       '-ldkg_metadata=debug',
@@ -68,12 +40,15 @@ export class LocalDkg {
       '-ldkg_proposal_handler=debug',
     ];
     if (opts.usageMode.mode === 'docker') {
-      LocalDkg.pullDkgImage({ frocePull: opts.usageMode.forcePullImage });
-      startArgs.push(
+      super.pullDkgImage({
+        frocePull: opts.usageMode.forcePullImage,
+        image: DKG_STANDALONE_DOCKER_IMAGE_URL,
+      });
+      const dockerArgs = [
         'run',
         '--rm',
         '--name',
-        `${opts.authority}-node`,
+        `${opts.authority}-node-${opts.ports.ws}`,
         '-p',
         `${opts.ports.ws}:9944`,
         '-p',
@@ -86,15 +61,26 @@ export class LocalDkg {
         '--rpc-cors',
         'all',
         '--ws-external',
-        `--${opts.authority}`
-      );
-      const proc = spawn('docker', startArgs);
+        '--rpc-methods=unsafe',
+        `--${opts.authority}`,
+        ...startArgs,
+      ];
+      const proc = spawn('docker', dockerArgs);
+      if (opts.enableLogging) {
+        proc.stdout.on('data', (data: Buffer) => {
+          console.log(data.toString());
+        });
+        proc.stderr.on('data', (data: Buffer) => {
+          console.error(data.toString());
+        });
+      }
       return new LocalDkg(opts, proc);
     } else {
       startArgs.push(
         '--tmp',
         '--rpc-cors',
         'all',
+        '--rpc-methods=unsafe',
         '--ws-external',
         `--ws-port=${opts.ports.ws}`,
         `--rpc-port=${opts.ports.http}`,
@@ -102,63 +88,53 @@ export class LocalDkg {
         `--${opts.authority}`
       );
       const proc = spawn(opts.usageMode.nodePath, startArgs);
+      if (opts.enableLogging) {
+        proc.stdout.on('data', (data: Buffer) => {
+          console.log(data.toString());
+        });
+        proc.stderr.on('data', (data: Buffer) => {
+          console.error(data.toString());
+        });
+      }
       return new LocalDkg(opts, proc);
     }
   }
 
-  public async api(): Promise<ApiPromise> {
-    if (this.#api) {
-      return this.#api;
+  public async fetchDkgPublicKey(): Promise<`0x${string}` | null> {
+    const api = await super.api();
+    const res = await api.query.dkg!.dkgPublicKey!();
+    const json = res.toJSON() as [number, string];
+    const tinysecp: TinySecp256k1Interface = TinySecp256k1;
+    const ECPair: ECPairAPI = ECPairFactory(tinysecp);
+    if (json && json[1] !== '0x') {
+      const key = json[1];
+      const dkgPubKey = ECPair.fromPublicKey(Buffer.from(key.slice(2), 'hex'), {
+        compressed: false,
+      }).publicKey.toString('hex');
+      // now we remove the `04` prefix byte and return it.
+      return `0x${dkgPubKey.slice(2)}`;
+    } else {
+      return null;
     }
-    const wsPort = (this.opts.ports as { ws: number }).ws;
-    this.#api = await ApiPromise.create({
-      provider: new WsProvider(`ws://localhost:${wsPort}`),
-    });
-    await this.#api.isReady;
-    return this.#api;
   }
 
-  public async stop(): Promise<void> {
-    await this.#api?.disconnect();
-    this.#api = null;
-    this.process.kill('SIGINT');
-  }
-
-  public async waitForEvent(typedEvent: TypedEvent): Promise<void> {
-    const api = await this.api();
-    return new Promise(async (resolve, _) => {
-      // Subscribe to system events via storage
-      const unsub: any = await api.query.system!.events!((events: any[]) => {
-        // Loop through the Vec<EventRecord>
-        events.forEach((record: any) => {
-          const { event } = record;
-          if (
-            event.section === typedEvent.section &&
-            event.method === typedEvent.method
-          ) {
-            // Unsubscribe from the storage
-            unsub();
-            // Resolve the promise
-            resolve();
-          }
-        });
-      });
-    });
-  }
-
-  private static checkIfDkgImageExists(): boolean {
-    const result = execSync('docker images', { encoding: 'utf8' });
-    return result.includes(DKG_STANDALONE_DOCKER_IMAGE_URL);
-  }
-
-  private static pullDkgImage(
-    opts: { frocePull: boolean } = { frocePull: false }
-  ): void {
-    if (!this.checkIfDkgImageExists() || opts.frocePull) {
-      execSync(`docker pull ${DKG_STANDALONE_DOCKER_IMAGE_URL}`, {
-        encoding: 'utf8',
-      });
-    }
+  public async exportConfig(suri: string): Promise<FullNodeInfo> {
+    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
+    const host = isCI ? 'localhost' : '127.0.0.1';
+    const nodeInfo: FullNodeInfo = {
+      enabled: true,
+      httpEndpoint: `http://${host}:${ports.http}`,
+      wsEndpoint: `ws://${host}:${ports.ws}`,
+      runtime: 'DKG',
+      pallets: [
+        {
+          pallet: 'DKGProposalHandler',
+          eventsWatcher: { enabled: true, pollingInterval: 3000 },
+        },
+      ],
+      suri,
+    };
+    return nodeInfo;
   }
 }
 

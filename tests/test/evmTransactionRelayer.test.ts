@@ -25,6 +25,7 @@ import { LocalChain } from '../lib/localTestnet.js';
 import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 
+// @FIXME: this needs a mocked signing backend to be implemented first.
 describe.skip('EVM Transaction Relayer', function () {
   this.timeout(120_000);
   const PK1 =
@@ -33,7 +34,7 @@ describe.skip('EVM Transaction Relayer', function () {
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmp = temp.track();
 
-  const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
+  const tmpDirPath = tmp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
   let signatureBridge: Bridges.SignatureBridge;
@@ -47,22 +48,32 @@ describe.skip('EVM Transaction Relayer', function () {
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-    localChain1 = new LocalChain('TestA', localChain1Port, [
-      {
-        secretKey: PK1,
-        balance: ethers.utils.parseEther('1000').toHexString(),
-      },
-    ]);
+    localChain1 = new LocalChain({
+      port: localChain1Port,
+      chainId: 5001,
+      name: 'Hermes',
+      populatedAccounts: [
+        {
+          secretKey: PK1,
+          balance: ethers.utils.parseEther('1000').toHexString(),
+        },
+      ],
+    });
 
     const localChain2Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-    localChain2 = new LocalChain('TestB', localChain2Port, [
-      {
-        secretKey: PK2,
-        balance: ethers.utils.parseEther('1000').toHexString(),
-      },
-    ]);
+    localChain2 = new LocalChain({
+      port: localChain2Port,
+      chainId: 5002,
+      name: 'Athena',
+      populatedAccounts: [
+        {
+          secretKey: PK2,
+          balance: ethers.utils.parseEther('1000').toHexString(),
+        },
+      ],
+    });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
@@ -88,11 +99,13 @@ describe.skip('EVM Transaction Relayer', function () {
     // save the chain configs.
     await localChain1.writeConfig(
       `${tmpDirPath}/${localChain1.name}.json`,
-      signatureBridge
+      signatureBridge,
+      /** Signing Backend */ 'none'
     );
     await localChain2.writeConfig(
       `${tmpDirPath}/${localChain2.name}.json`,
-      signatureBridge
+      signatureBridge,
+      /** Signing Backend */ 'none'
     );
 
     // get the anhor on localchain1
@@ -135,6 +148,7 @@ describe.skip('EVM Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });

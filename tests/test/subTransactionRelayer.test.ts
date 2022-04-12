@@ -9,10 +9,8 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { WebbRelayer } from '../lib/webbRelayer.js';
-import {
-  LocalProtocolSubstrate, NodeOptions,
-  UsageMode,
-} from '../lib/localProtocolSubstrate.js';
+import { LocalProtocolSubstrate } from '../lib/localProtocolSubstrate.js';
+import { UsageMode } from '../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -23,12 +21,10 @@ import {
   ProvingManagerSetupInput,
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
-import {ethers} from "ethers";
 
 describe('Substrate Transaction Relayer', function () {
   this.timeout(60000);
-  const tmp = temp.track();
-  const tmpDirPath = tmp.mkdirSync({ prefix: 'webb-relayer-test-' });
+  const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
 
@@ -96,17 +92,8 @@ describe('Substrate Transaction Relayer', function () {
     const keyring = new Keyring({ type: 'sr25519' });
     const charlie = keyring.addFromUri('//Charlie');
     // send the deposit transaction.
-    console.log('Waiting for the deposit');
-    const txPromise = new Promise((resolve, _reject) => {
-      tx.signAndSend(charlie, { nonce: -1 }, (res) => {
-        if (res.status.isFinalized) {
-          expect(res.isError).to.be.false;
-          resolve(0);
-        }
-      });
-    });
-    await txPromise;
-    console.log('Deposit done.');
+    const txSigned = tx.sign(charlie);
+    await aliceNode.executeTransaction(txSigned);
     // next we need to prepare the withdrawal transaction.
     const withdrawalProof = await createMixerWithdrawProof(api, note, {
       recipient: charlie.address,
@@ -117,11 +104,11 @@ describe('Substrate Transaction Relayer', function () {
     // ping the relayer!
     await webbRelayer.ping();
 
+    // get the initial balance
     // @ts-ignore
     let { nonce, data: balance } = await api.query.system.account(charlie.address);
     let initialBalance = balance.free.toBigInt();
     console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
-
     // now we need to submit the withdrawal transaction.
     const txHash = await webbRelayer.substrateMixerWithdraw({
       chain: aliceNode.name,
@@ -136,19 +123,18 @@ describe('Substrate Transaction Relayer', function () {
     });
     expect(txHash).to.be.not.null;
 
+    // get the balance after withdrawal is done and see if it increases
     // @ts-ignore
     const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(charlie.address);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
     expect(balanceAfterWithdraw > initialBalance).true;
-
   });
 
   after(async () => {
-    await aliceNode.stop();
-    await bobNode.stop();
-    await webbRelayer.stop();
-    tmp.cleanupSync(); // clean up the temp dir.
+    await aliceNode?.stop();
+    await bobNode?.stop();
+    await webbRelayer?.stop();
   });
 });
 

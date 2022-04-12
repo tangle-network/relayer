@@ -1,68 +1,27 @@
 /// A Helper Class to Start and Manage a Local Protocol Substrate Node.
 /// This Could be through a Docker Container or a Local Compiled node.
 
-import fs from 'fs';
-import getPort, { portNumbers } from 'get-port';
-import { ChildProcess, execSync, spawn } from 'child_process';
-import { ApiPromise, WsProvider } from '@polkadot/api';
-import { EventsWatcher, NodeInfo, Pallet } from './webbRelayer';
-import { ConvertToKebabCase } from './tsHacks';
+import { spawn } from 'child_process';
+import {
+  FullNodeInfo,
+  LocalNodeOpts,
+  SubstrateNodeBase,
+} from './substrateNodeBase.js';
 
 const STANDALONE_DOCKER_IMAGE_URL =
   'ghcr.io/webb-tools/protocol-substrate-standalone-node:edge';
 
-export type DockerMode = {
-  mode: 'docker';
-  forcePullImage: boolean;
-};
-
-export type HostMode = {
-  mode: 'host';
-  nodePath: string;
-};
-
-export type UsageMode = DockerMode | HostMode;
-export type NodeOptions = {
-  name: string;
-  ports:
-    | {
-        ws: number;
-        http: number;
-        p2p: number;
-      }
-    | 'auto';
-  authority: 'alice' | 'bob' | 'charlie';
-  usageMode: UsageMode;
-  enableLogging?: boolean;
-  isManual?: boolean; // for manual connection to the substrate node using 9944
-};
-
-export class LocalProtocolSubstrate {
-  #api: ApiPromise | null = null;
-  private constructor(
-    private readonly opts: NodeOptions,
-    private readonly process?: ChildProcess,
-  ) {}
-
-  public get name(): string {
-    return this.opts.name;
-  }
-
+export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
   public static async start(
-    opts: NodeOptions
+    opts: LocalNodeOpts
   ): Promise<LocalProtocolSubstrate> {
-    if (opts.ports === 'auto') {
-      opts.ports = {
-        ws: await getPort({ port: portNumbers(9944, 9999) }),
-        http: await getPort({ port: portNumbers(9933, 9999) }),
-        p2p: await getPort({ port: portNumbers(30333, 30399) }),
-      };
-    }
-
+    opts.ports = await super.makePorts(opts);
+    console.log(`ports are ${opts.ports}`);
     const startArgs: string[] = [];
     if (opts.usageMode.mode === 'docker') {
       LocalProtocolSubstrate.pullDkgImage({
         frocePull: opts.usageMode.forcePullImage,
+        image: STANDALONE_DOCKER_IMAGE_URL,
       });
       startArgs.push(
         'run',
@@ -83,8 +42,20 @@ export class LocalProtocolSubstrate {
         '--ws-external',
         `--${opts.authority}`
       );
-      const proc = spawn('docker', startArgs, {});
-      return new LocalProtocolSubstrate(opts, proc);
+      if(!opts.isManual) {
+        const proc = spawn('docker', startArgs, {});
+        if (opts.enableLogging) {
+          proc.stdout.on('data', (data: Buffer) => {
+            console.log(data.toString());
+          });
+          proc.stderr.on('data', (data: Buffer) => {
+            console.error(data.toString());
+          });
+        }
+        return new LocalProtocolSubstrate(opts, proc);
+      }
+
+      return new LocalProtocolSubstrate(opts);
     } else {
       startArgs.push(
         '--tmp',
@@ -96,67 +67,9 @@ export class LocalProtocolSubstrate {
         `--port=${opts.ports.p2p}`,
         `--${opts.authority}`
       );
-
-      if(!opts.isManual) {
-        const proc = spawn(opts.usageMode.nodePath, startArgs);
-        if (opts.enableLogging) {
-          proc.stdout.on('data', (data: Buffer) => {
-            console.log(data.toString());
-          });
-          proc.stderr.on('data', (data: Buffer) => {
-            console.error(data.toString());
-          });
-        }
-
-        return new LocalProtocolSubstrate(opts, proc);
-      }
-
-      return new LocalProtocolSubstrate(opts);
-
+      const proc = spawn(opts.usageMode.nodePath, startArgs);
+      return new LocalProtocolSubstrate(opts, proc);
     }
-  }
-
-  public async api(): Promise<ApiPromise> {
-    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
-    if(this.opts.isManual) {
-      return await createApiPromise(`ws://127.0.0.1:${ports.ws}`); // for manual connection to the substrate node using 9944
-    }
-    if (this.#api) {
-      return this.#api;
-    }
-    this.#api = await createApiPromise(`ws://127.0.0.1:${ports.ws}`);
-    await this.#api.isReady;
-    return this.#api;
-  }
-
-  public async stop(): Promise<void> {
-    await this.#api?.disconnect();
-    this.#api = null;
-
-    if(this.process)
-      this.process.kill('SIGINT');
-  }
-
-  public async waitForEvent(typedEvent: TypedEvent): Promise<void> {
-    const api = await this.api();
-    return new Promise(async (resolve, _) => {
-      // Subscribe to system events via storage
-      const unsub: any = await api.query.system!.events!((events: any[]) => {
-        // Loop through the Vec<EventRecord>
-        events.forEach((record: any) => {
-          const { event } = record;
-          if (
-            event.section === typedEvent.section &&
-            event.method === typedEvent.method
-          ) {
-            // Unsubscribe from the storage
-            unsub();
-            // Resolve the promise
-            resolve();
-          }
-        });
-      });
-    });
   }
 
   public async exportConfig(suri: string): Promise<FullNodeInfo> {
@@ -171,117 +84,7 @@ export class LocalProtocolSubstrate {
     };
     return nodeInfo;
   }
-
-  public async writeConfig({
-    path,
-    suri,
-  }: {
-    path: string;
-    suri: string;
-  }): Promise<void> {
-    const config = await this.exportConfig(suri);
-    // don't mind my typescript typing here XD
-    type ConvertedPallet = Omit<
-      ConvertToKebabCase<Pallet>,
-      'events-watcher'
-    > & {
-      'events-watcher': ConvertToKebabCase<EventsWatcher>;
-    };
-    type ConvertedConfig = Omit<
-      ConvertToKebabCase<typeof config>,
-      'pallets'
-    > & {
-      pallets: ConvertedPallet[];
-    };
-    type FullConfigFile = {
-      substrate: {
-        [key: string]: ConvertedConfig;
-      };
-    };
-    const convertedConfig: ConvertedConfig = {
-      enabled: config.enabled,
-      'http-endpoint': config.httpEndpoint,
-      'ws-endpoint': config.wsEndpoint,
-      runtime: config.runtime,
-      suri: config.suri,
-      pallets: config.pallets.map((pallet: Pallet) => {
-        const convertedPallet: ConvertedPallet = {
-          pallet: pallet.pallet,
-          'events-watcher': {
-            enabled: pallet.eventsWatcher.enabled,
-            'polling-interval': pallet.eventsWatcher.pollingInterval,
-          },
-        };
-        return convertedPallet;
-      }),
-    };
-    const fullConfigFile: FullConfigFile = {
-      substrate: {
-        [this.opts.name]: convertedConfig,
-      },
-    };
-    const configString = JSON.stringify(fullConfigFile, null, 2);
-    fs.writeFileSync(path, configString);
-  }
-
-  private static checkIfDkgImageExists(): boolean {
-    const result = execSync('docker images', { encoding: 'utf8' });
-    return result.includes(STANDALONE_DOCKER_IMAGE_URL);
-  }
-
-  private static pullDkgImage(
-    opts: { frocePull: boolean } = { frocePull: false }
-  ): void {
-    if (!this.checkIfDkgImageExists() || opts.frocePull) {
-      execSync(`docker pull ${STANDALONE_DOCKER_IMAGE_URL}`, {
-        encoding: 'utf8',
-      });
-    }
-  }
-
 }
-
-async function createApiPromise(endpoint: string) {
-  return await ApiPromise.create({
-    provider: new WsProvider(endpoint),
-    rpc: {
-      mt: {
-        getLeaves: {
-          description: 'Query for the tree leaves',
-          params: [
-            {
-              name: 'tree_id',
-              type: 'u32',
-              isOptional: false,
-            },
-            {
-              name: 'from',
-              type: 'u32',
-              isOptional: false,
-            },
-            {
-              name: 'to',
-              type: 'u32',
-              isOptional: false,
-            },
-            {
-              name: 'at',
-              type: 'Hash',
-              isOptional: true,
-            },
-          ],
-          type: 'Vec<[u8; 32]>',
-        },
-      },
-    },
-  });
-}
-
-export type FullNodeInfo = NodeInfo & {
-  httpEndpoint: string;
-  wsEndpoint: string;
-  suri: string;
-};
 
 export type TypedEvent = MixerBn254DepositEvent | MixerBn254WithdrawEvent;
 

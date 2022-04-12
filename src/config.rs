@@ -122,6 +122,7 @@ pub struct EvmChainConfig {
     /// Optionally, a user can specify an account to receive rewards for relaying
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
+    #[serde(default)]
     pub contracts: Vec<Contract>,
     /// TxQueue configuration
     #[serde(skip_serializing, default)]
@@ -182,6 +183,7 @@ pub struct SubstrateConfig {
     /// Which Substrate Runtime to use?
     pub runtime: SubstrateRuntime,
     /// Supported pallets over this substrate node.
+    #[serde(default)]
     pub pallets: Vec<Pallet>,
 }
 /// ExperimentalConfig is the configuration for the Experimental Options.
@@ -254,7 +256,8 @@ pub struct LinkedAnchorConfig {
 #[serde(tag = "contract")]
 pub enum Contract {
     Tornado(TornadoContractConfig),
-    AnchorOverDKG(AnchorContractOverDKGConfig),
+    Anchor(AnchorContractConfig),
+    SignatureBridge(SignatureBridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
 /// Enumerates the supported pallets configurations.
@@ -296,10 +299,11 @@ pub struct TornadoContractConfig {
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
 }
+
 /// AnchorContractOverDKGConfig represents the configuration for the Anchor contract over DKG.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct AnchorContractOverDKGConfig {
+pub struct AnchorContractConfig {
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
@@ -315,10 +319,20 @@ pub struct AnchorContractOverDKGConfig {
     /// Must be defined in the config.
     pub dkg_node: String,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
-    #[serde(rename(serialize = "linkedAnchors"))]
+    #[serde(rename(serialize = "linkedAnchors"), default)]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
 }
 /// GovernanceBravoDelegateContractConfig represents the configuration for the GovernanceBravoDelegate contract.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SignatureBridgeContractConfig {
+    #[serde(flatten)]
+    pub common: CommonContractConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct GovernanceBravoDelegateContractConfig {
@@ -608,7 +622,7 @@ fn postloading_process(
     // check that all required chains are already present in the config.
     for (chain_name, chain_config) in &config.evm {
         let anchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::AnchorOverDKG(cfg) => Some(cfg),
+            Contract::Anchor(cfg) => Some(cfg),
             _ => None,
         });
         for anchor in anchors {

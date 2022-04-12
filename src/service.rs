@@ -85,8 +85,17 @@ pub async fn ignite(
                         store.clone(),
                     )?;
                 }
-                Contract::AnchorOverDKG(config) => {
+                Contract::Anchor(config) => {
                     start_anchor_over_dkg_events_watcher(
+                        ctx,
+                        config,
+                        client.clone(),
+                        store.clone(),
+                    )
+                    .await?;
+                }
+                Contract::SignatureBridge(config) => {
+                    start_signature_bridge_events_watcher(
                         ctx,
                         config,
                         client.clone(),
@@ -115,16 +124,15 @@ pub async fn ignite(
                     api.constants().dkg_proposals().chain_identifier()?;
                 let chain_id = match chain_id {
                     TypedChainId::None => 0,
-                    TypedChainId::Evm(id) => id,
-                    TypedChainId::Substrate(id) => id,
-                    TypedChainId::PolkadotParachain(id) => id,
-                    TypedChainId::KusamaParachain(id) => id,
-                    TypedChainId::RococoParachain(id) => id,
-                    TypedChainId::Cosmos(id) => id,
-                    TypedChainId::Solana(id) => id,
+                    TypedChainId::Evm(id)
+                    | TypedChainId::Substrate(id)
+                    | TypedChainId::PolkadotParachain(id)
+                    | TypedChainId::KusamaParachain(id)
+                    | TypedChainId::RococoParachain(id)
+                    | TypedChainId::Cosmos(id)
+                    | TypedChainId::Solana(id) => id,
                 };
                 let chain_id = U256::from(chain_id);
-                // TODO(@shekohex): start the dkg service
                 for pallet in &node_config.pallets {
                     match pallet {
                         Pallet::DKGProposalHandler(config) => {
@@ -183,10 +191,11 @@ fn start_dkg_proposal_handler(
         node_name,
     );
     let node_name2 = node_name.clone();
-    let watcher =
-        ProposalHandlerWatcher.run(node_name, chain_id, client, store);
     let mut shutdown_signal = ctx.shutdown_signal();
+    let webb_config = ctx.config.clone();
     let task = async move {
+        let proposal_handler = ProposalHandlerWatcher::new(webb_config);
+        let watcher = proposal_handler.run(node_name, chain_id, client, store);
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -214,8 +223,7 @@ fn start_dkg_proposal_handler(
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - Tornado contract configuration
-/// * `client` - Tornado client
-/// * `store` -[Sled](https://sled.rs)-based database store
+/// * `client` - Tornado client * `store` -[Sled](https://sled.rs)-based database store
 fn start_tornado_events_watcher(
     ctx: &RelayerContext,
     config: &TornadoContractConfig,
@@ -270,7 +278,7 @@ fn start_tornado_events_watcher(
 /// * `store` -[Sled](https://sled.rs)-based database store
 async fn start_anchor_over_dkg_events_watcher(
     ctx: &RelayerContext,
-    config: &AnchorContractOverDKGConfig,
+    config: &AnchorContractConfig,
     client: Arc<Client>,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
@@ -281,7 +289,7 @@ async fn start_anchor_over_dkg_events_watcher(
         );
         return Ok(());
     }
-    let wrapper = AnchorContractOverDKGWrapper::new(
+    let wrapper = AnchorContractWrapper::new(
         config.clone(),
         ctx.config.clone(), // the original config to access all networks.
         client.clone(),
@@ -300,11 +308,20 @@ async fn start_anchor_over_dkg_events_watcher(
         );
         let watcher =
             AnchorWatcherOverDKG::new(dkg_client, PairSigner::new(pair));
+        let leaves_watcher = AnchorLeavesWatcher::default();
+        let anchor_leaves_watcher =
+            leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
         let anchor_over_dkg_watcher_task = watcher.run(client, store, wrapper);
         tokio::select! {
             _ = anchor_over_dkg_watcher_task => {
                 tracing::warn!(
                     "Anchor over dkg watcher task stopped for ({})",
+                    contract_address,
+                );
+            },
+            _ = anchor_leaves_watcher => {
+                tracing::warn!(
+                    "Anchor leaves watcher stopped for ({})",
                     contract_address,
                 );
             },
@@ -321,6 +338,66 @@ async fn start_anchor_over_dkg_events_watcher(
 
     Ok(())
 }
+
+/// Starts the event watcher for Signature Bridge contract.
+async fn start_signature_bridge_events_watcher(
+    ctx: &RelayerContext,
+    config: &SignatureBridgeContractConfig,
+    client: Arc<Client>,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "Signature Bridge events watcher is disabled for ({}).",
+            config.common.address,
+        );
+        return Ok(());
+    }
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let contract_address = config.common.address;
+    let wrapper =
+        SignatureBridgeContractWrapper::new(config.clone(), client.clone());
+    let task = async move {
+        tracing::debug!("Bridge watcher for ({}) Started.", contract_address);
+        let bridge_contract_watcher = SignatureBridgeContractWatcher::default();
+        let events_watcher_task = EventWatcher::run(
+            &bridge_contract_watcher,
+            client.clone(),
+            store.clone(),
+            wrapper.clone(),
+        );
+        let cmd_handler_task = BridgeWatcher::run(
+            &bridge_contract_watcher,
+            client,
+            store,
+            wrapper,
+        );
+        tokio::select! {
+            _ = events_watcher_task => {
+                tracing::warn!(
+                    "signature bridge events watcher task stopped for ({})",
+                    contract_address
+                );
+            },
+            _ = cmd_handler_task => {
+                tracing::warn!(
+                    "signature bridge cmd handler task stopped for ({})",
+                    contract_address
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping Signature Bridge watcher for ({})",
+                    contract_address,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
+    Ok(())
+}
+
 /// Starts the transaction queue task
 ///
 /// Returns Ok(()) if successful, or an error if not.
