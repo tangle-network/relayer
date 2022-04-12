@@ -30,11 +30,13 @@ use std::time::Duration;
 
 use ethereum_types::{U256, U64};
 use futures::prelude::*;
+
 use webb::{
     evm::ethers::{
         contract,
         providers::{self, Middleware},
         types,
+        types::transaction,
     },
     substrate::{
         scale,
@@ -46,7 +48,10 @@ use webb::{
     },
 };
 
-use crate::store::HistoryStore;
+use crate::store::sled::SledQueueKey;
+use crate::store::{
+    BridgeCommand, BridgeKey, HistoryStore, ProposalStore, QueueStore,
+};
 use crate::utils;
 
 /// A module for listening on tornado events.
@@ -54,13 +59,18 @@ mod tornado_leaves_watcher;
 #[doc(hidden)]
 pub use tornado_leaves_watcher::*;
 /// A module for listening on anchor events over the DKG.
-mod anchor_watcher_over_dkg;
+mod anchor_watcher;
 #[doc(hidden)]
-pub use anchor_watcher_over_dkg::*;
+pub use anchor_watcher::*;
 /// A module for listening on proposal events.
 mod proposal_handler_watcher;
 #[doc(hidden)]
 pub use proposal_handler_watcher::*;
+
+/// A module for listening on Signature Bridge commands and events.
+mod signature_bridge_watcher;
+#[doc(hidden)]
+pub use signature_bridge_watcher::*;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
@@ -220,7 +230,7 @@ pub trait EventWatcher {
                     );
                     tracing::event!(
                         target: crate::probe::TARGET,
-                        tracing::Level::DEBUG,
+                        tracing::Level::TRACE,
                         kind = %crate::probe::Kind::Sync,
                         %block,
                         %dest_block,
@@ -234,6 +244,76 @@ pub trait EventWatcher {
         Ok(())
     }
 }
+
+/// A Bridge Watcher is a trait for Bridge contracts that not specific for watching events from that contract,
+/// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers
+/// from the actual action that should be taken depending on the event.
+#[async_trait::async_trait]
+pub trait BridgeWatcher: EventWatcher
+where
+    Self::Store: ProposalStore<Proposal = ()>
+        + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
+        + QueueStore<BridgeCommand, Key = SledQueueKey>,
+{
+    async fn handle_cmd(
+        &self,
+        store: Arc<Self::Store>,
+        contract: &Self::Contract,
+        cmd: BridgeCommand,
+    ) -> anyhow::Result<()>;
+
+    /// Returns a task that should be running in the background
+    /// that will watch for all commands
+    #[tracing::instrument(
+        skip_all,
+        fields(
+            chain_id = %client.get_chainid().await?,
+            address = %contract.address(),
+            tag = %Self::TAG,
+        ),
+    )]
+    async fn run(
+        &self,
+        client: Arc<Self::Middleware>,
+        store: Arc<Self::Store>,
+        contract: Self::Contract,
+    ) -> anyhow::Result<()> {
+        let backoff = backoff::ExponentialBackoff {
+            max_elapsed_time: None,
+            ..Default::default()
+        };
+        let task = || async {
+            let my_address = contract.address();
+            let my_chain_id =
+                client.get_chainid().map_err(anyhow::Error::from).await?;
+            let bridge_key = BridgeKey::new(my_address, my_chain_id);
+            let key = SledQueueKey::from_bridge_key(bridge_key);
+            while let Some(command) = store.dequeue_item(key)? {
+                let result =
+                    self.handle_cmd(store.clone(), &contract, command).await;
+                match result {
+                    Ok(_) => {
+                        tokio::time::sleep(Duration::from_millis(500)).await;
+                        continue;
+                    }
+                    Err(e) => {
+                        tracing::error!("Error while handle_cmd {}", e);
+                        // this a transient error, so we will retry again.
+                        tracing::warn!("Restarting bridge event watcher ...");
+                        return Err(backoff::Error::transient(e));
+                    }
+                }
+                // sleep for a bit to avoid overloading the db.
+            }
+            // whenever this loop stops, we will restart the whole task again.
+            // that way we never have to worry about closed channels.
+            Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
+        };
+        backoff::future::retry(backoff, task).await?;
+        Ok(())
+    }
+}
+
 /// Type alias for Substrate block number.
 pub type BlockNumberOf<T> =
     <<T as SubstrateEventWatcher>::RuntimeConfig as subxt::Config>::BlockNumber;
@@ -346,16 +426,30 @@ pub trait SubstrateEventWatcher {
                         .block_hash(Some(dest_block.as_u32().into()))
                         .map_err(anyhow::Error::from)
                         .await?;
+                    tracing::trace!(?from, ?to, "Querying events");
                     // then we query the storage set of the system events.
-                    let change_sets = rpc
+                    let maybe_change_sets = rpc
                         .query_storage(keys.clone(), from, to)
                         .map_err(anyhow::Error::from)
-                        .await?;
-                    // now we go through the changeset, and for every change we extract the events.
-                    let found_events = change_sets
-                        .into_iter()
-                        .flat_map(|c| utils::change_set_to_events(c, decoder))
-                        .collect::<Vec<_>>();
+                        .await;
+                    let found_events = match maybe_change_sets {
+                        Ok(change_sets) => {
+                            tracing::trace!(?change_sets, "Queried events");
+                            // now we go through the changeset, and for every change we extract the events.
+                            change_sets
+                                .into_iter()
+                                .flat_map(|c| {
+                                    utils::change_set_to_events(c, decoder)
+                                })
+                                .collect::<Vec<_>>()
+                        }
+                        Err(e) => {
+                            tracing::error!(error = %e, "Failed to query events");
+                            // sleep for a bit to avoid spamming the node.
+                            tokio::time::sleep(Duration::from_secs(3)).await;
+                            continue;
+                        }
+                    };
                     tracing::trace!("Found #{} events", found_events.len());
 
                     for (block_hash, event) in found_events {
@@ -448,6 +542,79 @@ pub trait SubstrateEventWatcher {
             }
         };
         backoff::future::retry(backoff, task).await?;
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use webb::substrate::dkg_runtime;
+    use webb::substrate::dkg_runtime::api::system;
+
+    use crate::store::sled::SledStore;
+
+    use super::*;
+
+    #[derive(Debug, Clone, Default)]
+    struct RemarkedEventWatcher;
+
+    #[async_trait::async_trait]
+    impl SubstrateEventWatcher for RemarkedEventWatcher {
+        const TAG: &'static str = "Remarked Event Watcher";
+
+        type RuntimeConfig = subxt::DefaultConfig;
+
+        type Api = dkg_runtime::api::RuntimeApi<
+            Self::RuntimeConfig,
+            subxt::DefaultExtra<Self::RuntimeConfig>,
+        >;
+
+        type Event = system::events::Remarked;
+
+        type Store = SledStore;
+
+        async fn handle_event(
+            &self,
+            _store: Arc<Self::Store>,
+            _api: Arc<Self::Api>,
+            (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        ) -> anyhow::Result<()> {
+            tracing::debug!(
+                "Received `Remarked` Event: {:?} at block number: #{}",
+                event,
+                block_number
+            );
+            Ok(())
+        }
+    }
+
+    fn setup_logger() -> anyhow::Result<()> {
+        let log_level = tracing::Level::TRACE;
+        let env_filter = tracing_subscriber::EnvFilter::from_default_env()
+            .add_directive(format!("webb_relayer={}", log_level).parse()?);
+        tracing_subscriber::fmt()
+            .with_target(true)
+            .without_time()
+            .with_max_level(log_level)
+            .with_env_filter(env_filter)
+            .with_test_writer()
+            .compact()
+            .init();
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore = "need to be run manually"]
+    async fn substrate_event_watcher_should_work() -> anyhow::Result<()> {
+        setup_logger()?;
+        let node_name = String::from("test-node");
+        let chain_id = U256::from(5u32);
+        let store = Arc::new(SledStore::temporary()?);
+        let client = subxt::ClientBuilder::new().build().await?;
+        let watcher = RemarkedEventWatcher::default();
+        watcher.run(node_name, chain_id, client, store).await?;
         Ok(())
     }
 }

@@ -25,7 +25,7 @@ use std::fmt::{Debug, Display};
 use std::sync::Arc;
 
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use webb::evm::ethers::types;
 /// A module for managing in-memory storage of the relayer.
 pub mod mem;
@@ -44,9 +44,19 @@ pub enum HistoryStoreKey {
     },
 }
 
-// TODO: implement Bridges.
+/// A Bridge Key is a unique key used for Sending and Receiving Commands to the Signature Bridge
+/// It is a combination of the Chain ID and the Address of the Bridge contract.
 #[derive(Debug, Copy, Clone, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
-pub struct BridgeKey;
+pub struct BridgeKey {
+    pub address: types::H160,
+    pub chain_id: types::U256,
+}
+
+impl BridgeKey {
+    pub fn new(address: types::Address, chain_id: types::U256) -> Self {
+        Self { address, chain_id }
+    }
+}
 
 impl HistoryStoreKey {
     /// Returns the chain id of the chain this key is for.
@@ -70,6 +80,7 @@ impl HistoryStoreKey {
             }
         }
     }
+
     /// Returns the bytes of the key.
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut vec = vec![];
@@ -101,6 +112,12 @@ impl Display for HistoryStoreKey {
                 node_name,
             } => write!(f, "Substrate({}, {})", chain_id, node_name),
         }
+    }
+}
+
+impl Display for BridgeKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Bridge({}, {})", self.chain_id, self.address)
     }
 }
 
@@ -191,6 +208,13 @@ pub trait LeafCacheStore: HistoryStore {
         block_number: types::U64,
     ) -> anyhow::Result<types::U64>;
 }
+
+/// A Command sent to the Bridge to execute different actions.
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub enum BridgeCommand {
+    ExecuteProposalWithSignature { data: Vec<u8>, signature: Vec<u8> },
+}
+
 /// A trait for retrieving queue keys
 pub trait QueueKey {
     fn queue_name(&self) -> String;
@@ -201,7 +225,10 @@ pub trait QueueKey {
 /// The queue is a FIFO queue, that can be used to store anything that can be serialized.
 ///
 /// There is a simple API to get the items from the queue, from a background task for example.
-pub trait QueueStore<Item: Serialize + DeserializeOwned> {
+pub trait QueueStore<Item>
+where
+    Item: Serialize + DeserializeOwned + Clone,
+{
     type Key: QueueKey;
     /// Insert an item into the queue.
     fn enqueue_item(&self, key: Self::Key, item: Item) -> anyhow::Result<()>;
@@ -218,7 +245,7 @@ pub trait QueueStore<Item: Serialize + DeserializeOwned> {
 impl<S, T> QueueStore<T> for Arc<S>
 where
     S: QueueStore<T>,
-    T: Serialize + DeserializeOwned,
+    T: Serialize + DeserializeOwned + Clone,
 {
     type Key = S::Key;
 

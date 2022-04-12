@@ -17,6 +17,7 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
+use ethereum_types::H256;
 use futures::StreamExt;
 use webb::evm::contract::protocol_solidity::{
     FixedDepositAnchorContract, FixedDepositAnchorContractEvents,
@@ -30,10 +31,11 @@ use webb::substrate::{dkg_runtime, subxt};
 
 use crate::config;
 use crate::store::sled::SledStore;
+use crate::store::LeafCacheStore;
 
 type HttpProvider = providers::Provider<providers::Http>;
 /// Represents an Anchor Contract Watcher which will use the DKG Substrate nodes for signing.
-pub struct AnchorWatcherWithSubstrate<R, C>
+pub struct AnchorWatcher<R, C>
 where
     R: From<subxt::Client<C>>,
     C: subxt::Config,
@@ -42,7 +44,7 @@ where
     pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
 }
 
-impl<R, C> AnchorWatcherWithSubstrate<R, C>
+impl<R, C> AnchorWatcher<R, C>
 where
     R: From<subxt::Client<C>>,
     C: subxt::Config,
@@ -63,27 +65,26 @@ type DKGConfig = subxt::DefaultConfig;
 type DKGRuntimeApi =
     dkg_runtime::api::RuntimeApi<DKGConfig, subxt::DefaultExtra<DKGConfig>>;
 /// Type alias for the AnchorWatcherWithSubstrate.
-pub type AnchorWatcherOverDKG =
-    AnchorWatcherWithSubstrate<DKGRuntimeApi, DKGConfig>;
+pub type AnchorWatcherOverDKG = AnchorWatcher<DKGRuntimeApi, DKGConfig>;
 
 /// AnchorContractOverDKGWrapper contains FixedDepositAnchorContract contract along with configurations for Anchor contract over DKG, and Relayer.  
 #[derive(Clone, Debug)]
-pub struct AnchorContractOverDKGWrapper<M>
+pub struct AnchorContractWrapper<M>
 where
     M: Middleware,
 {
-    config: config::AnchorContractOverDKGConfig,
+    config: config::AnchorContractConfig,
     webb_config: config::WebbRelayerConfig,
     contract: FixedDepositAnchorContract<M>,
 }
 
-impl<M> AnchorContractOverDKGWrapper<M>
+impl<M> AnchorContractWrapper<M>
 where
     M: Middleware,
 {
     /// Creates a new AnchorContractOverDKGWrapper.
     pub fn new(
-        config: config::AnchorContractOverDKGConfig,
+        config: config::AnchorContractConfig,
         webb_config: config::WebbRelayerConfig,
         client: Arc<M>,
     ) -> Self {
@@ -98,7 +99,7 @@ where
     }
 }
 
-impl<M> ops::Deref for AnchorContractOverDKGWrapper<M>
+impl<M> ops::Deref for AnchorContractWrapper<M>
 where
     M: Middleware,
 {
@@ -109,7 +110,7 @@ where
     }
 }
 
-impl<M> super::WatchableContract for AnchorContractOverDKGWrapper<M>
+impl<M> super::WatchableContract for AnchorContractWrapper<M>
 where
     M: Middleware,
 {
@@ -132,12 +133,17 @@ where
     }
 }
 
+/// An Anchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
+/// It serves as a cache for leaves that could be used by dApp for proof generation.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct AnchorLeavesWatcher;
+
 #[async_trait::async_trait]
 impl super::EventWatcher for AnchorWatcherOverDKG {
-    const TAG: &'static str = "Anchor Watcher Over DKG";
+    const TAG: &'static str = "Anchor Watcher";
     type Middleware = HttpProvider;
 
-    type Contract = AnchorContractOverDKGWrapper<Self::Middleware>;
+    type Contract = AnchorContractWrapper<Self::Middleware>;
 
     type Events = FixedDepositAnchorContractEvents;
 
@@ -156,6 +162,10 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             DepositFilter(data) => data,
             _ => return Ok(()),
         };
+        tracing::debug!(
+            event = ?event_data,
+            "Anchor deposit event",
+        );
         let client = wrapper.contract.client();
         let src_chain_id = client.get_chainid().await?;
         let root = wrapper.contract.get_last_root().call().await?;
@@ -217,10 +227,10 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             );
             let tx_api = self.api.tx().dkg_proposals();
             tracing::debug!(
-                "sending proposal = nonce: {}, r_id: 0x{}, proposal_data: 0x{}",
-                leaf_index,
-                hex::encode(resource_id.into_bytes()),
-                hex::encode(&proposal.to_bytes())
+                %leaf_index,
+                resource_id = ?hex::encode(resource_id.into_bytes()),
+                proposal = ?proposal,
+                "sending proposal",
             );
             let xt = tx_api.acknowledge_proposal(
                 Nonce(leaf_index),
@@ -231,9 +241,84 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
             let signer = &self.pair;
             let mut progress = xt.sign_and_submit_then_watch(signer).await?;
             while let Some(event) = progress.next().await {
-                tracing::debug!("Tx Progress: {:?}", event);
+                match event {
+                    Ok(status) => {
+                        tracing::debug!(?status, "tx event")
+                    }
+                    Err(error) => tracing::error!(%error, "tx event error"),
+                }
             }
         }
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl super::EventWatcher for AnchorLeavesWatcher {
+    const TAG: &'static str = "Anchor Watcher For Leaves";
+
+    type Middleware = HttpProvider;
+
+    type Contract = AnchorContractWrapper<Self::Middleware>;
+
+    type Events = FixedDepositAnchorContractEvents;
+
+    type Store = SledStore;
+
+    #[tracing::instrument(skip_all)]
+    async fn handle_event(
+        &self,
+        store: Arc<Self::Store>,
+        wrapper: &Self::Contract,
+        (event, log): (Self::Events, LogMeta),
+    ) -> anyhow::Result<()> {
+        use FixedDepositAnchorContractEvents::*;
+        match event {
+            DepositFilter(deposit) => {
+                let commitment = deposit.commitment;
+                let leaf_index = deposit.leaf_index;
+                let value = (leaf_index, H256::from_slice(&commitment));
+                let chain_id = wrapper.contract.client().get_chainid().await?;
+                store.insert_leaves(
+                    (chain_id, wrapper.contract.address()),
+                    &[value],
+                )?;
+                store.insert_last_deposit_block_number(
+                    (chain_id, wrapper.contract.address()),
+                    log.block_number,
+                )?;
+                tracing::trace!(
+                    %log.block_number,
+                    "detected block number",
+                );
+                tracing::debug!(
+                    "Saved Deposit Event ({}, {}) at block {}",
+                    value.0,
+                    value.1,
+                    log.block_number
+                );
+            }
+            EdgeAdditionFilter(v) => {
+                tracing::debug!(
+                    "Edge Added of chain {} at index {} with root 0x{}",
+                    v.chain_id,
+                    v.latest_leaf_index,
+                    hex::encode(v.merkle_root)
+                );
+            }
+            EdgeUpdateFilter(v) => {
+                tracing::debug!(
+                    "Edge Updated of chain {} at index {} with root 0x{}",
+                    v.chain_id,
+                    v.latest_leaf_index,
+                    hex::encode(v.merkle_root)
+                );
+            }
+            _ => {
+                tracing::trace!("Unhandled event {:?}", event);
+            }
+        };
+
         Ok(())
     }
 }
