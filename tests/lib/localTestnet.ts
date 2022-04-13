@@ -153,7 +153,7 @@ export class LocalChain {
     const witnessCalculatorPath = path.join(
       gitRoot,
       'tests',
-      'protocol-solidity-fixtures/fixtures/bridge/2/witness_calculator.js'
+      'protocol-solidity-fixtures/fixtures/anchor/2/witness_calculator.js'
     );
     const witnessCalculatorCjsPath = path.join(
       gitRoot,
@@ -168,13 +168,13 @@ export class LocalChain {
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/bridge/2/poseidon_bridge_2.wasm'
+        'protocol-solidity-fixtures/fixtures/anchor/2/poseidon_anchor_2.wasm'
       ),
       witnessCalculatorCjsPath,
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/bridge/2/circuit_final.zkey'
+        'protocol-solidity-fixtures/fixtures/anchor/2/circuit_final.zkey'
       )
     );
 

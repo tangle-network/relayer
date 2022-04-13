@@ -261,10 +261,11 @@ describe('Signature Bridge <> DKG', function () {
       tokenAddress,
       wallet1
     );
+
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt()).to.equal(
-      ethers.utils.parseEther('1000').toBigInt()
-    );
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
     // now we are ready to do the deposit.
     await anchor1.deposit(localChain2.chainId);
     // wait until the signature bridge recives the execute call.

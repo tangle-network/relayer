@@ -181,7 +181,7 @@ describe('EVM Transaction Relayer', function () {
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
       )?.withdrawFeePercentage ?? 0;
-    const withdrawalInfo = await anchor1.setupWithdraw(
+    const { args, publicInputs, extData } = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
       recipient.address,
@@ -192,16 +192,16 @@ describe('EVM Transaction Relayer', function () {
       ).toBigInt(),
       0
     );
-
+    const [proofEncoded, roots, nullifierHash, extDataHash] = args;
     // ping the relayer!
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
-      localChain1.chainId.toString(),
+      localChain1.underlayingChainId.toString(),
       anchor1.getAddress(),
-      `0x${withdrawalInfo.proofEncoded}`,
-      withdrawalInfo.publicInputs,
-      withdrawalInfo.extData
+      proofEncoded,
+      publicInputs,
+      extData
     );
     expect(txHash).to.be.string;
   });

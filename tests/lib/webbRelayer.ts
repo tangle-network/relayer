@@ -280,8 +280,8 @@ async function txHashOrReject(
           refreshCommitment: extData._refreshCommitment,
           recipient: extData._recipient,
           relayer: extData._relayer,
-          fee: extData._fee,
-          refund: extData._refund,
+          fee: BigNumber.from(extData._fee).toHexString(),
+          refund: BigNumber.from(extData._refund).toHexString(),
         },
       },
     };
