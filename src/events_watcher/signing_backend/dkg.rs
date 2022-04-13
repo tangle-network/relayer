@@ -148,7 +148,7 @@ impl DkgSigningBackend<DkgRuntimeApi, DkgConfig> {
                 }
             }
         }
-        return Ok(());
+        Ok(())
     }
 }
 
