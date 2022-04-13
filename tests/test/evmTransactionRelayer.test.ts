@@ -25,8 +25,7 @@ import { LocalChain } from '../lib/localTestnet.js';
 import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 
-// @FIXME: this needs a mocked signing backend to be implemented first.
-describe.skip('EVM Transaction Relayer', function () {
+describe('EVM Transaction Relayer', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
@@ -97,16 +96,14 @@ describe.skip('EVM Transaction Relayer', function () {
       wallet2
     );
     // save the chain configs.
-    await localChain1.writeConfig(
-      `${tmpDirPath}/${localChain1.name}.json`,
+    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
-      /** Signing Backend */ 'none'
-    );
-    await localChain2.writeConfig(
-      `${tmpDirPath}/${localChain2.name}.json`,
+      signingBackend: { type: 'Mocked', privateKey: PK1 },
+    });
+    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
-      /** Signing Backend */ 'none'
-    );
+      signingBackend: { type: 'Mocked', privateKey: PK2 },
+    });
 
     // get the anhor on localchain1
     const anchor = signatureBridge.getAnchor(

@@ -415,7 +415,7 @@ export interface Contract {
   size?: number;
   withdrawGaslimit?: `0x${string}`;
   withdrawFeePercentage?: number;
-  'dkg-node'?: any;
+  signingBackend?: SigningBackend;
   linkedAnchors?: LinkedAnchor[];
 }
 
@@ -499,8 +499,14 @@ type ParsedRelayerMessage =
   | UnimplementedMessage
   | { kind: 'unknown' };
 
-export type DKGSigningBackend = string; /** DKG Node name in the config */
-export type MockedSigningBackend = { signer: string }; /** Signer private key */
+export type DKGSigningBackend = {
+  type: 'DKGNode';
+  node: string;
+}; /** DKG Node name in the config */
+export type MockedSigningBackend = {
+  type: 'Mocked';
+  privateKey: string;
+}; /** Signer private key */
 export type SigningBackend = DKGSigningBackend | MockedSigningBackend;
 function parseRelayTxMessage(o: any): ParsedRelayerMessage {
   if (o.pong) {

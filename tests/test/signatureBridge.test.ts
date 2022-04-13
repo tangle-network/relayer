@@ -151,16 +151,14 @@ describe('Signature Bridge <> DKG', function () {
       wallet2
     );
     // save the chain configs.
-    await localChain1.writeConfig(
-      `${tmpDirPath}/${localChain1.name}.json`,
+    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
-      /** Signing Backend */ charlieNode.name
-    );
-    await localChain2.writeConfig(
-      `${tmpDirPath}/${localChain2.name}.json`,
+      signingBackend: { type: 'DKGNode', node: charlieNode.name },
+    });
+    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
-      /** Signing Backend */ charlieNode.name
-    );
+      signingBackend: { type: 'DKGNode', node: charlieNode.name },
+    });
     // fetch the dkg public key.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
     expect(dkgPublicKey).to.not.be.null;

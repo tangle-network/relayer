@@ -41,6 +41,11 @@ export type GanacheAccounts = {
   secretKey: string;
 };
 
+export type ExportedConfigOptions = {
+  signatureBridge?: Bridges.SignatureBridge;
+  signingBackend: SigningBackend;
+};
+
 export function startGanacheServer(
   port: number,
   networkId: number,
@@ -178,10 +183,9 @@ export class LocalChain {
   }
 
   public async exportConfig(
-    signatureBridge?: Bridges.SignatureBridge,
-    signingBackend?: SigningBackend
+    opts: ExportedConfigOptions
   ): Promise<FullChainInfo> {
-    const bridge = signatureBridge ?? this.signatureBridge;
+    const bridge = opts.signatureBridge ?? this.signatureBridge;
     if (!bridge) {
       throw new Error('Signature bridge not deployed yet');
     }
@@ -217,7 +221,7 @@ export class LocalChain {
           deployedAt: 1,
           size: 1, // Ethers
           withdrawFeePercentage: 0,
-          'dkg-node': signingBackend ?? undefined,
+          signingBackend: opts.signingBackend,
           eventsWatcher: {
             enabled: true,
             pollingInterval: 1000,
@@ -245,16 +249,16 @@ export class LocalChain {
 
   public async writeConfig(
     path: string,
-    signatureBridge?: Bridges.SignatureBridge,
-    signingBackend?: SigningBackend
+    opts: ExportedConfigOptions
   ): Promise<void> {
-    const config = await this.exportConfig(signatureBridge, signingBackend);
+    const config = await this.exportConfig(opts);
     // don't mind my typescript typing here XD
     type ConvertedContract = Omit<
       ConvertToKebabCase<Contract>,
-      'events-watcher'
+      'events-watcher' | 'signing-backend'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
+      'signing-backend'?: ConvertToKebabCase<SigningBackend>;
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -281,7 +285,18 @@ export class LocalChain {
         address: contract.address,
         'deployed-at': contract.deployedAt,
         size: contract.size,
-        'dkg-node': contract['dkg-node'],
+        'signing-backend':
+          contract.signingBackend?.type === 'Mocked'
+            ? {
+                type: 'Mocked',
+                'private-key': contract.signingBackend?.privateKey,
+              }
+            : contract.signingBackend?.type === 'DKGNode'
+            ? {
+                type: 'DKGNode',
+                node: contract.signingBackend?.node,
+              }
+            : undefined,
         'withdraw-gaslimit': '0x5B8D80',
         'withdraw-fee-percentage': contract.withdrawFeePercentage,
         'events-watcher': {
