@@ -126,7 +126,7 @@ describe('Substrate Transaction Relayer', function () {
     const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(charlie.address);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
-    expect(balanceAfterWithdraw > initialBalance).true;
+    expect(balanceAfterWithdraw).to.be.gt(initialBalance);
   });
 
   after(async () => {
