@@ -47,6 +47,7 @@ export type LocalNodeOpts = {
   authority: 'alice' | 'bob' | 'charlie';
   usageMode: UsageMode;
   enableLogging?: boolean;
+  isManual?: boolean; // for manual connection to the substrate node using 9944
 };
 
 export type SubstrateEvent = {
@@ -58,7 +59,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   #api: ApiPromise | null = null;
   constructor(
     protected readonly opts: LocalNodeOpts,
-    private readonly proc: ChildProcess
+    private readonly proc?: ChildProcess
   ) {}
 
   public get name(): string {
@@ -78,51 +79,24 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   }
 
   public async api(): Promise<ApiPromise> {
+    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
+    const host = '127.0.0.1';
+    if(this.opts.isManual) {
+      return await createApiPromise(`ws://${host}:${ports.ws}`);
+    }
+
     if (this.#api) {
       return this.#api;
     }
-    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
-    const host = '127.0.0.1';
-    this.#api = await ApiPromise.create({
-      provider: new WsProvider(`ws://${host}:${ports.ws}`),
-      rpc: {
-        mt: {
-          getLeaves: {
-            description: 'Query for the tree leaves',
-            params: [
-              {
-                name: 'tree_id',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'from',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'to',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'at',
-                type: 'Hash',
-                isOptional: true,
-              },
-            ],
-            type: 'Vec<[u8; 32]>',
-          },
-        },
-      },
-    });
+    this.#api = await createApiPromise(`ws://${host}:${ports.ws}`);
     return this.#api;
   }
 
   public async stop(): Promise<void> {
     await this.#api?.disconnect();
     this.#api = null;
-    this.proc.kill('SIGINT');
+    if(this.proc)
+      this.proc.kill('SIGINT');
   }
 
   public async waitForEvent(typedEvent: TypedEvent): Promise<void> {
@@ -277,6 +251,42 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
       });
     }
   }
+}
+
+async function createApiPromise(endpoint: string) {
+  return await ApiPromise.create({
+    provider: new WsProvider(endpoint),
+    rpc: {
+      mt: {
+        getLeaves: {
+          description: 'Query for the tree leaves',
+          params: [
+            {
+              name: 'tree_id',
+              type: 'u32',
+              isOptional: false,
+            },
+            {
+              name: 'from',
+              type: 'u32',
+              isOptional: false,
+            },
+            {
+              name: 'to',
+              type: 'u32',
+              isOptional: false,
+            },
+            {
+              name: 'at',
+              type: 'Hash',
+              isOptional: true,
+            },
+          ],
+          type: 'Vec<[u8; 32]>',
+        },
+      },
+    },
+  });
 }
 
 export type FullNodeInfo = NodeInfo & {

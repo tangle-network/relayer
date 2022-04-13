@@ -39,6 +39,7 @@ describe('Substrate Transaction Relayer', function () {
             '../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
+
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
@@ -86,6 +87,12 @@ describe('Substrate Transaction Relayer', function () {
     });
     // ping the relayer!
     await webbRelayer.ping();
+
+    // get the initial balance
+    // @ts-ignore
+    let { nonce, data: balance } = await api.query.system.account(charlie.address);
+    let initialBalance = balance.free.toBigInt();
+    console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
     // now we need to submit the withdrawal transaction.
     const txHash = await webbRelayer.substrateMixerWithdraw({
       chain: aliceNode.name,
@@ -99,6 +106,13 @@ describe('Substrate Transaction Relayer', function () {
       relayer: withdrawalProof.relayer,
     });
     expect(txHash).to.be.not.null;
+
+    // get the balance after withdrawal is done and see if it increases
+    // @ts-ignore
+    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(charlie.address);
+    let balanceAfterWithdraw = balanceAfter.free.toBigInt();
+    console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
+    expect(balanceAfterWithdraw > initialBalance);
   });
 
   after(async () => {
