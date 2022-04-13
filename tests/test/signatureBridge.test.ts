@@ -176,10 +176,10 @@ describe('Signature Bridge <> DKG', function () {
           await tx.wait();
         },
         {
-          retries: 10,
+          retries: 5,
           minTimeout: 1000,
           onRetry: (error) => {
-            console.error('transferOwnership retry', error);
+            console.error('transferOwnership retry', error.name, error.message);
           },
         }
       );
@@ -237,7 +237,7 @@ describe('Signature Bridge <> DKG', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();

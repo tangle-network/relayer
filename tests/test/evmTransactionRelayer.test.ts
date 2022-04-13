@@ -53,7 +53,7 @@ describe('EVM Transaction Relayer', function () {
       populatedAccounts: [
         {
           secretKey: PK1,
-          balance: ethers.utils.parseEther('1000').toHexString(),
+          balance: ethers.utils.parseEther('5').toHexString(),
         },
       ],
     });
@@ -68,7 +68,7 @@ describe('EVM Transaction Relayer', function () {
       populatedAccounts: [
         {
           secretKey: PK2,
-          balance: ethers.utils.parseEther('1000').toHexString(),
+          balance: ethers.utils.parseEther('5').toHexString(),
         },
       ],
     });
@@ -119,7 +119,7 @@ describe('EVM Transaction Relayer', function () {
       wallet1
     );
     await token.approveSpending(anchor.contract.address);
-    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('5'));
 
     // do the same but on localchain2
     const anchor2 = signatureBridge.getAnchor(
@@ -136,7 +136,7 @@ describe('EVM Transaction Relayer', function () {
     );
 
     await token2.approveSpending(anchor2.contract.address);
-    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
+    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('5'));
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
@@ -144,7 +144,7 @@ describe('EVM Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -163,10 +163,11 @@ describe('EVM Transaction Relayer', function () {
       tokenAddress,
       wallet1
     );
+    // mint tokins to the account everytime.
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('5'));
     const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt()).to.equal(
-      ethers.utils.parseEther('1000').toBigInt()
-    );
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
     // now we are ready to do the deposit.
     const depositInfo = await anchor1.deposit(localChain1.chainId);
     const recipient = new ethers.Wallet(
