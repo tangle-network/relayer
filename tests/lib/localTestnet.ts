@@ -216,7 +216,7 @@ export class LocalChain {
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
-      chainId: this.opts.chainId,
+      chainId: this.underlayingChainId,
       beneficiary: wallet.address,
       privateKey: wallet.privateKey,
       contracts: [
@@ -316,7 +316,7 @@ export class LocalChain {
     };
     const fullConfigFile: FullConfigFile = {
       evm: {
-        [this.opts.chainId]: convertedConfig,
+        [this.underlayingChainId]: convertedConfig,
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);

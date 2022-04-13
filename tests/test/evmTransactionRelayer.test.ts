@@ -18,7 +18,7 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { Bridges, Tokens, Utility } from '@webb-tools/protocol-solidity';
+import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../lib/localTestnet.js';
