@@ -18,7 +18,7 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
+import { Bridges, Tokens, Utility } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../lib/localTestnet.js';
@@ -176,7 +176,7 @@ describe('EVM Transaction Relayer', function () {
     );
 
     const relayerInfo = await webbRelayer.info();
-    const localChain1Info = relayerInfo.evm[localChain1.chainId];
+    const localChain1Info = relayerInfo.evm[localChain1.underlayingChainId];
     const relayerFeePercentage =
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address

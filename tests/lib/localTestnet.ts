@@ -18,7 +18,7 @@ import fs from 'fs';
 import ganache from 'ganache';
 import { ethers } from 'ethers';
 import { Server } from 'ganache';
-import { Bridges, Interfaces } from '@webb-tools/protocol-solidity';
+import { Bridges, Interfaces, Utility } from '@webb-tools/protocol-solidity';
 import {
   BridgeInput,
   DeployerConfig,
@@ -61,7 +61,9 @@ export function startGanacheServer(
   });
 
   ganacheServer.listen(port).then(() => {
-    process.stdout.write(`Ganache Started on http://127.0.0.1:${port} ..\n`);
+    process.stdout.write(
+      `Ganache(${networkId}) Started on http://127.0.0.1:${port} ..\n`
+    );
   });
 
   return ganacheServer;
@@ -78,7 +80,7 @@ export class LocalChain {
   public readonly endpoint: string;
   private readonly server: Server<'ethereum'>;
   private signatureBridge: Bridges.SignatureBridge | null = null;
-  constructor(public readonly opts: LocalChainOpts) {
+  constructor(private readonly opts: LocalChainOpts) {
     this.endpoint = `http://127.0.0.1:${opts.port}`;
     this.server = startGanacheServer(
       opts.port,
@@ -92,6 +94,10 @@ export class LocalChain {
   }
 
   public get chainId(): number {
+    return Utility.getChainIdType(this.opts.chainId);
+  }
+
+  public get underlayingChainId(): number {
     return this.opts.chainId;
   }
 
@@ -127,20 +133,20 @@ export class LocalChain {
     const bridgeInput: BridgeInput = {
       anchorInputs: {
         asset: {
-          [this.opts.chainId]: [localToken.contract.address],
-          [otherChain.opts.chainId]: [otherToken.contract.address],
+          [this.chainId]: [localToken.contract.address],
+          [otherChain.chainId]: [otherToken.contract.address],
         },
         anchorSizes: [ethers.utils.parseEther('1')],
       },
-      chainIDs: [this.opts.chainId, otherChain.opts.chainId],
+      chainIDs: [this.chainId, otherChain.chainId],
     };
     const deployerConfig: DeployerConfig = {
-      [this.opts.chainId]: localWallet,
-      [otherChain.opts.chainId]: otherWallet,
+      [this.chainId]: localWallet,
+      [otherChain.chainId]: otherWallet,
     };
     const initialGovernors: GovernorConfig = {
-      [this.opts.chainId]: localWallet,
-      [otherChain.opts.chainId]: otherWallet,
+      [this.chainId]: localWallet,
+      [otherChain.chainId]: otherWallet,
     };
     // copy the witness_calculator.js file to @webb-tools/utils, but use the .cjs extension
     // to avoid the babel compiler to compile it.
@@ -190,13 +196,13 @@ export class LocalChain {
       throw new Error('Signature bridge not deployed yet');
     }
     const localAnchor = bridge.getAnchor(
-      this.opts.chainId,
+      this.chainId,
       ethers.utils.parseEther('1')
     );
-    const side = bridge.getBridgeSide(this.opts.chainId);
+    const side = bridge.getBridgeSide(this.chainId);
     const wallet = side.governor;
     const otherChainIds = Array.from(bridge.bridgeSides.keys()).filter(
-      (chainId) => chainId !== this.opts.chainId
+      (chainId) => chainId !== this.chainId
     );
     const otherAnchors = otherChainIds.map(
       (chainId) =>
