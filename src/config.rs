@@ -229,6 +229,7 @@ pub struct EventsWatcherConfig {
     #[serde(skip_serializing, default = "print_progress_interval_default")]
     pub print_progress_interval: u64,
 }
+
 /// AnchorWithdrawConfig is the configuration for the Anchor Withdraw.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -241,6 +242,7 @@ pub struct AnchorWithdrawConfig {
     #[serde(skip_serializing)]
     pub withdraw_gaslimit: U256,
 }
+
 /// LinkedAnchorConfig is the configuration for the linked anchor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -251,6 +253,7 @@ pub struct LinkedAnchorConfig {
     /// The Anchor Contract Address.
     pub address: Address,
 }
+
 /// Enumerates the supported contract configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
@@ -260,6 +263,7 @@ pub enum Contract {
     SignatureBridge(SignatureBridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
+
 /// Enumerates the supported pallets configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "pallet")]
@@ -267,6 +271,7 @@ pub enum Pallet {
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
 }
+
 /// Enumerates the supported Substrate runtimes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SubstrateRuntime {
@@ -274,6 +279,7 @@ pub enum SubstrateRuntime {
     Dkg,
     WebbProtocol,
 }
+
 /// CommonContractConfig represents the common configuration for contracts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -284,6 +290,7 @@ pub struct CommonContractConfig {
     #[serde(rename(serialize = "deployedAt"))]
     pub deployed_at: u64,
 }
+
 /// TornadoContractConfig represents the configuration for the Tornado contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -361,7 +368,7 @@ pub struct DKGProposalHandlerPalletConfig {
 
 /// Enumerates the supported different signing backends configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(tag = "signing-backend")]
+#[serde(tag = "type")]
 pub enum SigningBackendConfig {
     /// Uses an already running and configured DKG Node for signing proposals.
     #[serde(rename = "DKGNode")]
