@@ -271,14 +271,14 @@ describe('Signature Bridge <> DKG', function () {
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { chain_id: localChain2.chainId.toString() },
+      event: { chain_id: localChain2.underlayingChainId.toString() },
     });
     // now we wait for the tx queue on that chain to execute the transaction.
     await webbRelayer.waitForEvent({
       kind: 'tx_queue',
       event: {
         ty: 'EVM',
-        chain_id: localChain2.chainId.toString(),
+        chain_id: localChain2.underlayingChainId.toString(),
         finalized: true,
       },
     });

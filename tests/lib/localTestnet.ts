@@ -18,7 +18,12 @@ import fs from 'fs';
 import ganache from 'ganache';
 import { ethers } from 'ethers';
 import { Server } from 'ganache';
-import { Bridges, Interfaces, Utility } from '@webb-tools/protocol-solidity';
+import {
+  Anchors,
+  Bridges,
+  Interfaces,
+  Utility,
+} from '@webb-tools/protocol-solidity';
 import {
   BridgeInput,
   DeployerConfig,
@@ -204,12 +209,9 @@ export class LocalChain {
     const otherChainIds = Array.from(bridge.bridgeSides.keys()).filter(
       (chainId) => chainId !== this.chainId
     );
-    const otherAnchors = otherChainIds.map(
-      (chainId) =>
-        [chainId, bridge.getAnchor(chainId, ethers.utils.parseEther('1'))] as [
-          number,
-          Interfaces.IAnchor
-        ]
+
+    const otherAnchors = otherChainIds.map((chainId) =>
+      bridge.getAnchor(chainId, ethers.utils.parseEther('1'))
     );
 
     const chainInfo: FullChainInfo = {
@@ -233,10 +235,12 @@ export class LocalChain {
             pollingInterval: 1000,
             printProgressInterval: 20_000,
           },
-          linkedAnchors: otherAnchors.map(([chainId, anchor]) => ({
-            chain: chainId.toString(),
-            address: anchor.getAddress(),
-          })),
+          linkedAnchors: await Promise.all(
+            otherAnchors.map(async (anchor) => ({
+              chain: (await anchor.contract.getChainId()).toString(),
+              address: anchor.getAddress(),
+            }))
+          ),
         },
         {
           contract: 'SignatureBridge',
