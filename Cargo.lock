@@ -4587,6 +4587,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "typed-builder"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "89851716b67b937e393b3daa8423e67ddfc4bbbf1654bcf05488e95e0828db0c"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "typenum"
 version = "1.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4939,6 +4950,10 @@ name = "webb-proposals"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1c51d8b47df94f70941f32cff55b581b11965d79cc01dd7119640c88d5db9efe"
+dependencies = [
+ "parity-scale-codec",
+ "scale-info",
+]
 
 [[package]]
 name = "webb-relayer"
@@ -4958,6 +4973,7 @@ dependencies = [
  "hex",
  "native-tls",
  "once_cell",
+ "parity-scale-codec",
  "parking_lot",
  "paw",
  "rand 0.8.4",
@@ -4974,6 +4990,7 @@ dependencies = [
  "tracing-futures",
  "tracing-subscriber 0.3.6",
  "tracing-test",
+ "typed-builder",
  "url",
  "warp",
  "warp-real-ip",

@@ -24,6 +24,7 @@
 use std::sync::Arc;
 
 use ethereum_types::U256;
+use webb::evm::ethers::prelude::Middleware;
 use webb::evm::ethers::providers;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::dkg_runtime::api::RuntimeApi as DkgRuntimeApi;
@@ -32,6 +33,7 @@ use webb::substrate::subxt::PairSigner;
 
 use crate::config::*;
 use crate::context::RelayerContext;
+use crate::events_watcher::signing_backend::*;
 use crate::events_watcher::*;
 use crate::tx_queue::TxQueue;
 /// Type alias for providers
@@ -86,7 +88,7 @@ pub async fn ignite(
                     )?;
                 }
                 Contract::Anchor(config) => {
-                    start_anchor_over_dkg_events_watcher(
+                    start_anchor_events_watcher(
                         ctx,
                         config,
                         client.clone(),
@@ -266,7 +268,7 @@ fn start_tornado_events_watcher(
     tokio::task::spawn(task);
     Ok(())
 }
-/// Starts the event watcher for DKG events.
+/// Starts the event watcher for Anchor events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
 ///
@@ -276,7 +278,7 @@ fn start_tornado_events_watcher(
 /// * `config` - Anchor contract configuration
 /// * `client` - DKG client
 /// * `store` -[Sled](https://sled.rs)-based database store
-async fn start_anchor_over_dkg_events_watcher(
+async fn start_anchor_events_watcher(
     ctx: &RelayerContext,
     config: &AnchorContractConfig,
     client: Arc<Client>,
@@ -284,7 +286,7 @@ async fn start_anchor_over_dkg_events_watcher(
 ) -> anyhow::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
-            "Anchor Over DKG events watcher is disabled for ({}).",
+            "Anchor events watcher is disabled for ({}).",
             config.common.address,
         );
         return Ok(());
@@ -294,44 +296,101 @@ async fn start_anchor_over_dkg_events_watcher(
         ctx.config.clone(), // the original config to access all networks.
         client.clone(),
     );
-
-    let dkg_client = ctx
-        .substrate_provider::<subxt::DefaultConfig>(&config.dkg_node)
-        .await?;
-    let pair = ctx.substrate_wallet(&config.dkg_node).await?;
     let mut shutdown_signal = ctx.shutdown_signal();
     let contract_address = config.common.address;
+    let my_ctx = ctx.clone();
+    let signing_backend = config.signing_backend.clone();
     let task = async move {
         tracing::debug!(
-            "Anchor Over DKG events watcher for ({}) Started.",
+            "Anchor events watcher for ({}) Started.",
             contract_address,
         );
-        let watcher =
-            AnchorWatcherOverDKG::new(dkg_client, PairSigner::new(pair));
         let leaves_watcher = AnchorLeavesWatcher::default();
         let anchor_leaves_watcher =
             leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
-        let anchor_over_dkg_watcher_task = watcher.run(client, store, wrapper);
-        tokio::select! {
-            _ = anchor_over_dkg_watcher_task => {
-                tracing::warn!(
-                    "Anchor over dkg watcher task stopped for ({})",
-                    contract_address,
-                );
-            },
-            _ = anchor_leaves_watcher => {
-                tracing::warn!(
-                    "Anchor leaves watcher stopped for ({})",
-                    contract_address,
-                );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping Anchor watcher for ({})",
-                    contract_address,
-                );
-            },
-        }
+        match signing_backend {
+            SigningBackendConfig::DkgNode(c) => {
+                let dkg_client = my_ctx
+                    .substrate_provider::<subxt::DefaultConfig>(&c.node)
+                    .await?;
+                let pair = my_ctx.substrate_wallet(&c.node).await?;
+                let backend =
+                    DkgSigningBackend::new(dkg_client, PairSigner::new(pair));
+                let watcher = AnchorWatcher::new(backend);
+                let anchor_watcher_task = watcher.run(client, store, wrapper);
+                tokio::select! {
+                    _ = anchor_watcher_task => {
+                        tracing::warn!(
+                            "Anchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = anchor_leaves_watcher => {
+                        tracing::warn!(
+                            "Anchor leaves watcher stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Anchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
+            }
+            SigningBackendConfig::Mocked(c) => {
+                let chain_id = client.get_chainid().await?;
+                let signature_bridge_address = my_ctx
+                    .config
+                    .evm
+                    .values()
+                    .find(|c| c.chain_id == chain_id.as_u64())
+                    .and_then(|c| {
+                        c.contracts.iter().find(|contract| {
+                            matches!(contract, Contract::SignatureBridge(_))
+                        })
+                    })
+                    .and_then(|contract| match contract {
+                        Contract::SignatureBridge(bridge) => Some(bridge),
+                        _ => None,
+                    })
+                    .map(|config| config.common.address)
+                    .ok_or(anyhow::anyhow!(
+                        "No SignatureBridge contract found"
+                    ))?;
+                let backend = MockedSigningBackend::builder()
+                    .store(store.clone())
+                    .private_key(c.private_key)
+                    .chain_id(chain_id.as_u64())
+                    .signature_bridge_address(signature_bridge_address)
+                    .build();
+                let watcher = AnchorWatcher::new(backend);
+                let anchor_watcher_task = watcher.run(client, store, wrapper);
+                tokio::select! {
+                    _ = anchor_watcher_task => {
+                        tracing::warn!(
+                            "Anchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = anchor_leaves_watcher => {
+                        tracing::warn!(
+                            "Anchor leaves watcher stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Anchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
+            }
+        };
+
+        Result::<_, anyhow::Error>::Ok(())
     };
     // kick off the watcher.
     tokio::task::spawn(task);
