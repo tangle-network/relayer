@@ -65,7 +65,7 @@ describe('Substrate Transaction Relayer', function () {
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
-      ports: 'auto'
+      ports: 'auto',
     });
 
     await aliceNode.writeConfig({
@@ -126,7 +126,7 @@ describe('Substrate Transaction Relayer', function () {
     const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(charlie.address);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
-    expect(balanceAfterWithdraw).to.be.gt(initialBalance);
+    expect(balanceAfterWithdraw > initialBalance);
   });
 
   after(async () => {
