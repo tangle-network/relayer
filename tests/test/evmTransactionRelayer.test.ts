@@ -31,9 +31,8 @@ describe('EVM Transaction Relayer', function () {
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
   const PK2 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
-  const tmp = temp.track();
 
-  const tmpDirPath = tmp.mkdirSync();
+  const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
   let signatureBridge: Bridges.SignatureBridge;
@@ -207,9 +206,8 @@ describe('EVM Transaction Relayer', function () {
   });
 
   after(async () => {
-    await localChain1.stop();
-    await localChain2.stop();
-    await webbRelayer.stop();
-    tmp.cleanupSync(); // clean up the temp dir.
+    await localChain1?.stop();
+    await localChain2?.stop();
+    await webbRelayer?.stop();
   });
 });

@@ -3,5 +3,8 @@
   "extensions": ["ts"],
   "spec": ["**/*.test.*"],
   "exit": true,
-  "ignore": ["node_modules/**"]
+  "ignore": ["node_modules/**"],
+  "slow": 120000,
+  "timeout": 120000,
+  "retries": 5
 }
