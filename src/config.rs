@@ -321,9 +321,9 @@ pub struct AnchorContractConfig {
     /// Anchor withdraw configuration.
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
-    /// The type of the Siging backend used for signing proposals.
-    #[serde(rename(serialize = "signingBackend"))]
-    pub signing_backend: SigningBackendConfig,
+    /// The type of the signing backend used for signing proposals.
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: ProposalSigningBackendConfig,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
@@ -369,18 +369,18 @@ pub struct DKGProposalHandlerPalletConfig {
 /// Enumerates the supported different signing backends configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
-pub enum SigningBackendConfig {
+pub enum ProposalSigningBackendConfig {
     /// Uses an already running and configured DKG Node for signing proposals.
     #[serde(rename = "DKGNode")]
-    DkgNode(DkgNodeSigningBackendConfig),
+    DkgNode(DkgNodeProposalSigningBackendConfig),
     /// Uses the Private Key of the current Governor to sign proposals.
-    Mocked(MockedSigningBackendConfig),
+    Mocked(MockedProposalSigningBackendConfig),
 }
 
 /// DKGNodeSigningBackendConfig represents the configuration for the DKGNode signing backend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct DkgNodeSigningBackendConfig {
+pub struct DkgNodeProposalSigningBackendConfig {
     /// The name of the DKG Node that this contract will use.
     ///
     /// Must be defined in the config.
@@ -390,7 +390,7 @@ pub struct DkgNodeSigningBackendConfig {
 /// MockedSigningBackendConfig represents the configuration for the Mocked signing backend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct MockedSigningBackendConfig {
+pub struct MockedProposalSigningBackendConfig {
     /// The private key of the current Governor.
     #[serde(skip_serializing)]
     pub private_key: PrivateKey,

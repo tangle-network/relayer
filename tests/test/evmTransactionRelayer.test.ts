@@ -97,11 +97,11 @@ describe('EVM Transaction Relayer', function () {
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
-      signingBackend: { type: 'Mocked', privateKey: PK1 },
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
-      signingBackend: { type: 'Mocked', privateKey: PK2 },
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
     });
 
     // get the anhor on localchain1
@@ -176,7 +176,7 @@ describe('EVM Transaction Relayer', function () {
     );
 
     const relayerInfo = await webbRelayer.info();
-    const localChain1Info = relayerInfo.evm[localChain1.underlayingChainId];
+    const localChain1Info = relayerInfo.evm[localChain1.underlyingChainId];
     const relayerFeePercentage =
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
@@ -197,7 +197,7 @@ describe('EVM Transaction Relayer', function () {
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
-      localChain1.underlayingChainId.toString(),
+      localChain1.underlyingChainId.toString(),
       anchor1.getAddress(),
       proofEncoded,
       publicInputs,

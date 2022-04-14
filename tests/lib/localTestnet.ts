@@ -18,12 +18,7 @@ import fs from 'fs';
 import ganache from 'ganache';
 import { ethers } from 'ethers';
 import { Server } from 'ganache';
-import {
-  Anchors,
-  Bridges,
-  Interfaces,
-  Utility,
-} from '@webb-tools/protocol-solidity';
+import { Bridges, Utility } from '@webb-tools/protocol-solidity';
 import {
   BridgeInput,
   DeployerConfig,
@@ -37,7 +32,7 @@ import {
   ChainInfo,
   Contract,
   EventsWatcher,
-  SigningBackend,
+  ProposalSigningBackend,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
 
@@ -48,7 +43,7 @@ export type GanacheAccounts = {
 
 export type ExportedConfigOptions = {
   signatureBridge?: Bridges.SignatureBridge;
-  signingBackend: SigningBackend;
+  proposalSigningBackend: ProposalSigningBackend;
 };
 
 export function startGanacheServer(
@@ -66,9 +61,11 @@ export function startGanacheServer(
   });
 
   ganacheServer.listen(port).then(() => {
-    process.stdout.write(
-      `Ganache(${networkId}) Started on http://127.0.0.1:${port} ..\n`
-    );
+    if (options.enableLogging) {
+      process.stdout.write(
+        `Ganache(${networkId}) Started on http://127.0.0.1:${port} ..\n`
+      );
+    }
   });
 
   return ganacheServer;
@@ -79,6 +76,7 @@ type LocalChainOpts = {
   port: number;
   chainId: number;
   populatedAccounts: GanacheAccounts[];
+  enableLogging?: boolean;
 };
 
 export class LocalChain {
@@ -90,7 +88,10 @@ export class LocalChain {
     this.server = startGanacheServer(
       opts.port,
       opts.chainId,
-      opts.populatedAccounts
+      opts.populatedAccounts,
+      {
+        enableLogging: opts.enableLogging,
+      }
     );
   }
 
@@ -102,7 +103,7 @@ export class LocalChain {
     return Utility.getChainIdType(this.opts.chainId);
   }
 
-  public get underlayingChainId(): number {
+  public get underlyingChainId(): number {
     return this.opts.chainId;
   }
 
@@ -218,7 +219,7 @@ export class LocalChain {
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
-      chainId: this.underlayingChainId,
+      chainId: this.underlyingChainId,
       beneficiary: wallet.address,
       privateKey: wallet.privateKey,
       contracts: [
@@ -229,11 +230,11 @@ export class LocalChain {
           deployedAt: 1,
           size: 1, // Ethers
           withdrawFeePercentage: 0,
-          signingBackend: opts.signingBackend,
+          proposalSigningBackend: opts.proposalSigningBackend,
           eventsWatcher: {
             enabled: true,
             pollingInterval: 1000,
-            printProgressInterval: 20_000,
+            printProgressInterval: 60_000,
           },
           linkedAnchors: await Promise.all(
             otherAnchors.map(async (anchor) => ({
@@ -249,7 +250,7 @@ export class LocalChain {
           eventsWatcher: {
             enabled: true,
             pollingInterval: 1000,
-            printProgressInterval: 20_000,
+            printProgressInterval: 60_000,
           },
         },
       ],
@@ -265,10 +266,10 @@ export class LocalChain {
     // don't mind my typescript typing here XD
     type ConvertedContract = Omit<
       ConvertToKebabCase<Contract>,
-      'events-watcher' | 'signing-backend'
+      'events-watcher' | 'proposal-signing-backend'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
-      'signing-backend'?: ConvertToKebabCase<SigningBackend>;
+      'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -295,16 +296,16 @@ export class LocalChain {
         address: contract.address,
         'deployed-at': contract.deployedAt,
         size: contract.size,
-        'signing-backend':
-          contract.signingBackend?.type === 'Mocked'
+        'proposal-signing-backend':
+          contract.proposalSigningBackend?.type === 'Mocked'
             ? {
                 type: 'Mocked',
-                'private-key': contract.signingBackend?.privateKey,
+                'private-key': contract.proposalSigningBackend?.privateKey,
               }
-            : contract.signingBackend?.type === 'DKGNode'
+            : contract.proposalSigningBackend?.type === 'DKGNode'
             ? {
                 type: 'DKGNode',
-                node: contract.signingBackend?.node,
+                node: contract.proposalSigningBackend?.node,
               }
             : undefined,
         'withdraw-gaslimit': '0x5B8D80',
@@ -320,7 +321,7 @@ export class LocalChain {
     };
     const fullConfigFile: FullConfigFile = {
       evm: {
-        [this.underlayingChainId]: convertedConfig,
+        [this.underlyingChainId]: convertedConfig,
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);

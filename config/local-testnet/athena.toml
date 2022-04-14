@@ -16,7 +16,7 @@ withdraw-gaslimit = "0x350000"
 linked-anchors = [
   { chain = "hermes", address = "0xD24260C102B5D128cbEFA0F655E5be3c2370677C" },
 ]
-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
+proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
 
 [[evm.athena.contracts]]
 contract = "SignatureBridge"

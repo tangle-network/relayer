@@ -16,7 +16,7 @@ withdraw-gaslimit = "0x350000"
 linked-anchors = [
   { chain = "athena", address = "0xD30C8839c1145609E564b986F667b273Ddcb8496" },
 ]
-signing-backend = { type = "DKGNode", node = "dkg-local" }
+proposal-signing-backend = { type = "DKGNode", node = "dkg-local" }
 
 [[evm.hermes.contracts]]
 contract = "SignatureBridge"

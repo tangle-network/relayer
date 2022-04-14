@@ -8,7 +8,8 @@ type DkgConfig = subxt::DefaultConfig;
 type DkgRuntimeApi =
     dkg_runtime::api::RuntimeApi<DkgConfig, subxt::DefaultExtra<DkgConfig>>;
 
-pub struct DkgSigningBackend<R, C>
+/// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
+pub struct DkgProposalSigningBackend<R, C>
 where
     R: From<subxt::Client<C>>,
     C: subxt::Config,
@@ -17,7 +18,7 @@ where
     pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
 }
 
-impl<R, C> DkgSigningBackend<R, C>
+impl<R, C> DkgProposalSigningBackend<R, C>
 where
     R: From<subxt::Client<C>>,
     C: subxt::Config,
@@ -34,8 +35,8 @@ where
 }
 
 #[async_trait::async_trait]
-impl super::SigningBackend<AnchorUpdateProposal>
-    for DkgSigningBackend<DkgRuntimeApi, DkgConfig>
+impl super::ProposalSigningBackend<AnchorUpdateProposal>
+    for DkgProposalSigningBackend<DkgRuntimeApi, DkgConfig>
 {
     async fn can_handle_proposal(
         &self,
@@ -75,7 +76,7 @@ impl super::SigningBackend<AnchorUpdateProposal>
     }
 }
 
-impl DkgSigningBackend<DkgRuntimeApi, DkgConfig> {
+impl DkgProposalSigningBackend<DkgRuntimeApi, DkgConfig> {
     async fn handle_anchor_update_proposal(
         &self,
         proposal: &AnchorUpdateProposal,

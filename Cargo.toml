@@ -42,7 +42,7 @@ hex = { version = "0.4", default-features = false }
 # until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
 native-tls = { version = "^0.2", features = ["vendored"] }
 webb = { version = "0.3.0", default-features = false }
-webb-proposals = { version = "0.2.0", default-features = false, features = [
+webb-proposals = { version = "0.2.2", default-features = false, features = [
   "scale",
 ] }
 scale = { package = "parity-scale-codec", version = "2.3.0", default-features = false }

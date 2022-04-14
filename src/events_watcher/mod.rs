@@ -73,7 +73,7 @@ mod signature_bridge_watcher;
 pub use signature_bridge_watcher::*;
 
 #[doc(hidden)]
-pub mod signing_backend;
+pub mod proposal_signing_backend;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {

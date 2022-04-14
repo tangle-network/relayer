@@ -26,22 +26,24 @@ use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 
 use crate::config;
-use crate::events_watcher::signing_backend::SigningBackend;
+use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::LeafCacheStore;
 
 type HttpProvider = providers::Provider<providers::Http>;
-/// Represents an Anchor Contract Watcher which will use the DKG Substrate nodes for signing.
+/// Represents an Anchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct AnchorWatcher<B> {
-    signing_backend: B,
+    proposal_signing_backend: B,
 }
 
 impl<B> AnchorWatcher<B>
 where
-    B: SigningBackend<webb_proposals::AnchorUpdateProposal>,
+    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>,
 {
-    pub fn new(signing_backend: B) -> Self {
-        Self { signing_backend }
+    pub fn new(proposal_signing_backend: B) -> Self {
+        Self {
+            proposal_signing_backend,
+        }
     }
 }
 
@@ -119,7 +121,9 @@ pub struct AnchorLeavesWatcher;
 #[async_trait::async_trait]
 impl<B> super::EventWatcher for AnchorWatcher<B>
 where
-    B: SigningBackend<webb_proposals::AnchorUpdateProposal> + Send + Sync,
+    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>
+        + Send
+        + Sync,
 {
     const TAG: &'static str = "Anchor Watcher";
     type Middleware = HttpProvider;
@@ -179,10 +183,14 @@ where
                 leaf_index,
                 root,
             );
-            let can_sign_proposal =
-                self.signing_backend.can_handle_proposal(&proposal).await?;
+            let can_sign_proposal = self
+                .proposal_signing_backend
+                .can_handle_proposal(&proposal)
+                .await?;
             if can_sign_proposal {
-                self.signing_backend.handle_proposal(&proposal).await?;
+                self.proposal_signing_backend
+                    .handle_proposal(&proposal)
+                    .await?;
             } else {
                 tracing::warn!(
                     "Anchor update proposal is not supported by the signing backend"
