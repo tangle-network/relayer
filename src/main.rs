@@ -115,6 +115,8 @@ mod service;
 mod store;
 /// A module for managing the transaction queue for the relayer.
 mod tx_queue;
+/// Transaction relaying handlers
+mod tx_relay;
 /// A module for common functionality.
 mod utils;
 /// Package identifier, where the default configuration & database are defined.
