@@ -44,14 +44,14 @@ describe('Substrate Transaction Relayer', function () {
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
-      ports: 'auto',
+      ports: 'auto'
     });
 
     bobNode = await LocalProtocolSubstrate.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
-      ports: 'auto',
+      ports: 'auto'
     });
 
     await aliceNode.writeConfig({
@@ -71,8 +71,10 @@ describe('Substrate Transaction Relayer', function () {
   });
 
   it('Simple Mixer Transaction', async () => {
-    const withdrawalProof = await initWithdrawal(aliceNode, webbRelayer, '//Charlie');
     const api = await aliceNode.api();
+    const account = createAccount('//Charlie');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
     // get the initial balance
     // @ts-ignore
     let { nonce, data: balance } = await api.query.system.account(withdrawalProof.recipient);
@@ -101,7 +103,10 @@ describe('Substrate Transaction Relayer', function () {
   });
 
   it('Should fail to withdraw if address is invalid', async () => {
-    const withdrawalProof = await initWithdrawal(aliceNode, webbRelayer, '//Dave');
+    const api = await aliceNode.api();
+    const account = createAccount('//Dave');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
 
     const invalidAddress = "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy";
 
@@ -124,20 +129,29 @@ describe('Substrate Transaction Relayer', function () {
 
       // Expect an error to be thrown
       expect(e).to.not.be.null
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain("Runtime error: RuntimeError(Module { index: 40, error: 1 }");
     }
   });
 
   it('Should fail to withdraw if proof is invalid', async () => {
-    const withdrawalProof = await initWithdrawal(aliceNode, webbRelayer, '//Eve');
+    const api = await aliceNode.api();
+    const account = createAccount('//Eve');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
 
-    const invalidProofByte = "0x4243ba7b4f0fc4aac6e6d02f0810a8413df56269d6407786192f8d5da8dc32880acca580f677896ebba7704aec84ba5cfd634af254995cdc985bf2c26b5f43171f365b3b8e03fc833e67e6640e9a7e048e62ce4982d39b23d091cd00a584679f34142063ce11555a21d150c38d144109e21f09d6761c939c8462ab72ae0b420e";
+    const proofBytes = hexToU8a(withdrawalProof.proofBytes);
+    proofBytes[1] |= 0x42;
+    const invalidProofBytes = u8aToHex(proofBytes);
+    expect(withdrawalProof.proofBytes).to.not.eq(invalidProofBytes);
+
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
         chain: aliceNode.name,
         id: withdrawalProof.id,
-        proof: Array.from(hexToU8a(invalidProofByte)),
+        proof: Array.from(hexToU8a(invalidProofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
         nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
         refund: withdrawalProof.refund,
@@ -150,11 +164,16 @@ describe('Substrate Transaction Relayer', function () {
 
       // Expect an error to be thrown
       expect(e).to.not.be.null
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain("Runtime error: RuntimeError(Module { index: 40, error: 1 }");
     }
   });
 
   it('Should fail to withdraw if fee is not expected', async () => {
-    const withdrawalProof = await initWithdrawal(aliceNode, webbRelayer, '//Ferdie');
+    const api = await aliceNode.api();
+    const account = createAccount('//Ferdie');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
 
     const invalidFee = 100;
 
@@ -177,6 +196,8 @@ describe('Substrate Transaction Relayer', function () {
 
       // Expect an error to be thrown
       expect(e).to.not.be.null
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain("Runtime error: RuntimeError(Module { index: 40, error: 1 }");
     }
   });
 
@@ -220,8 +241,8 @@ async function createMixerDepositTx(api: ApiPromise): Promise<{
 type WithdrawalOpts = {
   relayer: string;
   recipient: string;
-  fee: number;
-  refund: number;
+  fee?: number;
+  refund?: number;
 };
 
 type WithdrawalProof = {
@@ -278,8 +299,8 @@ async function createMixerWithdrawProof(
       recipient: recipientAddressHex,
       leaves: treeLeaves,
       leafIndex,
-      fee: opts.fee,
-      refund: opts.refund,
+      fee: opts.fee === undefined ? 0 : opts.fee,
+      refund: opts.refund === undefined ? 0 : opts.refund,
       provingKey,
     };
     const zkProof = await pm.proof(proofInput);
@@ -290,8 +311,8 @@ async function createMixerWithdrawProof(
       nullifierHash: `0x${zkProof.nullifierHash}`,
       recipient: opts.recipient,
       relayer: opts.relayer,
-      fee: opts.fee,
-      refund: opts.refund,
+      fee: opts.fee === undefined ? 0 : opts.fee,
+      refund: opts.refund === undefined ? 0 : opts.refund,
     };
   } catch (error) {
     //@ts-ignore
@@ -302,21 +323,29 @@ async function createMixerWithdrawProof(
   }
 }
 
-async function initWithdrawal(aliceNode: any, webbRelayer: any, accountId: string): Promise<WithdrawalProof> {
-  const api = await aliceNode.api();
-  const { tx, note } = await createMixerDepositTx(api);
+function createAccount(accountId: string): any {
   const keyring = new Keyring({ type: 'sr25519' });
   const account = keyring.addFromUri(accountId);
+
+  return account;
+}
+
+async function makeDeposit(api: any, aliceNode: any, account: any):  Promise<any> {
+  const { tx, note } = await createMixerDepositTx(api);
+
   // send the deposit transaction.
   const txSigned = tx.sign(account);
   await aliceNode.executeTransaction(txSigned);
+
+  return note;
+}
+
+async function initWithdrawal(api: any, webbRelayer: any, account: any, note: any): Promise<WithdrawalProof> {
   // next we need to prepare the withdrawal transaction.
   // create correct proof with right address
   const withdrawalProof = await createMixerWithdrawProof(api, note, {
     recipient: account.address,
     relayer: account.address,
-    fee: 200,
-    refund: 200,
   });
   // ping the relayer!
   await webbRelayer.ping();
