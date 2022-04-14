@@ -92,10 +92,10 @@ export class WebbRelayer {
     return response.json() as Promise<WebbRelayerInfo>;
   }
 
-  public async get_leafs(id:number,address:string){
+  public async get_leafs(id:string,address:string):Promise<LeavesCacheResponse>{
     const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/${id}/${address}`;
     const response = await fetch(endpoint);
-    return response.json();
+    return response.json() as Promise<LeavesCacheResponse>
   }
 
   public async stop(): Promise<void> {
@@ -400,6 +400,11 @@ export type EventSelector = {
 export interface WebbRelayerInfo {
   evm: Evm;
   substrate: Substrate;
+}
+
+export interface LeavesCacheResponse {
+  leaves: [string],
+  last_queried_block: string,
 }
 
 export interface Evm {

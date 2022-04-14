@@ -108,7 +108,7 @@ describe('Relayer Lear Api', function () {
       populatedAccounts: [
         {
           secretKey: PK1,
-          balance: ethers.utils.parseEther('1000').toHexString(),
+          balance: ethers.utils.parseEther('10000').toHexString(),
         },
       ],
     });
@@ -124,7 +124,7 @@ describe('Relayer Lear Api', function () {
       populatedAccounts: [
         {
           secretKey: PK2,
-          balance: ethers.utils.parseEther('1000').toHexString(),
+          balance: ethers.utils.parseEther('10000').toHexString(),
         },
       ],
     });
@@ -204,7 +204,7 @@ describe('Relayer Lear Api', function () {
       wallet1
     );
     await token.approveSpending(anchor.contract.address);
-    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('10000'));
 
     // do the same but on localchain2
     const anchor2 = signatureBridge.getAnchor(
@@ -221,7 +221,7 @@ describe('Relayer Lear Api', function () {
     );
 
     await token2.approveSpending(anchor2.contract.address);
-    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
+    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('10000'));
 
     const api = await charlieNode.api();
     const resourceId1 = await anchor.createResourceId();
@@ -265,11 +265,14 @@ describe('Relayer Lear Api', function () {
     );
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt()).to.equal(
-      ethers.utils.parseEther('1000').toBigInt()
+      ethers.utils.parseEther('10000').toBigInt()
     );
     // now we are ready to do the deposit.
-     
-    await anchor1.deposit(localChain2.chainId);
+    const noOfDeposit = 5;
+    for (let i = 0, len = noOfDeposit; i<len; i++){
+      await anchor1.deposit(localChain2.chainId);
+    }
+    
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
@@ -285,12 +288,10 @@ describe('Relayer Lear Api', function () {
       },
     });
     
-    
-    var chain_id = localChain2.chainId;
-    console.log("this is chainid : {} ",chain_id);
-    const leaf_nodes = await webbRelayer.get_leafs(chain_id,"0x94b245f372b1179c87f1a006de7194ef2ef970af");
-    console.log("leaf nodes *** : ",leaf_nodes);
-    
+    var chain_id = localChain1.chainId.toString(16);
+    // relayer leaf API
+    const leaf_nodes = await webbRelayer.get_leafs(chain_id,anchor1.contract.address);
+    expect(noOfDeposit).to.equal(leaf_nodes["leaves"].length);
     
   });
 
