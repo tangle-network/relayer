@@ -72,21 +72,9 @@ describe('Substrate Transaction Relayer', function () {
 
   it('Simple Mixer Transaction', async () => {
     const api = await aliceNode.api();
-    const { tx, note } = await createMixerDepositTx(api);
-    const keyring = new Keyring({ type: 'sr25519' });
-    const charlie = keyring.addFromUri('//Charlie');
-    // send the deposit transaction.
-    const txSigned = await tx.signAsync(charlie);
-    await aliceNode.executeTransaction(txSigned);
-    // next we need to prepare the withdrawal transaction.
-    const withdrawalProof = await createMixerWithdrawProof(api, note, {
-      recipient: charlie.address,
-      relayer: charlie.address,
-      fee: 0,
-      refund: 0,
-    });
-    // ping the relayer!
-    await webbRelayer.ping();
+    const account = createAccount('//Dave');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
 
     // get the initial balance
     // @ts-ignore
@@ -347,7 +335,7 @@ async function makeDeposit(api: any, aliceNode: any, account: any):  Promise<any
   const { tx, note } = await createMixerDepositTx(api);
 
   // send the deposit transaction.
-  const txSigned = tx.sign(account);
+  const txSigned = await tx.signAsync(account);
   await aliceNode.executeTransaction(txSigned);
 
   return note;
