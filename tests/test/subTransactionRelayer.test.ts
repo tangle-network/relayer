@@ -65,16 +65,29 @@ describe('Substrate Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
 
   it('Simple Mixer Transaction', async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Charlie');
-    const note = await makeDeposit(api, aliceNode, account);
-    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
+    const { tx, note } = await createMixerDepositTx(api);
+    const keyring = new Keyring({ type: 'sr25519' });
+    const charlie = keyring.addFromUri('//Charlie');
+    // send the deposit transaction.
+    const txSigned = await tx.signAsync(charlie);
+    await aliceNode.executeTransaction(txSigned);
+    // next we need to prepare the withdrawal transaction.
+    const withdrawalProof = await createMixerWithdrawProof(api, note, {
+      recipient: charlie.address,
+      relayer: charlie.address,
+      fee: 0,
+      refund: 0,
+    });
+    // ping the relayer!
+    await webbRelayer.ping();
+
     // get the initial balance
     // @ts-ignore
     let { nonce, data: balance } = await api.query.system.account(withdrawalProof.recipient);

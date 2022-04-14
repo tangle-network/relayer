@@ -168,15 +168,16 @@ The table below documents all the configuration options available for both chain
 
 #### Contract Configuration
 
-| Field                     | Description                                                                                                                                                   | Optionality |
-| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `contract`                | Chain contract. Must be either: </br> - Anchor (tornado protocol) </br> - Anchor2 (darkwebb protocol) </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required    |
-| `address`                 | The address of this contract on this chain.                                                                                                                   | Required    |
-| `deployed-at`             | The block number where this contract got deployed at.                                                                                                         | Required    |
-| `size`                    | The size of this contract. **Note**: only available for `Anchor` and `Anchor2` contracts.                                                                     | Optional    |
-| `events-watcher`          | Control the events watcher for this contract.                                                                                                                 | Optional    |
-| `withdraw-fee-percentage` | The fee percentage that your account will receive when you relay a transaction over this chain.                                                               | Optional    |
-| `withdraw-gaslimit`       | A hex value of the gaslimit when doing a withdraw relay transaction on this chain.                                                                            | Optional    |
+| Field                      | Description                                                                                                                                                   | Optionality                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| `contract`                 | Chain contract. Must be either: </br> - Anchor (tornado protocol) </br> - Anchor2 (darkwebb protocol) </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required                           |
+| `address`                  | The address of this contract on this chain.                                                                                                                   | Required                           |
+| `deployed-at`              | The block number where this contract got deployed at.                                                                                                         | Required                           |
+| `size`                     | The size of this contract. **Note**: only available for `Anchor` and `Anchor2` contracts.                                                                     | Optional                           |
+| `events-watcher`           | Control the events watcher for this contract.                                                                                                                 | Optional                           |
+| `withdraw-fee-percentage`  | The fee percentage that your account will receive when you relay a transaction over this chain.                                                               | Optional                           |
+| `withdraw-gaslimit`        | A hex value of the gaslimit when doing a withdraw relay transaction on this chain.                                                                            | Optional                           |
+| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`)                                                                    | Required if the contract is Anchor |
 
 ### Docker 🐳
 
@@ -288,6 +289,14 @@ cargo test
 2. Run `cd tests && git submodule update --init --recursive`
 3. Run `yarn install` (in `tests` dir)
 4. `yarn test`
+
+### Tips for E2E tests
+
+1. If you want to run a specific test run `yarn test -fgrep <UNIQUE_PART_OF_TEST_NAME>`.
+2. If you want to make the tests fail fast (fail on first error) run `yarn test --bail`.
+3. by default, tests runs in parallel, to disable that run `yarn test --parallel=false`.
+4. failing tests will keep retry before giving up, up to 5 times. To disable that use `yarn test --retries=0`.
+5. You can combine all the tips above together, for more options see [here](https://mochajs.org/#command-line-usage)
 
 For the Substrate Mixer test, you can connect to your local chain manually by:
 

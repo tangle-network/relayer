@@ -229,6 +229,7 @@ pub struct EventsWatcherConfig {
     #[serde(skip_serializing, default = "print_progress_interval_default")]
     pub print_progress_interval: u64,
 }
+
 /// AnchorWithdrawConfig is the configuration for the Anchor Withdraw.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -241,6 +242,7 @@ pub struct AnchorWithdrawConfig {
     #[serde(skip_serializing)]
     pub withdraw_gaslimit: U256,
 }
+
 /// LinkedAnchorConfig is the configuration for the linked anchor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -251,6 +253,7 @@ pub struct LinkedAnchorConfig {
     /// The Anchor Contract Address.
     pub address: Address,
 }
+
 /// Enumerates the supported contract configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
@@ -260,6 +263,7 @@ pub enum Contract {
     SignatureBridge(SignatureBridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
+
 /// Enumerates the supported pallets configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "pallet")]
@@ -267,6 +271,7 @@ pub enum Pallet {
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
 }
+
 /// Enumerates the supported Substrate runtimes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SubstrateRuntime {
@@ -274,6 +279,7 @@ pub enum SubstrateRuntime {
     Dkg,
     WebbProtocol,
 }
+
 /// CommonContractConfig represents the common configuration for contracts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -284,6 +290,7 @@ pub struct CommonContractConfig {
     #[serde(rename(serialize = "deployedAt"))]
     pub deployed_at: u64,
 }
+
 /// TornadoContractConfig represents the configuration for the Tornado contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -314,14 +321,14 @@ pub struct AnchorContractConfig {
     /// Anchor withdraw configuration.
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
-    /// The name of the DKG node that this contract will use.
-    ///
-    /// Must be defined in the config.
-    pub dkg_node: String,
+    /// The type of the signing backend used for signing proposals.
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: ProposalSigningBackendConfig,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
 }
+
 /// GovernanceBravoDelegateContractConfig represents the configuration for the GovernanceBravoDelegate contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -340,6 +347,7 @@ pub struct GovernanceBravoDelegateContractConfig {
     pub common: CommonContractConfig,
     // TODO(@shekohex): add more fields here...
 }
+
 /// DKGProposalsPalletConfig represents the configuration for the DKGProposals pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -348,6 +356,7 @@ pub struct DKGProposalsPalletConfig {
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }
+
 /// DKGProposalHandlerPalletConfig represents the configuration for the DKGProposalHandler pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -356,6 +365,37 @@ pub struct DKGProposalHandlerPalletConfig {
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }
+
+/// Enumerates the supported different signing backends configurations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum ProposalSigningBackendConfig {
+    /// Uses an already running and configured DKG Node for signing proposals.
+    #[serde(rename = "DKGNode")]
+    DkgNode(DkgNodeProposalSigningBackendConfig),
+    /// Uses the Private Key of the current Governor to sign proposals.
+    Mocked(MockedProposalSigningBackendConfig),
+}
+
+/// DKGNodeSigningBackendConfig represents the configuration for the DKGNode signing backend.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct DkgNodeProposalSigningBackendConfig {
+    /// The name of the DKG Node that this contract will use.
+    ///
+    /// Must be defined in the config.
+    pub node: String,
+}
+
+/// MockedSigningBackendConfig represents the configuration for the Mocked signing backend.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct MockedProposalSigningBackendConfig {
+    /// The private key of the current Governor.
+    #[serde(skip_serializing)]
+    pub private_key: PrivateKey,
+}
+
 /// PrivateKey represents a private key.
 #[derive(Clone)]
 pub struct PrivateKey(Secret);
