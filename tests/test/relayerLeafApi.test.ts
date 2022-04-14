@@ -28,7 +28,7 @@ import getPort, { portNumbers } from 'get-port';
 import { LocalDkg } from '../lib/localDkg.js';
 import isCi from 'is-ci';
 import path from 'path';
-import { ethAddressFromUncompressedPublicKey,getChainIdType } from '../lib/ethHelperFunctions.js';
+import { ethAddressFromUncompressedPublicKey} from '../lib/ethHelperFunctions.js';
 import { UsageMode } from '../lib/substrateNodeBase.js';
 
 // to support chai-as-promised
