@@ -61,8 +61,10 @@ export class WebbRelayer {
         },
       }
     );
-    // log that we started
-    process.stdout.write(`Webb relayer started on port ${this.opts.port}\n`);
+    if (this.opts.showLogs) {
+      // log that we started
+      process.stdout.write(`Webb relayer started on port ${this.opts.port}\n`);
+    }
     this.#process.stdout
       ?.pipe(JSONStream.parse())
       .on('data', (parsedLog: UnparsedRawEvent) => {
@@ -80,9 +82,11 @@ export class WebbRelayer {
       });
 
     this.#process.on('close', (code) => {
-      process.stdout.write(
-        `Relayer ${this.opts.port} exited with code: ${code}\n`
-      );
+      if (this.opts.showLogs) {
+        process.stdout.write(
+          `Relayer ${this.opts.port} exited with code: ${code}\n`
+        );
+      }
     });
   }
 
@@ -280,8 +284,8 @@ async function txHashOrReject(
           refreshCommitment: extData._refreshCommitment,
           recipient: extData._recipient,
           relayer: extData._relayer,
-          fee: extData._fee,
-          refund: extData._refund,
+          fee: BigNumber.from(extData._fee).toHexString(),
+          refund: BigNumber.from(extData._refund).toHexString(),
         },
       },
     };
@@ -415,7 +419,7 @@ export interface Contract {
   size?: number;
   withdrawGaslimit?: `0x${string}`;
   withdrawFeePercentage?: number;
-  'dkg-node'?: any;
+  proposalSigningBackend?: ProposalSigningBackend;
   linkedAnchors?: LinkedAnchor[];
 }
 
@@ -452,6 +456,18 @@ type ContractKind =
   | 'GovernanceBravoDelegate';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind = 'DKGProposals' | 'DKGProposalHandler';
+
+export type DKGProposalSigningBackend = {
+  type: 'DKGNode';
+  node: string;
+}; /** DKG Node name in the config */
+export type MockedProposalSigningBackend = {
+  type: 'Mocked';
+  privateKey: string;
+}; /** Signer private key */
+export type ProposalSigningBackend =
+  | DKGProposalSigningBackend
+  | MockedProposalSigningBackend;
 
 type PongMessage = {
   kind: 'pong';
@@ -499,9 +515,6 @@ type ParsedRelayerMessage =
   | UnimplementedMessage
   | { kind: 'unknown' };
 
-export type DKGSigningBackend = string; /** DKG Node name in the config */
-export type MockedSigningBackend = { signer: string }; /** Signer private key */
-export type SigningBackend = DKGSigningBackend | MockedSigningBackend;
 function parseRelayTxMessage(o: any): ParsedRelayerMessage {
   if (o.pong) {
     return { kind: 'pong' };
