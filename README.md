@@ -38,31 +38,39 @@
 
 <h2 id="start"> Getting Started  🎉 </h2>
 
-In the Webb Protocol, the relayer is a multi-faceted oracle, data relayer, and protocol governance participant. Relayers fulfill the role of an oracle where the external data sources that they listen to are the state of the anchors for a bridge. Relayers, as their name entails, relay information for a connected set of Anchors on a bridge. This information is then used to update the state of each Anchor and allow applications to reference, both privately and potentially not, properties of data stored across the other connected Anchors.
+In the Webb Protocol, the relayer plays a variety of roles. This repo contains code for an Anchor Protcol oracle, transaction and data relayer, and protocol governance participant. The aim is that these can all be run exclusive to one another to ensure maximum flexibility of external participants to the Webb Protocol.
 
 The relayer system is composed of three main components. Each of these components should be thought of as entirely separate because they could be handled by different entities entirely.
 
 1. Private transaction relaying (of user bridge transactions like Tornado Cash’s relayer)
 2. Data querying (for zero-knowledge proof generation)
-3. Data proposing and signature relaying (of DKG proposals)
+3. Event listening, proposing, and signature relaying (of DKG proposals where the relayer acts like an oracle)
+
+#### Transaction relaying role
+Relayers who fulfill the role of a transaction relayer are responsible with exposing an API for clients who wish to relay their zero-knowledge transactions through and with submitting them. Relayers of this role must possess enough balance on the blockchains in which they will relay these transactions, since, after all, they must possess the native balance to pay the fees for these transactions. Relayers can be configured for any number of chains and protocols from mixers to variable anchors and run for individual chains or all of them that exist for a given bridged set of anchors.
+
+#### Data querying role
+Relayers who fulfill this role do so in conjunction with the transaction relaying role although it is not required to possess both. Namely, this role is concerned with listening to the events occurring within an Anchor Protocol instance and storing the data for clients who wish to quickly access it through traditional HTTP methods. This role is actively maintained and sees regular updates to how we hope to store and serve data in the future.
+
+#### Oracle role
+Relayers who fulfill the role of an oracle listen to the Anchor Protocol instances on the various chains the anchors exist on. When they hear of insertions into the anchors' merkle trees they handle them accordingly (as is implemented in the event watchers). Those playing this role then relay the anchor update information to other connected Anchors, the DKG governance system, and any other integration that gets implemented in this repo. Oracle relayers help keep the state of an Anchor Protocol instance up to date by ensuring that all anchors within an instance know about the latest state of their neighboring anchors.
 
 For additional information, please refer to the [Webb Relayer Rust Docs](https://webb-tools.github.io/relayer/) 📝. Have feedback on how to improve the relayer network? Or have a specific question to ask? Checkout the [Relayer Feedback Discussion](https://github.com/webb-tools/feedback/discussions/categories/webb-relayer-feedback) 💬.
 
 ### Top-level directory layout
 
 ```
-src/
-  |____tx_queue.rs          # A queue for orderly handling of transactions.
-  |____handler.rs           # Logic for what to do when a client is interacting with this relayer.
-  |____config.rs            # Functionality related to parsing of configurable values.
-  |____events_watcher       # Sync to different network types (EVM, Substrate), and act on different events.
-  |____service.rs           # The entry for tasks once the relayer is operating.
-  |____main.rs              # Build and start the relayer.
-  |____probe.rs             # Debugging relayer lifecycle, sync state, or other relayer state.
-  |____utils.rs             # Common functionality.
-  |____context.rs           # Access the parsed configuration and generate providers and wallets.
-  |____store                # Logic for storing information with different backends.
-
+├── config.rs               # Functionality related to parsing of configurable values.
+├── context.rs              # Access the parsed configuration and generate providers and wallets.
+├── events_watcher          # Sync to different network types (EVM, Substrate), and act on different events.
+├── handler.rs              # Logic for what to do when a client is interacting with this relayer.
+├── main.rs                 # Build and start the relayer.
+├── probe.rs                # Debugging relayer lifecycle, sync state, or other relayer state.
+├── service.rs              # The entry for tasks once the relayer is operating.
+├── store                   # Logic for storing information with different backends.
+├── tx_queue.rs             # A queue for orderly handling of transactions.
+├── tx_relay                # Transaction relay handlers for different chains and protocols
+└── utils.rs                # Common functionality.
 ```
 
 ### Prerequisites
