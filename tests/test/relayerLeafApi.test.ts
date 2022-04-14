@@ -28,13 +28,13 @@ import getPort, { portNumbers } from 'get-port';
 import { LocalDkg } from '../lib/localDkg.js';
 import isCi from 'is-ci';
 import path from 'path';
-import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
+import { ethAddressFromUncompressedPublicKey,getChainIdType } from '../lib/ethHelperFunctions.js';
 import { UsageMode } from '../lib/substrateNodeBase.js';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe.skip('Signature Bridge <> DKG', function () {
+describe('Relayer Lear Api', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
@@ -245,7 +245,7 @@ describe.skip('Signature Bridge <> DKG', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should handle AnchorUpdateProposal when a deposit happens', async () => {
+  it('no of leaf node should be equal to no of deposits', async () => {
     // we will use chain1 as an example here.
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
@@ -268,6 +268,7 @@ describe.skip('Signature Bridge <> DKG', function () {
       ethers.utils.parseEther('1000').toBigInt()
     );
     // now we are ready to do the deposit.
+     
     await anchor1.deposit(localChain2.chainId);
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
@@ -283,22 +284,14 @@ describe.skip('Signature Bridge <> DKG', function () {
         finalized: true,
       },
     });
-    // all is good, last thing is to check for the roots.
-    const srcChainRoot = await anchor1.contract.getLastRoot();
-    const neigborRoots = await anchor2.contract.getLatestNeighborRoots();
-    const edges = await anchor2.contract.getLatestNeighborEdges();
-    const isKnownNeighborRoot = neigborRoots.some(
-      (root: string) => root === srcChainRoot
-    );
-    if (!isKnownNeighborRoot) {
-      console.log({
-        srcChainRoot,
-        neigborRoots,
-        edges,
-        isKnownNeighborRoot,
-      });
-    }
-    expect(isKnownNeighborRoot).to.be.true;
+    
+    
+    var chain_id = localChain2.chainId;
+    console.log("this is chainid : {} ",chain_id);
+    const leaf_nodes = await webbRelayer.get_leafs(chain_id,"0x94b245f372b1179c87f1a006de7194ef2ef970af");
+    console.log("leaf nodes *** : ",leaf_nodes);
+    
+    
   });
 
   after(async () => {

@@ -92,6 +92,12 @@ export class WebbRelayer {
     return response.json() as Promise<WebbRelayerInfo>;
   }
 
+  public async get_leafs(id:number,address:string){
+    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/${id}/${address}`;
+    const response = await fetch(endpoint);
+    return response.json();
+  }
+
   public async stop(): Promise<void> {
     this.#process.kill('SIGINT');
   }
