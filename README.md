@@ -306,6 +306,27 @@ cargo test
 4. failing tests will keep retry before giving up, up to 5 times. To disable that use `yarn test --retries=0`.
 5. You can combine all the tips above together, for more options see [here](https://mochajs.org/#command-line-usage)
 
+For the Substrate Mixer test, you can connect to your local chain manually by:
+
+1. Specifying the Alice node ports such as:
+   ```
+       const aliceManualPorts = {
+          ws: 9944,
+          http: 9933,
+          p2p: 30333
+       }
+   ```
+2. Specifying the Bob node ports such as:
+    ```
+        const bobManualPorts = {
+           ws: 9945,
+           http: 9934,
+           p2p: 30334
+        }
+    ```
+3. Make the `ports` property value be the `aliceManualPorts` and `bobManualPorts` respectively in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start() function`    
+4. Specifying and setting `isManual` flag  to true in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start() function`
+
 ## Contributing
 
 Interested in contributing to the Webb Relayer Network? Thank you so much for your interest! We are always appreciative for contributions from the open-source community!
