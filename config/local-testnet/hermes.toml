@@ -16,9 +16,10 @@ withdraw-gaslimit = "0x350000"
 linked-anchors = [
   { chain = "athena", address = "0xD30C8839c1145609E564b986F667b273Ddcb8496" },
 ]
+proposal-signing-backend = { type = "DKGNode", node = "dkg-local" }
 
 [[evm.hermes.contracts]]
-contract = "Bridge"
+contract = "SignatureBridge"
 address = "0xDe09E74d4888Bc4e65F589e8c13Bce9F71DdF4c7"
 deployed-at = 1
 events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 0 }

@@ -21,6 +21,7 @@
 //! Services are tasks which the relayer constantly runs throughout its lifetime.
 //! Services handle keeping up to date with the configured chains.
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use ethereum_types::U256;
@@ -32,6 +33,7 @@ use webb::substrate::subxt::PairSigner;
 
 use crate::config::*;
 use crate::context::RelayerContext;
+use crate::events_watcher::proposal_signing_backend::*;
 use crate::events_watcher::*;
 use crate::tx_queue::TxQueue;
 /// Type alias for providers
@@ -86,7 +88,7 @@ pub async fn ignite(
                     )?;
                 }
                 Contract::Anchor(config) => {
-                    start_anchor_over_dkg_events_watcher(
+                    start_anchor_events_watcher(
                         ctx,
                         config,
                         client.clone(),
@@ -266,7 +268,7 @@ fn start_tornado_events_watcher(
     tokio::task::spawn(task);
     Ok(())
 }
-/// Starts the event watcher for DKG events.
+/// Starts the event watcher for Anchor events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
 ///
@@ -276,7 +278,7 @@ fn start_tornado_events_watcher(
 /// * `config` - Anchor contract configuration
 /// * `client` - DKG client
 /// * `store` -[Sled](https://sled.rs)-based database store
-async fn start_anchor_over_dkg_events_watcher(
+async fn start_anchor_events_watcher(
     ctx: &RelayerContext,
     config: &AnchorContractConfig,
     client: Arc<Client>,
@@ -284,7 +286,7 @@ async fn start_anchor_over_dkg_events_watcher(
 ) -> anyhow::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
-            "Anchor Over DKG events watcher is disabled for ({}).",
+            "Anchor events watcher is disabled for ({}).",
             config.common.address,
         );
         return Ok(());
@@ -294,44 +296,158 @@ async fn start_anchor_over_dkg_events_watcher(
         ctx.config.clone(), // the original config to access all networks.
         client.clone(),
     );
-
-    let dkg_client = ctx
-        .substrate_provider::<subxt::DefaultConfig>(&config.dkg_node)
-        .await?;
-    let pair = ctx.substrate_wallet(&config.dkg_node).await?;
     let mut shutdown_signal = ctx.shutdown_signal();
     let contract_address = config.common.address;
+    let my_ctx = ctx.clone();
+    let my_config = config.clone();
+    let proposal_signing_backend = config.proposal_signing_backend.clone();
     let task = async move {
         tracing::debug!(
-            "Anchor Over DKG events watcher for ({}) Started.",
+            "Anchor events watcher for ({}) Started.",
             contract_address,
         );
-        let watcher =
-            AnchorWatcherOverDKG::new(dkg_client, PairSigner::new(pair));
         let leaves_watcher = AnchorLeavesWatcher::default();
         let anchor_leaves_watcher =
             leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
-        let anchor_over_dkg_watcher_task = watcher.run(client, store, wrapper);
-        tokio::select! {
-            _ = anchor_over_dkg_watcher_task => {
-                tracing::warn!(
-                    "Anchor over dkg watcher task stopped for ({})",
-                    contract_address,
+        // we need to check/match on the proposal signing backend configured for this anchor.
+        match proposal_signing_backend {
+            ProposalSigningBackendConfig::DkgNode(c) => {
+                // if it is the dkg backend, we will need to connect to that node first,
+                // and then use the DkgProposalSigningBackend to sign the proposal.
+                let dkg_client = my_ctx
+                    .substrate_provider::<subxt::DefaultConfig>(&c.node)
+                    .await?;
+                let pair = my_ctx.substrate_wallet(&c.node).await?;
+                let backend = DkgProposalSigningBackend::new(
+                    dkg_client,
+                    PairSigner::new(pair),
                 );
-            },
-            _ = anchor_leaves_watcher => {
-                tracing::warn!(
-                    "Anchor leaves watcher stopped for ({})",
-                    contract_address,
-                );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping Anchor watcher for ({})",
-                    contract_address,
-                );
-            },
-        }
+                let watcher = AnchorWatcher::new(backend);
+                let anchor_watcher_task = watcher.run(client, store, wrapper);
+                tokio::select! {
+                    _ = anchor_watcher_task => {
+                        tracing::warn!(
+                            "Anchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = anchor_leaves_watcher => {
+                        tracing::warn!(
+                            "Anchor leaves watcher stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Anchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
+            }
+            ProposalSigningBackendConfig::Mocked(_) => {
+                // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
+                // which is a bit simpler than the DkgProposalSigningBackend.
+                // get only the linked chains to that anchor.
+                let linked_chains =
+                    my_config.linked_anchors.iter().flat_map(|c| {
+                        my_ctx
+                            .config
+                            .evm
+                            .get(&c.chain)
+                            .map(|chain_config| (chain_config, c.address))
+                    });
+                // then will have to go through our configruation to retrieve the correct
+                // signature bridges that are configrued on the linked chains.
+                // Note: this assumes that every network will only have one signature bridge configured for it.
+                let signature_bridges = linked_chains
+                    .flat_map(|(chain_config, address)| {
+                        // find the first signature bridge configured on that chain.
+                        let maybe_signature_bridge =
+                            chain_config.contracts.iter().find(|contract| {
+                                matches!(contract, Contract::SignatureBridge(_))
+                            });
+                        // also find the first the other anchor contract configured on that chain.
+                        // but this time with its address.
+                        let maybe_anchor_contract = chain_config
+                            .contracts
+                            .iter()
+                            .find(|contract| match contract {
+                                Contract::Anchor(c) => {
+                                    c.common.address == address
+                                }
+                                _ => false,
+                            });
+                        // if we found both, we will return the signature bridge and the anchor contract a long with chain config.
+                        maybe_signature_bridge.and_then(|bridge| {
+                            maybe_anchor_contract.map(|anchor| {
+                                (bridge, anchor.clone(), chain_config)
+                            })
+                        })
+                    })
+                    .map(|(bridge_contract, anchor_contract, chain_config)| {
+                        let bridge_config = match bridge_contract {
+                            Contract::SignatureBridge(c) => c,
+                            _ => unreachable!(),
+                        };
+                        let anchor_config = match anchor_contract {
+                            Contract::Anchor(c) => c,
+                            _ => unreachable!(),
+                        };
+                        (bridge_config, anchor_config, chain_config)
+                    })
+                    .flat_map(|(bridge_config, anchor_config, chain_config)| {
+                        // first things first we need the private key of the govenor of the signature bridge.
+                        // which is in the anchor config.
+                        let private_key =
+                            match anchor_config.proposal_signing_backend {
+                                ProposalSigningBackendConfig::Mocked(v) => {
+                                    v.private_key
+                                }
+                                _ => return None,
+                            };
+                        // then we just create the signature bridge metadata.
+                        let chain_id = webb_proposals::TypedChainId::Evm(
+                            chain_config.chain_id as u32,
+                        );
+                        let metadata = SignatureBridgeMetadata {
+                            address: bridge_config.common.address,
+                            chain_id,
+                            private_key,
+                        };
+                        Some((chain_id, metadata))
+                    })
+                    .collect::<HashMap<_, _>>();
+                let backend = MockedProposalSigningBackend::builder()
+                    .store(store.clone())
+                    .signature_bridges(signature_bridges)
+                    .build();
+                let watcher = AnchorWatcher::new(backend);
+                let anchor_watcher_task = watcher.run(client, store, wrapper);
+                tokio::select! {
+                    _ = anchor_watcher_task => {
+                        tracing::warn!(
+                            "Anchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = anchor_leaves_watcher => {
+                        tracing::warn!(
+                            "Anchor leaves watcher stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Anchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
+            }
+        };
+
+        Result::<_, anyhow::Error>::Ok(())
     };
     // kick off the watcher.
     tokio::task::spawn(task);

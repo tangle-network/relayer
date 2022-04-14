@@ -25,16 +25,14 @@ import { LocalChain } from '../lib/localTestnet.js';
 import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 
-// @FIXME: this needs a mocked signing backend to be implemented first.
-describe.skip('EVM Transaction Relayer', function () {
+describe('EVM Transaction Relayer', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
   const PK2 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
-  const tmp = temp.track();
 
-  const tmpDirPath = tmp.mkdirSync();
+  const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
   let signatureBridge: Bridges.SignatureBridge;
@@ -55,7 +53,7 @@ describe.skip('EVM Transaction Relayer', function () {
       populatedAccounts: [
         {
           secretKey: PK1,
-          balance: ethers.utils.parseEther('1000').toHexString(),
+          balance: ethers.utils.parseEther('5').toHexString(),
         },
       ],
     });
@@ -70,7 +68,7 @@ describe.skip('EVM Transaction Relayer', function () {
       populatedAccounts: [
         {
           secretKey: PK2,
-          balance: ethers.utils.parseEther('1000').toHexString(),
+          balance: ethers.utils.parseEther('5').toHexString(),
         },
       ],
     });
@@ -97,16 +95,14 @@ describe.skip('EVM Transaction Relayer', function () {
       wallet2
     );
     // save the chain configs.
-    await localChain1.writeConfig(
-      `${tmpDirPath}/${localChain1.name}.json`,
+    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
-      /** Signing Backend */ 'none'
-    );
-    await localChain2.writeConfig(
-      `${tmpDirPath}/${localChain2.name}.json`,
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+    });
+    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
-      /** Signing Backend */ 'none'
-    );
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
+    });
 
     // get the anhor on localchain1
     const anchor = signatureBridge.getAnchor(
@@ -123,7 +119,7 @@ describe.skip('EVM Transaction Relayer', function () {
       wallet1
     );
     await token.approveSpending(anchor.contract.address);
-    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('5'));
 
     // do the same but on localchain2
     const anchor2 = signatureBridge.getAnchor(
@@ -140,7 +136,7 @@ describe.skip('EVM Transaction Relayer', function () {
     );
 
     await token2.approveSpending(anchor2.contract.address);
-    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
+    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('5'));
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
@@ -148,7 +144,7 @@ describe.skip('EVM Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -167,10 +163,11 @@ describe.skip('EVM Transaction Relayer', function () {
       tokenAddress,
       wallet1
     );
+    // mint tokins to the account everytime.
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('5'));
     const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt()).to.equal(
-      ethers.utils.parseEther('1000').toBigInt()
-    );
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
     // now we are ready to do the deposit.
     const depositInfo = await anchor1.deposit(localChain1.chainId);
     const recipient = new ethers.Wallet(
@@ -179,12 +176,12 @@ describe.skip('EVM Transaction Relayer', function () {
     );
 
     const relayerInfo = await webbRelayer.info();
-    const localChain1Info = relayerInfo.evm[localChain1.chainId];
+    const localChain1Info = relayerInfo.evm[localChain1.underlyingChainId];
     const relayerFeePercentage =
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
       )?.withdrawFeePercentage ?? 0;
-    const withdrawalInfo = await anchor1.setupWithdraw(
+    const { args, publicInputs, extData } = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
       recipient.address,
@@ -195,24 +192,23 @@ describe.skip('EVM Transaction Relayer', function () {
       ).toBigInt(),
       0
     );
-
+    const [proofEncoded, roots, nullifierHash, extDataHash] = args;
     // ping the relayer!
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
-      localChain1.chainId.toString(),
+      localChain1.underlyingChainId.toString(),
       anchor1.getAddress(),
-      `0x${withdrawalInfo.proofEncoded}`,
-      withdrawalInfo.publicInputs,
-      withdrawalInfo.extData
+      proofEncoded,
+      publicInputs,
+      extData
     );
     expect(txHash).to.be.string;
   });
 
   after(async () => {
-    await localChain1.stop();
-    await localChain2.stop();
-    await webbRelayer.stop();
-    tmp.cleanupSync(); // clean up the temp dir.
+    await localChain1?.stop();
+    await localChain2?.stop();
+    await webbRelayer?.stop();
   });
 });

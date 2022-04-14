@@ -65,7 +65,7 @@ describe('Substrate Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -76,7 +76,7 @@ describe('Substrate Transaction Relayer', function () {
     const keyring = new Keyring({ type: 'sr25519' });
     const charlie = keyring.addFromUri('//Charlie');
     // send the deposit transaction.
-    const txSigned = tx.sign(charlie);
+    const txSigned = await tx.signAsync(charlie);
     await aliceNode.executeTransaction(txSigned);
     // next we need to prepare the withdrawal transaction.
     const withdrawalProof = await createMixerWithdrawProof(api, note, {

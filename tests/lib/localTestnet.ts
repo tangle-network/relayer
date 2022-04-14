@@ -18,7 +18,7 @@ import fs from 'fs';
 import ganache from 'ganache';
 import { ethers } from 'ethers';
 import { Server } from 'ganache';
-import { Bridges, Interfaces } from '@webb-tools/protocol-solidity';
+import { Bridges, Utility } from '@webb-tools/protocol-solidity';
 import {
   BridgeInput,
   DeployerConfig,
@@ -32,13 +32,18 @@ import {
   ChainInfo,
   Contract,
   EventsWatcher,
-  SigningBackend,
+  ProposalSigningBackend,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
 
 export type GanacheAccounts = {
   balance: string;
   secretKey: string;
+};
+
+export type ExportedConfigOptions = {
+  signatureBridge?: Bridges.SignatureBridge;
+  proposalSigningBackend: ProposalSigningBackend;
 };
 
 export function startGanacheServer(
@@ -56,7 +61,11 @@ export function startGanacheServer(
   });
 
   ganacheServer.listen(port).then(() => {
-    process.stdout.write(`Ganache Started on http://127.0.0.1:${port} ..\n`);
+    if (options.enableLogging) {
+      process.stdout.write(
+        `Ganache(${networkId}) Started on http://127.0.0.1:${port} ..\n`
+      );
+    }
   });
 
   return ganacheServer;
@@ -67,18 +76,22 @@ type LocalChainOpts = {
   port: number;
   chainId: number;
   populatedAccounts: GanacheAccounts[];
+  enableLogging?: boolean;
 };
 
 export class LocalChain {
   public readonly endpoint: string;
   private readonly server: Server<'ethereum'>;
   private signatureBridge: Bridges.SignatureBridge | null = null;
-  constructor(public readonly opts: LocalChainOpts) {
+  constructor(private readonly opts: LocalChainOpts) {
     this.endpoint = `http://127.0.0.1:${opts.port}`;
     this.server = startGanacheServer(
       opts.port,
       opts.chainId,
-      opts.populatedAccounts
+      opts.populatedAccounts,
+      {
+        enableLogging: opts.enableLogging,
+      }
     );
   }
 
@@ -87,6 +100,10 @@ export class LocalChain {
   }
 
   public get chainId(): number {
+    return Utility.getChainIdType(this.opts.chainId);
+  }
+
+  public get underlyingChainId(): number {
     return this.opts.chainId;
   }
 
@@ -122,27 +139,27 @@ export class LocalChain {
     const bridgeInput: BridgeInput = {
       anchorInputs: {
         asset: {
-          [this.opts.chainId]: [localToken.contract.address],
-          [otherChain.opts.chainId]: [otherToken.contract.address],
+          [this.chainId]: [localToken.contract.address],
+          [otherChain.chainId]: [otherToken.contract.address],
         },
         anchorSizes: [ethers.utils.parseEther('1')],
       },
-      chainIDs: [this.opts.chainId, otherChain.opts.chainId],
+      chainIDs: [this.chainId, otherChain.chainId],
     };
     const deployerConfig: DeployerConfig = {
-      [this.opts.chainId]: localWallet,
-      [otherChain.opts.chainId]: otherWallet,
+      [this.chainId]: localWallet,
+      [otherChain.chainId]: otherWallet,
     };
     const initialGovernors: GovernorConfig = {
-      [this.opts.chainId]: localWallet,
-      [otherChain.opts.chainId]: otherWallet,
+      [this.chainId]: localWallet,
+      [otherChain.chainId]: otherWallet,
     };
     // copy the witness_calculator.js file to @webb-tools/utils, but use the .cjs extension
     // to avoid the babel compiler to compile it.
     const witnessCalculatorPath = path.join(
       gitRoot,
       'tests',
-      'protocol-solidity-fixtures/fixtures/bridge/2/witness_calculator.js'
+      'protocol-solidity-fixtures/fixtures/anchor/2/witness_calculator.js'
     );
     const witnessCalculatorCjsPath = path.join(
       gitRoot,
@@ -157,13 +174,13 @@ export class LocalChain {
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/bridge/2/poseidon_bridge_2.wasm'
+        'protocol-solidity-fixtures/fixtures/anchor/2/poseidon_anchor_2.wasm'
       ),
       witnessCalculatorCjsPath,
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/bridge/2/circuit_final.zkey'
+        'protocol-solidity-fixtures/fixtures/anchor/2/circuit_final.zkey'
       )
     );
 
@@ -178,35 +195,31 @@ export class LocalChain {
   }
 
   public async exportConfig(
-    signatureBridge?: Bridges.SignatureBridge,
-    signingBackend?: SigningBackend
+    opts: ExportedConfigOptions
   ): Promise<FullChainInfo> {
-    const bridge = signatureBridge ?? this.signatureBridge;
+    const bridge = opts.signatureBridge ?? this.signatureBridge;
     if (!bridge) {
       throw new Error('Signature bridge not deployed yet');
     }
     const localAnchor = bridge.getAnchor(
-      this.opts.chainId,
+      this.chainId,
       ethers.utils.parseEther('1')
     );
-    const side = bridge.getBridgeSide(this.opts.chainId);
+    const side = bridge.getBridgeSide(this.chainId);
     const wallet = side.governor;
     const otherChainIds = Array.from(bridge.bridgeSides.keys()).filter(
-      (chainId) => chainId !== this.opts.chainId
+      (chainId) => chainId !== this.chainId
     );
-    const otherAnchors = otherChainIds.map(
-      (chainId) =>
-        [chainId, bridge.getAnchor(chainId, ethers.utils.parseEther('1'))] as [
-          number,
-          Interfaces.IAnchor
-        ]
+
+    const otherAnchors = otherChainIds.map((chainId) =>
+      bridge.getAnchor(chainId, ethers.utils.parseEther('1'))
     );
 
     const chainInfo: FullChainInfo = {
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
-      chainId: this.opts.chainId,
+      chainId: this.underlyingChainId,
       beneficiary: wallet.address,
       privateKey: wallet.privateKey,
       contracts: [
@@ -217,16 +230,18 @@ export class LocalChain {
           deployedAt: 1,
           size: 1, // Ethers
           withdrawFeePercentage: 0,
-          'dkg-node': signingBackend ?? undefined,
+          proposalSigningBackend: opts.proposalSigningBackend,
           eventsWatcher: {
             enabled: true,
             pollingInterval: 1000,
-            printProgressInterval: 20_000,
+            printProgressInterval: 60_000,
           },
-          linkedAnchors: otherAnchors.map(([chainId, anchor]) => ({
-            chain: chainId.toString(),
-            address: anchor.getAddress(),
-          })),
+          linkedAnchors: await Promise.all(
+            otherAnchors.map(async (anchor) => ({
+              chain: (await anchor.contract.getChainId()).toString(),
+              address: anchor.getAddress(),
+            }))
+          ),
         },
         {
           contract: 'SignatureBridge',
@@ -235,7 +250,7 @@ export class LocalChain {
           eventsWatcher: {
             enabled: true,
             pollingInterval: 1000,
-            printProgressInterval: 20_000,
+            printProgressInterval: 60_000,
           },
         },
       ],
@@ -245,16 +260,16 @@ export class LocalChain {
 
   public async writeConfig(
     path: string,
-    signatureBridge?: Bridges.SignatureBridge,
-    signingBackend?: SigningBackend
+    opts: ExportedConfigOptions
   ): Promise<void> {
-    const config = await this.exportConfig(signatureBridge, signingBackend);
+    const config = await this.exportConfig(opts);
     // don't mind my typescript typing here XD
     type ConvertedContract = Omit<
       ConvertToKebabCase<Contract>,
-      'events-watcher'
+      'events-watcher' | 'proposal-signing-backend'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
+      'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -281,7 +296,18 @@ export class LocalChain {
         address: contract.address,
         'deployed-at': contract.deployedAt,
         size: contract.size,
-        'dkg-node': contract['dkg-node'],
+        'proposal-signing-backend':
+          contract.proposalSigningBackend?.type === 'Mocked'
+            ? {
+                type: 'Mocked',
+                'private-key': contract.proposalSigningBackend?.privateKey,
+              }
+            : contract.proposalSigningBackend?.type === 'DKGNode'
+            ? {
+                type: 'DKGNode',
+                node: contract.proposalSigningBackend?.node,
+              }
+            : undefined,
         'withdraw-gaslimit': '0x5B8D80',
         'withdraw-fee-percentage': contract.withdrawFeePercentage,
         'events-watcher': {
@@ -295,7 +321,7 @@ export class LocalChain {
     };
     const fullConfigFile: FullConfigFile = {
       evm: {
-        [this.opts.chainId]: convertedConfig,
+        [this.underlyingChainId]: convertedConfig,
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);

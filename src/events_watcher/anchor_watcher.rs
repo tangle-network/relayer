@@ -18,56 +18,36 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use ethereum_types::H256;
-use futures::StreamExt;
 use webb::evm::contract::protocol_solidity::{
     FixedDepositAnchorContract, FixedDepositAnchorContractEvents,
 };
 use webb::evm::ethers::prelude::{Contract, LogMeta, Middleware};
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, Nonce, ResourceId};
-use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
-use webb::substrate::{dkg_runtime, subxt};
 
 use crate::config;
+use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::LeafCacheStore;
 
 type HttpProvider = providers::Provider<providers::Http>;
-/// Represents an Anchor Contract Watcher which will use the DKG Substrate nodes for signing.
-pub struct AnchorWatcher<R, C>
-where
-    R: From<subxt::Client<C>>,
-    C: subxt::Config,
-{
-    api: R,
-    pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
+/// Represents an Anchor Contract Watcher which will use a configured signing backend for signing proposals.
+pub struct AnchorWatcher<B> {
+    proposal_signing_backend: B,
 }
 
-impl<R, C> AnchorWatcher<R, C>
+impl<B> AnchorWatcher<B>
 where
-    R: From<subxt::Client<C>>,
-    C: subxt::Config,
+    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>,
 {
-    /// Creates a new AnchorWatcherWithSubstrate.
-    pub fn new(
-        client: subxt::Client<C>,
-        pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
-    ) -> Self {
+    pub fn new(proposal_signing_backend: B) -> Self {
         Self {
-            api: client.to_runtime_api(),
-            pair,
+            proposal_signing_backend,
         }
     }
 }
 
-type DKGConfig = subxt::DefaultConfig;
-type DKGRuntimeApi =
-    dkg_runtime::api::RuntimeApi<DKGConfig, subxt::DefaultExtra<DKGConfig>>;
-/// Type alias for the AnchorWatcherWithSubstrate.
-pub type AnchorWatcherOverDKG = AnchorWatcher<DKGRuntimeApi, DKGConfig>;
-
-/// AnchorContractOverDKGWrapper contains FixedDepositAnchorContract contract along with configurations for Anchor contract over DKG, and Relayer.  
+/// AnchorContractWrapper contains FixedDepositAnchorContract contract along with configurations for Anchor contract, and Relayer.
 #[derive(Clone, Debug)]
 pub struct AnchorContractWrapper<M>
 where
@@ -139,7 +119,12 @@ where
 pub struct AnchorLeavesWatcher;
 
 #[async_trait::async_trait]
-impl super::EventWatcher for AnchorWatcherOverDKG {
+impl<B> super::EventWatcher for AnchorWatcher<B>
+where
+    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>
+        + Send
+        + Sync,
+{
     const TAG: &'static str = "Anchor Watcher";
     type Middleware = HttpProvider;
 
@@ -187,33 +172,6 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
                 webb_proposals::TypedChainId::Evm(dest_chain.chain_id as _);
             let resource_id =
                 webb_proposals::ResourceId::new(target_system, typed_chain_id);
-            // first we need to do some checks before sending the proposal.
-            // 1. check if the origin_chain_id is whitleisted.
-            let storage_api = self.api.storage().dkg_proposals();
-            let maybe_whitelisted = storage_api
-                .chain_nonces(TypedChainId::Evm(src_chain_id.as_u32()), None)
-                .await?;
-            if maybe_whitelisted.is_none() {
-                // chain is not whitelisted.
-                tracing::warn!(
-                    "chain {} is not whitelisted, skipping proposal",
-                    src_chain_id
-                );
-                continue;
-            }
-            // 2. check for the resource id if it exists or not.
-            // if not, we need to skip the proposal.
-            let maybe_resource_id = storage_api
-                .resources(ResourceId(resource_id.into_bytes()), None)
-                .await?;
-            if maybe_resource_id.is_none() {
-                // resource id doesn't exist.
-                tracing::warn!(
-                    "resource id 0x{} doesn't exist, skipping proposal",
-                    hex::encode(resource_id.into_bytes())
-                );
-                continue;
-            }
             let header = webb_proposals::ProposalHeader::new(
                 resource_id,
                 function_signature.into(),
@@ -225,28 +183,18 @@ impl super::EventWatcher for AnchorWatcherOverDKG {
                 leaf_index,
                 root,
             );
-            let tx_api = self.api.tx().dkg_proposals();
-            tracing::debug!(
-                %leaf_index,
-                resource_id = ?hex::encode(resource_id.into_bytes()),
-                proposal = ?proposal,
-                "sending proposal",
-            );
-            let xt = tx_api.acknowledge_proposal(
-                Nonce(leaf_index),
-                TypedChainId::Evm(src_chain_id.as_u32()),
-                ResourceId(resource_id.into_bytes()),
-                proposal.to_bytes().into(),
-            );
-            let signer = &self.pair;
-            let mut progress = xt.sign_and_submit_then_watch(signer).await?;
-            while let Some(event) = progress.next().await {
-                match event {
-                    Ok(status) => {
-                        tracing::debug!(?status, "tx event")
-                    }
-                    Err(error) => tracing::error!(%error, "tx event error"),
-                }
+            let can_sign_proposal = self
+                .proposal_signing_backend
+                .can_handle_proposal(&proposal)
+                .await?;
+            if can_sign_proposal {
+                self.proposal_signing_backend
+                    .handle_proposal(&proposal)
+                    .await?;
+            } else {
+                tracing::warn!(
+                    "Anchor update proposal is not supported by the signing backend"
+                );
             }
         }
         Ok(())
