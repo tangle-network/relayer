@@ -293,7 +293,7 @@ cargo test
 
 ### To run E2E tests
 
-1. Run `cargo build --release --features integration-tests`
+1. Run `cargo build --features integration-tests`
 2. Run `cd tests && git submodule update --init --recursive`
 3. Run `yarn install` (in `tests` dir)
 4. `yarn test`
