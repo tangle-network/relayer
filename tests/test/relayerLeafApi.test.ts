@@ -14,32 +14,25 @@
  * limitations under the License.
  *
  */
-// A simple test for the Signature Bridge with the Relayer and the DKG.
+// This our basic EVM Transaction Relayer Tests.
+// These are for testing the basic relayer functionality. which is just relay transactions for us.
 
-import Chai, { expect } from 'chai';
-import ChaiAsPromised from 'chai-as-promised';
+import { expect } from 'chai';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
-import { ethers } from 'ethers';
+import { ethers} from 'ethers';
 import temp from 'temp';
-import retry from 'async-retry';
 import { LocalChain } from '../lib/localTestnet.js';
-import { WebbRelayer } from '../lib/webbRelayer.js';
+import {WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { LocalDkg } from '../lib/localDkg.js';
-import isCi from 'is-ci';
-import path from 'path';
-import { ethAddressFromUncompressedPublicKey} from '../lib/ethHelperFunctions.js';
-import { UsageMode } from '../lib/substrateNodeBase.js';
 
-// to support chai-as-promised
-Chai.use(ChaiAsPromised);
 
-describe('Relayer Lear Api', function () {
+describe('Relayer Leaf Api', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
   const PK2 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
+
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -47,60 +40,13 @@ describe('Relayer Lear Api', function () {
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
 
-  // dkg nodes
-  let aliceNode: LocalDkg;
-  let bobNode: LocalDkg;
-  let charlieNode: LocalDkg;
-
   let webbRelayer: WebbRelayer;
 
   before(async () => {
-    const usageMode: UsageMode = isCi
-      ? { mode: 'docker', forcePullImage: false }
-      : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../dkg-substrate/target/release/dkg-standalone-node'
-          ),
-        };
-    aliceNode = await LocalDkg.start({
-      name: 'substrate-alice',
-      authority: 'alice',
-      usageMode,
-      ports: 'auto',
-    });
-
-    bobNode = await LocalDkg.start({
-      name: 'substrate-bob',
-      authority: 'bob',
-      usageMode,
-      ports: 'auto',
-    });
-
-    charlieNode = await LocalDkg.start({
-      name: 'substrate-charlie',
-      authority: 'charlie',
-      usageMode,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
-    await charlieNode.writeConfig({
-      path: `${tmpDirPath}/${charlieNode.name}.json`,
-      suri: '//Charlie',
-    });
-
-    // we need to wait until the public key is on chain.
-    await charlieNode.waitForEvent({
-      section: 'dkg',
-      method: 'PublicKeySubmitted',
-    });
-
-    // next we need to start local evm node.
+    // first we need to start local evm node.
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-
     localChain1 = new LocalChain({
       port: localChain1Port,
       chainId: 5001,
@@ -116,7 +62,6 @@ describe('Relayer Lear Api', function () {
     const localChain2Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-
     localChain2 = new LocalChain({
       port: localChain2Port,
       chainId: 5002,
@@ -151,44 +96,15 @@ describe('Relayer Lear Api', function () {
       wallet2
     );
     // save the chain configs.
-    await localChain1.writeConfig(
-      `${tmpDirPath}/${localChain1.name}.json`,
+    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
-      /** Signing Backend */ charlieNode.name
-    );
-    await localChain2.writeConfig(
-      `${tmpDirPath}/${localChain2.name}.json`,
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+    });
+    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
-      /** Signing Backend */ charlieNode.name
-    );
-    // fetch the dkg public key.
-    const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
-    expect(dkgPublicKey).to.not.be.null;
-    const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey!);
-    // verify the governor address is a valid ethereum address.
-    expect(ethers.utils.isAddress(governorAddress)).to.be.true;
-    // transfer ownership to the DKG.
-    const sides = signatureBridge.bridgeSides.values();
-    for (const signatureSide of sides) {
-      const contract = signatureSide.contract;
-      // now we transferOwnership, forcefully.
-      const tx = await contract.transferOwnership(governorAddress, 1);
-      await retry(
-        async () => {
-          await tx.wait();
-        },
-        {
-          retries: 10,
-          minTimeout: 1000,
-          onRetry: (error) => {
-            console.error('transferOwnership retry', error);
-          },
-        }
-      );
-      // check that the new governor is the same as the one we just set.
-      const currentGovernor = await contract.governor();
-      expect(currentGovernor).to.eq(governorAddress);
-    }
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
+    });
+
     // get the anhor on localchain1
     const anchor = signatureBridge.getAnchor(
       localChain1.chainId,
@@ -223,82 +139,60 @@ describe('Relayer Lear Api', function () {
     await token2.approveSpending(anchor2.contract.address);
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('10000'));
 
-    const api = await charlieNode.api();
-    const resourceId1 = await anchor.createResourceId();
-    const resourceId2 = await anchor2.createResourceId();
-
-    const call = (resourceId: string) =>
-      api.tx.dkgProposals!.setResource!(resourceId, '0x00');
-    // register the resource on DKG node.
-    for (const rid of [resourceId1, resourceId2]) {
-      await charlieNode.sudoExecuteTransaction(call(rid));
-    }
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
-      verbosity: 3,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
 
-  it('no of leaf node should be equal to no of deposits', async () => {
-    // we will use chain1 as an example here.
+  it('no of deposits made should be equal to no of leafs in cache', async () => {
+    
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
       ethers.utils.parseEther('1')
     );
-    const anchor2 = signatureBridge.getAnchor(
-      localChain2.chainId,
-      ethers.utils.parseEther('1')
-    );
+    // set signer
     await anchor1.setSigner(wallet1);
     const tokenAddress = signatureBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
+    // get token
     const token = await Tokens.MintableToken.tokenFromAddress(
       tokenAddress,
       wallet1
     );
+    // check webbBalance
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt()).to.equal(
       ethers.utils.parseEther('10000').toBigInt()
     );
-    // now we are ready to do the deposit.
+    // Make multiple deposits
     const noOfDeposit = 5;
     for (let i = 0, len = noOfDeposit; i<len; i++){
       await anchor1.deposit(localChain2.chainId);
     }
-    
-    // wait until the signature bridge recives the execute call.
-    await webbRelayer.waitForEvent({
-      kind: 'signature_bridge',
-      event: { chain_id: localChain2.chainId.toString() },
-    });
-    // now we wait for the tx queue on that chain to execute the transaction.
+    // now we wait till transaction is added to tx_queue.
     await webbRelayer.waitForEvent({
       kind: 'tx_queue',
       event: {
         ty: 'EVM',
-        chain_id: localChain2.chainId.toString(),
-        finalized: true,
+        chain_id: localChain2.underlyingChainId.toString(),
+        pending: true,
       },
     });
-    
-    var chain_id = localChain1.chainId.toString(16);
-    // relayer leaf API
+    // now we call relayer leaf API to check no of leafs stored in LeafStorageCache
+    // are equal to no of deposits made.
+    const chain_id = localChain1.underlyingChainId.toString(16);
     const leaf_nodes = await webbRelayer.get_leafs(chain_id,anchor1.contract.address);
     expect(noOfDeposit).to.equal(leaf_nodes["leaves"].length);
-    
   });
 
   after(async () => {
-    await aliceNode?.stop();
-    await bobNode?.stop();
-    await charlieNode?.stop();
     await localChain1?.stop();
     await localChain2?.stop();
     await webbRelayer?.stop();
