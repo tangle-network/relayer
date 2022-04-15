@@ -178,7 +178,7 @@ The table below documents all the configuration options available for both chain
 
 | Field                      | Description                                                                                                                                                   | Optionality                        |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `contract`                 | Chain contract. Must be either: </br> - Anchor (tornado protocol) </br> - Anchor2 (darkwebb protocol) </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required                           |
+| `contract`                 | Chain contract. Must be either: </br> - Anchor (tornado protocol) </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required                           |
 | `address`                  | The address of this contract on this chain.                                                                                                                   | Required                           |
 | `deployed-at`              | The block number where this contract got deployed at.                                                                                                         | Required                           |
 | `size`                     | The size of this contract. **Note**: only available for `Anchor` and `Anchor2` contracts.                                                                     | Optional                           |
