@@ -96,6 +96,15 @@ export class WebbRelayer {
     return response.json() as Promise<WebbRelayerInfo>;
   }
 
+  public async getLeaves(
+    chainId: string,
+    contractAddress: string
+  ): Promise<LeavesCacheResponse> {
+    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/${chainId}/${contractAddress}`;
+    const response = await fetch(endpoint);
+    return response.json() as Promise<LeavesCacheResponse>;
+  }
+
   public async stop(): Promise<void> {
     this.#process.kill('SIGINT');
   }
@@ -387,7 +396,9 @@ type EventKind =
   | 'relay_tx'
   | 'signing_backend'
   | 'signature_bridge'
-  | 'tx_queue';
+  | 'tx_queue'
+  | 'leaves_store';
+
 type EventTarget = 'webb_probe';
 
 export type EventSelector = {
@@ -398,6 +409,11 @@ export type EventSelector = {
 export interface WebbRelayerInfo {
   evm: Evm;
   substrate: Substrate;
+}
+
+export interface LeavesCacheResponse {
+  leaves: [string];
+  last_queried_block: string;
 }
 
 export interface Evm {
