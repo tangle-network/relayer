@@ -181,6 +181,12 @@ describe('EVM Transaction Relayer', function () {
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
       )?.withdrawFeePercentage ?? 0;
+
+    // check balance of recipient before withdrawal
+    let webbBalanceOfRecipient = await token.getBalance(recipient.address);
+    let initialBalanceOfRecipient = webbBalanceOfRecipient.toBigInt();
+    console.log(`balance of recipient before withdrawal is ${initialBalanceOfRecipient}`);
+
     const { args, publicInputs, extData } = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
@@ -204,6 +210,14 @@ describe('EVM Transaction Relayer', function () {
       extData
     );
     expect(txHash).to.be.string;
+
+    webbBalanceOfRecipient = await token.getBalance(recipient.address);
+    let balanceOfRecipientAfterWithdraw = webbBalanceOfRecipient.toBigInt();
+    console.log(`balance of recipient after withdrawal is ${balanceOfRecipientAfterWithdraw}`);
+
+    // check that recipient balance has increased
+    expect(balanceOfRecipientAfterWithdraw > initialBalanceOfRecipient);
+
   });
 
   after(async () => {
