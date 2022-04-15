@@ -24,6 +24,8 @@ import temp from 'temp';
 import { LocalChain } from '../lib/localTestnet.js';
 import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
+import {IAnchor} from "@webb-tools/interfaces";
+import {IAnchorDeposit} from "@webb-tools/interfaces/src/anchor/index";
 
 describe('EVM Transaction Relayer', function () {
   this.timeout(120_000);
@@ -203,7 +205,7 @@ describe('EVM Transaction Relayer', function () {
   });
 });
 
-async function setUpAnchor(signatureBridge: any, chainId: number): Promise<any> {
+async function setUpAnchor(signatureBridge: Bridges.SignatureBridge, chainId: number): Promise<any> {
   const anchor1 = signatureBridge.getAnchor(
       chainId,
       ethers.utils.parseEther('1')
@@ -212,7 +214,7 @@ async function setUpAnchor(signatureBridge: any, chainId: number): Promise<any> 
   return anchor1;
 
 }
-async function makeDeposit(signatureBridge:any, anchor: any, wallet:any, chainId: number): Promise<any> {
+async function makeDeposit(signatureBridge: Bridges.SignatureBridge, anchor: IAnchor, wallet: ethers.Wallet, chainId: number): Promise<IAnchorDeposit> {
   await anchor.setSigner(wallet);
   const tokenAddress = signatureBridge.getWebbTokenAddress(
       chainId
@@ -233,7 +235,7 @@ async function makeDeposit(signatureBridge:any, anchor: any, wallet:any, chainId
   return depositInfo;
 }
 
-async function initWithdrawal(localChain: any, webbRelayer: any, anchor: any, wallet: any, depositInfo: any): Promise<any>{
+async function initWithdrawal(localChain: LocalChain, webbRelayer: WebbRelayer, anchor: IAnchor, wallet: ethers.Wallet, depositInfo: IAnchorDeposit): Promise<any>{
   const recipient = new ethers.Wallet(
       ethers.utils.randomBytes(32),
       localChain.provider()
