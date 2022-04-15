@@ -149,7 +149,7 @@ describe('EVM Transaction Relayer', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('no of deposits made should be equal to no of leaves in cache', async () => {
+  it('number of deposits made should be equal to number of leaves in cache', async () => {
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
       ethers.utils.parseEther('1')
@@ -160,7 +160,7 @@ describe('EVM Transaction Relayer', function () {
       localChain1.chainId
     )!;
     // get token
-    
+
     const token = await Tokens.MintableToken.tokenFromAddress(
       tokenAddress,
       wallet1
@@ -173,25 +173,25 @@ describe('EVM Transaction Relayer', function () {
       .be.true;
     // Make multiple deposits
     const noOfDeposit = 5;
-    for (let i = 0, len = noOfDeposit; i<len; i++){
+    for (let i = 0, len = noOfDeposit; i < len; i++) {
       await anchor1.deposit(localChain2.chainId);
     }
-     
-    // now we wait till transaction is added to tx_queue.
+    // now we wait for all deposit to be saved in LeafStorageCache
     await webbRelayer.waitForEvent({
-      kind: 'tx_queue',
+      kind: 'leaves_store',
       event: {
-        ty: 'EVM',
-        chain_id: localChain2.underlyingChainId.toString(),
-        pending: true,
+        leaf_index: (noOfDeposit - 1).toString(),
       },
     });
 
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
-    const chain_id = localChain1.underlyingChainId.toString(16);
-    const response = await webbRelayer.get_leaves(chain_id,anchor1.contract.address);
-    expect(noOfDeposit).to.equal(response["leaves"].length);
+    const chainId = localChain1.underlyingChainId.toString(16);
+    const response = await webbRelayer.getLeaves(
+      chainId,
+      anchor1.contract.address
+    );
+    expect(noOfDeposit).to.equal(response.leaves.length);
   });
 
   it('should relay same transaction on same chain', async () => {
