@@ -177,9 +177,6 @@ describe('EVM Transaction Relayer', function () {
       await anchor1.deposit(localChain2.chainId);
     }
      
-    // ping the relayer!
-    await webbRelayer.ping();
-    
     // now we wait till transaction is added to tx_queue.
     await webbRelayer.waitForEvent({
       kind: 'tx_queue',
@@ -190,16 +187,12 @@ describe('EVM Transaction Relayer', function () {
       },
     });
 
-    // ping the relayer!
-    await webbRelayer.ping();
-
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
     const chain_id = localChain1.underlyingChainId.toString(16);
     const response = await webbRelayer.get_leaves(chain_id,anchor1.contract.address);
     expect(noOfDeposit).to.equal(response["leaves"].length);
   });
-
 
   it('should relay same transaction on same chain', async () => {
     // we will use chain1 as an example here.
