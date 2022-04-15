@@ -53,7 +53,7 @@ describe('EVM Transaction Relayer', function () {
       populatedAccounts: [
         {
           secretKey: PK1,
-          balance: ethers.utils.parseEther('5').toHexString(),
+          balance: ethers.utils.parseEther('100000').toHexString(),
         },
       ],
     });
@@ -68,7 +68,7 @@ describe('EVM Transaction Relayer', function () {
       populatedAccounts: [
         {
           secretKey: PK2,
-          balance: ethers.utils.parseEther('5').toHexString(),
+          balance: ethers.utils.parseEther('100000').toHexString(),
         },
       ],
     });
@@ -148,6 +148,58 @@ describe('EVM Transaction Relayer', function () {
     });
     await webbRelayer.waitUntilReady();
   });
+
+  it('no of deposits made should be equal to no of leaves in cache', async () => {
+    const anchor1 = signatureBridge.getAnchor(
+      localChain1.chainId,
+      ethers.utils.parseEther('1')
+    );
+    // set signer
+    await anchor1.setSigner(wallet1);
+    const tokenAddress = signatureBridge.getWebbTokenAddress(
+      localChain1.chainId
+    )!;
+    // get token
+    
+    const token = await Tokens.MintableToken.tokenFromAddress(
+      tokenAddress,
+      wallet1
+    );
+    // mint tokins to the account everytime.
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
+    // check webbBalance
+    const webbBalance = await token.getBalance(wallet1.address);
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
+    // Make multiple deposits
+    const noOfDeposit = 5;
+    for (let i = 0, len = noOfDeposit; i<len; i++){
+      await anchor1.deposit(localChain2.chainId);
+    }
+     
+    // ping the relayer!
+    await webbRelayer.ping();
+    
+    // now we wait till transaction is added to tx_queue.
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain2.underlyingChainId.toString(),
+        pending: true,
+      },
+    });
+
+    // ping the relayer!
+    await webbRelayer.ping();
+
+    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
+    // are equal to no of deposits made.
+    const chain_id = localChain1.underlyingChainId.toString(16);
+    const response = await webbRelayer.get_leaves(chain_id,anchor1.contract.address);
+    expect(noOfDeposit).to.equal(response["leaves"].length);
+  });
+
 
   it('should relay same transaction on same chain', async () => {
     // we will use chain1 as an example here.
