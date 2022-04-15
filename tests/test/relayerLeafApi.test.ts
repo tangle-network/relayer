@@ -14,8 +14,8 @@
  * limitations under the License.
  *
  */
-// This our basic EVM Transaction Relayer Tests.
-// These are for testing the basic relayer functionality. which is just relay transactions for us.
+// This is Anchor watcher test case.
+// These are for testing the basic functionality of anchor watcher, which is to process and store the anchor deposit events.
 
 import { expect } from 'chai';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
