@@ -150,7 +150,7 @@ describe('Relayer Leaf Api', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('no of deposits made should be equal to no of leafs in cache', async () => {
+  it('no of deposits made should be equal to no of leaves in cache', async () => {
     
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
@@ -185,11 +185,11 @@ describe('Relayer Leaf Api', function () {
         pending: true,
       },
     });
-    // now we call relayer leaf API to check no of leafs stored in LeafStorageCache
+    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
     const chain_id = localChain1.underlyingChainId.toString(16);
-    const leaf_nodes = await webbRelayer.get_leafs(chain_id,anchor1.contract.address);
-    expect(noOfDeposit).to.equal(leaf_nodes["leaves"].length);
+    const response = await webbRelayer.get_leaves(chain_id,anchor1.contract.address);
+    expect(noOfDeposit).to.equal(response["leaves"].length);
   });
 
   after(async () => {
