@@ -26,6 +26,7 @@ import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import {IAnchor} from "@webb-tools/interfaces";
 import {IAnchorDeposit} from "@webb-tools/interfaces/src/anchor/index";
+import {hexToU8a, u8aToHex} from "@polkadot/util";
 
 describe('EVM Transaction Relayer', function () {
   this.timeout(120_000);
@@ -184,6 +185,59 @@ describe('EVM Transaction Relayer', function () {
       await webbRelayer.anchorWithdraw(
           localChain1.underlyingChainId.toString(),
           wallet2.address,
+          proofEncoded,
+          publicInputs,
+          extData
+      );
+    } catch (e) {
+      console.log(`error withdrawing ${e}`);
+
+      expect(e).to.not.be.null;
+      expect(e).to.be.eq(`unsupportedContract`);
+    }
+
+  });
+
+  it('Should fail to withdraw if proof is invalid', async () => {
+    // we will use chain1 as an example here.
+    let anchor1 = await setUpAnchor(signatureBridge, localChain1.chainId);
+    let depositInfo = await makeDeposit(signatureBridge, anchor1, wallet1, localChain1.chainId);
+
+    const [proofEncoded, publicInputs, extData] = await initWithdrawal(localChain1, webbRelayer, anchor1, wallet1, depositInfo);
+
+    const invalidProof = '0xef4b4f4d7554be477e828636a4e69b3f44d18ec0'
+
+    // now send the withdrawal request with a wrong recipient address
+    try {
+      await webbRelayer.anchorWithdraw(
+          localChain1.underlyingChainId.toString(),
+          anchor1.getAddress(),
+          invalidProof,
+          publicInputs,
+          extData
+      );
+    } catch (e) {
+      console.log(`error withdrawing ${JSON.stringify(e)}`);
+
+      expect(e).to.not.be.null;
+      expect(JSON.stringify(e)).to.contain(`VM Exception while processing transaction`);
+    }
+
+  });
+
+  it('Should fail to withdraw if fee is not expected', async () => {
+    // we will use chain1 as an example here.
+    let anchor1 = await setUpAnchor(signatureBridge, localChain1.chainId);
+    let depositInfo = await makeDeposit(signatureBridge, anchor1, wallet1, localChain1.chainId);
+
+    const [proofEncoded, publicInputs, extData] = await initWithdrawal(localChain1, webbRelayer, anchor1, wallet1, depositInfo);
+
+    extData.fee = 100;
+    // now send the withdrawal request with a wrong recipient address
+    try {
+      await webbRelayer.anchorWithdraw(
+          localChain1.underlyingChainId.toString(),
+          anchor1.getAddress(),
           proofEncoded,
           publicInputs,
           extData
