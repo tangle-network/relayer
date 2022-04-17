@@ -239,11 +239,14 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                     %log.block_number,
                     "detected block number",
                 );
-                tracing::debug!(
-                    "Saved Deposit Event ({}, {}) at block {}",
-                    value.0,
-                    value.1,
-                    log.block_number
+                tracing::event!(
+                    target: crate::probe::TARGET,
+                    tracing::Level::DEBUG,
+                    kind = %crate::probe::Kind::LeavesStore,
+                    leaf_index = %value.0,
+                    leaf = %value.1,
+                    chain_id = %chain_id,
+                    block_number = %log.block_number
                 );
             }
             EdgeAdditionFilter(v) => {

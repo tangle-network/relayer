@@ -24,9 +24,6 @@ import temp from 'temp';
 import { LocalChain } from '../lib/localTestnet.js';
 import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import {IAnchor} from "@webb-tools/interfaces";
-import {IAnchorDeposit} from "@webb-tools/interfaces/src/anchor/index";
-import {hexToU8a, u8aToHex} from "@polkadot/util";
 
 describe('EVM Transaction Relayer', function () {
   this.timeout(120_000);
@@ -56,10 +53,9 @@ describe('EVM Transaction Relayer', function () {
       populatedAccounts: [
         {
           secretKey: PK1,
-          balance: ethers.utils.parseEther('5').toHexString(),
+          balance: ethers.utils.parseEther('100000').toHexString(),
         },
       ],
-      enableLogging: true
     });
 
     const localChain2Port = await getPort({
@@ -72,10 +68,9 @@ describe('EVM Transaction Relayer', function () {
       populatedAccounts: [
         {
           secretKey: PK2,
-          balance: ethers.utils.parseEther('5').toHexString(),
+          balance: ethers.utils.parseEther('100000').toHexString(),
         },
       ],
-      enableLogging: true
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
@@ -149,18 +144,108 @@ describe('EVM Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
 
+  it('number of deposits made should be equal to number of leaves in cache', async () => {
+    const anchor1 = signatureBridge.getAnchor(
+      localChain1.chainId,
+      ethers.utils.parseEther('1')
+    );
+    // set signer
+    await anchor1.setSigner(wallet1);
+    const tokenAddress = signatureBridge.getWebbTokenAddress(
+      localChain1.chainId
+    )!;
+    // get token
+
+    const token = await Tokens.MintableToken.tokenFromAddress(
+      tokenAddress,
+      wallet1
+    );
+    // mint tokins to the account everytime.
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
+    // check webbBalance
+    const webbBalance = await token.getBalance(wallet1.address);
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
+    // Make multiple deposits
+    const noOfDeposit = 5;
+    for (let i = 0, len = noOfDeposit; i < len; i++) {
+      await anchor1.deposit(localChain2.chainId);
+    }
+    // now we wait for all deposit to be saved in LeafStorageCache
+    await webbRelayer.waitForEvent({
+      kind: 'leaves_store',
+      event: {
+        leaf_index: (noOfDeposit - 1).toString(),
+      },
+    });
+
+    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
+    // are equal to no of deposits made.
+    const chainId = localChain1.underlyingChainId.toString(16);
+    const response = await webbRelayer.getLeaves(
+      chainId,
+      anchor1.contract.address
+    );
+    expect(noOfDeposit).to.equal(response.leaves.length);
+  });
+
   it('should relay same transaction on same chain', async () => {
     // we will use chain1 as an example here.
-    let anchor1 = await setUpAnchor(signatureBridge, localChain1.chainId);
-    let depositInfo = await makeDeposit(signatureBridge, anchor1, wallet1, localChain1.chainId);
+    const anchor1 = signatureBridge.getAnchor(
+      localChain1.chainId,
+      ethers.utils.parseEther('1')
+    );
+    await anchor1.setSigner(wallet1);
+    const tokenAddress = signatureBridge.getWebbTokenAddress(
+      localChain1.chainId
+    )!;
+    const token = await Tokens.MintableToken.tokenFromAddress(
+      tokenAddress,
+      wallet1
+    );
+    // mint tokins to the account everytime.
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('5'));
+    const webbBalance = await token.getBalance(wallet1.address);
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
+    // now we are ready to do the deposit.
+    const depositInfo = await anchor1.deposit(localChain1.chainId);
+    const recipient = new ethers.Wallet(
+      ethers.utils.randomBytes(32),
+      localChain1.provider()
+    );
 
-    const [proofEncoded, publicInputs, extData] = await initWithdrawal(localChain1, webbRelayer, anchor1, wallet1, depositInfo);
+    const relayerInfo = await webbRelayer.info();
+    const localChain1Info = relayerInfo.evm[localChain1.underlyingChainId];
+    const relayerFeePercentage =
+      localChain1Info?.contracts.find(
+        (c) => c.address === anchor1.contract.address
+      )?.withdrawFeePercentage ?? 0;
 
+    // check balance of recipient before withdrawal
+    let webbBalanceOfRecipient = await token.getBalance(recipient.address);
+    let initialBalanceOfRecipient = webbBalanceOfRecipient.toBigInt();
+    console.log(`balance of recipient before withdrawal is ${initialBalanceOfRecipient}`);
+
+    const { args, publicInputs, extData } = await anchor1.setupWithdraw(
+      depositInfo.deposit,
+      depositInfo.index,
+      recipient.address,
+      wallet1.address,
+      calcualteRelayerFees(
+        anchor1.denomination!,
+        relayerFeePercentage
+      ).toBigInt(),
+      0
+    );
+    const [proofEncoded, roots, nullifierHash, extDataHash] = args;
+    // ping the relayer!
+    await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
       localChain1.underlyingChainId.toString(),
@@ -170,87 +255,15 @@ describe('EVM Transaction Relayer', function () {
       extData
     );
     expect(txHash).to.be.string;
-  });
 
+    webbBalanceOfRecipient = await token.getBalance(recipient.address);
+    let balanceOfRecipientAfterWithdraw = webbBalanceOfRecipient.toBigInt();
+    console.log(`balance of recipient after withdrawal is ${balanceOfRecipientAfterWithdraw}`);
 
-  it('Should fail to withdraw if address is invalid', async () => {
-    // we will use chain1 as an example here.
-    let anchor1 = await setUpAnchor(signatureBridge, localChain1.chainId);
-    let depositInfo = await makeDeposit(signatureBridge, anchor1, wallet1, localChain1.chainId);
-
-   const [proofEncoded, publicInputs, extData] = await initWithdrawal(localChain1, webbRelayer, anchor1, wallet1, depositInfo);
-
-    // now send the withdrawal request with a wrong recipient address
-    try {
-      await webbRelayer.anchorWithdraw(
-          localChain1.underlyingChainId.toString(),
-          wallet2.address,
-          proofEncoded,
-          publicInputs,
-          extData
-      );
-    } catch (e) {
-      console.log(`error withdrawing ${e}`);
-
-      expect(e).to.not.be.null;
-      expect(e).to.be.eq(`unsupportedContract`);
-    }
+    // check that recipient balance has increased
+    expect(balanceOfRecipientAfterWithdraw > initialBalanceOfRecipient);
 
   });
-
-  it('Should fail to withdraw if proof is invalid', async () => {
-    // we will use chain1 as an example here.
-    let anchor1 = await setUpAnchor(signatureBridge, localChain1.chainId);
-    let depositInfo = await makeDeposit(signatureBridge, anchor1, wallet1, localChain1.chainId);
-
-    const [proofEncoded, publicInputs, extData] = await initWithdrawal(localChain1, webbRelayer, anchor1, wallet1, depositInfo);
-
-    const invalidProof = '0xef4b4f4d7554be477e828636a4e69b3f44d18ec0'
-
-    // now send the withdrawal request with a wrong recipient address
-    try {
-      await webbRelayer.anchorWithdraw(
-          localChain1.underlyingChainId.toString(),
-          anchor1.getAddress(),
-          invalidProof,
-          publicInputs,
-          extData
-      );
-    } catch (e) {
-      console.log(`error withdrawing ${JSON.stringify(e)}`);
-
-      expect(e).to.not.be.null;
-      expect(JSON.stringify(e)).to.contain(`VM Exception while processing transaction`);
-    }
-
-  });
-
-  it('Should fail to withdraw if fee is not expected', async () => {
-    // we will use chain1 as an example here.
-    let anchor1 = await setUpAnchor(signatureBridge, localChain1.chainId);
-    let depositInfo = await makeDeposit(signatureBridge, anchor1, wallet1, localChain1.chainId);
-
-    const [proofEncoded, publicInputs, extData] = await initWithdrawal(localChain1, webbRelayer, anchor1, wallet1, depositInfo);
-
-    extData.fee = 100;
-    // now send the withdrawal request with a wrong recipient address
-    try {
-      await webbRelayer.anchorWithdraw(
-          localChain1.underlyingChainId.toString(),
-          anchor1.getAddress(),
-          proofEncoded,
-          publicInputs,
-          extData
-      );
-    } catch (e) {
-      console.log(`error withdrawing ${e}`);
-
-      expect(e).to.not.be.null;
-      expect(e).to.be.eq(`unsupportedContract`);
-    }
-
-  });
-
 
   after(async () => {
     await localChain1?.stop();
@@ -258,63 +271,3 @@ describe('EVM Transaction Relayer', function () {
     await webbRelayer?.stop();
   });
 });
-
-async function setUpAnchor(signatureBridge: Bridges.SignatureBridge, chainId: number): Promise<any> {
-  const anchor1 = signatureBridge.getAnchor(
-      chainId,
-      ethers.utils.parseEther('1')
-  );
-
-  return anchor1;
-
-}
-async function makeDeposit(signatureBridge: Bridges.SignatureBridge, anchor: IAnchor, wallet: ethers.Wallet, chainId: number): Promise<IAnchorDeposit> {
-  await anchor.setSigner(wallet);
-  const tokenAddress = signatureBridge.getWebbTokenAddress(
-      chainId
-  )!;
-  const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      wallet
-  );
-
-  // mint tokins to the account everytime.
-  await token.mintTokens(wallet.address, ethers.utils.parseEther('5'));
-  const webbBalance = await token.getBalance(wallet.address);
-  expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
-      .be.true;
-  // now we are ready to do the deposit.
-  const depositInfo = await anchor.deposit(chainId);
-
-  return depositInfo;
-}
-
-async function initWithdrawal(localChain: LocalChain, webbRelayer: WebbRelayer, anchor: IAnchor, wallet: ethers.Wallet, depositInfo: IAnchorDeposit): Promise<any>{
-  const recipient = new ethers.Wallet(
-      ethers.utils.randomBytes(32),
-      localChain.provider()
-  );
-
-  const relayerInfo = await webbRelayer.info();
-  const localChain1Info = relayerInfo.evm[localChain.underlyingChainId];
-  const relayerFeePercentage =
-      localChain1Info?.contracts.find(
-          (c) => c.address === anchor.contract.address
-      )?.withdrawFeePercentage ?? 0;
-  const { args, publicInputs, extData } = await anchor.setupWithdraw(
-      depositInfo.deposit,
-      depositInfo.index,
-      recipient.address,
-      wallet.address,
-      calcualteRelayerFees(
-          anchor.denomination!,
-          relayerFeePercentage
-      ).toBigInt(),
-      0
-  );
-  const [proofEncoded, roots, nullifierHash, extDataHash] = args;
-  // ping the relayer!
-  await webbRelayer.ping();
-
-  return [proofEncoded, publicInputs, extData]
-}

@@ -178,7 +178,7 @@ The table below documents all the configuration options available for both chain
 
 | Field                      | Description                                                                                                                                                   | Optionality                        |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `contract`                 | Chain contract. Must be either: </br> - Anchor (tornado protocol) </br> - Anchor2 (darkwebb protocol) </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required                           |
+| `contract`                 | Chain contract. Must be either: </br> - Anchor (tornado protocol) </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required                           |
 | `address`                  | The address of this contract on this chain.                                                                                                                   | Required                           |
 | `deployed-at`              | The block number where this contract got deployed at.                                                                                                         | Required                           |
 | `size`                     | The size of this contract. **Note**: only available for `Anchor` and `Anchor2` contracts.                                                                     | Optional                           |
@@ -293,7 +293,7 @@ cargo test
 
 ### To run E2E tests
 
-1. Run `cargo build --release --features integration-tests`
+1. Run `cargo build --features integration-tests`
 2. Run `cd tests && git submodule update --init --recursive`
 3. Run `yarn install` (in `tests` dir)
 4. `yarn test`
