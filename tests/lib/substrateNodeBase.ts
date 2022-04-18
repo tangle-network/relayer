@@ -81,7 +81,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   public async api(): Promise<ApiPromise> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     const host = '127.0.0.1';
-    if(this.opts.isManual) {
+    if (this.opts.isManual) {
       return await createApiPromise(`ws://${host}:${ports.ws}`);
     }
 
@@ -95,8 +95,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   public async stop(): Promise<void> {
     await this.#api?.disconnect();
     this.#api = null;
-    if(this.proc)
-      this.proc.kill('SIGINT');
+    if (this.proc) this.proc.kill('SIGINT');
   }
 
   public async waitForEvent(typedEvent: TypedEvent): Promise<void> {
