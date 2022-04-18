@@ -30,7 +30,7 @@ pub async fn handle_mixer_relay_tx<'a>(
 ) {
     use CommandResponse::*;
     let cmd = match cmd {
-        EvmCommand::MixerRelayTx(cmd) => cmd,
+        EvmCommand::Mixer(cmd) => cmd,
         _ => return,
     };
 

@@ -32,7 +32,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
 ) {
     use CommandResponse::*;
     let cmd = match cmd {
-        SubstrateCommand::VAnchorRelayTx(cmd) => cmd,
+        SubstrateCommand::VAnchor(cmd) => cmd,
         _ => return,
     };
 

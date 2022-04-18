@@ -34,7 +34,7 @@ pub async fn handle_anchor_relay_tx<'a>(
 ) {
     use CommandResponse::*;
     let cmd = match cmd {
-        EvmCommand::AnchorRelayTx(cmd) => cmd,
+        EvmCommand::Anchor(cmd) => cmd,
         _ => return,
     };
 
@@ -171,7 +171,7 @@ pub async fn handle_anchor_relay_tx<'a>(
         roots: roots.into(),
         proof: cmd.proof,
         nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
-        ext_data_hash: ext_data_hash,
+        ext_data_hash,
     };
     tracing::trace!(?proof, ?ext_data, "Client Proof");
     let call = contract.withdraw(proof, ext_data);

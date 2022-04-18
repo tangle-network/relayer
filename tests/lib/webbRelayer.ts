@@ -283,7 +283,7 @@ async function txHashOrReject(
     });
     const cmd = {
       evm: {
-        anchorRelayTx: {
+        anchor: {
           chain: chainName,
           contract: anchorAddress,
           proof,
@@ -358,7 +358,7 @@ async function substrateTxHashOrReject(
     });
     const cmd = {
       substrate: {
-        mixerRelayTx: {
+        mixer: {
           chain: input.chain,
           id: input.id,
           proof: input.proof,

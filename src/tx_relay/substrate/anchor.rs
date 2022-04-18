@@ -27,7 +27,7 @@ pub async fn handle_substrate_anchor_relay_tx<'a>(
 ) {
     use CommandResponse::*;
     let cmd = match cmd {
-        SubstrateCommand::AnchorRelayTx(cmd) => cmd,
+        SubstrateCommand::Anchor(cmd) => cmd,
         _ => return,
     };
     let roots_element: Vec<Element> =

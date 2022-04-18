@@ -274,9 +274,9 @@ pub enum Command {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CommandType<Id, P, R, E, I, B, A> {
-    MixerRelayTx(MixerRelayTransaction<Id, P, E, I, B>),
-    AnchorRelayTx(AnchorRelayTransaction<Id, P, R, E, I, B>),
-    VAnchorRelayTx(VAnchorRelayTransaction<Id, P, R, E, I, B, A>),
+    Mixer(MixerRelayTransaction<Id, P, E, I, B>),
+    Anchor(AnchorRelayTransaction<Id, P, R, E, I, B>),
+    VAnchor(VAnchorRelayTransaction<Id, P, R, E, I, B, A>),
 }
 
 /// Enumerates the command responses
@@ -358,13 +358,11 @@ pub async fn handle_evm(
     stream: CommandStream,
 ) {
     match cmd {
-        CommandType::MixerRelayTx(_) => {
-            handle_mixer_relay_tx(ctx, cmd, stream).await
-        }
-        CommandType::AnchorRelayTx(_) => {
+        CommandType::Mixer(_) => handle_mixer_relay_tx(ctx, cmd, stream).await,
+        CommandType::Anchor(_) => {
             handle_anchor_relay_tx(ctx, cmd, stream).await
         }
-        CommandType::VAnchorRelayTx(_) => {
+        CommandType::VAnchor(_) => {
             todo!();
         }
     }
@@ -416,13 +414,13 @@ pub async fn handle_substrate<'a>(
     stream: CommandStream,
 ) {
     match cmd {
-        CommandType::MixerRelayTx(_) => {
+        CommandType::Mixer(_) => {
             handle_substrate_mixer_relay_tx(ctx, cmd, stream).await;
         }
-        CommandType::AnchorRelayTx(_) => {
+        CommandType::Anchor(_) => {
             handle_substrate_anchor_relay_tx(ctx, cmd, stream).await;
         }
-        CommandType::VAnchorRelayTx(_) => {
+        CommandType::VAnchor(_) => {
             handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await;
         }
     }
