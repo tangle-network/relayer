@@ -465,11 +465,7 @@ export interface Pallet {
   eventsWatcher: EventsWatcher;
 }
 
-type ContractKind =
-  | 'Tornado'
-  | 'Anchor'
-  | 'SignatureBridge'
-  | 'GovernanceBravoDelegate';
+type ContractKind = 'Anchor' | 'SignatureBridge' | 'GovernanceBravoDelegate';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind = 'DKGProposals' | 'DKGProposalHandler';
 

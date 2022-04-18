@@ -54,10 +54,6 @@ use crate::store::{
 };
 use crate::utils;
 
-/// A module for listening on tornado events.
-mod tornado_leaves_watcher;
-#[doc(hidden)]
-pub use tornado_leaves_watcher::*;
 /// A module for listening on anchor events over the DKG.
 mod anchor_watcher;
 #[doc(hidden)]

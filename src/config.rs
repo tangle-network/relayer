@@ -258,7 +258,6 @@ pub struct LinkedAnchorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
 pub enum Contract {
-    Tornado(TornadoContractConfig),
     Anchor(AnchorContractConfig),
     SignatureBridge(SignatureBridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
@@ -289,22 +288,6 @@ pub struct CommonContractConfig {
     /// the block number where this contract got deployed at.
     #[serde(rename(serialize = "deployedAt"))]
     pub deployed_at: u64,
-}
-
-/// TornadoContractConfig represents the configuration for the Tornado contract.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct TornadoContractConfig {
-    #[serde(flatten)]
-    pub common: CommonContractConfig,
-    /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
-    pub events_watcher: EventsWatcherConfig,
-    /// The size of this contract
-    pub size: f64,
-    /// Anchor withdraw configuration.
-    #[serde(flatten)]
-    pub withdraw_config: AnchorWithdrawConfig,
 }
 
 /// AnchorContractOverDKGConfig represents the configuration for the Anchor contract over DKG.
