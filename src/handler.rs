@@ -39,7 +39,7 @@ use crate::tx_relay::evm::anchor::{handle_anchor_relay_tx, EVMAnchorRelayTransac
 use crate::tx_relay::evm::tornado::handle_tornado_relay_tx;
 use crate::tx_relay::substrate::anchor::{handle_substrate_anchor_relay_tx, SubstrateAnchorRelayTransaction};
 use crate::tx_relay::substrate::mixer::{handle_substrate_mixer_relay_tx, SubstrateMixerRelayTransaction};
-use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
+use crate::tx_relay::substrate::vanchor::{handle_substrate_vanchor_relay_tx, SubstrateVAnchorRelayTransaction};
 use webb::substrate::subxt::sp_core::Pair;
 use webb::substrate::subxt::{self};
 
