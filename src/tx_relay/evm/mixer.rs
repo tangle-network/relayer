@@ -11,8 +11,7 @@ use crate::handler::EvmCommand;
 use crate::{
     context::RelayerContext,
     handler::{
-        calculate_fee, into_withdraw_error, NetworkStatus,
-        WithdrawStatus,
+        calculate_fee, into_withdraw_error, NetworkStatus, WithdrawStatus,
     },
     handler::{CommandResponse, CommandStream},
 };
@@ -32,7 +31,7 @@ pub async fn handle_mixer_relay_tx<'a>(
     use CommandResponse::*;
     let cmd = match cmd {
         EvmCommand::MixerRelayTx(cmd) => cmd,
-        _ => return
+        _ => return,
     };
 
     let requested_chain = cmd.chain.to_lowercase();

@@ -36,35 +36,37 @@ use webb::substrate::subxt::sp_runtime::AccountId32;
 
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
-use crate::tx_relay::{AnchorRelayTransaction, VAnchorRelayTransaction, MixerRelayTransaction};
-use crate::tx_relay::evm::anchor::{handle_anchor_relay_tx};
+use crate::tx_relay::evm::anchor::handle_anchor_relay_tx;
 use crate::tx_relay::evm::mixer::handle_mixer_relay_tx;
-use crate::tx_relay::substrate::anchor::{handle_substrate_anchor_relay_tx};
-use crate::tx_relay::substrate::mixer::{handle_substrate_mixer_relay_tx};
-use crate::tx_relay::substrate::vanchor::{handle_substrate_vanchor_relay_tx};
+use crate::tx_relay::substrate::anchor::handle_substrate_anchor_relay_tx;
+use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
+use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
+use crate::tx_relay::{
+    AnchorRelayTransaction, MixerRelayTransaction, VAnchorRelayTransaction,
+};
 use webb::substrate::subxt::sp_core::Pair;
 
 /// Type alias for mpsc::Sender<CommandResponse>
 pub type CommandStream = mpsc::Sender<CommandResponse>;
 /// The command type for EVM txes
 pub type EvmCommand = CommandType<
-    Address,        // Contract address
-    Bytes,          // Proof bytes
-    Bytes,          // Roots format
-    H256,           // Element type
-    Address,        // Account identifier
-    U256,           // Balance type
-    i128            // Signed amount type
+    Address, // Contract address
+    Bytes,   // Proof bytes
+    Bytes,   // Roots format
+    H256,    // Element type
+    Address, // Account identifier
+    U256,    // Balance type
+    i128,    // Signed amount type
 >;
 /// The command type for Substrate pallet txes
 pub type SubstrateCommand = CommandType<
-    u32,            // Tree Id
-    Vec<u8>,        // Raw proof bytes
-    Vec<[u8; 32]>,  // Roots format
-    [u8; 32],       // Element type
-    AccountId32,    // Account identifier
-    u128,           // Balance type
-    i128            // Signed amount type
+    u32,           // Tree Id
+    Vec<u8>,       // Raw proof bytes
+    Vec<[u8; 32]>, // Roots format
+    [u8; 32],      // Element type
+    AccountId32,   // Account identifier
+    u128,          // Balance type
+    i128,          // Signed amount type
 >;
 
 /// Sets up a websocket connection.
@@ -273,8 +275,8 @@ pub enum Command {
 #[serde(rename_all = "camelCase")]
 pub enum CommandType<Id, P, R, E, I, B, A> {
     MixerRelayTx(MixerRelayTransaction<Id, P, E, I, B>),
-    AnchorRelayTx(AnchorRelayTransaction::<Id, P, R, E, I, B>),
-    VAnchorRelayTx(VAnchorRelayTransaction::<Id, P, R, E, I, B, A>),
+    AnchorRelayTx(AnchorRelayTransaction<Id, P, R, E, I, B>),
+    VAnchorRelayTx(VAnchorRelayTransaction<Id, P, R, E, I, B, A>),
 }
 
 /// Enumerates the command responses
@@ -358,13 +360,13 @@ pub async fn handle_evm(
     match cmd {
         CommandType::MixerRelayTx(_) => {
             handle_mixer_relay_tx(ctx, cmd, stream).await
-        },
+        }
         CommandType::AnchorRelayTx(_) => {
             handle_anchor_relay_tx(ctx, cmd, stream).await
-        },
+        }
         CommandType::VAnchorRelayTx(_) => {
             todo!();
-        },
+        }
     }
 }
 
@@ -416,13 +418,13 @@ pub async fn handle_substrate<'a>(
     match cmd {
         CommandType::MixerRelayTx(_) => {
             handle_substrate_mixer_relay_tx(ctx, cmd, stream).await;
-        },
+        }
         CommandType::AnchorRelayTx(_) => {
             handle_substrate_anchor_relay_tx(ctx, cmd, stream).await;
-        },
+        }
         CommandType::VAnchorRelayTx(_) => {
             handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await;
-        },
+        }
     }
 }
 

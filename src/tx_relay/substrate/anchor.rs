@@ -9,8 +9,8 @@ use webb::substrate::{
 
 use crate::{
     context::RelayerContext,
+    handler::WithdrawStatus,
     handler::{CommandResponse, CommandStream, SubstrateCommand},
-    handler::{WithdrawStatus},
 };
 
 /// Handler for Substrate Anchor commands
@@ -28,9 +28,10 @@ pub async fn handle_substrate_anchor_relay_tx<'a>(
     use CommandResponse::*;
     let cmd = match cmd {
         SubstrateCommand::AnchorRelayTx(cmd) => cmd,
-        _ => return
+        _ => return,
     };
-    let roots_element: Vec<Element> = cmd.roots.iter().map(|r| Element(*r)).collect();
+    let roots_element: Vec<Element> =
+        cmd.roots.iter().map(|r| Element(*r)).collect();
     let nullifier_hash_element = Element(cmd.nullifier_hash);
     let refresh_commitment_element = Element(cmd.refresh_commitment);
 

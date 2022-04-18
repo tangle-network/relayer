@@ -55,22 +55,22 @@ pub struct AnchorRelayTransaction<Id, P, R, E, I, B> {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProofData<P, R, E> {
-	pub proof: P,
-	pub public_amount: E,
-	pub roots: R,
-	pub input_nullifiers: Vec<E>,
-	pub output_commitments: Vec<E>,
-	pub ext_data_hash: E,
+    pub proof: P,
+    pub public_amount: E,
+    pub roots: R,
+    pub input_nullifiers: Vec<E>,
+    pub output_commitments: Vec<E>,
+    pub ext_data_hash: E,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ExtData<E, I, B, A> {
-	pub recipient: I,
-	pub relayer: I,
-	pub ext_amount: A,
-	pub fee: B,
-	pub encrypted_output1: E,
-	pub encrypted_output2: E,
+    pub recipient: I,
+    pub relayer: I,
+    pub ext_amount: A,
+    pub fee: B,
+    pub encrypted_output1: E,
+    pub encrypted_output2: E,
 }
 
 /// Contains data that is relayed to the VAnchors

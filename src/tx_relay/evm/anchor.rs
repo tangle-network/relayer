@@ -6,14 +6,17 @@ use webb::evm::{
         fixed_deposit_anchor::{ExtData, Proof},
         FixedDepositAnchorContract,
     },
-    ethers::{prelude::{Signer, SignerMiddleware}, utils::keccak256},
+    ethers::{
+        prelude::{Signer, SignerMiddleware},
+        utils::keccak256,
+    },
 };
 
 use crate::{
     context::RelayerContext,
     handler::{
-        calculate_fee, into_withdraw_error,
-        CommandResponse, CommandStream, NetworkStatus, WithdrawStatus, EvmCommand,
+        calculate_fee, into_withdraw_error, CommandResponse, CommandStream,
+        EvmCommand, NetworkStatus, WithdrawStatus,
     },
 };
 
@@ -32,7 +35,7 @@ pub async fn handle_anchor_relay_tx<'a>(
     use CommandResponse::*;
     let cmd = match cmd {
         EvmCommand::AnchorRelayTx(cmd) => cmd,
-        _ => return
+        _ => return,
     };
 
     let requested_chain = cmd.chain.to_lowercase();
@@ -127,10 +130,7 @@ pub async fn handle_anchor_relay_tx<'a>(
         Err(e) => {
             tracing::error!("Misconfigured Contract Denomination: {}", e);
             let _ = stream
-                .send(Error(format!(
-                    "Misconfigured Contract: {:?}",
-                    cmd.id
-                )))
+                .send(Error(format!("Misconfigured Contract: {:?}", cmd.id)))
                 .await;
             return;
         }
@@ -165,7 +165,6 @@ pub async fn handle_anchor_relay_tx<'a>(
     bytes.extend_from_slice(ext_data.relayer.as_bytes());
     bytes.extend_from_slice(&ext_data.fee.encode());
     bytes.extend_from_slice(&ext_data.refund.encode());
-    
 
     let ext_data_hash = keccak256(bytes);
     let proof = Proof {

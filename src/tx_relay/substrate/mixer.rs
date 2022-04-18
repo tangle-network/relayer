@@ -9,8 +9,8 @@ use webb::substrate::{
 
 use crate::{
     context::RelayerContext,
+    handler::WithdrawStatus,
     handler::{CommandResponse, CommandStream, SubstrateCommand},
-    handler::{WithdrawStatus},
 };
 
 /// Handler for Substrate Mixer commands
@@ -29,7 +29,7 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
 
     let cmd = match cmd {
         SubstrateCommand::MixerRelayTx(cmd) => cmd,
-        _ => return
+        _ => return,
     };
 
     let root_element = Element(cmd.root);
