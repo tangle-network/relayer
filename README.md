@@ -47,12 +47,15 @@ The relayer system is composed of three main components. Each of these component
 3. Event listening, proposing, and signature relaying (of DKG proposals where the relayer acts like an oracle)
 
 #### Transaction relaying role
+
 Relayers who fulfill the role of a transaction relayer are responsible with exposing an API for clients who wish to relay their zero-knowledge transactions through and with submitting them. Relayers of this role must possess enough balance on the blockchains in which they will relay these transactions, since, after all, they must possess the native balance to pay the fees for these transactions. Relayers can be configured for any number of chains and protocols from mixers to variable anchors and run for individual chains or all of them that exist for a given bridged set of anchors.
 
 #### Data querying role
+
 Relayers who fulfill this role do so in conjunction with the transaction relaying role although it is not required to possess both. Namely, this role is concerned with listening to the events occurring within an Anchor Protocol instance and storing the data for clients who wish to quickly access it through traditional HTTP methods. This role is actively maintained and sees regular updates to how we hope to store and serve data in the future.
 
 #### Oracle role
+
 Relayers who fulfill the role of an oracle listen to the Anchor Protocol instances on the various chains the anchors exist on. When they hear of insertions into the anchors' merkle trees they handle them accordingly (as is implemented in the event watchers). Those playing this role then relay the anchor update information to other connected Anchors, the DKG governance system, and any other integration that gets implemented in this repo. Oracle relayers help keep the state of an Anchor Protocol instance up to date by ensuring that all anchors within an instance know about the latest state of their neighboring anchors.
 
 For additional information, please refer to the [Webb Relayer Rust Docs](https://webb-tools.github.io/relayer/) 📝. Have feedback on how to improve the relayer network? Or have a specific question to ask? Checkout the [Relayer Feedback Discussion](https://github.com/webb-tools/feedback/discussions/categories/webb-relayer-feedback) 💬.
@@ -108,12 +111,12 @@ cargo build --release
 
 ### Quick Start ⚡
 
-#### Local EVM Tornado
+#### Local EVM Setup
 
-Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM tornado configuration to get up and running immediately.
+Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM Local Network configuration to get up and running immediately.
 
 ```
-./target/release/webb-relayer -c config/config-tornados/ethereum -vv
+cargo run -- -c ./config/local-testnet -vvv
 ```
 
 > Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
@@ -123,7 +126,7 @@ Eager to try out the Webb Relayer and see it in action? Run a relayer with our p
 To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer.
 
 ```
- ./target/release/webb-relayer -c config/local-substrate -vv
+cargo run -- -c config/local-substrate -vvv
 ```
 
 ### Run 🏃
@@ -153,8 +156,6 @@ webb-relayer -vv -c ./config
 
 <h2 id="config"> Configuration </h2>
 
-The table below documents all the configuration options available for both chain and contract set ups. For a completed example, check out [Harmony's testnet configuration](./config/config-tornados/harmony/testnet1.toml).
-
 **Note:** You can also review the different chain configurations for EVM and Substrate.
 
 - [`SubstrateConfig`](https://docs.webb.tools/relayer/webb_relayer/config/struct.SubstrateConfig.html)
@@ -176,16 +177,16 @@ The table below documents all the configuration options available for both chain
 
 #### Contract Configuration
 
-| Field                      | Description                                                                                                                                                   | Optionality                        |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
-| `contract`                 | Chain contract. Must be either: </br> - Anchor (tornado protocol) </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required                           |
-| `address`                  | The address of this contract on this chain.                                                                                                                   | Required                           |
-| `deployed-at`              | The block number where this contract got deployed at.                                                                                                         | Required                           |
-| `size`                     | The size of this contract. **Note**: only available for `Anchor` and `Anchor2` contracts.                                                                     | Optional                           |
-| `events-watcher`           | Control the events watcher for this contract.                                                                                                                 | Optional                           |
-| `withdraw-fee-percentage`  | The fee percentage that your account will receive when you relay a transaction over this chain.                                                               | Optional                           |
-| `withdraw-gaslimit`        | A hex value of the gaslimit when doing a withdraw relay transaction on this chain.                                                                            | Optional                           |
-| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`)                                                                    | Required if the contract is Anchor |
+| Field                      | Description                                                                                            | Optionality                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------- |
+| `contract`                 | Chain contract. Must be either: </br> - Anchor </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required                           |
+| `address`                  | The address of this contract on this chain.                                                            | Required                           |
+| `deployed-at`              | The block number where this contract got deployed at.                                                  | Required                           |
+| `size`                     | The size of this contract. **Note**: only available for `Anchor` and `Anchor2` contracts.              | Optional                           |
+| `events-watcher`           | Control the events watcher for this contract.                                                          | Optional                           |
+| `withdraw-fee-percentage`  | The fee percentage that your account will receive when you relay a transaction over this chain.        | Optional                           |
+| `withdraw-gaslimit`        | A hex value of the gaslimit when doing a withdraw relay transaction on this chain.                     | Optional                           |
+| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`)             | Required if the contract is Anchor |
 
 ### Docker 🐳
 
@@ -238,7 +239,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
             "chainId": 4,
             "beneficiary": "0x58fcd47ece3ed24ace88fee06efd90dcb38f541f",
             "contracts": [{
-                "contract": "Tornado",
+                "contract": "Anchor",
                 "address": "0x626fec5ffa7bf1ee8ced7dabde545630473e3abb",
                 "deployedAt": 8896800,
                 "eventsWatcher": {
@@ -246,6 +247,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
                     "pollingInterval": 15000
                 },
                 "size": 0.1,
+                "proposalSigningBackend": { "type": "DKGNode", "node": "dkg-local" },
                 "withdrawFeePercentage": 0.05
             }]
         }
@@ -317,15 +319,15 @@ For the Substrate Mixer test, you can connect to your local chain manually by:
        }
    ```
 2. Specifying the Bob node ports such as:
-    ```
-        const bobManualPorts = {
-           ws: 9945,
-           http: 9934,
-           p2p: 30334
-        }
-    ```
-3. Make the `ports` property value be the `aliceManualPorts` and `bobManualPorts` respectively in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start() function`    
-4. Specifying and setting `isManual` flag  to true in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start() function`
+   ```
+       const bobManualPorts = {
+          ws: 9945,
+          http: 9934,
+          p2p: 30334
+       }
+   ```
+3. Make the `ports` property value be the `aliceManualPorts` and `bobManualPorts` respectively in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start() function`
+4. Specifying and setting `isManual` flag to true in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start() function`
 
 ## Contributing
 
