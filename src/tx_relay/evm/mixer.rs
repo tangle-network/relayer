@@ -7,11 +7,12 @@ use webb::evm::{
     ethers::prelude::{Signer, SignerMiddleware},
 };
 
+use crate::handler::EvmCommand;
 use crate::{
     context::RelayerContext,
     handler::{
         calculate_fee, into_withdraw_error, NetworkStatus,
-        TornadoRelayTransaction, WithdrawStatus,
+        WithdrawStatus,
     },
     handler::{CommandResponse, CommandStream},
 };
@@ -23,12 +24,17 @@ use crate::{
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `cmd` - The command to execute
 /// * `stream` - The stream to write the response to
-pub async fn handle_tornado_relay_tx<'a>(
+pub async fn handle_mixer_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: TornadoRelayTransaction,
+    cmd: EvmCommand,
     stream: CommandStream,
 ) {
     use CommandResponse::*;
+    let cmd = match cmd {
+        EvmCommand::MixerRelayTx(cmd) => cmd,
+        _ => return
+    };
+
     let requested_chain = cmd.chain.to_lowercase();
     let chain = match ctx.config.evm.get(&requested_chain) {
         Some(v) => v,
@@ -54,7 +60,7 @@ pub async fn handle_tornado_relay_tx<'a>(
         .map(|c| (c.common.address, c))
         .collect();
     // get the contract configuration
-    let contract_config = match supported_contracts.get(&cmd.contract) {
+    let contract_config = match supported_contracts.get(&cmd.id) {
         Some(config) => config,
         None => {
             tracing::event!(
@@ -153,7 +159,7 @@ pub async fn handle_tornado_relay_tx<'a>(
 
     let client = SignerMiddleware::new(provider, wallet);
     let client = Arc::new(client);
-    let contract = TornadoContract::new(cmd.contract, client);
+    let contract = TornadoContract::new(cmd.id, client);
     let denomination = match contract.denomination().call().await {
         Ok(v) => v,
         Err(e) => {

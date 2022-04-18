@@ -1,42 +1,21 @@
-use ethereum_types::{Address, H256, U256, U64};
-use serde::Deserialize;
+use ethereum_types::U256;
+use scale::Encode;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use webb::evm::{
     contract::protocol_solidity::{
         fixed_deposit_anchor::{ExtData, Proof},
         FixedDepositAnchorContract,
     },
-    ethers::prelude::{Signer, SignerMiddleware, Bytes},
+    ethers::{prelude::{Signer, SignerMiddleware}, utils::keccak256},
 };
 
 use crate::{
     context::RelayerContext,
     handler::{
         calculate_fee, into_withdraw_error,
-        CommandResponse, CommandStream, NetworkStatus, WithdrawStatus,
+        CommandResponse, CommandStream, NetworkStatus, WithdrawStatus, EvmCommand,
     },
 };
-
-/// Contains transaction data that is relayed to Anchors
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EVMAnchorRelayTransaction {
-    /// one of the supported chains of this relayer
-    pub chain: String,
-    /// The target contract.
-    pub contract: Address,
-    /// Proof bytes
-    pub proof: Bytes,
-    /// Args...
-    pub roots: Bytes,
-    pub nullifier_hash: H256,
-    pub ext_data_hash: H256,
-    pub recipient: Address, // H160 ([u8; 20])
-    pub relayer: Address,   // H160 (should be this realyer account)
-    pub fee: U256,
-    pub refund: U256,
-    pub refresh_commitment: H256,
-}
 
 /// Handler for Anchor commands
 ///
@@ -47,10 +26,15 @@ pub struct EVMAnchorRelayTransaction {
 /// * `stream` - The stream to write the response to
 pub async fn handle_anchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: EVMAnchorRelayTransaction,
+    cmd: EvmCommand,
     stream: CommandStream,
 ) {
     use CommandResponse::*;
+    let cmd = match cmd {
+        EvmCommand::AnchorRelayTx(cmd) => cmd,
+        _ => return
+    };
+
     let requested_chain = cmd.chain.to_lowercase();
     let chain = match ctx.config.evm.get(&requested_chain) {
         Some(v) => v,
@@ -71,10 +55,10 @@ pub async fn handle_anchor_relay_tx<'a>(
         .map(|c| (c.common.address, c))
         .collect();
     // get the contract configuration
-    let contract_config = match supported_contracts.get(&cmd.contract) {
+    let contract_config = match supported_contracts.get(&cmd.id) {
         Some(config) => config,
         None => {
-            tracing::warn!("Unsupported Contract: {:?}", cmd.contract);
+            tracing::warn!("Unsupported Contract: {:?}", cmd.id);
             let _ = stream
                 .send(Network(NetworkStatus::UnsupportedContract))
                 .await;
@@ -137,7 +121,7 @@ pub async fn handle_anchor_relay_tx<'a>(
 
     let client = SignerMiddleware::new(provider, wallet);
     let client = Arc::new(client);
-    let contract = FixedDepositAnchorContract::new(cmd.contract, client);
+    let contract = FixedDepositAnchorContract::new(cmd.id, client);
     let denomination = match contract.denomination().call().await {
         Ok(v) => v,
         Err(e) => {
@@ -145,7 +129,7 @@ pub async fn handle_anchor_relay_tx<'a>(
             let _ = stream
                 .send(Error(format!(
                     "Misconfigured Contract: {:?}",
-                    cmd.contract
+                    cmd.id
                 )))
                 .await;
             return;
@@ -174,11 +158,21 @@ pub async fn handle_anchor_relay_tx<'a>(
         fee: cmd.fee,
         refund: cmd.refund,
     };
+
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&ext_data.refresh_commitment);
+    bytes.extend_from_slice(ext_data.recipient.as_bytes());
+    bytes.extend_from_slice(ext_data.relayer.as_bytes());
+    bytes.extend_from_slice(&ext_data.fee.encode());
+    bytes.extend_from_slice(&ext_data.refund.encode());
+    
+
+    let ext_data_hash = keccak256(bytes);
     let proof = Proof {
         roots: roots.into(),
         proof: cmd.proof,
         nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
-        ext_data_hash: cmd.ext_data_hash.to_fixed_bytes(),
+        ext_data_hash: ext_data_hash,
     };
     tracing::trace!(?proof, ?ext_data, "Client Proof");
     let call = contract.withdraw(proof, ext_data);

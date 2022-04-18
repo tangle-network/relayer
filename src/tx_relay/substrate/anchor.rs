@@ -1,5 +1,4 @@
 use ethereum_types::H256;
-use serde::Deserialize;
 use tokio_stream::StreamExt;
 use webb::substrate::{
     protocol_substrate_runtime::api::{
@@ -10,35 +9,9 @@ use webb::substrate::{
 
 use crate::{
     context::RelayerContext,
-    handler::{CommandResponse, CommandStream},
+    handler::{CommandResponse, CommandStream, SubstrateCommand},
     handler::{WithdrawStatus},
 };
-
-/// Contains data that is relayed to the Mixers
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SubstrateAnchorRelayTransaction {
-    /// one of the supported chains of this relayer
-    pub chain: String,
-    /// The tree id of the mixer's underlying tree
-    pub id: u32,
-    /// The zero-knowledge proof bytes
-    pub proof: Vec<u8>,
-    /// The target merkle root for the proof
-    pub roots: Vec<[u8; 32]>,
-    /// The nullifier_hash for the proof
-    pub nullifier_hash: [u8; 32],
-    /// The recipient of the transaction
-    pub recipient: subxt::sp_core::crypto::AccountId32,
-    /// The relayer of the transaction
-    pub relayer: subxt::sp_core::crypto::AccountId32,
-    /// The relayer's fee for the transaction
-    pub fee: u128,
-    /// The refund for the transaction in native tokens
-    pub refund: u128,
-    /// The refresh commitment
-    pub refresh_commitment: [u8; 32],
-}
 
 /// Handler for Substrate Anchor commands
 ///
@@ -49,11 +22,14 @@ pub struct SubstrateAnchorRelayTransaction {
 /// * `stream` - The stream to write the response to
 pub async fn handle_substrate_anchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: SubstrateAnchorRelayTransaction,
+    cmd: SubstrateCommand,
     stream: CommandStream,
 ) {
     use CommandResponse::*;
-
+    let cmd = match cmd {
+        SubstrateCommand::AnchorRelayTx(cmd) => cmd,
+        _ => return
+    };
     let roots_element: Vec<Element> = cmd.roots.iter().map(|r| Element(*r)).collect();
     let nullifier_hash_element = Element(cmd.nullifier_hash);
     let refresh_commitment_element = Element(cmd.refresh_commitment);

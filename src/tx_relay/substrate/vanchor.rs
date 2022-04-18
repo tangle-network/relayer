@@ -1,6 +1,5 @@
 
 use ethereum_types::H256;
-use serde::{Deserialize, Serialize};
 use tokio_stream::StreamExt;
 use webb::substrate::subxt::sp_runtime::AccountId32;
 use webb::substrate::{
@@ -10,45 +9,12 @@ use webb::substrate::{
     subxt::{self, DefaultConfig, PairSigner, TransactionStatus},
 };
 
+use crate::handler::SubstrateCommand;
 use crate::{
     context::RelayerContext,
     handler::{CommandResponse, CommandStream},
     handler::{WithdrawStatus},
 };
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ProofData<E> {
-	pub proof: Vec<u8>,
-	pub public_amount: E,
-	pub roots: Vec<E>,
-	pub input_nullifiers: Vec<E>,
-	pub output_commitments: Vec<E>,
-	pub ext_data_hash: E,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-pub struct ExtData<I, A, B, E> {
-	pub recipient: I,
-	pub relayer: I,
-	pub ext_amount: A,
-	pub fee: B,
-	pub encrypted_output1: E,
-	pub encrypted_output2: E,
-}
-
-/// Contains data that is relayed to the Mixers
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SubstrateVAnchorRelayTransaction {
-    /// one of the supported chains of this relayer
-    pub chain: String,
-    /// The tree id of the mixer's underlying tree
-    pub id: u32,
-    /// The zero-knowledge proof data structure for VAnchor transactions
-    pub proof_data: ProofData<[u8; 32]>,
-    /// The external data structure for arbitrary inputs
-    pub ext_data: ExtData<AccountId32, i128, u128, [u8; 32]>,
-}
 
 /// Handler for Substrate Anchor commands
 ///
@@ -59,10 +25,14 @@ pub struct SubstrateVAnchorRelayTransaction {
 /// * `stream` - The stream to write the response to
 pub async fn handle_substrate_vanchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: SubstrateVAnchorRelayTransaction,
+    cmd: SubstrateCommand,
     stream: CommandStream,
 ) {
     use CommandResponse::*;
+    let cmd = match cmd {
+        SubstrateCommand::VAnchorRelayTx(cmd) => cmd,
+        _ => return
+    };
 
     let proof_elements: vanchor::ProofData<Element> = vanchor::ProofData {
         proof: cmd.proof_data.proof,
