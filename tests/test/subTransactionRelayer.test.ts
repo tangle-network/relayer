@@ -44,14 +44,14 @@ describe('Substrate Transaction Relayer', function () {
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
-      ports: 'auto'
+      ports: 'auto',
     });
 
     bobNode = await LocalProtocolSubstrate.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
-      ports: 'auto'
+      ports: 'auto',
     });
 
     await aliceNode.writeConfig({
@@ -74,11 +74,18 @@ describe('Substrate Transaction Relayer', function () {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     const note = await makeDeposit(api, aliceNode, account);
-    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
 
     // get the initial balance
     // @ts-ignore
-    let { nonce, data: balance } = await api.query.system.account(withdrawalProof.recipient);
+    let { nonce, data: balance } = await api.query.system.account(
+      withdrawalProof.recipient
+    );
     let initialBalance = balance.free.toBigInt();
     console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
     // now we need to submit the withdrawal transaction.
@@ -97,7 +104,8 @@ describe('Substrate Transaction Relayer', function () {
 
     // get the balance after withdrawal is done and see if it increases
     // @ts-ignore
-    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(withdrawalProof.recipient);
+    const { nonce: nonceAfter, data: balanceAfter } =
+      await api.query.system.account(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
     expect(balanceAfterWithdraw > initialBalance);
@@ -107,9 +115,14 @@ describe('Substrate Transaction Relayer', function () {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     const note = await makeDeposit(api, aliceNode, account);
-    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
 
-    const invalidAddress = "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy";
+    const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
 
     // now we need to submit the withdrawal transaction.
     try {
@@ -129,9 +142,11 @@ describe('Substrate Transaction Relayer', function () {
       console.log(`error is ${e}`);
 
       // Expect an error to be thrown
-      expect(e).to.not.be.null
+      expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain("Runtime error: RuntimeError(Module { index: 40, error: 1 }");
+      expect(e).to.contain(
+        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+      );
     }
   });
 
@@ -139,7 +154,12 @@ describe('Substrate Transaction Relayer', function () {
     const api = await aliceNode.api();
     const account = createAccount('//Eve');
     const note = await makeDeposit(api, aliceNode, account);
-    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
 
     const proofBytes = hexToU8a(withdrawalProof.proofBytes);
     proofBytes[1] |= 0x42;
@@ -164,9 +184,11 @@ describe('Substrate Transaction Relayer', function () {
       console.log(`error is ${e}`);
 
       // Expect an error to be thrown
-      expect(e).to.not.be.null
+      expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain("Runtime error: RuntimeError(Module { index: 40, error: 1 }");
+      expect(e).to.contain(
+        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+      );
     }
   });
 
@@ -174,7 +196,12 @@ describe('Substrate Transaction Relayer', function () {
     const api = await aliceNode.api();
     const account = createAccount('//Ferdie');
     const note = await makeDeposit(api, aliceNode, account);
-    const withdrawalProof = await initWithdrawal(api, webbRelayer, account, note);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
 
     const invalidFee = 100;
 
@@ -196,12 +223,13 @@ describe('Substrate Transaction Relayer', function () {
       console.log(`error is ${e}`);
 
       // Expect an error to be thrown
-      expect(e).to.not.be.null
+      expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain("Runtime error: RuntimeError(Module { index: 40, error: 1 }");
+      expect(e).to.contain(
+        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+      );
     }
   });
-
 
   after(async () => {
     await aliceNode?.stop();
@@ -331,7 +359,11 @@ function createAccount(accountId: string): any {
   return account;
 }
 
-async function makeDeposit(api: any, aliceNode: any, account: any):  Promise<any> {
+async function makeDeposit(
+  api: any,
+  aliceNode: any,
+  account: any
+): Promise<any> {
   const { tx, note } = await createMixerDepositTx(api);
 
   // send the deposit transaction.
@@ -341,7 +373,12 @@ async function makeDeposit(api: any, aliceNode: any, account: any):  Promise<any
   return note;
 }
 
-async function initWithdrawal(api: any, webbRelayer: any, account: any, note: any): Promise<WithdrawalProof> {
+async function initWithdrawal(
+  api: any,
+  webbRelayer: any,
+  account: any,
+  note: any
+): Promise<WithdrawalProof> {
   // next we need to prepare the withdrawal transaction.
   // create correct proof with right address
   const withdrawalProof = await createMixerWithdrawProof(api, note, {
@@ -353,4 +390,3 @@ async function initWithdrawal(api: any, webbRelayer: any, account: any, note: an
 
   return withdrawalProof;
 }
-

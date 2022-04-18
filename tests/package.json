@@ -9,7 +9,8 @@
   "type": "module",
   "scripts": {
     "lint": "eslint . --ext .ts",
-    "test": "mocha"
+    "test": "mocha",
+    "format": "prettier -w **/*.ts"
   },
   "engines": {
     "node": "17.x.x"

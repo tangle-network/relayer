@@ -41,7 +41,7 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
         '--ws-external',
         `--${opts.authority}`
       );
-      if(!opts.isManual) {
+      if (!opts.isManual) {
         const proc = spawn('docker', startArgs, {});
         if (opts.enableLogging) {
           proc.stdout.on('data', (data: Buffer) => {
