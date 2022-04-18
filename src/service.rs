@@ -79,14 +79,6 @@ pub async fn ignite(
 
         for contract in &chain_config.contracts {
             match contract {
-                Contract::Tornado(config) => {
-                    start_tornado_events_watcher(
-                        ctx,
-                        config,
-                        client.clone(),
-                        store.clone(),
-                    )?;
-                }
                 Contract::Anchor(config) => {
                     start_anchor_events_watcher(
                         ctx,
@@ -217,57 +209,7 @@ fn start_dkg_proposal_handler(
     tokio::task::spawn(task);
     Ok(())
 }
-/// Starts the event watcher for tornado events.
-///
-/// Returns Ok(()) if successful, or an error if not.
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `config` - Tornado contract configuration
-/// * `client` - Tornado client * `store` -[Sled](https://sled.rs)-based database store
-fn start_tornado_events_watcher(
-    ctx: &RelayerContext,
-    config: &TornadoContractConfig,
-    client: Arc<Client>,
-    store: Arc<Store>,
-) -> anyhow::Result<()> {
-    // check first if we should start the events watcher for this contract.
-    if !config.events_watcher.enabled {
-        tracing::warn!(
-            "Tornado events watcher is disabled for ({}).",
-            config.common.address,
-        );
-        return Ok(());
-    }
-    let wrapper = TornadoContractWrapper::new(config.clone(), client.clone());
-    tracing::debug!(
-        "Tornado events watcher for ({}) Started.",
-        config.common.address,
-    );
-    let watcher = TornadoLeavesWatcher.run(client, store, wrapper);
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let contract_address = config.common.address;
-    let task = async move {
-        tokio::select! {
-            _ = watcher => {
-                tracing::warn!(
-                    "Tornado events watcher stopped for ({})",
-                    contract_address,
-                );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping Tornado events watcher for ({})",
-                    contract_address,
-                );
-            },
-        }
-    };
-    // kick off the watcher.
-    tokio::task::spawn(task);
-    Ok(())
-}
+
 /// Starts the event watcher for Anchor events.
 ///
 /// Returns Ok(()) if successful, or an error if not.

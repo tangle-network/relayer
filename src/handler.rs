@@ -37,7 +37,6 @@ use webb::substrate::subxt::sp_runtime::AccountId32;
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
 use crate::tx_relay::evm::anchor::handle_anchor_relay_tx;
-use crate::tx_relay::evm::mixer::handle_mixer_relay_tx;
 use crate::tx_relay::substrate::anchor::handle_substrate_anchor_relay_tx;
 use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
@@ -300,7 +299,6 @@ pub enum NetworkStatus {
     Disconnected,
     UnsupportedContract,
     UnsupportedChain,
-    Misconfigured,
     InvalidRelayerAddress,
 }
 /// Enumerates the withdraw status response of the relayer
@@ -358,13 +356,13 @@ pub async fn handle_evm(
     stream: CommandStream,
 ) {
     match cmd {
-        CommandType::Mixer(_) => handle_mixer_relay_tx(ctx, cmd, stream).await,
         CommandType::Anchor(_) => {
             handle_anchor_relay_tx(ctx, cmd, stream).await
         }
         CommandType::VAnchor(_) => {
             todo!();
         }
+        _ => {}
     }
 }
 
