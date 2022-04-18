@@ -1,20 +1,42 @@
-use ethereum_types::U256;
+use ethereum_types::{Address, H256, U256, U64};
+use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use webb::evm::{
     contract::protocol_solidity::{
         fixed_deposit_anchor::{ExtData, Proof},
         FixedDepositAnchorContract,
     },
-    ethers::prelude::{Signer, SignerMiddleware},
+    ethers::prelude::{Signer, SignerMiddleware, Bytes},
 };
 
 use crate::{
     context::RelayerContext,
     handler::{
-        calculate_fee, into_withdraw_error, AnchorRelayTransaction,
+        calculate_fee, into_withdraw_error,
         CommandResponse, CommandStream, NetworkStatus, WithdrawStatus,
     },
 };
+
+/// Contains transaction data that is relayed to Anchors
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EVMAnchorRelayTransaction {
+    /// one of the supported chains of this relayer
+    pub chain: String,
+    /// The target contract.
+    pub contract: Address,
+    /// Proof bytes
+    pub proof: Bytes,
+    /// Args...
+    pub roots: Bytes,
+    pub nullifier_hash: H256,
+    pub ext_data_hash: H256,
+    pub recipient: Address, // H160 ([u8; 20])
+    pub relayer: Address,   // H160 (should be this realyer account)
+    pub fee: U256,
+    pub refund: U256,
+    pub refresh_commitment: H256,
+}
 
 /// Handler for Anchor commands
 ///
@@ -25,7 +47,7 @@ use crate::{
 /// * `stream` - The stream to write the response to
 pub async fn handle_anchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: AnchorRelayTransaction,
+    cmd: EVMAnchorRelayTransaction,
     stream: CommandStream,
 ) {
     use CommandResponse::*;

@@ -35,9 +35,11 @@ use webb::evm::ethers::{
 
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
-use crate::tx_relay::evm::anchor::handle_anchor_relay_tx;
+use crate::tx_relay::evm::anchor::{handle_anchor_relay_tx, EVMAnchorRelayTransaction};
 use crate::tx_relay::evm::tornado::handle_tornado_relay_tx;
-use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
+use crate::tx_relay::substrate::anchor::{handle_substrate_anchor_relay_tx, SubstrateAnchorRelayTransaction};
+use crate::tx_relay::substrate::mixer::{handle_substrate_mixer_relay_tx, SubstrateMixerRelayTransaction};
+use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
 use webb::substrate::subxt::sp_core::Pair;
 use webb::substrate::subxt::{self};
 
@@ -248,37 +250,17 @@ pub enum Command {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateCommand {
-    MixerRelayTx(MixerRelayTransaction),
+    MixerRelayTx(SubstrateMixerRelayTransaction),
+    AnchorRelayTx(SubstrateAnchorRelayTransaction),
+    VAnchorRelayTx(SubstrateVAnchorRelayTransaction),
 }
-/// Contains data that is relayed to the Mixers
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct MixerRelayTransaction {
-    /// one of the supported chains of this relayer
-    pub chain: String,
-    /// The tree id of the mixer's underlying tree
-    pub id: u32,
-    /// The zero-knowledge proof bytes
-    pub proof: Vec<u8>,
-    /// The target merkle root for the proof
-    pub root: [u8; 32],
-    /// The nullifier_hash for the proof
-    pub nullifier_hash: [u8; 32],
-    /// The recipient of the transaction
-    pub recipient: subxt::sp_core::crypto::AccountId32,
-    /// The relayer of the transaction
-    pub relayer: subxt::sp_core::crypto::AccountId32,
-    /// The relayer's fee for the transaction
-    pub fee: u128,
-    /// The refund for the transaction in native tokens
-    pub refund: u128,
-}
+
 /// Enumerates the supported EVM commands for relaying transactions
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmCommand {
     TornadoRelayTx(TornadoRelayTransaction),
-    AnchorRelayTx(AnchorRelayTransaction),
+    AnchorRelayTx(EVMAnchorRelayTransaction),
 }
 /// Contains the data for tornado relay transactions
 #[derive(Debug, Clone, Deserialize)]
@@ -298,26 +280,7 @@ pub struct TornadoRelayTransaction {
     pub fee: U256,
     pub refund: U256,
 }
-/// Contains transaction data that is relayed to Anchors
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AnchorRelayTransaction {
-    /// one of the supported chains of this relayer
-    pub chain: String,
-    /// The target contract.
-    pub contract: Address,
-    /// Proof bytes
-    pub proof: Bytes,
-    /// Args...
-    pub roots: Bytes,
-    pub refresh_commitment: H256,
-    pub nullifier_hash: H256,
-    pub ext_data_hash: H256,
-    pub recipient: Address, // H160 ([u8; 20])
-    pub relayer: Address,   // H160 (should be this realyer account)
-    pub fee: U256,
-    pub refund: U256,
-}
+
 /// Enumerates the command responses
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -454,7 +417,13 @@ pub async fn handle_substrate<'a>(
     match cmd {
         SubstrateCommand::MixerRelayTx(cmd) => {
             handle_substrate_mixer_relay_tx(ctx, cmd, stream).await;
-        }
+        },
+        SubstrateCommand::AnchorRelayTx(cmd) => {
+            handle_substrate_anchor_relay_tx(ctx, cmd, stream).await;
+        },
+        SubstrateCommand::VAnchorRelayTx(cmd) => {
+            handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await;
+        },
     }
 }
 

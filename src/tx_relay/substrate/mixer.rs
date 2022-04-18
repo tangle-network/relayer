@@ -1,4 +1,5 @@
 use ethereum_types::H256;
+use serde::Deserialize;
 use tokio_stream::StreamExt;
 use webb::substrate::{
     protocol_substrate_runtime::api::{
@@ -10,8 +11,32 @@ use webb::substrate::{
 use crate::{
     context::RelayerContext,
     handler::{CommandResponse, CommandStream},
-    handler::{MixerRelayTransaction, WithdrawStatus},
+    handler::{WithdrawStatus},
 };
+
+/// Contains data that is relayed to the Mixers
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SubstrateMixerRelayTransaction {
+    /// one of the supported chains of this relayer
+    pub chain: String,
+    /// The tree id of the mixer's underlying tree
+    pub id: u32,
+    /// The zero-knowledge proof bytes
+    pub proof: Vec<u8>,
+    /// The target merkle root for the proof
+    pub root: [u8; 32],
+    /// The nullifier_hash for the proof
+    pub nullifier_hash: [u8; 32],
+    /// The recipient of the transaction
+    pub recipient: subxt::sp_core::crypto::AccountId32,
+    /// The relayer of the transaction
+    pub relayer: subxt::sp_core::crypto::AccountId32,
+    /// The relayer's fee for the transaction
+    pub fee: u128,
+    /// The refund for the transaction in native tokens
+    pub refund: u128,
+}
 
 /// Handler for Substrate Mixer commands
 ///
@@ -22,7 +47,7 @@ use crate::{
 /// * `stream` - The stream to write the response to
 pub async fn handle_substrate_mixer_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: MixerRelayTransaction,
+    cmd: SubstrateMixerRelayTransaction,
     stream: CommandStream,
 ) {
     use CommandResponse::*;
