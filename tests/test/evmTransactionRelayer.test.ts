@@ -28,7 +28,7 @@ import { IAnchor } from '@webb-tools/interfaces';
 import { IAnchorDeposit } from '@webb-tools/interfaces/src/anchor/index';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 
-describe('EVM Transaction Relayer', function () {
+describe.skip('EVM Transaction Relayer', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';

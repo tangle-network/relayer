@@ -22,7 +22,7 @@ import {
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Transaction Relayer', function () {
+describe.skip('Substrate Transaction Relayer', function () {
   this.timeout(60000);
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;

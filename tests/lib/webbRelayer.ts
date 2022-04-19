@@ -201,6 +201,25 @@ export class WebbRelayer {
     await new Promise((resolve) => ws.once('open', resolve));
     return substrateTxHashOrReject(ws, inputs);
   }
+
+  public async substrateAnchorWithdraw(inputs: {
+    chain: string;
+    id: number;
+    proof: number[];
+    root: number[];
+    nullifierHash: number[];
+    recipient: string;
+    relayer: string;
+    fee: number;
+    refund: number;
+    refreshCommitment: string;
+  }): Promise<`0x${string}`> {
+    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
+    // create a new websocket connection to the relayer.
+    const ws = new WebSocket(wsEndpoint);
+    await new Promise((resolve) => ws.once('open', resolve));
+    return substrateTxHashOrReject(ws, inputs);
+  }
 }
 
 export function calcualteRelayerFees(
@@ -368,6 +387,18 @@ async function substrateTxHashOrReject(
           relayer: input.relayer,
           fee: input.fee,
           refund: input.refund,
+        },
+        anchorRelayTx: {
+          chain: input.chain,
+          id: input.id,
+          proof: input.proof,
+          root: input.root,
+          nullifierHash: input.nullifierHash,
+          recipient: input.recipient,
+          relayer: input.relayer,
+          fee: input.fee,
+          refund: input.refund,
+          refreshCommitment: input.refreshCommitment
         },
       },
     };
