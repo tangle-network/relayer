@@ -177,8 +177,10 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
         exponentiation: '5',
     };
     const note = await Note.generateNote(noteInput);
-    const treeId = 0;
+    const treeId = 4;
     const leaf = note.getLeaf();
+    console.log(`leaf ${JSON.stringify(leaf)}`);
+    console.log(`leaf ${u8aToHex(leaf)}`);
     //api.tx.anchorBn254!.create!(10000, 2, 30, 0);
     const tx = api.tx.anchorBn254!.deposit!(treeId, leaf);
     console.log(`tx in create anchor deposit ${tx}`);
@@ -218,14 +220,17 @@ async function createAnchorWithdrawProof(
             '0x',
             ''
         );
-        const treeId = 0;
+        const treeId = 4;
         //@ts-ignore
         const getLeaves = api.rpc.mt.getLeaves;
         const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
         const pm = new ProvingManagerWrapper('direct-call');
         const leafHex = u8aToHex(note.getLeaf());
         const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
-        const refreshCommitment = '0';
+        const refreshCommitment: Uint8Array = new Uint8Array(32);
+        const refreshCommitmentHex = u8aToHex(refreshCommitment);
+        console.log(`refresh commitment ${refreshCommitment}`);
+        console.log(`refresh commitment hex ${refreshCommitmentHex}`);
         expect(leafIndex).to.be.greaterThan(-1);
         const gitRoot = child
             .execSync('git rev-parse --show-toplevel')
@@ -235,9 +240,10 @@ async function createAnchorWithdrawProof(
             gitRoot,
             'tests',
             'protocol-substrate-fixtures',
-            'anchor',
+            'fixed-anchor',
             'bn254',
             'x5',
+            '2',
             'proving_key_uncompressed.bin'
         );
         const provingKey = fs.readFileSync(provingKeyPath);
@@ -251,9 +257,11 @@ async function createAnchorWithdrawProof(
             fee: opts.fee === undefined ? 0 : opts.fee,
             refund: opts.refund === undefined ? 0 : opts.refund,
             provingKey,
-            refreshCommitment
+            refreshCommitment: refreshCommitmentHex
         };
+        //console.log(`proofInput ${JSON.stringify(proofInput)}`);
         const zkProof = await pm.proof(proofInput);
+        console.log(`zkProof ${zkProof}`);
         return {
             id: treeId,
             proofBytes: `0x${zkProof.proof}`,
@@ -263,9 +271,10 @@ async function createAnchorWithdrawProof(
             relayer: opts.relayer,
             fee: opts.fee === undefined ? 0 : opts.fee,
             refund: opts.refund === undefined ? 0 : opts.refund,
-            refreshCommitment
+            refreshCommitment: refreshCommitmentHex
         };
     } catch (error) {
+        console.log("error thrown here")
         //@ts-ignore
         console.error(error.error_message);
         //@ts-ignore
@@ -316,6 +325,7 @@ async function initWithdrawal(
         recipient: account.address,
         relayer: account.address,
     });
+    console.log(`withdrawal proof is ${withdrawalProof}`);
     // ping the relayer!
     await webbRelayer.ping();
 
