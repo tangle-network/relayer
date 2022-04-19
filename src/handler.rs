@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use warp::ws::Message;
+use webb::evm::ethers::prelude::I256;
 use webb::evm::ethers::{
     contract::ContractError,
     core::k256::SecretKey,
@@ -37,6 +38,7 @@ use webb::substrate::subxt::sp_runtime::AccountId32;
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
 use crate::tx_relay::evm::anchor::handle_anchor_relay_tx;
+use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use crate::tx_relay::substrate::anchor::handle_substrate_anchor_relay_tx;
 use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
@@ -55,7 +57,7 @@ pub type EvmCommand = CommandType<
     H256,    // Element type
     Address, // Account identifier
     U256,    // Balance type
-    i128,    // Signed amount type
+    I256,    // Signed amount type
 >;
 /// The command type for Substrate pallet txes
 pub type SubstrateCommand = CommandType<
@@ -360,7 +362,7 @@ pub async fn handle_evm(
             handle_anchor_relay_tx(ctx, cmd, stream).await
         }
         CommandType::VAnchor(_) => {
-            todo!();
+            handle_vanchor_relay_tx(ctx, cmd, stream).await
         }
         _ => {}
     }

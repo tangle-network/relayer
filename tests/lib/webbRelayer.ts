@@ -285,7 +285,7 @@ async function txHashOrReject(
       evm: {
         anchor: {
           chain: chainName,
-          contract: anchorAddress,
+          id: anchorAddress,
           proof,
           roots: publicInputs._roots,
           nullifierHash: publicInputs._nullifierHash,

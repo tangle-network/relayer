@@ -1,6 +1,6 @@
 use ethereum_types::U256;
 use scale::Encode;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc};
 use webb::evm::{
     contract::protocol_solidity::{
         fixed_deposit_anchor::{ExtData, Proof},
@@ -15,9 +15,10 @@ use webb::evm::{
 use crate::{
     context::RelayerContext,
     handler::{
-        calculate_fee, into_withdraw_error, CommandResponse, CommandStream,
-        EvmCommand, NetworkStatus, WithdrawStatus,
+        calculate_fee, CommandResponse, CommandStream, EvmCommand,
+        NetworkStatus, WithdrawStatus,
     },
+    tx_relay::evm::handle_evm_tx,
 };
 
 /// Handler for Anchor commands
@@ -175,60 +176,6 @@ pub async fn handle_anchor_relay_tx<'a>(
     };
     tracing::trace!(?proof, ?ext_data, "Client Proof");
     let call = contract.withdraw(proof, ext_data);
-    // Make a dry call, to make sure the transaction will go through successfully
-    // to avoid wasting fees on invalid calls.
-    match call.call().await {
-        Ok(_) => {
-            let _ = stream.send(Withdraw(WithdrawStatus::Valid)).await;
-            tracing::debug!("Proof is valid");
-        }
-        Err(e) => {
-            tracing::error!("Error Client sent an invalid proof: {}", e);
-            let err = into_withdraw_error(e);
-            let _ = stream.send(Withdraw(err)).await;
-            return;
-        }
-    };
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain);
-    let tx = match call.send().await {
-        Ok(pending) => {
-            let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
-            let tx_hash = *pending;
-            tracing::debug!(%tx_hash, "Tx is submitted and pending!");
-            let result = pending.interval(Duration::from_millis(1000)).await;
-            let _ = stream
-                .send(Withdraw(WithdrawStatus::Submitted { tx_hash }))
-                .await;
-            result
-        }
-        Err(e) => {
-            tracing::error!("Error while sending Tx: {}", e);
-            let err = into_withdraw_error(e);
-            let _ = stream.send(Withdraw(err)).await;
-            return;
-        }
-    };
-    match tx {
-        Ok(Some(receipt)) => {
-            tracing::debug!("Finalized Tx #{}", receipt.transaction_hash);
-            let _ = stream
-                .send(Withdraw(WithdrawStatus::Finalized {
-                    tx_hash: receipt.transaction_hash,
-                }))
-                .await;
-        }
-        Ok(None) => {
-            tracing::warn!("Transaction Dropped from Mempool!!");
-            let _ = stream
-                .send(Withdraw(WithdrawStatus::DroppedFromMemPool))
-                .await;
-        }
-        Err(e) => {
-            let reason = e.to_string();
-            tracing::error!("Transaction Errored: {}", reason);
-            let _ = stream
-                .send(Withdraw(WithdrawStatus::Errored { reason, code: 4 }))
-                .await;
-        }
-    };
+    handle_evm_tx(call, stream).await;
 }
