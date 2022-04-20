@@ -4720,6 +4720,7 @@ dependencies = [
  "glob",
  "headers",
  "hex",
+ "libsecp256k1",
  "native-tls",
  "once_cell",
  "parity-scale-codec",

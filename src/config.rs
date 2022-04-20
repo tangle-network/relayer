@@ -267,6 +267,8 @@ pub enum Contract {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "pallet")]
 pub enum Pallet {
+    #[serde(rename = "DKG")]
+    Dkg(DKGPalletConfig),
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
 }
@@ -340,6 +342,14 @@ pub struct DKGProposalsPalletConfig {
     pub events_watcher: EventsWatcherConfig,
 }
 
+/// DKGPalletConfig represents the configuration for the DKG pallet (dkg-metadata).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct DKGPalletConfig {
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+}
 /// DKGProposalHandlerPalletConfig represents the configuration for the DKGProposalHandler pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]

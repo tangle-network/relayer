@@ -69,6 +69,11 @@ mod signature_bridge_watcher;
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
 
+/// A module for listening on DKG Governor Changes event.
+mod governor_watcher;
+#[doc(hidden)]
+pub use governor_watcher::*;
+
 #[doc(hidden)]
 pub mod proposal_signing_backend;
 
