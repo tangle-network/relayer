@@ -50,14 +50,11 @@ use webb::{
 
 use crate::store::sled::SledQueueKey;
 use crate::store::{
-    BridgeCommand, BridgeKey, HistoryStore, ProposalStore, QueueStore,
+    BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
+    QueueStore,
 };
 use crate::utils;
 
-/// A module for listening on tornado events.
-mod tornado_leaves_watcher;
-#[doc(hidden)]
-pub use tornado_leaves_watcher::*;
 /// A module for listening on anchor events over the DKG.
 mod anchor_watcher;
 #[doc(hidden)]
@@ -99,7 +96,7 @@ pub trait EventWatcher {
     type Contract: Deref<Target = contract::Contract<Self::Middleware>>
         + WatchableContract;
     type Events: contract::EthLogDecode;
-    type Store: HistoryStore;
+    type Store: HistoryStore + EventHashStore;
 
     async fn handle_event(
         &self,

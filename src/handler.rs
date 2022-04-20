@@ -35,13 +35,15 @@ use webb::evm::ethers::{
 
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
+use crate::tx_relay::evm::anchor::handle_anchor_relay_tx;
+use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
+use webb::substrate::subxt;
 use crate::tx_relay::evm::anchor::{handle_anchor_relay_tx, EVMAnchorRelayTransaction};
 use crate::tx_relay::evm::tornado::handle_tornado_relay_tx;
 use crate::tx_relay::substrate::anchor::{handle_substrate_anchor_relay_tx, SubstrateAnchorRelayTransaction};
 use crate::tx_relay::substrate::mixer::{handle_substrate_mixer_relay_tx, SubstrateMixerRelayTransaction};
 use crate::tx_relay::substrate::vanchor::{handle_substrate_vanchor_relay_tx, SubstrateVAnchorRelayTransaction};
 use webb::substrate::subxt::sp_core::Pair;
-use webb::substrate::subxt::{self};
 
 /// Type alias for mpsc::Sender<CommandResponse>
 pub type CommandStream = mpsc::Sender<CommandResponse>;
@@ -259,13 +261,13 @@ pub enum SubstrateCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmCommand {
-    TornadoRelayTx(TornadoRelayTransaction),
-    AnchorRelayTx(EVMAnchorRelayTransaction),
+    AnchorRelayTx(AnchorRelayTransaction),
 }
-/// Contains the data for tornado relay transactions
+
+/// Contains transaction data that is relayed to Anchors
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TornadoRelayTransaction {
+pub struct AnchorRelayTransaction {
     /// one of the supported chains of this relayer
     pub chain: String,
     /// The target contract.
@@ -273,8 +275,10 @@ pub struct TornadoRelayTransaction {
     /// Proof bytes
     pub proof: Bytes,
     /// Args...
-    pub root: H256,
+    pub roots: Bytes,
+    pub refresh_commitment: H256,
     pub nullifier_hash: H256,
+    pub ext_data_hash: H256,
     pub recipient: Address, // H160 ([u8; 20])
     pub relayer: Address,   // H160 (should be this realyer account)
     pub fee: U256,
@@ -302,7 +306,6 @@ pub enum NetworkStatus {
     Disconnected,
     UnsupportedContract,
     UnsupportedChain,
-    Misconfigured,
     InvalidRelayerAddress,
 }
 /// Enumerates the withdraw status response of the relayer
@@ -360,9 +363,6 @@ pub async fn handle_evm(
     stream: CommandStream,
 ) {
     match cmd {
-        EvmCommand::TornadoRelayTx(cmd) => {
-            handle_tornado_relay_tx(ctx, cmd, stream).await
-        }
         EvmCommand::AnchorRelayTx(cmd) => {
             handle_anchor_relay_tx(ctx, cmd, stream).await
         }
