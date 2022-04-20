@@ -163,8 +163,8 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     const noteInput: NoteGenInput = {
         protocol: 'anchor',
         version: 'v2',
-        sourceChain: '5',
-        targetChain: '5',
+        sourceChain: '2199023256632',
+        targetChain: '2199023256632',
         sourceIdentifyingData: '3',
         targetIdentifyingData: '3',
         tokenSymbol: 'WEBB',
@@ -179,8 +179,8 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     const note = await Note.generateNote(noteInput);
     const treeId = 4;
     const leaf = note.getLeaf();
-    console.log(`leaf ${JSON.stringify(leaf)}`);
-    console.log(`leaf ${u8aToHex(leaf)}`);
+    console.log(`leaf deposit ${JSON.stringify(leaf)}`);
+    console.log(`leaf deposit ${u8aToHex(leaf)}`);
     //api.tx.anchorBn254!.create!(10000, 2, 30, 0);
     const tx = api.tx.anchorBn254!.deposit!(treeId, leaf);
     console.log(`tx in create anchor deposit ${tx}`);
@@ -223,8 +223,8 @@ async function createAnchorWithdrawProof(
         const treeId = 4;
         //@ts-ignore
         const getLeaves = api.rpc.mt.getLeaves;
-        const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
-        console.log(`tree leaves are: ${JSON.stringify(treeLeaves)}`);
+        const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);
+       // console.log(`tree leaves are: ${JSON.stringify(treeLeaves)}`);
 
         // @ts-ignore
         const treeRoot = await api.query.merkleTreeBn254.trees(4);
@@ -240,14 +240,9 @@ async function createAnchorWithdrawProof(
         const pm = new ProvingManagerWrapper('direct-call');
         const leafHex = u8aToHex(note.getLeaf());
         treeLeaves.forEach((l) => console.log(`for each ${u8aToHex(l)}`))
-        console.log(`leaf hex is: ${leafHex}`);
+        console.log(`leaf hex withdrawal is: ${leafHex}`);
         const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
         console.log(`leaf index is ${leafIndex}`);
-        const refreshCommitment: Uint8Array = new Uint8Array(32);
-        const refreshCommitmentHex = u8aToHex(refreshCommitment).replace(
-            '0x',
-            ''
-        );
         expect(leafIndex).to.be.greaterThan(-1);
         const gitRoot = child
             .execSync('git rev-parse --show-toplevel')
@@ -276,7 +271,7 @@ async function createAnchorWithdrawProof(
             refund: opts.refund === undefined ? 0 : opts.refund,
             provingKey,
             roots: newTreeRoot,
-            refreshCommitment: refreshCommitmentHex
+            refreshCommitment: '0000000000000000000000000000000000000000000000000000000000000000'
         };
         //console.log(`proofInput ${JSON.stringify(proofInput)}`);
         const zkProof = await pm.proof(proofInput);
@@ -290,7 +285,7 @@ async function createAnchorWithdrawProof(
             relayer: opts.relayer,
             fee: opts.fee === undefined ? 0 : opts.fee,
             refund: opts.refund === undefined ? 0 : opts.refund,
-            refreshCommitment: refreshCommitmentHex
+            refreshCommitment: '0000000000000000000000000000000000000000000000000000000000000000'
         };
     } catch (error) {
         console.log("error thrown here")
