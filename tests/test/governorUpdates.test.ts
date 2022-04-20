@@ -14,7 +14,8 @@
  * limitations under the License.
  *
  */
-// A simple test for the Signature Bridge with the Relayer and the DKG.
+
+// A simple test for Updating the Signature Bridge Governor when DKG Rotates.
 
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
@@ -37,7 +38,7 @@ import {
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
+describe('SignatureBridge Governor Updates', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
@@ -69,6 +70,10 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const enabledPallets: Pallet[] = [
       {
         pallet: 'DKGProposalHandler',
+        eventsWatcher: defaultEventsWatcherValue,
+      },
+      {
+        pallet: 'DKG',
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
@@ -188,8 +193,8 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
           await tx.wait();
         },
         {
-          retries: 5,
-          minTimeout: 1000,
+          retries: 3,
+          minTimeout: 500,
           onRetry: (error) => {
             console.error('transferOwnership retry', error.name, error.message);
           },
@@ -255,255 +260,50 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should handle AnchorUpdateProposal when a deposit happens using DKG proposal backend', async () => {
-    // we will use chain1 as an example here.
-    const anchor1 = signatureBridge.getAnchor(
-      localChain1.chainId,
-      ethers.utils.parseEther('1')
-    );
-    const anchor2 = signatureBridge.getAnchor(
-      localChain2.chainId,
-      ethers.utils.parseEther('1')
-    );
-    await anchor1.setSigner(wallet1);
-    const tokenAddress = signatureBridge.getWebbTokenAddress(
-      localChain1.chainId
-    )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      wallet1
-    );
+  it('ownership should be transfered when the DKG rotates', async () => {
+    // now we just need to force the DKG to rotate/refresh.
+    const api = await charlieNode.api();
+    const forceIncrementNonce = api.tx.dkg!.manualIncrementNonce!();
+    const forceRefresh = api.tx.dkg!.manualRefresh!();
+    await charlieNode.sudoExecuteTransaction(forceIncrementNonce);
+    await charlieNode.sudoExecuteTransaction(forceRefresh);
+    // now we just need for the relayer to pick up the new DKG events.
+    // and update both chains' signature bridge governor.
+    await Promise.all([
+      webbRelayer.waitForEvent({
+        kind: 'tx_queue',
+        event: {
+          ty: 'EVM',
+          chain_id: localChain1.underlyingChainId.toString(),
+          finalized: true,
+        },
+      }),
+      webbRelayer.waitForEvent({
+        kind: 'tx_queue',
+        event: {
+          ty: 'EVM',
+          chain_id: localChain2.underlyingChainId.toString(),
+          finalized: true,
+        },
+      }),
+    ]);
 
-    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
-    const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
-      .be.true;
-    // now we are ready to do the deposit.
-    await anchor1.deposit(localChain2.chainId);
-    // wait until the signature bridge recives the execute call.
-    await webbRelayer.waitForEvent({
-      kind: 'signature_bridge',
-      event: { chain_id: localChain2.underlyingChainId.toString() },
-    });
-    // now we wait for the tx queue on that chain to execute the transaction.
-    await webbRelayer.waitForEvent({
-      kind: 'tx_queue',
-      event: {
-        ty: 'EVM',
-        chain_id: localChain2.underlyingChainId.toString(),
-        finalized: true,
-      },
-    });
-    // all is good, last thing is to check for the roots.
-    const srcChainRoot = await anchor1.contract.getLastRoot();
-    const neigborRoots = await anchor2.contract.getLatestNeighborRoots();
-    const edges = await anchor2.contract.getLatestNeighborEdges();
-    const isKnownNeighborRoot = neigborRoots.some(
-      (root: string) => root === srcChainRoot
-    );
-    if (!isKnownNeighborRoot) {
-      console.log({
-        srcChainRoot,
-        neigborRoots,
-        edges,
-        isKnownNeighborRoot,
-      });
+    // now we need to check that the ownership was transfered.
+    const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
+    expect(dkgPublicKey).to.not.be.null;
+    const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey!);
+    const sides = signatureBridge.bridgeSides.values();
+    for (const signatureSide of sides) {
+      const contract = signatureSide.contract;
+      const currentGovernor = await contract.governor();
+      expect(currentGovernor).to.eq(governorAddress);
     }
-    expect(isKnownNeighborRoot).to.be.true;
   });
 
   after(async () => {
     await aliceNode?.stop();
     await bobNode?.stop();
     await charlieNode?.stop();
-    await localChain1?.stop();
-    await localChain2?.stop();
-    await webbRelayer?.stop();
-  });
-});
-
-describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
-  this.timeout(120_000);
-  const PK1 =
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
-  const PK2 =
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
-  const tmpDirPath = temp.mkdirSync();
-  let localChain1: LocalChain;
-  let localChain2: LocalChain;
-  let signatureBridge: Bridges.SignatureBridge;
-  let wallet1: ethers.Wallet;
-  let wallet2: ethers.Wallet;
-
-  let webbRelayer: WebbRelayer;
-
-  before(async () => {
-    const localChain1Port = await getPort({
-      port: portNumbers(3333, 4444),
-    });
-
-    localChain1 = new LocalChain({
-      port: localChain1Port,
-      chainId: 5001,
-      name: 'Hermes',
-      populatedAccounts: [
-        {
-          secretKey: PK1,
-          balance: ethers.utils.parseEther('1000').toHexString(),
-        },
-      ],
-    });
-
-    const localChain2Port = await getPort({
-      port: portNumbers(3333, 4444),
-    });
-
-    localChain2 = new LocalChain({
-      port: localChain2Port,
-      chainId: 5002,
-      name: 'Athena',
-      populatedAccounts: [
-        {
-          secretKey: PK2,
-          balance: ethers.utils.parseEther('1000').toHexString(),
-        },
-      ],
-    });
-
-    wallet1 = new ethers.Wallet(PK1, localChain1.provider());
-    wallet2 = new ethers.Wallet(PK2, localChain2.provider());
-    // Deploy the token.
-    const localToken1 = await localChain1.deployToken(
-      'Webb Token',
-      'WEBB',
-      wallet1
-    );
-    const localToken2 = await localChain2.deployToken(
-      'Webb Token',
-      'WEBB',
-      wallet2
-    );
-
-    signatureBridge = await localChain1.deploySignatureBridge(
-      localChain2,
-      localToken1,
-      localToken2,
-      wallet1,
-      wallet2
-    );
-    // save the chain configs.
-    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
-      signatureBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
-    });
-    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
-      signatureBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
-    });
-    // get the anhor on localchain1
-    const anchor = signatureBridge.getAnchor(
-      localChain1.chainId,
-      ethers.utils.parseEther('1')
-    )!;
-    await anchor.setSigner(wallet1);
-    // approve token spending
-    const tokenAddress = signatureBridge.getWebbTokenAddress(
-      localChain1.chainId
-    )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      wallet1
-    );
-    await token.approveSpending(anchor.contract.address);
-    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
-
-    // do the same but on localchain2
-    const anchor2 = signatureBridge.getAnchor(
-      localChain2.chainId,
-      ethers.utils.parseEther('1')
-    )!;
-    await anchor2.setSigner(wallet2);
-    const tokenAddress2 = signatureBridge.getWebbTokenAddress(
-      localChain2.chainId
-    )!;
-    const token2 = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress2,
-      wallet2
-    );
-
-    await token2.approveSpending(anchor2.contract.address);
-    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
-
-    // now start the relayer
-    const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
-    webbRelayer = new WebbRelayer({
-      port: relayerPort,
-      tmp: true,
-      configDir: tmpDirPath,
-      showLogs: false,
-      verbosity: 3,
-    });
-    await webbRelayer.waitUntilReady();
-  });
-
-  it('should handle AnchorUpdateProposal when a deposit happens using mocked proposal backend', async () => {
-    // we will use chain1 as an example here.
-    const anchor1 = signatureBridge.getAnchor(
-      localChain1.chainId,
-      ethers.utils.parseEther('1')
-    );
-    const anchor2 = signatureBridge.getAnchor(
-      localChain2.chainId,
-      ethers.utils.parseEther('1')
-    );
-    await anchor1.setSigner(wallet1);
-    const tokenAddress = signatureBridge.getWebbTokenAddress(
-      localChain1.chainId
-    )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      wallet1
-    );
-
-    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
-    const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
-      .be.true;
-    // now we are ready to do the deposit.
-    await anchor1.deposit(localChain2.chainId);
-    // wait until the signature bridge recives the execute call.
-    await webbRelayer.waitForEvent({
-      kind: 'signature_bridge',
-      event: { chain_id: localChain2.underlyingChainId.toString() },
-    });
-    // now we wait for the tx queue on that chain to execute the transaction.
-    await webbRelayer.waitForEvent({
-      kind: 'tx_queue',
-      event: {
-        ty: 'EVM',
-        chain_id: localChain2.underlyingChainId.toString(),
-        finalized: true,
-      },
-    });
-    // all is good, last thing is to check for the roots.
-    const srcChainRoot = await anchor1.contract.getLastRoot();
-    const neigborRoots = await anchor2.contract.getLatestNeighborRoots();
-    const edges = await anchor2.contract.getLatestNeighborEdges();
-    const isKnownNeighborRoot = neigborRoots.some(
-      (root: string) => root === srcChainRoot
-    );
-    if (!isKnownNeighborRoot) {
-      console.log({
-        srcChainRoot,
-        neigborRoots,
-        edges,
-        isKnownNeighborRoot,
-      });
-    }
-    expect(isKnownNeighborRoot).to.be.true;
-  });
-
-  after(async () => {
     await localChain1?.stop();
     await localChain2?.stop();
     await webbRelayer?.stop();

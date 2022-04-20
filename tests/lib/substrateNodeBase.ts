@@ -48,11 +48,18 @@ export type LocalNodeOpts = {
   usageMode: UsageMode;
   enableLogging?: boolean;
   isManual?: boolean; // for manual connection to the substrate node using 9944
+  enabledPallets?: Pallet[];
 };
 
 export type SubstrateEvent = {
   section: string;
   method: string;
+};
+
+// Default Events watcher for the pallets.
+export const defaultEventsWatcherValue: EventsWatcher = {
+  enabled: true,
+  pollingInterval: 3000,
 };
 
 export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {

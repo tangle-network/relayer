@@ -467,7 +467,7 @@ export interface Pallet {
 
 type ContractKind = 'Anchor' | 'SignatureBridge' | 'GovernanceBravoDelegate';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
-type PalletKind = 'DKGProposals' | 'DKGProposalHandler';
+type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler';
 
 export type DKGProposalSigningBackend = {
   type: 'DKGNode';
