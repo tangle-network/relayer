@@ -224,13 +224,30 @@ async function createAnchorWithdrawProof(
         //@ts-ignore
         const getLeaves = api.rpc.mt.getLeaves;
         const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
+        console.log(`tree leaves are: ${JSON.stringify(treeLeaves)}`);
+
+        // @ts-ignore
+        const treeRoot = await api.query.merkleTreeBn254.trees(4);
+        //console.log(`tree root is ${treeRoot}`);
+        // @ts-ignore
+        console.log(`tree root is ${treeRoot.toJSON().root}`);
+        // @ts-ignore
+        const newTreeRoot = treeRoot.toJSON().root.replace(
+            '0x',
+            ''
+        );
+
         const pm = new ProvingManagerWrapper('direct-call');
         const leafHex = u8aToHex(note.getLeaf());
+        treeLeaves.forEach((l) => console.log(`for each ${u8aToHex(l)}`))
+        console.log(`leaf hex is: ${leafHex}`);
         const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
+        console.log(`leaf index is ${leafIndex}`);
         const refreshCommitment: Uint8Array = new Uint8Array(32);
-        const refreshCommitmentHex = u8aToHex(refreshCommitment);
-        console.log(`refresh commitment ${refreshCommitment}`);
-        console.log(`refresh commitment hex ${refreshCommitmentHex}`);
+        const refreshCommitmentHex = u8aToHex(refreshCommitment).replace(
+            '0x',
+            ''
+        );
         expect(leafIndex).to.be.greaterThan(-1);
         const gitRoot = child
             .execSync('git rev-parse --show-toplevel')
@@ -248,6 +265,7 @@ async function createAnchorWithdrawProof(
         );
         const provingKey = fs.readFileSync(provingKeyPath);
 
+        // @ts-ignore
         const proofInput: ProvingManagerSetupInput = {
             note: note.serialize(),
             relayer: relayerAddressHex,
@@ -257,6 +275,7 @@ async function createAnchorWithdrawProof(
             fee: opts.fee === undefined ? 0 : opts.fee,
             refund: opts.refund === undefined ? 0 : opts.refund,
             provingKey,
+            roots: newTreeRoot,
             refreshCommitment: refreshCommitmentHex
         };
         //console.log(`proofInput ${JSON.stringify(proofInput)}`);
@@ -284,8 +303,6 @@ async function createAnchorWithdrawProof(
 }
 
 function createAccount(accountId: string): any {
-    console.log("inside create account");
-
     const keyring = new Keyring({ type: 'sr25519' });
     const account = keyring.addFromUri(accountId);
 
@@ -297,17 +314,13 @@ async function makeDeposit(
     aliceNode: any,
     account: any
 ): Promise<any> {
-    console.log("inside make deposit");
-
     const { tx, note } = await createAnchorDepositTx(api);
 
 
     // send the deposit transaction.
     const txSigned = await tx.signAsync(account);
 
-    console.log(`signed transaction ${txSigned}`);
     const executedTrx = await aliceNode.executeTransaction(txSigned);
-    console.log(`executed transaction ${executedTrx}`);
 
     return note;
 }
