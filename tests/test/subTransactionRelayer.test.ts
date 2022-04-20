@@ -104,8 +104,8 @@ describe('Substrate Transaction Relayer', function () {
 
     // get the balance after withdrawal is done and see if it increases
     // @ts-ignore
-    const { nonce: nonceAfter, data: balanceAfter } =
-      await api.query.system.account(withdrawalProof.recipient);
+    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
+      .account!(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
     expect(balanceAfterWithdraw > initialBalance);
