@@ -105,8 +105,6 @@ describe('Substrate Anchor Transaction Relayer', function () {
     });
 
     it('Simple Anchor Transaction', async () => {
-        console.log("inside simple anchor transaction");
-
         const api = await aliceNode.api();
         const account = createAccount('//Dave');
         const note = await makeDeposit(api, aliceNode, account);
@@ -124,20 +122,25 @@ describe('Substrate Anchor Transaction Relayer', function () {
         );
         let initialBalance = balance.free.toBigInt();
         console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
+
+        const roots = [Array.from(hexToU8a(withdrawalProof.root)), Array.from(hexToU8a(withdrawalProof.root))];
+
         // now we need to submit the withdrawal transaction.
-        const txHash = await webbRelayer.substrateAnchorWithdraw({
-            chain: aliceNode.name,
-            id: withdrawalProof.id,
-            proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
-            root: Array.from(hexToU8a(withdrawalProof.root)),
-            nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
-            refund: withdrawalProof.refund,
-            fee: withdrawalProof.fee,
-            recipient: withdrawalProof.recipient,
-            relayer: withdrawalProof.relayer,
-            refreshCommitment: withdrawalProof.refreshCommitment,
-        });
-        expect(txHash).to.be.not.null;
+
+            const txHash = await webbRelayer.substrateAnchorWithdraw({
+                chain: aliceNode.name,
+                id: withdrawalProof.id,
+                proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+                roots: roots,
+                nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+                refund: withdrawalProof.refund,
+                fee: withdrawalProof.fee,
+                recipient: withdrawalProof.recipient,
+                relayer: withdrawalProof.relayer,
+                refreshCommitment: Array.from(hexToU8a(withdrawalProof.refreshCommitment)),
+            });
+
+            expect(txHash).to.be.not.null;
 
         // get the balance after withdrawal is done and see if it increases
         // @ts-ignore
@@ -179,11 +182,7 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     const note = await Note.generateNote(noteInput);
     const treeId = 4;
     const leaf = note.getLeaf();
-    console.log(`leaf deposit ${JSON.stringify(leaf)}`);
-    console.log(`leaf deposit ${u8aToHex(leaf)}`);
-    //api.tx.anchorBn254!.create!(10000, 2, 30, 0);
     const tx = api.tx.anchorBn254!.deposit!(treeId, leaf);
-    console.log(`tx in create anchor deposit ${tx}`);
     return { tx, note };
 }
 
@@ -197,13 +196,13 @@ type WithdrawalOpts = {
 type WithdrawalProof = {
     id: number;
     proofBytes: string;
-    root: string;
     nullifierHash: string;
     recipient: string;
     relayer: string;
     fee: number;
     refund: number;
     refreshCommitment: string;
+    root: string;
 };
 
 async function createAnchorWithdrawProof(
@@ -224,25 +223,20 @@ async function createAnchorWithdrawProof(
         //@ts-ignore
         const getLeaves = api.rpc.mt.getLeaves;
         const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);
-       // console.log(`tree leaves are: ${JSON.stringify(treeLeaves)}`);
 
         // @ts-ignore
         const treeRoot = await api.query.merkleTreeBn254.trees(4);
-        //console.log(`tree root is ${treeRoot}`);
+
         // @ts-ignore
         console.log(`tree root is ${treeRoot.toJSON().root}`);
+
         // @ts-ignore
-        const newTreeRoot = treeRoot.toJSON().root.replace(
-            '0x',
-            ''
-        );
+        const treeRootArray = [hexToU8a(treeRoot.toHuman().root),hexToU8a(treeRoot.toHuman().root)]
 
         const pm = new ProvingManagerWrapper('direct-call');
         const leafHex = u8aToHex(note.getLeaf());
-        treeLeaves.forEach((l) => console.log(`for each ${u8aToHex(l)}`))
-        console.log(`leaf hex withdrawal is: ${leafHex}`);
+
         const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
-        console.log(`leaf index is ${leafIndex}`);
         expect(leafIndex).to.be.greaterThan(-1);
         const gitRoot = child
             .execSync('git rev-parse --show-toplevel')
@@ -270,25 +264,26 @@ async function createAnchorWithdrawProof(
             fee: opts.fee === undefined ? 0 : opts.fee,
             refund: opts.refund === undefined ? 0 : opts.refund,
             provingKey,
-            roots: newTreeRoot,
+            roots:  treeRootArray,
             refreshCommitment: '0000000000000000000000000000000000000000000000000000000000000000'
         };
-        //console.log(`proofInput ${JSON.stringify(proofInput)}`);
+
         const zkProof = await pm.proof(proofInput);
-        console.log(`zkProof ${zkProof}`);
+        const rootsGot = `0x${zkProof.roots}`
+        console.log(`zkProof roots got ${rootsGot}`);
         return {
             id: treeId,
             proofBytes: `0x${zkProof.proof}`,
-            root: `0x${zkProof.root}`,
             nullifierHash: `0x${zkProof.nullifierHash}`,
             recipient: opts.recipient,
             relayer: opts.relayer,
             fee: opts.fee === undefined ? 0 : opts.fee,
             refund: opts.refund === undefined ? 0 : opts.refund,
-            refreshCommitment: '0000000000000000000000000000000000000000000000000000000000000000'
+            refreshCommitment: '0x0000000000000000000000000000000000000000000000000000000000000000',
+            // @ts-ignore
+            root: treeRoot.toHuman().root,
         };
     } catch (error) {
-        console.log("error thrown here")
         //@ts-ignore
         console.error(error.error_message);
         //@ts-ignore
@@ -311,11 +306,10 @@ async function makeDeposit(
 ): Promise<any> {
     const { tx, note } = await createAnchorDepositTx(api);
 
-
     // send the deposit transaction.
     const txSigned = await tx.signAsync(account);
 
-    const executedTrx = await aliceNode.executeTransaction(txSigned);
+    await aliceNode.executeTransaction(txSigned);
 
     return note;
 }
@@ -326,14 +320,12 @@ async function initWithdrawal(
     account: any,
     note: any
 ): Promise<WithdrawalProof> {
-    console.log(`initialize withdrawal`)
     // next we need to prepare the withdrawal transaction.
     // create correct proof with right address
     const withdrawalProof = await createAnchorWithdrawProof(api, note, {
         recipient: account.address,
         relayer: account.address,
     });
-    console.log(`withdrawal proof is ${withdrawalProof}`);
     // ping the relayer!
     await webbRelayer.ping();
 
