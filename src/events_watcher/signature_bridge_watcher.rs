@@ -128,13 +128,12 @@ impl BridgeWatcher for SignatureBridgeContractWatcher {
         tracing::trace!("Got cmd {:?}", cmd);
         match cmd {
             ExecuteProposalWithSignature { data, signature } => {
-                __self
-                    .execute_proposal_with_signature(
-                        store,
-                        &wrapper.contract,
-                        (data, signature),
-                    )
-                    .await?;
+                self.execute_proposal_with_signature(
+                    store,
+                    &wrapper.contract,
+                    (data, signature),
+                )
+                .await?;
             }
             TransferOwnershipWithSignature {
                 public_key,
@@ -305,7 +304,7 @@ where
         );
         QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
         tracing::debug!(
-            data_hash = ?hex::encode(data_hash),
+            data_hash = %hex::encode(data_hash),
             chain_id = %chain_id.as_u64(),
             "Enqueued the ownership transfer for execution in the tx queue",
         );

@@ -110,9 +110,9 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
                 kind = %crate::probe::Kind::SigningBackend,
                 backend = "DKG",
                 signal_bridge = %bridge_key,
-                public_key = ?hex::encode(&public_key_uncompressed),
+                public_key = %hex::encode(&public_key_uncompressed),
                 nonce = %refresh_nonce,
-                signature = ?hex::encode(&event.pub_key_sig),
+                signature = %hex::encode(&event.pub_key_sig),
             );
             store.enqueue_item(
                 SledQueueKey::from_bridge_key(bridge_key),
