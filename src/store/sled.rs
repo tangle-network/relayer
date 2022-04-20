@@ -17,12 +17,14 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fmt::Debug;
 use std::path::Path;
-use webb::evm::ethers::types;
+use webb::evm::ethers::{self, types};
 
 use crate::store::{BridgeKey, QueueKey};
 
 use super::HistoryStoreKey;
-use super::{HistoryStore, LeafCacheStore, ProposalStore, QueueStore};
+use super::{
+    EventHashStore, HistoryStore, LeafCacheStore, ProposalStore, QueueStore,
+};
 /// SledStore is a store that stores the history of events in  a [Sled](https://sled.rs)-based database.
 #[derive(Clone)]
 pub struct SledStore {
@@ -158,6 +160,30 @@ impl LeafCacheStore for SledStore {
         }
     }
 }
+
+impl EventHashStore for SledStore {
+    fn store_event(&self, event: &[u8]) -> anyhow::Result<()> {
+        let tree = self.db.open_tree("event_hashes")?;
+        let hash = ethers::utils::keccak256(event);
+        tree.insert(hash, &[])?;
+        Ok(())
+    }
+
+    fn contains_event(&self, event: &[u8]) -> anyhow::Result<bool> {
+        let tree = self.db.open_tree("event_hashes")?;
+        let hash = ethers::utils::keccak256(event);
+        let exists = tree.contains_key(hash)?;
+        Ok(exists)
+    }
+
+    fn delete_event(&self, event: &[u8]) -> anyhow::Result<()> {
+        let tree = self.db.open_tree("event_hashes")?;
+        let hash = ethers::utils::keccak256(event);
+        tree.remove(hash)?;
+        Ok(())
+    }
+}
+
 /// SledQueueKey is a key for a queue in Sled.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum SledQueueKey {
@@ -389,6 +415,8 @@ impl ProposalStore for SledStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ethereum_types::Address;
+    use webb::evm::contract::protocol_solidity::WithdrawalFilter;
     use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
     use webb::evm::ethers::types::transaction::request::TransactionRequest;
 
@@ -406,6 +434,7 @@ mod tests {
             Self::from_evm_with_custom_key(chain_id, key)
         }
     }
+
     #[test]
     fn get_leaves_should_work() {
         let tmp = tempfile::tempdir().unwrap();
@@ -523,5 +552,35 @@ mod tests {
                 .unwrap(),
             Option::<TypedTransaction>::None
         );
+    }
+
+    #[test]
+    fn events_hash_should_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+
+        let events = (0..20)
+            .map(|_| WithdrawalFilter {
+                to: Address::random(),
+                relayer: Address::random(),
+                fee: types::U256::zero(),
+            })
+            .collect::<Vec<_>>();
+
+        for event in &events {
+            let event_bytes = serde_json::to_vec(&event).unwrap();
+            // check if the event is already in the store
+            assert!(!store.contains_event(&event_bytes).unwrap());
+            // add the event
+            store.store_event(&event_bytes).unwrap();
+        }
+
+        for event in &events {
+            let event_bytes = serde_json::to_vec(&event).unwrap();
+            // check if the event is in the store
+            assert!(store.contains_event(&event_bytes).unwrap());
+            // remove the event
+            store.delete_event(&event_bytes).unwrap();
+        }
     }
 }
