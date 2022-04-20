@@ -10,8 +10,8 @@ use webb::substrate::{
 
 use crate::{
     context::RelayerContext,
+    handler::WithdrawStatus,
     handler::{CommandResponse, CommandStream},
-    handler::{WithdrawStatus},
 };
 
 /// Contains data that is relayed to the Mixers
@@ -54,7 +54,8 @@ pub async fn handle_substrate_anchor_relay_tx<'a>(
 ) {
     use CommandResponse::*;
 
-    let roots_element: Vec<Element> = cmd.roots.iter().map(|r| Element(*r)).collect();
+    let roots_element: Vec<Element> =
+        cmd.roots.iter().map(|r| Element(*r)).collect();
     let nullifier_hash_element = Element(cmd.nullifier_hash);
     let refresh_commitment_element = Element(cmd.refresh_commitment);
 

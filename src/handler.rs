@@ -35,14 +35,18 @@ use webb::evm::ethers::{
 
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
-use crate::tx_relay::evm::anchor::handle_anchor_relay_tx;
-use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
-use webb::substrate::subxt;
-use crate::tx_relay::evm::anchor::{handle_anchor_relay_tx, EVMAnchorRelayTransaction};
-use crate::tx_relay::evm::tornado::handle_tornado_relay_tx;
-use crate::tx_relay::substrate::anchor::{handle_substrate_anchor_relay_tx, SubstrateAnchorRelayTransaction};
-use crate::tx_relay::substrate::mixer::{handle_substrate_mixer_relay_tx, SubstrateMixerRelayTransaction};
-use crate::tx_relay::substrate::vanchor::{handle_substrate_vanchor_relay_tx, SubstrateVAnchorRelayTransaction};
+use crate::tx_relay::evm::anchor::{
+    handle_anchor_relay_tx, EVMAnchorRelayTransaction,
+};
+use crate::tx_relay::substrate::anchor::{
+    handle_substrate_anchor_relay_tx, SubstrateAnchorRelayTransaction,
+};
+use crate::tx_relay::substrate::mixer::{
+    handle_substrate_mixer_relay_tx, SubstrateMixerRelayTransaction,
+};
+use crate::tx_relay::substrate::vanchor::{
+    handle_substrate_vanchor_relay_tx, SubstrateVAnchorRelayTransaction,
+};
 use webb::substrate::subxt::sp_core::Pair;
 
 /// Type alias for mpsc::Sender<CommandResponse>
@@ -252,16 +256,16 @@ pub enum Command {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateCommand {
-    MixerRelayTx(SubstrateMixerRelayTransaction),
-    AnchorRelayTx(SubstrateAnchorRelayTransaction),
-    VAnchorRelayTx(SubstrateVAnchorRelayTransaction),
+    Mixer(SubstrateMixerRelayTransaction),
+    Anchor(SubstrateAnchorRelayTransaction),
+    VAnchor(SubstrateVAnchorRelayTransaction),
 }
 
 /// Enumerates the supported EVM commands for relaying transactions
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmCommand {
-    AnchorRelayTx(AnchorRelayTransaction),
+    Anchor(EVMAnchorRelayTransaction),
 }
 
 /// Contains transaction data that is relayed to Anchors
@@ -363,7 +367,7 @@ pub async fn handle_evm(
     stream: CommandStream,
 ) {
     match cmd {
-        EvmCommand::AnchorRelayTx(cmd) => {
+        EvmCommand::Anchor(cmd) => {
             handle_anchor_relay_tx(ctx, cmd, stream).await
         }
     }
@@ -415,15 +419,15 @@ pub async fn handle_substrate<'a>(
     stream: CommandStream,
 ) {
     match cmd {
-        SubstrateCommand::MixerRelayTx(cmd) => {
+        SubstrateCommand::Mixer(cmd) => {
             handle_substrate_mixer_relay_tx(ctx, cmd, stream).await;
-        },
-        SubstrateCommand::AnchorRelayTx(cmd) => {
+        }
+        SubstrateCommand::Anchor(cmd) => {
             handle_substrate_anchor_relay_tx(ctx, cmd, stream).await;
-        },
-        SubstrateCommand::VAnchorRelayTx(cmd) => {
+        }
+        SubstrateCommand::VAnchor(cmd) => {
             handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await;
-        },
+        }
     }
 }
 

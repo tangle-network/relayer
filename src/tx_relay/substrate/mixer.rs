@@ -10,8 +10,8 @@ use webb::substrate::{
 
 use crate::{
     context::RelayerContext,
+    handler::WithdrawStatus,
     handler::{CommandResponse, CommandStream},
-    handler::{WithdrawStatus},
 };
 
 /// Contains data that is relayed to the Mixers

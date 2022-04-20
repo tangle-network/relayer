@@ -1,39 +1,41 @@
-
 use ethereum_types::H256;
 use serde::{Deserialize, Serialize};
 use tokio_stream::StreamExt;
 use webb::substrate::subxt::sp_runtime::AccountId32;
 use webb::substrate::{
     protocol_substrate_runtime::api::{
-        runtime_types::{webb_standalone_runtime::Element, webb_primitives::types::vanchor}, RuntimeApi,
+        runtime_types::{
+            webb_primitives::types::vanchor, webb_standalone_runtime::Element,
+        },
+        RuntimeApi,
     },
     subxt::{self, DefaultConfig, PairSigner, TransactionStatus},
 };
 
 use crate::{
     context::RelayerContext,
+    handler::WithdrawStatus,
     handler::{CommandResponse, CommandStream},
-    handler::{WithdrawStatus},
 };
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProofData<E> {
-	pub proof: Vec<u8>,
-	pub public_amount: E,
-	pub roots: Vec<E>,
-	pub input_nullifiers: Vec<E>,
-	pub output_commitments: Vec<E>,
-	pub ext_data_hash: E,
+    pub proof: Vec<u8>,
+    pub public_amount: E,
+    pub roots: Vec<E>,
+    pub input_nullifiers: Vec<E>,
+    pub output_commitments: Vec<E>,
+    pub ext_data_hash: E,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ExtData<I, A, B, E> {
-	pub recipient: I,
-	pub relayer: I,
-	pub ext_amount: A,
-	pub fee: B,
-	pub encrypted_output1: E,
-	pub encrypted_output2: E,
+    pub recipient: I,
+    pub relayer: I,
+    pub ext_amount: A,
+    pub fee: B,
+    pub encrypted_output1: E,
+    pub encrypted_output2: E,
 }
 
 /// Contains data that is relayed to the Mixers
@@ -68,18 +70,29 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         proof: cmd.proof_data.proof,
         public_amount: Element(cmd.proof_data.public_amount),
         roots: cmd.proof_data.roots.iter().map(|r| Element(*r)).collect(),
-        input_nullifiers: cmd.proof_data.input_nullifiers.iter().map(|r| Element(*r)).collect(),
-        output_commitments: cmd.proof_data.output_commitments.iter().map(|r| Element(*r)).collect(),
+        input_nullifiers: cmd
+            .proof_data
+            .input_nullifiers
+            .iter()
+            .map(|r| Element(*r))
+            .collect(),
+        output_commitments: cmd
+            .proof_data
+            .output_commitments
+            .iter()
+            .map(|r| Element(*r))
+            .collect(),
         ext_data_hash: Element(cmd.proof_data.ext_data_hash),
     };
-    let ext_data_elements: vanchor::ExtData<AccountId32, i128, u128, Element> = vanchor::ExtData {
-        recipient: cmd.ext_data.recipient,
-        relayer: cmd.ext_data.relayer,
-        fee: cmd.ext_data.fee,
-        ext_amount: cmd.ext_data.ext_amount,
-        encrypted_output1: Element(cmd.ext_data.encrypted_output1),
-        encrypted_output2: Element(cmd.ext_data.encrypted_output2),
-    };
+    let ext_data_elements: vanchor::ExtData<AccountId32, i128, u128, Element> =
+        vanchor::ExtData {
+            recipient: cmd.ext_data.recipient,
+            relayer: cmd.ext_data.relayer,
+            fee: cmd.ext_data.fee,
+            ext_amount: cmd.ext_data.ext_amount,
+            encrypted_output1: Element(cmd.ext_data.encrypted_output1),
+            encrypted_output2: Element(cmd.ext_data.encrypted_output2),
+        };
 
     let requested_chain = cmd.chain.to_lowercase();
     let maybe_client = ctx
@@ -111,11 +124,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     let transact_tx = api
         .tx()
         .v_anchor_bn254()
-        .transact(
-            cmd.id,
-            proof_elements,
-            ext_data_elements,
-        )
+        .transact(cmd.id, proof_elements, ext_data_elements)
         .sign_and_submit_then_watch(&signer)
         .await;
     let mut event_stream = match transact_tx {

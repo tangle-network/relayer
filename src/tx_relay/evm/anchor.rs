@@ -1,4 +1,4 @@
-use ethereum_types::{Address, H256, U256, U64};
+use ethereum_types::{Address, H256, U256};
 use serde::Deserialize;
 use std::{collections::HashMap, sync::Arc, time::Duration};
 use webb::evm::{
@@ -6,14 +6,14 @@ use webb::evm::{
         fixed_deposit_anchor::{ExtData, Proof},
         FixedDepositAnchorContract,
     },
-    ethers::prelude::{Signer, SignerMiddleware, Bytes},
+    ethers::prelude::{Bytes, Signer, SignerMiddleware},
 };
 
 use crate::{
     context::RelayerContext,
     handler::{
-        calculate_fee, into_withdraw_error,
-        CommandResponse, CommandStream, NetworkStatus, WithdrawStatus,
+        calculate_fee, into_withdraw_error, CommandResponse, CommandStream,
+        NetworkStatus, WithdrawStatus,
     },
 };
 
