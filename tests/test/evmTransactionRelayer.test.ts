@@ -153,6 +153,7 @@ describe('EVM Transaction Relayer', function () {
   });
 
   it('number of deposits made should be equal to number of leaves in cache', async () => {
+    this.retries(0);
     let anchor1 = await setUpAnchor(signatureBridge, localChain1.chainId);
 
     // set signer
