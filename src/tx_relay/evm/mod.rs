@@ -12,6 +12,11 @@ use crate::handler::{
 pub mod anchor;
 pub mod vanchor;
 
+/// Submits a dry-run and then submits the actual transaction for an EVM transaction.
+///
+/// This is meant to be reused amongst all kinds of EVM transactions that the relayer sends.
+/// The intention is that a dry-run call is made first to ensure that the transaction is valid
+/// and then the actual transaction is submitted and its progress is monitored.
 pub async fn handle_evm_tx<M, D>(
     call: ContractCall<M, D>,
     stream: CommandStream,

@@ -13,6 +13,11 @@ pub mod anchor;
 pub mod mixer;
 pub mod vanchor;
 
+/// Handles a submitted Substrate transaction by processing its `TransactionProgress`.
+///
+/// The `TransactionProgress` is a subscription to a transaction's progress. This method
+/// is intended to be used in a variety of places for all kinds of submitted Substrate
+/// transactions.
 pub async fn handle_substrate_tx<E: Decode + Debug>(
     mut event_stream: TransactionProgress<'_, DefaultConfig, E>,
     stream: CommandStream,

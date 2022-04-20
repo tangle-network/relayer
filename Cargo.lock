@@ -4676,9 +4676,9 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.3.2"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "df2bf6e718b953d96633a68b2673e0370fdc5d840a9b460d5702e41d6a7a0f6f"
+checksum = "9cea065330a36a4705bd16e9307c025a61a17b444f3275ed50ae6220f048af99"
 dependencies = [
  "async-trait",
  "ethers",
@@ -4686,6 +4686,7 @@ dependencies = [
  "openssl",
  "parity-scale-codec",
  "rand 0.8.4",
+ "serde",
  "serde_json",
  "subxt",
  "tempfile",
@@ -4705,7 +4706,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "anyhow",
  "async-trait",

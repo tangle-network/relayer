@@ -55,23 +55,37 @@ pub struct AnchorRelayTransaction<Id, P, R, E, I, B> {
     pub ext_data_hash: E,
 }
 
+/// Proof data object for VAnchor proofs on any chain
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ProofData<P, R, E> {
+    /// Encoded proof
     pub proof: P,
+    /// Public amount for proof
     pub public_amount: E,
+    /// Root set for proving membership of inputs within
     pub roots: R,
+    /// Input nullifiers to be spent
     pub input_nullifiers: Vec<E>,
+    /// Output commitments to be added into the tree
     pub output_commitments: Vec<E>,
+    /// External data hash consisting of arbitrary data inputs
     pub ext_data_hash: E,
 }
 
+/// External data for the VAnchor on any chain.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct ExtData<E, I, B, A> {
+    /// Recipient identifier of the withdrawn funds
     pub recipient: I,
+    /// Relayer identifier of the transaction
     pub relayer: I,
+    /// External amount being deposited or withdrawn withdrawn
     pub ext_amount: A,
+    /// Fee to pay the relayer
     pub fee: B,
+    /// First encrypted output commitment
     pub encrypted_output1: E,
+    /// Second encrypted output commitment
     pub encrypted_output2: E,
 }
 
