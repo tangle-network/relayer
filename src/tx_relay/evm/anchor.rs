@@ -1,15 +1,11 @@
 use ethereum_types::U256;
-use scale::Encode;
 use std::{collections::HashMap, sync::Arc};
 use webb::evm::{
     contract::protocol_solidity::{
         fixed_deposit_anchor::{ExtData, Proof},
         FixedDepositAnchorContract,
     },
-    ethers::{
-        prelude::{Signer, SignerMiddleware},
-        utils::keccak256,
-    },
+    ethers::prelude::{Signer, SignerMiddleware},
 };
 
 use crate::{
@@ -160,19 +156,11 @@ pub async fn handle_anchor_relay_tx<'a>(
         refund: cmd.refund,
     };
 
-    let mut bytes = Vec::new();
-    bytes.extend_from_slice(&ext_data.refresh_commitment);
-    bytes.extend_from_slice(ext_data.recipient.as_bytes());
-    bytes.extend_from_slice(ext_data.relayer.as_bytes());
-    bytes.extend_from_slice(&ext_data.fee.encode());
-    bytes.extend_from_slice(&ext_data.refund.encode());
-
-    let ext_data_hash = keccak256(bytes);
     let proof = Proof {
         roots: roots.into(),
         proof: cmd.proof,
         nullifier_hash: cmd.nullifier_hash.to_fixed_bytes(),
-        ext_data_hash,
+        ext_data_hash: cmd.ext_data_hash.to_fixed_bytes(),
     };
     tracing::trace!(?proof, ?ext_data, "Client Proof");
     let call = contract.withdraw(proof, ext_data);

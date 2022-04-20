@@ -51,6 +51,8 @@ pub struct AnchorRelayTransaction<Id, P, R, E, I, B> {
     pub refund: B,
     /// The refresh commitment
     pub refresh_commitment: E,
+    /// The external data hash,
+    pub ext_data_hash: E,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
