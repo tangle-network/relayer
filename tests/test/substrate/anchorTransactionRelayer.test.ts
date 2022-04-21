@@ -122,20 +122,21 @@ describe('Substrate Anchor Transaction Relayer', function () {
         const roots = [Array.from(hexToU8a(withdrawalProof.root)), Array.from(hexToU8a(withdrawalProof.root))];
 
         // now we need to submit the withdrawal transaction.
-            const txHash = await webbRelayer.substrateAnchorWithdraw({
-                chain: aliceNode.name,
-                id: withdrawalProof.id,
-                proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
-                roots: roots,
-                nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
-                refund: withdrawalProof.refund,
-                fee: withdrawalProof.fee,
-                recipient: withdrawalProof.recipient,
-                relayer: withdrawalProof.relayer,
-                refreshCommitment: Array.from(hexToU8a(withdrawalProof.refreshCommitment)),
-            });
+        const txHash = await webbRelayer.substrateAnchorWithdraw({
+            chain: aliceNode.name,
+            id: withdrawalProof.id,
+            proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+            roots: roots,
+            nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+            refund: withdrawalProof.refund,
+            fee: withdrawalProof.fee,
+            recipient: withdrawalProof.recipient,
+            relayer: withdrawalProof.relayer,
+            refreshCommitment: Array.from(hexToU8a(withdrawalProof.refreshCommitment)),
+            extDataHash: Array.from(hexToU8a('0x0000000000000000000000000000000000000000000000000000000000000000')),
+        });
 
-            expect(txHash).to.be.not.null;
+        expect(txHash).to.be.not.null;
 
         // get the balance after withdrawal is done and see if it increases
         // @ts-ignore
@@ -174,6 +175,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
                 recipient: invalidAddress,
                 relayer: invalidAddress,
                 refreshCommitment: Array.from(hexToU8a(withdrawalProof.refreshCommitment)),
+                extDataHash: Array.from(hexToU8a('0x0000000000000000000000000000000000000000000000000000000000000000')),
             });
         } catch (e) {
             console.log(`error is ${e}`);

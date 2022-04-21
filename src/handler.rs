@@ -25,6 +25,7 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use warp::ws::Message;
+use webb::evm::ethers::prelude::I256;
 use webb::evm::ethers::{
     contract::ContractError,
     core::k256::SecretKey,
@@ -32,25 +33,42 @@ use webb::evm::ethers::{
     signers::{LocalWallet, Signer},
     types::Bytes,
 };
+use webb::substrate::subxt::sp_runtime::AccountId32;
 
 use crate::context::RelayerContext;
 use crate::store::LeafCacheStore;
-use crate::tx_relay::evm::anchor::{
-    handle_anchor_relay_tx, EVMAnchorRelayTransaction,
-};
-use crate::tx_relay::substrate::anchor::{
-    handle_substrate_anchor_relay_tx, SubstrateAnchorRelayTransaction,
-};
-use crate::tx_relay::substrate::mixer::{
-    handle_substrate_mixer_relay_tx, SubstrateMixerRelayTransaction,
-};
-use crate::tx_relay::substrate::vanchor::{
-    handle_substrate_vanchor_relay_tx, SubstrateVAnchorRelayTransaction,
+use crate::tx_relay::evm::anchor::handle_anchor_relay_tx;
+use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
+use crate::tx_relay::substrate::anchor::handle_substrate_anchor_relay_tx;
+use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
+use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
+use crate::tx_relay::{
+    AnchorRelayTransaction, MixerRelayTransaction, VAnchorRelayTransaction,
 };
 use webb::substrate::subxt::sp_core::Pair;
 
 /// Type alias for mpsc::Sender<CommandResponse>
 pub type CommandStream = mpsc::Sender<CommandResponse>;
+/// The command type for EVM txes
+pub type EvmCommand = CommandType<
+    Address, // Contract address
+    Bytes,   // Proof bytes
+    Bytes,   // Roots format
+    H256,    // Element type
+    Address, // Account identifier
+    U256,    // Balance type
+    I256,    // Signed amount type
+>;
+/// The command type for Substrate pallet txes
+pub type SubstrateCommand = CommandType<
+    u32,           // Tree Id
+    Vec<u8>,       // Raw proof bytes
+    Vec<[u8; 32]>, // Roots format
+    [u8; 32],      // Element type
+    AccountId32,   // Account identifier
+    u128,          // Balance type
+    i128,          // Signed amount type
+>;
 
 /// Sets up a websocket connection.
 ///
@@ -252,41 +270,14 @@ pub enum Command {
     Evm(EvmCommand),
     Ping(),
 }
-/// Enumerates the supported commands for the substrate relayer
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SubstrateCommand {
-    Mixer(SubstrateMixerRelayTransaction),
-    Anchor(SubstrateAnchorRelayTransaction),
-    VAnchor(SubstrateVAnchorRelayTransaction),
-}
 
-/// Enumerates the supported EVM commands for relaying transactions
+/// Enumerates the supported protocols for relaying transactions
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum EvmCommand {
-    Anchor(EVMAnchorRelayTransaction),
-}
-
-/// Contains transaction data that is relayed to Anchors
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AnchorRelayTransaction {
-    /// one of the supported chains of this relayer
-    pub chain: String,
-    /// The target contract.
-    pub contract: Address,
-    /// Proof bytes
-    pub proof: Bytes,
-    /// Args...
-    pub roots: Bytes,
-    pub refresh_commitment: H256,
-    pub nullifier_hash: H256,
-    pub ext_data_hash: H256,
-    pub recipient: Address, // H160 ([u8; 20])
-    pub relayer: Address,   // H160 (should be this realyer account)
-    pub fee: U256,
-    pub refund: U256,
+pub enum CommandType<Id, P, R, E, I, B, A> {
+    Mixer(MixerRelayTransaction<Id, P, E, I, B>),
+    Anchor(AnchorRelayTransaction<Id, P, R, E, I, B>),
+    VAnchor(VAnchorRelayTransaction<Id, P, R, E, I, B, A>),
 }
 
 /// Enumerates the command responses
@@ -367,9 +358,13 @@ pub async fn handle_evm(
     stream: CommandStream,
 ) {
     match cmd {
-        EvmCommand::Anchor(cmd) => {
+        CommandType::Anchor(_) => {
             handle_anchor_relay_tx(ctx, cmd, stream).await
         }
+        CommandType::VAnchor(_) => {
+            handle_vanchor_relay_tx(ctx, cmd, stream).await
+        }
+        _ => {}
     }
 }
 
@@ -419,13 +414,13 @@ pub async fn handle_substrate<'a>(
     stream: CommandStream,
 ) {
     match cmd {
-        SubstrateCommand::Mixer(cmd) => {
+        CommandType::Mixer(_) => {
             handle_substrate_mixer_relay_tx(ctx, cmd, stream).await;
         }
-        SubstrateCommand::Anchor(cmd) => {
+        CommandType::Anchor(_) => {
             handle_substrate_anchor_relay_tx(ctx, cmd, stream).await;
         }
-        SubstrateCommand::VAnchor(cmd) => {
+        CommandType::VAnchor(_) => {
             handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await;
         }
     }
