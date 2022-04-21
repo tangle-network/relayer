@@ -265,7 +265,7 @@ pub enum SubstrateCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmCommand {
-    AnchorRelayTx(EVMAnchorRelayTransaction),
+    Anchor(EVMAnchorRelayTransaction),
 }
 
 /// Contains transaction data that is relayed to Anchors
@@ -367,7 +367,7 @@ pub async fn handle_evm(
     stream: CommandStream,
 ) {
     match cmd {
-        EvmCommand::AnchorRelayTx(cmd) => {
+        EvmCommand::Anchor(cmd) => {
             handle_anchor_relay_tx(ctx, cmd, stream).await
         }
     }

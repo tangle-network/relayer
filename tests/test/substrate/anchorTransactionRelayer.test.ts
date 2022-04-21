@@ -56,6 +56,20 @@ describe('Substrate Anchor Transaction Relayer', function () {
                 ),
             };
 
+        // for manual connection
+        const aliceManualPorts = {
+            ws: 9944,
+            http: 9933,
+            p2p: 30333
+        }
+
+        // for manual connection
+        const bobManualPorts = {
+            ws: 9945,
+            http: 9934,
+            p2p: 30334
+        }
+
         aliceNode = await LocalProtocolSubstrate.start({
             name: 'substrate-alice',
             authority: 'alice',
@@ -129,6 +143,48 @@ describe('Substrate Anchor Transaction Relayer', function () {
         let balanceAfterWithdraw = balanceAfter.free.toBigInt();
         console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
         expect(balanceAfterWithdraw > initialBalance);
+    });
+
+    it('Should fail to withdraw if address is invalid', async () => {
+        const api = await aliceNode.api();
+        const account = createAccount('//Dave');
+        const note = await makeDeposit(api, aliceNode, account);
+        const withdrawalProof = await initWithdrawal(
+            api,
+            webbRelayer,
+            account,
+            note
+        );
+
+        const roots = [Array.from(hexToU8a(withdrawalProof.root)), Array.from(hexToU8a(withdrawalProof.root))];
+
+        const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
+
+        // now we need to submit the withdrawal transaction.
+        try {
+            // try to withdraw with invalid address
+            await webbRelayer.substrateAnchorWithdraw({
+                chain: aliceNode.name,
+                id: withdrawalProof.id,
+                proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+                roots: roots,
+                nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+                refund: withdrawalProof.refund,
+                fee: withdrawalProof.fee,
+                recipient: invalidAddress,
+                relayer: invalidAddress,
+                refreshCommitment: Array.from(hexToU8a(withdrawalProof.refreshCommitment)),
+            });
+        } catch (e) {
+            console.log(`error is ${e}`);
+
+            // Expect an error to be thrown
+            expect(e).to.not.be.null;
+            // Runtime Error that indicates invalid withdrawal proof
+            expect(e).to.contain(
+                'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+            );
+        }
     });
 
     after(async () => {
@@ -210,10 +266,6 @@ async function createAnchorWithdrawProof(
         const treeRoot = await api.query.merkleTreeBn254.trees(4);
 
 
-        // make a root set from the tree root
-        // @ts-ignore
-        const treeRootArray = [hexToU8a(treeRoot.toHuman().root),hexToU8a(treeRoot.toHuman().root)]
-
         const pm = new ProvingManagerWrapper('direct-call');
         const leafHex = u8aToHex(note.getLeaf());
 
@@ -223,6 +275,11 @@ async function createAnchorWithdrawProof(
             .execSync('git rev-parse --show-toplevel')
             .toString()
             .trim();
+
+        // make a root set from the tree root
+        // @ts-ignore
+        const treeRootArray = [hexToU8a(treeRoot.toHuman().root),hexToU8a(treeRoot.toHuman().root)]
+
         const provingKeyPath = path.join(
             gitRoot,
             'tests',
@@ -250,8 +307,6 @@ async function createAnchorWithdrawProof(
         };
 
         const zkProof = await pm.proof(proofInput);
-        const rootsGot = `0x${zkProof.roots}`
-        console.log(`zkProof roots got ${rootsGot}`);
         return {
             id: treeId,
             proofBytes: `0x${zkProof.proof}`,

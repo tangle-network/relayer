@@ -201,7 +201,7 @@ export class WebbRelayer {
     await new Promise((resolve) => ws.once('open', resolve));
     const cmd = {
       substrate: {
-        mixerRelayTx: {
+        mixer: {
           chain: inputs.chain,
           id: inputs.id,
           proof: inputs.proof,
@@ -236,7 +236,7 @@ export class WebbRelayer {
 
     const cmd = {
       substrate: {
-        anchorRelayTx: {
+        anchor: {
           chain: inputs.chain,
           id: inputs.id,
           proof: inputs.proof,
@@ -334,7 +334,7 @@ async function txHashOrReject(
     });
     const cmd = {
       evm: {
-        anchorRelayTx: {
+        anchor: {
           chain: chainName,
           contract: anchorAddress,
           proof,
