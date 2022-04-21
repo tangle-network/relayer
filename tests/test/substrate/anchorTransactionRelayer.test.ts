@@ -56,36 +56,18 @@ describe('Substrate Anchor Transaction Relayer', function () {
                 ),
             };
 
-        // for manual connection
-        const aliceManualPorts = {
-            ws: 9944,
-            http: 9933,
-            p2p: 30333
-        }
-
-        // for manual connection
-        const bobManualPorts = {
-            ws: 9945,
-            http: 9934,
-            p2p: 30334
-        }
-
         aliceNode = await LocalProtocolSubstrate.start({
             name: 'substrate-alice',
             authority: 'alice',
             usageMode,
-            ports: aliceManualPorts,
-            isManual: true,
-            enableLogging: true
+            ports: 'auto',
         });
 
         bobNode = await LocalProtocolSubstrate.start({
             name: 'substrate-bob',
             authority: 'bob',
             usageMode,
-            ports: bobManualPorts,
-            isManual: true,
-            enableLogging: true
+            ports: 'auto',
         });
 
         await aliceNode.writeConfig({
