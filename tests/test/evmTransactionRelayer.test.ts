@@ -26,15 +26,9 @@ import { calcualteRelayerFees, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { IAnchor } from '@webb-tools/interfaces';
 import { IAnchorDeposit } from '@webb-tools/interfaces/src/anchor/index';
-import { hexToU8a, u8aToHex } from '@polkadot/util';
+import { u8aToHex } from '@polkadot/util';
 
 describe('EVM Transaction Relayer', function () {
-  this.timeout(120_000);
-  const PK1 =
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
-  const PK2 =
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
-
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -45,6 +39,8 @@ describe('EVM Transaction Relayer', function () {
   let webbRelayer: WebbRelayer;
 
   before(async () => {
+    const PK1 = u8aToHex(ethers.utils.randomBytes(32));
+    const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     // first we need to start local evm node.
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
@@ -230,9 +226,6 @@ describe('EVM Transaction Relayer', function () {
     // check balance of recipient before withdrawal
     let webbBalanceOfRecipient = await token.getBalance(recipient.address);
     let initialBalanceOfRecipient = webbBalanceOfRecipient.toBigInt();
-    console.log(
-      `balance of recipient before withdrawal is ${initialBalanceOfRecipient}`
-    );
 
     const { args, publicInputs, extData } = await anchor1.setupWithdraw(
       depositInfo.deposit,
@@ -260,9 +253,6 @@ describe('EVM Transaction Relayer', function () {
 
     webbBalanceOfRecipient = await token.getBalance(recipient.address);
     let balanceOfRecipientAfterWithdraw = webbBalanceOfRecipient.toBigInt();
-    console.log(
-      `balance of recipient after withdrawal is ${balanceOfRecipientAfterWithdraw}`
-    );
 
     // check that recipient balance has increased
     expect(balanceOfRecipientAfterWithdraw > initialBalanceOfRecipient);
@@ -296,8 +286,6 @@ describe('EVM Transaction Relayer', function () {
         extData
       );
     } catch (e) {
-      console.log(`error withdrawing ${e}`);
-
       expect(e).to.not.be.null;
       expect(e).to.be.eq(`unsupportedContract`);
     }
@@ -333,8 +321,6 @@ describe('EVM Transaction Relayer', function () {
         extData
       );
     } catch (e) {
-      console.log(`error withdrawing ${JSON.stringify(e)}`);
-
       expect(e).to.not.be.null;
       expect(JSON.stringify(e)).to.contain(
         `VM Exception while processing transaction`
@@ -371,8 +357,6 @@ describe('EVM Transaction Relayer', function () {
         extData
       );
     } catch (e) {
-      console.log(`error withdrawing ${e}`);
-
       expect(e).to.not.be.null;
       expect(e).to.be.eq(`unsupportedContract`);
     }

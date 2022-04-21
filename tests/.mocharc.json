@@ -4,8 +4,9 @@
   "spec": ["**/*.test.*"],
   "exit": true,
   "ignore": ["node_modules/**"],
-  "slow": 120000,
-  "timeout": 120000,
-  "retries": 5,
+  "slow": 60000,
+  "timeout": 150000,
+  "retries": 0,
+  "jobs": 8,
   "no-warnings": true
 }

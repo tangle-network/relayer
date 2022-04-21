@@ -19,6 +19,7 @@
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
+import { u8aToHex } from '@polkadot/util';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
@@ -38,11 +39,6 @@ import {
 Chai.use(ChaiAsPromised);
 
 describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
-  this.timeout(120_000);
-  const PK1 =
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
-  const PK2 =
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -58,6 +54,8 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
   let webbRelayer: WebbRelayer;
 
   before(async () => {
+    const PK1 = u8aToHex(ethers.utils.randomBytes(32));
+    const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
@@ -180,9 +178,8 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     // transfer ownership to the DKG.
     const sides = signatureBridge.bridgeSides.values();
     for (const signatureSide of sides) {
-      const contract = signatureSide.contract;
       // now we transferOwnership, forcefully.
-      const tx = await contract.transferOwnership(governorAddress, 1);
+      const tx = await signatureSide.transferOwnership(governorAddress, 1);
       await retry(
         async () => {
           await tx.wait();
@@ -196,7 +193,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
         }
       );
       // check that the new governor is the same as the one we just set.
-      const currentGovernor = await contract.governor();
+      const currentGovernor = await signatureSide.contract.governor();
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
@@ -323,11 +320,6 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
 });
 
 describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
-  this.timeout(120_000);
-  const PK1 =
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
-  const PK2 =
-    '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7f';
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -338,6 +330,8 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
   let webbRelayer: WebbRelayer;
 
   before(async () => {
+    const PK1 = u8aToHex(ethers.utils.randomBytes(32));
+    const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
