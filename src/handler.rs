@@ -367,7 +367,7 @@ pub async fn handle_evm(
     stream: CommandStream,
 ) {
     match cmd {
-        EvmCommand::Anchor(cmd) => {
+        EvmCommand::AnchorRelayTx(cmd) => {
             handle_anchor_relay_tx(ctx, cmd, stream).await
         }
     }
