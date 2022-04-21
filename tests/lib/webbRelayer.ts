@@ -246,7 +246,7 @@ export class WebbRelayer {
           relayer: inputs.relayer,
           fee: inputs.fee,
           refund: inputs.refund,
-          refreshCommitment: inputs.refreshCommitment
+          refreshCommitment: inputs.refreshCommitment,
         },
       },
     };
