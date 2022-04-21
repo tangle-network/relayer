@@ -13,7 +13,6 @@ use crate::handler::SubstrateCommand;
 use crate::tx_relay::substrate::handle_substrate_tx;
 use crate::{
     context::RelayerContext,
-    handler::WithdrawStatus,
     handler::{CommandResponse, CommandStream},
 };
 

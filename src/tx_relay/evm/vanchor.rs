@@ -161,15 +161,10 @@ pub async fn handle_vanchor_relay_tx<'a>(
             .into(),
     };
 
-    let mut bytes = Vec::new();
-    bytes.extend_from_slice(ext_data.recipient.as_bytes());
-    bytes.extend_from_slice(ext_data.relayer.as_bytes());
-
-    let ext_data_hash = keccak256(bytes);
     let proof = Proof {
         proof: cmd.proof_data.proof,
         roots: roots.into(),
-        ext_data_hash,
+        ext_data_hash: cmd.proof_data.ext_data_hash.to_fixed_bytes(),
         public_amount: U256::from_little_endian(
             &cmd.proof_data.public_amount.to_fixed_bytes(),
         ),

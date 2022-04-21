@@ -86,7 +86,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
         await webbRelayer.waitUntilReady();
     });
 
-    it('Simple Anchor Transaction', async () => {
+    it.only('Simple Anchor Transaction', async () => {
         const api = await aliceNode.api();
         const account = createAccount('//Dave');
         const note = await makeDeposit(api, aliceNode, account);
@@ -108,20 +108,20 @@ describe('Substrate Anchor Transaction Relayer', function () {
         const roots = [Array.from(hexToU8a(withdrawalProof.root)), Array.from(hexToU8a(withdrawalProof.root))];
 
         // now we need to submit the withdrawal transaction.
-            const txHash = await webbRelayer.substrateAnchorWithdraw({
-                chain: aliceNode.name,
-                id: withdrawalProof.id,
-                proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
-                roots: roots,
-                nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
-                refund: withdrawalProof.refund,
-                fee: withdrawalProof.fee,
-                recipient: withdrawalProof.recipient,
-                relayer: withdrawalProof.relayer,
-                refreshCommitment: Array.from(hexToU8a(withdrawalProof.refreshCommitment)),
-            });
+        const txHash = await webbRelayer.substrateAnchorWithdraw({
+            chain: aliceNode.name,
+            id: withdrawalProof.id,
+            proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+            roots: roots,
+            nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+            refund: withdrawalProof.refund,
+            fee: withdrawalProof.fee,
+            recipient: withdrawalProof.recipient,
+            relayer: withdrawalProof.relayer,
+            refreshCommitment: Array.from(hexToU8a(withdrawalProof.refreshCommitment)),
+        });
 
-            expect(txHash).to.be.not.null;
+        expect(txHash).to.be.not.null;
 
         // get the balance after withdrawal is done and see if it increases
         // @ts-ignore

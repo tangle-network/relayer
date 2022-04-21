@@ -201,7 +201,7 @@ export class WebbRelayer {
     await new Promise((resolve) => ws.once('open', resolve));
     const cmd = {
       substrate: {
-        mixerRelayTx: {
+        mixer: {
           chain: inputs.chain,
           id: inputs.id,
           proof: inputs.proof,
@@ -236,7 +236,7 @@ export class WebbRelayer {
 
     const cmd = {
       substrate: {
-        anchorRelayTx: {
+        anchor: {
           chain: inputs.chain,
           id: inputs.id,
           proof: inputs.proof,
@@ -407,21 +407,7 @@ async function substrateTxHashOrReject(
         }
       }
     });
-    const cmd = {
-      substrate: {
-        mixer: {
-          chain: input.chain,
-          id: input.id,
-          proof: input.proof,
-          root: input.root,
-          nullifierHash: input.nullifierHash,
-          recipient: input.recipient,
-          relayer: input.relayer,
-          fee: input.fee,
-          refund: input.refund,
-        },
-      },
-    };
+
     ws.send(JSON.stringify(cmd));
   });
 }
