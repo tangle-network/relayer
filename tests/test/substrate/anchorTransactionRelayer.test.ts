@@ -56,34 +56,18 @@ describe('Substrate Anchor Transaction Relayer', function () {
                 ),
             };
 
-        // for manual connection
-        const aliceManualPorts = {
-            ws: 9944,
-            http: 9933,
-            p2p: 30333
-        }
-
-        // for manual connection
-        const bobManualPorts = {
-            ws: 9945,
-            http: 9934,
-            p2p: 30334
-        }
-
         aliceNode = await LocalProtocolSubstrate.start({
             name: 'substrate-alice',
             authority: 'alice',
             usageMode,
-            ports: aliceManualPorts,
-            isManual: true
+            ports: 'auto',
         });
 
         bobNode = await LocalProtocolSubstrate.start({
             name: 'substrate-bob',
             authority: 'bob',
             usageMode,
-            ports: bobManualPorts,
-            isManual: true
+            ports: 'auto',
         });
 
         await aliceNode.writeConfig({
@@ -148,7 +132,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
         expect(balanceAfterWithdraw > initialBalance);
     });
 
-    /*it('Should fail to withdraw if address is invalid', async () => {
+    it('Should fail to withdraw if address is invalid', async () => {
         const api = await aliceNode.api();
         const account = createAccount('//Dave');
         const note = await makeDeposit(api, aliceNode, account);
@@ -159,7 +143,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
             note
         );
 
-        const roots = [Array.from(hexToU8a(withdrawalProof.root)), Array.from(hexToU8a(withdrawalProof.root))];
+        const roots = [Array.from(hexToU8a('0x0000000000000000000000000000000000000000000000000000000000000000')), Array.from(hexToU8a(withdrawalProof.root))];
 
         const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
 
@@ -189,7 +173,98 @@ describe('Substrate Anchor Transaction Relayer', function () {
                 'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
             );
         }
-    });*/
+    });
+
+    it('Should fail to withdraw if proof is invalid', async () => {
+        const api = await aliceNode.api();
+        const account = createAccount('//Eve');
+        const note = await makeDeposit(api, aliceNode, account);
+        const withdrawalProof = await initWithdrawal(
+            api,
+            webbRelayer,
+            account,
+            note
+        );
+
+        const proofBytes = hexToU8a(withdrawalProof.proofBytes);
+        proofBytes[1] |= 0x42;
+        const invalidProofBytes = u8aToHex(proofBytes);
+        expect(withdrawalProof.proofBytes).to.not.eq(invalidProofBytes);
+
+        const roots = [Array.from(hexToU8a('0x0000000000000000000000000000000000000000000000000000000000000000')), Array.from(hexToU8a(withdrawalProof.root))];
+
+        // now we need to submit the withdrawal transaction.
+        try {
+            // try to withdraw with invalid address
+            // try to withdraw with invalid address
+            await webbRelayer.substrateAnchorWithdraw({
+                chain: aliceNode.name,
+                id: withdrawalProof.id,
+                proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+                roots: roots,
+                nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+                refund: withdrawalProof.refund,
+                fee: withdrawalProof.fee,
+                recipient: withdrawalProof.recipient,
+                relayer: withdrawalProof.relayer,
+                refreshCommitment: Array.from(hexToU8a(withdrawalProof.refreshCommitment)),
+                extDataHash: Array.from(hexToU8a('0x0000000000000000000000000000000000000000000000000000000000000000')),
+            });
+        } catch (e) {
+            console.log(`error is ${e}`);
+
+            // Expect an error to be thrown
+            expect(e).to.not.be.null;
+            // Runtime Error that indicates invalid withdrawal proof
+            expect(e).to.contain(
+                'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+            );
+        }
+    });
+
+    it('Should fail to withdraw if fee is not expected', async () => {
+        const api = await aliceNode.api();
+        const account = createAccount('//Ferdie');
+        const note = await makeDeposit(api, aliceNode, account);
+        const withdrawalProof = await initWithdrawal(
+            api,
+            webbRelayer,
+            account,
+            note
+        );
+
+        const invalidFee = 100;
+
+        const roots = [Array.from(hexToU8a('0x0000000000000000000000000000000000000000000000000000000000000000')), Array.from(hexToU8a(withdrawalProof.root))];
+
+        // now we need to submit the withdrawal transaction.
+        try {
+            // try to withdraw with invalid address
+            await webbRelayer.substrateAnchorWithdraw({
+                chain: aliceNode.name,
+                id: withdrawalProof.id,
+                proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+                roots: roots,
+                nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+                refund: withdrawalProof.refund,
+                fee: invalidFee,
+                recipient: withdrawalProof.recipient,
+                relayer: withdrawalProof.relayer,
+                refreshCommitment: Array.from(hexToU8a(withdrawalProof.refreshCommitment)),
+                extDataHash: Array.from(hexToU8a('0x0000000000000000000000000000000000000000000000000000000000000000')),
+            });
+        } catch (e) {
+            console.log(`error is ${e}`);
+
+            // Expect an error to be thrown
+            expect(e).to.not.be.null;
+            // Runtime Error that indicates invalid withdrawal proof
+            expect(e).to.contain(
+                'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
+            );
+        }
+    });
+
 
     after(async () => {
         await aliceNode?.stop();
