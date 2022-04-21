@@ -74,14 +74,16 @@ describe('Substrate Anchor Transaction Relayer', function () {
             name: 'substrate-alice',
             authority: 'alice',
             usageMode,
-            ports: 'auto',
+            ports: aliceManualPorts,
+            isManual: true
         });
 
         bobNode = await LocalProtocolSubstrate.start({
             name: 'substrate-bob',
             authority: 'bob',
             usageMode,
-            ports: 'auto',
+            ports: bobManualPorts,
+            isManual: true
         });
 
         await aliceNode.writeConfig({
@@ -119,7 +121,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
         let initialBalance = balance.free.toBigInt();
         console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
 
-        const roots = [Array.from(hexToU8a(withdrawalProof.root)), Array.from(hexToU8a(withdrawalProof.root))];
+        const roots = [Array.from(hexToU8a('0x0000000000000000000000000000000000000000000000000000000000000000')), Array.from(hexToU8a(withdrawalProof.root))];
 
         // now we need to submit the withdrawal transaction.
             const txHash = await webbRelayer.substrateAnchorWithdraw({
@@ -145,7 +147,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
         expect(balanceAfterWithdraw > initialBalance);
     });
 
-    it('Should fail to withdraw if address is invalid', async () => {
+    /*it('Should fail to withdraw if address is invalid', async () => {
         const api = await aliceNode.api();
         const account = createAccount('//Dave');
         const note = await makeDeposit(api, aliceNode, account);
@@ -185,7 +187,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
                 'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
             );
         }
-    });
+    });*/
 
     after(async () => {
         await aliceNode?.stop();
@@ -278,7 +280,7 @@ async function createAnchorWithdrawProof(
 
         // make a root set from the tree root
         // @ts-ignore
-        const treeRootArray = [hexToU8a(treeRoot.toHuman().root),hexToU8a(treeRoot.toHuman().root)]
+        const treeRootArray = [hexToU8a('0x0000000000000000000000000000000000000000000000000000000000000000'),hexToU8a(treeRoot.toHuman().root)]
 
         const provingKeyPath = path.join(
             gitRoot,

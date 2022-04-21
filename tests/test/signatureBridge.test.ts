@@ -34,7 +34,7 @@ import { UsageMode } from '../lib/substrateNodeBase.js';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
+describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   this.timeout(120_000);
   const PK1 =
     '0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e';
