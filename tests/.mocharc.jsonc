@@ -7,6 +7,11 @@
   "slow": 60000,
   "timeout": 150000,
   "retries": 0,
-  "jobs": 8,
+  // jobs (how many tests run in parallel)
+  // for now it is 1, since running many nodes at the same time causes
+  // the tests to fail.
+  // TODO: make it configurable
+  "jobs": 1,
+  "parallel": false,
   "no-warnings": true
 }

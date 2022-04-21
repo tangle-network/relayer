@@ -253,7 +253,7 @@ describe('SignatureBridge Governor Updates', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
