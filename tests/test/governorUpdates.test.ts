@@ -25,6 +25,7 @@ import temp from 'temp';
 import retry from 'async-retry';
 import { LocalChain } from '../lib/localTestnet.js';
 import { sleep } from '../lib/sleep.js';
+import { timeout } from '../lib/timeout.js';
 import { Pallet, WebbRelayer } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { LocalDkg } from '../lib/localDkg.js';
@@ -97,7 +98,7 @@ describe('SignatureBridge Governor Updates', function () {
       authority: 'charlie',
       usageMode,
       ports: 'auto',
-      enableLogging: false,
+      enableLogging: true,
       enabledPallets,
     });
 
@@ -252,7 +253,7 @@ describe('SignatureBridge Governor Updates', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
@@ -263,8 +264,11 @@ describe('SignatureBridge Governor Updates', function () {
     const api = await charlieNode.api();
     const forceIncrementNonce = api.tx.dkg!.manualIncrementNonce!();
     const forceRefresh = api.tx.dkg!.manualRefresh!();
-    await charlieNode.sudoExecuteTransaction(forceIncrementNonce);
-    await charlieNode.sudoExecuteTransaction(forceRefresh);
+    await timeout(
+      charlieNode.sudoExecuteTransaction(forceIncrementNonce),
+      5000
+    );
+    await timeout(charlieNode.sudoExecuteTransaction(forceRefresh), 5000);
     // now we just need for the relayer to pick up the new DKG events.
     // and update both chains' signature bridge governor.
     await Promise.all([
