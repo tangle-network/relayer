@@ -5,10 +5,7 @@ use webb::evm::{
         variable_anchor::{ExtData, Proof},
         VAnchorContract,
     },
-    ethers::{
-        prelude::{Signer, SignerMiddleware},
-        utils::keccak256,
-    },
+    ethers::prelude::{Signer, SignerMiddleware},
 };
 
 use crate::{

@@ -228,6 +228,7 @@ export class WebbRelayer {
     fee: number;
     refund: number;
     refreshCommitment: number[];
+    extDataHash: number[];
   }): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
     // create a new websocket connection to the relayer.
@@ -247,6 +248,7 @@ export class WebbRelayer {
           fee: inputs.fee,
           refund: inputs.refund,
           refreshCommitment: inputs.refreshCommitment,
+          extDataHash: inputs.extDataHash,
         },
       },
     };
