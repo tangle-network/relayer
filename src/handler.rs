@@ -265,7 +265,7 @@ pub enum SubstrateCommand {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmCommand {
-    Anchor(EVMAnchorRelayTransaction),
+    AnchorRelayTx(EVMAnchorRelayTransaction),
 }
 
 /// Contains transaction data that is relayed to Anchors
