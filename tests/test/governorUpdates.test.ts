@@ -98,7 +98,7 @@ describe('SignatureBridge Governor Updates', function () {
       authority: 'charlie',
       usageMode,
       ports: 'auto',
-      enableLogging: true,
+      enableLogging: false,
       enabledPallets,
     });
 
@@ -266,9 +266,9 @@ describe('SignatureBridge Governor Updates', function () {
     const forceRefresh = api.tx.dkg!.manualRefresh!();
     await timeout(
       charlieNode.sudoExecuteTransaction(forceIncrementNonce),
-      5000
+      8000
     );
-    await timeout(charlieNode.sudoExecuteTransaction(forceRefresh), 5000);
+    await timeout(charlieNode.sudoExecuteTransaction(forceRefresh), 9000);
     // now we just need for the relayer to pick up the new DKG events.
     // and update both chains' signature bridge governor.
     await Promise.all([
