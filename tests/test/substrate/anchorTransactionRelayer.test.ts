@@ -108,7 +108,6 @@ describe('Substrate Anchor Transaction Relayer', function () {
         const roots = [Array.from(hexToU8a(withdrawalProof.root)), Array.from(hexToU8a(withdrawalProof.root))];
 
         // now we need to submit the withdrawal transaction.
-
             const txHash = await webbRelayer.substrateAnchorWithdraw({
                 chain: aliceNode.name,
                 id: withdrawalProof.id,
@@ -206,12 +205,12 @@ async function createAnchorWithdrawProof(
         const getLeaves = api.rpc.mt.getLeaves;
         const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);
 
+        // Get tree root on chain
         // @ts-ignore
         const treeRoot = await api.query.merkleTreeBn254.trees(4);
 
-        // @ts-ignore
-        console.log(`tree root is ${treeRoot.toJSON().root}`);
 
+        // make a root set from the tree root
         // @ts-ignore
         const treeRootArray = [hexToU8a(treeRoot.toHuman().root),hexToU8a(treeRoot.toHuman().root)]
 
