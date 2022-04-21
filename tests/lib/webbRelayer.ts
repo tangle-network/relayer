@@ -334,9 +334,9 @@ async function txHashOrReject(
     });
     const cmd = {
       evm: {
-        anchorRelayTx: {
+        anchor: {
           chain: chainName,
-          contract: anchorAddress,
+          id: anchorAddress,
           proof,
           roots: publicInputs._roots,
           nullifierHash: publicInputs._nullifierHash,
@@ -407,7 +407,21 @@ async function substrateTxHashOrReject(
         }
       }
     });
-
+    const cmd = {
+      substrate: {
+        mixer: {
+          chain: input.chain,
+          id: input.id,
+          proof: input.proof,
+          root: input.root,
+          nullifierHash: input.nullifierHash,
+          recipient: input.recipient,
+          relayer: input.relayer,
+          fee: input.fee,
+          refund: input.refund,
+        },
+      },
+    };
     ws.send(JSON.stringify(cmd));
   });
 }

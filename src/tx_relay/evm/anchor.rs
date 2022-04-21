@@ -1,42 +1,21 @@
-use ethereum_types::{Address, H256, U256};
-use serde::Deserialize;
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use ethereum_types::U256;
+use std::{collections::HashMap, sync::Arc};
 use webb::evm::{
     contract::protocol_solidity::{
         fixed_deposit_anchor::{ExtData, Proof},
         FixedDepositAnchorContract,
     },
-    ethers::prelude::{Bytes, Signer, SignerMiddleware},
+    ethers::prelude::{Signer, SignerMiddleware},
 };
 
 use crate::{
     context::RelayerContext,
     handler::{
-        calculate_fee, into_withdraw_error, CommandResponse, CommandStream,
+        calculate_fee, CommandResponse, CommandStream, EvmCommand,
         NetworkStatus, WithdrawStatus,
     },
+    tx_relay::evm::handle_evm_tx,
 };
-
-/// Contains transaction data that is relayed to Anchors
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct EVMAnchorRelayTransaction {
-    /// one of the supported chains of this relayer
-    pub chain: String,
-    /// The target contract.
-    pub contract: Address,
-    /// Proof bytes
-    pub proof: Bytes,
-    /// Args...
-    pub roots: Bytes,
-    pub nullifier_hash: H256,
-    pub ext_data_hash: H256,
-    pub recipient: Address, // H160 ([u8; 20])
-    pub relayer: Address,   // H160 (should be this realyer account)
-    pub fee: U256,
-    pub refund: U256,
-    pub refresh_commitment: H256,
-}
 
 /// Handler for Anchor commands
 ///
@@ -47,10 +26,15 @@ pub struct EVMAnchorRelayTransaction {
 /// * `stream` - The stream to write the response to
 pub async fn handle_anchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: EVMAnchorRelayTransaction,
+    cmd: EvmCommand,
     stream: CommandStream,
 ) {
     use CommandResponse::*;
+    let cmd = match cmd {
+        EvmCommand::Anchor(cmd) => cmd,
+        _ => return,
+    };
+
     let requested_chain = cmd.chain.to_lowercase();
     let chain = match ctx.config.evm.get(&requested_chain) {
         Some(v) => v,
@@ -71,10 +55,10 @@ pub async fn handle_anchor_relay_tx<'a>(
         .map(|c| (c.common.address, c))
         .collect();
     // get the contract configuration
-    let contract_config = match supported_contracts.get(&cmd.contract) {
+    let contract_config = match supported_contracts.get(&cmd.id) {
         Some(config) => config,
         None => {
-            tracing::warn!("Unsupported Contract: {:?}", cmd.contract);
+            tracing::warn!("Unsupported Contract: {:?}", cmd.id);
             let _ = stream
                 .send(Network(NetworkStatus::UnsupportedContract))
                 .await;
@@ -137,16 +121,13 @@ pub async fn handle_anchor_relay_tx<'a>(
 
     let client = SignerMiddleware::new(provider, wallet);
     let client = Arc::new(client);
-    let contract = FixedDepositAnchorContract::new(cmd.contract, client);
+    let contract = FixedDepositAnchorContract::new(cmd.id, client);
     let denomination = match contract.denomination().call().await {
         Ok(v) => v,
         Err(e) => {
             tracing::error!("Misconfigured Contract Denomination: {}", e);
             let _ = stream
-                .send(Error(format!(
-                    "Misconfigured Contract: {:?}",
-                    cmd.contract
-                )))
+                .send(Error(format!("Misconfigured Contract: {:?}", cmd.id)))
                 .await;
             return;
         }
@@ -174,6 +155,7 @@ pub async fn handle_anchor_relay_tx<'a>(
         fee: cmd.fee,
         refund: cmd.refund,
     };
+
     let proof = Proof {
         roots: roots.into(),
         proof: cmd.proof,
@@ -182,60 +164,6 @@ pub async fn handle_anchor_relay_tx<'a>(
     };
     tracing::trace!(?proof, ?ext_data, "Client Proof");
     let call = contract.withdraw(proof, ext_data);
-    // Make a dry call, to make sure the transaction will go through successfully
-    // to avoid wasting fees on invalid calls.
-    match call.call().await {
-        Ok(_) => {
-            let _ = stream.send(Withdraw(WithdrawStatus::Valid)).await;
-            tracing::debug!("Proof is valid");
-        }
-        Err(e) => {
-            tracing::error!("Error Client sent an invalid proof: {}", e);
-            let err = into_withdraw_error(e);
-            let _ = stream.send(Withdraw(err)).await;
-            return;
-        }
-    };
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain);
-    let tx = match call.send().await {
-        Ok(pending) => {
-            let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
-            let tx_hash = *pending;
-            tracing::debug!(%tx_hash, "Tx is submitted and pending!");
-            let result = pending.interval(Duration::from_millis(1000)).await;
-            let _ = stream
-                .send(Withdraw(WithdrawStatus::Submitted { tx_hash }))
-                .await;
-            result
-        }
-        Err(e) => {
-            tracing::error!("Error while sending Tx: {}", e);
-            let err = into_withdraw_error(e);
-            let _ = stream.send(Withdraw(err)).await;
-            return;
-        }
-    };
-    match tx {
-        Ok(Some(receipt)) => {
-            tracing::debug!("Finalized Tx #{}", receipt.transaction_hash);
-            let _ = stream
-                .send(Withdraw(WithdrawStatus::Finalized {
-                    tx_hash: receipt.transaction_hash,
-                }))
-                .await;
-        }
-        Ok(None) => {
-            tracing::warn!("Transaction Dropped from Mempool!!");
-            let _ = stream
-                .send(Withdraw(WithdrawStatus::DroppedFromMemPool))
-                .await;
-        }
-        Err(e) => {
-            let reason = e.to_string();
-            tracing::error!("Transaction Errored: {}", reason);
-            let _ = stream
-                .send(Withdraw(WithdrawStatus::Errored { reason, code: 4 }))
-                .await;
-        }
-    };
+    handle_evm_tx(call, stream).await;
 }
