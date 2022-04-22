@@ -230,7 +230,15 @@ pub trait LeafCacheStore: HistoryStore {
 /// A Command sent to the Bridge to execute different actions.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum BridgeCommand {
-    ExecuteProposalWithSignature { data: Vec<u8>, signature: Vec<u8> },
+    ExecuteProposalWithSignature {
+        data: Vec<u8>,
+        signature: Vec<u8>,
+    },
+    TransferOwnershipWithSignature {
+        public_key: Vec<u8>,
+        nonce: u32,
+        signature: Vec<u8>,
+    },
 }
 
 /// A trait for retrieving queue keys

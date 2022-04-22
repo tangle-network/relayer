@@ -139,6 +139,16 @@ pub async fn ignite(
                                 store.clone(),
                             )?;
                         }
+                        Pallet::Dkg(config) => {
+                            start_dkg_pallet_watcher(
+                                ctx,
+                                config,
+                                client.clone(),
+                                node_name.clone(),
+                                chain_id,
+                                store.clone(),
+                            )?;
+                        }
                         Pallet::DKGProposals(_) => {
                             // TODO(@shekohex): start the dkg proposals service
                         }
@@ -152,6 +162,7 @@ pub async fn ignite(
     }
     Ok(())
 }
+
 /// Starts the event watcher for DKG proposal handler events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
@@ -200,6 +211,61 @@ fn start_dkg_proposal_handler(
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
                     "Stopping DKG Proposal Handler events watcher for ({})",
+                    node_name2,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
+    Ok(())
+}
+
+/// Starts the event watcher for DKG pallet events watcher.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - DKG pallet configuration
+/// * `client` - DKG client
+/// * `node_name` - Name of the node
+/// * `chain_id` - An U256 representing the chain id of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
+fn start_dkg_pallet_watcher(
+    ctx: &RelayerContext,
+    config: &DKGPalletConfig,
+    client: DkgClient,
+    node_name: String,
+    chain_id: U256,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    // check first if we should start the events watcher for this pallet.
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "DKG Pallet events watcher is disabled for ({}).",
+            node_name,
+        );
+        return Ok(());
+    }
+    tracing::debug!("DKG Pallet events watcher for ({}) Started.", node_name,);
+    let node_name2 = node_name.clone();
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let webb_config = ctx.config.clone();
+    let task = async move {
+        let governor_watcher = DKGGovernorWatcher::new(webb_config);
+        let watcher = governor_watcher.run(node_name, chain_id, client, store);
+        tokio::select! {
+            _ = watcher => {
+                tracing::warn!(
+                    "DKG Pallet events watcher stopped for ({})",
+                    node_name2,
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping DKG Pallet events watcher for ({})",
                     node_name2,
                 );
             },

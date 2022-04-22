@@ -126,12 +126,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       httpEndpoint: `http://${host}:${ports.http}`,
       wsEndpoint: `ws://${host}:${ports.ws}`,
       runtime: 'DKG',
-      pallets: [
-        {
-          pallet: 'DKGProposalHandler',
-          eventsWatcher: { enabled: true, pollingInterval: 3000 },
-        },
-      ],
+      pallets: this.opts.enabledPallets ?? [],
       suri,
     };
     return nodeInfo;
