@@ -24,6 +24,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
+import { sleep } from '../../lib/sleep.js';
 import { WebbRelayer } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { UsageMode } from '../../lib/substrateNodeBase.js';
@@ -74,7 +75,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       path: `${tmpDirPath}/${aliceNode.name}.json`,
       suri: '//Charlie',
     });
-
+    await sleep(5000);
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
@@ -84,6 +85,32 @@ describe('Substrate Anchor Transaction Relayer', function () {
       showLogs: false,
     });
     await webbRelayer.waitUntilReady();
+  });
+
+  it('Substrate Anchor Leaf Api', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Dave');
+    // Make multiple deposits
+    const noOfDeposit = 5;
+    for (let i = 0, len = noOfDeposit; i < len; i++) {
+      const note = await makeDeposit(api, aliceNode, account);
+    }
+    // now we wait for all deposit to be saved in LeafStorageCache
+    await webbRelayer.waitForEvent({
+      kind: 'leaves_store',
+      event: {
+        leaf_index: (noOfDeposit - 1).toString(),
+      },
+    });
+    // chainId
+    const chainId = 1080;
+    const chainIdHex = chainId.toString(16);
+    // converted aliceNode.name to H160 ethereum type
+    const nodeName = '0x7375627374726174652d616c6963650000000000';
+    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
+    // are equal to no of deposits made.
+    const response = await webbRelayer.getLeaves(chainIdHex, nodeName);
+    expect(noOfDeposit).to.equal(response.leaves.length);
   });
 
   it('Simple Anchor Transaction', async () => {
