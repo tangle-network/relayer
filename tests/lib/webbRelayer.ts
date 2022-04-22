@@ -199,7 +199,60 @@ export class WebbRelayer {
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-    return substrateTxHashOrReject(ws, inputs);
+    const cmd = {
+      substrate: {
+        mixer: {
+          chain: inputs.chain,
+          id: inputs.id,
+          proof: inputs.proof,
+          root: inputs.root,
+          nullifierHash: inputs.nullifierHash,
+          recipient: inputs.recipient,
+          relayer: inputs.relayer,
+          fee: inputs.fee,
+          refund: inputs.refund,
+        },
+      },
+    };
+    return substrateTxHashOrReject(ws, cmd);
+  }
+
+  public async substrateAnchorWithdraw(inputs: {
+    chain: string;
+    id: number;
+    proof: number[];
+    roots: number[][];
+    nullifierHash: number[];
+    recipient: string;
+    relayer: string;
+    fee: number;
+    refund: number;
+    refreshCommitment: number[];
+    extDataHash: number[];
+  }): Promise<`0x${string}`> {
+    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
+    // create a new websocket connection to the relayer.
+    const ws = new WebSocket(wsEndpoint);
+    await new Promise((resolve) => ws.once('open', resolve));
+
+    const cmd = {
+      substrate: {
+        anchor: {
+          chain: inputs.chain,
+          id: inputs.id,
+          proof: inputs.proof,
+          roots: inputs.roots,
+          nullifierHash: inputs.nullifierHash,
+          recipient: inputs.recipient,
+          relayer: inputs.relayer,
+          fee: inputs.fee,
+          refund: inputs.refund,
+          refreshCommitment: inputs.refreshCommitment,
+          extDataHash: inputs.extDataHash,
+        },
+      },
+    };
+    return substrateTxHashOrReject(ws, cmd);
   }
 }
 
@@ -283,9 +336,9 @@ async function txHashOrReject(
     });
     const cmd = {
       evm: {
-        anchorRelayTx: {
+        anchor: {
           chain: chainName,
-          contract: anchorAddress,
+          id: anchorAddress,
           proof,
           roots: publicInputs._roots,
           nullifierHash: publicInputs._nullifierHash,
@@ -304,7 +357,7 @@ async function txHashOrReject(
 
 async function substrateTxHashOrReject(
   ws: WebSocket,
-  input: any
+  cmd: any
 ): Promise<`0x${string}`> {
   return new Promise((resolve, reject) => {
     ws.on('error', reject);
@@ -356,21 +409,7 @@ async function substrateTxHashOrReject(
         }
       }
     });
-    const cmd = {
-      substrate: {
-        mixerRelayTx: {
-          chain: input.chain,
-          id: input.id,
-          proof: input.proof,
-          root: input.root,
-          nullifierHash: input.nullifierHash,
-          recipient: input.recipient,
-          relayer: input.relayer,
-          fee: input.fee,
-          refund: input.refund,
-        },
-      },
-    };
+
     ws.send(JSON.stringify(cmd));
   });
 }
