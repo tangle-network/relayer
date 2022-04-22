@@ -22,8 +22,6 @@ import {
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
-const delay = (ms) => new Promise((res) => setTimeout(res, ms));
-
 describe('Substrate Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
@@ -59,8 +57,7 @@ describe('Substrate Transaction Relayer', function () {
       path: `${tmpDirPath}/${aliceNode.name}.json`,
       suri: '//Charlie',
     });
-    // wait for protocol substrate nodes to get started
-    await delay(5000);
+
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
@@ -70,34 +67,6 @@ describe('Substrate Transaction Relayer', function () {
       showLogs: false,
     });
     await webbRelayer.waitUntilReady();
-  });
-
-  it('Substrate Anchor Leaf Api', async () => {
-    const api = await aliceNode.api();
-    const account = createAccount('//Dave');
-    // Make multiple deposits
-    const noOfDeposit = 5;
-    for (let i = 0, len = noOfDeposit; i < len; i++) {
-      const { tx, note } = await depositAnchorBnX5_4(api);
-      const txSigned = await tx.signAsync(account);
-      await aliceNode.executeTransaction(txSigned);
-    }
-    // now we wait for all deposit to be saved in LeafStorageCache
-    await webbRelayer.waitForEvent({
-      kind: 'leaves_store',
-      event: {
-        leaf_index: (noOfDeposit - 1).toString(),
-      },
-    });
-    // chainId
-    const chainId = 1080;
-    const chainIdHex = chainId.toString(16);
-    // converted aliceNode.name to H160 ethereum type
-    const nodeName = '0x7375627374726174652d616c6963650000000000';
-    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
-    // are equal to no of deposits made.
-    const response = await webbRelayer.getLeaves(chainIdHex, nodeName);
-    expect(noOfDeposit).to.equal(response.leaves.length);
   });
 
   it('Simple Mixer Transaction', async () => {
@@ -263,34 +232,6 @@ describe('Substrate Transaction Relayer', function () {
 });
 
 // Helper methods, we can move them somewhere if we end up using them again.
-
-async function depositAnchorBnX5_4(api: ApiPromise): Promise<{
-  tx: SubmittableExtrinsic<'promise'>;
-  note: Note;
-}> {
-  const noteInput: NoteGenInput = {
-    protocol: 'anchor',
-    version: 'v2',
-    sourceChain: '5',
-    targetChain: '5',
-    sourceIdentifyingData: '3',
-    targetIdentifyingData: '3',
-    tokenSymbol: 'WEBB',
-    amount: '1',
-    denomination: '18',
-    backend: 'Arkworks',
-    hashFunction: 'Poseidon',
-    curve: 'Bn254',
-    width: '4',
-    exponentiation: '5',
-  };
-
-  const note = await Note.generateNote(noteInput);
-  const treeId = 4;
-  const leaf = note.getLeaf();
-  const tx = api.tx.anchorBn254!.deposit!(treeId, leaf);
-  return { tx, note };
-}
 
 async function createMixerDepositTx(api: ApiPromise): Promise<{
   tx: SubmittableExtrinsic<'promise'>;
