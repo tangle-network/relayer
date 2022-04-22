@@ -139,8 +139,8 @@ describe('Substrate Anchor Transaction Relayer', function () {
 
     // get the balance after withdrawal is done and see if it increases
     // @ts-ignore
-    const { nonce: nonceAfter, data: balanceAfter } =
-      await api.query.system.account(withdrawalProof.recipient);
+    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
+      .account!(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
     expect(balanceAfterWithdraw > initialBalance);
@@ -408,11 +408,12 @@ async function createAnchorWithdrawProof(
 
     // make a root set from the tree root
     // @ts-ignore
+    const rootValue = treeRoot.toHuman() as { root: string };
     const treeRootArray = [
       hexToU8a(
         '0x0000000000000000000000000000000000000000000000000000000000000000'
       ),
-      hexToU8a(treeRoot.toHuman().root),
+      hexToU8a(rootValue.root),
     ];
 
     const provingKeyPath = path.join(
