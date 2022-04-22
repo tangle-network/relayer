@@ -8,9 +8,9 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { WebbRelayer } from '../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../lib/localProtocolSubstrate.js';
-import { UsageMode } from '../lib/substrateNodeBase.js';
+import { WebbRelayer } from '../../lib/webbRelayer.js';
+import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
+import { UsageMode } from '../../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -25,7 +25,6 @@ import {
 const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 describe('Substrate Transaction Relayer', function () {
-  this.timeout(60000);
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -118,7 +117,6 @@ describe('Substrate Transaction Relayer', function () {
       withdrawalProof.recipient
     );
     let initialBalance = balance.free.toBigInt();
-    console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
     // now we need to submit the withdrawal transaction.
     const txHash = await webbRelayer.substrateMixerWithdraw({
       chain: aliceNode.name,
@@ -135,9 +133,9 @@ describe('Substrate Transaction Relayer', function () {
 
     // get the balance after withdrawal is done and see if it increases
     // @ts-ignore
-    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(withdrawalProof.recipient);
+    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
+      .account!(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
-    console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
     expect(balanceAfterWithdraw > initialBalance);
   });
 
@@ -169,8 +167,6 @@ describe('Substrate Transaction Relayer', function () {
         relayer: invalidAddress,
       });
     } catch (e) {
-      console.log(`error is ${e}`);
-
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
@@ -192,7 +188,11 @@ describe('Substrate Transaction Relayer', function () {
     );
 
     const proofBytes = hexToU8a(withdrawalProof.proofBytes);
-    proofBytes[1] |= 0x42;
+    // flip a bit in the proof, so it is invalid
+    const flipCount = proofBytes.length / 8;
+    for (let i = 0; i < flipCount; i++) {
+      proofBytes[i] |= 0x42;
+    }
     const invalidProofBytes = u8aToHex(proofBytes);
     expect(withdrawalProof.proofBytes).to.not.eq(invalidProofBytes);
 
@@ -211,14 +211,10 @@ describe('Substrate Transaction Relayer', function () {
         relayer: withdrawalProof.relayer,
       });
     } catch (e) {
-      console.log(`error is ${e}`);
-
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
-      );
+      expect(e).to.contain('Module { index: 40, error: 1 }');
     }
   });
 
@@ -250,8 +246,6 @@ describe('Substrate Transaction Relayer', function () {
         relayer: withdrawalProof.relayer,
       });
     } catch (e) {
-      console.log(`error is ${e}`);
-
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof

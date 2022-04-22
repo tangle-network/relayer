@@ -135,6 +135,18 @@ impl BridgeWatcher for SignatureBridgeContractWatcher {
                 )
                 .await?;
             }
+            TransferOwnershipWithSignature {
+                public_key,
+                nonce,
+                signature,
+            } => {
+                self.transfer_ownership_with_signature(
+                    store,
+                    &wrapper.contract,
+                    (public_key, nonce, signature),
+                )
+                .await?
+            }
         };
         Ok(())
     }
@@ -214,6 +226,90 @@ where
         );
         Ok(())
     }
+
+    #[tracing::instrument(skip_all)]
+    async fn transfer_ownership_with_signature(
+        &self,
+        store: Arc<<Self as EventWatcher>::Store>,
+        contract: &SignatureBridgeContract<<Self as EventWatcher>::Middleware>,
+        (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
+    ) -> anyhow::Result<()> {
+        // before doing anything, we need to do just two things:
+        // 1. check if we already have this transaction in the queue.
+        // 2. if not, check if the signature is valid.
+
+        let chain_id = contract.get_chain_id().call().await?;
+        let data_hash = utils::keccak256(&public_key);
+        let tx_key = SledQueueKey::from_evm_with_custom_key(
+            chain_id,
+            make_transfer_ownership_key(data_hash),
+        );
+
+        // check if we already have a queued tx for this action.
+        // if we do, we should not enqueue it again.
+        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+        if qq {
+            tracing::debug!(
+                data_hash = %hex::encode(data_hash),
+                "Skipping transfer ownership since it is already in tx queue",
+            );
+            return Ok(());
+        }
+        // we need to do some checks here:
+        // 1. convert the public key to address and check it is not the same as the current governor.
+        // 2. check if the nonce is greater than the current nonce.
+        // 3. ~check if the signature is valid.~
+        let new_governor_address =
+            eth_address_from_uncompressed_public_key(&public_key);
+        let current_governor_address = contract.governor().call().await?;
+        if new_governor_address == current_governor_address {
+            tracing::warn!(
+                %new_governor_address,
+                %current_governor_address,
+                public_key = %hex::encode(&public_key),
+                %nonce,
+                signature = %hex::encode(&signature),
+                "Skipping transfer ownership since the new governor is the same as the current one",
+            );
+            return Ok(());
+        }
+
+        let current_nonce = contract.refresh_nonce().call().await?;
+        if nonce <= current_nonce {
+            tracing::warn!(
+                %current_nonce,
+                public_key = %hex::encode(&public_key),
+                %nonce,
+                signature = %hex::encode(&signature),
+                "Skipping transfer ownership since the nonce is not greater than the current one",
+            );
+            return Ok(());
+        }
+        tracing::event!(
+            target: crate::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %crate::probe::Kind::SignatureBridge,
+            call = "transfer_ownership_with_signature_pub_key",
+            chain_id = %chain_id.as_u64(),
+            public_key = %hex::encode(&public_key),
+            %nonce,
+            signature = %hex::encode(&signature),
+            data_hash = %hex::encode(data_hash),
+        );
+        // get the current governor nonce.
+        let call = contract.transfer_ownership_with_signature_pub_key(
+            public_key.into(),
+            nonce,
+            signature.into(),
+        );
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
+        tracing::debug!(
+            data_hash = %hex::encode(data_hash),
+            chain_id = %chain_id.as_u64(),
+            "Enqueued the ownership transfer for execution in the tx queue",
+        );
+        Ok(())
+    }
 }
 
 fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
@@ -222,4 +318,46 @@ fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
     result[0..32].copy_from_slice(prefix);
     result[32..64].copy_from_slice(&data_hash);
     result
+}
+
+fn make_transfer_ownership_key(data_hash: [u8; 32]) -> [u8; 64] {
+    let mut result = [0u8; 64];
+    let prefix = b"transfer_ownership_wt_signature_";
+    result[0..32].copy_from_slice(prefix);
+    result[32..64].copy_from_slice(&data_hash);
+    result
+}
+
+/// Get the Ethereum address from the uncompressed EcDSA public key.
+fn eth_address_from_uncompressed_public_key(pub_key: &[u8]) -> Address {
+    // hash the public key.
+    let pub_key_hash = utils::keccak256(pub_key);
+    // take the last 20 bytes of the hash.
+    let mut address_bytes = [0u8; 20];
+    address_bytes.copy_from_slice(&pub_key_hash[12..32]);
+    Address::from(address_bytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn should_get_the_correct_eth_address_from_public_key() {
+        // given
+        let public_key_uncompressed_hex = hex::decode(
+            "58eb6e2a1901baead22a6f021454638c2abeb8e179400879098f327cebdecf44823ec88239a198b00622768b8461e66c7531a6b22be417db0069be28abe1bdf3",
+        ).unwrap();
+        // when
+        let address = eth_address_from_uncompressed_public_key(
+            &public_key_uncompressed_hex,
+        );
+        // then
+        assert_eq!(
+            address,
+            "0x9dD0de7Ff10D3eB77F0488039591498f32a23c8A"
+                .parse()
+                .unwrap()
+        );
+    }
 }

@@ -178,6 +178,24 @@ pub trait HistoryStore: Clone + Send + Sync {
     }
 }
 
+/// A Simple Event Store, that does not store the events, instead it store the hash of the event as the key
+/// and the value is just empty bytes.
+///
+/// This is mainly useful to mark the event as processed.
+pub trait EventHashStore: Send + Sync + Clone {
+    /// Store the event in the store.
+    /// the key is the hash of the event.
+    fn store_event(&self, event: &[u8]) -> anyhow::Result<()>;
+
+    /// Check if the event is stored in the store.
+    /// the key is the hash of the event.
+    fn contains_event(&self, event: &[u8]) -> anyhow::Result<bool>;
+
+    /// Delete the event from the store.
+    /// the key is the hash of the event.
+    fn delete_event(&self, event: &[u8]) -> anyhow::Result<()>;
+}
+
 /// A Leaf Cache Store is a simple trait that would help in
 /// getting the leaves and insert them with a simple API.
 pub trait LeafCacheStore: HistoryStore {
@@ -212,7 +230,15 @@ pub trait LeafCacheStore: HistoryStore {
 /// A Command sent to the Bridge to execute different actions.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum BridgeCommand {
-    ExecuteProposalWithSignature { data: Vec<u8>, signature: Vec<u8> },
+    ExecuteProposalWithSignature {
+        data: Vec<u8>,
+        signature: Vec<u8>,
+    },
+    TransferOwnershipWithSignature {
+        public_key: Vec<u8>,
+        nonce: u32,
+        signature: Vec<u8>,
+    },
 }
 
 /// A trait for retrieving queue keys

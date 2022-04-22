@@ -32,7 +32,7 @@ use webb::substrate::{protocol_substrate_runtime, subxt};
 use crate::config;
 use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
-use crate::store::LeafCacheStore;
+use crate::store::{EventHashStore, LeafCacheStore};
 
 type HttpProvider = providers::Provider<providers::Http>;
 /// Represents an Anchor Contract Watcher which will use a configured signing backend for signing proposals.
@@ -141,7 +141,7 @@ where
     #[tracing::instrument(skip_all)]
     async fn handle_event(
         &self,
-        _store: Arc<Self::Store>,
+        store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
@@ -201,6 +201,10 @@ where
                 );
             }
         }
+        // mark this event as processed.
+
+        let events_bytes = serde_json::to_vec(&event_data)?;
+        store.store_event(&events_bytes)?;
         Ok(())
     }
 }
@@ -239,6 +243,8 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                     (chain_id, wrapper.contract.address()),
                     log.block_number,
                 )?;
+                let events_bytes = serde_json::to_vec(&deposit)?;
+                store.store_event(&events_bytes)?;
                 tracing::trace!(
                     %log.block_number,
                     "detected block number",

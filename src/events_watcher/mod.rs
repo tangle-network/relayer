@@ -50,7 +50,8 @@ use webb::{
 
 use crate::store::sled::SledQueueKey;
 use crate::store::{
-    BridgeCommand, BridgeKey, HistoryStore, ProposalStore, QueueStore,
+    BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
+    QueueStore,
 };
 use crate::utils;
 
@@ -67,6 +68,11 @@ pub use proposal_handler_watcher::*;
 mod signature_bridge_watcher;
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
+
+/// A module for listening on DKG Governor Changes event.
+mod governor_watcher;
+#[doc(hidden)]
+pub use governor_watcher::*;
 
 #[doc(hidden)]
 pub mod proposal_signing_backend;
@@ -95,7 +101,7 @@ pub trait EventWatcher {
     type Contract: Deref<Target = contract::Contract<Self::Middleware>>
         + WatchableContract;
     type Events: contract::EthLogDecode;
-    type Store: HistoryStore;
+    type Store: HistoryStore + EventHashStore;
 
     async fn handle_event(
         &self,
