@@ -39,6 +39,7 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
         '--rpc-cors',
         'all',
         '--ws-external',
+        '--rpc-methods=unsafe',
         `--${opts.authority}`
       );
       if (!opts.isManual) {
@@ -60,6 +61,7 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
         '--tmp',
         '--rpc-cors',
         'all',
+        '--rpc-methods=unsafe',
         '--ws-external',
         `--ws-port=${opts.ports.ws}`,
         `--rpc-port=${opts.ports.http}`,
@@ -78,7 +80,10 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
       httpEndpoint: `http://127.0.0.1:${ports.http}`,
       wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
       runtime: 'WebbProtocol',
-      pallets: [],
+      pallets: [{
+        pallet: 'AnchorBn254',
+        eventsWatcher: { enabled: true, pollingInterval: 3000 },
+      }],
       suri,
     };
     return nodeInfo;
