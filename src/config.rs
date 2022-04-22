@@ -269,6 +269,7 @@ pub enum Contract {
 pub enum Pallet {
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
+    AnchorBn254(AnchorBn254PalletConfig),
 }
 
 /// Enumerates the supported Substrate runtimes.
@@ -344,6 +345,15 @@ pub struct DKGProposalsPalletConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct DKGProposalHandlerPalletConfig {
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+}
+
+/// AnchorBn254PalletConfig represents the configuration for the AnchorBn254 pallet.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct AnchorBn254PalletConfig {
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,

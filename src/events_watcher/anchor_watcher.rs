@@ -25,6 +25,10 @@ use webb::evm::ethers::prelude::{Contract, LogMeta, Middleware};
 use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 
+use super::{BlockNumberOf, SubstrateEventWatcher};
+use webb::substrate::protocol_substrate_runtime::api::anchor_bn254;
+use webb::substrate::{protocol_substrate_runtime, subxt};
+
 use crate::config;
 use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
@@ -270,6 +274,77 @@ impl super::EventWatcher for AnchorLeavesWatcher {
             }
         };
 
+        Ok(())
+    }
+}
+
+/// An Substrate Anchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
+/// It serves as a cache for leaves that could be used by dApp for proof generation.
+#[derive(Clone, Debug, Default)]
+pub struct SubstrateLeavesWatcher {
+    node_name: String,
+    chain_id: types::U256,
+}
+
+impl SubstrateLeavesWatcher {
+    pub fn new(node_name: String, chain_id: types::U256) -> Self {
+        Self {
+            node_name,
+            chain_id,
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl SubstrateEventWatcher for SubstrateLeavesWatcher {
+    const TAG: &'static str = "Substrate leaves Watcher";
+
+    type RuntimeConfig = subxt::DefaultConfig;
+
+    type Api = protocol_substrate_runtime::api::RuntimeApi<
+        Self::RuntimeConfig,
+        subxt::DefaultExtra<Self::RuntimeConfig>,
+    >;
+
+    type Event = anchor_bn254::events::Deposit;
+
+    type Store = SledStore;
+
+    async fn handle_event(
+        &self,
+        store: Arc<Self::Store>,
+        api: Arc<Self::Api>,
+        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+    ) -> anyhow::Result<()> {
+        // fetch leaf_index from merkle tree at given block_number
+        let at_hash = api
+            .storage()
+            .system()
+            .block_hash(block_number, None)
+            .await?;
+        let next_leaf_index = api
+            .storage()
+            .merkle_tree_bn254()
+            .next_leaf_index(event.tree_id, Some(at_hash))
+            .await?;
+        let leaf_index = next_leaf_index - 1;
+        let chain_id = self.chain_id;
+        let leaf = event.leaf;
+        let value = (leaf_index, H256::from_slice(&leaf.0));
+        store.insert_leaves((chain_id, self.node_name.clone()), &[value])?;
+        store.insert_last_deposit_block_number(
+            (chain_id, self.node_name.clone()),
+            types::U64::from(block_number),
+        )?;
+        tracing::event!(
+            target: crate::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %crate::probe::Kind::LeavesStore,
+            chain_id = %chain_id,
+            leaf_index = %leaf_index,
+            leaf = %value.1,
+            block_number = %block_number
+        );
         Ok(())
     }
 }
