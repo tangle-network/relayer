@@ -13,7 +13,7 @@ import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { UsageMode } from '../../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
-import { SubmittableExtrinsic } from '@polkadot/api/types';
+import { ModuleErrors, SubmittableExtrinsic } from '@polkadot/api/types';
 import { decodeAddress } from '@polkadot/util-crypto';
 import {
   Note,
