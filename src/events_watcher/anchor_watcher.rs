@@ -182,6 +182,7 @@ where
                 webb_proposals::TypedChainId::Evm(src_chain_id.as_u32()),
                 leaf_index,
                 root,
+                target_system.into_fixed_bytes(),
             );
             let can_sign_proposal = self
                 .proposal_signing_backend
