@@ -25,9 +25,12 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { sleep } from '../../lib/sleep.js';
-import { WebbRelayer } from '../../lib/webbRelayer.js';
+import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
-import { UsageMode } from '../../lib/substrateNodeBase.js';
+import {
+  UsageMode,
+  defaultEventsWatcherValue,
+} from '../../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -40,7 +43,6 @@ import {
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Anchor Transaction Relayer', function () {
-  this.timeout(60000);
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -56,12 +58,18 @@ describe('Substrate Anchor Transaction Relayer', function () {
             '../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
-
+    const enabledPallets: Pallet[] = [
+      {
+        pallet: 'AnchorBn254',
+        eventsWatcher: defaultEventsWatcherValue,
+      },
+    ];
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
       ports: 'auto',
+      enabledPallets,
     });
 
     bobNode = await LocalProtocolSubstrate.start({
@@ -75,6 +83,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       path: `${tmpDirPath}/${aliceNode.name}.json`,
       suri: '//Charlie',
     });
+    // wait for protocol substrate node to get started
     await sleep(5000);
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
@@ -87,7 +96,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('Substrate Anchor Leaf Api', async () => {
+  it('number of deposits made should be equal to number of leaves in cache', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     // Make multiple deposits

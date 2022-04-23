@@ -80,10 +80,7 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
       httpEndpoint: `http://127.0.0.1:${ports.http}`,
       wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
       runtime: 'WebbProtocol',
-      pallets: [{
-        pallet: 'AnchorBn254',
-        eventsWatcher: { enabled: true, pollingInterval: 3000 },
-      }],
+      pallets: this.opts.enabledPallets ?? [],
       suri,
     };
     return nodeInfo;
