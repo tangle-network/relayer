@@ -348,7 +348,7 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     exponentiation: '5',
   };
   const note = await Note.generateNote(noteInput);
-  const treeId = 4;
+  const treeId = 5;
   const leaf = note.getLeaf();
   const tx = api.tx.anchorBn254!.deposit!(treeId, leaf);
   return { tx, note };
@@ -387,7 +387,7 @@ async function createAnchorWithdrawProof(
       '0x',
       ''
     );
-    const treeId = 4;
+    const treeId = 5;
     //@ts-ignore
     const getLeaves = api.rpc.mt.getLeaves;
     const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);

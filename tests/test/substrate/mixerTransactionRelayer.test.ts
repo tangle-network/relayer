@@ -22,7 +22,7 @@ import {
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Transaction Relayer', function () {
+describe('Substrate Mixer Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
