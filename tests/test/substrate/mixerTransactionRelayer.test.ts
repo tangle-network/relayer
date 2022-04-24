@@ -13,7 +13,7 @@ import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { UsageMode } from '../../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
-import { SubmittableExtrinsic } from '@polkadot/api/types';
+import { ModuleErrors, SubmittableExtrinsic } from '@polkadot/api/types';
 import { decodeAddress } from '@polkadot/util-crypto';
 import {
   Note,
@@ -22,7 +22,7 @@ import {
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Transaction Relayer', function () {
+describe('Substrate Mixer Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;

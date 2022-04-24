@@ -197,7 +197,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
       expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+        'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
       );
     }
   });
@@ -257,7 +257,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
       expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+        'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
       );
     }
   });
@@ -348,7 +348,12 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     exponentiation: '5',
   };
   const note = await Note.generateNote(noteInput);
-  const treeId = 4;
+  //@ts-ignore
+  const treeIds = await api.query.anchorBn254.anchors?.keys();
+  //@ts-ignore
+  const sorted = treeIds?.map(id => Number(id.toHuman()[0])).sort();
+  //@ts-ignore
+  const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
   const tx = api.tx.anchorBn254!.deposit!(treeId, leaf);
   return { tx, note };
@@ -387,14 +392,19 @@ async function createAnchorWithdrawProof(
       '0x',
       ''
     );
-    const treeId = 4;
+    //@ts-ignore
+    const treeIds = await api.query.anchorBn254.anchors?.keys();
+    //@ts-ignore
+    const sorted = treeIds?.map(id => Number(id.toHuman()[0])).sort();
+    //@ts-ignore
+    const treeId = sorted[0] || 5;
     //@ts-ignore
     const getLeaves = api.rpc.mt.getLeaves;
     const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);
 
     // Get tree root on chain
     // @ts-ignore
-    const treeRoot = await api.query.merkleTreeBn254.trees(4);
+    const treeRoot = await api.query.merkleTreeBn254.trees(treeId);
 
     const pm = new ProvingManagerWrapper('direct-call');
     const leafHex = u8aToHex(note.getLeaf());
