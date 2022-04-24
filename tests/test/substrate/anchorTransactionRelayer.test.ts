@@ -353,7 +353,7 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
   //@ts-ignore
   const sorted = treeIds?.map(id => Number(id.toHuman()[0])).sort();
   //@ts-ignore
-  const treeId = sorted[0];
+  const treeId = sorted[0]!;
   const leaf = note.getLeaf();
   const tx = api.tx.anchorBn254!.deposit!(treeId, leaf);
   return { tx, note };
@@ -397,7 +397,7 @@ async function createAnchorWithdrawProof(
     //@ts-ignore
     const sorted = treeIds?.map(id => Number(id.toHuman()[0])).sort();
     //@ts-ignore
-    const treeId = sorted[0];
+    const treeId = sorted[0]!;
     //@ts-ignore
     const getLeaves = api.rpc.mt.getLeaves;
     const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);
