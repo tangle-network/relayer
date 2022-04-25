@@ -65,6 +65,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
             backend = "DKG",
             ty = "ProposalSigned",
             ?event.target_chain,
+            ?event.key,
             ?block_number,
         );
         let maybe_bridge_key = match event.target_chain {
