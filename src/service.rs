@@ -238,8 +238,7 @@ fn start_substrate_leaves_watcher(
     let node_name2 = node_name.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
     let task = async move {
-        let leaves_watcher =
-            SubstrateLeavesWatcher::new(node_name.clone(), chain_id);
+        let leaves_watcher = SubstrateLeavesWatcher::default();
         let watcher = leaves_watcher.run(node_name, chain_id, client, store);
         tokio::select! {
             _ = watcher => {

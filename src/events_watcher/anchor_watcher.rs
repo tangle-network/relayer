@@ -287,19 +287,7 @@ impl super::EventWatcher for AnchorLeavesWatcher {
 /// An Substrate Anchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
 #[derive(Clone, Debug, Default)]
-pub struct SubstrateLeavesWatcher {
-    node_name: String,
-    chain_id: types::U256,
-}
-
-impl SubstrateLeavesWatcher {
-    pub fn new(node_name: String, chain_id: types::U256) -> Self {
-        Self {
-            node_name,
-            chain_id,
-        }
-    }
-}
+pub struct SubstrateLeavesWatcher;
 
 #[async_trait::async_trait]
 impl SubstrateEventWatcher for SubstrateLeavesWatcher {
@@ -322,6 +310,9 @@ impl SubstrateEventWatcher for SubstrateLeavesWatcher {
         api: Arc<Self::Api>,
         (event, block_number): (Self::Event, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
+        // fetch chain_id
+        let chain_id =
+            api.constants().linkable_tree_bn254().chain_identifier()?;
         // fetch leaf_index from merkle tree at given block_number
         let at_hash = api
             .storage()
@@ -334,12 +325,13 @@ impl SubstrateEventWatcher for SubstrateLeavesWatcher {
             .next_leaf_index(event.tree_id, Some(at_hash))
             .await?;
         let leaf_index = next_leaf_index - 1;
-        let chain_id = self.chain_id;
+        let chain_id = types::U256::from(chain_id);
+        let tree_id = event.tree_id.to_string();
         let leaf = event.leaf;
         let value = (leaf_index, H256::from_slice(&leaf.0));
-        store.insert_leaves((chain_id, self.node_name.clone()), &[value])?;
+        store.insert_leaves((chain_id, tree_id.clone()), &[value])?;
         store.insert_last_deposit_block_number(
-            (chain_id, self.node_name.clone()),
+            (chain_id, tree_id.clone()),
             types::U64::from(block_number),
         )?;
         tracing::event!(
@@ -349,6 +341,7 @@ impl SubstrateEventWatcher for SubstrateLeavesWatcher {
             chain_id = %chain_id,
             leaf_index = %leaf_index,
             leaf = %value.1,
+            tree_id = %tree_id,
             block_number = %block_number
         );
         Ok(())
