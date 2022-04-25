@@ -23,6 +23,7 @@ import {
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Mixer Transaction Relayer', function () {
+  this.timeout(250000);
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;

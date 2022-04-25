@@ -16,14 +16,14 @@
  */
 import { u8aToHex } from '@polkadot/util';
 
-export function resize(arr, newSize, defaultValue) {
+function resize(arr, newSize, defaultValue) {
   return [
     ...arr,
     ...Array(Math.max(newSize - arr.length, 0)).fill(defaultValue),
   ];
 }
 
-export function getBytes(str: string) {
+function getBytes(str: string) {
   return [...Buffer.from(str)];
 }
 // generate 20 byte ethereum type address from string.
