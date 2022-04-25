@@ -35,7 +35,7 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { decodeAddress } from '@polkadot/util-crypto';
-import { ethAddressFromString } from '../utils/utils';
+import { ethAddressFromString } from '../utils/util';
 import {
   Note,
   NoteGenInput,
@@ -44,6 +44,7 @@ import {
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Anchor Transaction Relayer', function () {
+  this.timeout(250000);
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -101,7 +102,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     // Make multiple deposits
-    const noOfDeposit = 5;
+    const noOfDeposit = 3;
     for (let i = 0, len = noOfDeposit; i < len; i++) {
       const note = await makeDeposit(api, aliceNode, account);
     }
@@ -554,3 +555,4 @@ async function initWithdrawal(
 
   return withdrawalProof;
 }
+
