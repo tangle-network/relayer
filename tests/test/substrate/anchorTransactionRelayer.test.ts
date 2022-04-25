@@ -86,7 +86,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       suri: '//Charlie',
     });
     // wait for protocol substrate node to get started
-    await sleep(5000);
+    await sleep(10000);
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
