@@ -57,7 +57,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
       path: `${tmpDirPath}/${aliceNode.name}.json`,
       suri: '//Charlie',
     });
-
+    // Wait until we are ready and connected
+    const api = await aliceNode.api();
+    await api.isReady;
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
