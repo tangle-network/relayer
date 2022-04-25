@@ -82,6 +82,7 @@ impl DkgProposalSigningBackend<DkgRuntimeApi, DkgConfig> {
         proposal: &AnchorUpdateProposal,
     ) -> anyhow::Result<()> {
         let tx_api = self.api.tx().dkg_proposals();
+
         let leaf_index = proposal.latest_leaf_index();
         let resource_id = proposal.header().resource_id();
         let src_chain_id =
