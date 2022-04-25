@@ -24,7 +24,6 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { sleep } from '../../lib/sleep.js';
 import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
@@ -44,7 +43,6 @@ import {
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Anchor Transaction Relayer', function () {
-  this.timeout(250000);
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -85,8 +83,11 @@ describe('Substrate Anchor Transaction Relayer', function () {
       path: `${tmpDirPath}/${aliceNode.name}.json`,
       suri: '//Charlie',
     });
-    // wait for protocol substrate node to get started
-    await sleep(10000);
+
+    // Wait until we are ready and connected
+    const api = await aliceNode.api();
+    await api.isReady;
+
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
@@ -119,7 +120,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
     //@ts-ignore
     const treeIds = await api.query.anchorBn254.anchors?.keys();
     //@ts-ignore
-    const sorted = treeIds?.map(id => Number(id.toHuman()[0])).sort();
+    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
     //@ts-ignore
     const treeId = sorted[0] || 5;
     // Since substrate pallet does not have address, we use treeId
@@ -396,7 +397,7 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
   //@ts-ignore
   const treeIds = await api.query.anchorBn254.anchors?.keys();
   //@ts-ignore
-  const sorted = treeIds?.map(id => Number(id.toHuman()[0])).sort();
+  const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
   //@ts-ignore
   const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
@@ -440,7 +441,7 @@ async function createAnchorWithdrawProof(
     //@ts-ignore
     const treeIds = await api.query.anchorBn254.anchors?.keys();
     //@ts-ignore
-    const sorted = treeIds?.map(id => Number(id.toHuman()[0])).sort();
+    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
     //@ts-ignore
     const treeId = sorted[0] || 5;
     //@ts-ignore
@@ -560,4 +561,3 @@ async function initWithdrawal(
 
   return withdrawalProof;
 }
-
