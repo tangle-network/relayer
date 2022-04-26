@@ -15,14 +15,18 @@
  *
  */
 import { u8aToHex } from '@polkadot/util';
-
-function resize(arr, newSize, defaultValue) {
+// resize byte array to given new size, If array is small fill rest with defaultvalue.
+function resize(
+  arr: number[],
+  newSize: number,
+  defaultValue: number
+): number[] {
   return [
     ...arr,
     ...Array(Math.max(newSize - arr.length, 0)).fill(defaultValue),
   ];
 }
-
+// convert string to byte array
 function getBytes(str: string) {
   return [...Buffer.from(str)];
 }

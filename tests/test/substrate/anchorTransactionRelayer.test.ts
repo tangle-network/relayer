@@ -34,7 +34,7 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { decodeAddress } from '@polkadot/util-crypto';
-import { ethAddressFromString } from '../utils/util.js';
+import { ethAddressFromString } from '../utils/ethAddressFromString.js';
 import {
   Note,
   NoteGenInput,
@@ -125,10 +125,10 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const treeId = sorted[0] || 5;
     // Since substrate pallet does not have address, we use treeId
     // converted treeId to H160 ethereum type address
-    const nodeName = ethAddressFromString(treeId.toString());
+    const treeIdAddress = ethAddressFromString(treeId.toString());
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
-    const response = await webbRelayer.getLeaves(chainIdHex, nodeName);
+    const response = await webbRelayer.getLeaves(chainIdHex, treeIdAddress);
     expect(noOfDeposit).to.equal(response.leaves.length);
   });
 

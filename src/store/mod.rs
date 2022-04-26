@@ -71,7 +71,7 @@ impl HistoryStoreKey {
         match self {
             HistoryStoreKey::Evm { address, .. } => *address,
             HistoryStoreKey::Substrate { tree_id, .. } => {
-                // a bit hacky, but we don't have a way to get the address from the node name
+                // a bit hacky, but we don't have a way to get the address from the tree id
                 // so we just pretend it's the address of the node
                 let mut address_bytes = vec![];
                 address_bytes.extend_from_slice(tree_id.as_bytes());

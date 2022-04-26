@@ -181,7 +181,7 @@ pub async fn ignite(
                 for pallet in &node_config.pallets {
                     match pallet {
                         Pallet::AnchorBn254(config) => {
-                            start_substrate_leaves_watcher(
+                            start_substrate_anchor_leaves_watcher(
                                 ctx,
                                 config,
                                 client.clone(),
@@ -218,7 +218,7 @@ pub async fn ignite(
 /// * `node_name` - Name of the node
 /// * `chain_id` - An U256 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
-fn start_substrate_leaves_watcher(
+fn start_substrate_anchor_leaves_watcher(
     ctx: &RelayerContext,
     config: &AnchorBn254PalletConfig,
     client: WebbProtocolClient,
