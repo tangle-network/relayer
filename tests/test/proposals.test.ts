@@ -38,7 +38,11 @@ import {
 import {
   ChainIdType,
   encodeTokenAddProposal,
+  encodeTokenRemoveProposal,
+  encodeWrappingFeeUpdateProposal,
   TokenAddProposal,
+  TokenRemoveProposal,
+  WrappingFeeUpdateProposal,
 } from '../lib/webbProposals.js';
 import { sleep } from '../lib/sleep.js';
 
@@ -259,21 +263,20 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
   });
 
   it('should handle TokenAddProposal', async () => {
-    let api = await charlieNode.api();
     // get the anhor on localchain1
     const anchor = signatureBridge.getAnchor(
       localChain1.chainId,
       ethers.utils.parseEther('1')
     )!;
     //Create an ERC20 Token
-    const tokenToAdd = await Tokens.MintableToken.createToken(
+    const testToken = await Tokens.MintableToken.createToken(
       'testToken',
       'TEST',
       wallet1
@@ -285,7 +288,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     );
     const resourceId = await governedToken.createResourceId();
     const currentNonce = await governedToken.contract.proposalNonce();
-    const proposalPayload: TokenAddProposal = {
+    const tokenAddProposalPayload: TokenAddProposal = {
       header: {
         resourceId,
         functionSignature: governedToken.contract.interface.getSighash(
@@ -295,12 +298,11 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         chainIdType: ChainIdType.EVM,
         chainId: localChain1.underlyingChainId,
       },
-      newTokenAddress: tokenToAdd.contract.address,
+      newTokenAddress: testToken.contract.address,
     };
-    const proposalBytes = u8aToHex(encodeTokenAddProposal(proposalPayload));
     await forceSubmitUnsignedProposal(charlieNode, {
       kind: 'TokenAdd',
-      data: proposalBytes,
+      data: u8aToHex(encodeTokenAddProposal(tokenAddProposalPayload)),
     });
     // now we wait for the proposal to be signed.
     charlieNode.waitForEvent({
@@ -323,8 +325,123 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     });
     await sleep(1000);
     // now we check that the token was added.
+    let tokens = await governedToken.contract.getTokens();
+    expect(tokens.includes(testToken.contract.address)).to.eq(true);
+  });
+
+  it('should handle TokenRemoveProposal', async () => {
+    // get the anhor on localchain1
+    const anchor = signatureBridge.getAnchor(
+      localChain1.chainId,
+      ethers.utils.parseEther('1')
+    )!;
+    const governedTokenAddress = anchor.token!;
+    const governedToken = Tokens.GovernedTokenWrapper.connect(
+      governedTokenAddress,
+      wallet1
+    );
+    const resourceId = await governedToken.createResourceId();
+    const currentNonce = await governedToken.contract.proposalNonce();
+    const currentTokens = await governedToken.contract.getTokens();
+    const tokenToRemove = currentTokens[0];
+    expect(tokenToRemove).to.not.be.undefined;
+    // but first, remove all realyer old events (as in reset the event listener)
+    webbRelayer.clearLogs();
+    const tokenRemoveProposalPayload: TokenRemoveProposal = {
+      header: {
+        resourceId,
+        functionSignature: governedToken.contract.interface.getSighash(
+          governedToken.contract.interface.functions['remove(address,uint256)']
+        ),
+        nonce: currentNonce.add(1).toNumber(),
+        chainIdType: ChainIdType.EVM,
+        chainId: localChain1.underlyingChainId,
+      },
+      removeTokenAddress: tokenToRemove!,
+    };
+    await forceSubmitUnsignedProposal(charlieNode, {
+      kind: 'TokenRemove',
+      data: u8aToHex(encodeTokenRemoveProposal(tokenRemoveProposalPayload)),
+    });
+    // now we wait for the proposal to be signed.
+    charlieNode.waitForEvent({
+      section: 'dkgProposalHandler',
+      method: 'ProposalSigned',
+    });
+    // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
+    await webbRelayer.waitForEvent({
+      kind: 'signature_bridge',
+      event: { chain_id: localChain1.underlyingChainId.toString() },
+    });
+    // now we wait for the tx queue on that chain to execute the transaction.
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain1.underlyingChainId.toString(),
+        finalized: true,
+      },
+    });
+    await sleep(1000);
+    // now we check that the token was removed.
     const tokens = await governedToken.contract.getTokens();
-    expect(tokens.includes(tokenToAdd.contract.address)).to.eq(true);
+    expect(tokens.includes(tokenToRemove!)).to.eq(false);
+  });
+
+  it('should handle WrappingFeeUpdateProposal', async () => {
+    // get the anhor on localchain1
+    const anchor = signatureBridge.getAnchor(
+      localChain1.chainId,
+      ethers.utils.parseEther('1')
+    )!;
+    const governedTokenAddress = anchor.token!;
+    const governedToken = Tokens.GovernedTokenWrapper.connect(
+      governedTokenAddress,
+      wallet1
+    );
+    const resourceId = await governedToken.createResourceId();
+    const currentNonce = await governedToken.contract.proposalNonce();
+    webbRelayer.clearLogs();
+    const wrappingFeeProposalPayload: WrappingFeeUpdateProposal = {
+      header: {
+        resourceId,
+        functionSignature: governedToken.contract.interface.getSighash(
+          governedToken.contract.interface.functions['setFee(uint8,uint256)']
+        ),
+        nonce: currentNonce.add(1).toNumber(),
+        chainIdType: ChainIdType.EVM,
+        chainId: localChain1.underlyingChainId,
+      },
+      newFee: '0x50',
+    };
+    await forceSubmitUnsignedProposal(charlieNode, {
+      kind: 'WrappingFeeUpdate',
+      data: u8aToHex(
+        encodeWrappingFeeUpdateProposal(wrappingFeeProposalPayload)
+      ),
+    });
+    // now we wait for the proposal to be signed.
+    charlieNode.waitForEvent({
+      section: 'dkgProposalHandler',
+      method: 'ProposalSigned',
+    });
+    // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
+    await webbRelayer.waitForEvent({
+      kind: 'signature_bridge',
+      event: { chain_id: localChain1.underlyingChainId.toString() },
+    });
+    // now we wait for the tx queue on that chain to execute the transaction.
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain1.underlyingChainId.toString(),
+        finalized: true,
+      },
+    });
+    await sleep(1000);
+    const fee = await governedToken.contract.getFee();
+    expect(parseInt('0x50', 16)).to.eq(fee);
   });
 
   after(async () => {
@@ -337,7 +454,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   });
 });
 
-type WebbProposalKind = 'TokenAdd' | 'TokenRemove';
+type WebbProposalKind = 'TokenAdd' | 'TokenRemove' | 'WrappingFeeUpdate';
 
 async function forceSubmitUnsignedProposal(
   node: LocalDkg,

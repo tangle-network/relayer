@@ -113,6 +113,10 @@ export class WebbRelayer {
     return this.#logs;
   }
 
+  public clearLogs(): void {
+    this.#logs.length = 0;
+  }
+
   public async waitUntilReady(): Promise<void> {
     await this.waitForEvent({ kind: 'lifecycle', event: { started: true } });
   }
