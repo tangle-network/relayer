@@ -36,8 +36,10 @@ use webb::substrate::{
 use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::proposal_signing_backend::*;
+use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
 use crate::tx_queue::TxQueue;
+
 /// Type alias for providers
 type Client = providers::Provider<providers::Http>;
 /// Type alias for the DKG DefaultConfig
@@ -238,7 +240,7 @@ fn start_substrate_leaves_watcher(
     let node_name2 = node_name.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
     let task = async move {
-        let leaves_watcher = SubstrateLeavesWatcher::default();
+        let leaves_watcher = SubstrateAnchorLeavesWatcher::default();
         let watcher = leaves_watcher.run(node_name, chain_id, client, store);
         tokio::select! {
             _ = watcher => {
