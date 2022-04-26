@@ -24,13 +24,17 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { WebbRelayer } from '../../lib/webbRelayer.js';
+import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
-import { UsageMode } from '../../lib/substrateNodeBase.js';
+import {
+  UsageMode,
+  defaultEventsWatcherValue,
+} from '../../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { decodeAddress } from '@polkadot/util-crypto';
+import { ethAddressFromString } from '../utils/ethAddressFromString.js';
 import {
   Note,
   NoteGenInput,
@@ -39,7 +43,6 @@ import {
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Anchor Transaction Relayer', function () {
-  this.timeout(60000);
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -55,12 +58,18 @@ describe('Substrate Anchor Transaction Relayer', function () {
             '../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
-
+    const enabledPallets: Pallet[] = [
+      {
+        pallet: 'AnchorBn254',
+        eventsWatcher: defaultEventsWatcherValue,
+      },
+    ];
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
       ports: 'auto',
+      enabledPallets,
     });
 
     bobNode = await LocalProtocolSubstrate.start({
@@ -75,6 +84,10 @@ describe('Substrate Anchor Transaction Relayer', function () {
       suri: '//Charlie',
     });
 
+    // Wait until we are ready and connected
+    const api = await aliceNode.api();
+    await api.isReady;
+
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
@@ -84,6 +97,39 @@ describe('Substrate Anchor Transaction Relayer', function () {
       showLogs: false,
     });
     await webbRelayer.waitUntilReady();
+  });
+
+  it('number of deposits made should be equal to number of leaves in cache', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Dave');
+    // Make multiple deposits
+    const noOfDeposit = 3;
+    for (let i = 0, len = noOfDeposit; i < len; i++) {
+      const note = await makeDeposit(api, aliceNode, account);
+    }
+    // now we wait for all deposit to be saved in LeafStorageCache
+    await webbRelayer.waitForEvent({
+      kind: 'leaves_store',
+      event: {
+        leaf_index: (noOfDeposit - 1).toString(),
+      },
+    });
+    // chainId
+    const chainId = 1080;
+    const chainIdHex = chainId.toString(16);
+    //@ts-ignore
+    const treeIds = await api.query.anchorBn254.anchors?.keys();
+    //@ts-ignore
+    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
+    //@ts-ignore
+    const treeId = sorted[0] || 5;
+    // Since substrate pallet does not have address, we use treeId
+    // converted treeId to H160 ethereum type address
+    const treeIdAddress = ethAddressFromString(treeId.toString());
+    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
+    // are equal to no of deposits made.
+    const response = await webbRelayer.getLeaves(chainIdHex, treeIdAddress);
+    expect(noOfDeposit).to.equal(response.leaves.length);
   });
 
   it('Simple Anchor Transaction', async () => {
@@ -351,7 +397,7 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
   //@ts-ignore
   const treeIds = await api.query.anchorBn254.anchors?.keys();
   //@ts-ignore
-  const sorted = treeIds?.map(id => Number(id.toHuman()[0])).sort();
+  const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
   //@ts-ignore
   const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
@@ -395,7 +441,7 @@ async function createAnchorWithdrawProof(
     //@ts-ignore
     const treeIds = await api.query.anchorBn254.anchors?.keys();
     //@ts-ignore
-    const sorted = treeIds?.map(id => Number(id.toHuman()[0])).sort();
+    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
     //@ts-ignore
     const treeId = sorted[0] || 5;
     //@ts-ignore

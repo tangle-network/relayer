@@ -77,6 +77,10 @@ pub use governor_watcher::*;
 #[doc(hidden)]
 pub mod proposal_signing_backend;
 
+/// A module for listening on substrate events.
+#[doc(hidden)]
+pub mod substrate;
+
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
     /// The block number where this contract is deployed.

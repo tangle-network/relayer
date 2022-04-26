@@ -40,7 +40,7 @@ pub enum HistoryStoreKey {
     },
     Substrate {
         chain_id: types::U256,
-        node_name: String,
+        tree_id: String,
     },
 }
 
@@ -70,11 +70,11 @@ impl HistoryStoreKey {
     pub fn address(&self) -> types::H160 {
         match self {
             HistoryStoreKey::Evm { address, .. } => *address,
-            HistoryStoreKey::Substrate { node_name, .. } => {
-                // a bit hacky, but we don't have a way to get the address from the node name
+            HistoryStoreKey::Substrate { tree_id, .. } => {
+                // a bit hacky, but we don't have a way to get the address from the tree id
                 // so we just pretend it's the address of the node
                 let mut address_bytes = vec![];
-                address_bytes.extend_from_slice(node_name.as_bytes());
+                address_bytes.extend_from_slice(tree_id.as_bytes());
                 address_bytes.resize(20, 0);
                 types::H160::from_slice(&address_bytes)
             }
@@ -89,12 +89,9 @@ impl HistoryStoreKey {
                 vec.extend_from_slice(&chain_id.as_u128().to_le_bytes());
                 vec.extend_from_slice(address.as_bytes());
             }
-            Self::Substrate {
-                chain_id,
-                node_name,
-            } => {
+            Self::Substrate { chain_id, tree_id } => {
                 vec.extend_from_slice(&chain_id.as_u128().to_le_bytes());
-                vec.extend_from_slice(node_name.as_bytes());
+                vec.extend_from_slice(tree_id.as_bytes());
             }
         }
         vec
@@ -107,10 +104,9 @@ impl Display for HistoryStoreKey {
             Self::Evm { chain_id, address } => {
                 write!(f, "Evm({}, {})", chain_id, address)
             }
-            Self::Substrate {
-                chain_id,
-                node_name,
-            } => write!(f, "Substrate({}, {})", chain_id, node_name),
+            Self::Substrate { chain_id, tree_id } => {
+                write!(f, "Substrate({}, {})", chain_id, tree_id)
+            }
         }
     }
 }
@@ -134,20 +130,14 @@ impl From<(types::Address, types::U256)> for HistoryStoreKey {
 }
 
 impl From<(types::U256, String)> for HistoryStoreKey {
-    fn from((chain_id, node_name): (types::U256, String)) -> Self {
-        Self::Substrate {
-            chain_id,
-            node_name,
-        }
+    fn from((chain_id, tree_id): (types::U256, String)) -> Self {
+        Self::Substrate { chain_id, tree_id }
     }
 }
 
 impl From<(String, types::U256)> for HistoryStoreKey {
-    fn from((node_name, chain_id): (String, types::U256)) -> Self {
-        Self::Substrate {
-            chain_id,
-            node_name,
-        }
+    fn from((tree_id, chain_id): (String, types::U256)) -> Self {
+        Self::Substrate { chain_id, tree_id }
     }
 }
 

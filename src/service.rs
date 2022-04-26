@@ -28,20 +28,31 @@ use ethereum_types::U256;
 use webb::evm::ethers::providers;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::dkg_runtime::api::RuntimeApi as DkgRuntimeApi;
-use webb::substrate::subxt;
-use webb::substrate::subxt::PairSigner;
+use webb::substrate::{
+    protocol_substrate_runtime::api::RuntimeApi as WebbProtocolRuntimeApi,
+    subxt::{self, PairSigner},
+};
 
 use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::proposal_signing_backend::*;
+use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
 use crate::tx_queue::TxQueue;
+
 /// Type alias for providers
 type Client = providers::Provider<providers::Http>;
 /// Type alias for the DKG DefaultConfig
 type DkgClient = subxt::Client<subxt::DefaultConfig>;
 /// Type alias for the DKG RuntimeApi
 type DkgRuntime = DkgRuntimeApi<
+    subxt::DefaultConfig,
+    subxt::DefaultExtra<subxt::DefaultConfig>,
+>;
+/// Type alias for the WebbProtocol DefaultConfig
+type WebbProtocolClient = subxt::Client<subxt::DefaultConfig>;
+/// Type alias for the WebbProtocol RuntimeApi
+type WebbProtocolRuntime = WebbProtocolRuntimeApi<
     subxt::DefaultConfig,
     subxt::DefaultExtra<subxt::DefaultConfig>,
 >;
@@ -152,17 +163,104 @@ pub async fn ignite(
                         Pallet::DKGProposals(_) => {
                             // TODO(@shekohex): start the dkg proposals service
                         }
+                        Pallet::AnchorBn254(_) => {
+                            unreachable!()
+                        }
                     }
                 }
             }
             SubstrateRuntime::WebbProtocol => {
-                // Handle Webb Protocol here
+                let client = ctx
+                    .substrate_provider::<subxt::DefaultConfig>(node_name)
+                    .await?;
+                let api =
+                    client.clone().to_runtime_api::<WebbProtocolRuntime>();
+                let chain_id =
+                    api.constants().linkable_tree_bn254().chain_identifier()?;
+                let chain_id = U256::from(chain_id);
+                for pallet in &node_config.pallets {
+                    match pallet {
+                        Pallet::AnchorBn254(config) => {
+                            start_substrate_anchor_leaves_watcher(
+                                ctx,
+                                config,
+                                client.clone(),
+                                node_name.clone(),
+                                chain_id,
+                                store.clone(),
+                            )?;
+                        }
+                        Pallet::DKGProposals(_) => {
+                            unreachable!()
+                        }
+                        Pallet::DKGProposalHandler(_) => {
+                            unreachable!()
+                        }
+                        Pallet::Dkg(_) => {
+                            unreachable!()
+                        }
+                    }
+                }
             }
         };
     }
     Ok(())
 }
-
+/// Starts the event watcher for Substrate anchor leaves.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - AnchorBn254 configuration
+/// * `client` - WebbProtocol client
+/// * `node_name` - Name of the node
+/// * `chain_id` - An U256 representing the chain id of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
+fn start_substrate_anchor_leaves_watcher(
+    ctx: &RelayerContext,
+    config: &AnchorBn254PalletConfig,
+    client: WebbProtocolClient,
+    node_name: String,
+    chain_id: U256,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "Substrate Anchor events watcher is disabled for ({}).",
+            node_name,
+        );
+        return Ok(());
+    }
+    tracing::debug!(
+        "Substrate Anchor events watcher for ({}) Started.",
+        node_name,
+    );
+    let node_name2 = node_name.clone();
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let task = async move {
+        let leaves_watcher = SubstrateAnchorLeavesWatcher::default();
+        let watcher = leaves_watcher.run(node_name, chain_id, client, store);
+        tokio::select! {
+            _ = watcher => {
+                tracing::warn!(
+                    "Substrate leaves watcher stopped for ({})",
+                    node_name2,
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping substrate leaves watcher for ({})",
+                    node_name2,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
+    Ok(())
+}
 /// Starts the event watcher for DKG proposal handler events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
