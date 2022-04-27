@@ -106,11 +106,28 @@ impl EventWatcher for SignatureBridgeContractWatcher {
     )]
     async fn handle_event(
         &self,
-        _store: Arc<Self::Store>,
-        _wrapper: &Self::Contract,
+        store: Arc<Self::Store>,
+        wrapper: &Self::Contract,
         e: (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
-        tracing::debug!("Got Event {:?}", e.0);
+        let event = e.0;
+        match event {
+            SignatureBridgeContractEvents::GovernanceOwnershipTransferredFilter(v) => {
+                // if the ownership is transferred to the new owner, we need to
+                // to check our txqueue and remove any pending tx that was trying to
+                // do this transfer.
+                let chain_id = wrapper.contract.get_chain_id().call().await?;
+                let tx_key = SledQueueKey::from_evm_with_custom_key(
+                    chain_id,
+                    make_transfer_ownership_key(v.new_owner.to_fixed_bytes())
+                );
+                let result = QueueStore::<TypedTransaction>::remove_item(&store, tx_key);
+                if result.is_ok() {
+                    tracing::debug!("Removed pending transfer ownership tx from txqueue")
+                }
+            },
+            e => tracing::debug!("Got Event {:?}", e),
+        }
         Ok(())
     }
 }
@@ -239,10 +256,11 @@ where
         // 2. if not, check if the signature is valid.
 
         let chain_id = contract.get_chain_id().call().await?;
-        let data_hash = utils::keccak256(&public_key);
+        let new_governor_address =
+            eth_address_from_uncompressed_public_key(&public_key);
         let tx_key = SledQueueKey::from_evm_with_custom_key(
             chain_id,
-            make_transfer_ownership_key(data_hash),
+            make_transfer_ownership_key(new_governor_address.to_fixed_bytes()),
         );
 
         // check if we already have a queued tx for this action.
@@ -250,7 +268,6 @@ where
         let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
         if qq {
             tracing::debug!(
-                data_hash = %hex::encode(data_hash),
                 "Skipping transfer ownership since it is already in tx queue",
             );
             return Ok(());
@@ -259,8 +276,6 @@ where
         // 1. convert the public key to address and check it is not the same as the current governor.
         // 2. check if the nonce is greater than the current nonce.
         // 3. ~check if the signature is valid.~
-        let new_governor_address =
-            eth_address_from_uncompressed_public_key(&public_key);
         let current_governor_address = contract.governor().call().await?;
         if new_governor_address == current_governor_address {
             tracing::warn!(
@@ -294,7 +309,6 @@ where
             public_key = %hex::encode(&public_key),
             %nonce,
             signature = %hex::encode(&signature),
-            data_hash = %hex::encode(data_hash),
         );
         // get the current governor nonce.
         let call = contract.transfer_ownership_with_signature_pub_key(
@@ -304,7 +318,6 @@ where
         );
         QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
         tracing::debug!(
-            data_hash = %hex::encode(data_hash),
             chain_id = %chain_id.as_u64(),
             "Enqueued the ownership transfer for execution in the tx queue",
         );
@@ -320,11 +333,11 @@ fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
     result
 }
 
-fn make_transfer_ownership_key(data_hash: [u8; 32]) -> [u8; 64] {
+fn make_transfer_ownership_key(new_owner_address: [u8; 20]) -> [u8; 64] {
     let mut result = [0u8; 64];
     let prefix = b"transfer_ownership_wt_signature_";
     result[0..32].copy_from_slice(prefix);
-    result[32..64].copy_from_slice(&data_hash);
+    result[32..52].copy_from_slice(&new_owner_address);
     result
 }
 
