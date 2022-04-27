@@ -166,6 +166,9 @@ pub async fn ignite(
                         Pallet::AnchorBn254(_) => {
                             unreachable!()
                         }
+                        Pallet::VAnchorBn254(_) => {
+                            unreachable!()
+                        }
                     }
                 }
             }
@@ -182,6 +185,16 @@ pub async fn ignite(
                     match pallet {
                         Pallet::AnchorBn254(config) => {
                             start_substrate_anchor_leaves_watcher(
+                                ctx,
+                                config,
+                                client.clone(),
+                                node_name.clone(),
+                                chain_id,
+                                store.clone(),
+                            )?;
+                        }
+                        Pallet::VAnchorBn254(config) => {
+                            start_substrate_vanchor_leaves_watcher(
                                 ctx,
                                 config,
                                 client.clone(),
@@ -228,13 +241,13 @@ fn start_substrate_anchor_leaves_watcher(
 ) -> anyhow::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
-            "Substrate Anchor events watcher is disabled for ({}).",
+            "Substrate anchor events watcher is disabled for ({}).",
             node_name,
         );
         return Ok(());
     }
     tracing::debug!(
-        "Substrate Anchor events watcher for ({}) Started.",
+        "Substrate anchor events watcher for ({}) Started.",
         node_name,
     );
     let node_name2 = node_name.clone();
@@ -245,13 +258,69 @@ fn start_substrate_anchor_leaves_watcher(
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
-                    "Substrate leaves watcher stopped for ({})",
+                    "Substrate anchor leaves watcher stopped for ({})",
                     node_name2,
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
-                    "Stopping substrate leaves watcher for ({})",
+                    "Stopping substrate anchor leaves watcher for ({})",
+                    node_name2,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
+    Ok(())
+}
+
+/// Starts the event watcher for Substrate vanchor leaves.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - VAnchorBn254 configuration
+/// * `client` - WebbProtocol client
+/// * `node_name` - Name of the node
+/// * `chain_id` - An U256 representing the chain id of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
+fn start_substrate_vanchor_leaves_watcher(
+    ctx: &RelayerContext,
+    config: &VAnchorBn254PalletConfig,
+    client: WebbProtocolClient,
+    node_name: String,
+    chain_id: U256,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "Substrate vanchor events watcher is disabled for ({}).",
+            node_name,
+        );
+        return Ok(());
+    }
+    tracing::debug!(
+        "Substrate vanchor events watcher for ({}) Started.",
+        node_name,
+    );
+    let node_name2 = node_name.clone();
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let task = async move {
+        let leaves_watcher = SubstrateVAnchorLeavesWatcher::default();
+        let watcher = leaves_watcher.run(node_name, chain_id, client, store);
+        tokio::select! {
+            _ = watcher => {
+                tracing::warn!(
+                    "Substrate vanchor leaves watcher stopped for ({})",
+                    node_name2,
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping substrate vanchor leaves watcher for ({})",
                     node_name2,
                 );
             },

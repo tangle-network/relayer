@@ -272,6 +272,7 @@ pub enum Pallet {
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
     AnchorBn254(AnchorBn254PalletConfig),
+    VAnchorBn254(VAnchorBn254PalletConfig),
 }
 
 /// Enumerates the supported Substrate runtimes.
@@ -364,6 +365,15 @@ pub struct DKGProposalHandlerPalletConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct AnchorBn254PalletConfig {
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+}
+
+/// VAnchorBn254PalletConfig represents the configuration for the VAnchorBn254 pallet.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct VAnchorBn254PalletConfig {
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
