@@ -23,19 +23,19 @@ import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
-import { LocalChain } from '../lib/localTestnet.js';
-import { sleep } from '../lib/sleep.js';
-import { timeout } from '../lib/timeout.js';
-import { Pallet, WebbRelayer } from '../lib/webbRelayer.js';
+import { LocalChain } from '../../lib/localTestnet.js';
+import { sleep } from '../../lib/sleep.js';
+import { timeout } from '../../lib/timeout.js';
+import { Pallet, WebbRelayer } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { LocalDkg } from '../lib/localDkg.js';
+import { LocalDkg } from '../../lib/localDkg.js';
 import isCi from 'is-ci';
 import path from 'path';
-import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
+import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
 import {
   defaultEventsWatcherValue,
   UsageMode,
-} from '../lib/substrateNodeBase.js';
+} from '../../lib/substrateNodeBase.js';
 import { u8aToHex } from '@webb-tools/sdk-core';
 
 // to support chai-as-promised
