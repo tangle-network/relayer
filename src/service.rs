@@ -35,6 +35,7 @@ use webb::substrate::{
 
 use crate::config::*;
 use crate::context::RelayerContext;
+use crate::events_watcher::evm::*;
 use crate::events_watcher::proposal_signing_backend::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
@@ -91,7 +92,7 @@ pub async fn ignite(
         for contract in &chain_config.contracts {
             match contract {
                 Contract::Anchor(config) => {
-                    start_anchor_events_watcher(
+                    start_evm_anchor_events_watcher(
                         ctx,
                         config,
                         client.clone(),
@@ -109,6 +110,16 @@ pub async fn ignite(
                     .await?;
                 }
                 Contract::GovernanceBravoDelegate(_) => {}
+                Contract::VAnchor(config) => {
+                    start_evm_vanchor_events_watcher(
+                        ctx,
+                        config,
+                        client.clone(),
+                        store.clone(),
+                    )
+                    .await?;
+                }
+                Contract::SignatureVBridge(_) => {}
             }
         }
         // start the transaction queue after starting other tasks.
@@ -374,6 +385,64 @@ fn start_dkg_pallet_watcher(
     Ok(())
 }
 
+/// Starts the event watcher for EVM VAnchor events.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - VAnchor contract configuration
+/// * `client` - DKG client
+/// * `store` -[Sled](https://sled.rs)-based database store
+async fn start_evm_vanchor_events_watcher(
+    ctx: &RelayerContext,
+    config: &VAnchorContractConfig,
+    client: Arc<Client>,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "VAnchor events watcher is disabled for ({}).",
+            config.common.address,
+        );
+        return Ok(());
+    }
+    let wrapper = VAnchorContractWrapper::new(
+        config.clone(),
+        ctx.config.clone(), // the original config to access all networks.
+        client.clone(),
+    );
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let contract_address = config.common.address;
+    let task = async move {
+        tracing::debug!(
+            "VAnchor events watcher for ({}) Started.",
+            contract_address,
+        );
+        let leaves_watcher = VAnchorLeavesWatcher::default();
+        let vanchor_leaves_watcher =
+            leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
+        tokio::select! {
+            _ = vanchor_leaves_watcher => {
+                tracing::warn!(
+                    "VAnchor events watcher stopped for ({})",
+                    contract_address,
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping VAnchor events watcher for ({})",
+                    contract_address,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
+    Ok(())
+}
+
 /// Starts the event watcher for Anchor events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
@@ -384,7 +453,7 @@ fn start_dkg_pallet_watcher(
 /// * `config` - Anchor contract configuration
 /// * `client` - DKG client
 /// * `store` -[Sled](https://sled.rs)-based database store
-async fn start_anchor_events_watcher(
+async fn start_evm_anchor_events_watcher(
     ctx: &RelayerContext,
     config: &AnchorContractConfig,
     client: Arc<Client>,

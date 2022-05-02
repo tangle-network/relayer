@@ -55,10 +55,6 @@ use crate::store::{
 };
 use crate::utils;
 
-/// A module for listening on anchor events over the DKG.
-mod anchor_watcher;
-#[doc(hidden)]
-pub use anchor_watcher::*;
 /// A module for listening on proposal events.
 mod proposal_handler_watcher;
 #[doc(hidden)]
@@ -80,6 +76,10 @@ pub mod proposal_signing_backend;
 /// A module for listening on substrate events.
 #[doc(hidden)]
 pub mod substrate;
+
+/// A module for listening on substrate events.
+#[doc(hidden)]
+pub mod evm;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
