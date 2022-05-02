@@ -39,11 +39,14 @@ describe('Substrate Mixer Transaction Relayer', function () {
           ),
         };
 
+
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
       ports: 'auto',
+      isManual: true,
+      enableLogging: true
     });
 
     bobNode = await LocalProtocolSubstrate.start({
@@ -51,6 +54,8 @@ describe('Substrate Mixer Transaction Relayer', function () {
       authority: 'bob',
       usageMode,
       ports: 'auto',
+      isManual: true,
+      enableLogging: true
     });
 
     await aliceNode.writeConfig({
@@ -66,7 +71,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });

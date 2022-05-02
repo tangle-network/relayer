@@ -49,7 +49,7 @@ import { sleep } from '../lib/sleep.js';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
+describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

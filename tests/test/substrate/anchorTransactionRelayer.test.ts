@@ -70,6 +70,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       usageMode,
       ports: 'auto',
       enabledPallets,
+      enableLogging: true
     });
 
     bobNode = await LocalProtocolSubstrate.start({
@@ -77,6 +78,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       authority: 'bob',
       usageMode,
       ports: 'auto',
+      enableLogging: true
     });
 
     await aliceNode.writeConfig({
@@ -94,7 +96,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });

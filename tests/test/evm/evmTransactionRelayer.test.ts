@@ -28,7 +28,7 @@ import { IAnchor } from '@webb-tools/interfaces';
 import { IAnchorDeposit } from '@webb-tools/interfaces/src/anchor';
 import { u8aToHex } from '@polkadot/util';
 
-describe('EVM Transaction Relayer', function () {
+describe.skip('EVM Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
