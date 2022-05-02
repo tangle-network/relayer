@@ -192,7 +192,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
     expect(balanceAfterWithdraw > initialBalance);
   });
 
-  it('Should fail to withdraw if address is invalid', async () => {
+  it('Should fail to withdraw if recipient address is invalid', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     const note = await makeDeposit(api, aliceNode, account);
@@ -226,7 +226,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
         refund: withdrawalProof.refund,
         fee: withdrawalProof.fee,
         recipient: invalidAddress,
-        relayer: invalidAddress,
+        relayer: withdrawalProof.relayer,
         refreshCommitment: Array.from(
           hexToU8a(withdrawalProof.refreshCommitment)
         ),
@@ -360,6 +360,179 @@ describe('Substrate Anchor Transaction Relayer', function () {
       // Runtime Error that indicates invalid withdrawal proof
       expect(e).to.contain(
         'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
+      );
+    }
+  });
+
+  it('Should fail to withdraw if root is invalid', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Eve');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+        api,
+        webbRelayer,
+        account,
+        note
+    );
+
+    const invalidRoots = [
+      Array.from(
+          hexToU8a(
+              '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
+      ),
+      Array.from(
+          hexToU8a(
+              '0x27f427ccbf58a44b1270abbe4eda6ba53bd6ac4d88cf1e00a13c4371ce71d366'
+          )
+      ),
+    ];
+
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid roots
+      await webbRelayer.substrateAnchorWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+        roots: invalidRoots,
+        nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
+        recipient: withdrawalProof.recipient,
+        relayer: withdrawalProof.relayer,
+        refreshCommitment: Array.from(
+            hexToU8a(withdrawalProof.refreshCommitment)
+        ),
+        extDataHash: Array.from(
+            hexToU8a(
+                '0x0000000000000000000000000000000000000000000000000000000000000000'
+            )
+        ),
+      });
+    } catch (e) {
+      console.log(`error is ${e}`);
+
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain(
+          'Runtime error: RuntimeError(Module { index: 36, error: 1 }'
+      );
+    }
+  });
+
+  it('Should fail to withdraw if relayer address is invalid', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Dave');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+        api,
+        webbRelayer,
+        account,
+        note
+    );
+
+    const roots = [
+      Array.from(
+          hexToU8a(
+              '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
+      ),
+      Array.from(hexToU8a(withdrawalProof.root)),
+    ];
+
+    const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
+
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid address
+      await webbRelayer.substrateAnchorWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+        roots: roots,
+        nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
+        recipient: withdrawalProof.recipient,
+        relayer: invalidAddress,
+        refreshCommitment: Array.from(
+            hexToU8a(withdrawalProof.refreshCommitment)
+        ),
+        extDataHash: Array.from(
+            hexToU8a(
+                '0x0000000000000000000000000000000000000000000000000000000000000000'
+            )
+        ),
+      });
+    } catch (e) {
+      console.log(`error is ${e}`);
+
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain(
+          'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
+      );
+    }
+  });
+
+  it('Should fail to withdraw with invalid nullifier hash', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Ferdie');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+        api,
+        webbRelayer,
+        account,
+        note
+    );
+
+    const roots = [
+      Array.from(
+          hexToU8a(
+              '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
+      ),
+      Array.from(hexToU8a(withdrawalProof.root)),
+    ];
+
+    const nullifierHashBytes = hexToU8a(withdrawalProof.nullifierHash);
+    nullifierHashBytes[1] |= 0x42;
+    const invalidNullifierHash = u8aToHex(nullifierHashBytes);
+    expect(withdrawalProof.nullifierHash).to.not.eq(invalidNullifierHash);
+
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid address
+      await webbRelayer.substrateAnchorWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+        roots: roots,
+        nullifierHash: Array.from(hexToU8a(invalidNullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
+        recipient: withdrawalProof.recipient,
+        relayer: withdrawalProof.relayer,
+        refreshCommitment: Array.from(
+            hexToU8a(withdrawalProof.refreshCommitment)
+        ),
+        extDataHash: Array.from(
+            hexToU8a(
+                '0x0000000000000000000000000000000000000000000000000000000000000000'
+            )
+        ),
+      });
+    } catch (e) {
+      console.log(`error is ${e}`);
+
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain(
+          'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
       );
     }
   });
