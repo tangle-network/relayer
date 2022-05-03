@@ -64,6 +64,21 @@ describe('Substrate Anchor Transaction Relayer', function () {
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
+
+    // for manual connection
+    const aliceManualPorts = {
+      ws: 9944,
+      http: 9933,
+      p2p: 30333
+    }
+
+// for manual connection
+    const bobManualPorts = {
+      ws: 9945,
+      http: 9934,
+      p2p: 30334
+    }
+
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
@@ -644,6 +659,8 @@ async function createAnchorWithdrawProof(
       ),
       hexToU8a(rootValue.root),
     ];
+
+    console.log(`DBG: Root VALUE IS is  ${rootValue.root}` );
 
     const provingKeyPath = path.join(
       gitRoot,

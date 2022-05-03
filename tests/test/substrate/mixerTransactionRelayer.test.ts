@@ -39,6 +39,19 @@ describe('Substrate Mixer Transaction Relayer', function () {
           ),
         };
 
+    // for manual connection
+    const aliceManualPorts = {
+      ws: 9944,
+      http: 9933,
+      p2p: 30333
+    }
+
+// for manual connection
+    const bobManualPorts = {
+      ws: 9945,
+      http: 9934,
+      p2p: 30334
+    }
 
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
@@ -454,6 +467,9 @@ async function createMixerWithdrawProof(
       provingKey,
     };
     const zkProof = await pm.proof(proofInput);
+
+    console.log(`DBG: Root VALUE From ZK mixer is ${JSON.stringify(zkProof.root)}` );
+
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,
