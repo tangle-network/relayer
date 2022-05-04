@@ -664,7 +664,7 @@ async function createAnchorWithdrawProof(
     // @ts-ignore
     const rootValue = treeRoot.toHuman() as { root: string };
     const treeRootArray = [
-      hexToU8a(neighborRoots),
+      hexToU8a(rootValue.root),
       hexToU8a(neighborRoots),
     ];
 
