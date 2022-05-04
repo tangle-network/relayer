@@ -291,6 +291,24 @@ async function createApiPromise(endpoint: string) {
           type: 'Vec<[u8; 32]>',
         },
       },
+      lt: {
+        getNeighborRoots: {
+          description: 'Query for the neighbor roots',
+          params: [
+            {
+              name: 'tree_id',
+              type: 'u32',
+              isOptional: false,
+            },
+            {
+              name: 'at',
+              type: 'Hash',
+              isOptional: true,
+            },
+          ],
+          type: 'Vec<[u8; 32]>',
+        },
+      },
     },
   });
 }
