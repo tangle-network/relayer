@@ -22,7 +22,11 @@ import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
-import { calcualteRelayerFees, WebbRelayer } from '../../lib/webbRelayer.js';
+import {
+  calcualteRelayerFees,
+  EnabledContracts,
+  WebbRelayer,
+} from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { IAnchor } from '@webb-tools/interfaces';
 import { IAnchorDeposit } from '@webb-tools/interfaces/src/anchor';
@@ -45,6 +49,11 @@ describe('EVM Transaction Relayer', function () {
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
+    const enabledContracts: EnabledContracts[] = [
+      {
+        contract: 'Anchor',
+      },
+    ];
     localChain1 = new LocalChain({
       port: localChain1Port,
       chainId: 5001,
@@ -55,6 +64,7 @@ describe('EVM Transaction Relayer', function () {
           balance: ethers.utils.parseEther('100000').toHexString(),
         },
       ],
+      enabledContracts: enabledContracts,
     });
 
     const localChain2Port = await getPort({
@@ -70,6 +80,7 @@ describe('EVM Transaction Relayer', function () {
           balance: ethers.utils.parseEther('100000').toHexString(),
         },
       ],
+      enabledContracts: enabledContracts,
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());

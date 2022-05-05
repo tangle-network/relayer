@@ -77,7 +77,7 @@ pub mod proposal_signing_backend;
 #[doc(hidden)]
 pub mod substrate;
 
-/// A module for listening on substrate events.
+/// A module for listening on evm events.
 #[doc(hidden)]
 pub mod evm;
 
