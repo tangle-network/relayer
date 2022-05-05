@@ -2620,14 +2620,14 @@
   resolved "https://registry.yarnpkg.com/@ungap/promise-all-settled/-/promise-all-settled-1.1.2.tgz#aa58042711d6e3275dd37dc597e5d31e8c290a44"
   integrity sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==
 
-"@webb-tools/anchors@^0.1.11":
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/@webb-tools/anchors/-/anchors-0.1.11.tgz#5dcf0b0cc0c3b4c2690ffc30f34f302158647f68"
-  integrity sha512-7UeVBOzLpQ5wrNPPiEbH2Qw98eDtokrjbOcD9nutDRm4GLnfa/omLEB+Jk1AfW2wMvjteL9DOyJGHtqT/pNaxg==
+"@webb-tools/anchors@^0.1.12":
+  version "0.1.12"
+  resolved "https://registry.yarnpkg.com/@webb-tools/anchors/-/anchors-0.1.12.tgz#6f08a815f747e0b6f5807abb787d7ec2caeb90fd"
+  integrity sha512-CW7bGHbDuQ+b+SfwidU7z98NLVIRRqwD0IvcOu7NvKt38EHxvG5srcFKhww4sEen+cCNYvOL8UznUV1wTgIgCg==
   dependencies:
-    "@webb-tools/contracts" "^0.1.7"
+    "@webb-tools/contracts" "^0.1.8"
     "@webb-tools/interfaces" "^0.1.9"
-    "@webb-tools/merkle-tree" "^0.1.11"
+    "@webb-tools/merkle-tree" "^0.1.12"
     "@webb-tools/utils" "^0.1.7"
     snarkjs "0.4.16"
 
@@ -2652,25 +2652,25 @@
     "@polkadot/rpc-core" "8.1.1"
     "@webb-tools/api-derive" "0.1.4-58"
 
-"@webb-tools/bridges@^0.1.11":
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/@webb-tools/bridges/-/bridges-0.1.11.tgz#2a8e57a3f0f97b1515c7edbbadb1eb515e33de8a"
-  integrity sha512-hYlOyPsIuUoUuWjqTml0U1WeVJ886DSvlwSeU110wteS1yS7IVni46eMNMmqoUm8DSGIAJPBEZKRWLnuZeehaw==
+"@webb-tools/bridges@^0.1.12":
+  version "0.1.12"
+  resolved "https://registry.yarnpkg.com/@webb-tools/bridges/-/bridges-0.1.12.tgz#e76a1e6d4f1e5e9e6929cdfe7a770710bdd7e2b4"
+  integrity sha512-HlMnEv7s/4eSTp6UEiJD186AKTbZ5B+6j0apkq15kJUe5tLvRU+HYfSRWfzXS4tDeL+5sdCTLB87au0KaQ8rzw==
   dependencies:
-    "@webb-tools/anchors" "^0.1.11"
-    "@webb-tools/contracts" "^0.1.7"
+    "@webb-tools/anchors" "^0.1.12"
+    "@webb-tools/contracts" "^0.1.8"
     "@webb-tools/interfaces" "^0.1.9"
-    "@webb-tools/tokens" "^0.1.10"
+    "@webb-tools/tokens" "^0.1.11"
     "@webb-tools/utils" "^0.1.7"
     circomlibjs "^0.0.8"
     ethers "5.5.1"
     ffjavascript "^0.2.38"
     snarkjs "0.4.16"
 
-"@webb-tools/contracts@^0.1.7":
-  version "0.1.7"
-  resolved "https://registry.yarnpkg.com/@webb-tools/contracts/-/contracts-0.1.7.tgz#f3de40053be2d71844d4b1c05a254ce3ca3a8fcd"
-  integrity sha512-pbBimVW2OrLaeZZ/yv/9DX+p4pV938QfWATg9aocJNoFBgsgsiyna58cKBiv+p4SSYofp4j8hYW3AZ2/lyW3Ww==
+"@webb-tools/contracts@^0.1.8":
+  version "0.1.8"
+  resolved "https://registry.yarnpkg.com/@webb-tools/contracts/-/contracts-0.1.8.tgz#abe32f04f6e4afe5176160830c53cf7f1122bf54"
+  integrity sha512-oKwmwEVYsITafrdjdroNscFeXH1nx2IINmNptpBt67Y+MEhQq5pehSeo+udjDqqYz76Z1Z549zCEk4nv0+9ubQ==
   dependencies:
     "@typechain/ethers-v5" "^7.0.1"
     "@typechain/hardhat" "^2.3.0"
@@ -2683,29 +2683,29 @@
   dependencies:
     "@webb-tools/utils" "^0.1.7"
 
-"@webb-tools/merkle-tree@^0.1.11":
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/@webb-tools/merkle-tree/-/merkle-tree-0.1.11.tgz#3341a3031e8650082c0bef2f27eaf76325728074"
-  integrity sha512-4QXq5cNE7uV0QGjMhnZW7qVcq/G40sGoNHurV9/czA1bqxn+GeBwBKis4Tt02jcufgvahy6zEKo3C30zGfoNDQ==
+"@webb-tools/merkle-tree@^0.1.12":
+  version "0.1.12"
+  resolved "https://registry.yarnpkg.com/@webb-tools/merkle-tree/-/merkle-tree-0.1.12.tgz#da9608c45eb1575e5aa693a6998b6cd3100b76ad"
+  integrity sha512-NjKXEzL/hRkJyGZIgpgGArQsVYZEKgJLxSVuHLHzwRC493+s/F7WXTdUuvIjqtPuoBGONzSCH6pY+9+OVbRFFw==
   dependencies:
-    "@webb-tools/contracts" "^0.1.7"
+    "@webb-tools/contracts" "^0.1.8"
     "@webb-tools/interfaces" "^0.1.9"
-    "@webb-tools/tokens" "^0.1.10"
+    "@webb-tools/tokens" "^0.1.11"
     "@webb-tools/utils" "^0.1.7"
 
-"@webb-tools/protocol-solidity@^0.1.12":
-  version "0.1.12"
-  resolved "https://registry.yarnpkg.com/@webb-tools/protocol-solidity/-/protocol-solidity-0.1.12.tgz#26088a1d89ff71637af0ffcdf89329b4081108a9"
-  integrity sha512-dT/w4naJ7xo8Gjlg51xZxfa06HP0TIwov0rskuJ/1n7qY4/1Zn48k3SBBucIhO07wstiRqsU5HiqQDXLw9676w==
+"@webb-tools/protocol-solidity@0.1.13":
+  version "0.1.13"
+  resolved "https://registry.yarnpkg.com/@webb-tools/protocol-solidity/-/protocol-solidity-0.1.13.tgz#29dbbc5a5c5378245dcfaa23d7a0614c4a6a4800"
+  integrity sha512-AM87u9NowXbfZUSHI4gFMy9kgC36yKgXTDpnco48dNgqVkiqjJpvabJR7nLsoZ22VaNlFLktWi8B52SrvTVHxA==
   dependencies:
-    "@webb-tools/anchors" "^0.1.11"
-    "@webb-tools/bridges" "^0.1.11"
-    "@webb-tools/contracts" "^0.1.7"
+    "@webb-tools/anchors" "^0.1.12"
+    "@webb-tools/bridges" "^0.1.12"
+    "@webb-tools/contracts" "^0.1.8"
     "@webb-tools/interfaces" "^0.1.9"
-    "@webb-tools/merkle-tree" "^0.1.11"
-    "@webb-tools/tokens" "^0.1.10"
+    "@webb-tools/merkle-tree" "^0.1.12"
+    "@webb-tools/tokens" "^0.1.11"
     "@webb-tools/utils" "^0.1.7"
-    "@webb-tools/vbridge" "^0.1.11"
+    "@webb-tools/vbridge" "^0.1.12"
 
 "@webb-tools/sdk-core@0.1.4-58":
   version "0.1.4-58"
@@ -2719,12 +2719,12 @@
     events "^3.2.0"
     lodash "^4.17.20"
 
-"@webb-tools/tokens@^0.1.10":
-  version "0.1.10"
-  resolved "https://registry.yarnpkg.com/@webb-tools/tokens/-/tokens-0.1.10.tgz#697edfe3f218407843f22395ead8a1a8fe105865"
-  integrity sha512-g1asb2YxbeygEW8bhwncHOzYntyWGShrWSWEvvCWp61brwnxCe/niVOaAqA3zWY05orOxRh3+95rokYx2R1n7Q==
+"@webb-tools/tokens@^0.1.11":
+  version "0.1.11"
+  resolved "https://registry.yarnpkg.com/@webb-tools/tokens/-/tokens-0.1.11.tgz#28b26b52c38edd5321e80bd34c615cd9bdab1c06"
+  integrity sha512-zGWY3ZlNM9TtTBiwOSrR0VRaKys3wLMM2xBXUtHsj1WMmc0ZLJMRbTZ0qn8GZ4fdi8diQpp1qA61WFQe9ELdtQ==
   dependencies:
-    "@webb-tools/contracts" "^0.1.7"
+    "@webb-tools/contracts" "^0.1.8"
     "@webb-tools/utils" "^0.1.7"
     ethers "5.5.1"
 
@@ -2751,14 +2751,14 @@
     ethers "5.5.1"
     ffjavascript "^0.2.43"
 
-"@webb-tools/vbridge@^0.1.11":
-  version "0.1.11"
-  resolved "https://registry.yarnpkg.com/@webb-tools/vbridge/-/vbridge-0.1.11.tgz#c8413ccc8121d532c6bf0d8e5b364fd13f4a355b"
-  integrity sha512-4MBUOTfntxEwn7ZudQvScAyOmWymbKwUWtyOjRS44KxqltDXwlB/vBs+D4W06Gd3l6T/5pvgIp0c0O1l0f+tdQ==
+"@webb-tools/vbridge@^0.1.12":
+  version "0.1.12"
+  resolved "https://registry.yarnpkg.com/@webb-tools/vbridge/-/vbridge-0.1.12.tgz#d8ffe81a542ea5b46eb71d4baf85fb665eaf65c7"
+  integrity sha512-Od9sOxkbnXrJNJjQpJ+aL3D2bqI6WFMObkhlQhh+0bjjIFby9IEHaNPAJxOoEYvf2joI7tZLEiePdykUVJDQKQ==
   dependencies:
-    "@webb-tools/bridges" "^0.1.11"
-    "@webb-tools/contracts" "^0.1.7"
-    "@webb-tools/tokens" "^0.1.10"
+    "@webb-tools/bridges" "^0.1.12"
+    "@webb-tools/contracts" "^0.1.8"
+    "@webb-tools/tokens" "^0.1.11"
     "@webb-tools/utils" "^0.1.7"
     circomlibjs "^0.0.8"
     ethers "5.5.1"

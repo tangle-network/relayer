@@ -505,8 +505,6 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       (root: string) => root === srcChainRoot
     );
 
-    neigborRoots
-
     if (!isKnownNeighborRoot) {
       console.log({
         srcChainRoot,
