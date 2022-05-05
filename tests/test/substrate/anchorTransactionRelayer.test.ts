@@ -543,13 +543,17 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
   tx: SubmittableExtrinsic<'promise'>;
   note: Note;
 }> {
+  // @ts-ignore
+  const treeIds = await api.query.anchorBn254.anchors.keys();
+  const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
+  const treeId = sorted[0] || 5;
   const noteInput: NoteGenInput = {
     protocol: 'anchor',
     version: 'v2',
     sourceChain: '6',
     targetChain: '6',
-    sourceIdentifyingData: '3',
-    targetIdentifyingData: '3',
+    sourceIdentifyingData: `${treeId}`,
+    targetIdentifyingData: `${treeId}`,
     tokenSymbol: 'WEBB',
     amount: '1',
     denomination: '18',
@@ -560,10 +564,6 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     exponentiation: '5',
   };
   const note = await Note.generateNote(noteInput);
-  // @ts-ignore
-  const treeIds = await api.query.anchorBn254.anchors.keys();
-  const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
-  const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
   // @ts-ignore
   const tx = api.tx.anchorBn254.deposit(treeId, leaf);
