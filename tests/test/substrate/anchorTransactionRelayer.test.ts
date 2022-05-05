@@ -135,8 +135,11 @@ describe('Substrate Anchor Transaction Relayer', function () {
     // chainId
     const chainId = 1080;
     const chainIdHex = chainId.toString(16);
-    const treeIds = await api.query.anchorBn254.anchors.keys();
-    const sorted = treeIds?.map((id) => Number(id.toHuman())).sort();
+    //@ts-ignore
+    const treeIds = await api.query.anchorBn254.anchors?.keys();
+    //@ts-ignore
+    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
+    //@ts-ignore
     const treeId = sorted[0] || 5;
     // Since substrate pallet does not have address, we use treeId
     // converted treeId to H160 ethereum type address
@@ -159,6 +162,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
     );
 
     // get the initial balance
+    // @ts-ignore
     let { nonce, data: balance } = await api.query.system.account(
       withdrawalProof.recipient
     );
@@ -194,6 +198,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
     expect(txHash).to.be.not.null;
 
     // get the balance after withdrawal is done and see if it increases
+    // @ts-ignore
     const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
       .account!(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
@@ -555,10 +560,12 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     exponentiation: '5',
   };
   const note = await Note.generateNote(noteInput);
+  // @ts-ignore
   const treeIds = await api.query.anchorBn254.anchors.keys();
   const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
   const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
+  // @ts-ignore
   const tx = api.tx.anchorBn254.deposit(treeId, leaf);
   return { tx, note };
 }
@@ -598,28 +605,38 @@ async function createAnchorWithdrawProof(
       '0x',
       ''
     );
-    const treeIds = await api.query.anchorBn254.anchors.keys();
-    const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
-    console.log('sorted: ', sorted[0]);
+    //@ts-ignore
+    const treeIds = await api.query.anchorBn254.anchors?.keys();
+    //@ts-ignore
+    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
+    //@ts-ignore
     const treeId = sorted[0] || 5;
     console.log(`tree id in substrate anchor test is ${treeId}`);
-    const treeLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(treeId, 0, 0);
-
-    treeLeaves.map((leaf) => {
-      console.log('tree leaf: ', Buffer.from(leaf).toString('hex'));
-    })
+    //@ts-ignore
+    const getLeaves = api.rpc.mt.getLeaves;
+    const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);
+    console.log(`tree leaves are ${treeLeaves}`)
 
     //@ts-ignore
     const getNeighborRoots = api.rpc.lt.getNeighborRoots;
-    let neighborRoots: Uint8Array[] = await getNeighborRoots(treeId);
+    let neighborRoots = await getNeighborRoots(treeId);
+    console.log(`Neighbor roots are ${neighborRoots[0]}`)
+
+    let neighborRootsU8:Uint8Array[] = new Array(neighborRoots.length);
+    for (let i = 0; i < neighborRootsU8.length; i++) {
+      // @ts-ignore
+      neighborRootsU8[i] = hexToU8a(neighborRoots[0].toString());
+    }
 
     // Get tree root on chain
+    // @ts-ignore
     const treeRoot = await api.query.merkleTreeBn254.trees(treeId);
 
     const pm = new ProvingManagerWrapper('direct-call');
     const leafHex = u8aToHex(note.getLeaf());
 
     const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
+    console.log(`leaf index ${leafIndex}`);
     expect(leafIndex).to.be.greaterThan(-1);
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
@@ -627,13 +644,16 @@ async function createAnchorWithdrawProof(
       .trim();
 
     // make a root set from the tree root
-    const rootValue = treeRoot.unwrap().root.toU8a();
+    // @ts-ignore
+    const rootValue = treeRoot.toHuman() as { root: string };
+    console.log(`DBG: Root VALUE IS is  ${rootValue.root}` );
     const treeRootArray = [
-      rootValue,
-      ...neighborRoots,
+      hexToU8a(rootValue.root),
+      ...neighborRootsU8,
     ];
 
     console.log(`DBG: Root VALUE IS is  ${rootValue}` );
+    console.log(`treeLeaves  ${treeLeaves}` );
 
     const provingKeyPath = path.join(
       gitRoot,
@@ -647,6 +667,7 @@ async function createAnchorWithdrawProof(
     );
     const provingKey = fs.readFileSync(provingKeyPath);
 
+    // @ts-ignore
     const proofInput: ProvingManagerSetupInput = {
       note: note.serialize(),
       relayer: relayerAddressHex,
@@ -672,11 +693,13 @@ async function createAnchorWithdrawProof(
       refund: opts.refund === undefined ? 0 : opts.refund,
       refreshCommitment:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
-      treeRoot: rootValue,
+      treeRoot: hexToU8a(rootValue.root),
       neighborRoot: neighborRoots[0]!
     };
-  } catch (error: any) {
+  } catch (error) {
+    //@ts-ignore
     console.error(error.error_message);
+    //@ts-ignore
     console.error(error.code);
     throw error;
   }
