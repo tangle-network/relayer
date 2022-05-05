@@ -99,6 +99,14 @@ impl super::EventWatcher for VAnchorLeavesWatcher {
                     H256::from_slice(&v.nullifier)
                 );
             }
+            InsertionFilter(v) => {
+                tracing::debug!(
+                    "Leaf {:?} inserted at index {} on time {}",
+                    H256::from_slice(&v.commitment),
+                    v.leaf_index,
+                    v.timestamp
+                );
+            }
             _ => {
                 tracing::trace!("Unhandled event {:?}", event);
             }
