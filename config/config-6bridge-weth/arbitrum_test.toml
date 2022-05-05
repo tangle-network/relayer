@@ -1,23 +1,29 @@
 [evm.arbitrumtestnet]
-http-endpoint = "https://arb-rinkeby.g.alchemy.com/v2/$ALCHEMY_KEY"
-ws-endpoint = "wss://arb-rinkeby.g.alchemy.com/v2/$ALCHEMY_KEY"
+http-endpoint = "https://arb-rinkeby.g.alchemy.com/v2/$ARBITRUM_ALCHEMY_KEY"
+ws-endpoint = "wss://arb-rinkeby.g.alchemy.com/v2/$ARBITRUM_ALCHEMY_KEY"
 explorer = "https://rinkeby-explorer.arbitrum.io/#/"
 chain-id = 421611
 private-key = "$ARBITRUMTESTNET_PRIVATE_KEY"
 
 [[evm.arbitrumtestnet.contracts]]
 contract = "Anchor"
-address = "0xfbda54512c6aa9a6bc790f11585aff170d393ee9"
-deployed-at = 8301075
-size = 0.1
-events-watcher = { enabled = true, polling-interval = 5000 }
+address = "0x3dd2457c44e79aF992120E817FF4BE22B023e22a"
+deployed-at = 11721072
+size = 0.01
+events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "ropsten", address = "0x40f587e4782f4457541c2971d700ebb888262ac7" },
-  { chain = "goerli", address = "0x40f587e4782f4457541c2971d700ebb888262ac7" },
-  { chain = "polygontestnet", address = "0x40f587e4782f4457541c2971d700ebb888262ac7" },
-  { chain = "optimismtestnet", address = "0x2a80c1ef363c4dfadce2e0bb6094fae04622a232" },
-  { chain = "rinkeby", address = "0x40f587e4782f4457541c2971d700ebb888262ac7" },
+  { chain = "ropsten", address = "0x12f2C4A1469B035e4459539E38ae68bC4DD5ba07" },
+  { chain = "goerli", address = "0x9c0B0e0Fb6dac561Ad4c947e6Db9abcf0f40B6Dc" },
+  { chain = "polygontestnet", address = "0x84EbBB5F7884C6d71a45C298B1CEaed940E2334E" },
+  { chain = "optimismtestnet", address = "0x9c0B0e0Fb6dac561Ad4c947e6Db9abcf0f40B6Dc" },
+  { chain = "rinkeby", address = "0x12f2C4A1469B035e4459539E38ae68bC4DD5ba07" },
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
+
+[[evm.arbitrumtestnet.contracts]]
+contract = "SignatureBridge"
+address = "0xffd2174417a81ea7ac8bea1b8e64f233eeb63084"
+deployed-at = 11697042
+events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
