@@ -22,6 +22,7 @@ import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import { EventsWatcher, NodeInfo, Pallet } from './webbRelayer.js';
 import { ConvertToKebabCase } from './tsHacks.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
+import { options } from '@webb-tools/api';
 
 export type DockerMode = {
   mode: 'docker';
@@ -260,37 +261,9 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
 }
 
 async function createApiPromise(endpoint: string) {
-  return await ApiPromise.create({
+  return await ApiPromise.create( options({
     provider: new WsProvider(endpoint),
     rpc: {
-      mt: {
-        getLeaves: {
-          description: 'Query for the tree leaves',
-          params: [
-            {
-              name: 'tree_id',
-              type: 'u32',
-              isOptional: false,
-            },
-            {
-              name: 'from',
-              type: 'u32',
-              isOptional: false,
-            },
-            {
-              name: 'to',
-              type: 'u32',
-              isOptional: false,
-            },
-            {
-              name: 'at',
-              type: 'Hash',
-              isOptional: true,
-            },
-          ],
-          type: 'Vec<[u8; 32]>',
-        },
-      },
       lt: {
         getNeighborRoots: {
           description: 'Query for the neighbor roots',
@@ -310,7 +283,7 @@ async function createApiPromise(endpoint: string) {
         },
       },
     },
-  });
+  }));
 }
 
 export type FullNodeInfo = NodeInfo & {
