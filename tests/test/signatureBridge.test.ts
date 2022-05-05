@@ -440,7 +440,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should handle AnchorUpdateProposal when a deposit happens using mocked proposal backend', async () => {
+  it.only('should handle AnchorUpdateProposal when a deposit happens using mocked proposal backend', async () => {
     // we will use chain1 as an example here.
     const anchor1 = signatureBridge.getAnchor(
       localChain1.chainId,
@@ -459,17 +459,30 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       wallet1
     );
 
+    const b4neigborRoots = await anchor2.contract.getLatestNeighborRoots();
+
+    b4neigborRoots.map((root) => {
+      console.log('b4 neighbor root: ', root);
+    })
+
+
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
     // now we are ready to do the deposit.
     await anchor1.deposit(localChain2.chainId);
+
+    console.log('deposited on anchor 1');
+
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
       event: { chain_id: localChain2.underlyingChainId.toString() },
     });
+
+    console.log('received an event for execute call');
+
     // now we wait for the tx queue on that chain to execute the transaction.
     await webbRelayer.waitForEvent({
       kind: 'tx_queue',
@@ -483,9 +496,17 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     const srcChainRoot = await anchor1.contract.getLastRoot();
     const neigborRoots = await anchor2.contract.getLatestNeighborRoots();
     const edges = await anchor2.contract.getLatestNeighborEdges();
+
+    neigborRoots.map((root) => {
+      console.log('neighbor root: ', root);
+    })
+
     const isKnownNeighborRoot = neigborRoots.some(
       (root: string) => root === srcChainRoot
     );
+
+    neigborRoots
+
     if (!isKnownNeighborRoot) {
       console.log({
         srcChainRoot,

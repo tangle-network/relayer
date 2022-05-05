@@ -227,9 +227,9 @@ impl super::EventWatcher for AnchorLeavesWatcher {
     ) -> anyhow::Result<()> {
         use FixedDepositAnchorContractEvents::*;
         match event {
-            DepositFilter(deposit) => {
-                let commitment = deposit.commitment;
-                let leaf_index = deposit.leaf_index;
+            InsertionFilter(insert_event) => {
+                let commitment = insert_event.commitment;
+                let leaf_index = insert_event.leaf_index;
                 let value = (leaf_index, H256::from_slice(&commitment));
                 let chain_id = wrapper.contract.client().get_chainid().await?;
                 store.insert_leaves(
@@ -240,7 +240,7 @@ impl super::EventWatcher for AnchorLeavesWatcher {
                     (chain_id, wrapper.contract.address()),
                     log.block_number,
                 )?;
-                let events_bytes = serde_json::to_vec(&deposit)?;
+                let events_bytes = serde_json::to_vec(&insert_event)?;
                 store.store_event(&events_bytes)?;
                 tracing::trace!(
                     %log.block_number,

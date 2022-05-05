@@ -1,0 +1,25 @@
+[evm.athena]
+http-endpoint = "http://localhost:5002"
+ws-endpoint = "ws://localhost:5002"
+chain-id = 5002
+private-key = "$ATHENA_PRIVATE_KEY"
+tx-queue = { max-sleep-interval = 1500 }
+
+[[evm.athena.contracts]]
+contract = "Anchor"
+address = "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"
+deployed-at = 1
+size = 1
+events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
+withdraw-fee-percentage = 0
+withdraw-gaslimit = "0x350000"
+linked-anchors = [
+  { chain = "hermes", address = "0xbfce6B877Ebff977bB6e80B24FbBb7bC4eBcA4df" },
+]
+proposal-signing-backend = { type = "Mocked", private-key = "0xc0d375903fd6f6ad3edafc2c5428900c0757ce1da10e5dd864fe387b32b91d7e" }
+
+[[evm.athena.contracts]]
+contract = "SignatureBridge"
+address = "0x2946259E0334f33A064106302415aD3391BeD384"
+deployed-at = 1
+events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }

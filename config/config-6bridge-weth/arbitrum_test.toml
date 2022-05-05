@@ -1,22 +1,23 @@
 [evm.arbitrumtestnet]
-http-endpoint = "https://rinkeby.arbitrum.io/rpc"
-ws-endpoint = "wss://rinkeby.arbitrum.io/rpc"
+http-endpoint = "https://arb-rinkeby.g.alchemy.com/v2/$ALCHEMY_KEY"
+ws-endpoint = "wss://arb-rinkeby.g.alchemy.com/v2/$ALCHEMY_KEY"
 explorer = "https://rinkeby-explorer.arbitrum.io/#/"
 chain-id = 421611
 private-key = "$ARBITRUMTESTNET_PRIVATE_KEY"
 
 [[evm.arbitrumtestnet.contracts]]
 contract = "Anchor"
-address = "0xD8a8F9629a98EABFF31CfA9493f274A4D5e768Cd"
+address = "0xfbda54512c6aa9a6bc790f11585aff170d393ee9"
 deployed-at = 8301075
 size = 0.1
 events-watcher = { enabled = true, polling-interval = 5000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "ropsten", address = "0x97747a4De7302Ff7Ee3334e33138879469BFEcf8" },
-  { chain = "goerli", address = "0x6aA5C74953F7Da1556a298C5e129E417410474E2" },
-  { chain = "polygontestnet", address = "0x12323BcABB342096669d80F968f7a31bdB29d4C4" },
-  { chain = "optimismtestnet", address = "0xC44A4EcAC4f23b6F92485Cb1c90dBEd75a987BC8" },
-  { chain = "rinkeby", address = "0x09B722aA809A076027FA51902e431a8C03e3f8dF" },
+  { chain = "ropsten", address = "0x40f587e4782f4457541c2971d700ebb888262ac7" },
+  { chain = "goerli", address = "0x40f587e4782f4457541c2971d700ebb888262ac7" },
+  { chain = "polygontestnet", address = "0x40f587e4782f4457541c2971d700ebb888262ac7" },
+  { chain = "optimismtestnet", address = "0x2a80c1ef363c4dfadce2e0bb6094fae04622a232" },
+  { chain = "rinkeby", address = "0x40f587e4782f4457541c2971d700ebb888262ac7" },
 ]
+proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }

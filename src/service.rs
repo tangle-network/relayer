@@ -463,8 +463,8 @@ async fn start_anchor_events_watcher(
                             .get(&c.chain)
                             .map(|chain_config| (chain_config, c.address))
                     });
-                // then will have to go through our configruation to retrieve the correct
-                // signature bridges that are configrued on the linked chains.
+                // then go through our configuration to retrieve the correct
+                // signature bridges for the linked chains.
                 // Note: this assumes that every network will only have one signature bridge configured for it.
                 let signature_bridges = linked_chains
                     .flat_map(|(chain_config, address)| {

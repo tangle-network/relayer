@@ -1,6 +1,7 @@
 // This our basic Substrate Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
+import '@webb-tools/types';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -83,7 +84,6 @@ describe('Substrate Mixer Transaction Relayer', function () {
     );
 
     // get the initial balance
-    // @ts-ignore
     let { nonce, data: balance } = await api.query.system.account(
       withdrawalProof.recipient
     );
@@ -103,9 +103,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     expect(txHash).to.be.not.null;
 
     // get the balance after withdrawal is done and see if it increases
-    // @ts-ignore
-    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
-      .account!(withdrawalProof.recipient);
+    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     expect(balanceAfterWithdraw > initialBalance);
   });
