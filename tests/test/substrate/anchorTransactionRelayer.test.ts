@@ -136,9 +136,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const chainId = 1080;
     const chainIdHex = chainId.toString(16);
     const treeIds = await api.query.anchorBn254.anchors.keys();
-    //@ts-ignore
-    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
-    //@ts-ignore
+    const sorted = treeIds?.map((id) => Number(id.toHuman())).sort();
     const treeId = sorted[0] || 5;
     // Since substrate pallet does not have address, we use treeId
     // converted treeId to H160 ethereum type address
@@ -161,7 +159,6 @@ describe('Substrate Anchor Transaction Relayer', function () {
     );
 
     // get the initial balance
-    // @ts-ignore
     let { nonce, data: balance } = await api.query.system.account(
       withdrawalProof.recipient
     );
@@ -197,7 +194,6 @@ describe('Substrate Anchor Transaction Relayer', function () {
     expect(txHash).to.be.not.null;
 
     // get the balance after withdrawal is done and see if it increases
-    // @ts-ignore
     const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
       .account!(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
@@ -559,14 +555,11 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     exponentiation: '5',
   };
   const note = await Note.generateNote(noteInput);
-  //@ts-ignore
-  const treeIds = await api.query.anchorBn254.anchors?.keys();
-  //@ts-ignore
-  const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
-  //@ts-ignore
+  const treeIds = await api.query.anchorBn254.anchors.keys();
+  const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
   const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
-  const tx = api.tx.anchorBn254!.deposit!(treeId, leaf);
+  const tx = api.tx.anchorBn254.deposit(treeId, leaf);
   return { tx, note };
 }
 
@@ -610,7 +603,6 @@ async function createAnchorWithdrawProof(
     console.log('sorted: ', sorted[0]);
     const treeId = sorted[0] || 5;
     console.log(`tree id in substrate anchor test is ${treeId}`);
-    //@ts-ignore
     const treeLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(treeId, 0, 0);
 
     treeLeaves.map((leaf) => {
@@ -635,7 +627,6 @@ async function createAnchorWithdrawProof(
       .trim();
 
     // make a root set from the tree root
-    // @ts-ignore
     const rootValue = treeRoot.unwrap().root.toU8a();
     const treeRootArray = [
       rootValue,
@@ -656,7 +647,6 @@ async function createAnchorWithdrawProof(
     );
     const provingKey = fs.readFileSync(provingKeyPath);
 
-    // @ts-ignore
     const proofInput: ProvingManagerSetupInput = {
       note: note.serialize(),
       relayer: relayerAddressHex,
@@ -685,10 +675,8 @@ async function createAnchorWithdrawProof(
       treeRoot: rootValue,
       neighborRoot: neighborRoots[0]!
     };
-  } catch (error) {
-    //@ts-ignore
+  } catch (error: any) {
     console.error(error.error_message);
-    //@ts-ignore
     console.error(error.code);
     throw error;
   }
