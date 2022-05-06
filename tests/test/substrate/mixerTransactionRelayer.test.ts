@@ -185,7 +185,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain('Module { index: 40, error: 1 }');
+      expect(e).to.contain('Module { index: 35, error: 1 }');
     }
   });
 
