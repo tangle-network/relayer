@@ -22,7 +22,7 @@ import {
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
-describe.skip('Substrate Mixer Transaction Relayer', function () {
+describe('Substrate Mixer Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -467,9 +467,6 @@ async function createMixerWithdrawProof(
       provingKey,
     };
     const zkProof = await pm.proof(proofInput);
-
-    console.log(`DBG: Root VALUE From ZK mixer is ${JSON.stringify(zkProof.root)}` );
-
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,
