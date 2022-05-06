@@ -322,7 +322,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     // flip a bit in the proof, so it is invalid
     const flipCount = nullifierHash.length / 8;
     for (let i = 0; i < flipCount; i++) {
-      nullifierHash[i] |= 0x42;
+      nullifierHash[i] = 0x42;
     }
     const invalidNullifierHash = u8aToHex(nullifierHash);
     expect(withdrawalProof.proofBytes).to.not.eq(invalidNullifierHash);
