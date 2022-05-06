@@ -1929,26 +1929,12 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
-"@open-web3/orml-type-definitions@1.0.1", "@open-web3/orml-type-definitions@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@open-web3/orml-type-definitions/-/orml-type-definitions-1.0.1.tgz#497a708ae658dd7c7fed024306c2a3015ebc7b4b"
-  integrity sha512-FGSeVaQv6DcQSa3E0YX20ymJpqtD8XJmLukCuC4AhVfSgLqT6roI2SfrRhUiYVbe1PQph7ptxx1EhEV/PNcnEw==
-  dependencies:
-    lodash.merge "^4.6.2"
-
 "@open-web3/orml-type-definitions@1.1.4":
   version "1.1.4"
   resolved "https://registry.yarnpkg.com/@open-web3/orml-type-definitions/-/orml-type-definitions-1.1.4.tgz#a036b6cf0410783aaedf7e95d27917a5d66c5bed"
   integrity sha512-diuQx0Pf7cfoBtCpZTrBQOeIur0POp6Y9qfDS3p11RBF2XKwQ7jw/YKEFYqga1AyrzTcoSEE2OYUfeW3AKU94w==
   dependencies:
     lodash.merge "^4.6.2"
-
-"@open-web3/orml-types@^1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@open-web3/orml-types/-/orml-types-1.0.1.tgz#6eda4a358ebc40b397546a4f6ebd911200252907"
-  integrity sha512-A7XimIY15ZkgixvSPyBE7GXZW1XgH9TdCkKAEUXgpS6doerh4fiX1rqKjsqzjJjmJMiietg0asNJVVJ6iDF+3w==
-  dependencies:
-    "@open-web3/orml-type-definitions" "1.0.1"
 
 "@open-web3/orml-types@^1.1.3":
   version "1.1.4"
@@ -2206,29 +2192,6 @@
     eventemitter3 "^4.0.7"
     mock-socket "^9.1.2"
     nock "^13.2.4"
-
-"@polkadot/typegen@7.13.1":
-  version "7.13.1"
-  resolved "https://registry.yarnpkg.com/@polkadot/typegen/-/typegen-7.13.1.tgz#9f3da391974f7c02d029ad9b4dc930cd2117b520"
-  integrity sha512-8z/7wcTnPD0iKBPe62pmGVqrZsTaxokxdAkxuRYT8F2pDefcJZyEJFI5SIgvXQ4aUtwvaRhapJ7h1SUzdHo90Q==
-  dependencies:
-    "@babel/core" "^7.17.8"
-    "@babel/register" "^7.17.7"
-    "@babel/runtime" "^7.17.8"
-    "@polkadot/api" "7.13.1"
-    "@polkadot/api-augment" "7.13.1"
-    "@polkadot/rpc-augment" "7.13.1"
-    "@polkadot/rpc-provider" "7.13.1"
-    "@polkadot/types" "7.13.1"
-    "@polkadot/types-augment" "7.13.1"
-    "@polkadot/types-codec" "7.13.1"
-    "@polkadot/types-create" "7.13.1"
-    "@polkadot/types-support" "7.13.1"
-    "@polkadot/util" "^8.6.1"
-    "@polkadot/x-ws" "^8.6.1"
-    handlebars "^4.7.7"
-    websocket "^1.0.34"
-    yargs "^17.3.1"
 
 "@polkadot/typegen@8.1.1":
   version "8.1.1"
@@ -2975,16 +2938,6 @@
     "@webb-tools/api" "0.1.4-58"
     "@webb-tools/types" "0.1.4-58"
 
-"@webb-tools/api@0.1.4-46":
-  version "0.1.4-46"
-  resolved "https://registry.yarnpkg.com/@webb-tools/api/-/api-0.1.4-46.tgz#58de23a6e81d77b310bc0bf68197a7f5515d444a"
-  integrity sha512-5LcgRjrIoktqNwjDf6FhnaPzki4VAj15sUlc+4FJ2/ByR0i4vR4qIqVBrCBrkPCQ1SV8lSSE4nAS8/CzCnS9rQ==
-  dependencies:
-    "@babel/runtime" "^7.10.2"
-    "@polkadot/api" "7.13.1"
-    "@polkadot/rpc-core" "7.13.1"
-    "@webb-tools/types" "0.1.4-46"
-
 "@webb-tools/api@0.1.4-58":
   version "0.1.4-58"
   resolved "https://registry.yarnpkg.com/@webb-tools/api/-/api-0.1.4-58.tgz#4a951161d2769094fcc01d48c75f5cbdb6f74ce7"
@@ -3070,24 +3023,6 @@
     "@webb-tools/contracts" "^0.1.7"
     "@webb-tools/utils" "^0.1.7"
     ethers "5.5.1"
-
-"@webb-tools/type-definitions@0.1.4-46":
-  version "0.1.4-46"
-  resolved "https://registry.yarnpkg.com/@webb-tools/type-definitions/-/type-definitions-0.1.4-46.tgz#4a31afd2c5a1fe1feeac3bcb7e0c65c7318efac7"
-  integrity sha512-M0+WSagJqdyjGDwfC01qcnEFzgl0Pj35TUB2c+OdltxHq1V89YjprEGbJhbCOxBdMwPMSIOpZYLkHedupJZWVg==
-  dependencies:
-    "@open-web3/orml-type-definitions" "^1.0.1"
-
-"@webb-tools/types@0.1.4-46":
-  version "0.1.4-46"
-  resolved "https://registry.yarnpkg.com/@webb-tools/types/-/types-0.1.4-46.tgz#f4b69397533d9027215bfdfd1a56c58517acadf1"
-  integrity sha512-W7kD+x2aCts5a/GwkzrxjRyqH/ZDFTkzDgKX0WpR1LlFWFQ+L2SysLj1eX17FW2UMQX1PzJHe63L/xgNHspQyw==
-  dependencies:
-    "@babel/runtime" "^7.10.2"
-    "@open-web3/orml-types" "^1.0.1"
-    "@polkadot/typegen" "7.13.1"
-    "@polkadot/types" "7.13.1"
-    "@webb-tools/type-definitions" "0.1.4-46"
 
 "@webb-tools/types@0.1.4-58":
   version "0.1.4-58"
@@ -8802,19 +8737,6 @@ yargs@16.2.0:
     string-width "^4.2.0"
     y18n "^5.0.5"
     yargs-parser "^20.2.2"
-
-yargs@^17.3.1:
-  version "17.4.0"
-  resolved "https://registry.yarnpkg.com/yargs/-/yargs-17.4.0.tgz#9fc9efc96bd3aa2c1240446af28499f0e7593d00"
-  integrity sha512-WJudfrk81yWFSOkZYpAZx4Nt7V4xp7S/uJkX0CnxovMCt1wCE8LNftPpNuF9X/u9gN5nsD7ycYtRcDf2pL3UiA==
-  dependencies:
-    cliui "^7.0.2"
-    escalade "^3.1.1"
-    get-caller-file "^2.0.5"
-    require-directory "^2.1.1"
-    string-width "^4.2.3"
-    y18n "^5.0.5"
-    yargs-parser "^21.0.0"
 
 yargs@^17.4.1:
   version "17.4.1"
