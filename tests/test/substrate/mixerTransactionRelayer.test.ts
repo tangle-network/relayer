@@ -39,20 +39,6 @@ describe('Substrate Mixer Transaction Relayer', function () {
           ),
         };
 
-    // for manual connection
-    const aliceManualPorts = {
-      ws: 9944,
-      http: 9933,
-      p2p: 30333
-    }
-
-// for manual connection
-    const bobManualPorts = {
-      ws: 9945,
-      http: 9934,
-      p2p: 30334
-    }
-
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
@@ -199,7 +185,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain('Module { index: 35, error: 1 }');
+      expect(e).to.contain('Module { index: 40, error: 1 }');
     }
   });
 
