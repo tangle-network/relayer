@@ -309,7 +309,7 @@ export class LocalChain {
     return val;
   }
 
-  public async getAnchorChainConfig(
+  private async getAnchorChainConfig(
     opts: ExportedConfigOptions
   ): Promise<FullChainInfo> {
     const bridge = opts.signatureBridge ?? this.signatureBridge;
@@ -367,7 +367,7 @@ export class LocalChain {
     return chainInfo;
   }
 
-  public async getVAnchorChainConfig(
+  private async getVAnchorChainConfig(
     opts: ExportedConfigOptions
   ): Promise<FullChainInfo> {
     const bridge = opts.signatureVBridge ?? this.signatureVBridge;

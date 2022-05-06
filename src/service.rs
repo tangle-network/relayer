@@ -393,7 +393,7 @@ fn start_dkg_pallet_watcher(
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - VAnchor contract configuration
-/// * `client` - DKG client
+/// * `client` - EVM Chain api client
 /// * `store` -[Sled](https://sled.rs)-based database store
 async fn start_evm_vanchor_events_watcher(
     ctx: &RelayerContext,
@@ -443,7 +443,7 @@ async fn start_evm_vanchor_events_watcher(
     Ok(())
 }
 
-/// Starts the event watcher for Anchor events.
+/// Starts the event watcher for EVM Anchor events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
 ///
@@ -451,7 +451,7 @@ async fn start_evm_vanchor_events_watcher(
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - Anchor contract configuration
-/// * `client` - DKG client
+/// * `client` - EVM Chain api client
 /// * `store` -[Sled](https://sled.rs)-based database store
 async fn start_evm_anchor_events_watcher(
     ctx: &RelayerContext,
