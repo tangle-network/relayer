@@ -292,7 +292,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates proof verifier error
       expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 36, error: 1 })'
+        'Runtime error: RuntimeError(Module { index: 41, error: 2 })'
       );
     }
   });
