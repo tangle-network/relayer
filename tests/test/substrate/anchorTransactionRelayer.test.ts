@@ -66,7 +66,6 @@ describe('Substrate Anchor Transaction Relayer', function () {
       },
     ];
 
-
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
@@ -294,11 +293,11 @@ describe('Substrate Anchor Transaction Relayer', function () {
 
       try {
         expect(e).to.contain(
-            'Runtime error: RuntimeError(Module { index: 41, error: 2 })'
-        )
-      } catch(ex) {
+          'Runtime error: RuntimeError(Module { index: 41, error: 2 })'
+        );
+      } catch (ex) {
         expect(ex).to.contain(
-            'Runtime error: RuntimeError(Module { index: 36, error: 1 })'
+          'Runtime error: RuntimeError(Module { index: 36, error: 1 })'
         );
       }
     }
@@ -361,18 +360,18 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const account = createAccount('//Eve');
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
-        api,
-        webbRelayer,
-        account,
-        note
+      api,
+      webbRelayer,
+      account,
+      note
     );
 
     const invalidRoots = [
       Array.from(withdrawalProof.treeRoot),
       Array.from(
-          hexToU8a(
-              '0x27f427ccbf58a44b1270abbe4eda6ba53bd6ac4d88cf1e00a13c4371ce71d366'
-          )
+        hexToU8a(
+          '0x27f427ccbf58a44b1270abbe4eda6ba53bd6ac4d88cf1e00a13c4371ce71d366'
+        )
       ),
     ];
 
@@ -390,12 +389,12 @@ describe('Substrate Anchor Transaction Relayer', function () {
         recipient: withdrawalProof.recipient,
         relayer: withdrawalProof.relayer,
         refreshCommitment: Array.from(
-            hexToU8a(withdrawalProof.refreshCommitment)
+          hexToU8a(withdrawalProof.refreshCommitment)
         ),
         extDataHash: Array.from(
-            hexToU8a(
-                '0x0000000000000000000000000000000000000000000000000000000000000000'
-            )
+          hexToU8a(
+            '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
         ),
       });
     } catch (e) {
@@ -405,7 +404,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid neighbor roots
       expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 39, error: 2 }'
+        'Runtime error: RuntimeError(Module { index: 39, error: 2 }'
       );
     }
   });
@@ -415,14 +414,18 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const account = createAccount('//Eve');
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
-        api,
-        webbRelayer,
-        account,
-        note
+      api,
+      webbRelayer,
+      account,
+      note
     );
 
     const invalidRoots = [
-      Array.from(hexToU8a('0x27f427ccbf58a44b1270abbe4eda6ba53bd6ac4d88cf1e00a13c4371ce71d366')),
+      Array.from(
+        hexToU8a(
+          '0x27f427ccbf58a44b1270abbe4eda6ba53bd6ac4d88cf1e00a13c4371ce71d366'
+        )
+      ),
       Array.from(withdrawalProof.neighborRoot),
     ];
 
@@ -440,12 +443,12 @@ describe('Substrate Anchor Transaction Relayer', function () {
         recipient: withdrawalProof.recipient,
         relayer: withdrawalProof.relayer,
         refreshCommitment: Array.from(
-            hexToU8a(withdrawalProof.refreshCommitment)
+          hexToU8a(withdrawalProof.refreshCommitment)
         ),
         extDataHash: Array.from(
-            hexToU8a(
-                '0x0000000000000000000000000000000000000000000000000000000000000000'
-            )
+          hexToU8a(
+            '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
         ),
       });
     } catch (e) {
@@ -455,7 +458,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates Unknown Root
       expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 39, error: 0 }'
+        'Runtime error: RuntimeError(Module { index: 39, error: 0 }'
       );
     }
   });
@@ -465,10 +468,10 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const account = createAccount('//Dave');
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
-        api,
-        webbRelayer,
-        account,
-        note
+      api,
+      webbRelayer,
+      account,
+      note
     );
 
     const roots = [
@@ -492,12 +495,12 @@ describe('Substrate Anchor Transaction Relayer', function () {
         recipient: withdrawalProof.recipient,
         relayer: invalidAddress,
         refreshCommitment: Array.from(
-            hexToU8a(withdrawalProof.refreshCommitment)
+          hexToU8a(withdrawalProof.refreshCommitment)
         ),
         extDataHash: Array.from(
-            hexToU8a(
-                '0x0000000000000000000000000000000000000000000000000000000000000000'
-            )
+          hexToU8a(
+            '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
         ),
       });
     } catch (e) {
@@ -507,7 +510,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
       expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
+        'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
       );
     }
   });
@@ -517,10 +520,10 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const account = createAccount('//Ferdie');
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
-        api,
-        webbRelayer,
-        account,
-        note
+      api,
+      webbRelayer,
+      account,
+      note
     );
 
     const roots = [
@@ -550,12 +553,12 @@ describe('Substrate Anchor Transaction Relayer', function () {
         recipient: withdrawalProof.recipient,
         relayer: withdrawalProof.relayer,
         refreshCommitment: Array.from(
-            hexToU8a(withdrawalProof.refreshCommitment)
+          hexToU8a(withdrawalProof.refreshCommitment)
         ),
         extDataHash: Array.from(
-            hexToU8a(
-                '0x0000000000000000000000000000000000000000000000000000000000000000'
-            )
+          hexToU8a(
+            '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
         ),
       });
     } catch (e) {
@@ -565,7 +568,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
       expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
+        'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
       );
     }
   });
@@ -658,7 +661,7 @@ async function createAnchorWithdrawProof(
     const getNeighborRoots = api.rpc.lt.getNeighborRoots;
     let neighborRoots = await getNeighborRoots(treeId);
 
-    let neighborRootsU8:Uint8Array[] = new Array(neighborRoots.length);
+    let neighborRootsU8: Uint8Array[] = new Array(neighborRoots.length);
     for (let i = 0; i < neighborRootsU8.length; i++) {
       // @ts-ignore
       neighborRootsU8[i] = hexToU8a(neighborRoots[0].toString());
@@ -682,10 +685,7 @@ async function createAnchorWithdrawProof(
     // @ts-ignore
     const rootValue = treeRoot.toHuman() as { root: string };
 
-    const treeRootArray = [
-      hexToU8a(rootValue.root),
-      ...neighborRootsU8,
-    ];
+    const treeRootArray = [hexToU8a(rootValue.root), ...neighborRootsU8];
 
     const provingKeyPath = path.join(
       gitRoot,
@@ -726,7 +726,7 @@ async function createAnchorWithdrawProof(
       refreshCommitment:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
       treeRoot: hexToU8a(rootValue.root),
-      neighborRoot: neighborRoots[0]!
+      neighborRoot: neighborRoots[0]!,
     };
   } catch (error) {
     //@ts-ignore

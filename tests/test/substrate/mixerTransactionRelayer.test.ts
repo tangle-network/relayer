@@ -186,10 +186,10 @@ describe('Substrate Mixer Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
       try {
-        expect(e).to.contain('Module { index: 35, error: 1 }')
-      } catch(ex) {
+        expect(e).to.contain('Module { index: 35, error: 1 }');
+      } catch (ex) {
         expect(ex).to.contain(
-            'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+          'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
         );
       }
     }
@@ -237,10 +237,10 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const account = createAccount('//Eve');
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
-        api,
-        webbRelayer,
-        account,
-        note
+      api,
+      webbRelayer,
+      account,
+      note
     );
 
     const rootBytes = hexToU8a(withdrawalProof.root);
@@ -271,7 +271,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
       expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 40, error: 4 }'
+        'Runtime error: RuntimeError(Module { index: 40, error: 4 }'
       );
     }
   });
@@ -281,10 +281,10 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const account = createAccount('//Dave');
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
-        api,
-        webbRelayer,
-        account,
-        note
+      api,
+      webbRelayer,
+      account,
+      note
     );
 
     const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
@@ -308,7 +308,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
       expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
       );
     }
   });
@@ -318,10 +318,10 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const account = createAccount('//Eve');
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
-        api,
-        webbRelayer,
-        account,
-        note
+      api,
+      webbRelayer,
+      account,
+      note
     );
 
     const nullifierHash = hexToU8a(withdrawalProof.root);
@@ -352,7 +352,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
       expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
       );
     }
   });
