@@ -291,11 +291,16 @@ describe('Substrate Anchor Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates proof verifier error
-      expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 41, error: 2 })'
-      ) || expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 36, error: 1 })'
-      );
+
+      try {
+        expect(e).to.contain(
+            'Runtime error: RuntimeError(Module { index: 41, error: 2 })'
+        )
+      } catch(ex) {
+        expect(ex).to.contain(
+            'Runtime error: RuntimeError(Module { index: 36, error: 1 })'
+        );
+      }
     }
   });
 
@@ -523,9 +528,12 @@ describe('Substrate Anchor Transaction Relayer', function () {
       Array.from(withdrawalProof.neighborRoot),
     ];
 
-    const nullifierHashBytes = hexToU8a(withdrawalProof.nullifierHash);
-    nullifierHashBytes[1] |= 0x42;
-    const invalidNullifierHash = u8aToHex(nullifierHashBytes);
+    const nullifierHash = hexToU8a(withdrawalProof.nullifierHash);
+    const flipCount = nullifierHash.length / 8;
+    for (let i = 0; i < flipCount; i++) {
+      nullifierHash[i] = 0x42;
+    }
+    const invalidNullifierHash = u8aToHex(nullifierHash);
     expect(withdrawalProof.nullifierHash).to.not.eq(invalidNullifierHash);
 
     // now we need to submit the withdrawal transaction.

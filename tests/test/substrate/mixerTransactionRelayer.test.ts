@@ -185,9 +185,13 @@ describe('Substrate Mixer Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain('Module { index: 35, error: 1 }') || expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
-      );
+      try {
+        expect(e).to.contain('Module { index: 35, error: 1 }')
+      } catch(ex) {
+        expect(ex).to.contain(
+            'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+        );
+      }
     }
   });
 
@@ -327,7 +331,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       nullifierHash[i] = 0x42;
     }
     const invalidNullifierHash = u8aToHex(nullifierHash);
-    expect(withdrawalProof.proofBytes).to.not.eq(invalidNullifierHash);
+    expect(withdrawalProof.nullifierHash).to.not.eq(invalidNullifierHash);
 
     // now we need to submit the withdrawal transaction.
     try {
