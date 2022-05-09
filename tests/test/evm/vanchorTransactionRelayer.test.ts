@@ -195,12 +195,7 @@ describe('Vanchor Transaction relayer', function () {
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
-    // Make multiple deposits
-    const inputUtxo = new Utxo({
-      chainId: BigNumber.from(localChain1.chainId),
-      originChainId: BigNumber.from(localChain1.chainId),
-    });
-
+    
     // Make multiple deposits
     const noOfDeposit = 5;
     for (let i = 0, len = noOfDeposit; i < len; i++) {
