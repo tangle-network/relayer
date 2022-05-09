@@ -21,7 +21,7 @@
           "size": 1,
           "events-watcher": {
             "enabled": true,
-            "polling-interval": 10000,
+            "polling-interval": 1000,
             "print-progress-interval": 0
           },
           "withdraw-fee-percentage": 0,
@@ -43,7 +43,7 @@
           "deployed-at": 1,
           "events-watcher": {
             "enabled": true,
-            "polling-interval": 10000,
+            "polling-interval": 1000,
             "print-progress-interval": 0
           }
         }
@@ -65,7 +65,7 @@
           "size": 1,
           "events-watcher": {
             "enabled": true,
-            "polling-interval": 10000,
+            "polling-interval": 1000,
             "print-progress-interval": 0
           },
           "withdraw-fee-percentage": 0,
@@ -87,7 +87,7 @@
           "deployed-at": 1,
           "events-watcher": {
             "enabled": true,
-            "polling-interval": 10000,
+            "polling-interval": 1000,
             "print-progress-interval": 0
           }
         }
