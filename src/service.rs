@@ -520,81 +520,46 @@ async fn start_evm_anchor_events_watcher(
                     },
                 }
             }
-            ProposalSigningBackendConfig::Mocked(_) => {
+            ProposalSigningBackendConfig::Mocked(mocked) => {
                 // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
                 // which is a bit simpler than the DkgProposalSigningBackend.
                 // get only the linked chains to that anchor.
-                let linked_chains =
-                    my_config.linked_anchors.iter().flat_map(|c| {
-                        my_ctx
-                            .config
-                            .evm
-                            .get(&c.chain)
-                            .map(|chain_config| (chain_config, c.address))
-                    });
+                let linked_chains = my_config
+                    .linked_anchors
+                    .iter()
+                    .flat_map(|c| my_ctx.config.evm.get(&c.chain));
                 // then will have to go through our configruation to retrieve the correct
                 // signature bridges that are configrued on the linked chains.
                 // Note: this assumes that every network will only have one signature bridge configured for it.
                 let signature_bridges = linked_chains
-                    .flat_map(|(chain_config, address)| {
+                    .flat_map(|chain_config| {
                         // find the first signature bridge configured on that chain.
-                        let maybe_signature_bridge =
-                            chain_config.contracts.iter().find(|contract| {
-                                matches!(contract, Contract::SignatureBridge(_))
-                            });
-                        // also find the first the other anchor contract configured on that chain.
-                        // but this time with its address.
-                        let maybe_anchor_contract = chain_config
+                        chain_config
                             .contracts
                             .iter()
-                            .find(|contract| match contract {
-                                Contract::Anchor(c) => {
-                                    c.common.address == address
-                                }
-                                _ => false,
-                            });
-                        // if we found both, we will return the signature bridge and the anchor contract a long with chain config.
-                        maybe_signature_bridge.and_then(|bridge| {
-                            maybe_anchor_contract.map(|anchor| {
-                                (bridge, anchor.clone(), chain_config)
+                            .find(|contract| {
+                                matches!(contract, Contract::SignatureBridge(_))
                             })
-                        })
+                            .map(|contract| (contract, chain_config.chain_id))
                     })
-                    .map(|(bridge_contract, anchor_contract, chain_config)| {
-                        let bridge_config = match bridge_contract {
-                            Contract::SignatureBridge(c) => c,
-                            _ => unreachable!(),
-                        };
-                        let anchor_config = match anchor_contract {
-                            Contract::Anchor(c) => c,
-                            _ => unreachable!(),
-                        };
-                        (bridge_config, anchor_config, chain_config)
+                    .map(|(bridge_contract, chain_id)| match bridge_contract {
+                        Contract::SignatureBridge(c) => (c, chain_id),
+                        _ => unreachable!(),
                     })
-                    .flat_map(|(bridge_config, anchor_config, chain_config)| {
-                        // first things first we need the private key of the govenor of the signature bridge.
-                        // which is in the anchor config.
-                        let private_key =
-                            match anchor_config.proposal_signing_backend {
-                                ProposalSigningBackendConfig::Mocked(v) => {
-                                    v.private_key
-                                }
-                                _ => return None,
-                            };
+                    .flat_map(|(bridge_config, chain_id)| {
                         // then we just create the signature bridge metadata.
-                        let chain_id = webb_proposals::TypedChainId::Evm(
-                            chain_config.chain_id as u32,
-                        );
-                        let metadata = SignatureBridgeMetadata {
-                            address: bridge_config.common.address,
-                            chain_id,
-                            private_key,
-                        };
-                        Some((chain_id, metadata))
+                        let chain_id =
+                            webb_proposals::TypedChainId::Evm(chain_id as u32);
+                        let target_system =
+                            webb_proposals::TargetSystem::new_contract_address(
+                                bridge_config.common.address,
+                            );
+                        Some((chain_id, target_system))
                     })
                     .collect::<HashMap<_, _>>();
                 let backend = MockedProposalSigningBackend::builder()
                     .store(store.clone())
+                    .private_key(mocked.private_key)
                     .signature_bridges(signature_bridges)
                     .build();
                 let watcher = AnchorWatcher::new(backend);
