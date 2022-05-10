@@ -130,7 +130,6 @@ export class WebbRelayer {
           return a === b;
         });
         if (exactSameEvent) {
-          console.log('exact same event detected');
           // remove listener
           this.#eventEmitter.removeListener(selector.kind, listener);
           resolve(rawEvent);
