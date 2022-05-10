@@ -18,19 +18,20 @@ import fs from 'fs';
 import ganache from 'ganache';
 import { ethers } from 'ethers';
 import { Server } from 'ganache';
-import { Bridges, Utility } from '@webb-tools/protocol-solidity';
+import { Bridges, Utility, VBridge } from '@webb-tools/protocol-solidity';
 import {
   BridgeInput,
   DeployerConfig,
   GovernorConfig,
 } from '@webb-tools/interfaces';
-import { MintableToken } from '@webb-tools/tokens';
+import { MintableToken, GovernedTokenWrapper } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import path from 'path';
 import child from 'child_process';
 import {
   ChainInfo,
   Contract,
+  EnabledContracts,
   EventsWatcher,
   ProposalSigningBackend,
 } from './webbRelayer';
@@ -43,7 +44,15 @@ export type GanacheAccounts = {
 
 export type ExportedConfigOptions = {
   signatureBridge?: Bridges.SignatureBridge;
+  signatureVBridge?: VBridge.VBridge;
   proposalSigningBackend: ProposalSigningBackend;
+};
+
+// Default Events watcher for the contracts.
+export const defaultEventsWatcherValue: EventsWatcher = {
+  enabled: true,
+  pollingInterval: 1000,
+  printProgressInterval: 60_000,
 };
 
 export function startGanacheServer(
@@ -77,12 +86,14 @@ type LocalChainOpts = {
   chainId: number;
   populatedAccounts: GanacheAccounts[];
   enableLogging?: boolean;
+  enabledContracts: EnabledContracts[];
 };
 
 export class LocalChain {
   public readonly endpoint: string;
   private readonly server: Server<'ethereum'>;
   private signatureBridge: Bridges.SignatureBridge | null = null;
+  private signatureVBridge: VBridge.VBridge | null = null;
   constructor(private readonly opts: LocalChainOpts) {
     this.endpoint = `http://127.0.0.1:${opts.port}`;
     this.server = startGanacheServer(
@@ -121,6 +132,110 @@ export class LocalChain {
     wallet: ethers.Wallet
   ): Promise<MintableToken> {
     return MintableToken.createToken(name, symbol, wallet);
+  }
+
+  public async deploySignatureVBridge(
+    otherChain: LocalChain,
+    localToken: MintableToken,
+    otherToken: MintableToken,
+    localWallet: ethers.Wallet,
+    otherWallet: ethers.Wallet
+  ): Promise<VBridge.VBridge> {
+    const gitRoot = child
+      .execSync('git rev-parse --show-toplevel')
+      .toString()
+      .trim();
+    let webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
+    webbTokens1.set(this.chainId, null!);
+    webbTokens1.set(otherChain.chainId, null!);
+    const vBridgeInput: VBridge.VBridgeInput = {
+      vAnchorInputs: {
+        asset: {
+          [this.chainId]: [localToken.contract.address],
+          [otherChain.chainId]: [otherToken.contract.address],
+        },
+      },
+      chainIDs: [this.chainId, otherChain.chainId],
+      webbTokens: webbTokens1,
+    };
+    const deployerConfig: DeployerConfig = {
+      [this.chainId]: localWallet,
+      [otherChain.chainId]: otherWallet,
+    };
+    const initialGovernors: GovernorConfig = {
+      [this.chainId]: localWallet,
+      [otherChain.chainId]: otherWallet,
+    };
+
+    const witnessCalculatorPath_2 = path.join(
+      gitRoot,
+      'tests',
+      'protocol-solidity-fixtures/fixtures/vanchor_2/2/witness_calculator.js'
+    );
+
+    const witnessCalculatorCjsPath_2 = path.join(
+      gitRoot,
+      'tests',
+      'node_modules/@webb-tools/utils/witness_calculator_2.cjs'
+    );
+    // check if the cjs file exists, if not, copy the js file to the cjs file
+    if (!fs.existsSync(witnessCalculatorCjsPath_2)) {
+      fs.copyFileSync(witnessCalculatorPath_2, witnessCalculatorCjsPath_2);
+    }
+
+    const witnessCalculatorPath_16 = path.join(
+      gitRoot,
+      'tests',
+      'protocol-solidity-fixtures/fixtures/vanchor_16/2/witness_calculator.js'
+    );
+
+    const witnessCalculatorCjsPath_16 = path.join(
+      gitRoot,
+      'tests',
+      'node_modules/@webb-tools/utils/witness_calculator_16.cjs'
+    );
+    // check if the cjs file exists, if not, copy the js file to the cjs file
+    if (!fs.existsSync(witnessCalculatorCjsPath_16)) {
+      fs.copyFileSync(witnessCalculatorPath_16, witnessCalculatorCjsPath_16);
+    }
+
+    const zkComponents_2 = await fetchComponentsFromFilePaths(
+      path.join(
+        gitRoot,
+        'tests',
+        'protocol-solidity-fixtures/fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm'
+      ),
+      witnessCalculatorCjsPath_2,
+      path.join(
+        gitRoot,
+        'tests',
+        'protocol-solidity-fixtures/fixtures/vanchor_2/2/circuit_final.zkey'
+      )
+    );
+
+    const zkComponents_16 = await fetchComponentsFromFilePaths(
+      path.join(
+        gitRoot,
+        'tests',
+        'protocol-solidity-fixtures/fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm'
+      ),
+      witnessCalculatorCjsPath_16,
+      path.join(
+        gitRoot,
+        'tests',
+        'protocol-solidity-fixtures/fixtures/vanchor_16/2/circuit_final.zkey'
+      )
+    );
+
+    const vBridge = await VBridge.VBridge.deployVariableAnchorBridge(
+      vBridgeInput,
+      deployerConfig,
+      initialGovernors,
+      zkComponents_2,
+      zkComponents_16
+    );
+    this.signatureVBridge = vBridge;
+    return vBridge;
   }
 
   public async deploySignatureBridge(
@@ -194,7 +309,7 @@ export class LocalChain {
     return val;
   }
 
-  public async exportConfig(
+  private async getAnchorChainConfig(
     opts: ExportedConfigOptions
   ): Promise<FullChainInfo> {
     const bridge = opts.signatureBridge ?? this.signatureBridge;
@@ -215,6 +330,31 @@ export class LocalChain {
       bridge.getAnchor(chainId, ethers.utils.parseEther('1'))
     );
 
+    let contracts: Contract[] = [
+      // first the local Anchor
+      {
+        contract: 'Anchor',
+        address: localAnchor.getAddress(),
+        deployedAt: 1,
+        size: 1, // Ethers
+        withdrawFeePercentage: 0,
+        proposalSigningBackend: opts.proposalSigningBackend,
+        eventsWatcher: defaultEventsWatcherValue,
+        linkedAnchors: await Promise.all(
+          otherAnchors.map(async (anchor) => ({
+            chain: (await anchor.contract.getChainId()).toString(),
+            address: anchor.getAddress(),
+          }))
+        ),
+      },
+      {
+        contract: 'SignatureBridge',
+        address: side.contract.address,
+        deployedAt: 1,
+        eventsWatcher: defaultEventsWatcherValue,
+      },
+    ];
+
     const chainInfo: FullChainInfo = {
       enabled: true,
       httpEndpoint: this.endpoint,
@@ -222,39 +362,91 @@ export class LocalChain {
       chainId: this.underlyingChainId,
       beneficiary: wallet.address,
       privateKey: wallet.privateKey,
-      contracts: [
-        // first the local Anchor
-        {
-          contract: 'Anchor',
-          address: localAnchor.getAddress(),
-          deployedAt: 1,
-          size: 1, // Ethers
-          withdrawFeePercentage: 0,
-          proposalSigningBackend: opts.proposalSigningBackend,
-          eventsWatcher: {
-            enabled: true,
-            pollingInterval: 1000,
-            printProgressInterval: 60_000,
-          },
-          linkedAnchors: await Promise.all(
-            otherAnchors.map(async (anchor) => ({
-              chain: (await anchor.contract.getChainId()).toString(),
-              address: anchor.getAddress(),
-            }))
-          ),
-        },
-        {
-          contract: 'SignatureBridge',
-          address: side.contract.address,
-          deployedAt: 1,
-          eventsWatcher: {
-            enabled: true,
-            pollingInterval: 1000,
-            printProgressInterval: 60_000,
-          },
-        },
-      ],
+      contracts: contracts,
     };
+    return chainInfo;
+  }
+
+  private async getVAnchorChainConfig(
+    opts: ExportedConfigOptions
+  ): Promise<FullChainInfo> {
+    const bridge = opts.signatureVBridge ?? this.signatureVBridge;
+    if (!bridge) {
+      throw new Error('Signature V bridge not deployed yet');
+    }
+    const localAnchor = bridge.getVAnchor(this.chainId);
+    const side = bridge.getVBridgeSide(this.chainId);
+    const wallet = side.governor;
+    const otherChainIds = Array.from(bridge.vBridgeSides.keys()).filter(
+      (chainId) => chainId !== this.chainId
+    );
+    const otherAnchors = otherChainIds.map((chainId) =>
+      bridge.getVAnchor(chainId)
+    );
+    let contracts: Contract[] = [
+      // first the local Anchor
+      {
+        contract: 'VAnchor',
+        address: localAnchor.getAddress(),
+        deployedAt: 1,
+        size: 1, // Ethers
+        withdrawFeePercentage: 0,
+        proposalSigningBackend: opts.proposalSigningBackend,
+        eventsWatcher: {
+          enabled: true,
+          pollingInterval: 1000,
+          printProgressInterval: 60_000,
+        },
+        linkedAnchors: await Promise.all(
+          otherAnchors.map(async (anchor) => ({
+            chain: (await anchor.contract.getChainId()).toString(),
+            address: anchor.getAddress(),
+          }))
+        ),
+      },
+      {
+        contract: 'SignatureVBridge',
+        address: side.contract.address,
+        deployedAt: 1,
+        eventsWatcher: {
+          enabled: true,
+          pollingInterval: 1000,
+          printProgressInterval: 60_000,
+        },
+      },
+    ];
+    const chainInfo: FullChainInfo = {
+      enabled: true,
+      httpEndpoint: this.endpoint,
+      wsEndpoint: this.endpoint.replace('http', 'ws'),
+      chainId: this.underlyingChainId,
+      beneficiary: wallet.address,
+      privateKey: wallet.privateKey,
+      contracts: contracts,
+    };
+    return chainInfo;
+  }
+
+  public async exportConfig(
+    opts: ExportedConfigOptions
+  ): Promise<FullChainInfo> {
+    const chainInfo: FullChainInfo = {
+      enabled: true,
+      httpEndpoint: this.endpoint,
+      wsEndpoint: this.endpoint.replace('http', 'ws'),
+      chainId: this.underlyingChainId,
+      beneficiary: '',
+      privateKey: '',
+      contracts: [],
+    };
+    for (const contract of this.opts.enabledContracts) {
+      if (contract.contract === 'Anchor') {
+        return this.getAnchorChainConfig(opts);
+      }
+      if (contract.contract == 'VAnchor') {
+        return this.getVAnchorChainConfig(opts);
+      }
+    }
     return chainInfo;
   }
 

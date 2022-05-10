@@ -25,7 +25,7 @@ import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
 import { LocalChain } from '../lib/localTestnet.js';
-import { Pallet, WebbRelayer } from '../lib/webbRelayer.js';
+import { Pallet, WebbRelayer, EnabledContracts } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { LocalDkg } from '../lib/localDkg.js';
 import isCi from 'is-ci';
@@ -121,7 +121,12 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-
+    
+    const enabledContracts: EnabledContracts[] = [
+      {
+        contract: 'Anchor',
+      },
+    ];
     localChain1 = new LocalChain({
       port: localChain1Port,
       chainId: 5001,
@@ -132,6 +137,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
+      enabledContracts: enabledContracts
     });
 
     const localChain2Port = await getPort({
@@ -148,6 +154,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
+      enabledContracts: enabledContracts
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
