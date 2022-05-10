@@ -7,18 +7,18 @@ private-key = "$ROPSTEN_PRIVATE_KEY"
 
 [[evm.ropsten.contracts]]
 contract = "Anchor"
-address = "0xC95ffc094b31789f5F1a6cbaE071d7cc6e677d19"
-deployed-at = 12242400
+address = "0x09d2D6520BE3922549c81885477258F41c96c43f"
+deployed-at = 12253337
 size = 0.01
 events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "rinkeby", address = "0xf2f7bc0bED36d94c19C337b6E114caD2bC218819" },
-  { chain = "goerli", address = "0x3e8B7e3B498eA9375172f4d4bd181C21f18A4381" },
-  { chain = "polygontestnet", address = "0x3e8B7e3B498eA9375172f4d4bd181C21f18A4381" },
-  { chain = "optimismtestnet", address = "0xf2f7bc0bED36d94c19C337b6E114caD2bC218819" },
-  { chain = "arbitrumtestnet", address = "0x151bb411B44088a4615A1314B5a948272d8A0342" },
+  { chain = "rinkeby", address = "0x95E2eB4c9Fe2FB580E27dCe997e0E3D69FFdDf5a" },
+  { chain = "goerli", address = "0x6188F18359250f241e2171BAFD57447F8931176e" },
+  { chain = "polygontestnet", address = "0x95E2eB4c9Fe2FB580E27dCe997e0E3D69FFdDf5a" },
+  { chain = "optimismtestnet", address = "0x27a693cdF40acFc18195C2ecc9f0352452624e84" },
+  { chain = "arbitrumtestnet", address = "0x30aEF9a80BAe60Cd789904C8875fbd6a19b80488" },
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
 

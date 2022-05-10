@@ -1,13 +1,13 @@
-[evm.athena]
-http-endpoint = "http://localhost:5002"
-ws-endpoint = "ws://localhost:5002"
-chain-id = 5002
-private-key = "$ATHENA_PRIVATE_KEY"
+[evm.demeter]
+http-endpoint = "http://localhost:5003"
+ws-endpoint = "ws://localhost:5003"
+chain-id = 5003
+private-key = "$DEMETER_PRIVATE_KEY"
 tx-queue = { max-sleep-interval = 1500 }
 
-[[evm.athena.contracts]]
+[[evm.demeter.contracts]]
 contract = "Anchor"
-address = "0xcd75Ad7AC9C9325105f798c476E84176648F391A"
+address = "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"
 deployed-at = 1
 size = 1
 events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
@@ -15,13 +15,13 @@ withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
   { chain = "hermes", address = "0xbfce6B877Ebff977bB6e80B24FbBb7bC4eBcA4df" },
-  { chain = "demeter", address = "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"},
+  { chain = "athena", address = "0xcd75Ad7AC9C9325105f798c476E84176648F391A" },
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "0x0000000000000000000000000000000000000000000000000000000000000001" }
 
-[[evm.athena.contracts]]
+[[evm.demeter.contracts]]
 contract = "Anchor"
-address = "0x9F4dcd09DE62E1985807C74716dBB6768CE26892"
+address = "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
 deployed-at = 1
 size = 0.01
 events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
@@ -29,12 +29,12 @@ withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
   { chain = "hermes", address = "0x3Bb7f1A59bDE3B61a0d537723E4e27D022489635" },
-  { chain = "demeter", address = "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"},
+  { chain = "athena", address = "0x9F4dcd09DE62E1985807C74716dBB6768CE26892" },
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "0x0000000000000000000000000000000000000000000000000000000000000001" }
 
-[[evm.athena.contracts]]
+[[evm.demeter.contracts]]
 contract = "SignatureBridge"
-address = "0x51a240271AB8AB9f9a21C82d9a85396b704E164d"
+address = "0x2946259E0334f33A064106302415aD3391BeD384"
 deployed-at = 1
 events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
