@@ -17,6 +17,7 @@
 // This our basic Substrate Anchor Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
+import '@webb-tools/types';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -64,6 +65,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
+
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
       authority: 'alice',
@@ -94,7 +96,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -152,12 +154,8 @@ describe('Substrate Anchor Transaction Relayer', function () {
     console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
 
     const roots = [
-      Array.from(
-        hexToU8a(
-          '0x0000000000000000000000000000000000000000000000000000000000000000'
-        )
-      ),
-      Array.from(hexToU8a(withdrawalProof.root)),
+      Array.from(withdrawalProof.treeRoot),
+      Array.from(withdrawalProof.neighborRoot),
     ];
 
     // now we need to submit the withdrawal transaction.
@@ -192,7 +190,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
     expect(balanceAfterWithdraw > initialBalance);
   });
 
-  it('Should fail to withdraw if address is invalid', async () => {
+  it('Should fail to withdraw if recipient address is invalid', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     const note = await makeDeposit(api, aliceNode, account);
@@ -204,12 +202,8 @@ describe('Substrate Anchor Transaction Relayer', function () {
     );
 
     const roots = [
-      Array.from(
-        hexToU8a(
-          '0x0000000000000000000000000000000000000000000000000000000000000000'
-        )
-      ),
-      Array.from(hexToU8a(withdrawalProof.root)),
+      Array.from(withdrawalProof.treeRoot),
+      Array.from(withdrawalProof.neighborRoot),
     ];
 
     const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
@@ -226,7 +220,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
         refund: withdrawalProof.refund,
         fee: withdrawalProof.fee,
         recipient: invalidAddress,
-        relayer: invalidAddress,
+        relayer: withdrawalProof.relayer,
         refreshCommitment: Array.from(
           hexToU8a(withdrawalProof.refreshCommitment)
         ),
@@ -260,22 +254,75 @@ describe('Substrate Anchor Transaction Relayer', function () {
     );
 
     const proofBytes = hexToU8a(withdrawalProof.proofBytes);
-    proofBytes[1] |= 0x42;
+    proofBytes[1] = 0x42;
     const invalidProofBytes = u8aToHex(proofBytes);
     expect(withdrawalProof.proofBytes).to.not.eq(invalidProofBytes);
 
     const roots = [
-      Array.from(
-        hexToU8a(
-          '0x0000000000000000000000000000000000000000000000000000000000000000'
-        )
-      ),
-      Array.from(hexToU8a(withdrawalProof.root)),
+      Array.from(withdrawalProof.treeRoot),
+      Array.from(withdrawalProof.neighborRoot),
+    ];
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid proof
+      await webbRelayer.substrateAnchorWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(invalidProofBytes)),
+        roots: roots,
+        nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
+        recipient: withdrawalProof.recipient,
+        relayer: withdrawalProof.relayer,
+        refreshCommitment: Array.from(
+          hexToU8a(withdrawalProof.refreshCommitment)
+        ),
+        extDataHash: Array.from(
+          hexToU8a(
+            '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
+        ),
+      });
+    } catch (e) {
+      console.log(`error is ${e}`);
+
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates proof verifier error
+
+      try {
+        expect(e).to.contain(
+          'Runtime error: RuntimeError(Module { index: 41, error: 2 })'
+        );
+      } catch (ex) {
+        expect(ex).to.contain(
+          'Runtime error: RuntimeError(Module { index: 36, error: 1 })'
+        );
+      }
+    }
+  });
+
+  it('Should fail to withdraw if fee is not expected', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Ferdie');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
+
+    const invalidFee = 100;
+
+    const roots = [
+      Array.from(withdrawalProof.treeRoot),
+      Array.from(withdrawalProof.neighborRoot),
     ];
 
     // now we need to submit the withdrawal transaction.
     try {
-      // try to withdraw with invalid address
       // try to withdraw with invalid address
       await webbRelayer.substrateAnchorWithdraw({
         chain: aliceNode.name,
@@ -284,7 +331,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
         roots: roots,
         nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
         refund: withdrawalProof.refund,
-        fee: withdrawalProof.fee,
+        fee: invalidFee,
         recipient: withdrawalProof.recipient,
         relayer: withdrawalProof.relayer,
         refreshCommitment: Array.from(
@@ -308,9 +355,9 @@ describe('Substrate Anchor Transaction Relayer', function () {
     }
   });
 
-  it('Should fail to withdraw if fee is not expected', async () => {
+  it('Should fail to withdraw if neighbor root is invalid', async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Ferdie');
+    const account = createAccount('//Eve');
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
       api,
@@ -319,16 +366,120 @@ describe('Substrate Anchor Transaction Relayer', function () {
       note
     );
 
-    const invalidFee = 100;
-
-    const roots = [
+    const invalidRoots = [
+      Array.from(withdrawalProof.treeRoot),
       Array.from(
         hexToU8a(
-          '0x0000000000000000000000000000000000000000000000000000000000000000'
+          '0x27f427ccbf58a44b1270abbe4eda6ba53bd6ac4d88cf1e00a13c4371ce71d366'
         )
       ),
-      Array.from(hexToU8a(withdrawalProof.root)),
     ];
+
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid roots
+      await webbRelayer.substrateAnchorWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+        roots: invalidRoots,
+        nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
+        recipient: withdrawalProof.recipient,
+        relayer: withdrawalProof.relayer,
+        refreshCommitment: Array.from(
+          hexToU8a(withdrawalProof.refreshCommitment)
+        ),
+        extDataHash: Array.from(
+          hexToU8a(
+            '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
+        ),
+      });
+    } catch (e) {
+      console.log(`error is ${e}`);
+
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates invalid neighbor roots
+      expect(e).to.contain(
+        'Runtime error: RuntimeError(Module { index: 39, error: 2 }'
+      );
+    }
+  });
+
+  it('Should fail to withdraw if tree root is invalid', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Eve');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
+
+    const invalidRoots = [
+      Array.from(
+        hexToU8a(
+          '0x27f427ccbf58a44b1270abbe4eda6ba53bd6ac4d88cf1e00a13c4371ce71d366'
+        )
+      ),
+      Array.from(withdrawalProof.neighborRoot),
+    ];
+
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid roots
+      await webbRelayer.substrateAnchorWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+        roots: invalidRoots,
+        nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
+        recipient: withdrawalProof.recipient,
+        relayer: withdrawalProof.relayer,
+        refreshCommitment: Array.from(
+          hexToU8a(withdrawalProof.refreshCommitment)
+        ),
+        extDataHash: Array.from(
+          hexToU8a(
+            '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
+        ),
+      });
+    } catch (e) {
+      console.log(`error is ${e}`);
+
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates Unknown Root
+      expect(e).to.contain(
+        'Runtime error: RuntimeError(Module { index: 39, error: 0 }'
+      );
+    }
+  });
+
+  it('Should fail to withdraw if relayer address is invalid', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Dave');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
+
+    const roots = [
+      Array.from(withdrawalProof.treeRoot),
+      Array.from(withdrawalProof.neighborRoot),
+    ];
+
+    const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
 
     // now we need to submit the withdrawal transaction.
     try {
@@ -340,7 +491,65 @@ describe('Substrate Anchor Transaction Relayer', function () {
         roots: roots,
         nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
         refund: withdrawalProof.refund,
-        fee: invalidFee,
+        fee: withdrawalProof.fee,
+        recipient: withdrawalProof.recipient,
+        relayer: invalidAddress,
+        refreshCommitment: Array.from(
+          hexToU8a(withdrawalProof.refreshCommitment)
+        ),
+        extDataHash: Array.from(
+          hexToU8a(
+            '0x0000000000000000000000000000000000000000000000000000000000000000'
+          )
+        ),
+      });
+    } catch (e) {
+      console.log(`error is ${e}`);
+
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain(
+        'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
+      );
+    }
+  });
+
+  it('Should fail to withdraw with invalid nullifier hash', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Ferdie');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
+
+    const roots = [
+      Array.from(withdrawalProof.treeRoot),
+      Array.from(withdrawalProof.neighborRoot),
+    ];
+
+    const nullifierHash = hexToU8a(withdrawalProof.nullifierHash);
+    const flipCount = nullifierHash.length / 8;
+    for (let i = 0; i < flipCount; i++) {
+      nullifierHash[i] = 0x42;
+    }
+    const invalidNullifierHash = u8aToHex(nullifierHash);
+    expect(withdrawalProof.nullifierHash).to.not.eq(invalidNullifierHash);
+
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid address
+      await webbRelayer.substrateAnchorWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+        roots: roots,
+        nullifierHash: Array.from(hexToU8a(invalidNullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
         recipient: withdrawalProof.recipient,
         relayer: withdrawalProof.relayer,
         refreshCommitment: Array.from(
@@ -382,8 +591,8 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     version: 'v2',
     sourceChain: '2199023256632',
     targetChain: '2199023256632',
-    sourceIdentifyingData: '3',
-    targetIdentifyingData: '3',
+    sourceIdentifyingData: `5`,
+    targetIdentifyingData: `5`,
     tokenSymbol: 'WEBB',
     amount: '1',
     denomination: '18',
@@ -394,14 +603,13 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     exponentiation: '5',
   };
   const note = await Note.generateNote(noteInput);
-  //@ts-ignore
-  const treeIds = await api.query.anchorBn254.anchors?.keys();
-  //@ts-ignore
-  const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
-  //@ts-ignore
+  // @ts-ignore
+  const treeIds = await api.query.anchorBn254.anchors.keys();
+  const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
   const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
-  const tx = api.tx.anchorBn254!.deposit!(treeId, leaf);
+  // @ts-ignore
+  const tx = api.tx.anchorBn254.deposit(treeId, leaf);
   return { tx, note };
 }
 
@@ -421,12 +629,13 @@ type WithdrawalProof = {
   fee: number;
   refund: number;
   refreshCommitment: string;
-  root: string;
+  treeRoot: Uint8Array;
+  neighborRoot: Uint8Array;
 };
 
 async function createAnchorWithdrawProof(
   api: ApiPromise,
-  note: any,
+  note: Note,
   opts: WithdrawalOpts
 ): Promise<WithdrawalProof> {
   try {
@@ -448,6 +657,16 @@ async function createAnchorWithdrawProof(
     const getLeaves = api.rpc.mt.getLeaves;
     const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);
 
+    //@ts-ignore
+    const getNeighborRoots = api.rpc.lt.getNeighborRoots;
+    let neighborRoots = await getNeighborRoots(treeId);
+
+    let neighborRootsU8: Uint8Array[] = new Array(neighborRoots.length);
+    for (let i = 0; i < neighborRootsU8.length; i++) {
+      // @ts-ignore
+      neighborRootsU8[i] = hexToU8a(neighborRoots[0].toString());
+    }
+
     // Get tree root on chain
     // @ts-ignore
     const treeRoot = await api.query.merkleTreeBn254.trees(treeId);
@@ -465,12 +684,8 @@ async function createAnchorWithdrawProof(
     // make a root set from the tree root
     // @ts-ignore
     const rootValue = treeRoot.toHuman() as { root: string };
-    const treeRootArray = [
-      hexToU8a(
-        '0x0000000000000000000000000000000000000000000000000000000000000000'
-      ),
-      hexToU8a(rootValue.root),
-    ];
+
+    const treeRootArray = [hexToU8a(rootValue.root), ...neighborRootsU8];
 
     const provingKeyPath = path.join(
       gitRoot,
@@ -510,8 +725,8 @@ async function createAnchorWithdrawProof(
       refund: opts.refund === undefined ? 0 : opts.refund,
       refreshCommitment:
         '0x0000000000000000000000000000000000000000000000000000000000000000',
-      // @ts-ignore
-      root: treeRoot.toHuman().root,
+      treeRoot: hexToU8a(rootValue.root),
+      neighborRoot: neighborRoots[0]!,
     };
   } catch (error) {
     //@ts-ignore
@@ -533,7 +748,7 @@ async function makeDeposit(
   api: any,
   aliceNode: any,
   account: any
-): Promise<any> {
+): Promise<Note> {
   const { tx, note } = await createAnchorDepositTx(api);
 
   // send the deposit transaction.
@@ -548,7 +763,7 @@ async function initWithdrawal(
   api: any,
   webbRelayer: any,
   account: any,
-  note: any
+  note: Note
 ): Promise<WithdrawalProof> {
   // next we need to prepare the withdrawal transaction.
   // create correct proof with right address
