@@ -179,17 +179,13 @@ describe('Substrate Mixer Transaction Relayer', function () {
         recipient: withdrawalProof.recipient,
         relayer: withdrawalProof.relayer,
       });
-    } catch (e) {
+    } catch (e: any) {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
-      // Runtime Error that indicates invalid withdrawal proof
-      try {
-        expect(e).to.contain('Module { index: 35, error: 1 }');
-      } catch (ex) {
-        expect(ex).to.contain(
-          'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
-        );
-      }
+
+      // Runtime Error that indicates VerifyError in pallet-verifier, or InvalidWithdrawProof in pallet-mixer
+      const correctErrorMessage = e.contains('Module { index: 35, error: 1 }') || e.contains('Module { index: 40, error: 1 }');
+      expect(correctErrorMessage);
     }
   });
 
