@@ -7,15 +7,7 @@ use typed_builder::TypedBuilder;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::utils::keccak256;
-use webb_proposals::AnchorUpdateProposal;
-use webb_proposals::TypedChainId;
-
-#[derive(Debug, Clone)]
-pub struct SignatureBridgeMetadata {
-    pub chain_id: TypedChainId,
-    pub address: Address,
-    pub private_key: PrivateKey,
-}
+use webb_proposals::{AnchorUpdateProposal, TargetSystem, TypedChainId};
 
 /// A ProposalSigningBackend that uses the Governor's private key to sign proposals.
 #[derive(TypedBuilder)]
@@ -23,21 +15,24 @@ pub struct MockedProposalSigningBackend<S>
 where
     S: QueueStore<BridgeCommand, Key = SledQueueKey>,
 {
-    /// A map between chain id and its signature bridge contract address.
+    /// A map between chain id and its signature bridge system.
     #[builder(setter(into))]
-    signature_bridges: HashMap<TypedChainId, SignatureBridgeMetadata>,
+    signature_bridges: HashMap<TypedChainId, TargetSystem>,
     /// Something that implements the QueueStore trait.
     store: Arc<S>,
+    /// The private key of the governor.
+    /// **NOTE**: This must be the same for all signature bridges.
+    private_key: PrivateKey,
 }
 
 impl<S> MockedProposalSigningBackend<S>
 where
     S: QueueStore<BridgeCommand, Key = SledQueueKey>,
 {
-    pub fn bridge_metadata(
+    fn bridge_metadata(
         &self,
         chain_id: TypedChainId,
-    ) -> anyhow::Result<SignatureBridgeMetadata> {
+    ) -> anyhow::Result<TargetSystem> {
         self.signature_bridges
             .get(&chain_id)
             .cloned()
@@ -45,15 +40,10 @@ where
                 anyhow::anyhow!("no bridge for chain id {:?}", chain_id)
             })
     }
-    /// get the signer of the target chain that will be used to sign proposals.
-    pub fn signer(
-        &self,
-        chain_id: TypedChainId,
-    ) -> anyhow::Result<LocalWallet> {
-        let metadata = self.bridge_metadata(chain_id)?;
-        let key = SecretKey::from_bytes(metadata.private_key.as_bytes())?;
+    fn signer(&self, chain_id: TypedChainId) -> anyhow::Result<LocalWallet> {
+        let key = SecretKey::from_bytes(self.private_key.as_bytes())?;
         let signer = LocalWallet::from(key)
-            .with_chain_id(metadata.chain_id.underlying_chain_id());
+            .with_chain_id(chain_id.underlying_chain_id());
         Ok(signer)
     }
 }
@@ -81,15 +71,12 @@ where
         // the we use the hash to be signed by the signer.
         // Read more here: https://bit.ly/3rqNYTU
         let dest_chain_id = proposal.header().resource_id().typed_chain_id();
-        let bridge_metadata = self.bridge_metadata(dest_chain_id)?;
+        let target_system = self.bridge_metadata(dest_chain_id)?;
         let signer = self.signer(dest_chain_id)?;
         let proposal_bytes = proposal.to_bytes();
         let hash = keccak256(&proposal_bytes);
         let signature = signer.sign_hash(H256::from(hash), false);
-        let bridge_key = BridgeKey::new(
-            bridge_metadata.address,
-            bridge_metadata.chain_id.underlying_chain_id().into(),
-        );
+        let bridge_key = BridgeKey::new(target_system, dest_chain_id);
         tracing::debug!(
             %bridge_key,
             ?proposal,

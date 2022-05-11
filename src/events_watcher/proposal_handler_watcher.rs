@@ -89,7 +89,12 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
                     Contract::SignatureBridge(bridge) => Some(bridge),
                     _ => None,
                 })
-                .map(|config| BridgeKey::new(config.common.address, id.into())),
+                .map(|config| {
+                    BridgeKey::new(
+                        config.common.address,
+                        webb_proposals::TypedChainId::Evm(id),
+                    )
+                }),
             TypedChainId::Substrate(_) => {
                 tracing::warn!(
                     "Unhandled `ProposalSigned` Event with substrate chain id"
