@@ -145,7 +145,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     }
   });
 
-  it('Should fail to withdraw if proof is invalid', async () => {
+  it.only('Should fail to withdraw if proof is invalid', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Eve');
     const note = await makeDeposit(api, aliceNode, account);
@@ -182,9 +182,10 @@ describe('Substrate Mixer Transaction Relayer', function () {
     } catch (e: any) {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
+      const errorMessage: string = e.toString();
 
       // Runtime Error that indicates VerifyError in pallet-verifier, or InvalidWithdrawProof in pallet-mixer
-      const correctErrorMessage = e.contains('Module { index: 35, error: 1 }') || e.contains('Module { index: 40, error: 1 }');
+      const correctErrorMessage = errorMessage.includes('Module { index: 35, error: 1 }') || errorMessage.includes('Module { index: 40, error: 1 }');
       expect(correctErrorMessage);
     }
   });
