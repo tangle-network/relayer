@@ -45,7 +45,7 @@ export type GanacheAccounts = {
 export type ExportedConfigOptions = {
   signatureBridge?: Bridges.SignatureBridge;
   signatureVBridge?: VBridge.VBridge;
-  proposalSigningBackend: ProposalSigningBackend;
+  proposalSigningBackend?: ProposalSigningBackend;
 };
 
 // Default Events watcher for the contracts.
