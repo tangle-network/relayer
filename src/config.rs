@@ -310,7 +310,7 @@ pub struct AnchorContractConfig {
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    #[serde(rename(serialize = "proposalSigningBackend"))] 
+    #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
