@@ -486,7 +486,7 @@ async fn start_evm_anchor_events_watcher(
             leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
         // we need to check/match on the proposal signing backend configured for this anchor.
         match proposal_signing_backend {
-            ProposalSigningBackendConfig::DkgNode(c) => {
+            Some(ProposalSigningBackendConfig::DkgNode(c)) => {
                 // if it is the dkg backend, we will need to connect to that node first,
                 // and then use the DkgProposalSigningBackend to sign the proposal.
                 let dkg_client = my_ctx
@@ -520,7 +520,7 @@ async fn start_evm_anchor_events_watcher(
                     },
                 }
             }
-            ProposalSigningBackendConfig::Mocked(mocked) => {
+            Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
                 // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
                 // which is a bit simpler than the DkgProposalSigningBackend.
                 // get only the linked chains to that anchor.
@@ -584,6 +584,11 @@ async fn start_evm_anchor_events_watcher(
                         );
                     },
                 }
+            }
+            None => {
+                tracing::debug!(
+                    "No backend configured for proposal signing..!"
+                );
             }
         };
 

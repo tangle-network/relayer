@@ -309,9 +309,9 @@ pub struct AnchorContractConfig {
     /// Anchor withdraw configuration.
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
-    /// The type of the signing backend used for signing proposals.
-    #[serde(rename(serialize = "proposalSigningBackend"))]
-    pub proposal_signing_backend: ProposalSigningBackendConfig,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(rename(serialize = "proposalSigningBackend"))] 
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
@@ -331,9 +331,9 @@ pub struct VAnchorContractConfig {
     /// Anchor withdraw configuration.
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
-    /// The type of the signing backend used for signing proposals.
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
-    pub proposal_signing_backend: ProposalSigningBackendConfig,
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
