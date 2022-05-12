@@ -243,7 +243,8 @@ export class LocalChain {
     localToken: MintableToken,
     otherToken: MintableToken,
     localWallet: ethers.Wallet,
-    otherWallet: ethers.Wallet
+    otherWallet: ethers.Wallet,
+    initialGovernors?: GovernorConfig
   ): Promise<Bridges.SignatureBridge> {
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
@@ -265,7 +266,7 @@ export class LocalChain {
       [this.chainId]: localWallet,
       [otherChain.chainId]: otherWallet,
     };
-    const initialGovernors: GovernorConfig = {
+    const defaultInitialGovernors: GovernorConfig = initialGovernors ?? {
       [this.chainId]: localWallet,
       [otherChain.chainId]: otherWallet,
     };
@@ -302,7 +303,7 @@ export class LocalChain {
     const val = await Bridges.SignatureBridge.deployFixedDepositBridge(
       bridgeInput,
       deployerConfig,
-      initialGovernors,
+      defaultInitialGovernors,
       zkComponents
     );
     this.signatureBridge = val;

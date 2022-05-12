@@ -110,7 +110,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-    
+
     const enabledContracts: EnabledContracts[] = [
       {
         contract: 'Anchor',
@@ -127,7 +127,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
-      enabledContracts: enabledContracts
+      enabledContracts: enabledContracts,
     });
 
     const localChain2Port = await getPort({
@@ -144,7 +144,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
-      enabledContracts: enabledContracts
+      enabledContracts: enabledContracts,
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
@@ -340,6 +340,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
   before(async () => {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
+    const GOV = u8aToHex(ethers.utils.randomBytes(32));
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
@@ -359,8 +360,12 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
           secretKey: PK1,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
+        {
+          secretKey: GOV,
+          balance: ethers.utils.parseEther('1000').toHexString(),
+        },
       ],
-      enabledContracts: enabledContracts
+      enabledContracts: enabledContracts,
     });
 
     const localChain2Port = await getPort({
@@ -376,8 +381,12 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
           secretKey: PK2,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
+        {
+          secretKey: GOV,
+          balance: ethers.utils.parseEther('1000').toHexString(),
+        },
       ],
-      enabledContracts: enabledContracts
+      enabledContracts: enabledContracts,
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
@@ -394,22 +403,34 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       wallet2
     );
 
+    const govWallet = new ethers.Wallet(GOV);
     signatureBridge = await localChain1.deploySignatureBridge(
       localChain2,
       localToken1,
       localToken2,
       wallet1,
-      wallet2
+      wallet2,
+      {
+        [localChain1.chainId]: govWallet,
+        [localChain2.chainId]: govWallet,
+      }
     );
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
     });
+    const governorAddress = govWallet.address;
+    const sides = signatureBridge.bridgeSides.values();
+    for (const signatureSide of sides) {
+      // check that the new governor is the same as the one we just set.
+      const currentGovernor = await signatureSide.contract.governor();
+      expect(currentGovernor).to.eq(governorAddress);
+    }
     // get the anhor on localchain1
     const anchor = signatureBridge.getAnchor(
       localChain1.chainId,
