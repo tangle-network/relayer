@@ -15,7 +15,7 @@
  *
  */
 // This our basic EVM Transaction Relayer Tests.
-// These are for testing the basic relayer functionality. which is just relay transactions for us without configuring proposal signing backend.
+// These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
