@@ -75,7 +75,7 @@ where
         let src_chain_id = client.get_chainid().await?;
         let root = wrapper.contract.get_last_root().call().await?;
         let leaf_index = event_data.leaf_index;
-        let function_signature = [68, 52, 123, 169];
+        let function_signature = [141, 9, 22, 157];
         let nonce = event_data.leaf_index;
         for linked_anchor in &wrapper.config.linked_anchors {
             let dest_chain = linked_anchor.chain.to_lowercase();

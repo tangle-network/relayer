@@ -1,6 +1,7 @@
 // This our basic Substrate Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
+import '@webb-tools/types';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -83,7 +84,6 @@ describe('Substrate Mixer Transaction Relayer', function () {
     );
 
     // get the initial balance
-    // @ts-ignore
     let { nonce, data: balance } = await api.query.system.account(
       withdrawalProof.recipient
     );
@@ -103,9 +103,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     expect(txHash).to.be.not.null;
 
     // get the balance after withdrawal is done and see if it increases
-    // @ts-ignore
-    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
-      .account!(withdrawalProof.recipient);
+    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     expect(balanceAfterWithdraw > initialBalance);
   });
@@ -147,7 +145,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     }
   });
 
-  it('Should fail to withdraw if proof is invalid', async () => {
+  it.only('Should fail to withdraw if proof is invalid', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Eve');
     const note = await makeDeposit(api, aliceNode, account);
@@ -181,17 +179,14 @@ describe('Substrate Mixer Transaction Relayer', function () {
         recipient: withdrawalProof.recipient,
         relayer: withdrawalProof.relayer,
       });
-    } catch (e) {
+    } catch (e: any) {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
-      // Runtime Error that indicates invalid withdrawal proof
-      try {
-        expect(e).to.contain('Module { index: 35, error: 1 }');
-      } catch (ex) {
-        expect(ex).to.contain(
-          'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
-        );
-      }
+      const errorMessage: string = e.toString();
+
+      // Runtime Error that indicates VerifyError in pallet-verifier, or InvalidWithdrawProof in pallet-mixer
+      const correctErrorMessage = errorMessage.includes('Module { index: 35, error: 1 }') || errorMessage.includes('Module { index: 40, error: 1 }');
+      expect(correctErrorMessage);
     }
   });
 

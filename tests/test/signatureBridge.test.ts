@@ -495,7 +495,6 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       tokenAddress,
       wallet1
     );
-
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
