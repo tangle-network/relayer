@@ -113,17 +113,17 @@ cargo build --release
 
 #### Local EVM Setup
 
-Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM Local Network configuration to get up and running immediately.
+Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM Local Network configuration to get up and running immediately. You can follow this [guide](https://docs.webb.tools/how-to-guides/v1/evm-bridge/local-bridge/) to use the relayer for the EVM bridge! You will have to configure an `.env` file in the root directory as well. See below configuration section for more details.
 
 ```
-cargo run -- -c ./config/local-testnet -vvv
+cargo run -- -c ./config/evm-localnet -vvv
 ```
 
 > Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
 
 #### Local Substrate Mixer
 
-To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer.
+To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer. You can follow this [guide](https://docs.webb.tools/how-to-guides/v1/substrate-mixer/local-mixer/) to use the relayer for the Substrate mixer!
 
 ```
 cargo run -- -c config/local-substrate -vvv
