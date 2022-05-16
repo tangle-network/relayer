@@ -103,7 +103,8 @@ describe('Substrate Mixer Transaction Relayer', function () {
     expect(txHash).to.be.not.null;
 
     // get the balance after withdrawal is done and see if it increases
-    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system.account(withdrawalProof.recipient);
+    const { nonce: nonceAfter, data: balanceAfter } =
+      await api.query.system.account(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     expect(balanceAfterWithdraw > initialBalance);
   });
@@ -145,7 +146,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     }
   });
 
-  it.only('Should fail to withdraw if proof is invalid', async () => {
+  it('Should fail to withdraw if proof is invalid', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Eve');
     const note = await makeDeposit(api, aliceNode, account);
@@ -185,7 +186,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
       const errorMessage: string = e.toString();
 
       // Runtime Error that indicates VerifyError in pallet-verifier, or InvalidWithdrawProof in pallet-mixer
-      const correctErrorMessage = errorMessage.includes('Module { index: 35, error: 1 }') || errorMessage.includes('Module { index: 40, error: 1 }');
+      const correctErrorMessage =
+        errorMessage.includes('Module { index: 35, error: 1 }') ||
+        errorMessage.includes('Module { index: 40, error: 1 }');
       expect(correctErrorMessage);
     }
   });

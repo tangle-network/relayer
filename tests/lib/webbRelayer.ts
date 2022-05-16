@@ -516,8 +516,7 @@ type ContractKind =
   | 'Anchor'
   | 'SignatureBridge'
   | 'GovernanceBravoDelegate'
-  | 'VAnchor'
-  | 'SignatureVBridge';
+  | 'VAnchor';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler' | 'AnchorBn254';
 

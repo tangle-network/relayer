@@ -17,6 +17,7 @@
 
 // Testing different kind of proposals between DKG <=> Relayer <=> Signature Bridge.
 
+import '@webb-tools/types';
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
@@ -121,7 +122,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-    
+
     const enabledContracts: EnabledContracts[] = [
       {
         contract: 'Anchor',
@@ -137,7 +138,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
-      enabledContracts: enabledContracts
+      enabledContracts: enabledContracts,
     });
 
     const localChain2Port = await getPort({
@@ -154,7 +155,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
-      enabledContracts: enabledContracts
+      enabledContracts: enabledContracts,
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
@@ -475,13 +476,15 @@ async function forceSubmitUnsignedProposal(
     'DkgRuntimePrimitivesProposalProposalKind',
     opts.kind
   );
-  const proposal = api.createType('DkgRuntimePrimitivesProposal', {
-    Unsigned: {
-      kind,
-      data: opts.data,
-    },
-  });
-  let call = api.tx.dkgProposalHandler!.forceSubmitUnsignedProposal!(proposal);
+  const proposal = api
+    .createType('DkgRuntimePrimitivesProposal', {
+      Unsigned: {
+        kind,
+        data: opts.data,
+      },
+    })
+    .toU8a();
+  let call = api.tx.dkgProposalHandler.forceSubmitUnsignedProposal(proposal);
   let txHash = await node.sudoExecuteTransaction(call);
   return txHash;
 }

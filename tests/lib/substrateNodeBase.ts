@@ -261,9 +261,10 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
 }
 
 async function createApiPromise(endpoint: string) {
-  return await ApiPromise.create(
+  return ApiPromise.create(
+    // @ts-ignore
     options({
-      provider: new WsProvider(endpoint),
+      provider: new WsProvider(endpoint) as any,
       rpc: {
         mt: {
           getLeaves: {
