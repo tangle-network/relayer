@@ -23,15 +23,19 @@ use webb::evm::contract::protocol_solidity::{
 use webb::evm::ethers::prelude::{Contract, Middleware};
 use webb::evm::ethers::types;
 
-mod anchor_leaves_watcher;
-mod anchor_watcher;
-mod vanchor_leaves_watcher;
+pub mod anchor_leaves_watcher;
+pub mod anchor_watcher;
+pub mod vanchor_leaves_watcher;
+pub mod vanchor_watcher;
+
 #[doc(hidden)]
 pub use anchor_leaves_watcher::*;
 #[doc(hidden)]
 pub use anchor_watcher::*;
 #[doc(hidden)]
 pub use vanchor_leaves_watcher::*;
+#[doc(hidden)]
+pub use vanchor_watcher::*;
 
 /// AnchorContractWrapper contains FixedDepositAnchorContract contract along with configurations for Anchor contract, and Relayer.
 #[derive(Clone, Debug)]

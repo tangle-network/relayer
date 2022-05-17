@@ -28,6 +28,7 @@ use ethereum_types::U256;
 use webb::evm::ethers::providers;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::dkg_runtime::api::RuntimeApi as DkgRuntimeApi;
+use webb::substrate::subxt::DefaultConfig;
 use webb::substrate::{
     protocol_substrate_runtime::api::RuntimeApi as WebbProtocolRuntimeApi,
     subxt::{self, PairSigner},
@@ -39,6 +40,7 @@ use crate::events_watcher::evm::*;
 use crate::events_watcher::proposal_signing_backend::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
+use crate::store::sled::SledStore;
 use crate::tx_queue::TxQueue;
 
 /// Type alias for providers
@@ -119,7 +121,6 @@ pub async fn ignite(
                     )
                     .await?;
                 }
-                Contract::SignatureVBridge(_) => {}
             }
         }
         // start the transaction queue after starting other tasks.
@@ -415,6 +416,8 @@ async fn start_evm_vanchor_events_watcher(
     );
     let mut shutdown_signal = ctx.shutdown_signal();
     let contract_address = config.common.address;
+    let my_ctx = ctx.clone();
+    let my_config = config.clone();
     let task = async move {
         tracing::debug!(
             "VAnchor events watcher for ({}) Started.",
@@ -423,20 +426,70 @@ async fn start_evm_vanchor_events_watcher(
         let leaves_watcher = VAnchorLeavesWatcher::default();
         let vanchor_leaves_watcher =
             leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
-        tokio::select! {
-            _ = vanchor_leaves_watcher => {
-                tracing::warn!(
-                    "VAnchor events watcher stopped for ({})",
-                    contract_address,
+        let proposal_signing_backend = make_proposal_signing_backend(
+            &my_ctx,
+            store.clone(),
+            &my_config.linked_anchors,
+            my_config.proposal_signing_backend,
+        )
+        .await?;
+        match proposal_signing_backend {
+            ProposalSigningBackendSelector::Dkg(backend) => {
+                let watcher = VAnchorWatcher::new(backend);
+                let vanchor_watcher_task = watcher.run(client, store, wrapper);
+                tokio::select! {
+                    _ = vanchor_watcher_task => {
+                        tracing::warn!(
+                            "VAnchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = vanchor_leaves_watcher => {
+                        tracing::warn!(
+                            "VAnchor leaves watcher stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping VAnchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
+            }
+            ProposalSigningBackendSelector::Mocked(backend) => {
+                let watcher = VAnchorWatcher::new(backend);
+                let vanchor_watcher_task = watcher.run(client, store, wrapper);
+                tokio::select! {
+                    _ = vanchor_watcher_task => {
+                        tracing::warn!(
+                            "VAnchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = vanchor_leaves_watcher => {
+                        tracing::warn!(
+                            "VAnchor leaves watcher stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping VAnchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
+            }
+            ProposalSigningBackendSelector::None => {
+                tracing::debug!(
+                    "No backend configured for proposal signing..!"
                 );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping VAnchor events watcher for ({})",
-                    contract_address,
-                );
-            },
-        }
+            }
+        };
+
+        Result::<_, anyhow::Error>::Ok(())
     };
     // kick off the watcher.
     tokio::task::spawn(task);
@@ -475,7 +528,6 @@ async fn start_evm_anchor_events_watcher(
     let contract_address = config.common.address;
     let my_ctx = ctx.clone();
     let my_config = config.clone();
-    let proposal_signing_backend = config.proposal_signing_backend.clone();
     let task = async move {
         tracing::debug!(
             "Anchor events watcher for ({}) Started.",
@@ -484,19 +536,15 @@ async fn start_evm_anchor_events_watcher(
         let leaves_watcher = AnchorLeavesWatcher::default();
         let anchor_leaves_watcher =
             leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
-        // we need to check/match on the proposal signing backend configured for this anchor.
+        let proposal_signing_backend = make_proposal_signing_backend(
+            &my_ctx,
+            store.clone(),
+            &my_config.linked_anchors,
+            my_config.proposal_signing_backend,
+        )
+        .await?;
         match proposal_signing_backend {
-            Some(ProposalSigningBackendConfig::DkgNode(c)) => {
-                // if it is the dkg backend, we will need to connect to that node first,
-                // and then use the DkgProposalSigningBackend to sign the proposal.
-                let dkg_client = my_ctx
-                    .substrate_provider::<subxt::DefaultConfig>(&c.node)
-                    .await?;
-                let pair = my_ctx.substrate_wallet(&c.node).await?;
-                let backend = DkgProposalSigningBackend::new(
-                    dkg_client,
-                    PairSigner::new(pair),
-                );
+            ProposalSigningBackendSelector::Dkg(backend) => {
                 let watcher = AnchorWatcher::new(backend);
                 let anchor_watcher_task = watcher.run(client, store, wrapper);
                 tokio::select! {
@@ -520,48 +568,7 @@ async fn start_evm_anchor_events_watcher(
                     },
                 }
             }
-            Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
-                // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
-                // which is a bit simpler than the DkgProposalSigningBackend.
-                // get only the linked chains to that anchor.
-                let linked_chains = my_config
-                    .linked_anchors
-                    .iter()
-                    .flat_map(|c| my_ctx.config.evm.get(&c.chain));
-                // then will have to go through our configruation to retrieve the correct
-                // signature bridges that are configrued on the linked chains.
-                // Note: this assumes that every network will only have one signature bridge configured for it.
-                let signature_bridges = linked_chains
-                    .flat_map(|chain_config| {
-                        // find the first signature bridge configured on that chain.
-                        chain_config
-                            .contracts
-                            .iter()
-                            .find(|contract| {
-                                matches!(contract, Contract::SignatureBridge(_))
-                            })
-                            .map(|contract| (contract, chain_config.chain_id))
-                    })
-                    .map(|(bridge_contract, chain_id)| match bridge_contract {
-                        Contract::SignatureBridge(c) => (c, chain_id),
-                        _ => unreachable!(),
-                    })
-                    .flat_map(|(bridge_config, chain_id)| {
-                        // then we just create the signature bridge metadata.
-                        let chain_id =
-                            webb_proposals::TypedChainId::Evm(chain_id as u32);
-                        let target_system =
-                            webb_proposals::TargetSystem::new_contract_address(
-                                bridge_config.common.address,
-                            );
-                        Some((chain_id, target_system))
-                    })
-                    .collect::<HashMap<_, _>>();
-                let backend = MockedProposalSigningBackend::builder()
-                    .store(store.clone())
-                    .private_key(mocked.private_key)
-                    .signature_bridges(signature_bridges)
-                    .build();
+            ProposalSigningBackendSelector::Mocked(backend) => {
                 let watcher = AnchorWatcher::new(backend);
                 let anchor_watcher_task = watcher.run(client, store, wrapper);
                 tokio::select! {
@@ -585,7 +592,7 @@ async fn start_evm_anchor_events_watcher(
                     },
                 }
             }
-            None => {
+            ProposalSigningBackendSelector::None => {
                 tracing::debug!(
                     "No backend configured for proposal signing..!"
                 );
@@ -696,4 +703,79 @@ fn start_tx_queue(
     // kick off the tx_queue.
     tokio::task::spawn(task);
     Ok(())
+}
+
+#[allow(clippy::large_enum_variant)]
+enum ProposalSigningBackendSelector {
+    None,
+    Mocked(MockedProposalSigningBackend<SledStore>),
+    Dkg(DkgProposalSigningBackend<DkgRuntime, DefaultConfig>),
+}
+
+async fn make_proposal_signing_backend(
+    ctx: &RelayerContext,
+    store: Arc<Store>,
+    linked_anchors: &[LinkedAnchorConfig],
+    proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+) -> anyhow::Result<ProposalSigningBackendSelector> {
+    // we need to check/match on the proposal signing backend configured for this anchor.
+    match proposal_signing_backend {
+        Some(ProposalSigningBackendConfig::DkgNode(c)) => {
+            // if it is the dkg backend, we will need to connect to that node first,
+            // and then use the DkgProposalSigningBackend to sign the proposal.
+            let dkg_client = ctx
+                .substrate_provider::<subxt::DefaultConfig>(&c.node)
+                .await?;
+            let pair = ctx.substrate_wallet(&c.node).await?;
+            let backend = DkgProposalSigningBackend::new(
+                dkg_client,
+                PairSigner::new(pair),
+            );
+            Ok(ProposalSigningBackendSelector::Dkg(backend))
+        }
+        Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
+            // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
+            // which is a bit simpler than the DkgProposalSigningBackend.
+            // get only the linked chains to that anchor.
+            let linked_chains = linked_anchors
+                .iter()
+                .flat_map(|c| ctx.config.evm.get(&c.chain));
+            // then will have to go through our configruation to retrieve the correct
+            // signature bridges that are configrued on the linked chains.
+            // Note: this assumes that every network will only have one signature bridge configured for it.
+            let signature_bridges = linked_chains
+                .flat_map(|chain_config| {
+                    // find the first signature bridge configured on that chain.
+                    chain_config
+                        .contracts
+                        .iter()
+                        .find(|contract| {
+                            matches!(contract, Contract::SignatureBridge(_))
+                        })
+                        .map(|contract| (contract, chain_config.chain_id))
+                })
+                .map(|(bridge_contract, chain_id)| match bridge_contract {
+                    Contract::SignatureBridge(c) => (c, chain_id),
+                    _ => unreachable!(),
+                })
+                .flat_map(|(bridge_config, chain_id)| {
+                    // then we just create the signature bridge metadata.
+                    let chain_id =
+                        webb_proposals::TypedChainId::Evm(chain_id as u32);
+                    let target_system =
+                        webb_proposals::TargetSystem::new_contract_address(
+                            bridge_config.common.address,
+                        );
+                    Some((chain_id, target_system))
+                })
+                .collect::<HashMap<_, _>>();
+            let backend = MockedProposalSigningBackend::builder()
+                .store(store.clone())
+                .private_key(mocked.private_key)
+                .signature_bridges(signature_bridges)
+                .build();
+            Ok(ProposalSigningBackendSelector::Mocked(backend))
+        }
+        None => Ok(ProposalSigningBackendSelector::None),
+    }
 }

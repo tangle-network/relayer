@@ -243,7 +243,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const resourceId2 = await anchor2.createResourceId();
 
     const call = (resourceId: string) =>
-      api.tx.dkgProposals!.setResource!(resourceId, '0x00');
+      api.tx.dkgProposals.setResource(resourceId, '0x00');
     // register the resource on DKG node.
     for (const rid of [resourceId1, resourceId2]) {
       await charlieNode.sudoExecuteTransaction(call(rid));

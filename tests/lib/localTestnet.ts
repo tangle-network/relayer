@@ -119,7 +119,10 @@ export class LocalChain {
   }
 
   public provider(): ethers.providers.WebSocketProvider {
-    return new ethers.providers.WebSocketProvider(this.endpoint);
+    return new ethers.providers.WebSocketProvider(this.endpoint, {
+      name: this.opts.name,
+      chainId: this.underlyingChainId,
+    });
   }
 
   public async stop() {
@@ -139,7 +142,8 @@ export class LocalChain {
     localToken: MintableToken,
     otherToken: MintableToken,
     localWallet: ethers.Wallet,
-    otherWallet: ethers.Wallet
+    otherWallet: ethers.Wallet,
+    initialGovernors?: GovernorConfig
   ): Promise<VBridge.VBridge> {
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
@@ -162,7 +166,7 @@ export class LocalChain {
       [this.chainId]: localWallet,
       [otherChain.chainId]: otherWallet,
     };
-    const initialGovernors: GovernorConfig = {
+    const defaultInitialGovernors: GovernorConfig = initialGovernors ?? {
       [this.chainId]: localWallet,
       [otherChain.chainId]: otherWallet,
     };
@@ -230,7 +234,7 @@ export class LocalChain {
     const vBridge = await VBridge.VBridge.deployVariableAnchorBridge(
       vBridgeInput,
       deployerConfig,
-      initialGovernors,
+      defaultInitialGovernors,
       zkComponents_2,
       zkComponents_16
     );
@@ -406,7 +410,7 @@ export class LocalChain {
         ),
       },
       {
-        contract: 'SignatureVBridge',
+        contract: 'SignatureBridge',
         address: side.contract.address,
         deployedAt: 1,
         eventsWatcher: {
