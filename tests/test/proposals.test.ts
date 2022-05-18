@@ -105,7 +105,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       authority: 'charlie',
       usageMode,
       ports: 'auto',
-      enableLogging: true,
+      enableLogging: false,
       enabledPallets,
     });
 
@@ -273,7 +273,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
