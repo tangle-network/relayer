@@ -412,6 +412,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const resourceId = await governedToken.createResourceId();
     const currentNonce = await governedToken.contract.proposalNonce();
     webbRelayer.clearLogs();
+    const newFee = ethers.utils.hexValue(50);
     const wrappingFeeProposalPayload: WrappingFeeUpdateProposal = {
       header: {
         resourceId,
@@ -422,7 +423,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         chainIdType: ChainIdType.EVM,
         chainId: localChain1.underlyingChainId,
       },
-      newFee: '0x50',
+      newFee,
     };
     await forceSubmitUnsignedProposal(charlieNode, {
       kind: 'WrappingFeeUpdate',
@@ -451,7 +452,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     });
     await sleep(1000);
     const fee = await governedToken.contract.getFee();
-    expect(parseInt('0x50', 16)).to.eq(fee);
+    expect(newFee).to.eq(ethers.utils.hexValue(fee));
   });
 
   after(async () => {
