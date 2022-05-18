@@ -51,6 +51,8 @@ import { sleep } from '../lib/sleep.js';
 Chai.use(ChaiAsPromised);
 
 describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
+  // 5 minutes
+  this.timeout(5 * 60 * 1000);
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
