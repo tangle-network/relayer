@@ -124,11 +124,7 @@ jobs:
 
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-unknown-linux-musl'
-        uses: nick-fields/retry@v2
-        with:
-          timeout_minutes: 30
-          max_attempts: 7
-          command: cd tests && yarn test
+        run: cd tests && yarn test
 
     strategy:
       fail-fast: true
