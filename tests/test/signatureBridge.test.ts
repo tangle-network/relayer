@@ -39,6 +39,7 @@ import {
 Chai.use(ChaiAsPromised);
 
 describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
+  this.timeout(5 * 60 * 1000);
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -57,7 +58,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
-      ? { mode: 'docker', forcePullImage: false }
+      ? { mode: 'host', nodePath: 'dkg-standalone-node' }
       : {
           mode: 'host',
           nodePath: path.resolve(

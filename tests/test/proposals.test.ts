@@ -51,6 +51,8 @@ import { sleep } from '../lib/sleep.js';
 Chai.use(ChaiAsPromised);
 
 describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
+  // 8 minutes
+  this.timeout(8 * 60 * 1000);
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -69,7 +71,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
-      ? { mode: 'docker', forcePullImage: false }
+      ? { mode: 'host', nodePath: 'dkg-standalone-node' }
       : {
           mode: 'host',
           nodePath: path.resolve(
@@ -410,6 +412,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const resourceId = await governedToken.createResourceId();
     const currentNonce = await governedToken.contract.proposalNonce();
     webbRelayer.clearLogs();
+    const newFee = ethers.utils.hexValue(50);
     const wrappingFeeProposalPayload: WrappingFeeUpdateProposal = {
       header: {
         resourceId,
@@ -420,7 +423,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         chainIdType: ChainIdType.EVM,
         chainId: localChain1.underlyingChainId,
       },
-      newFee: '0x50',
+      newFee,
     };
     await forceSubmitUnsignedProposal(charlieNode, {
       kind: 'WrappingFeeUpdate',
@@ -449,7 +452,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     });
     await sleep(1000);
     const fee = await governedToken.contract.getFee();
-    expect(parseInt('0x50', 16)).to.eq(fee);
+    expect(newFee).to.eq(ethers.utils.hexValue(fee));
   });
 
   after(async () => {

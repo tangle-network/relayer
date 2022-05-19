@@ -96,7 +96,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -290,16 +290,15 @@ describe('Substrate Anchor Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates proof verifier error
-
-      try {
-        expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 41, error: 2 })'
-        );
-      } catch (ex) {
-        expect(ex).to.contain(
-          'Runtime error: RuntimeError(Module { index: 36, error: 1 })'
-        );
-      }
+      // Examples:
+      // RuntimeError(Module { index: 41, error: 2 })
+      // RuntimeError(Module { index: 36, error: 1 })
+      const regex =
+        /{ index: (?<palletIndex>\d+), error: (?<errorIndex>\d+) }/gm;
+      const match = regex.exec(e as string);
+      expect(match).to.not.be.null;
+      expect(match?.groups?.palletIndex).to.be.oneOf(['41', '36']);
+      expect(match?.groups?.errorIndex).to.be.oneOf(['2', '1']);
     }
   });
 

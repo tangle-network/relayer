@@ -101,12 +101,15 @@ jobs:
       - run: ci/set_rust_version.bash ${{ matrix.channel }} ${{ matrix.target }}
       - run: ci/build.bash /tmp/cross ${{ matrix.target }}
       - name: Use Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v3
         with:
           node-version-file: "./tests/.nvmrc"
           cache: "yarn"
           cache-dependency-path: "./tests/yarn.lock"
-      - run: npm install -g ganache-cli
+          registry-url: "https://npm.pkg.github.com"
+      - run: yarn global add @webb-tools/dkg-standalone-binary@latest
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: ci/test.bash /tmp/cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-unknown-linux-musl'
       - run: cargo build --features integration-tests
@@ -117,16 +120,11 @@ jobs:
         run: cd tests && git submodule update --init --recursive && yarn
       - name: Pull Docker Images used for testing.
         run: |
-          docker pull ghcr.io/webb-tools/dkg-standalone-node:edge
           docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:edge
 
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-unknown-linux-musl'
-        uses: nick-fields/retry@v2
-        with:
-          timeout_minutes: 30
-          max_attempts: 7
-          command: cd tests && yarn test
+        run: cd tests && yarn test
 
     strategy:
       fail-fast: true
