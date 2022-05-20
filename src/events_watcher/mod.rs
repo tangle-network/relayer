@@ -51,7 +51,7 @@ use webb::{
 use crate::store::sled::SledQueueKey;
 use crate::store::{
     BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
-    QueueStore,
+    QueueStore, SubstrateBridgeCommand,
 };
 use crate::utils;
 
@@ -549,6 +549,86 @@ pub trait SubstrateEventWatcher {
                     instant = std::time::Instant::now();
                 }
             }
+        };
+        backoff::future::retry(backoff, task).await?;
+        Ok(())
+    }
+}
+
+// A Bridge Watcher is a trait for Bridge contracts that not specific for watching events from that contract,
+/// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers
+/// from the actual action that should be taken depending on the event.
+#[async_trait::async_trait]
+pub trait SubstrateBridgeWatcher: SubstrateEventWatcher
+where
+    Self::Store: ProposalStore<Proposal = ()>
+        + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
+        + QueueStore<SubstrateBridgeCommand, Key = SledQueueKey>,
+{
+    async fn handle_cmd(
+        &self,
+        node_name: String,
+        store: Arc<Self::Store>,
+        client: subxt::Client<Self::RuntimeConfig>,
+        cmd: SubstrateBridgeCommand,
+    ) -> anyhow::Result<()>;
+
+    /// Returns a task that should be running in the background
+    /// that will watch events
+    #[tracing::instrument(
+        skip_all,
+        fields(
+            node = %node_name,
+            chain_id = %chain_id,
+            tag = %Self::TAG
+        )
+    )]
+    async fn run(
+        &self,
+        node_name: String,
+        chain_id: U256,
+        client: subxt::Client<Self::RuntimeConfig>,
+        store: Arc<Self::Store>,
+    ) -> anyhow::Result<()> {
+        let backoff = backoff::ExponentialBackoff {
+            max_elapsed_time: None,
+            ..Default::default()
+        };
+
+        let task = || async {
+            // chain_id is used as tree_id, to ensure that we have one signature bridge
+            let target_system =
+                webb_proposals::TargetSystem::new_tree_id(chain_id.as_u32());
+            let my_chain_id =
+                webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
+            let bridge_key = BridgeKey::new(target_system, my_chain_id);
+            let key = SledQueueKey::from_bridge_key(bridge_key);
+            while let Some(command) = store.dequeue_item(key)? {
+                let result = self
+                    .handle_cmd(
+                        node_name.clone(),
+                        store.clone(),
+                        client.clone(),
+                        command,
+                    )
+                    .await;
+                match result {
+                    Ok(_) => {
+                        tokio::time::sleep(Duration::from_millis(500)).await;
+                        continue;
+                    }
+                    Err(e) => {
+                        tracing::error!("Error while handle_cmd {}", e);
+                        // this a transient error, so we will retry again.
+                        tracing::warn!("Restarting bridge event watcher ...");
+                        return Err(backoff::Error::transient(e));
+                    }
+                }
+                // sleep for a bit to avoid overloading the db.
+            }
+            // whenever this loop stops, we will restart the whole task again.
+            // that way we never have to worry about closed channels.
+            Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())
