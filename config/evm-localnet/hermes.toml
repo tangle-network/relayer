@@ -43,7 +43,6 @@ withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
   { chain = "athena", address = "0xFEe587E68c470DAE8147B46bB39fF230A29D4769" },
-  { chain = "demeter", address = "0xdB587ef6aaA16b5719CDd3AaB316F0E70473e9Be" },
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "0x0000000000000000000000000000000000000000000000000000000000000001" }
 
