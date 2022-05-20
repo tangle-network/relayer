@@ -20,7 +20,7 @@ use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::FixedDepositAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb::evm::ethers::providers;
-
+use webb_proposals::evm::AnchorUpdateProposal;
 type HttpProvider = providers::Provider<providers::Http>;
 /// Represents an Anchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct AnchorWatcher<B> {
@@ -29,7 +29,7 @@ pub struct AnchorWatcher<B> {
 
 impl<B> AnchorWatcher<B>
 where
-    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>,
+    B: ProposalSigningBackend<AnchorUpdateProposal>,
 {
     pub fn new(proposal_signing_backend: B) -> Self {
         Self {
@@ -41,9 +41,7 @@ where
 #[async_trait::async_trait]
 impl<B> super::EventWatcher for AnchorWatcher<B>
 where
-    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>
-        + Send
-        + Sync,
+    B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {
     const TAG: &'static str = "Anchor Watcher";
     type Middleware = HttpProvider;
@@ -97,7 +95,7 @@ where
                 function_signature.into(),
                 nonce.into(),
             );
-            let proposal = webb_proposals::AnchorUpdateProposal::new(
+            let proposal = AnchorUpdateProposal::new(
                 header,
                 webb_proposals::TypedChainId::Evm(src_chain_id.as_u32()),
                 leaf_index,

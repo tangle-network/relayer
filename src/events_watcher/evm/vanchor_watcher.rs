@@ -20,7 +20,7 @@ use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb::evm::ethers::providers;
-
+use webb_proposals::evm::AnchorUpdateProposal;
 type HttpProvider = providers::Provider<providers::Http>;
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorWatcher<B> {
@@ -29,7 +29,7 @@ pub struct VAnchorWatcher<B> {
 
 impl<B> VAnchorWatcher<B>
 where
-    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>,
+    B: ProposalSigningBackend<AnchorUpdateProposal>,
 {
     pub fn new(proposal_signing_backend: B) -> Self {
         Self {
@@ -41,9 +41,7 @@ where
 #[async_trait::async_trait]
 impl<B> super::EventWatcher for VAnchorWatcher<B>
 where
-    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>
-        + Send
-        + Sync,
+    B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {
     const TAG: &'static str = "VAnchor Watcher";
     type Middleware = HttpProvider;
@@ -111,7 +109,7 @@ where
                 function_signature.into(),
                 nonce.into(),
             );
-            let proposal = webb_proposals::AnchorUpdateProposal::new(
+            let proposal = AnchorUpdateProposal::new(
                 header,
                 webb_proposals::TypedChainId::Evm(src_chain_id.as_u32()),
                 leaf_index,

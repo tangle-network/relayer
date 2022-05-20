@@ -2,7 +2,7 @@ use futures::StreamExt;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId, Nonce};
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::{dkg_runtime, subxt};
-use webb_proposals::AnchorUpdateProposal;
+use webb_proposals::evm::AnchorUpdateProposal;
 
 type DkgConfig = subxt::DefaultConfig;
 type DkgRuntimeApi =
