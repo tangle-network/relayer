@@ -67,7 +67,9 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
 
   let webbRelayer: WebbRelayer;
 
-  before(async () => {
+  before(async function () {
+    // Only run these tests in CI
+    if (!isCi) this.skip();
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi

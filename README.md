@@ -295,10 +295,20 @@ cargo test
 
 ### To run E2E tests
 
-1. Run `cargo build --features integration-tests`
-2. Run `cd tests && git submodule update --init --recursive`
-3. Run `yarn install` (in `tests` dir)
-4. `yarn test`
+First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) node, compiled locally (in release mode) and both the `protocol-substrate` and `relayer` project
+must be next to each other.
+
+Here is the basic setup you will need:
+
+1. Clone the Relayer repo `git clone https://github.com/webb-tools/relayer.git`
+2. Clone Protocol Substrate node `https://github.com/webb-tools/protocol-substrate.git`
+3. Then fetch the submodules for the node `cd protocol-substrate && git submodule update --init`
+4. While you are there, build the standalone node `cargo build --release -p webb-standalone-node`
+5. And then go back to the relayer `cd ../relayer`
+6. Run `cargo build --features integration-tests`
+7. Run `cd tests && git submodule update --init --recursive`
+8. Run `yarn install` (in `tests` dir)
+9. `yarn test`
 
 ### Tips for E2E tests
 
@@ -311,23 +321,19 @@ cargo test
 For the Substrate Mixer test, you can connect to your local chain manually by:
 
 1. Specifying the Alice node ports such as:
-   ```
-       const aliceManualPorts = {
-          ws: 9944,
-          http: 9933,
-          p2p: 30333
-       }
-   ```
+
+```ts
+const aliceManualPorts = { ws: 9944, http: 9933, p2p: 30333 };
+```
+
 2. Specifying the Bob node ports such as:
-   ```
-       const bobManualPorts = {
-          ws: 9945,
-          http: 9934,
-          p2p: 30334
-       }
-   ```
-3. Make the `ports` property value be the `aliceManualPorts` and `bobManualPorts` respectively in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start() function`
-4. Specifying and setting `isManual` flag to true in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start() function`
+
+```ts
+const bobManualPorts = { ws: 9945, http: 9934, p2p: 30334 };
+```
+
+3. Make the `ports` property value be the `aliceManualPorts` and `bobManualPorts` respectively in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start()` method.
+4. Specifying and setting `isManual` flag to `true` in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start()` method.
 
 ## Contributing
 
