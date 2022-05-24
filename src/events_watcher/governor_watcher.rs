@@ -14,6 +14,7 @@
 //
 use std::sync::Arc;
 
+use ethereum_types::U256;
 use webb::substrate::dkg_runtime::api::dkg;
 use webb::substrate::{dkg_runtime, subxt};
 
@@ -95,7 +96,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
                 _ => None,
             })
             .map(|(chain_id, address)| {
-                BridgeKey::new(address, chain_id.into())
+                BridgeKey::new(address, U256::from(chain_id))
             });
         // now we just signal every signature bridge to transfer the ownership.
         for bridge_key in bridge_keys {

@@ -113,6 +113,10 @@ export class WebbRelayer {
     return this.#logs;
   }
 
+  public clearLogs(): void {
+    this.#logs.length = 0;
+  }
+
   public async waitUntilReady(): Promise<void> {
     await this.waitForEvent({ kind: 'lifecycle', event: { started: true } });
   }
@@ -504,7 +508,15 @@ export interface Pallet {
   eventsWatcher: EventsWatcher;
 }
 
-type ContractKind = 'Anchor' | 'SignatureBridge' | 'GovernanceBravoDelegate';
+export interface EnabledContracts {
+  contract: ContractKind;
+}
+
+type ContractKind =
+  | 'Anchor'
+  | 'SignatureBridge'
+  | 'GovernanceBravoDelegate'
+  | 'VAnchor';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler' | 'AnchorBn254';
 

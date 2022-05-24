@@ -45,16 +45,71 @@ pub enum HistoryStoreKey {
 }
 
 /// A Bridge Key is a unique key used for Sending and Receiving Commands to the Signature Bridge
-/// It is a combination of the Chain ID and the Address of the Bridge contract.
-#[derive(Debug, Copy, Clone, Default, Hash, PartialEq, Eq, PartialOrd, Ord)]
+/// It is a combination of the Chain ID and the target system of the Bridge system.
+#[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct BridgeKey {
-    pub address: types::H160,
-    pub chain_id: types::U256,
+    pub target_system: webb_proposals::TargetSystem,
+    pub chain_id: webb_proposals::TypedChainId,
+}
+/// A way to convert an arbitrary type to a TargetSystem.
+pub trait IntoTargetSystem {
+    fn into_target_system(self) -> webb_proposals::TargetSystem;
+}
+
+/// A way to convert an arbitrary type to a TypedChainId.
+pub trait IntoTypedChainId {
+    fn into_typed_chain_id(self) -> webb_proposals::TypedChainId;
+}
+
+impl IntoTargetSystem for webb_proposals::TargetSystem {
+    fn into_target_system(self) -> webb_proposals::TargetSystem {
+        self
+    }
+}
+
+impl IntoTargetSystem for types::Address {
+    fn into_target_system(self) -> webb_proposals::TargetSystem {
+        webb_proposals::TargetSystem::new_contract_address(self)
+    }
+}
+
+impl IntoTargetSystem for u32 {
+    fn into_target_system(self) -> webb_proposals::TargetSystem {
+        webb_proposals::TargetSystem::new_tree_id(self)
+    }
+}
+
+impl IntoTypedChainId for webb_proposals::TypedChainId {
+    fn into_typed_chain_id(self) -> webb_proposals::TypedChainId {
+        self
+    }
+}
+
+impl IntoTypedChainId for types::U256 {
+    fn into_typed_chain_id(self) -> webb_proposals::TypedChainId {
+        webb_proposals::TypedChainId::Evm(self.as_u32())
+    }
+}
+
+impl IntoTypedChainId for u32 {
+    fn into_typed_chain_id(self) -> webb_proposals::TypedChainId {
+        webb_proposals::TypedChainId::Substrate(self)
+    }
 }
 
 impl BridgeKey {
-    pub fn new(address: types::Address, chain_id: types::U256) -> Self {
-        Self { address, chain_id }
+    pub fn new<TargetSystem, ChainId>(
+        target_system: TargetSystem,
+        chain_id: ChainId,
+    ) -> Self
+    where
+        TargetSystem: IntoTargetSystem,
+        ChainId: IntoTypedChainId,
+    {
+        Self {
+            target_system: target_system.into_target_system(),
+            chain_id: chain_id.into_typed_chain_id(),
+        }
     }
 }
 
@@ -113,7 +168,7 @@ impl Display for HistoryStoreKey {
 
 impl Display for BridgeKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Bridge({}, {})", self.chain_id, self.address)
+        write!(f, "Bridge({:?}, {:?})", self.chain_id, self.target_system)
     }
 }
 

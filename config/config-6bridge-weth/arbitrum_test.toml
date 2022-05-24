@@ -1,22 +1,29 @@
 [evm.arbitrumtestnet]
-http-endpoint = "https://rinkeby.arbitrum.io/rpc"
-ws-endpoint = "wss://rinkeby.arbitrum.io/rpc"
+http-endpoint = <ARBITRUM_TESTNET_HTTPS_API_KEY>
+ws-endpoint = <ARBITRUM_TESTNET_WSS_API_KEY>
 explorer = "https://rinkeby-explorer.arbitrum.io/#/"
 chain-id = 421611
 private-key = "$ARBITRUMTESTNET_PRIVATE_KEY"
 
 [[evm.arbitrumtestnet.contracts]]
 contract = "Anchor"
-address = "0xD8a8F9629a98EABFF31CfA9493f274A4D5e768Cd"
-deployed-at = 8301075
-size = 0.1
-events-watcher = { enabled = true, polling-interval = 5000 }
+address = "0x30aEF9a80BAe60Cd789904C8875fbd6a19b80488"
+deployed-at = 11799624
+size = 0.01
+events-watcher = { enabled = true, polling-interval = 15000 }
 withdraw-fee-percentage = 0
 withdraw-gaslimit = "0x350000"
 linked-anchors = [
-  { chain = "ropsten", address = "0x97747a4De7302Ff7Ee3334e33138879469BFEcf8" },
-  { chain = "goerli", address = "0x6aA5C74953F7Da1556a298C5e129E417410474E2" },
-  { chain = "polygontestnet", address = "0x12323BcABB342096669d80F968f7a31bdB29d4C4" },
-  { chain = "optimismtestnet", address = "0xC44A4EcAC4f23b6F92485Cb1c90dBEd75a987BC8" },
-  { chain = "rinkeby", address = "0x09B722aA809A076027FA51902e431a8C03e3f8dF" },
+  { chain = "ropsten", address = "0x09d2D6520BE3922549c81885477258F41c96c43f" },
+  { chain = "goerli", address = "0x6188F18359250f241e2171BAFD57447F8931176e" },
+  { chain = "polygontestnet", address = "0x95E2eB4c9Fe2FB580E27dCe997e0E3D69FFdDf5a" },
+  { chain = "optimismtestnet", address = "0x27a693cdF40acFc18195C2ecc9f0352452624e84" },
+  { chain = "rinkeby", address = "0x95E2eB4c9Fe2FB580E27dCe997e0E3D69FFdDf5a" },
 ]
+proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
+
+[[evm.arbitrumtestnet.contracts]]
+contract = "SignatureBridge"
+address = "0xffd2174417a81ea7ac8bea1b8e64f233eeb63084"
+deployed-at = 11697042
+events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }

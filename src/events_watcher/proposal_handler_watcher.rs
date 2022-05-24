@@ -65,6 +65,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
             backend = "DKG",
             ty = "ProposalSigned",
             ?event.target_chain,
+            ?event.key,
             ?block_number,
         );
         let maybe_bridge_key = match event.target_chain {
@@ -88,7 +89,12 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
                     Contract::SignatureBridge(bridge) => Some(bridge),
                     _ => None,
                 })
-                .map(|config| BridgeKey::new(config.common.address, id.into())),
+                .map(|config| {
+                    BridgeKey::new(
+                        config.common.address,
+                        webb_proposals::TypedChainId::Evm(id),
+                    )
+                }),
             TypedChainId::Substrate(_) => {
                 tracing::warn!(
                     "Unhandled `ProposalSigned` Event with substrate chain id"

@@ -139,7 +139,8 @@ export type TypedEvent =
   | NextPublicKeySignatureSubmitted
   | PublicKeySubmitted
   | PublicKeyChanged
-  | PublicKeySignatureChanged;
+  | PublicKeySignatureChanged
+  | ProposalSigned;
 
 type NewSession = { section: 'session'; method: 'NewSession' };
 type NextPublicKeySubmitted = {
@@ -155,4 +156,9 @@ type PublicKeyChanged = { section: 'dkg'; method: 'PublicKeyChanged' };
 type PublicKeySignatureChanged = {
   section: 'dkg';
   method: 'PublicKeySignatureChanged';
+};
+
+type ProposalSigned = {
+  section: 'dkgProposalHandler';
+  method: 'ProposalSigned';
 };

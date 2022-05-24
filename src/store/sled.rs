@@ -185,7 +185,7 @@ impl EventHashStore for SledStore {
 }
 
 /// SledQueueKey is a key for a queue in Sled.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SledQueueKey {
     EvmTx {
         chain_id: types::U256,
@@ -246,7 +246,8 @@ impl QueueKey for SledQueueKey {
             Self::EvmTx { chain_id, .. } => format!("evm_tx_{}", chain_id),
             Self::BridgeCmd { bridge_key, .. } => format!(
                 "bridge_cmd_{}_{}",
-                bridge_key.chain_id, bridge_key.address
+                bridge_key.chain_id.chain_id(),
+                hex::encode(bridge_key.target_system.to_bytes())
             ),
         }
     }

@@ -1,6 +1,7 @@
 // This our basic Substrate Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
+import '@webb-tools/types';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -83,7 +84,6 @@ describe('Substrate Mixer Transaction Relayer', function () {
     );
 
     // get the initial balance
-    // @ts-ignore
     let { nonce, data: balance } = await api.query.system.account(
       withdrawalProof.recipient
     );
@@ -103,14 +103,13 @@ describe('Substrate Mixer Transaction Relayer', function () {
     expect(txHash).to.be.not.null;
 
     // get the balance after withdrawal is done and see if it increases
-    // @ts-ignore
-    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
-      .account!(withdrawalProof.recipient);
+    const { nonce: nonceAfter, data: balanceAfter } =
+      await api.query.system.account(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     expect(balanceAfterWithdraw > initialBalance);
   });
 
-  it('Should fail to withdraw if address is invalid', async () => {
+  it('Should fail to withdraw if recipient address is invalid', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     const note = await makeDeposit(api, aliceNode, account);
@@ -135,7 +134,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
         refund: withdrawalProof.refund,
         fee: withdrawalProof.fee,
         recipient: invalidAddress,
-        relayer: invalidAddress,
+        relayer: withdrawalProof.relayer,
       });
     } catch (e) {
       // Expect an error to be thrown
@@ -181,11 +180,16 @@ describe('Substrate Mixer Transaction Relayer', function () {
         recipient: withdrawalProof.recipient,
         relayer: withdrawalProof.relayer,
       });
-    } catch (e) {
+    } catch (e: any) {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
-      // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain('Module { index: 40, error: 1 }');
+      const errorMessage: string = e.toString();
+
+      // Runtime Error that indicates VerifyError in pallet-verifier, or InvalidWithdrawProof in pallet-mixer
+      const correctErrorMessage =
+        errorMessage.includes('Module { index: 35, error: 1 }') ||
+        errorMessage.includes('Module { index: 40, error: 1 }');
+      expect(correctErrorMessage);
     }
   });
 
@@ -213,6 +217,131 @@ describe('Substrate Mixer Transaction Relayer', function () {
         nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
         refund: withdrawalProof.refund,
         fee: invalidFee,
+        recipient: withdrawalProof.recipient,
+        relayer: withdrawalProof.relayer,
+      });
+    } catch (e) {
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain(
+        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+      );
+    }
+  });
+
+  it('Should fail to withdraw with invalid root', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Eve');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
+
+    const rootBytes = hexToU8a(withdrawalProof.root);
+    // flip a bit in the proof, so it is invalid
+    const flipCount = rootBytes.length / 8;
+    for (let i = 0; i < flipCount; i++) {
+      rootBytes[i] |= 0x42;
+    }
+    const invalidRootBytes = u8aToHex(rootBytes);
+    expect(withdrawalProof.proofBytes).to.not.eq(invalidRootBytes);
+
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid address
+      await webbRelayer.substrateMixerWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+        root: Array.from(hexToU8a(invalidRootBytes)),
+        nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
+        recipient: withdrawalProof.recipient,
+        relayer: withdrawalProof.relayer,
+      });
+    } catch (e) {
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain(
+        'Runtime error: RuntimeError(Module { index: 40, error: 4 }'
+      );
+    }
+  });
+
+  it('Should fail to withdraw if recipient address is invalid', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Dave');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
+
+    const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
+
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid address
+      await webbRelayer.substrateMixerWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+        root: Array.from(hexToU8a(withdrawalProof.root)),
+        nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
+        recipient: withdrawalProof.recipient,
+        relayer: invalidAddress,
+      });
+    } catch (e) {
+      // Expect an error to be thrown
+      expect(e).to.not.be.null;
+      // Runtime Error that indicates invalid withdrawal proof
+      expect(e).to.contain(
+        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+      );
+    }
+  });
+
+  it('Should fail to withdraw with invalid nullifier hash', async () => {
+    const api = await aliceNode.api();
+    const account = createAccount('//Eve');
+    const note = await makeDeposit(api, aliceNode, account);
+    const withdrawalProof = await initWithdrawal(
+      api,
+      webbRelayer,
+      account,
+      note
+    );
+
+    const nullifierHash = hexToU8a(withdrawalProof.root);
+    // flip a bit in the proof, so it is invalid
+    const flipCount = nullifierHash.length / 8;
+    for (let i = 0; i < flipCount; i++) {
+      nullifierHash[i] = 0x42;
+    }
+    const invalidNullifierHash = u8aToHex(nullifierHash);
+    expect(withdrawalProof.nullifierHash).to.not.eq(invalidNullifierHash);
+
+    // now we need to submit the withdrawal transaction.
+    try {
+      // try to withdraw with invalid address
+      await webbRelayer.substrateMixerWithdraw({
+        chain: aliceNode.name,
+        id: withdrawalProof.id,
+        proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
+        root: Array.from(hexToU8a(withdrawalProof.root)),
+        nullifierHash: Array.from(hexToU8a(invalidNullifierHash)),
+        refund: withdrawalProof.refund,
+        fee: withdrawalProof.fee,
         recipient: withdrawalProof.recipient,
         relayer: withdrawalProof.relayer,
       });

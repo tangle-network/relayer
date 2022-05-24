@@ -23,19 +23,23 @@ import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
-import { LocalChain } from '../lib/localTestnet.js';
-import { sleep } from '../lib/sleep.js';
-import { timeout } from '../lib/timeout.js';
-import { Pallet, WebbRelayer } from '../lib/webbRelayer.js';
+import { LocalChain } from '../../lib/localTestnet.js';
+import { sleep } from '../../lib/sleep.js';
+import { timeout } from '../../lib/timeout.js';
+import {
+  Pallet,
+  WebbRelayer,
+  EnabledContracts,
+} from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { LocalDkg } from '../lib/localDkg.js';
+import { LocalDkg } from '../../lib/localDkg.js';
 import isCi from 'is-ci';
 import path from 'path';
-import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
+import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
 import {
   defaultEventsWatcherValue,
   UsageMode,
-} from '../lib/substrateNodeBase.js';
+} from '../../lib/substrateNodeBase.js';
 import { u8aToHex } from '@webb-tools/sdk-core';
 
 // to support chai-as-promised
@@ -61,7 +65,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
-      ? { mode: 'docker', forcePullImage: false }
+      ? { mode: 'host', nodePath: 'dkg-standalone-node' }
       : {
           mode: 'host',
           nodePath: path.resolve(
@@ -118,7 +122,11 @@ describe.skip('SignatureBridge Governor Updates', function () {
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-
+    const enabledContracts: EnabledContracts[] = [
+      {
+        contract: 'Anchor',
+      },
+    ];
     localChain1 = new LocalChain({
       port: localChain1Port,
       chainId: 5001,
@@ -129,6 +137,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
+      enabledContracts: enabledContracts,
     });
 
     const localChain2Port = await getPort({
@@ -145,6 +154,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
+      enabledContracts: enabledContracts,
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());

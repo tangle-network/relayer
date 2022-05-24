@@ -259,6 +259,7 @@ pub struct LinkedAnchorConfig {
 #[serde(tag = "contract")]
 pub enum Contract {
     Anchor(AnchorContractConfig),
+    VAnchor(VAnchorContractConfig),
     SignatureBridge(SignatureBridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
@@ -308,15 +309,36 @@ pub struct AnchorContractConfig {
     /// Anchor withdraw configuration.
     #[serde(flatten)]
     pub withdraw_config: AnchorWithdrawConfig,
-    /// The type of the signing backend used for signing proposals.
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
-    pub proposal_signing_backend: ProposalSigningBackendConfig,
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
     pub linked_anchors: Vec<LinkedAnchorConfig>,
 }
 
-/// GovernanceBravoDelegateContractConfig represents the configuration for the GovernanceBravoDelegate contract.
+/// VAnchorContractConfig represents the configuration for the VAnchor contract.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct VAnchorContractConfig {
+    #[serde(flatten)]
+    pub common: CommonContractConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+    /// The size of this contract
+    pub size: f64,
+    /// Anchor withdraw configuration.
+    #[serde(flatten)]
+    pub withdraw_config: AnchorWithdrawConfig,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+    /// A List of linked Anchor Contracts (on other chains) to this contract.
+    #[serde(rename(serialize = "linkedAnchors"), default)]
+    pub linked_anchors: Vec<LinkedAnchorConfig>,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SignatureBridgeContractConfig {
@@ -327,6 +349,7 @@ pub struct SignatureBridgeContractConfig {
     pub events_watcher: EventsWatcherConfig,
 }
 
+/// GovernanceBravoDelegateContractConfig represents the configuration for the GovernanceBravoDelegate contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct GovernanceBravoDelegateContractConfig {

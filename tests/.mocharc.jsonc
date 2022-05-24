@@ -4,8 +4,8 @@
   "spec": ["**/*.test.*"],
   "exit": true,
   "ignore": ["node_modules/**"],
-  "slow": 60000,
-  "timeout": 150000,
+  "slow": 90000,
+  "timeout": 120000,
   "retries": 0,
   // jobs (how many tests run in parallel)
   // for now it is 1, since running many nodes at the same time causes
