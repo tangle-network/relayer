@@ -54,7 +54,9 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
   let webbRelayer: WebbRelayer;
 
-  before(async () => {
+  before(async function () {
+    // skip this test if we are locally running, only run on the CI
+    if (!isCi) this.skip();
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
