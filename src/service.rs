@@ -250,23 +250,89 @@ fn start_substrate_anchor_leaves_watcher(
         node_name,
     );
     let node_name2 = node_name.clone();
+    let my_ctx = ctx.clone();
+    let my_config = config.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
     let task = async move {
-        let leaves_watcher = SubstrateAnchorLeavesWatcher::default();
-        let watcher = leaves_watcher.run(node_name, chain_id, client, store);
-        tokio::select! {
-            _ = watcher => {
-                tracing::warn!(
-                    "Substrate leaves watcher stopped for ({})",
-                    node_name2,
+        let watcher = SubstrateAnchorLeavesWatcher::default();
+        let substrate_leaves_watcher_task = watcher.run(
+            node_name.clone(),
+            chain_id,
+            client.clone(),
+            store.clone(),
+        );
+        let proposal_signing_backend = make_substrate_proposal_signing_backend(
+            &my_ctx,
+            store.clone(),
+            &my_config.linked_anchors,
+            my_config.proposal_signing_backend,
+        )
+        .await
+        .unwrap();
+        match proposal_signing_backend {
+            ProposalSigningBackendSelector::Dkg(backend) => {
+                let watcher = SubstrateAnchorWatcher::new(backend);
+                let substrate_anchor_watcher_task = watcher.run(
+                    node_name.clone(),
+                    chain_id,
+                    client.clone(),
+                    store.clone(),
                 );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping substrate leaves watcher for ({})",
-                    node_name2,
+                tokio::select! {
+                    _ = substrate_anchor_watcher_task => {
+                        tracing::warn!(
+                            "Substrate Anchor watcher (DKG Backend) task stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = substrate_leaves_watcher_task => {
+                        tracing::warn!(
+                            "Substrate Anchor leaves watcher stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Substrate Anchor watcher (DKG Backend) for ({})",
+                            node_name,
+                        );
+                    },
+                }
+            }
+            ProposalSigningBackendSelector::Mocked(backend) => {
+                let watcher = SubstrateAnchorWatcher::new(backend);
+                let substrate_anchor_watcher_task = watcher.run(
+                    node_name.clone(),
+                    chain_id,
+                    client.clone(),
+                    store.clone(),
                 );
-            },
+                tokio::select! {
+                    _ = substrate_anchor_watcher_task => {
+                        tracing::warn!(
+                            "Substrate Anchor watcher (Mocked Backend) task stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = substrate_leaves_watcher_task => {
+                        tracing::warn!(
+                            "Substrate Anchor leaves watcher stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Substrate Anchor watcher (Mocked Backend) for ({})",
+                            node_name,
+                        );
+                    },
+                }
+            }
+            ProposalSigningBackendSelector::None => {
+                tracing::debug!(
+                    "No backend configured for proposal signing..!"
+                );
+            }
         }
     };
     // kick off the watcher.
@@ -773,6 +839,54 @@ async fn make_proposal_signing_backend(
                 .store(store.clone())
                 .private_key(mocked.private_key)
                 .signature_bridges(signature_bridges)
+                .build();
+            Ok(ProposalSigningBackendSelector::Mocked(backend))
+        }
+        None => Ok(ProposalSigningBackendSelector::None),
+    }
+}
+
+async fn make_substrate_proposal_signing_backend(
+    ctx: &RelayerContext,
+    store: Arc<Store>,
+    linked_anchors: &[SubstrateLinkedAnchorConfig],
+    proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+) -> anyhow::Result<ProposalSigningBackendSelector> {
+    // we need to check/match on the proposal signing backend configured for this anchor.
+    match proposal_signing_backend {
+        Some(ProposalSigningBackendConfig::DkgNode(c)) => {
+            // if it is the dkg backend, we will need to connect to that node first,
+            // and then use the DkgProposalSigningBackend to sign the proposal.
+            let dkg_client = ctx
+                .substrate_provider::<subxt::DefaultConfig>(&c.node)
+                .await?;
+            let pair = ctx.substrate_wallet(&c.node).await?;
+            let backend = DkgProposalSigningBackend::new(
+                dkg_client,
+                PairSigner::new(pair),
+            );
+            Ok(ProposalSigningBackendSelector::Dkg(backend))
+        }
+        Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
+            // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
+            // which is a bit simpler than the DkgProposalSigningBackend.
+            // get only the linked chains to that anchor.
+            let chain_id = 1080;
+            let linked_chains = linked_anchors
+                .iter()
+                .flat_map(|link| {
+                    let chain_id =
+                        webb_proposals::TypedChainId::Substrate(chain_id as u32);
+                    let target_system =
+                        webb_proposals::TargetSystem::new_tree_id(link.tree);
+                    Some((chain_id, target_system))
+                })
+                .collect::<HashMap<_, _>>();
+
+            let backend = MockedProposalSigningBackend::builder()
+                .store(store.clone())
+                .private_key(mocked.private_key)
+                .signature_bridges(linked_chains)
                 .build();
             Ok(ProposalSigningBackendSelector::Mocked(backend))
         }

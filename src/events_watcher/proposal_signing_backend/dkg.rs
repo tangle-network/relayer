@@ -156,7 +156,7 @@ impl super::ProposalSigningBackend<substrate::AnchorUpdateProposal>
         &self,
         proposal: &substrate::AnchorUpdateProposal,
     ) -> anyhow::Result<bool> {
-        let resource_id = proposal.resource_id();
+        let resource_id = proposal.header().resource_id();
         let storage_api = self.api.storage().dkg_proposals();
         let src_chain_id =
             webb_proposals_typed_chain_converter(proposal.src_chain());
@@ -188,7 +188,7 @@ impl super::ProposalSigningBackend<substrate::AnchorUpdateProposal>
         let tx_api = self.api.tx().dkg_proposals();
 
         let leaf_index = proposal.latest_leaf_index();
-        let resource_id = proposal.resource_id();
+        let resource_id = proposal.header().resource_id();
         let src_chain_id =
             webb_proposals_typed_chain_converter(proposal.src_chain());
         tracing::debug!(
@@ -202,7 +202,7 @@ impl super::ProposalSigningBackend<substrate::AnchorUpdateProposal>
             Nonce(leaf_index),
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
-            proposal.to_bytes(),
+            proposal.to_bytes().into(),
         );
         // TODO: here we should have a substrate based tx queue in the background
         // where just send the raw xt bytes and let it handle the work for us.

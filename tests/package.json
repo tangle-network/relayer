@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint . --ext .ts",
-    "test": "NODE_OPTIONS=--openssl-legacy-provider mocha",
+    "test": "mocha",
     "format": "prettier -w **/*.ts"
   },
   "engines": {

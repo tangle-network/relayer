@@ -493,6 +493,11 @@ export interface LinkedAnchor {
   address: string;
 }
 
+export interface SubstrateLinkedAnchor {
+  node: string;
+  tree: number;
+}
+
 export interface Substrate {
   [key: string]: NodeInfo;
 }
@@ -506,6 +511,8 @@ export interface NodeInfo {
 export interface Pallet {
   pallet: PalletKind;
   eventsWatcher: EventsWatcher;
+  proposalSigningBackend?: ProposalSigningBackend;
+  linkedAnchors?: SubstrateLinkedAnchor[];
 }
 
 export interface EnabledContracts {

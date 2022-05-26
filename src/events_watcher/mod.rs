@@ -28,6 +28,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::context::RelayerContext;
 use ethereum_types::{U256, U64};
 use futures::prelude::*;
 
@@ -51,7 +52,7 @@ use webb::{
 use crate::store::sled::SledQueueKey;
 use crate::store::{
     BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
-    QueueStore, SubstrateBridgeCommand,
+    QueueStore,
 };
 use crate::utils;
 
@@ -563,14 +564,16 @@ pub trait SubstrateBridgeWatcher: SubstrateEventWatcher
 where
     Self::Store: ProposalStore<Proposal = ()>
         + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
-        + QueueStore<SubstrateBridgeCommand, Key = SledQueueKey>,
+        + QueueStore<BridgeCommand, Key = SledQueueKey>,
 {
     async fn handle_cmd(
         &self,
         node_name: String,
+        chain_id: U256,
         store: Arc<Self::Store>,
-        client: subxt::Client<Self::RuntimeConfig>,
-        cmd: SubstrateBridgeCommand,
+        ctx: &RelayerContext,
+        client: Arc<Self::Api>,
+        cmd: BridgeCommand,
     ) -> anyhow::Result<()>;
 
     /// Returns a task that should be running in the background
@@ -588,6 +591,7 @@ where
         node_name: String,
         chain_id: U256,
         client: subxt::Client<Self::RuntimeConfig>,
+        ctx: &RelayerContext,
         store: Arc<Self::Store>,
     ) -> anyhow::Result<()> {
         let backoff = backoff::ExponentialBackoff {
@@ -596,6 +600,8 @@ where
         };
 
         let task = || async {
+            let client_api = client.clone();
+            let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
             // chain_id is used as tree_id, to ensure that we have one signature bridge
             let target_system =
                 webb_proposals::TargetSystem::new_tree_id(chain_id.as_u32());
@@ -607,8 +613,10 @@ where
                 let result = self
                     .handle_cmd(
                         node_name.clone(),
+                        chain_id.clone(),
                         store.clone(),
-                        client.clone(),
+                        &ctx,
+                        api.clone(),
                         command,
                     )
                     .await;
