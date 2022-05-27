@@ -15,34 +15,24 @@
  *
  */
 // This our basic Substrate Anchor Transaction Relayer Tests.
-// These are for testing the basic relayer functionality. which is just to relay transactions for us.
+// These are for testing mocked proposal signing backend for substrate
 
 import '@webb-tools/types';
-import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
-import fs from 'fs';
 import isCi from 'is-ci';
-import child from 'child_process';
 import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
-import { LocalDkg } from '../../lib/localDkg.js';
 import {
   UsageMode,
   defaultEventsWatcherValue,
 } from '../../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
-import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import { decodeAddress } from '@polkadot/util-crypto';
-import { ethers } from 'ethers';
-import { ethAddressFromString } from '../utils/ethAddressFromString.js';
 import {
   Note,
   NoteGenInput,
-  ProvingManagerSetupInput,
-  ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Signing Backend', function () {
@@ -50,7 +40,11 @@ describe('Substrate Signing Backend', function () {
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
 
-  const PK1 = u8aToHex(ethers.utils.randomBytes(32));
+  // Governer key
+  const PK1 = "0x9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60";
+  const uncompressedKey = "0xed7000a10ba086a64a5af64555d09c7d375c4f29e575fa3da290ac2e6e7a227ae649b1a057dc0e85e290d0d061732d7f64d533a2ffe8f712069a5664e00efe53";
+
+
   let webbRelayer: WebbRelayer;
 
   before(async () => {
@@ -62,9 +56,15 @@ describe('Substrate Signing Backend', function () {
             '../../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
+    
+    // enable pallets
     const enabledPallets: Pallet[] = [
       {
         pallet: 'AnchorBn254',
+        eventsWatcher: defaultEventsWatcherValue,
+      },
+      {
+        pallet: 'SignatureBridge',
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
@@ -75,6 +75,7 @@ describe('Substrate Signing Backend', function () {
       usageMode,
       ports: 'auto',
       enabledPallets,
+      enableLogging: true
     });
 
     bobNode = await LocalProtocolSubstrate.start({
@@ -84,25 +85,29 @@ describe('Substrate Signing Backend', function () {
       ports: 'auto',
     });
 
-
+    // set proposal signing backend and linked anchors
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`,
       {
           suri: '//Charlie',
           proposalSigningBackend: { type: 'Mocked', privateKey: PK1},
           linkedAnchors: [
               {
-                  node: aliceNode.name,
+                  chain: 1080,
                   tree: 5
               }
           ]
     });
-    
+
 
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
-    
-   
+
+
+    //force set maintainer
+    let setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(uncompressedKey);
+    // send the deposit transaction.
+    await aliceNode.sudoExecuteTransaction(setMaintainerCall);
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
@@ -115,62 +120,28 @@ describe('Substrate Signing Backend', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('Simple Anchor Transaction', async () => {
+  it('Simple Anchor Deposit', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
-    // add edge
-    let root:Number[] = Array(32).fill(0);
     const note = await makeDeposit(api, aliceNode, account);
-    const withdrawalProof = await initWithdrawal(
-      api,
-      webbRelayer,
-      account,
-      note
-    );
 
-    // get the initial balance
-    // @ts-ignore
-    let { nonce, data: balance } = await api.query.system.account(
-      withdrawalProof.recipient
-    );
-    let initialBalance = balance.free.toBigInt();
-    console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
-
-    const roots = [
-      Array.from(withdrawalProof.treeRoot),
-      Array.from(withdrawalProof.neighborRoot),
-    ];
-
-    // now we need to submit the withdrawal transaction.
-    const txHash = await webbRelayer.substrateAnchorWithdraw({
-      chain: aliceNode.name,
-      id: withdrawalProof.id,
-      proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
-      roots: roots,
-      nullifierHash: Array.from(hexToU8a(withdrawalProof.nullifierHash)),
-      refund: withdrawalProof.refund,
-      fee: withdrawalProof.fee,
-      recipient: withdrawalProof.recipient,
-      relayer: withdrawalProof.relayer,
-      refreshCommitment: Array.from(
-        hexToU8a(withdrawalProof.refreshCommitment)
-      ),
-      extDataHash: Array.from(
-        hexToU8a(
-          '0x0000000000000000000000000000000000000000000000000000000000000000'
-        )
-      ),
+    // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
+    await webbRelayer.waitForEvent({
+      kind: 'signing_backend',
+      event: {
+        backend: 'Mocked'
+      }
     });
 
-    expect(txHash).to.be.not.null;
+    // now we wait for the proposals to verified and executed by signature bridge
 
-    // get the balance after withdrawal is done and see if it increases
-    // @ts-ignore
-    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
-      .account!(withdrawalProof.recipient);
-    let balanceAfterWithdraw = balanceAfter.free.toBigInt();
-    console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
-    expect(balanceAfterWithdraw > initialBalance);
+    await webbRelayer.waitForEvent({
+      kind: 'signature_bridge',
+      event: {
+        call: 'execute_proposal_with_signature'
+      }
+    });
+
   });
 
   after(async () => {
@@ -213,130 +184,6 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
   return { tx, note };
 }
 
-type WithdrawalOpts = {
-  relayer: string;
-  recipient: string;
-  fee?: number;
-  refund?: number;
-};
-
-type WithdrawalProof = {
-  id: number;
-  proofBytes: string;
-  nullifierHash: string;
-  recipient: string;
-  relayer: string;
-  fee: number;
-  refund: number;
-  refreshCommitment: string;
-  treeRoot: Uint8Array;
-  neighborRoot: Uint8Array;
-};
-
-async function createAnchorWithdrawProof(
-  api: ApiPromise,
-  note: Note,
-  opts: WithdrawalOpts
-): Promise<WithdrawalProof> {
-  try {
-    const recipientAddressHex = u8aToHex(decodeAddress(opts.recipient)).replace(
-      '0x',
-      ''
-    );
-    const relayerAddressHex = u8aToHex(decodeAddress(opts.relayer)).replace(
-      '0x',
-      ''
-    );
-    //@ts-ignore
-    const treeIds = await api.query.anchorBn254.anchors?.keys();
-    //@ts-ignore
-    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
-    //@ts-ignore
-    const treeId = sorted[0] || 5;
-    //@ts-ignore
-    const getLeaves = api.rpc.mt.getLeaves;
-    const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);
-
-    //@ts-ignore
-    const getNeighborRoots = api.rpc.lt.getNeighborRoots;
-    let neighborRoots = await getNeighborRoots(treeId);
-
-    let neighborRootsU8: Uint8Array[] = new Array(neighborRoots.length);
-    for (let i = 0; i < neighborRootsU8.length; i++) {
-      // @ts-ignore
-      neighborRootsU8[i] = hexToU8a(neighborRoots[0].toString());
-    }
-
-    // Get tree root on chain
-    // @ts-ignore
-    const treeRoot = await api.query.merkleTreeBn254.trees(treeId);
-
-    const pm = new ProvingManagerWrapper('direct-call');
-    const leafHex = u8aToHex(note.getLeaf());
-
-    const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
-    expect(leafIndex).to.be.greaterThan(-1);
-    const gitRoot = child
-      .execSync('git rev-parse --show-toplevel')
-      .toString()
-      .trim();
-
-    // make a root set from the tree root
-    // @ts-ignore
-    const rootValue = treeRoot.toHuman() as { root: string };
-
-    const treeRootArray = [hexToU8a(rootValue.root), ...neighborRootsU8];
-
-    const provingKeyPath = path.join(
-      gitRoot,
-      'tests',
-      'protocol-substrate-fixtures',
-      'fixed-anchor',
-      'bn254',
-      'x5',
-      '2',
-      'proving_key_uncompressed.bin'
-    );
-    const provingKey = fs.readFileSync(provingKeyPath);
-
-    // @ts-ignore
-    const proofInput: ProvingManagerSetupInput = {
-      note: note.serialize(),
-      relayer: relayerAddressHex,
-      recipient: recipientAddressHex,
-      leaves: treeLeaves,
-      leafIndex,
-      fee: opts.fee === undefined ? 0 : opts.fee,
-      refund: opts.refund === undefined ? 0 : opts.refund,
-      provingKey,
-      roots: treeRootArray,
-      refreshCommitment:
-        '0000000000000000000000000000000000000000000000000000000000000000',
-    };
-
-    const zkProof = await pm.proof(proofInput);
-    return {
-      id: treeId,
-      proofBytes: `0x${zkProof.proof}`,
-      nullifierHash: `0x${zkProof.nullifierHash}`,
-      recipient: opts.recipient,
-      relayer: opts.relayer,
-      fee: opts.fee === undefined ? 0 : opts.fee,
-      refund: opts.refund === undefined ? 0 : opts.refund,
-      refreshCommitment:
-        '0x0000000000000000000000000000000000000000000000000000000000000000',
-      treeRoot: hexToU8a(rootValue.root),
-      neighborRoot: neighborRoots[0]!,
-    };
-  } catch (error) {
-    //@ts-ignore
-    console.error(error.error_message);
-    //@ts-ignore
-    console.error(error.code);
-    throw error;
-  }
-}
-
 function createAccount(accountId: string): any {
   const keyring = new Keyring({ type: 'sr25519' });
   const account = keyring.addFromUri(accountId);
@@ -359,20 +206,4 @@ async function makeDeposit(
   return note;
 }
 
-async function initWithdrawal(
-  api: any,
-  webbRelayer: any,
-  account: any,
-  note: Note
-): Promise<WithdrawalProof> {
-  // next we need to prepare the withdrawal transaction.
-  // create correct proof with right address
-  const withdrawalProof = await createAnchorWithdrawProof(api, note, {
-    recipient: account.address,
-    relayer: account.address,
-  });
-  // ping the relayer!
-  await webbRelayer.ping();
 
-  return withdrawalProof;
-}

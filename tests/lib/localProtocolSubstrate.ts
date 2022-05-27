@@ -95,7 +95,6 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
       pallets: enabledPallets,
       suri: opts.suri,
     };
-    console.log("node info ", nodeInfo);
     return nodeInfo;
   }
 }

@@ -954,13 +954,15 @@ async fn make_substrate_proposal_signing_backend(
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
             // which is a bit simpler than the DkgProposalSigningBackend.
             // get only the linked chains to that anchor.
+
+            
             let linked_chains = linked_anchors
                 .iter()
                 .flat_map(|anchor| {
                     let chain_id =
                         webb_proposals::TypedChainId::Substrate(anchor.chain);
                     let target_system =
-                        webb_proposals::TargetSystem::new_tree_id(anchor.tree);
+                        webb_proposals::TargetSystem::new_tree_id(anchor.chain);
                     Some((chain_id, target_system))
                 })
                 .collect::<HashMap<_, _>>();

@@ -440,7 +440,9 @@ type EventKind =
   | 'signing_backend'
   | 'signature_bridge'
   | 'tx_queue'
-  | 'leaves_store';
+  | 'leaves_store'
+  | 'signing_backend'
+  | 'signature_bridge';
 
 type EventTarget = 'webb_probe';
 

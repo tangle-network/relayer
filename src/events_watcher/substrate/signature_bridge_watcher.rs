@@ -232,8 +232,15 @@ where
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> anyhow::Result<()> {
         let new_maintainer = public_key.clone();
+        // get current maintainer
         let current_maintainer =
             api.storage().signature_bridge().maintainer(None).await?;
+
+        // we need to do some checks here:
+        // 1. convert the public key to address and check it is not the same as the current governor.
+        // 2. check if the nonce is greater than the current nonce.
+        // 3. ~check if the signature is valid.~
+        
         if new_maintainer == current_maintainer {
             tracing::warn!(
                 current_mainatiner =  %hex::encode(&current_maintainer),

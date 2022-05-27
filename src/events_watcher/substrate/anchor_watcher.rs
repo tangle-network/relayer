@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 use super::BlockNumberOf;
+use crate::store::EventHashStore;
 use crate::config::SubstrateLinkedAnchorConfig;
 use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
@@ -22,7 +23,7 @@ use webb::substrate::scale::Encode;
 use webb::substrate::{protocol_substrate_runtime, subxt};
 use webb_proposals::substrate::AnchorUpdateProposal;
 
-/// Represents an Anchor Contract Watcher which will use a configured signing backend for signing proposals.
+/// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
 pub struct SubstrateAnchorWatcher<'a, B> {
     proposal_signing_backend: B,
     linked_anchors: &'a [SubstrateLinkedAnchorConfig],
@@ -78,7 +79,7 @@ where
             .system()
             .block_hash(block_number, None)
             .await?;
-
+        // fetch tree
         let tree = api
             .storage()
             .merkle_tree_bn254()
@@ -99,7 +100,7 @@ where
         let target_system = webb_proposals::TargetSystem::new_tree_id(tree_id);
         let mut merkle_root = [0; 32];
         merkle_root.copy_from_slice(&root.encode());
-
+        // update linked anchors
         for anchor in self.linked_anchors {
             let anchor_chain_id =
                 webb_proposals::TypedChainId::Substrate(anchor.chain);
@@ -138,8 +139,9 @@ where
                 );
             }
         }
-        // let events_bytes = serde_json::to_vec(&event)?;
-        // store.store_event(&events_bytes)?;
+        // mark this event as processed.
+        let events_bytes = &event.encode();
+        store.store_event(&events_bytes)?;
         Ok(())
     }
 }
