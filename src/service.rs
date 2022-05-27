@@ -178,6 +178,9 @@ pub async fn ignite(
                         Pallet::AnchorBn254(_) => {
                             unreachable!()
                         }
+                        Pallet::SignatureBridge(_) => {
+                            unreachable!()
+                        }
                     }
                 }
             }
@@ -201,6 +204,17 @@ pub async fn ignite(
                                 chain_id,
                                 store.clone(),
                             )?;
+                        }
+                        Pallet::SignatureBridge(config) => {
+                            start_substrate_signature_bridge_events_watcher(
+                                ctx.clone(),
+                                config,
+                                client.clone(),
+                                node_name.clone(),
+                                chain_id,
+                                store.clone(),
+                            )
+                            .await?;
                         }
                         Pallet::DKGProposals(_) => {
                             unreachable!()
@@ -249,7 +263,6 @@ fn start_substrate_anchor_leaves_watcher(
         "Substrate Anchor events watcher for ({}) Started.",
         node_name,
     );
-    let node_name2 = node_name.clone();
     let my_ctx = ctx.clone();
     let my_config = config.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
@@ -264,14 +277,17 @@ fn start_substrate_anchor_leaves_watcher(
         let proposal_signing_backend = make_substrate_proposal_signing_backend(
             &my_ctx,
             store.clone(),
-            &my_config.linked_anchors,
+            &my_config.linked_anchors[..],
             my_config.proposal_signing_backend,
         )
         .await
         .unwrap();
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
-                let watcher = SubstrateAnchorWatcher::new(backend);
+                let watcher = SubstrateAnchorWatcher::new(
+                    backend,
+                    &my_config.linked_anchors,
+                );
                 let substrate_anchor_watcher_task = watcher.run(
                     node_name.clone(),
                     chain_id,
@@ -300,7 +316,10 @@ fn start_substrate_anchor_leaves_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
-                let watcher = SubstrateAnchorWatcher::new(backend);
+                let watcher = SubstrateAnchorWatcher::new(
+                    backend,
+                    &my_config.linked_anchors[..],
+                );
                 let substrate_anchor_watcher_task = watcher.run(
                     node_name.clone(),
                     chain_id,
@@ -732,6 +751,70 @@ async fn start_signature_bridge_events_watcher(
     Ok(())
 }
 
+/// Starts the event watcher for Signature Bridge Pallet.
+async fn start_substrate_signature_bridge_events_watcher(
+    ctx: RelayerContext,
+    config: &SignatureBridgePalletConfig,
+    client: WebbProtocolClient,
+    node_name: String,
+    chain_id: U256,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "Substrate Signature Bridge events watcher is disabled for ({}).",
+            node_name,
+        );
+        return Ok(());
+    }
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let task = async move {
+        tracing::debug!(
+            "Substrate Signature Bridge watcher for ({}) Started.",
+            node_name
+        );
+        let substrate_bridge_watcher = SubstrateBridgeEventWatcher::default();
+        let events_watcher_task = SubstrateEventWatcher::run(
+            &substrate_bridge_watcher,
+            node_name.clone(),
+            chain_id,
+            client.clone(),
+            store.clone(),
+        );
+        let cmd_handler_task = SubstrateBridgeWatcher::run(
+            &substrate_bridge_watcher,
+            node_name.clone(),
+            chain_id,
+            client.clone(),
+            ctx.clone(),
+            store.clone(),
+        );
+        tokio::select! {
+            _ = events_watcher_task => {
+                tracing::warn!(
+                    "Substrate signature bridge events watcher task stopped for ({})",
+                    node_name
+                );
+            },
+            _ = cmd_handler_task => {
+                tracing::warn!(
+                    "Substrate signature bridge cmd handler task stopped for ({})",
+                    node_name
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping Substrate Signature Bridge watcher for ({})",
+                    node_name,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
+    Ok(())
+}
+
 /// Starts the transaction queue task
 ///
 /// Returns Ok(()) if successful, or an error if not.
@@ -871,14 +954,13 @@ async fn make_substrate_proposal_signing_backend(
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
             // which is a bit simpler than the DkgProposalSigningBackend.
             // get only the linked chains to that anchor.
-            let chain_id = 1080;
             let linked_chains = linked_anchors
                 .iter()
-                .flat_map(|link| {
+                .flat_map(|anchor| {
                     let chain_id =
-                        webb_proposals::TypedChainId::Substrate(chain_id as u32);
+                        webb_proposals::TypedChainId::Substrate(anchor.chain);
                     let target_system =
-                        webb_proposals::TargetSystem::new_tree_id(link.tree);
+                        webb_proposals::TargetSystem::new_tree_id(anchor.tree);
                     Some((chain_id, target_system))
                 })
                 .collect::<HashMap<_, _>>();

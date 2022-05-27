@@ -494,7 +494,7 @@ export interface LinkedAnchor {
 }
 
 export interface SubstrateLinkedAnchor {
-  node: string;
+  chain: number;
   tree: number;
 }
 
@@ -525,7 +525,7 @@ type ContractKind =
   | 'GovernanceBravoDelegate'
   | 'VAnchor';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
-type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler' | 'AnchorBn254';
+type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler' | 'AnchorBn254' | 'SignatureBridge';
 
 export type DKGProposalSigningBackend = {
   type: 'DKGNode';

@@ -12,37 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use std::ops;
+
 use std::sync::Arc;
-use std::time::Duration;
 use crate::context::RelayerContext;
-use webb::evm::contract::protocol_solidity::{
-    SignatureBridgeContract, SignatureBridgeContractEvents,
-};
+use webb::substrate::subxt::sp_core::ecdsa::Signature;
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standalone_runtime::Call;
-use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
-use webb::evm::ethers::prelude::*;
-use webb::evm::ethers::providers;
-use webb::evm::ethers::types;
-use webb::evm::ethers::utils;
-use ethereum_types::{U256, U64};
-use crate::config;
-use crate::events_watcher::{BridgeWatcher, EventWatcher};
-use crate::store::sled::{SledQueueKey, SledStore};
-use crate::store::{BridgeCommand, QueueStore};
-use webb::substrate::{protocol_substrate_runtime, subxt::{self, DefaultConfig, PairSigner}};
-type HttpProvider = providers::Provider<providers::Http>;
 use super::{BlockNumberOf, SubstrateEventWatcher};
 use crate::events_watcher::SubstrateBridgeWatcher;
-use crate::store::LeafCacheStore;
-use webb::substrate::protocol_substrate_runtime::api::anchor_bn254;
+use crate::store::sled::SledStore;
+use crate::store::BridgeCommand;
+use ethereum_types::U256;
+use futures::StreamExt;
+use webb::substrate::{
+    protocol_substrate_runtime,
+    subxt::{self, PairSigner},
+};
+use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
 
 /// A SignatureBridge contract events & commands watcher.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct SignatureBridgePalletWatcher;
+pub struct SubstrateBridgeEventWatcher;
 
 #[async_trait::async_trait]
-impl SubstrateEventWatcher for SignatureBridgePalletWatcher {
+impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
     const TAG: &'static str = "Substrate bridge pallet Watcher";
 
     type RuntimeConfig = subxt::DefaultConfig;
@@ -52,7 +44,7 @@ impl SubstrateEventWatcher for SignatureBridgePalletWatcher {
         subxt::DefaultExtra<Self::RuntimeConfig>,
     >;
 
-    type Event = anchor_bn254::events::Deposit;
+    type Event = signature_bridge::events::MaintainerSet;
 
     type Store = SledStore;
 
@@ -62,53 +54,32 @@ impl SubstrateEventWatcher for SignatureBridgePalletWatcher {
         api: Arc<Self::Api>,
         (event, block_number): (Self::Event, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
-        // fetch chain_id
-        let chain_id =
-            api.constants().linkable_tree_bn254().chain_identifier()?;
-        // fetch leaf_index from merkle tree at given block_number
-        let at_hash = api
-            .storage()
-            .system()
-            .block_hash(block_number, None)
-            .await?;
-        let next_leaf_index = api
-            .storage()
-            .merkle_tree_bn254()
-            .next_leaf_index(event.tree_id, Some(at_hash))
-            .await?;
-        let leaf_index = next_leaf_index - 1;
-        let chain_id = types::U256::from(chain_id);
-        let tree_id = event.tree_id.to_string();
-        let leaf = event.leaf;
-        let value = (leaf_index, H256::from_slice(&leaf.0));
-        store.insert_leaves((chain_id, tree_id.clone()), &[value])?;
-        store.insert_last_deposit_block_number(
-            (chain_id, tree_id.clone()),
-            types::U64::from(block_number),
-        )?;
+        // if the ownership is transferred to the new owner, we need to
+        // to check our txqueue and remove any pending tx that was trying to
+        // do this transfer.
         tracing::event!(
             target: crate::probe::TARGET,
             tracing::Level::DEBUG,
-            kind = %crate::probe::Kind::LeavesStore,
-            chain_id = %chain_id,
-            leaf_index = %leaf_index,
-            leaf = %value.1,
-            tree_id = %tree_id,
-            block_number = %block_number
+            kind = %crate::probe::Kind::SignatureBridge,
+            call = "signature-bridge-maintainer-event",
+            msg = "Maintainer set",
+            new_maintainer = ?event.new_maintainer,
+            old_maintainer = ?event.old_maintainer,
         );
+
         Ok(())
     }
 }
 
 #[async_trait::async_trait]
-impl SubstrateBridgeWatcher for SignatureBridgePalletWatcher {
+impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
     #[tracing::instrument(skip_all)]
     async fn handle_cmd(
         &self,
         node_name: String,
         chain_id: U256,
         store: Arc<Self::Store>,
-        ctx: &RelayerContext,
+        ctx: RelayerContext,
         api: Arc<Self::Api>,
         cmd: BridgeCommand,
     ) -> anyhow::Result<()> {
@@ -121,7 +92,7 @@ impl SubstrateBridgeWatcher for SignatureBridgePalletWatcher {
                     node_name,
                     chain_id,
                     store,
-                    &ctx,
+                    ctx,
                     api.clone(),
                     (data, signature),
                 )
@@ -147,7 +118,7 @@ impl SubstrateBridgeWatcher for SignatureBridgePalletWatcher {
     }
 }
 
-impl SignatureBridgePalletWatcher
+impl SubstrateBridgeEventWatcher
 where
     Self: SubstrateBridgeWatcher,
 {
@@ -157,42 +128,29 @@ where
         node_name: String,
         chain_id: U256,
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
-        ctx: &RelayerContext,
+        ctx: RelayerContext,
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
         (data, signature): (Vec<u8>, Vec<u8>),
     ) -> anyhow::Result<()> {
-        // before doing anything, we need to do just two things:
-        // 1. check if we already have this transaction in the queue.
-        // 2. if not, check if the signature is valid.
-
-        let data_hash = utils::keccak256(&data);
-        let tx_key = SledQueueKey::from_evm_with_custom_key(
-            chain_id,
-            make_execute_proposal_key(data_hash),
-        );
-        let chain_id = chain_id.as_u32();
-
-        // check if we already have a queued tx for this proposal.
-        // if we do, we should not enqueue it again.
-        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
-        if qq {
-            tracing::debug!(
-                data_hash = ?hex::encode(data_hash),
-                "Skipping execution of the proposal since it is already in tx queue",
-            );
-            return Ok(());
-        }
-
-        // now we need to check if the signature is valid.
-        let (data_clone, signature_clone) = (data.clone(), signature.clone());
-
         let data_hex = hex::encode(&data);
         let signature_hex = hex::encode(&signature);
-
+        // parse proposal call
         let parsed_proposal_bytes = parse_call_from_proposal_data(&data);
         let proposal_encoded_call: Call =
             scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())
                 .unwrap();
+        // now we need to check if the signature is valid.
+        let is_signature_valid =
+            validate_ecdsa_signature(data.as_slice(), signature.as_slice());
+
+        if !is_signature_valid {
+            tracing::warn!(
+                data = ?data_hex,
+                signature = ?signature_hex,
+                "Skipping execution of this proposal since signature is invalid",
+            );
+            return Ok(());
+        }
 
         tracing::event!(
             target: crate::probe::TARGET,
@@ -202,11 +160,10 @@ where
             chain_id = %chain_id,
             data = ?data_hex,
             signature = ?signature_hex,
-            data_hash = ?hex::encode(data_hash),
         );
-        // I guess now we are ready to enqueue the transaction.
+        // todo! transaction queue
         let execute_proposal_tx = api.tx().signature_bridge().execute_proposal(
-            chain_id.into(),
+            chain_id.as_u64(),
             proposal_encoded_call,
             data,
             signature,
@@ -261,12 +218,6 @@ where
                 }
             }
         }
-        //todo!
-        // QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, execute_proposal_tx.tx)?;
-        // tracing::debug!(
-        //     data_hash = ?hex::encode(data_hash),
-        //     "Enqueued the proposal for execution in the tx queue",
-        // );
         Ok(())
     }
 
@@ -280,6 +231,102 @@ where
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> anyhow::Result<()> {
+        let new_maintainer = public_key.clone();
+        let current_maintainer =
+            api.storage().signature_bridge().maintainer(None).await?;
+        if new_maintainer == current_maintainer {
+            tracing::warn!(
+                current_mainatiner =  %hex::encode(&current_maintainer),
+                new_maintainer = %hex::encode(&new_maintainer),
+                %nonce,
+                signature = %hex::encode(&signature),
+                "Skipping transfer ownership since the new governor is the same as the current one",
+            );
+            return Ok(());
+        }
+        let current_nonce = api
+            .storage()
+            .signature_bridge()
+            .maintainer_nonce(None)
+            .await?;
+        if nonce <= current_nonce {
+            tracing::warn!(
+                %current_nonce,
+                new_maintainer = %hex::encode(&new_maintainer),
+                %nonce,
+                signature = %hex::encode(&signature),
+                "Skipping transfer ownership since the nonce is not greater than the current one",
+            );
+            return Ok(());
+        }
+
+        tracing::event!(
+            target: crate::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %crate::probe::Kind::SignatureBridge,
+            call = "transfer_ownership_with_signature_pub_key",
+            chain_id = %chain_id.as_u64(),
+            new_maintainer = %hex::encode(&new_maintainer),
+            %nonce,
+            signature = %hex::encode(&signature),
+        );
+
+        let set_maintainer_tx = api
+            .tx()
+            .signature_bridge()
+            .set_maintainer(new_maintainer, signature);
+
+        let pair = ctx.substrate_wallet(&node_name).await?;
+        let signer = PairSigner::new(pair);
+        let mut progress = set_maintainer_tx
+            .sign_and_submit_then_watch(&signer)
+            .await?;
+        while let Some(event) = progress.next().await {
+            let e = match event {
+                Ok(e) => e,
+                Err(err) => {
+                    tracing::error!(error = %err, "failed to watch for tx events");
+                    return Err(err.into());
+                }
+            };
+
+            match e {
+                subxt::TransactionStatus::Future => {}
+                subxt::TransactionStatus::Ready => {
+                    tracing::trace!("tx ready");
+                }
+                subxt::TransactionStatus::Broadcast(_) => {}
+                subxt::TransactionStatus::InBlock(_) => {
+                    tracing::trace!("tx in block");
+                }
+                subxt::TransactionStatus::Retracted(_) => {
+                    tracing::warn!("tx retracted");
+                }
+                subxt::TransactionStatus::FinalityTimeout(_) => {
+                    tracing::warn!("tx timeout");
+                }
+                subxt::TransactionStatus::Finalized(v) => {
+                    let maybe_success = v.wait_for_success().await;
+                    match maybe_success {
+                        Ok(events) => {
+                            tracing::debug!(?events, "tx finalized",);
+                        }
+                        Err(err) => {
+                            tracing::error!(error = %err, "tx failed");
+                            return Err(err.into());
+                        }
+                    }
+                }
+                subxt::TransactionStatus::Usurped(_) => {}
+                subxt::TransactionStatus::Dropped => {
+                    tracing::warn!("tx dropped");
+                }
+                subxt::TransactionStatus::Invalid => {
+                    tracing::warn!("tx invalid");
+                }
+            }
+        }
+
         Ok(())
     }
 }
@@ -295,4 +342,16 @@ fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
 pub fn parse_call_from_proposal_data(proposal_data: &Vec<u8>) -> Vec<u8> {
     // Not [36..] because there are 4 byte of zero padding to match Solidity side
     proposal_data[40..].to_vec()
+}
+
+pub fn validate_ecdsa_signature(data: &[u8], signature: &[u8]) -> bool {
+    const SIGNATURE_LENGTH: usize = 65;
+    if signature.len() == SIGNATURE_LENGTH {
+        let mut sig = [0u8; SIGNATURE_LENGTH];
+        sig[..SIGNATURE_LENGTH].copy_from_slice(&signature);
+        let signature: Signature = Signature::from_raw(sig);
+        return signature.recover(data).is_some();
+    } else {
+        return false;
+    }
 }

@@ -286,12 +286,6 @@ pub enum BridgeCommand {
     },
 }
 
-/// A Command sent to the SubstrateBridge to execute different actions.
-#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
-pub enum SubstrateBridgeCommand {
-    ExecuteProposalWithSignature { data: Vec<u8>, signature: Vec<u8> },
-}
-
 /// A trait for retrieving queue keys
 pub trait QueueKey {
     fn queue_name(&self) -> String;

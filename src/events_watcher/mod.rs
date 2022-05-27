@@ -571,7 +571,7 @@ where
         node_name: String,
         chain_id: U256,
         store: Arc<Self::Store>,
-        ctx: &RelayerContext,
+        ctx: RelayerContext,
         client: Arc<Self::Api>,
         cmd: BridgeCommand,
     ) -> anyhow::Result<()>;
@@ -591,7 +591,7 @@ where
         node_name: String,
         chain_id: U256,
         client: subxt::Client<Self::RuntimeConfig>,
-        ctx: &RelayerContext,
+        ctx: RelayerContext,
         store: Arc<Self::Store>,
     ) -> anyhow::Result<()> {
         let backoff = backoff::ExponentialBackoff {
@@ -615,7 +615,7 @@ where
                         node_name.clone(),
                         chain_id.clone(),
                         store.clone(),
-                        &ctx,
+                        ctx.clone(),
                         api.clone(),
                         command,
                     )

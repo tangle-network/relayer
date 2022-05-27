@@ -79,10 +79,13 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     let enabledPallets: Pallet[] = [];
     for( let p of this.opts.enabledPallets ?? [] ){
-      p.linkedAnchors = opts.linkedAnchors,
-      p.proposalSigningBackend = opts.proposalSigningBackend
-      console.log("This is P : {}", p);
-      enabledPallets.push(p)
+      if(p.pallet != 'SignatureBridge'){
+        p.linkedAnchors = opts.linkedAnchors,
+        p.proposalSigningBackend = opts.proposalSigningBackend
+        enabledPallets.push(p)
+      }else{
+        enabledPallets.push(p)
+      }
     }
     const nodeInfo: FullNodeInfo = {
       enabled: true,

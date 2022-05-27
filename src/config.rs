@@ -260,7 +260,7 @@ pub struct LinkedAnchorConfig {
 pub struct SubstrateLinkedAnchorConfig {
     /// The node name where this anchor belongs to.
     /// and it is case-insensitive.
-    pub node: String,
+    pub chain: u32,
     /// Tree Id of the anchor
     #[serde(rename(serialize = "tree"))]
     pub tree: u32,
@@ -285,6 +285,7 @@ pub enum Pallet {
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
     AnchorBn254(AnchorBn254PalletConfig),
+    SignatureBridge(SignatureBridgePalletConfig),
 }
 
 /// Enumerates the supported Substrate runtimes.
@@ -408,6 +409,15 @@ pub struct AnchorBn254PalletConfig {
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
     pub linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
+}
+
+/// SignatureBridgePalletConfig represents the configuration for the SignatureBridge pallet.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SignatureBridgePalletConfig {
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
 }
 
 /// Enumerates the supported different signing backends configurations.
