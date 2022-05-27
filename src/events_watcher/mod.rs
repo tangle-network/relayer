@@ -556,7 +556,7 @@ pub trait SubstrateEventWatcher {
     }
 }
 
-// A Bridge Watcher is a trait for Bridge contracts that not specific for watching events from that contract,
+// A Substrate Bridge Watcher is a trait for Signature Bridge Pallet that is not specific for watching events from that pallet,
 /// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers
 /// from the actual action that should be taken depending on the event.
 #[async_trait::async_trait]
