@@ -13,10 +13,10 @@
 // limitations under the License.
 //
 use super::BlockNumberOf;
-use crate::store::EventHashStore;
 use crate::config::SubstrateLinkedAnchorConfig;
 use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
+use crate::store::EventHashStore;
 use std::sync::Arc;
 use webb::substrate::protocol_substrate_runtime::api::anchor_bn254;
 use webb::substrate::scale::Encode;

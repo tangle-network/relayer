@@ -955,7 +955,6 @@ async fn make_substrate_proposal_signing_backend(
             // which is a bit simpler than the DkgProposalSigningBackend.
             // get only the linked chains to that anchor.
 
-            
             let linked_chains = linked_anchors
                 .iter()
                 .flat_map(|anchor| {

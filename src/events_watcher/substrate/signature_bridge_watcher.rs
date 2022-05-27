@@ -240,7 +240,7 @@ where
         // 1. convert the public key to address and check it is not the same as the current governor.
         // 2. check if the nonce is greater than the current nonce.
         // 3. ~check if the signature is valid.~
-        
+
         if new_maintainer == current_maintainer {
             tracing::warn!(
                 current_mainatiner =  %hex::encode(&current_maintainer),
