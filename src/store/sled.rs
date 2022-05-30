@@ -191,10 +191,6 @@ pub enum SledQueueKey {
         chain_id: types::U256,
         optional_key: Option<[u8; 64]>,
     },
-    SubstrateTx {
-        chain_id: types::U256,
-        optional_key: Option<[u8; 64]>,
-    },
     BridgeCmd {
         bridge_key: BridgeKey,
     },
@@ -206,25 +202,6 @@ impl SledQueueKey {
         Self::EvmTx {
             chain_id,
             optional_key: None,
-        }
-    }
-
-    /// Create a new SledQueueKey from an substrate chain id.
-    pub fn from_substrate_chain_id(chain_id: types::U256) -> Self {
-        Self::SubstrateTx {
-            chain_id,
-            optional_key: None,
-        }
-    }
-
-    /// from_evm_with_custom_key returns an EVM specific SledQueueKey.
-    pub fn from_substrate_with_custom_key(
-        chain_id: types::U256,
-        key: [u8; 64],
-    ) -> Self {
-        Self::SubstrateTx {
-            chain_id,
-            optional_key: Some(key),
         }
     }
 
@@ -257,15 +234,6 @@ impl fmt::Display for SledQueueKey {
                 chain_id,
                 optional_key.map(hex::encode)
             ),
-            Self::SubstrateTx {
-                chain_id,
-                optional_key,
-            } => write!(
-                f,
-                "SubstrateTx({}, {:?})",
-                chain_id,
-                optional_key.map(hex::encode)
-            ),
             Self::BridgeCmd { bridge_key } => {
                 write!(f, "BridgeCmd({})", bridge_key)
             }
@@ -277,9 +245,6 @@ impl QueueKey for SledQueueKey {
     fn queue_name(&self) -> String {
         match self {
             Self::EvmTx { chain_id, .. } => format!("evm_tx_{}", chain_id),
-            Self::SubstrateTx { chain_id, .. } => {
-                format!("substrate_tx_{}", chain_id)
-            }
             Self::BridgeCmd { bridge_key, .. } => format!(
                 "bridge_cmd_{}_{}",
                 bridge_key.chain_id.chain_id(),
@@ -291,7 +256,6 @@ impl QueueKey for SledQueueKey {
     fn item_key(&self) -> Option<[u8; 64]> {
         match self {
             Self::EvmTx { optional_key, .. } => *optional_key,
-            Self::SubstrateTx { optional_key, .. } => *optional_key,
             Self::BridgeCmd { .. } => None,
         }
     }

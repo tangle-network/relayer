@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use super::*;
 mod anchor_leaves_watcher;
 mod anchor_watcher;
 mod signature_bridge_watcher;

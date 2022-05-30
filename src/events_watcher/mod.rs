@@ -613,7 +613,7 @@ where
                 let result = self
                     .handle_cmd(
                         node_name.clone(),
-                        chain_id.clone(),
+                        chain_id,
                         store.clone(),
                         ctx.clone(),
                         api.clone(),

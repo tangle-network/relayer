@@ -202,7 +202,7 @@ impl super::ProposalSigningBackend<substrate::AnchorUpdateProposal>
             Nonce(leaf_index),
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
-            proposal.to_bytes().into(),
+            proposal.to_bytes(),
         );
         // TODO: here we should have a substrate based tx queue in the background
         // where just send the raw xt bytes and let it handle the work for us.

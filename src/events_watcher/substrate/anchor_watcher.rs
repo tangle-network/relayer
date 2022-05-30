@@ -69,7 +69,6 @@ where
         api: Arc<Self::Api>,
         (event, block_number): (Self::Event, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
-        tracing::debug!("Substrate Anchor deposit event",);
         // fetch chain_id
         let chain_id =
             api.constants().linkable_tree_bn254().chain_identifier()?;
@@ -141,7 +140,7 @@ where
         }
         // mark this event as processed.
         let events_bytes = &event.encode();
-        store.store_event(&events_bytes)?;
+        store.store_event(events_bytes)?;
         Ok(())
     }
 }

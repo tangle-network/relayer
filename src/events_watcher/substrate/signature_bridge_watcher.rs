@@ -15,7 +15,7 @@
 
 use std::sync::Arc;
 use crate::context::RelayerContext;
-use webb::substrate::subxt::sp_core::ecdsa::Signature;
+use webb::substrate::subxt::sp_core::hashing::keccak_256;
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standalone_runtime::Call;
 use super::{BlockNumberOf, SubstrateEventWatcher};
 use crate::events_watcher::SubstrateBridgeWatcher;
@@ -50,10 +50,11 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
 
     async fn handle_event(
         &self,
-        store: Arc<Self::Store>,
-        api: Arc<Self::Api>,
-        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        _store: Arc<Self::Store>,
+        _api: Arc<Self::Api>,
+        (event, _block_number): (Self::Event, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
+        // todo
         // if the ownership is transferred to the new owner, we need to
         // to check our txqueue and remove any pending tx that was trying to
         // do this transfer.
@@ -66,6 +67,10 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
             new_maintainer = ?event.new_maintainer,
             old_maintainer = ?event.old_maintainer,
         );
+
+        // mark this event as processed.
+        // let events_bytes = &event.encode();
+        // store.store_event(events_bytes)?;
 
         Ok(())
     }
@@ -85,7 +90,6 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
     ) -> anyhow::Result<()> {
         use BridgeCommand::*;
         tracing::trace!("Got cmd {:?}", cmd);
-        //    let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
         match cmd {
             ExecuteProposalWithSignature { data, signature } => {
                 self.execute_proposal_with_signature(
@@ -127,7 +131,7 @@ where
         &self,
         node_name: String,
         chain_id: U256,
-        store: Arc<<Self as SubstrateEventWatcher>::Store>,
+        _store: Arc<<Self as SubstrateEventWatcher>::Store>,
         ctx: RelayerContext,
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
         (data, signature): (Vec<u8>, Vec<u8>),
@@ -140,6 +144,7 @@ where
             scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())
                 .unwrap();
         // now we need to check if the signature is valid.
+
         let is_signature_valid =
             validate_ecdsa_signature(data.as_slice(), signature.as_slice());
 
@@ -218,6 +223,7 @@ where
                 }
             }
         }
+
         Ok(())
     }
 
@@ -226,7 +232,7 @@ where
         &self,
         node_name: String,
         chain_id: U256,
-        store: Arc<<Self as SubstrateEventWatcher>::Store>,
+        _store: Arc<<Self as SubstrateEventWatcher>::Store>,
         ctx: &RelayerContext,
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
@@ -338,15 +344,7 @@ where
     }
 }
 
-fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
-    let mut result = [0u8; 64];
-    let prefix = b"execute_proposal_with_signature_";
-    result[0..32].copy_from_slice(prefix);
-    result[32..64].copy_from_slice(&data_hash);
-    result
-}
-
-pub fn parse_call_from_proposal_data(proposal_data: &Vec<u8>) -> Vec<u8> {
+pub fn parse_call_from_proposal_data(proposal_data: &[u8]) -> Vec<u8> {
     // Not [36..] because there are 4 byte of zero padding to match Solidity side
     proposal_data[40..].to_vec()
 }
@@ -355,10 +353,32 @@ pub fn validate_ecdsa_signature(data: &[u8], signature: &[u8]) -> bool {
     const SIGNATURE_LENGTH: usize = 65;
     if signature.len() == SIGNATURE_LENGTH {
         let mut sig = [0u8; SIGNATURE_LENGTH];
-        sig[..SIGNATURE_LENGTH].copy_from_slice(&signature);
-        let signature: Signature = Signature::from_raw(sig);
-        return signature.recover(data).is_some();
+        sig[..SIGNATURE_LENGTH].copy_from_slice(signature);
+
+        let hash = keccak_256(data);
+
+        secp256k1_ecdsa_recover(&sig, &hash).is_ok()
     } else {
-        return false;
+        false
     }
+}
+
+fn secp256k1_ecdsa_recover(
+    sig: &[u8; 65],
+    msg: &[u8; 32],
+) -> Result<[u8; 64], libsecp256k1::Error> {
+    let rs = libsecp256k1::Signature::parse_standard_slice(&sig[0..64])
+        .map_err(|_| libsecp256k1::Error::InvalidSignature)?;
+    let v = libsecp256k1::RecoveryId::parse(if sig[64] > 26 {
+        sig[64] - 27
+    } else {
+        sig[64]
+    } as u8)
+    .map_err(|_| libsecp256k1::Error::InvalidSignature)?;
+    let pubkey =
+        libsecp256k1::recover(&libsecp256k1::Message::parse(msg), &rs, &v)
+            .map_err(|_| libsecp256k1::Error::InvalidSignature)?;
+    let mut res = [0u8; 64];
+    res.copy_from_slice(&pubkey.serialize()[1..65]);
+    Ok(res)
 }
