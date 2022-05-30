@@ -143,10 +143,17 @@ where
         let proposal_encoded_call: Call =
             scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())
                 .unwrap();
-        // now we need to check if the signature is valid.
+        // get current maintainer
+        let current_maintainer =
+            api.storage().signature_bridge().maintainer(None).await?;
 
-        let is_signature_valid =
-            validate_ecdsa_signature(data.as_slice(), signature.as_slice());
+        // now we need to check if the signature is valid.
+        let is_signature_valid = validate_ecdsa_signature(
+            data.as_slice(),
+            signature.as_slice(),
+            current_maintainer.as_slice(),
+        )
+        .unwrap_or(false);
 
         if !is_signature_valid {
             tracing::warn!(
@@ -349,17 +356,21 @@ pub fn parse_call_from_proposal_data(proposal_data: &[u8]) -> Vec<u8> {
     proposal_data[40..].to_vec()
 }
 
-pub fn validate_ecdsa_signature(data: &[u8], signature: &[u8]) -> bool {
+pub fn validate_ecdsa_signature(
+    data: &[u8],
+    signature: &[u8],
+    maintainer: &[u8],
+) -> Result<bool, libsecp256k1::Error> {
     const SIGNATURE_LENGTH: usize = 65;
     if signature.len() == SIGNATURE_LENGTH {
         let mut sig = [0u8; SIGNATURE_LENGTH];
         sig[..SIGNATURE_LENGTH].copy_from_slice(signature);
 
         let hash = keccak_256(data);
-
-        secp256k1_ecdsa_recover(&sig, &hash).is_ok()
+        let pub_key = secp256k1_ecdsa_recover(&sig, &hash)?;
+        Ok(pub_key == *maintainer)
     } else {
-        false
+        Ok(false)
     }
 }
 
