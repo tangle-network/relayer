@@ -456,7 +456,7 @@ async function createMixerWithdrawProof(
       refund: opts.refund === undefined ? 0 : opts.refund,
       provingKey,
     };
-    const zkProof = await pm.proof(proofInput);
+    const zkProof = await pm.prove(proofInput);
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,

@@ -714,7 +714,7 @@ async function createAnchorWithdrawProof(
         '0000000000000000000000000000000000000000000000000000000000000000',
     };
 
-    const zkProof = await pm.proof(proofInput);
+    const zkProof = await pm.prove(proofInput);
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,
