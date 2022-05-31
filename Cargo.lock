@@ -4825,6 +4825,7 @@ dependencies = [
  "num-traits",
  "parity-scale-codec 3.1.2",
  "scale-info",
+ "typed-builder",
 ]
 
 [[package]]

@@ -74,7 +74,10 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             return;
         }
     };
-    let api = client.to_runtime_api::<RuntimeApi<DefaultConfig, subxt::DefaultExtra<DefaultConfig>>>();
+    let api = client.to_runtime_api::<RuntimeApi<
+        DefaultConfig,
+        subxt::PolkadotExtrinsicParams<DefaultConfig>,
+    >>();
 
     let pair = match ctx.substrate_wallet(&cmd.chain).await {
         Ok(v) => v,
@@ -89,12 +92,19 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
 
     let signer = PairSigner::new(pair);
 
-    let transact_tx = api
-        .tx()
-        .v_anchor_bn254()
-        .transact(cmd.id, proof_elements, ext_data_elements)
-        .sign_and_submit_then_watch(&signer)
-        .await;
+    let transact_tx = api.tx().v_anchor_bn254().transact(
+        cmd.id,
+        proof_elements,
+        ext_data_elements,
+    );
+    let transact_tx = match transact_tx {
+        Ok(tx) => tx.sign_and_submit_then_watch_default(&signer).await,
+        Err(e) => {
+            tracing::error!("Error while creating transaction: {}", e);
+            let _ = stream.send(Error(format!("{}", e))).await;
+            return;
+        }
+    };
 
     let event_stream = match transact_tx {
         Ok(s) => s,
