@@ -40,7 +40,7 @@ import {
   defaultEventsWatcherValue,
   UsageMode,
 } from '../../lib/substrateNodeBase.js';
-import { u8aToHex } from '@webb-tools/sdk-core';
+import { u8aToHex } from '@polkadot/util';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
