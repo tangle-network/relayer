@@ -47,7 +47,7 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
     };
     let api = client.to_runtime_api::<RuntimeApi<
         DefaultConfig,
-        subxt::PolkadotExtrinsicParams<DefaultConfig>,
+        subxt::SubstrateExtrinsicParams<DefaultConfig>,
     >>();
 
     let pair = match ctx.substrate_wallet(&cmd.chain).await {
