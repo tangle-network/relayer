@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-// This our basic Substrate Anchor Transaction Relayer Tests.
+// This our basic Substrate VAnchor Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import '@webb-tools/types';
@@ -45,7 +45,7 @@ import {
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Anchor Transaction Relayer', function () {
+describe('Substrate VAnchor Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
