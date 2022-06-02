@@ -264,9 +264,9 @@ describe('Substrate Mixer Transaction Relayer', function() {
       });
     } catch (e) {
       // Expect an error to be thrown
+      console.log(e);
       expect(e).to.not.be.null;
-      // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.match(/UnkownRoot/gmi);
+      expect(e).to.match(/UnknownRoot/gmi);
     }
   });
 
@@ -301,9 +301,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
-      );
+      expect(e).to.match(/InvalidWithdrawProof/gmi);
     }
   });
 
@@ -345,9 +343,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
-      );
+      expect(e).to.match(/InvalidWithdrawProof/gmi);
     }
   });
 
