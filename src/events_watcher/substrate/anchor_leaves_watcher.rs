@@ -34,10 +34,11 @@ impl SubstrateEventWatcher for SubstrateAnchorLeavesWatcher {
 
     type Api = protocol_substrate_runtime::api::RuntimeApi<
         Self::RuntimeConfig,
-        subxt::DefaultExtra<Self::RuntimeConfig>,
+        subxt::PolkadotExtrinsicParams<Self::RuntimeConfig>,
     >;
 
-    type Event = anchor_bn254::events::Deposit;
+    type Event = protocol_substrate_runtime::api::Event;
+    type FilteredEvent = anchor_bn254::events::Deposit;
 
     type Store = SledStore;
 
@@ -45,7 +46,7 @@ impl SubstrateEventWatcher for SubstrateAnchorLeavesWatcher {
         &self,
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
-        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
         // fetch chain_id
         let chain_id =
@@ -54,12 +55,12 @@ impl SubstrateEventWatcher for SubstrateAnchorLeavesWatcher {
         let at_hash = api
             .storage()
             .system()
-            .block_hash(block_number, None)
+            .block_hash(&(block_number as _), None)
             .await?;
         let next_leaf_index = api
             .storage()
             .merkle_tree_bn254()
-            .next_leaf_index(event.tree_id, Some(at_hash))
+            .next_leaf_index(&event.tree_id, Some(at_hash))
             .await?;
         let leaf_index = next_leaf_index - 1;
         let chain_id = types::U256::from(chain_id);

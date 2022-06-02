@@ -45,10 +45,11 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
 
     type Api = dkg_runtime::api::RuntimeApi<
         Self::RuntimeConfig,
-        subxt::DefaultExtra<Self::RuntimeConfig>,
+        subxt::PolkadotExtrinsicParams<Self::RuntimeConfig>,
     >;
 
-    type Event = dkg_proposal_handler::events::ProposalSigned;
+    type Event = dkg_runtime::api::Event;
+    type FilteredEvent = dkg_proposal_handler::events::ProposalSigned;
 
     type Store = SledStore;
 
@@ -56,7 +57,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         &self,
         store: Arc<Self::Store>,
         _api: Arc<Self::Api>,
-        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
         tracing::event!(
             target: crate::probe::TARGET,

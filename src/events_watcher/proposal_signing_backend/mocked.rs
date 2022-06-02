@@ -7,7 +7,7 @@ use typed_builder::TypedBuilder;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::utils::keccak256;
-use webb_proposals::{AnchorUpdateProposal, TargetSystem, TypedChainId};
+use webb_proposals::{evm::AnchorUpdateProposal, TargetSystem, TypedChainId};
 
 /// A ProposalSigningBackend that uses the Governor's private key to sign proposals.
 #[derive(TypedBuilder)]

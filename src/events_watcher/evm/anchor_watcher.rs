@@ -29,7 +29,7 @@ pub struct AnchorWatcher<B> {
 
 impl<B> AnchorWatcher<B>
 where
-    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>,
+    B: ProposalSigningBackend<webb_proposals::evm::AnchorUpdateProposal>,
 {
     pub fn new(proposal_signing_backend: B) -> Self {
         Self {
@@ -41,7 +41,7 @@ where
 #[async_trait::async_trait]
 impl<B> super::EventWatcher for AnchorWatcher<B>
 where
-    B: ProposalSigningBackend<webb_proposals::AnchorUpdateProposal>
+    B: ProposalSigningBackend<webb_proposals::evm::AnchorUpdateProposal>
         + Send
         + Sync,
 {
@@ -97,7 +97,7 @@ where
                 function_signature.into(),
                 nonce.into(),
             );
-            let proposal = webb_proposals::AnchorUpdateProposal::new(
+            let proposal = webb_proposals::evm::AnchorUpdateProposal::new(
                 header,
                 webb_proposals::TypedChainId::Evm(src_chain_id.as_u32()),
                 leaf_index,
