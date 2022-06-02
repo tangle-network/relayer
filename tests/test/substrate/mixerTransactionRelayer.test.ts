@@ -442,7 +442,7 @@ async function createMixerWithdrawProof(
     );
     const provingKey = fs.readFileSync(provingKeyPath);
 
-    const proofInput: ProvingManagerSetupInput = {
+    const proofInput: ProvingManagerSetupInput<'mixer'> = {
       note: note.serialize(),
       relayer: relayerAddressHex,
       recipient: recipientAddressHex,
@@ -452,7 +452,7 @@ async function createMixerWithdrawProof(
       refund: opts.refund === undefined ? 0 : opts.refund,
       provingKey,
     };
-    const zkProof = await pm.proof(proofInput);
+    const zkProof = await pm.prove('mixer', proofInput);
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,

@@ -674,8 +674,7 @@ async function createAnchorWithdrawProof(
     );
     const provingKey = fs.readFileSync(provingKeyPath);
 
-    // @ts-ignore
-    const proofInput: ProvingManagerSetupInput = {
+    const proofInput: ProvingManagerSetupInput<'anchor'> = {
       note: note.serialize(),
       relayer: relayerAddressHex,
       recipient: recipientAddressHex,
@@ -689,7 +688,7 @@ async function createAnchorWithdrawProof(
         '0000000000000000000000000000000000000000000000000000000000000000',
     };
 
-    const zkProof = await pm.proof(proofInput);
+    const zkProof = await pm.prove('anchor', proofInput);
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,
