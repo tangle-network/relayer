@@ -14,7 +14,7 @@ import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { UsageMode } from '../../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
-import { ModuleErrors, SubmittableExtrinsic } from '@polkadot/api/types';
+import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { decodeAddress } from '@polkadot/util-crypto';
 import {
   Note,
@@ -23,7 +23,7 @@ import {
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Mixer Transaction Relayer', function () {
+describe('Substrate Mixer Transaction Relayer', function() {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -34,11 +34,11 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
-          ),
-        };
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../protocol-substrate/target/release/webb-standalone-node'
+        ),
+      };
 
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
@@ -224,9 +224,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
-      );
+      expect(e).to.match(/InvalidWithdrawProof/gmi);
     }
   });
 
@@ -266,11 +264,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
       });
     } catch (e) {
       // Expect an error to be thrown
+      console.log(e);
       expect(e).to.not.be.null;
-      // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 4 }'
-      );
+      expect(e).to.match(/UnknownRoot/gmi);
     }
   });
 
@@ -305,9 +301,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
-      );
+      expect(e).to.match(/InvalidWithdrawProof/gmi);
     }
   });
 
@@ -349,9 +343,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
-      );
+      expect(e).to.match(/InvalidWithdrawProof/gmi);
     }
   });
 
@@ -446,7 +438,7 @@ async function createMixerWithdrawProof(
     );
     const provingKey = fs.readFileSync(provingKeyPath);
 
-    const proofInput: ProvingManagerSetupInput = {
+    const proofInput: ProvingManagerSetupInput<'mixer'> = {
       note: note.serialize(),
       relayer: relayerAddressHex,
       recipient: recipientAddressHex,
@@ -456,7 +448,7 @@ async function createMixerWithdrawProof(
       refund: opts.refund === undefined ? 0 : opts.refund,
       provingKey,
     };
-    const zkProof = await pm.proof(proofInput);
+    const zkProof = await pm.prove('mixer', proofInput);
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,

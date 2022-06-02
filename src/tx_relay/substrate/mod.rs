@@ -2,9 +2,9 @@ use std::fmt::Debug;
 
 use ethereum_types::H256;
 use futures::StreamExt;
-use scale::Decode;
+use webb::substrate::scale::Decode;
 use webb::substrate::subxt::{
-    DefaultConfig, TransactionProgress, TransactionStatus,
+    DefaultConfig, HasModuleError, TransactionProgress, TransactionStatus,
 };
 
 use crate::handler::{CommandResponse, CommandStream, WithdrawStatus};
@@ -18,8 +18,11 @@ pub mod vanchor;
 /// The `TransactionProgress` is a subscription to a transaction's progress. This method
 /// is intended to be used in a variety of places for all kinds of submitted Substrate
 /// transactions.
-pub async fn handle_substrate_tx<E: Decode + Debug>(
-    mut event_stream: TransactionProgress<'_, DefaultConfig, E>,
+pub async fn handle_substrate_tx<
+    E: Debug + Decode + HasModuleError,
+    Evs: Decode,
+>(
+    mut event_stream: TransactionProgress<'_, DefaultConfig, E, Evs>,
     stream: CommandStream,
 ) {
     use CommandResponse::*;
