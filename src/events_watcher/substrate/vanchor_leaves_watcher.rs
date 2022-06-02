@@ -34,10 +34,12 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
 
     type Api = protocol_substrate_runtime::api::RuntimeApi<
         Self::RuntimeConfig,
-        subxt::DefaultExtra<Self::RuntimeConfig>,
+        subxt::PolkadotExtrinsicParams<Self::RuntimeConfig>,
     >;
 
-    type Event = v_anchor_bn254::events::Transaction;
+    type Event = protocol_substrate_runtime::api::Event;
+
+    type FilteredEvent = v_anchor_bn254::events::Transaction;
 
     type Store = SledStore;
 
@@ -45,18 +47,18 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
         &self,
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
-        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
         // fetch leaf_index from merkle tree at given block_number
         let at_hash = api
             .storage()
             .system()
-            .block_hash(block_number, None)
+            .block_hash(&u64::from(block_number), None)
             .await?;
         let next_leaf_index = api
             .storage()
             .merkle_tree_bn254()
-            .next_leaf_index(event.tree_id, Some(at_hash))
+            .next_leaf_index(&event.tree_id, Some(at_hash))
             .await?;
         // fetch chain_id
         let chain_id =
@@ -64,7 +66,7 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
         let chain_id = types::U256::from(chain_id);
         let tree_id = event.tree_id.to_string();
         let leaf_count = event.leafs.len();
-        let mut leaf_index = next_leaf_index - leaf_count as u32 - 1;
+        let mut leaf_index = next_leaf_index.saturating_sub(leaf_count as u32);
         let mut leaf_store = Vec::with_capacity(leaf_count);
         for leaf in event.leafs {
             let leaf_value = H256::from_slice(&leaf.0);

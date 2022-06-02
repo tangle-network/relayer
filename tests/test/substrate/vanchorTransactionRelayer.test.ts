@@ -18,7 +18,7 @@
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import '@webb-tools/types';
-import { JsNote, JsUtxo } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
+import { JsUtxo } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -33,16 +33,14 @@ import {
   defaultEventsWatcherValue,
 } from '../../lib/substrateNodeBase.js';
 import { BigNumber } from 'ethers';
-import { ApiPromise, Keyring } from '@polkadot/api';
+import { Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
-import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { ethAddressFromString } from '../utils/ethAddressFromString.js';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 
 import {
   Note,
-  NoteGenInput,
   ProvingManagerSetupInput,
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
@@ -76,7 +74,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       usageMode,
       ports: 'auto',
       enabledPallets,
-      enableLogging: true
+      enableLogging: true,
     });
 
     bobNode = await LocalProtocolSubstrate.start({
@@ -84,7 +82,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       authority: 'bob',
       usageMode,
       ports: 'auto',
-      enableLogging: true
+      enableLogging: true,
     });
 
     await aliceNode.writeConfig({
@@ -118,7 +116,6 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
 
-   
     const outputAmount = '15';
 
     const chainId = '2199023256632';
@@ -128,7 +125,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    
+
     const pkPath = path.join(
       // tests path
       gitRoot,
@@ -144,13 +141,34 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const pk = hexToU8a(pk_hex);
 
     // Creating two empty vanchor notes
-    const note1 = await generateVAnchorNote(0, Number(outputChainId.toString()), Number(outputChainId.toString()), 0);
+    const note1 = await generateVAnchorNote(
+      0,
+      Number(outputChainId.toString()),
+      Number(outputChainId.toString()),
+      0
+    );
     const note2 = note1.getDefaultUtxoNote();
     const publicAmount = currencyToUnitI128(10);
     const notes = [note1, note2];
     // Output UTXOs configs
-    const output1 = new JsUtxo('Bn254', 'Arkworks', 2, 2, publicAmount.toString(), chainId, undefined);
-    const output2 = new JsUtxo('Bn254', 'Arkworks', 2, 2, '0', chainId, undefined);
+    const output1 = new JsUtxo(
+      'Bn254',
+      'Arkworks',
+      2,
+      2,
+      publicAmount.toString(),
+      chainId,
+      undefined
+    );
+    const output2 = new JsUtxo(
+      'Bn254',
+      'Arkworks',
+      2,
+      2,
+      '0',
+      chainId,
+      undefined
+    );
 
     // Configure a new proving manager with direct call
     const provingManager = new ProvingManagerWrapper('direct-call');
@@ -181,44 +199,59 @@ describe('Substrate Anchor Transaction Relayer', function () {
       relayer: decodedAddress,
       recipient: decodedAddress,
       extAmount: extAmount.toString(),
-      fee: fee.toString()
+      fee: fee.toString(),
     };
-
 
     const data = await provingManager.prove('vanchor', setup);
     const extData = {
-    relayer: address,
-    recipient: address,
-    fee,
-    extAmount: extAmount,
-    encryptedOutput1: u8aToHex(comEnc1),
-    encryptedOutput2: u8aToHex(comEnc2)
-  };
+      relayer: address,
+      recipient: address,
+      fee,
+      extAmount: extAmount,
+      encryptedOutput1: u8aToHex(comEnc1),
+      encryptedOutput2: u8aToHex(comEnc2),
+    };
 
-  let vanchorProofData = {
-    proof: `0x${data.proof}`,
-    publicAmount: data.publicAmount,
-    roots: rootsSet,
-    inputNullifiers: data.inputUtxos.map(input => `0x${input.nullifier}`),
-    outputCommitments: data.outputNotes.map(note => u8aToHex(note.getLeafCommitment())),
-    extDataHash: data.extDataHash
-  };
-  const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(Number(treeId));
-  const indexBeforeInsetion = Math.max(leafsCount - 1, 0);
+    let vanchorProofData = {
+      proof: `0x${data.proof}`,
+      publicAmount: data.publicAmount,
+      roots: rootsSet,
+      inputNullifiers: data.inputUtxos.map((input) => `0x${input.nullifier}`),
+      outputCommitments: data.outputNotes.map((note) =>
+        u8aToHex(note.getLeafCommitment())
+      ),
+      extDataHash: data.extDataHash,
+    };
+    const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
+      Number(treeId)
+    );
+    const indexBeforeInsetion = Math.max(leafsCount - 1, 0);
 
-  let transactCall = api.tx.vAnchorBn254!.transact!(treeId, vanchorProofData, extData);
-  const txSigned = await transactCall.signAsync(account);
-  const result = await aliceNode.executeTransaction(txSigned);
-  console.log("tx hash ", result);
-  
-  // now we wait for all deposit to be saved in LeafStorageCache
-  await webbRelayer.waitForEvent({
-    kind: 'leaves_store',
-    event: {
-  
-    },
-  });
+    // now we call the vanchor transact
+    let transactCall = api.tx.vAnchorBn254!.transact!(
+      treeId,
+      vanchorProofData,
+      extData
+    );
+    const txSigned = await transactCall.signAsync(account);
+    await aliceNode.executeTransaction(txSigned);
 
+    // now we wait for all deposit to be saved in LeafStorageCache.
+    await webbRelayer.waitForEvent({
+      kind: 'leaves_store',
+      event: {
+        leaf_index: indexBeforeInsetion + 2,
+      },
+    });
+
+    // chainId
+    const chainIdentifier = 1080;
+    const chainIdHex = chainIdentifier.toString(16);
+    const treeIdAddress = ethAddressFromString(treeId.toString());
+    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
+    // are equal to no of deposits made.
+    const response = await webbRelayer.getLeaves(chainIdHex, treeIdAddress);
+    expect(indexBeforeInsetion + 2).to.equal(response.leaves.length);
   });
 
   after(async () => {

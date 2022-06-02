@@ -62,7 +62,7 @@ impl SubstrateEventWatcher for SubstrateAnchorLeavesWatcher {
             .merkle_tree_bn254()
             .next_leaf_index(&event.tree_id, Some(at_hash))
             .await?;
-        let leaf_index = next_leaf_index - 1;
+        let leaf_index = next_leaf_index.saturating_sub(1);
         let chain_id = types::U256::from(chain_id);
         let tree_id = event.tree_id.to_string();
         let leaf = event.leaf;
