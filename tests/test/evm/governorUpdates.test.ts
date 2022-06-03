@@ -40,7 +40,7 @@ import {
   defaultEventsWatcherValue,
   UsageMode,
 } from '../../lib/substrateNodeBase.js';
-import { u8aToHex } from '@webb-tools/sdk-core';
+import { u8aToHex } from '@polkadot/util';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -65,7 +65,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
-      ? { mode: 'docker', forcePullImage: false }
+      ? { mode: 'host', nodePath: 'dkg-standalone-node' }
       : {
           mode: 'host',
           nodePath: path.resolve(

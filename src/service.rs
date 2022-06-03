@@ -50,14 +50,14 @@ type DkgClient = subxt::Client<subxt::DefaultConfig>;
 /// Type alias for the DKG RuntimeApi
 type DkgRuntime = DkgRuntimeApi<
     subxt::DefaultConfig,
-    subxt::DefaultExtra<subxt::DefaultConfig>,
+    subxt::PolkadotExtrinsicParams<subxt::DefaultConfig>,
 >;
 /// Type alias for the WebbProtocol DefaultConfig
 type WebbProtocolClient = subxt::Client<subxt::DefaultConfig>;
 /// Type alias for the WebbProtocol RuntimeApi
 type WebbProtocolRuntime = WebbProtocolRuntimeApi<
     subxt::DefaultConfig,
-    subxt::DefaultExtra<subxt::DefaultConfig>,
+    subxt::PolkadotExtrinsicParams<subxt::DefaultConfig>,
 >;
 /// Type alias for [Sled](https://sled.rs)-based database store
 type Store = crate::store::sled::SledStore;

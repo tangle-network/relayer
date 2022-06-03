@@ -1,6 +1,6 @@
 [package]
 name = "webb-relayer"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Shady Khalifa <shekohex@gmail.com>"]
 edition = "2018"
 
@@ -32,9 +32,8 @@ hex = { version = "0.4", default-features = false }
 # just to make it compile on linux where the openssl is not available.
 # until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
 native-tls = { version = "^0.2", features = ["vendored"] }
-webb = { path = "/Users/salman01z/webb-tools/webb-rs/",version = "0.3.8", default-features = false }
-webb-proposals = { path="/Users/salman01z/webb-tools/webb-rs/proposals",version = "0.3.1", default-features = false, features = ["scale","evm","substrate"] }
-scale = { package = "parity-scale-codec", version = "2.3.0", default-features = false }
+webb = { version = "0.4.1", default-features = false }
+webb-proposals = { version = "0.3.2", default-features = false, features = ["scale"] }
 ethereum-types = "0.12"
 thiserror = "^1.0"
 glob = "^0.3"
@@ -45,11 +44,12 @@ tempfile = "^3.2"
 derive_more = { version = "0.99", default-features = false, features = ["display"] }
 typed-builder = "0.10.0"
 libsecp256k1 = "0.7.0"
+
 [dev-dependencies]
 tempfile = "^3.2"
 
 [features]
 default = ["evm-runtime", "substrate-runtime"]
-evm-runtime = ["webb/evm-runtime"]
-substrate-runtime = ["webb/substrate-runtime"]
+evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
+substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]
 integration-tests = ["tracing-subscriber/json"]

@@ -1,13 +1,15 @@
 use futures::StreamExt;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId, Nonce};
+use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
+use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::{dkg_runtime, subxt};
-use webb_proposals::evm;
-use webb_proposals::substrate;
+use webb_proposals::evm::AnchorUpdateProposal;
 
 type DkgConfig = subxt::DefaultConfig;
-type DkgRuntimeApi =
-    dkg_runtime::api::RuntimeApi<DkgConfig, subxt::DefaultExtra<DkgConfig>>;
+type DkgRuntimeApi = dkg_runtime::api::RuntimeApi<
+    DkgConfig,
+    subxt::PolkadotExtrinsicParams<DkgConfig>,
+>;
 
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
 pub struct DkgProposalSigningBackend<R, C>
@@ -16,7 +18,7 @@ where
     C: subxt::Config,
 {
     api: R,
-    pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
+    pair: subxt::PairSigner<C, Sr25519Pair>,
 }
 
 impl<R, C> DkgProposalSigningBackend<R, C>
@@ -26,7 +28,7 @@ where
 {
     pub fn new(
         client: subxt::Client<C>,
-        pair: subxt::PairSigner<C, subxt::DefaultExtra<C>, Sr25519Pair>,
+        pair: subxt::PairSigner<C, Sr25519Pair>,
     ) -> Self {
         Self {
             api: client.to_runtime_api(),
@@ -50,14 +52,14 @@ impl super::ProposalSigningBackend<evm::AnchorUpdateProposal>
         let src_chain_id =
             webb_proposals_typed_chain_converter(proposal.src_chain());
         let maybe_whitelisted =
-            storage_api.chain_nonces(src_chain_id.clone(), None).await?;
+            storage_api.chain_nonces(&src_chain_id, None).await?;
         if maybe_whitelisted.is_none() {
             tracing::warn!(?src_chain_id, "chain is not whitelisted");
             return Ok(false);
         }
 
         let maybe_resource_id = storage_api
-            .resources(ResourceId(resource_id.into_bytes()), None)
+            .resources(&ResourceId(resource_id.into_bytes()), None)
             .await?;
         if maybe_resource_id.is_none() {
             tracing::warn!(
@@ -202,13 +204,14 @@ impl super::ProposalSigningBackend<substrate::AnchorUpdateProposal>
             Nonce(leaf_index),
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
-            proposal.to_bytes(),
-        );
+            proposal.to_bytes().into(),
+        )?;
         // TODO: here we should have a substrate based tx queue in the background
         // where just send the raw xt bytes and let it handle the work for us.
         // but this here for now.
         let signer = &self.pair;
-        let mut progress = xt.sign_and_submit_then_watch(signer).await?;
+        let mut progress =
+            xt.sign_and_submit_then_watch_default(signer).await?;
         while let Some(event) = progress.next().await {
             let e = match event {
                 Ok(e) => e,

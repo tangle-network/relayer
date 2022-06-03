@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use ethereum_types::U256;
 use webb::substrate::dkg_runtime::api::dkg;
+use webb::substrate::subxt::PolkadotExtrinsicParams;
 use webb::substrate::{dkg_runtime, subxt};
 
 use crate::config::{self, Contract};
@@ -45,10 +46,12 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
 
     type Api = dkg_runtime::api::RuntimeApi<
         Self::RuntimeConfig,
-        subxt::DefaultExtra<Self::RuntimeConfig>,
+        PolkadotExtrinsicParams<Self::RuntimeConfig>,
     >;
+    type Event = dkg_runtime::api::Event;
+
     // when the DKG public key signature changes, we know the DKG is changed.
-    type Event = dkg::events::PublicKeySignatureChanged;
+    type FilteredEvent = dkg::events::PublicKeySignatureChanged;
 
     type Store = SledStore;
 
@@ -56,7 +59,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
         &self,
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
-        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
         // we got that the signature of the DKG public key changed.
         // that means the DKG Public Key itself changed.
@@ -66,7 +69,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
         let at_hash = api
             .storage()
             .system()
-            .block_hash(block_number, None)
+            .block_hash(&block_number, None)
             .await?;
         let (_authority_id, public_key_compressed) =
             api.storage().dkg().dkg_public_key(Some(at_hash)).await?;

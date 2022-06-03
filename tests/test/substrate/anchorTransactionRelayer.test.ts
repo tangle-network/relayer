@@ -43,7 +43,7 @@ import {
   ProvingManagerWrapper,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Anchor Transaction Relayer', function () {
+describe('Substrate Anchor Transaction Relayer', function() {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -54,11 +54,11 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
-          ),
-        };
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../protocol-substrate/target/release/webb-standalone-node'
+        ),
+      };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'AnchorBn254',
@@ -96,7 +96,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -151,8 +151,6 @@ describe('Substrate Anchor Transaction Relayer', function () {
       withdrawalProof.recipient
     );
     let initialBalance = balance.free.toBigInt();
-    console.log(`balance before withdrawal is ${balance.free.toBigInt()}`);
-
     const roots = [
       Array.from(withdrawalProof.treeRoot),
       Array.from(withdrawalProof.neighborRoot),
@@ -186,7 +184,6 @@ describe('Substrate Anchor Transaction Relayer', function () {
     const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
       .account!(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
-    console.log(`balance after withdrawal is ${balanceAfter.free.toBigInt()}`);
     expect(balanceAfterWithdraw > initialBalance);
   });
 
@@ -235,10 +232,6 @@ describe('Substrate Anchor Transaction Relayer', function () {
 
       // Expect an error to be thrown
       expect(e).to.not.be.null;
-      // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
-      );
     }
   });
 
@@ -289,17 +282,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
 
       // Expect an error to be thrown
       expect(e).to.not.be.null;
-      // Runtime Error that indicates proof verifier error
-
-      try {
-        expect(e).to.contain(
-          'Runtime error: RuntimeError(Module { index: 41, error: 2 })'
-        );
-      } catch (ex) {
-        expect(ex).to.contain(
-          'Runtime error: RuntimeError(Module { index: 36, error: 1 })'
-        );
-      }
+      expect(e).to.match(/InvalidWithdrawProof|VerifyError/gmi);
     }
   });
 
@@ -349,9 +332,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
-      );
+      expect(e).to.match(/InvalidWithdrawProof|VerifyError/gmi);
     }
   });
 
@@ -403,9 +384,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid neighbor roots
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 39, error: 2 }'
-      );
+      expect(e).to.match(/UnknownRoot|InvalidNeighborWithdrawRoot/gmi);
     }
   });
 
@@ -457,9 +436,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates Unknown Root
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 39, error: 0 }'
-      );
+      expect(e).to.match(/UnknownRoot/gmi);
     }
   });
 
@@ -567,9 +544,7 @@ describe('Substrate Anchor Transaction Relayer', function () {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 41, error: 2 }'
-      );
+      expect(e).to.match(/InvalidWithdrawProof/gmi);
     }
   });
 
@@ -699,8 +674,7 @@ async function createAnchorWithdrawProof(
     );
     const provingKey = fs.readFileSync(provingKeyPath);
 
-    // @ts-ignore
-    const proofInput: ProvingManagerSetupInput = {
+    const proofInput: ProvingManagerSetupInput<'anchor'> = {
       note: note.serialize(),
       relayer: relayerAddressHex,
       recipient: recipientAddressHex,
@@ -714,7 +688,7 @@ async function createAnchorWithdrawProof(
         '0000000000000000000000000000000000000000000000000000000000000000',
     };
 
-    const zkProof = await pm.proof(proofInput);
+    const zkProof = await pm.prove('anchor', proofInput);
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,

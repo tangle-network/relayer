@@ -41,11 +41,7 @@ use webb::{
     },
     substrate::{
         scale,
-        subxt::{
-            self,
-            sp_core::{storage::StorageKey, twox_128},
-            sp_runtime::traits::Header,
-        },
+        subxt::{self, sp_runtime::traits::Header},
     },
 };
 
@@ -54,7 +50,6 @@ use crate::store::{
     BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
     QueueStore,
 };
-use crate::utils;
 
 /// A module for listening on proposal events.
 mod proposal_handler_watcher;
@@ -327,20 +322,27 @@ where
 /// Type alias for Substrate block number.
 pub type BlockNumberOf<T> =
     <<T as SubstrateEventWatcher>::RuntimeConfig as subxt::Config>::BlockNumber;
+
 /// Represents a Substrate event watcher.
 #[async_trait::async_trait]
 pub trait SubstrateEventWatcher {
     const TAG: &'static str;
+    /// The Config of this Runtime, mostly it will be [`subxt::DefaultConfig`]
     type RuntimeConfig: subxt::Config + Send + Sync + 'static;
+    /// The Runtime API.
     type Api: From<subxt::Client<Self::RuntimeConfig>> + Send + Sync;
-    type Event: subxt::Event + Send + Sync;
+    /// All types of events that are supported by this Runtime.
+    /// Usually it will be [`my_runtime::api::Event`] which is an enum of all events.
+    type Event: scale::Decode + Send + Sync + 'static;
+    /// The kind of event that this watcher is watching.
+    type FilteredEvent: subxt::Event + Send + Sync + 'static;
     type Store: HistoryStore;
 
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
-        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> anyhow::Result<()>;
 
     /// Returns a task that should be running in the background
@@ -364,31 +366,13 @@ pub trait SubstrateEventWatcher {
             max_elapsed_time: None,
             ..Default::default()
         };
-        // The storage Key, where all events are stored.
-        struct SystemEvents(StorageKey);
-
-        impl Default for SystemEvents {
-            fn default() -> Self {
-                let mut storage_key = twox_128(b"System").to_vec();
-                storage_key.extend(twox_128(b"Events").to_vec());
-                Self(StorageKey(storage_key))
-            }
-        }
-
-        impl From<SystemEvents> for StorageKey {
-            fn from(key: SystemEvents) -> Self {
-                key.0
-            }
-        }
 
         let task = || async {
             let mut instant = std::time::Instant::now();
-            let step = U64::from(50u64);
+            let step = U64::from(1u64);
             let client_api = client.clone();
             let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
             let rpc = client.rpc();
-            let decoder = client.events_decoder();
-            let keys = vec![StorageKey::from(SystemEvents::default())];
             loop {
                 // now we start polling for new events.
                 // get the latest seen block number.
@@ -432,34 +416,16 @@ pub trait SubstrateEventWatcher {
                         .map_err(anyhow::Error::from)
                         .await?;
                     let from = maybe_from.unwrap_or(latest_head);
-                    let to = rpc
-                        .block_hash(Some(dest_block.as_u32().into()))
-                        .map_err(anyhow::Error::from)
-                        .await?;
-                    tracing::trace!(?from, ?to, "Querying events");
-                    // then we query the storage set of the system events.
-                    let maybe_change_sets = rpc
-                        .query_storage(keys.clone(), from, to)
-                        .map_err(anyhow::Error::from)
-                        .await;
-                    let found_events = match maybe_change_sets {
-                        Ok(change_sets) => {
-                            tracing::trace!(?change_sets, "Queried events");
-                            // now we go through the changeset, and for every change we extract the events.
-                            change_sets
-                                .into_iter()
-                                .flat_map(|c| {
-                                    utils::change_set_to_events(c, decoder)
-                                })
-                                .collect::<Vec<_>>()
-                        }
-                        Err(e) => {
-                            tracing::error!(error = %e, "Failed to query events");
-                            // sleep for a bit to avoid spamming the node.
-                            tokio::time::sleep(Duration::from_secs(3)).await;
-                            continue;
-                        }
-                    };
+                    tracing::trace!(?from, "Querying events");
+                    let events =
+                        subxt::events::at::<_, Self::Event>(&client, from)
+                            .map_err(anyhow::Error::from)
+                            .await?;
+                    let found_events = events
+                        .find::<Self::FilteredEvent>()
+                        .flatten()
+                        .map(|e| (from, e))
+                        .collect::<Vec<_>>();
                     tracing::trace!("Found #{} events", found_events.len());
 
                     for (block_hash, event) in found_events {
@@ -665,10 +631,11 @@ mod tests {
 
         type Api = dkg_runtime::api::RuntimeApi<
             Self::RuntimeConfig,
-            subxt::DefaultExtra<Self::RuntimeConfig>,
+            subxt::PolkadotExtrinsicParams<Self::RuntimeConfig>,
         >;
 
-        type Event = system::events::Remarked;
+        type Event = dkg_runtime::api::Event;
+        type FilteredEvent = system::events::Remarked;
 
         type Store = SledStore;
 
@@ -676,7 +643,7 @@ mod tests {
             &self,
             _store: Arc<Self::Store>,
             _api: Arc<Self::Api>,
-            (event, block_number): (Self::Event, BlockNumberOf<Self>),
+            (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
         ) -> anyhow::Result<()> {
             tracing::debug!(
                 "Received `Remarked` Event: {:?} at block number: #{}",
