@@ -34,7 +34,8 @@ hex = { version = "0.4", default-features = false }
 native-tls = { version = "^0.2", features = ["vendored"] }
 webb = { version = "0.4.1", default-features = false }
 webb-proposals = { version = "0.3.4", default-features = false, features = ["scale"] }
-scale-info = { version = "2.1.2", default-features = false}
+scale-codec = { package = 'parity-scale-codec', version = '3.0.0', default-features = false }
+scale-info = { version = "2.1.1", default-features = false }
 ethereum-types = "0.12"
 thiserror = "^1.0"
 glob = "^0.3"
