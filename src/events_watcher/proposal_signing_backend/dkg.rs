@@ -4,7 +4,7 @@ use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Non
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::{dkg_runtime, subxt};
 use webb_proposals::Proposal;
-use scale::{Encode, Decode};
+use webb::substrate::scale::{Encode, Decode};
 
 const PROPOSAL_LENGTH: usize = webb_proposals::ProposalHeader::LENGTH;
 const TYPE_CHAIN_LENGTH: usize = webb_proposals::TypedChainId::LENGTH;

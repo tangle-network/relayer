@@ -28,6 +28,7 @@ use webb::substrate::{
     subxt::{self, PairSigner},
 };
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
+use webb::substrate::scale;
 
 /// A SignatureBridge contract events & commands watcher.
 #[derive(Copy, Clone, Debug, Default)]
