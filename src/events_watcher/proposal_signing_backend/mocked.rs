@@ -6,6 +6,7 @@ use std::sync::Arc;
 use typed_builder::TypedBuilder;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
+use ethereum_types::H256;
 use webb::evm::ethers::utils::keccak256;
 use webb_proposals::{Proposal, TargetSystem, TypedChainId};
 
