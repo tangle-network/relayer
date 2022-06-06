@@ -82,7 +82,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       authority: 'bob',
       usageMode,
       ports: 'auto',
-      enableLogging: true,
+      enableLogging: false,
     });
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
