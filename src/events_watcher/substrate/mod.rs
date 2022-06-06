@@ -14,6 +14,9 @@
 //
 
 mod anchor_leaves_watcher;
+mod vanchor_leaves_watcher;
 use super::{BlockNumberOf, SubstrateEventWatcher};
 #[doc(hidden)]
 pub use anchor_leaves_watcher::*;
+#[doc(hidden)]
+pub use vanchor_leaves_watcher::*;

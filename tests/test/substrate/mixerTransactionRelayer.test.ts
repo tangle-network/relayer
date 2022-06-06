@@ -419,7 +419,7 @@ async function createMixerWithdrawProof(
     //@ts-ignore
     const getLeaves = api.rpc.mt.getLeaves;
     const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
-    const pm = new ProvingManagerWrapper('direct-call');
+    const provingManager = new ProvingManagerWrapper('direct-call');
     const leafHex = u8aToHex(note.getLeaf());
     const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
     expect(leafIndex).to.be.greaterThan(-1);
@@ -448,7 +448,7 @@ async function createMixerWithdrawProof(
       refund: opts.refund === undefined ? 0 : opts.refund,
       provingKey,
     };
-    const zkProof = await pm.prove('mixer', proofInput);
+    const zkProof = await provingManager.prove('mixer', proofInput);
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,
