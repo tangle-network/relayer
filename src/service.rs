@@ -181,6 +181,9 @@ pub async fn ignite(
                         Pallet::SignatureBridge(_) => {
                             unreachable!()
                         }
+                        Pallet::VAnchorBn254(_) => {
+                            unreachable!()
+                        }
                     }
                 }
             }
@@ -196,7 +199,17 @@ pub async fn ignite(
                 for pallet in &node_config.pallets {
                     match pallet {
                         Pallet::AnchorBn254(config) => {
-                            start_substrate_anchor_leaves_watcher(
+                            start_substrate_anchor_event_watcher(
+                                ctx,
+                                config,
+                                client.clone(),
+                                node_name.clone(),
+                                chain_id,
+                                store.clone(),
+                            )?;
+                        }
+                        Pallet::VAnchorBn254(config) => {
+                            start_substrate_vanchor_event_watcher(
                                 ctx,
                                 config,
                                 client.clone(),
@@ -232,7 +245,7 @@ pub async fn ignite(
     }
     Ok(())
 }
-/// Starts the event watcher for Substrate anchor leaves.
+/// Starts the event watcher for Substrate anchor events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
 ///
@@ -244,7 +257,7 @@ pub async fn ignite(
 /// * `node_name` - Name of the node
 /// * `chain_id` - An U256 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
-fn start_substrate_anchor_leaves_watcher(
+fn start_substrate_anchor_event_watcher(
     ctx: &RelayerContext,
     config: &AnchorBn254PalletConfig,
     client: WebbProtocolClient,
@@ -254,13 +267,13 @@ fn start_substrate_anchor_leaves_watcher(
 ) -> anyhow::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
-            "Substrate Anchor events watcher is disabled for ({}).",
+            "Substrate anchor events watcher is disabled for ({}).",
             node_name,
         );
         return Ok(());
     }
     tracing::debug!(
-        "Substrate Anchor events watcher for ({}) Started.",
+        "Substrate anchor events watcher for ({}) Started.",
         node_name,
     );
     let my_ctx = ctx.clone();
@@ -359,6 +372,63 @@ fn start_substrate_anchor_leaves_watcher(
     tokio::task::spawn(task);
     Ok(())
 }
+
+/// Starts the event watcher for Substrate vanchor events.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - VAnchorBn254 configuration
+/// * `client` - WebbProtocol client
+/// * `node_name` - Name of the node
+/// * `chain_id` - An U256 representing the chain id of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
+fn start_substrate_vanchor_event_watcher(
+    ctx: &RelayerContext,
+    config: &VAnchorBn254PalletConfig,
+    client: WebbProtocolClient,
+    node_name: String,
+    chain_id: U256,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "Substrate vanchor events watcher is disabled for ({}).",
+            node_name,
+        );
+        return Ok(());
+    }
+    tracing::debug!(
+        "Substrate vanchor events watcher for ({}) Started.",
+        node_name,
+    );
+    let node_name2 = node_name.clone();
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let task = async move {
+        let leaves_watcher = SubstrateVAnchorLeavesWatcher::default();
+        let watcher = leaves_watcher.run(node_name, chain_id, client, store);
+        tokio::select! {
+            _ = watcher => {
+                tracing::warn!(
+                    "Substrate vanchor leaves watcher stopped for ({})",
+                    node_name2,
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping substrate vanchor leaves watcher for ({})",
+                    node_name2,
+                );
+            },
+        }
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
+    Ok(())
+}
+
 /// Starts the event watcher for DKG proposal handler events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
@@ -962,7 +1032,9 @@ async fn make_substrate_proposal_signing_backend(
                 .flat_map(|anchor| {
                     // using chain_id to ensure that we have only one signature bridge
                     let target_system =
-                        webb_proposals::TargetSystem::new_tree_id(chain_id.as_u32());
+                        webb_proposals::TargetSystem::new_tree_id(
+                            chain_id.as_u32(),
+                        );
                     let chain_id =
                         webb_proposals::TypedChainId::Substrate(anchor.chain);
                     Some((chain_id, target_system))

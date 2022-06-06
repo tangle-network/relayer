@@ -50,6 +50,10 @@ describe('Substrate Anchor Transaction Relayer', function() {
 
   let webbRelayer: WebbRelayer;
 
+  // Governer key
+  const PK1 =
+    '0x9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60';
+
   before(async () => {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
@@ -83,6 +87,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
     });
 
     // Wait until we are ready and connected
@@ -645,7 +650,7 @@ async function createAnchorWithdrawProof(
     // @ts-ignore
     const treeRoot = await api.query.merkleTreeBn254.trees(treeId);
 
-    const pm = new ProvingManagerWrapper('direct-call');
+    const provingManager = new ProvingManagerWrapper('direct-call');
     const leafHex = u8aToHex(note.getLeaf());
 
     const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
@@ -687,7 +692,7 @@ async function createAnchorWithdrawProof(
         '0000000000000000000000000000000000000000000000000000000000000000',
     };
 
-    const zkProof = await pm.prove('anchor', proofInput);
+    const zkProof = await provingManager.prove('anchor', proofInput);
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,

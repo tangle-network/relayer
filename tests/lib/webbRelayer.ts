@@ -438,7 +438,6 @@ type EventKind =
   | 'sync'
   | 'relay_tx'
   | 'signing_backend'
-  | 'signature_bridge'
   | 'tx_queue'
   | 'leaves_store'
   | 'signing_backend'
@@ -527,7 +526,7 @@ type ContractKind =
   | 'GovernanceBravoDelegate'
   | 'VAnchor';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
-type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler' | 'AnchorBn254' | 'SignatureBridge';
+type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler' | 'AnchorBn254' | 'VAnchorBn254' | 'SignatureBridge';
 
 export type DKGProposalSigningBackend = {
   type: 'DKGNode';

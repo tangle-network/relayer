@@ -53,7 +53,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
 
