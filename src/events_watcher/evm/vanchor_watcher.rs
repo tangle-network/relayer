@@ -29,7 +29,7 @@ pub struct VAnchorWatcher<B> {
 
 impl<B> VAnchorWatcher<B>
 where
-    B: ProposalSigningBackend<webb_proposals::evm::AnchorUpdateProposal>,
+    B: ProposalSigningBackend<AnchorUpdateProposal>,
 {
     pub fn new(proposal_signing_backend: B) -> Self {
         Self {
@@ -41,9 +41,7 @@ where
 #[async_trait::async_trait]
 impl<B> super::EventWatcher for VAnchorWatcher<B>
 where
-    B: ProposalSigningBackend<webb_proposals::evm::AnchorUpdateProposal>
-        + Send
-        + Sync,
+    B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {
     const TAG: &'static str = "VAnchor Watcher";
     type Middleware = HttpProvider;

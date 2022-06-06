@@ -98,8 +98,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
       enabledPallets,
     });
 
-    await charlieNode.writeConfig({
-      path: `${tmpDirPath}/${charlieNode.name}.json`,
+    await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
     });
 

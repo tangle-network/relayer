@@ -81,8 +81,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
       ports: 'auto',
     });
 
-    await aliceNode.writeConfig({
-      path: `${tmpDirPath}/${aliceNode.name}.json`,
+    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
     });
 

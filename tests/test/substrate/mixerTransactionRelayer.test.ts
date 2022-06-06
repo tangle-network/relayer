@@ -54,10 +54,10 @@ describe('Substrate Mixer Transaction Relayer', function() {
       ports: 'auto',
     });
 
-    await aliceNode.writeConfig({
-      path: `${tmpDirPath}/${aliceNode.name}.json`,
+    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
     });
+
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;

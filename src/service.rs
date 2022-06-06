@@ -277,6 +277,7 @@ fn start_substrate_anchor_leaves_watcher(
         let proposal_signing_backend = make_substrate_proposal_signing_backend(
             &my_ctx,
             store.clone(),
+            chain_id,
             &my_config.linked_anchors[..],
             my_config.proposal_signing_backend,
         )
@@ -932,6 +933,7 @@ async fn make_proposal_signing_backend(
 async fn make_substrate_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
+    chain_id: U256,
     linked_anchors: &[SubstrateLinkedAnchorConfig],
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> anyhow::Result<ProposalSigningBackendSelector> {
@@ -958,10 +960,11 @@ async fn make_substrate_proposal_signing_backend(
             let linked_chains = linked_anchors
                 .iter()
                 .flat_map(|anchor| {
+                    // using chain_id to ensure that we have only one signature bridge
+                    let target_system =
+                        webb_proposals::TargetSystem::new_tree_id(chain_id.as_u32());
                     let chain_id =
                         webb_proposals::TypedChainId::Substrate(anchor.chain);
-                    let target_system =
-                        webb_proposals::TargetSystem::new_tree_id(anchor.chain);
                     Some((chain_id, target_system))
                 })
                 .collect::<HashMap<_, _>>();

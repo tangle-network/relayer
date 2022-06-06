@@ -41,10 +41,12 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
 
     type Api = protocol_substrate_runtime::api::RuntimeApi<
         Self::RuntimeConfig,
-        subxt::DefaultExtra<Self::RuntimeConfig>,
+        subxt::SubstrateExtrinsicParams<Self::RuntimeConfig>,
     >;
 
-    type Event = signature_bridge::events::MaintainerSet;
+    type Event = protocol_substrate_runtime::api::Event;
+
+    type FilteredEvent = signature_bridge::events::MaintainerSet;
 
     type Store = SledStore;
 
@@ -52,7 +54,7 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
         &self,
         _store: Arc<Self::Store>,
         _api: Arc<Self::Api>,
-        (event, _block_number): (Self::Event, BlockNumberOf<Self>),
+        (event, _block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
         // todo
         // if the ownership is transferred to the new owner, we need to
@@ -143,6 +145,8 @@ where
         let proposal_encoded_call: Call =
             scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())
                 .unwrap();
+
+        tracing::debug!("decoded proposal call : {:?}", proposal_encoded_call);
         // get current maintainer
         let current_maintainer =
             api.storage().signature_bridge().maintainer(None).await?;
@@ -174,16 +178,17 @@ where
             signature = ?signature_hex,
         );
         // todo! transaction queue
-        let execute_proposal_tx = api.tx().signature_bridge().execute_proposal(
-            chain_id.as_u64(),
-            proposal_encoded_call,
-            data,
-            signature,
-        );
+        let execute_proposal_tx =
+            api.tx().signature_bridge().execute_proposal(
+                chain_id.as_u64(),
+                proposal_encoded_call,
+                data,
+                signature,
+            )?;
         let pair = ctx.substrate_wallet(&node_name).await?;
         let signer = PairSigner::new(pair);
         let mut progress = execute_proposal_tx
-            .sign_and_submit_then_watch(&signer)
+            .sign_and_submit_then_watch_default(&signer)
             .await?;
         while let Some(event) = progress.next().await {
             let e = match event {
@@ -294,12 +299,12 @@ where
         let set_maintainer_tx = api
             .tx()
             .signature_bridge()
-            .set_maintainer(new_maintainer, signature);
+            .set_maintainer(new_maintainer, signature)?;
 
         let pair = ctx.substrate_wallet(&node_name).await?;
         let signer = PairSigner::new(pair);
         let mut progress = set_maintainer_tx
-            .sign_and_submit_then_watch(&signer)
+            .sign_and_submit_then_watch_default(&signer)
             .await?;
         while let Some(event) = progress.next().await {
             let e = match event {

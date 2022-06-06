@@ -111,8 +111,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       enabledPallets,
     });
 
-    await charlieNode.writeConfig({
-      path: `${tmpDirPath}/${charlieNode.name}.json`,
+    await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
     });
 

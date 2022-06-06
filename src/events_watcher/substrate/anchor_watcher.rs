@@ -55,10 +55,12 @@ where
 
     type Api = protocol_substrate_runtime::api::RuntimeApi<
         Self::RuntimeConfig,
-        subxt::DefaultExtra<Self::RuntimeConfig>,
+        subxt::SubstrateExtrinsicParams<Self::RuntimeConfig>,
     >;
 
-    type Event = anchor_bn254::events::Deposit;
+    type Event = protocol_substrate_runtime::api::Event;
+
+    type FilteredEvent = anchor_bn254::events::Deposit;
 
     type Store = SledStore;
 
@@ -67,7 +69,7 @@ where
         &self,
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
-        (event, block_number): (Self::Event, BlockNumberOf<Self>),
+        (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
         // fetch chain_id
         let chain_id =
@@ -76,13 +78,13 @@ where
         let at_hash = api
             .storage()
             .system()
-            .block_hash(block_number, None)
+            .block_hash(&u64::from(block_number), None)
             .await?;
         // fetch tree
         let tree = api
             .storage()
             .merkle_tree_bn254()
-            .trees(event.tree_id, Some(at_hash))
+            .trees(&event.tree_id, Some(at_hash))
             .await?;
         let tree = match tree {
             Some(t) => t,
@@ -121,7 +123,7 @@ where
                 .merkle_root(merkle_root)
                 .latest_leaf_index(latest_leaf_index)
                 .target(target_system.into_fixed_bytes())
-                .pallet_index(10)
+                .pallet_index(44)
                 .build();
 
             let can_sign_proposal = self
