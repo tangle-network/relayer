@@ -25,6 +25,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
+import { ethers } from 'ethers';
 import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
@@ -51,8 +52,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
   let webbRelayer: WebbRelayer;
 
   // Governer key
-  const PK1 =
-    '0x9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60';
+  const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
   before(async () => {
     const usageMode: UsageMode = isCi

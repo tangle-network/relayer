@@ -74,7 +74,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       usageMode,
       ports: 'auto',
       enabledPallets,
-      enableLogging: true,
+      enableLogging: false,
     });
 
     bobNode = await LocalProtocolSubstrate.start({

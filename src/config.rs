@@ -258,8 +258,7 @@ pub struct LinkedAnchorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SubstrateLinkedAnchorConfig {
-    /// The node name where this anchor belongs to.
-    /// and it is case-insensitive.
+    /// The Chain Id where this anchor belongs to.
     pub chain: u32,
     /// Tree Id of the anchor
     #[serde(rename(serialize = "tree"))]

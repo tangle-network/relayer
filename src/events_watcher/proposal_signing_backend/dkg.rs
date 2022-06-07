@@ -6,8 +6,6 @@ use webb::substrate::{dkg_runtime, subxt};
 use webb_proposals::Proposal;
 use webb::substrate::scale::{Encode, Decode};
 
-const PROPOSAL_LENGTH: usize = webb_proposals::ProposalHeader::LENGTH;
-const TYPE_CHAIN_LENGTH: usize = webb_proposals::TypedChainId::LENGTH;
 type DkgConfig = subxt::DefaultConfig;
 type DkgRuntimeApi = dkg_runtime::api::RuntimeApi<
     DkgConfig,
@@ -21,6 +19,7 @@ where
 {
     api: R,
     pair: subxt::PairSigner<C, Sr25519Pair>,
+    typed_chain_id: webb_proposals::TypedChainId,
 }
 
 impl<R, C> DkgProposalSigningBackend<R, C>
@@ -31,10 +30,12 @@ where
     pub fn new(
         client: subxt::Client<C>,
         pair: subxt::PairSigner<C, Sr25519Pair>,
+        typed_chain_id: webb_proposals::TypedChainId,
     ) -> Self {
         Self {
             api: client.to_runtime_api(),
             pair,
+            typed_chain_id,
         }
     }
 }
@@ -50,14 +51,8 @@ where
         let header = proposal.header();
         let resource_id = header.resource_id();
         let storage_api = self.api.storage().dkg_proposals();
-        let proposal_bytes = proposal.to_vec();
-        // get src chain id from bytes
-        let mut src_chain_bytes = [0u8; TYPE_CHAIN_LENGTH];
-        let j = PROPOSAL_LENGTH + TYPE_CHAIN_LENGTH;
-        src_chain_bytes[..TYPE_CHAIN_LENGTH]
-            .copy_from_slice(&proposal_bytes[PROPOSAL_LENGTH..j]);
-        let src_chain_id = webb_proposals::TypedChainId::from(src_chain_bytes);
-        let src_chain_id = webb_proposals_typed_chain_converter(src_chain_id);
+        let src_chain_id =
+            webb_proposals_typed_chain_converter(self.typed_chain_id);
         let maybe_whitelisted =
             storage_api.chain_nonces(&src_chain_id, None).await?;
         if maybe_whitelisted.is_none() {
@@ -83,14 +78,8 @@ where
         let tx_api = self.api.tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
-        let proposal_bytes = proposal.to_vec();
-        // get src chain id from bytes
-        let mut src_chain_bytes = [0u8; TYPE_CHAIN_LENGTH];
-        let j = PROPOSAL_LENGTH + TYPE_CHAIN_LENGTH;
-        src_chain_bytes[..TYPE_CHAIN_LENGTH]
-            .copy_from_slice(&proposal_bytes[PROPOSAL_LENGTH..j]);
-        let src_chain_id = webb_proposals::TypedChainId::from(src_chain_bytes);
-        let src_chain_id = webb_proposals_typed_chain_converter(src_chain_id);
+        let src_chain_id =
+            webb_proposals_typed_chain_converter(self.typed_chain_id);
         let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
         tracing::debug!(
             nonce = %hex::encode(&nonce.encode()),

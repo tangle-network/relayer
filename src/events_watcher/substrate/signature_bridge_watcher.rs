@@ -65,7 +65,7 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
             target: crate::probe::TARGET,
             tracing::Level::DEBUG,
             kind = %crate::probe::Kind::SignatureBridge,
-            call = "signature-bridge-maintainer-event",
+            call = "pallet_signature_bridge:: set_maintainer",
             msg = "Maintainer set",
             new_maintainer = ?event.new_maintainer,
             old_maintainer = ?event.old_maintainer,
@@ -144,8 +144,7 @@ where
         // parse proposal call
         let parsed_proposal_bytes = parse_call_from_proposal_data(&data);
         let proposal_encoded_call: Call =
-            scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())
-                .unwrap();
+            scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())?;
 
         tracing::debug!("decoded proposal call : {:?}", proposal_encoded_call);
         // get current maintainer
@@ -256,7 +255,7 @@ where
             api.storage().signature_bridge().maintainer(None).await?;
 
         // we need to do some checks here:
-        // 1. convert the public key to address and check it is not the same as the current governor.
+        // 1. convert the public key to address and check it is not the same as the current maintainer.
         // 2. check if the nonce is greater than the current nonce.
         // 3. ~check if the signature is valid.~
 
@@ -266,7 +265,7 @@ where
                 new_maintainer = %hex::encode(&new_maintainer),
                 %nonce,
                 signature = %hex::encode(&signature),
-                "Skipping transfer ownership since the new governor is the same as the current one",
+                "Skipping transfer ownership since the new maintainer is the same as the current one",
             );
             return Ok(());
         }

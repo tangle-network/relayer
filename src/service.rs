@@ -84,6 +84,7 @@ pub async fn ignite(
         if !chain_config.enabled {
             continue;
         }
+        let chain_id = U256::from(chain_config.chain_id);
         let provider = ctx.evm_provider(chain_name).await?;
         let client = Arc::new(provider);
         tracing::debug!(
@@ -97,6 +98,17 @@ pub async fn ignite(
                     start_evm_anchor_events_watcher(
                         ctx,
                         config,
+                        chain_id,
+                        client.clone(),
+                        store.clone(),
+                    )
+                    .await?;
+                }
+                Contract::VAnchor(config) => {
+                    start_evm_vanchor_events_watcher(
+                        ctx,
+                        config,
+                        chain_id,
                         client.clone(),
                         store.clone(),
                     )
@@ -112,15 +124,6 @@ pub async fn ignite(
                     .await?;
                 }
                 Contract::GovernanceBravoDelegate(_) => {}
-                Contract::VAnchor(config) => {
-                    start_evm_vanchor_events_watcher(
-                        ctx,
-                        config,
-                        client.clone(),
-                        store.clone(),
-                    )
-                    .await?;
-                }
             }
         }
         // start the transaction queue after starting other tasks.
@@ -555,6 +558,7 @@ fn start_dkg_pallet_watcher(
 async fn start_evm_vanchor_events_watcher(
     ctx: &RelayerContext,
     config: &VAnchorContractConfig,
+    chain_id: U256,
     client: Arc<Client>,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
@@ -585,6 +589,7 @@ async fn start_evm_vanchor_events_watcher(
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
+            chain_id,
             &my_config.linked_anchors,
             my_config.proposal_signing_backend,
         )
@@ -665,6 +670,7 @@ async fn start_evm_vanchor_events_watcher(
 async fn start_evm_anchor_events_watcher(
     ctx: &RelayerContext,
     config: &AnchorContractConfig,
+    chain_id: U256,
     client: Arc<Client>,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
@@ -695,6 +701,7 @@ async fn start_evm_anchor_events_watcher(
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
+            chain_id,
             &my_config.linked_anchors,
             my_config.proposal_signing_backend,
         )
@@ -935,6 +942,7 @@ enum ProposalSigningBackendSelector {
 async fn make_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
+    chain_id: U256,
     linked_anchors: &[LinkedAnchorConfig],
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> anyhow::Result<ProposalSigningBackendSelector> {
@@ -943,6 +951,8 @@ async fn make_proposal_signing_backend(
         Some(ProposalSigningBackendConfig::DkgNode(c)) => {
             // if it is the dkg backend, we will need to connect to that node first,
             // and then use the DkgProposalSigningBackend to sign the proposal.
+            let typed_chain_id =
+                webb_proposals::TypedChainId::Evm(chain_id.as_u32());
             let dkg_client = ctx
                 .substrate_provider::<subxt::DefaultConfig>(&c.node)
                 .await?;
@@ -950,6 +960,7 @@ async fn make_proposal_signing_backend(
             let backend = DkgProposalSigningBackend::new(
                 dkg_client,
                 PairSigner::new(pair),
+                typed_chain_id,
             );
             Ok(ProposalSigningBackendSelector::Dkg(backend))
         }
@@ -1012,6 +1023,8 @@ async fn make_substrate_proposal_signing_backend(
         Some(ProposalSigningBackendConfig::DkgNode(c)) => {
             // if it is the dkg backend, we will need to connect to that node first,
             // and then use the DkgProposalSigningBackend to sign the proposal.
+            let typed_chain_id =
+                webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
             let dkg_client = ctx
                 .substrate_provider::<subxt::DefaultConfig>(&c.node)
                 .await?;
@@ -1019,6 +1032,7 @@ async fn make_substrate_proposal_signing_backend(
             let backend = DkgProposalSigningBackend::new(
                 dkg_client,
                 PairSigner::new(pair),
+                typed_chain_id,
             );
             Ok(ProposalSigningBackendSelector::Dkg(backend))
         }

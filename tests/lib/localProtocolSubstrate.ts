@@ -2,12 +2,12 @@
 /// This Could be through a Docker Container or a Local Compiled node.
 
 import { spawn } from 'child_process';
-import { Pallet } from './webbRelayer.js'
+import { Pallet } from './webbRelayer.js';
 import {
   FullNodeInfo,
   LocalNodeOpts,
   SubstrateNodeBase,
-  ExportedConfigOptions
+  ExportedConfigOptions,
 } from './substrateNodeBase.js';
 
 const STANDALONE_DOCKER_IMAGE_URL =
@@ -75,16 +75,18 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
     }
   }
 
-  public async exportConfig(opts: ExportedConfigOptions): Promise<FullNodeInfo> {
+  public async exportConfig(
+    opts: ExportedConfigOptions
+  ): Promise<FullNodeInfo> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     let enabledPallets: Pallet[] = [];
-    for( let p of this.opts.enabledPallets ?? [] ){
-      if(p.pallet != 'SignatureBridge'){
-        p.linkedAnchors = opts.linkedAnchors,
-        p.proposalSigningBackend = opts.proposalSigningBackend
-        enabledPallets.push(p)
-      }else{
-        enabledPallets.push(p)
+    for (let p of this.opts.enabledPallets ?? []) {
+      if (p.pallet != 'SignatureBridge') {
+        (p.linkedAnchors = opts.linkedAnchors),
+          (p.proposalSigningBackend = opts.proposalSigningBackend);
+        enabledPallets.push(p);
+      } else {
+        enabledPallets.push(p);
       }
     }
     const nodeInfo: FullNodeInfo = {

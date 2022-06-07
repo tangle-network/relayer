@@ -526,7 +526,13 @@ type ContractKind =
   | 'GovernanceBravoDelegate'
   | 'VAnchor';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
-type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler' | 'AnchorBn254' | 'VAnchorBn254' | 'SignatureBridge';
+type PalletKind =
+  | 'DKG'
+  | 'DKGProposals'
+  | 'DKGProposalHandler'
+  | 'AnchorBn254'
+  | 'VAnchorBn254'
+  | 'SignatureBridge';
 
 export type DKGProposalSigningBackend = {
   type: 'DKGNode';

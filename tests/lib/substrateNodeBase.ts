@@ -206,7 +206,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   public async writeConfig(
     path: string,
     opts: ExportedConfigOptions
-    ): Promise<void> {
+  ): Promise<void> {
     const config = await this.exportConfig(opts);
     // don't mind my typescript typing here XD
     type ConvertedPallet = Omit<
@@ -253,7 +253,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
                 }
               : undefined,
 
-          'linked-anchors': c.linkedAnchors
+          'linked-anchors': c.linkedAnchors,
         };
         return convertedPallet;
       }),

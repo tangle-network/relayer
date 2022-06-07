@@ -22,9 +22,10 @@ import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
 import isCi from 'is-ci';
+import { ethers } from 'ethers';
 import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
-import { hexToU8a } from '@polkadot/util';
+import { hexToU8a, u8aToHex } from '@polkadot/util';
 import {
   UsageMode,
   defaultEventsWatcherValue,
@@ -40,10 +41,10 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
   let bobNode: LocalProtocolSubstrate;
 
   // Governer key
-  const PK1 =
-    '0x9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60';
-  const uncompressedKey =
-    '8db55b05db86c0b1786ca49f095d76344c9e6056b2f02701a7e7f3c20aabfd913ebbe148dd17c56551a52952371071a6c604b3f3abe8f2c8fa742158ea6dd7d4';
+  const PK1 = u8aToHex(ethers.utils.randomBytes(32));
+  let governorWallet = new ethers.Wallet(PK1)
+  // slice 0x04 from public key
+  let uncompressedKey = governorWallet._signingKey().publicKey.slice(4);
 
   let webbRelayer: WebbRelayer;
 
