@@ -204,6 +204,7 @@ impl SledQueueKey {
             optional_key: None,
         }
     }
+
     /// from_evm_with_custom_key returns an EVM specific SledQueueKey.
     pub fn from_evm_with_custom_key(
         chain_id: types::U256,

@@ -34,7 +34,7 @@ impl SubstrateEventWatcher for SubstrateAnchorLeavesWatcher {
 
     type Api = protocol_substrate_runtime::api::RuntimeApi<
         Self::RuntimeConfig,
-        subxt::PolkadotExtrinsicParams<Self::RuntimeConfig>,
+        subxt::SubstrateExtrinsicParams<Self::RuntimeConfig>,
     >;
 
     type Event = protocol_substrate_runtime::api::Event;

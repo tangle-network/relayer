@@ -25,6 +25,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
+import { ethers } from 'ethers';
 import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
@@ -49,6 +50,9 @@ describe('Substrate Anchor Transaction Relayer', function() {
   let bobNode: LocalProtocolSubstrate;
 
   let webbRelayer: WebbRelayer;
+
+  // Governer key
+  const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -81,9 +85,9 @@ describe('Substrate Anchor Transaction Relayer', function() {
       ports: 'auto',
     });
 
-    await aliceNode.writeConfig({
-      path: `${tmpDirPath}/${aliceNode.name}.json`,
+    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
     });
 
     // Wait until we are ready and connected

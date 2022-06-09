@@ -438,9 +438,10 @@ type EventKind =
   | 'sync'
   | 'relay_tx'
   | 'signing_backend'
-  | 'signature_bridge'
   | 'tx_queue'
-  | 'leaves_store';
+  | 'leaves_store'
+  | 'signing_backend'
+  | 'signature_bridge';
 
 type EventTarget = 'webb_probe';
 
@@ -493,6 +494,11 @@ export interface LinkedAnchor {
   address: string;
 }
 
+export interface SubstrateLinkedAnchor {
+  chain: number;
+  tree: number;
+}
+
 export interface Substrate {
   [key: string]: NodeInfo;
 }
@@ -506,6 +512,8 @@ export interface NodeInfo {
 export interface Pallet {
   pallet: PalletKind;
   eventsWatcher: EventsWatcher;
+  proposalSigningBackend?: ProposalSigningBackend;
+  linkedAnchors?: SubstrateLinkedAnchor[];
 }
 
 export interface EnabledContracts {
@@ -518,7 +526,13 @@ type ContractKind =
   | 'GovernanceBravoDelegate'
   | 'VAnchor';
 type RuntimeKind = 'DKG' | 'WebbProtocol';
-type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler' | 'AnchorBn254' | 'VAnchorBn254';
+type PalletKind =
+  | 'DKG'
+  | 'DKGProposals'
+  | 'DKGProposalHandler'
+  | 'AnchorBn254'
+  | 'VAnchorBn254'
+  | 'SignatureBridge';
 
 export type DKGProposalSigningBackend = {
   type: 'DKGNode';

@@ -28,6 +28,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::context::RelayerContext;
 use ethereum_types::{U256, U64};
 use futures::prelude::*;
 
@@ -515,6 +516,93 @@ pub trait SubstrateEventWatcher {
                     instant = std::time::Instant::now();
                 }
             }
+        };
+        backoff::future::retry(backoff, task).await?;
+        Ok(())
+    }
+}
+
+// A Substrate Bridge Watcher is a trait for Signature Bridge Pallet that is not specific for watching events from that pallet,
+/// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers
+/// from the actual action that should be taken depending on the event.
+#[async_trait::async_trait]
+pub trait SubstrateBridgeWatcher: SubstrateEventWatcher
+where
+    Self::Store: ProposalStore<Proposal = ()>
+        + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
+        + QueueStore<BridgeCommand, Key = SledQueueKey>,
+{
+    async fn handle_cmd(
+        &self,
+        node_name: String,
+        chain_id: U256,
+        store: Arc<Self::Store>,
+        ctx: RelayerContext,
+        client: Arc<Self::Api>,
+        cmd: BridgeCommand,
+    ) -> anyhow::Result<()>;
+
+    /// Returns a task that should be running in the background
+    /// that will watch events
+    #[tracing::instrument(
+        skip_all,
+        fields(
+            node = %node_name,
+            chain_id = %chain_id,
+            tag = %Self::TAG
+        )
+    )]
+    async fn run(
+        &self,
+        node_name: String,
+        chain_id: U256,
+        client: subxt::Client<Self::RuntimeConfig>,
+        ctx: RelayerContext,
+        store: Arc<Self::Store>,
+    ) -> anyhow::Result<()> {
+        let backoff = backoff::ExponentialBackoff {
+            max_elapsed_time: None,
+            ..Default::default()
+        };
+
+        let task = || async {
+            let client_api = client.clone();
+            let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
+            // chain_id is used as tree_id, to ensure that we have one signature bridge
+            let target_system =
+                webb_proposals::TargetSystem::new_tree_id(chain_id.as_u32());
+            let my_chain_id =
+                webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
+            let bridge_key = BridgeKey::new(target_system, my_chain_id);
+            let key = SledQueueKey::from_bridge_key(bridge_key);
+            while let Some(command) = store.dequeue_item(key)? {
+                let result = self
+                    .handle_cmd(
+                        node_name.clone(),
+                        chain_id,
+                        store.clone(),
+                        ctx.clone(),
+                        api.clone(),
+                        command,
+                    )
+                    .await;
+                match result {
+                    Ok(_) => {
+                        tokio::time::sleep(Duration::from_millis(500)).await;
+                        continue;
+                    }
+                    Err(e) => {
+                        tracing::error!("Error while handle_cmd {}", e);
+                        // this a transient error, so we will retry again.
+                        tracing::warn!("Restarting bridge event watcher ...");
+                        return Err(backoff::Error::transient(e));
+                    }
+                }
+                // sleep for a bit to avoid overloading the db.
+            }
+            // whenever this loop stops, we will restart the whole task again.
+            // that way we never have to worry about closed channels.
+            Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())

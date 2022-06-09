@@ -3,14 +3,14 @@ use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{T
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::{dkg_runtime, subxt};
-use webb_proposals::evm::AnchorUpdateProposal;
+use webb_proposals::Proposal;
+use webb::substrate::scale::{Encode, Decode};
 
 type DkgConfig = subxt::DefaultConfig;
 type DkgRuntimeApi = dkg_runtime::api::RuntimeApi<
     DkgConfig,
     subxt::PolkadotExtrinsicParams<DkgConfig>,
 >;
-
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
 pub struct DkgProposalSigningBackend<R, C>
 where
@@ -19,6 +19,7 @@ where
 {
     api: R,
     pair: subxt::PairSigner<C, Sr25519Pair>,
+    typed_chain_id: webb_proposals::TypedChainId,
 }
 
 impl<R, C> DkgProposalSigningBackend<R, C>
@@ -29,27 +30,29 @@ where
     pub fn new(
         client: subxt::Client<C>,
         pair: subxt::PairSigner<C, Sr25519Pair>,
+        typed_chain_id: webb_proposals::TypedChainId,
     ) -> Self {
         Self {
             api: client.to_runtime_api(),
             pair,
+            typed_chain_id,
         }
     }
 }
 
+//AnchorUpdateProposal for evm
 #[async_trait::async_trait]
-impl super::ProposalSigningBackend<AnchorUpdateProposal>
+impl<P> super::ProposalSigningBackend<P>
     for DkgProposalSigningBackend<DkgRuntimeApi, DkgConfig>
+where
+    P: Proposal + Sync + 'static + Send,
 {
-    async fn can_handle_proposal(
-        &self,
-        proposal: &AnchorUpdateProposal,
-    ) -> anyhow::Result<bool> {
+    async fn can_handle_proposal(&self, proposal: &P) -> anyhow::Result<bool> {
         let header = proposal.header();
         let resource_id = header.resource_id();
         let storage_api = self.api.storage().dkg_proposals();
         let src_chain_id =
-            webb_proposals_typed_chain_converter(proposal.src_chain());
+            webb_proposals_typed_chain_converter(self.typed_chain_id);
         let maybe_whitelisted =
             storage_api.chain_nonces(&src_chain_id, None).await?;
         if maybe_whitelisted.is_none() {
@@ -71,37 +74,25 @@ impl super::ProposalSigningBackend<AnchorUpdateProposal>
         Ok(true)
     }
 
-    async fn handle_proposal(
-        &self,
-        proposal: &AnchorUpdateProposal,
-    ) -> anyhow::Result<()> {
-        self.handle_anchor_update_proposal(proposal).await
-    }
-}
-
-impl DkgProposalSigningBackend<DkgRuntimeApi, DkgConfig> {
-    async fn handle_anchor_update_proposal(
-        &self,
-        proposal: &AnchorUpdateProposal,
-    ) -> anyhow::Result<()> {
+    async fn handle_proposal(&self, proposal: &P) -> anyhow::Result<()> {
         let tx_api = self.api.tx().dkg_proposals();
-
-        let leaf_index = proposal.latest_leaf_index();
         let resource_id = proposal.header().resource_id();
+        let nonce = proposal.header().nonce();
         let src_chain_id =
-            webb_proposals_typed_chain_converter(proposal.src_chain());
+            webb_proposals_typed_chain_converter(self.typed_chain_id);
+        let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
         tracing::debug!(
-            %leaf_index,
+            nonce = %hex::encode(&nonce.encode()),
             resource_id = %hex::encode(&resource_id.into_bytes()),
             src_chain_id = ?src_chain_id,
-            proposal = %hex::encode(&proposal.to_bytes()),
+            proposal = %hex::encode(&proposal.to_vec()),
             "sending proposal to DKG runtime"
         );
         let xt = tx_api.acknowledge_proposal(
-            Nonce(leaf_index),
+            nonce,
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
-            proposal.to_bytes().into(),
+            proposal.to_vec(),
         )?;
         // TODO: here we should have a substrate based tx queue in the background
         // where just send the raw xt bytes and let it handle the work for us.

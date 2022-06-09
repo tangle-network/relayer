@@ -25,6 +25,7 @@ import {
   FullNodeInfo,
   LocalNodeOpts,
   SubstrateNodeBase,
+  ExportedConfigOptions,
 } from './substrateNodeBase.js';
 
 const DKG_STANDALONE_DOCKER_IMAGE_URL =
@@ -118,7 +119,9 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
     }
   }
 
-  public async exportConfig(suri: string): Promise<FullNodeInfo> {
+  public async exportConfig(
+    opts: ExportedConfigOptions
+  ): Promise<FullNodeInfo> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     const host = isCI ? 'localhost' : '127.0.0.1';
     const nodeInfo: FullNodeInfo = {
@@ -127,7 +130,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       wsEndpoint: `ws://${host}:${ports.ws}`,
       runtime: 'DKG',
       pallets: this.opts.enabledPallets ?? [],
-      suri,
+      suri: opts.suri,
     };
     return nodeInfo;
   }

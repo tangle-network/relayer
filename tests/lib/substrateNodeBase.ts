@@ -19,7 +19,13 @@ import fs from 'fs';
 import getPort, { portNumbers } from 'get-port';
 import { ChildProcess, execSync } from 'child_process';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
-import { EventsWatcher, NodeInfo, Pallet } from './webbRelayer.js';
+import {
+  EventsWatcher,
+  NodeInfo,
+  Pallet,
+  ProposalSigningBackend,
+  SubstrateLinkedAnchor,
+} from './webbRelayer.js';
 import { ConvertToKebabCase } from './tsHacks.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { options } from '@webb-tools/api';
@@ -55,6 +61,12 @@ export type LocalNodeOpts = {
 export type SubstrateEvent = {
   section: string;
   method: string;
+};
+
+export type ExportedConfigOptions = {
+  suri: string;
+  proposalSigningBackend?: ProposalSigningBackend;
+  linkedAnchors?: SubstrateLinkedAnchor[];
 };
 
 // Default Events watcher for the pallets.
@@ -189,22 +201,20 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     });
   }
 
-  abstract exportConfig(suri: string): Promise<FullNodeInfo>;
+  abstract exportConfig(opts: ExportedConfigOptions): Promise<FullNodeInfo>;
 
-  public async writeConfig({
-    path,
-    suri,
-  }: {
-    path: string;
-    suri: string;
-  }): Promise<void> {
-    const config = await this.exportConfig(suri);
+  public async writeConfig(
+    path: string,
+    opts: ExportedConfigOptions
+  ): Promise<void> {
+    const config = await this.exportConfig(opts);
     // don't mind my typescript typing here XD
     type ConvertedPallet = Omit<
       ConvertToKebabCase<Pallet>,
-      'events-watcher'
+      'events-watcher' | 'proposal-signing-backend'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
+      'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -230,6 +240,20 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
             enabled: c.eventsWatcher.enabled,
             'polling-interval': c.eventsWatcher.pollingInterval,
           },
+          'proposal-signing-backend':
+            c.proposalSigningBackend?.type === 'Mocked'
+              ? {
+                  type: 'Mocked',
+                  'private-key': c.proposalSigningBackend?.privateKey,
+                }
+              : c.proposalSigningBackend?.type === 'DKGNode'
+              ? {
+                  type: 'DKGNode',
+                  node: c.proposalSigningBackend?.node,
+                }
+              : undefined,
+
+          'linked-anchors': c.linkedAnchors,
         };
         return convertedPallet;
       }),

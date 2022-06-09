@@ -107,10 +107,10 @@ describe.skip('SignatureBridge Governor Updates', function () {
       enabledPallets,
     });
 
-    await charlieNode.writeConfig({
-      path: `${tmpDirPath}/${charlieNode.name}.json`,
+    await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
     });
+
 
     // we need to wait until the public key is on chain.
     await charlieNode.waitForEvent({

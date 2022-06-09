@@ -254,6 +254,17 @@ pub struct LinkedAnchorConfig {
     pub address: Address,
 }
 
+/// SubstrateLinkedAnchorConfig is the configuration for the linked anchor of substrate.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SubstrateLinkedAnchorConfig {
+    /// The Chain Id where this anchor belongs to.
+    pub chain: u32,
+    /// Tree Id of the anchor
+    #[serde(rename(serialize = "tree"))]
+    pub tree: u32,
+}
+
 /// Enumerates the supported contract configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
@@ -273,6 +284,7 @@ pub enum Pallet {
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
     AnchorBn254(AnchorBn254PalletConfig),
+    SignatureBridge(SignatureBridgePalletConfig),
     VAnchorBn254(VAnchorBn254PalletConfig),
 }
 
@@ -388,6 +400,21 @@ pub struct DKGProposalHandlerPalletConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct AnchorBn254PalletConfig {
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+    /// A List of linked Anchor Contracts (on other chains) to this contract.
+    #[serde(rename(serialize = "linkedAnchors"), default)]
+    pub linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
+}
+
+/// SignatureBridgePalletConfig represents the configuration for the SignatureBridge pallet.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SignatureBridgePalletConfig {
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,

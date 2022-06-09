@@ -74,7 +74,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       usageMode,
       ports: 'auto',
       enabledPallets,
-      enableLogging: true,
+      enableLogging: false,
     });
 
     bobNode = await LocalProtocolSubstrate.start({
@@ -82,11 +82,10 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       authority: 'bob',
       usageMode,
       ports: 'auto',
-      enableLogging: true,
+      enableLogging: false,
     });
 
-    await aliceNode.writeConfig({
-      path: `${tmpDirPath}/${aliceNode.name}.json`,
+    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
     });
 
