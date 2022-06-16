@@ -77,6 +77,15 @@ pub struct WebbRelayerConfig {
     /// For Experimental Options
     #[serde(default)]
     pub experimental: ExperimentalConfig,
+    /// Configuration for running relayer
+    ///
+    /// by deafult all features are enabled
+    /// Features:
+    /// 1. Data quering for leafs
+    /// 2. Governance relaying
+    /// 3. Private transaction relaying
+    #[serde(default)]
+    pub features: FeaturesConfig,
 }
 /// EvmChainConfig is the configuration for the EVM based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -194,6 +203,17 @@ pub struct ExperimentalConfig {
     /// the bridge to create the proposals.
     pub smart_anchor_updates: bool,
     pub smart_anchor_updates_retries: u32,
+}
+/// FeaturesConfig is the configuration for running relayer with option.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]
+#[serde(rename_all = "kebab-case")]
+pub struct FeaturesConfig {
+    /// Enable data quering for leafs
+    pub data_query: bool,
+    /// Enable governance relaying
+    pub governance_relay: bool,
+    /// Enable private tx relaying
+    pub private_tx_relay: bool,
 }
 /// TxQueueConfig is the configuration for the TxQueue.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -743,6 +763,13 @@ fn postloading_process(
                 }
             }
         }
+    }
+    // check if data quering is enabled then governance_relaying should also be enabled
+    if config.features.data_query && !config.features.governance_relay {
+        tracing::warn!(
+            "!!WARNING!!: In order to enable data quering for relayer,
+            governance relaying must be configured."
+        );
     }
     Ok(config)
 }

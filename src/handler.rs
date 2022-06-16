@@ -337,12 +337,21 @@ pub async fn handle_cmd(
     stream: CommandStream,
 ) {
     use CommandResponse::*;
-    match cmd {
-        Command::Substrate(sub) => handle_substrate(ctx, sub, stream).await,
-        Command::Evm(evm) => handle_evm(ctx, evm, stream).await,
-        Command::Ping() => {
-            let _ = stream.send(Pong()).await;
+    if ctx.config.features.private_tx_relay {
+        match cmd {
+            Command::Substrate(sub) => handle_substrate(ctx, sub, stream).await,
+            Command::Evm(evm) => handle_evm(ctx, evm, stream).await,
+            Command::Ping() => {
+                let _ = stream.send(Pong()).await;
+            }
         }
+    } else {
+        tracing::error!("Private transaction relaying is not configured..!");
+        let _ = stream
+            .send(Error(
+                "Private transaction relaying is not configured..!".to_string(),
+            ))
+            .await;
     }
 }
 /// Handler for EVM commands
