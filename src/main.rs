@@ -366,13 +366,20 @@ fn build_relayer(
     // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
     let store = Arc::new(store);
     let store_filter = warp::any().map(move || Arc::clone(&store)).boxed();
+    let is_data_query_enabled = ctx.config.features.data_query;
     let leaves_cache_filter = warp::path("leaves")
         .and(store_filter)
         .and(warp::path::param())
         .and(warp::path::param())
-        .and_then(handler::handle_leaves_cache)
+        .and_then(move |store, chain_id, contract| {
+            handler::handle_leaves_cache(
+                store,
+                chain_id,
+                contract,
+                is_data_query_enabled,
+            )
+        })
         .boxed();
-
     // Code that will map the request handlers above to a defined http endpoint.
     let routes = ip_filter.or(info_filter).or(leaves_cache_filter).boxed(); // will add more routes here.
     let http_filter =

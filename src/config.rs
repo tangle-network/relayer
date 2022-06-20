@@ -205,7 +205,7 @@ pub struct ExperimentalConfig {
     pub smart_anchor_updates_retries: u32,
 }
 /// FeaturesConfig is the configuration for running relayer with option.
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct FeaturesConfig {
     /// Enable data quering for leafs
@@ -214,6 +214,15 @@ pub struct FeaturesConfig {
     pub governance_relay: bool,
     /// Enable private tx relaying
     pub private_tx_relay: bool,
+}
+impl Default for FeaturesConfig {
+    fn default() -> Self {
+        Self {
+            data_query: true,
+            governance_relay: true,
+            private_tx_relay: true,
+        }
+    }
 }
 /// TxQueueConfig is the configuration for the TxQueue.
 #[derive(Debug, Clone, Deserialize, Serialize)]

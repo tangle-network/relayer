@@ -79,6 +79,7 @@ pub async fn ignite(
     ctx: &RelayerContext,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
+    tracing::debug!("Relayer configuration  : {:?}", ctx.config);
     // check if relayer is configured for governance relaying
     if !ctx.config.features.governance_relay {
         tracing::warn!("Governance relaying is not configured.");

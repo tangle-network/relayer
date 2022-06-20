@@ -242,10 +242,12 @@ pub async fn handle_relayer_info(
 /// * `store` - [Sled](https://sled.rs)-based database store
 /// * `chain_id` - An U256 representing the chain id of the chain to query
 /// * `contract` - An address of the contract to query
+/// * `is_data_query_enabled` - return response only if data query is enabled for relayer
 pub async fn handle_leaves_cache(
     store: Arc<crate::store::sled::SledStore>,
     chain_id: U256,
     contract: Address,
+    is_data_query_enabled: bool,
 ) -> Result<impl warp::Reply, Infallible> {
     #[derive(Debug, Serialize)]
     #[serde(rename_all = "camelCase")]
@@ -257,6 +259,13 @@ pub async fn handle_leaves_cache(
     let last_queried_block = store
         .get_last_deposit_block_number((chain_id, contract))
         .unwrap();
+    // check if data query is enabled for relayer
+    if !is_data_query_enabled {
+        tracing::warn!("Data query is not enabled for relayer.");
+        return Ok(warp::reply::json(&String::from(
+            "Data query is not enabled for relayer",
+        )));
+    }
     Ok(warp::reply::json(&LeavesCacheResponse {
         leaves,
         last_queried_block,
