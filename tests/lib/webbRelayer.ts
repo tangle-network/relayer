@@ -24,6 +24,8 @@ import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
+import { FullChainInfo } from './localTestnet';
+import { FullNodeInfo } from './substrateNodeBase';
 
 export type WebbRelayerOptions = {
   port: number;
@@ -96,13 +98,10 @@ export class WebbRelayer {
     return response.json() as Promise<WebbRelayerInfo>;
   }
 
-  public async getLeaves(
-    chainId: string,
-    contractAddress: string
-  ): Promise<LeavesCacheResponse> {
+  public async getLeaves(chainId: string, contractAddress: string) {
     const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/${chainId}/${contractAddress}`;
     const response = await fetch(endpoint);
-    return response.json() as Promise<LeavesCacheResponse>;
+    return response;
   }
 
   public async stop(): Promise<void> {
@@ -449,6 +448,12 @@ export type EventSelector = {
   kind: EventKind;
   event?: any;
 };
+
+export interface FeaturesConfig {
+  dataQuery?: boolean;
+  governanceRelay?: boolean;
+  privateTxRelay?: boolean;
+}
 
 export interface WebbRelayerInfo {
   evm: Evm;

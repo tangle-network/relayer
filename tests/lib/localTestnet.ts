@@ -33,6 +33,7 @@ import {
   Contract,
   EnabledContracts,
   EventsWatcher,
+  FeaturesConfig,
   ProposalSigningBackend,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
@@ -46,6 +47,7 @@ export type ExportedConfigOptions = {
   signatureBridge?: Bridges.SignatureBridge;
   signatureVBridge?: VBridge.VBridge;
   proposalSigningBackend?: ProposalSigningBackend;
+  features?: FeaturesConfig;
 };
 
 // Default Events watcher for the contracts.
@@ -479,6 +481,7 @@ export class LocalChain {
         // chainId as the chain identifier
         [key: number]: ConvertedConfig;
       };
+      features?: ConvertToKebabCase<FeaturesConfig>;
     };
 
     const convertedConfig: ConvertedConfig = {
@@ -519,6 +522,11 @@ export class LocalChain {
     const fullConfigFile: FullConfigFile = {
       evm: {
         [this.underlyingChainId]: convertedConfig,
+      },
+      features: {
+        'data-query': opts.features?.dataQuery ?? true,
+        'governance-relay': opts.features?.governanceRelay ?? true,
+        'private-tx-relay': opts.features?.privateTxRelay ?? true,
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);

@@ -82,7 +82,7 @@ pub async fn ignite(
     tracing::debug!("Relayer configuration  : {:?}", ctx.config);
     // check if relayer is configured for governance relaying
     if !ctx.config.features.governance_relay {
-        tracing::warn!("Governance relaying is not configured.");
+        tracing::error!("Governance relaying is not configured.");
         return Ok(());
     }
     // now we go through each chain, in our configuration

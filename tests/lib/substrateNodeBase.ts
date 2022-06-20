@@ -21,6 +21,7 @@ import { ChildProcess, execSync } from 'child_process';
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import {
   EventsWatcher,
+  FeaturesConfig,
   NodeInfo,
   Pallet,
   ProposalSigningBackend,
@@ -67,6 +68,7 @@ export type ExportedConfigOptions = {
   suri: string;
   proposalSigningBackend?: ProposalSigningBackend;
   linkedAnchors?: SubstrateLinkedAnchor[];
+  features?: FeaturesConfig;
 };
 
 // Default Events watcher for the pallets.
@@ -226,6 +228,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
       substrate: {
         [key: string]: ConvertedConfig;
       };
+      features?: ConvertToKebabCase<FeaturesConfig>;
     };
     const convertedConfig: ConvertedConfig = {
       enabled: config.enabled,
@@ -261,6 +264,11 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     const fullConfigFile: FullConfigFile = {
       substrate: {
         [this.opts.name]: convertedConfig,
+      },
+      features: {
+        'data-query': opts.features?.dataQuery ?? true,
+        'governance-relay': opts.features?.governanceRelay ?? true,
+        'private-tx-relay': opts.features?.privateTxRelay ?? true,
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);

@@ -262,14 +262,20 @@ pub async fn handle_leaves_cache(
     // check if data query is enabled for relayer
     if !is_data_query_enabled {
         tracing::warn!("Data query is not enabled for relayer.");
-        return Ok(warp::reply::json(&String::from(
-            "Data query is not enabled for relayer",
-        )));
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&String::from(
+                "Data query is not enabled for relayer.",
+            )),
+            warp::http::StatusCode::FORBIDDEN,
+        ));
     }
-    Ok(warp::reply::json(&LeavesCacheResponse {
-        leaves,
-        last_queried_block,
-    }))
+    Ok(warp::reply::with_status(
+        warp::reply::json(&LeavesCacheResponse {
+            leaves,
+            last_queried_block,
+        }),
+        warp::http::StatusCode::OK,
+    ))
 }
 /// Enumerates the supported commands for chain specific relayers
 #[derive(Debug, Clone, Deserialize)]

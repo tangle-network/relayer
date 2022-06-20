@@ -26,7 +26,7 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { ethers } from 'ethers';
-import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
+import { WebbRelayer, Pallet, LeavesCacheResponse } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
   UsageMode,
@@ -135,7 +135,11 @@ describe('Substrate Anchor Transaction Relayer', function() {
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
     const response = await webbRelayer.getLeaves(chainIdHex, treeIdAddress);
-    expect(noOfDeposit).to.equal(response.leaves.length);
+    expect(response.status).equal(200);
+    let leavesStore = response.json() as Promise<LeavesCacheResponse>;
+    leavesStore.then(resp => {
+      expect(noOfDeposit).to.equal(resp.leaves.length);
+    });
   });
 
   it('Simple Anchor Transaction', async () => {
