@@ -28,8 +28,6 @@ import {
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { IAnchor } from '@webb-tools/interfaces';
-import { IAnchorDeposit } from '@webb-tools/interfaces/src/anchor';
 import { u8aToHex } from '@polkadot/util';
 
 describe('Governance Relaying Service', function () {
