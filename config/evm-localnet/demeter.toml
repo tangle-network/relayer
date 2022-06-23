@@ -33,7 +33,7 @@ linked-anchors = [
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "0x0000000000000000000000000000000000000000000000000000000000000001" }
 
-[[evm.athena.contracts]]
+[[evm.demeter.contracts]]
 contract = "VAnchor"
 address = "0xdB587ef6aaA16b5719CDd3AaB316F0E70473e9Be"
 deployed-at = 1
