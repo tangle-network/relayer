@@ -158,8 +158,8 @@ webb-relayer -vv -c ./config
 
 **Note:** You can also review the different chain configurations for EVM and Substrate.
 
-- [`SubstrateConfig`](https://docs.webb.tools/relayer/webb_relayer/config/struct.SubstrateConfig.html)
-- [`EvmChainConfig`](https://docs.webb.tools/relayer/webb_relayer/config/struct.EvmChainConfig.html)
+- [`SubstrateConfig`](https://webb-tools.github.io/relayer/webb_relayer/config/struct.SubstrateConfig.html)
+- [`EvmChainConfig`](https://webb-tools.github.io/relayer/webb_relayer/config/struct.EvmChainConfig.html)
 
 #### Chain Configuration
 
