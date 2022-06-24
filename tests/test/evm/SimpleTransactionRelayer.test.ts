@@ -23,7 +23,8 @@ import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import {
-  calcualteRelayerFees,
+  calculateRelayerFees,
+  defaultWithdrawConfigValue,
   EnabledContracts,
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
@@ -105,6 +106,7 @@ describe('Simple Transaction Relayer With No Proposal Signing Banckend', functio
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
+      withdrawConfig: defaultWithdrawConfigValue
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
@@ -184,7 +186,7 @@ describe('Simple Transaction Relayer With No Proposal Signing Banckend', functio
     const relayerFeePercentage =
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
-      )?.withdrawFeePercentage ?? 0;
+      )?.withdrawConfig?.withdrawFeePercentage ?? 0;
 
     // check balance of recipient before withdrawal
     let webbBalanceOfRecipient = await token.getBalance(recipient.address);
@@ -195,7 +197,7 @@ describe('Simple Transaction Relayer With No Proposal Signing Banckend', functio
       depositInfo.index,
       recipient.address,
       wallet1.address,
-      calcualteRelayerFees(
+      calculateRelayerFees(
         anchor1.denomination!,
         relayerFeePercentage
       ).toBigInt(),

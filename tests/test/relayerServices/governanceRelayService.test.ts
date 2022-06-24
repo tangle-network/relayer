@@ -23,7 +23,8 @@ import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import {
-  calcualteRelayerFees,
+  calculateRelayerFees,
+  defaultWithdrawConfigValue,
   EnabledContracts,
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
@@ -107,6 +108,7 @@ describe('Governance Relaying Service', function () {
       signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       features: { dataQuery: false, privateTxRelay: false },
+      withdrawConfig: defaultWithdrawConfigValue
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
@@ -196,7 +198,7 @@ describe('Governance Relaying Service', function () {
     // now we try to call relayer leaves API
     // It should fail since data querying is not configured for relayer
     const chainId = localChain1.underlyingChainId.toString(16);
-    const response = await webbRelayer.getLeaves(
+    const response = await webbRelayer.getLeavesEvm(
       chainId,
       anchor1.contract.address
     );
@@ -233,7 +235,7 @@ describe('Governance Relaying Service', function () {
     const relayerFeePercentage =
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
-      )?.withdrawFeePercentage ?? 0;
+      )?.withdrawConfig?.withdrawFeePercentage ?? 0;
 
     try {
       await anchor1.setupWithdraw(
@@ -241,7 +243,7 @@ describe('Governance Relaying Service', function () {
         depositInfo.index,
         recipient.address,
         wallet1.address,
-        calcualteRelayerFees(
+        calculateRelayerFees(
           anchor1.denomination!,
           relayerFeePercentage
         ).toBigInt(),
@@ -250,7 +252,7 @@ describe('Governance Relaying Service', function () {
     } catch (e) {
       // should fail since private transaction is not configured for the relayer
       expect(e).to.contain(
-        'error: {"error":"Private transaction relaying is not configured..!"}'
+        'Private transaction relaying is not configured'
       );
     }
   });

@@ -97,9 +97,15 @@ export class WebbRelayer {
     const response = await fetch(endpoint);
     return response.json() as Promise<WebbRelayerInfo>;
   }
-
-  public async getLeaves(chainId: string, contractAddress: string) {
-    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/${chainId}/${contractAddress}`;
+  // data querying api for evm
+  public async getLeavesEvm(chainId: string, contractAddress: string) {
+    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/evm/${chainId}/${contractAddress}`;
+    const response = await fetch(endpoint);
+    return response;
+  }
+  // data querying api for substrate
+  public async getLeavesSubstrate(chainId: string, treeId: string) {
+    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/substrate/${chainId}/${treeId}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -259,7 +265,7 @@ export class WebbRelayer {
   }
 }
 
-export function calcualteRelayerFees(
+export function calculateRelayerFees(
   denomination: string,
   feePercentage: number
 ): BigNumber {
@@ -454,6 +460,10 @@ export interface FeaturesConfig {
   governanceRelay?: boolean;
   privateTxRelay?: boolean;
 }
+export interface WithdrawConfig {
+  withdrawFeePercentage: number;
+  withdrawGaslimit: `0x${string}`;
+}
 
 export interface WebbRelayerInfo {
   evm: Evm;
@@ -482,8 +492,7 @@ export interface Contract {
   deployedAt: number;
   eventsWatcher: EventsWatcher;
   size?: number;
-  withdrawGaslimit?: `0x${string}`;
-  withdrawFeePercentage?: number;
+  withdrawConfig?: WithdrawConfig;
   proposalSigningBackend?: ProposalSigningBackend;
   linkedAnchors?: LinkedAnchor[];
 }
@@ -524,6 +533,12 @@ export interface Pallet {
 export interface EnabledContracts {
   contract: ContractKind;
 }
+
+// Default WithdrawlConfig for the contracts.
+export const defaultWithdrawConfigValue: WithdrawConfig = {
+  withdrawGaslimit: '0x5B8D80',
+  withdrawFeePercentage: 0,
+};
 
 type ContractKind =
   | 'Anchor'

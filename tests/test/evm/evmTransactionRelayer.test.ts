@@ -23,7 +23,8 @@ import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import {
-  calcualteRelayerFees,
+  calculateRelayerFees,
+  defaultWithdrawConfigValue,
   EnabledContracts,
   LeavesCacheResponse,
   WebbRelayer,
@@ -109,6 +110,8 @@ describe('EVM Transaction Relayer', function () {
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+      withdrawConfig: defaultWithdrawConfigValue
+      
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
@@ -197,7 +200,7 @@ describe('EVM Transaction Relayer', function () {
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
     const chainId = localChain1.underlyingChainId.toString(16);
-    const response = await webbRelayer.getLeaves(
+    const response = await webbRelayer.getLeavesEvm(
       chainId,
       anchor1.contract.address
     );
@@ -237,7 +240,7 @@ describe('EVM Transaction Relayer', function () {
     const relayerFeePercentage =
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
-      )?.withdrawFeePercentage ?? 0;
+      )?.withdrawConfig?.withdrawFeePercentage ?? 0;
 
     // check balance of recipient before withdrawal
     let webbBalanceOfRecipient = await token.getBalance(recipient.address);
@@ -248,7 +251,7 @@ describe('EVM Transaction Relayer', function () {
       depositInfo.index,
       recipient.address,
       wallet1.address,
-      calcualteRelayerFees(
+      calculateRelayerFees(
         anchor1.denomination!,
         relayerFeePercentage
       ).toBigInt(),
@@ -437,13 +440,13 @@ async function initWithdrawal(
   const relayerFeePercentage =
     localChain1Info?.contracts.find(
       (c) => c.address === anchor.contract.address
-    )?.withdrawFeePercentage ?? 0;
+    )?.withdrawConfig?.withdrawFeePercentage ?? 0;
   const { args, publicInputs, extData } = await anchor.setupWithdraw(
     depositInfo.deposit,
     depositInfo.index,
     recipient.address,
     wallet.address,
-    calcualteRelayerFees(anchor.denomination!, relayerFeePercentage).toBigInt(),
+    calculateRelayerFees(anchor.denomination!, relayerFeePercentage).toBigInt(),
     0
   );
   const [proofEncoded, roots, nullifierHash, extDataHash] = args;

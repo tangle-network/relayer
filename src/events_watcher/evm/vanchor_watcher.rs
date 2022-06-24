@@ -89,7 +89,17 @@ where
         let leaf_index = event_data.leaf_index;
         let function_signature = [141, 9, 22, 157];
         let nonce = event_data.leaf_index;
-        for linked_anchor in &wrapper.config.linked_anchors {
+        let linked_anchors = match &wrapper.config.linked_anchors {
+            Some(anchors) => anchors,
+            None => {
+                tracing::error!(
+                    "Linked anchors not configured for : ({})",
+                    src_chain_id
+                );
+                return Ok(());
+            }
+        };
+        for linked_anchor in linked_anchors {
             let dest_chain = linked_anchor.chain.to_lowercase();
             let maybe_chain = wrapper.webb_config.evm.get(&dest_chain);
             let dest_chain = match maybe_chain {

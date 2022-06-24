@@ -35,6 +35,7 @@ import {
   EventsWatcher,
   FeaturesConfig,
   ProposalSigningBackend,
+  WithdrawConfig,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
 
@@ -48,6 +49,7 @@ export type ExportedConfigOptions = {
   signatureVBridge?: VBridge.VBridge;
   proposalSigningBackend?: ProposalSigningBackend;
   features?: FeaturesConfig;
+  withdrawConfig?: WithdrawConfig;
 };
 
 // Default Events watcher for the contracts.
@@ -344,8 +346,8 @@ export class LocalChain {
         address: localAnchor.getAddress(),
         deployedAt: 1,
         size: 1, // Ethers
-        withdrawFeePercentage: 0,
         proposalSigningBackend: opts.proposalSigningBackend,
+        withdrawConfig: opts.withdrawConfig,
         eventsWatcher: defaultEventsWatcherValue,
         linkedAnchors: await Promise.all(
           otherAnchors.map(async (anchor) => ({
@@ -397,8 +399,8 @@ export class LocalChain {
         address: localAnchor.getAddress(),
         deployedAt: 1,
         size: 1, // Ethers
-        withdrawFeePercentage: 0,
         proposalSigningBackend: opts.proposalSigningBackend,
+        withdrawConfig: opts.withdrawConfig,
         eventsWatcher: {
           enabled: true,
           pollingInterval: 1000,
@@ -465,10 +467,11 @@ export class LocalChain {
     // don't mind my typescript typing here XD
     type ConvertedContract = Omit<
       ConvertToKebabCase<Contract>,
-      'events-watcher' | 'proposal-signing-backend'
+      'events-watcher' | 'proposal-signing-backend' | 'withdraw-config'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
       'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
+      'withdraw-config'?: ConvertToKebabCase<WithdrawConfig>;
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -508,8 +511,13 @@ export class LocalChain {
                 node: contract.proposalSigningBackend?.node,
               }
             : undefined,
-        'withdraw-gaslimit': '0x5B8D80',
-        'withdraw-fee-percentage': contract.withdrawFeePercentage,
+        'withdraw-config': contract.withdrawConfig
+          ? {
+              'withdraw-fee-percentage':
+                contract.withdrawConfig?.withdrawFeePercentage,
+              'withdraw-gaslimit': contract.withdrawConfig?.withdrawGaslimit,
+            }
+          : undefined,
         'events-watcher': {
           enabled: contract.eventsWatcher.enabled,
           'polling-interval': contract.eventsWatcher.pollingInterval,

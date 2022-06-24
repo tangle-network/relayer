@@ -80,11 +80,7 @@ pub async fn ignite(
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
     tracing::debug!("Relayer configuration  : {:?}", ctx.config);
-    // check if relayer is configured for governance relaying
-    if !ctx.config.features.governance_relay {
-        tracing::error!("Governance relaying is not configured.");
-        return Ok(());
-    }
+
     // now we go through each chain, in our configuration
     for (chain_name, chain_config) in &ctx.config.evm {
         if !chain_config.enabled {
@@ -303,8 +299,7 @@ fn start_substrate_anchor_event_watcher(
             &my_config.linked_anchors[..],
             my_config.proposal_signing_backend,
         )
-        .await
-        .unwrap();
+        .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
                 let watcher = SubstrateAnchorWatcher::new(
@@ -375,7 +370,8 @@ fn start_substrate_anchor_event_watcher(
                     "No backend configured for proposal signing..!"
                 );
             }
-        }
+        };
+        Result::<_, anyhow::Error>::Ok(())
     };
     // kick off the watcher.
     tokio::task::spawn(task);
@@ -596,7 +592,7 @@ async fn start_evm_vanchor_events_watcher(
             &my_ctx,
             store.clone(),
             chain_id,
-            &my_config.linked_anchors,
+            my_config.linked_anchors,
             my_config.proposal_signing_backend,
         )
         .await?;
@@ -631,28 +627,39 @@ async fn start_evm_vanchor_events_watcher(
                 tokio::select! {
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
-                            "VAnchor watcher task stopped for ({})",
+                            "V-anchor watcher task stopped for ({})",
                             contract_address,
                         );
                     },
                     _ = vanchor_leaves_watcher => {
                         tracing::warn!(
-                            "VAnchor leaves watcher stopped for ({})",
+                            "V-anchor leaves watcher stopped for ({})",
                             contract_address,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping VAnchor watcher for ({})",
+                            "Stopping V-anchor watcher for ({})",
                             contract_address,
                         );
                     },
                 }
             }
             ProposalSigningBackendSelector::None => {
-                tracing::debug!(
-                    "No backend configured for proposal signing..!"
-                );
+                tokio::select! {
+                    _ = vanchor_leaves_watcher => {
+                        tracing::warn!(
+                            "V-anchor leaves watcher stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping V-anchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
             }
         };
 
@@ -708,7 +715,7 @@ async fn start_evm_anchor_events_watcher(
             &my_ctx,
             store.clone(),
             chain_id,
-            &my_config.linked_anchors,
+            my_config.linked_anchors,
             my_config.proposal_signing_backend,
         )
         .await?;
@@ -762,9 +769,20 @@ async fn start_evm_anchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::None => {
-                tracing::debug!(
-                    "No backend configured for proposal signing..!"
-                );
+                tokio::select! {
+                    _ = anchor_leaves_watcher => {
+                        tracing::warn!(
+                            "Anchor leaves watcher stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Anchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
             }
         };
 
@@ -949,9 +967,30 @@ async fn make_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
     chain_id: U256,
-    linked_anchors: &[LinkedAnchorConfig],
+    linked_anchors: Option<Vec<LinkedAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> anyhow::Result<ProposalSigningBackendSelector> {
+    // Check if contract is configured with governance support for the relayer.
+    if !ctx.config.features.governance_relay {
+        tracing::warn!("Governance relaying is not enabled for relayer");
+        return Ok(ProposalSigningBackendSelector::None);
+    }
+    // We do this by checking if linked anchors are provided.
+    let linked_anchors = match linked_anchors {
+        Some(anchors) => {
+            if anchors.is_empty() {
+                tracing::warn!("Misconfigured Network: Linked anchors cannot be empty for governance relaying");
+                return Ok(ProposalSigningBackendSelector::None);
+            } else {
+                anchors
+            }
+        }
+        None => {
+            tracing::warn!("Misconfigured Network: Linked anchors must be configured for governance relaying");
+            return Ok(ProposalSigningBackendSelector::None);
+        }
+    };
+
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
         Some(ProposalSigningBackendConfig::DkgNode(c)) => {
@@ -1013,7 +1052,10 @@ async fn make_proposal_signing_backend(
                 .build();
             Ok(ProposalSigningBackendSelector::Mocked(backend))
         }
-        None => Ok(ProposalSigningBackendSelector::None),
+        None => {
+            tracing::warn!("Misconfigured Network: Proposal signing backend must be configured for governance relaying");
+            Ok(ProposalSigningBackendSelector::None)
+        }
     }
 }
 

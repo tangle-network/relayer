@@ -23,7 +23,8 @@ import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import {
-  calcualteRelayerFees,
+  calculateRelayerFees,
+  defaultWithdrawConfigValue,
   EnabledContracts,
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
@@ -107,6 +108,7 @@ describe('Data Querying Service', function () {
       signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       features: { privateTxRelay: false },
+      withdrawConfig: defaultWithdrawConfigValue
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
@@ -195,7 +197,7 @@ describe('Data Querying Service', function () {
 
     // now we call relayer leaves API
     const chainId = localChain1.underlyingChainId.toString(16);
-    const response = await webbRelayer.getLeaves(
+    const response = await webbRelayer.getLeavesEvm(
       chainId,
       anchor1.contract.address
     );
@@ -232,7 +234,7 @@ describe('Data Querying Service', function () {
     const relayerFeePercentage =
       localChain1Info?.contracts.find(
         (c) => c.address === anchor1.contract.address
-      )?.withdrawFeePercentage ?? 0;
+      )?.withdrawConfig?.withdrawFeePercentage ?? 0;
 
     try {
       await anchor1.setupWithdraw(
@@ -240,7 +242,7 @@ describe('Data Querying Service', function () {
         depositInfo.index,
         recipient.address,
         wallet1.address,
-        calcualteRelayerFees(
+        calculateRelayerFees(
           anchor1.denomination!,
           relayerFeePercentage
         ).toBigInt(),
