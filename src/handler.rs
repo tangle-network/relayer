@@ -497,7 +497,7 @@ pub async fn handle_cmd(
         tracing::error!("Private transaction relaying is not configured..!");
         let _ = stream
             .send(Error(
-                "Private transaction relaying is not configured..!".to_string(),
+                "Private transaction relaying is not enabled.".to_string(),
             ))
             .await;
     }
