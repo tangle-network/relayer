@@ -15,9 +15,8 @@
  *
  */
 import fs from 'fs';
-import ganache from 'ganache';
 import { ethers } from 'ethers';
-import { Server } from 'ganache';
+import ganache, { Server } from 'ganache';
 import { Bridges, Utility, VBridge } from '@webb-tools/protocol-solidity';
 import {
   BridgeInput,

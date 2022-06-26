@@ -18,7 +18,6 @@
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import '@webb-tools/types';
-import { JsUtxo } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -42,7 +41,9 @@ import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 import {
   Note,
   ProvingManagerSetupInput,
-  ProvingManagerWrapper,
+  ArkworksProvingManager,
+  Utxo,
+  VAnchorProof,
 } from '@webb-tools/sdk-core';
 
 describe('Substrate VAnchor Transaction Relayer Tests', function () {
@@ -104,7 +105,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('number of deposits made should be equal to number of leaves in cache', async () => {
+  it.only('number of deposits made should be equal to number of leaves in cache', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     //create vanchor
@@ -114,8 +115,6 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
 
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
-
-    const outputAmount = '15';
 
     const chainId = '2199023256632';
     const outputChainId = BigInt(chainId);
@@ -146,31 +145,25 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       Number(outputChainId.toString()),
       0
     );
-    const note2 = note1.getDefaultUtxoNote();
+    const note2 = await note1.getDefaultUtxoNote();
     const publicAmount = currencyToUnitI128(10);
     const notes = [note1, note2];
     // Output UTXOs configs
-    const output1 = new JsUtxo(
-      'Bn254',
-      'Arkworks',
-      2,
-      2,
-      publicAmount.toString(),
+    const output1 = await Utxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Arkworks',
+      amount: publicAmount.toString(),
       chainId,
-      undefined
-    );
-    const output2 = new JsUtxo(
-      'Bn254',
-      'Arkworks',
-      2,
-      2,
-      '0',
+    });
+    const output2 = await Utxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Arkworks',
+      amount: '0',
       chainId,
-      undefined
-    );
+    });
 
     // Configure a new proving manager with direct call
-    const provingManager = new ProvingManagerWrapper('direct-call');
+    const provingManager = new ArkworksProvingManager(null);
     const leavesMap: any = {};
 
     const address = account.address;
@@ -188,7 +181,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const setup: ProvingManagerSetupInput<'vanchor'> = {
       chainId: outputChainId.toString(),
       indices: [0, 0],
-      inputNotes: notes.map((note) => note.serialize()),
+      inputNotes: notes,
       leavesMap: leavesMap,
       output: [output1, output2],
       encryptedCommitments: [comEnc1, comEnc2],
@@ -201,7 +194,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       fee: fee.toString(),
     };
 
-    const data = await provingManager.prove('vanchor', setup);
+    const data = await provingManager.prove('vanchor', setup) as VAnchorProof;
     const extData = {
       relayer: address,
       recipient: address,
@@ -217,7 +210,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       roots: rootsSet,
       inputNullifiers: data.inputUtxos.map((input) => `0x${input.nullifier}`),
       outputCommitments: data.outputNotes.map((note) =>
-        u8aToHex(note.getLeafCommitment())
+        u8aToHex(note.note.getLeafCommitment())
       ),
       extDataHash: data.extDataHash,
     };

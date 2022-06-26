@@ -210,12 +210,10 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     exponentiation: '5',
   };
   const note = await Note.generateNote(noteInput);
-  // @ts-ignore
   const treeIds = await api.query.anchorBn254.anchors.keys();
   const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
   const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
-  // @ts-ignore
   const tx = api.tx.anchorBn254.deposit(treeId, leaf);
   return { tx, note };
 }

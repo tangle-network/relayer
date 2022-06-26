@@ -20,7 +20,7 @@ import {
   Note,
   NoteGenInput,
   ProvingManagerSetupInput,
-  ProvingManagerWrapper,
+  ArkworksProvingManager
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Mixer Transaction Relayer', function() {
@@ -416,10 +416,9 @@ async function createMixerWithdrawProof(
       ''
     );
     const treeId = 0;
-    //@ts-ignore
-    const getLeaves = api.rpc.mt.getLeaves;
-    const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
-    const provingManager = new ProvingManagerWrapper('direct-call');
+    const leafCount: number = await api.derive.merkleTreeBn254.getLeafCountForTree(treeId)
+    const treeLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(treeId, 0, leafCount-1);
+    const provingManager = new ArkworksProvingManager(null);
     const leafHex = u8aToHex(note.getLeaf());
     const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
     expect(leafIndex).to.be.greaterThan(-1);
