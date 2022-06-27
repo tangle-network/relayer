@@ -295,12 +295,11 @@ cargo test
 
 ### To run E2E tests
 
-First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) node, compiled locally (in release mode) and both the `protocol-substrate` and `relayer` project
-must be next to each other.
+First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) node, compiled locally (in release mode) and both the `protocol-substrate` and `relayer` project must be next to each other. The relayer must be compiled using `--features integration-tests`.
 
 Here is the basic setup you will need:
 
-1. Clone the Relayer repo `git clone https://github.com/webb-tools/relayer.git`
+1. Clone the Relayer repo `git clone https://github.com/webb-tools/relayer.git` 
 2. Clone Protocol Substrate node `https://github.com/webb-tools/protocol-substrate.git`
 3. Then fetch the submodules for the node `cd protocol-substrate && git submodule update --init`
 4. While you are there, build the standalone node `cargo build --release -p webb-standalone-node`
