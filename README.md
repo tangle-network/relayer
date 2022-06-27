@@ -295,8 +295,7 @@ cargo test
 
 ### To run E2E tests
 
-First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) node, compiled locally (in release mode) and both the `protocol-substrate` and `relayer` project
-must be next to each other.
+First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) node, compiled locally (in release mode and with `--features integration-tests`) and both the `protocol-substrate` and `relayer` project must be next to each other.
 
 Here is the basic setup you will need:
 
