@@ -620,8 +620,7 @@ async function createAnchorWithdrawProof(
       ''
     );
     const treeIds = await api.query.anchorBn254.anchors.keys();
-    //@ts-ignore
-    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
+    const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
     const treeId = sorted[0] || 5;
     const leafCount: number = await api.derive.merkleTreeBn254.getLeafCountForTree(treeId)
     const treeLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(treeId, 0, leafCount-1);
