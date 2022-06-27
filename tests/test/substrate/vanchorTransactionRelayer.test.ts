@@ -26,7 +26,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
+import { WebbRelayer, Pallet, LeavesCacheResponse } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
   UsageMode,
@@ -36,7 +36,6 @@ import { BigNumber } from 'ethers';
 import { Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
-import { ethAddressFromString } from '../utils/ethAddressFromString.js';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 
 import {
@@ -99,7 +98,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -246,11 +245,14 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     // chainId
     const chainIdentifier = 1080;
     const chainIdHex = chainIdentifier.toString(16);
-    const treeIdAddress = ethAddressFromString(treeId.toString());
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
-    const response = await webbRelayer.getLeaves(chainIdHex, treeIdAddress);
-    expect(indexBeforeInsetion + 2).to.equal(response.leaves.length);
+    const response = await webbRelayer.getLeavesSubstrate(chainIdHex, treeId.toString());
+    expect(response.status).equal(200);
+    let leavesStore = response.json() as Promise<LeavesCacheResponse>;
+    leavesStore.then(resp => {
+      expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
+    });
   });
 
   after(async () => {

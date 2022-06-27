@@ -8,6 +8,7 @@ use webb::evm::{
     ethers::prelude::{Signer, SignerMiddleware},
 };
 
+use crate::config::AnchorWithdrawConfig;
 use crate::{
     context::RelayerContext,
     handler::{
@@ -61,6 +62,19 @@ pub async fn handle_anchor_relay_tx<'a>(
             tracing::warn!("Unsupported Contract: {:?}", cmd.id);
             let _ = stream
                 .send(Network(NetworkStatus::UnsupportedContract))
+                .await;
+            return;
+        }
+    };
+    // validate contract withdraw configuration
+    let withdraw_config: &AnchorWithdrawConfig = match &contract_config
+        .withdraw_config
+    {
+        Some(cfg) => cfg,
+        None => {
+            tracing::error!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain);
+            let _ = stream
+                .send(Error(format!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain)))
                 .await;
             return;
         }
@@ -133,10 +147,8 @@ pub async fn handle_anchor_relay_tx<'a>(
         }
     };
     // check the fee
-    let expected_fee = calculate_fee(
-        contract_config.withdraw_config.withdraw_fee_percentage,
-        denomination,
-    );
+    let expected_fee =
+        calculate_fee(withdraw_config.withdraw_fee_percentage, denomination);
     let (_, unacceptable_fee) = U256::overflowing_sub(cmd.fee, expected_fee);
     if unacceptable_fee {
         tracing::error!("Received a fee lower than configuration");

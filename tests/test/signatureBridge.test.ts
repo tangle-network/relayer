@@ -38,7 +38,7 @@ import {
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
+describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   this.timeout(5 * 60 * 1000);
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;

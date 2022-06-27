@@ -50,7 +50,7 @@ import { sleep } from '../lib/sleep.js';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
+describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   // 8 minutes
   this.timeout(8 * 60 * 1000);
   const tmpDirPath = temp.mkdirSync();

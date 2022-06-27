@@ -24,6 +24,8 @@ import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
+import { FullChainInfo } from './localTestnet';
+import { FullNodeInfo } from './substrateNodeBase';
 
 export type WebbRelayerOptions = {
   port: number;
@@ -95,14 +97,17 @@ export class WebbRelayer {
     const response = await fetch(endpoint);
     return response.json() as Promise<WebbRelayerInfo>;
   }
-
-  public async getLeaves(
-    chainId: string,
-    contractAddress: string
-  ): Promise<LeavesCacheResponse> {
-    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/${chainId}/${contractAddress}`;
+  // data querying api for evm
+  public async getLeavesEvm(chainId: string, contractAddress: string) {
+    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/evm/${chainId}/${contractAddress}`;
     const response = await fetch(endpoint);
-    return response.json() as Promise<LeavesCacheResponse>;
+    return response;
+  }
+  // data querying api for substrate
+  public async getLeavesSubstrate(chainId: string, treeId: string) {
+    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/substrate/${chainId}/${treeId}`;
+    const response = await fetch(endpoint);
+    return response;
   }
 
   public async stop(): Promise<void> {
@@ -260,7 +265,7 @@ export class WebbRelayer {
   }
 }
 
-export function calcualteRelayerFees(
+export function calculateRelayerFees(
   denomination: string,
   feePercentage: number
 ): BigNumber {
@@ -450,6 +455,16 @@ export type EventSelector = {
   event?: any;
 };
 
+export interface FeaturesConfig {
+  dataQuery?: boolean;
+  governanceRelay?: boolean;
+  privateTxRelay?: boolean;
+}
+export interface WithdrawConfig {
+  withdrawFeePercentage: number;
+  withdrawGaslimit: `0x${string}`;
+}
+
 export interface WebbRelayerInfo {
   evm: Evm;
   substrate: Substrate;
@@ -477,8 +492,7 @@ export interface Contract {
   deployedAt: number;
   eventsWatcher: EventsWatcher;
   size?: number;
-  withdrawGaslimit?: `0x${string}`;
-  withdrawFeePercentage?: number;
+  withdrawConfig?: WithdrawConfig;
   proposalSigningBackend?: ProposalSigningBackend;
   linkedAnchors?: LinkedAnchor[];
 }
@@ -519,6 +533,12 @@ export interface Pallet {
 export interface EnabledContracts {
   contract: ContractKind;
 }
+
+// Default WithdrawlConfig for the contracts.
+export const defaultWithdrawConfigValue: WithdrawConfig = {
+  withdrawGaslimit: '0x5B8D80',
+  withdrawFeePercentage: 0,
+};
 
 type ContractKind =
   | 'Anchor'
