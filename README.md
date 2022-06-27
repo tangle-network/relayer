@@ -348,3 +348,10 @@ Licensed under <a href="LICENSE">Apache 2.0 license</a>.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in this crate by you, as defined in the Apache 2.0 license, shall
 be licensed as above, without any additional terms or conditions.
+
+## Supported by
+
+<br />
+<p align="center">
+ <img src="./assets/w3f.jpeg" width="30%" height="60%" >
+</p>
