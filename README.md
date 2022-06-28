@@ -158,8 +158,8 @@ webb-relayer -vv -c ./config
 
 **Note:** You can also review the different chain configurations for EVM and Substrate.
 
-- [`SubstrateConfig`](https://docs.webb.tools/relayer/webb_relayer/config/struct.SubstrateConfig.html)
-- [`EvmChainConfig`](https://docs.webb.tools/relayer/webb_relayer/config/struct.EvmChainConfig.html)
+- [`SubstrateConfig`](https://webb-tools.github.io/relayer/webb_relayer/config/struct.SubstrateConfig.html)
+- [`EvmChainConfig`](https://webb-tools.github.io/relayer/webb_relayer/config/struct.EvmChainConfig.html)
 
 #### Chain Configuration
 
@@ -295,12 +295,11 @@ cargo test
 
 ### To run E2E tests
 
-First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) node, compiled locally (in release mode) and both the `protocol-substrate` and `relayer` project
-must be next to each other.
+First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) node, compiled locally (in release mode) and both the `protocol-substrate` and `relayer` project must be next to each other. The relayer must be compiled using `--features integration-tests`.
 
 Here is the basic setup you will need:
 
-1. Clone the Relayer repo `git clone https://github.com/webb-tools/relayer.git`
+1. Clone the Relayer repo `git clone https://github.com/webb-tools/relayer.git` 
 2. Clone Protocol Substrate node `https://github.com/webb-tools/protocol-substrate.git`
 3. Then fetch the submodules for the node `cd protocol-substrate && git submodule update --init`
 4. While you are there, build the standalone node `cargo build --release -p webb-standalone-node`
@@ -348,3 +347,10 @@ Licensed under <a href="LICENSE">Apache 2.0 license</a>.
 Unless you explicitly state otherwise, any contribution intentionally submitted
 for inclusion in this crate by you, as defined in the Apache 2.0 license, shall
 be licensed as above, without any additional terms or conditions.
+
+## Supported by
+
+<br />
+<p align="center">
+ <img src="./assets/w3f.jpeg" width="30%" height="60%" >
+</p>

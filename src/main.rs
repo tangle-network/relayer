@@ -364,17 +364,49 @@ fn build_relayer(
 
     // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
     // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
-    let store = Arc::new(store);
-    let store_filter = warp::any().map(move || Arc::clone(&store)).boxed();
-    let leaves_cache_filter = warp::path("leaves")
+    let evm_store = Arc::new(store.clone());
+    let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
+    let ctx_arc = Arc::new(ctx.clone());
+    let leaves_cache_filter_evm = warp::path("leaves")
+        .and(warp::path("evm"))
         .and(store_filter)
         .and(warp::path::param())
         .and(warp::path::param())
-        .and_then(handler::handle_leaves_cache)
+        .and_then(move |store, chain_id, contract| {
+            handler::handle_leaves_cache_evm(
+                store,
+                chain_id,
+                contract,
+                Arc::clone(&ctx_arc),
+            )
+        })
         .boxed();
-
+    // leaf api handler for substrate
+    let substrate_store = Arc::new(store);
+    let store_filter = warp::any()
+        .map(move || Arc::clone(&substrate_store))
+        .boxed();
+    let ctx_arc = Arc::new(ctx.clone());
+    let leaves_cache_filter_substrate = warp::path("leaves")
+        .and(warp::path("substrate"))
+        .and(store_filter)
+        .and(warp::path::param())
+        .and(warp::path::param())
+        .and_then(move |store, chain_id, contract| {
+            handler::handle_leaves_cache_substrate(
+                store,
+                chain_id,
+                contract,
+                Arc::clone(&ctx_arc),
+            )
+        })
+        .boxed();
     // Code that will map the request handlers above to a defined http endpoint.
-    let routes = ip_filter.or(info_filter).or(leaves_cache_filter).boxed(); // will add more routes here.
+    let routes = ip_filter
+        .or(info_filter)
+        .or(leaves_cache_filter_evm)
+        .or(leaves_cache_filter_substrate)
+        .boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();
 

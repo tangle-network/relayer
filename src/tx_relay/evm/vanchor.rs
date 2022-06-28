@@ -8,6 +8,7 @@ use webb::evm::{
     ethers::prelude::{Signer, SignerMiddleware},
 };
 
+use crate::config::AnchorWithdrawConfig;
 use crate::{
     context::RelayerContext,
     handler::{
@@ -16,8 +17,7 @@ use crate::{
     },
     tx_relay::evm::handle_evm_tx,
 };
-
-/// Handler for Anchor commands
+/// Handler for VAnchor commands
 ///
 /// # Arguments
 ///
@@ -49,7 +49,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            crate::config::Contract::Anchor(c) => Some(c),
+            crate::config::Contract::VAnchor(c) => Some(c),
             _ => None,
         })
         .map(|c| (c.common.address, c))
@@ -61,6 +61,19 @@ pub async fn handle_vanchor_relay_tx<'a>(
             tracing::warn!("Unsupported Contract: {:?}", cmd.id);
             let _ = stream
                 .send(Network(NetworkStatus::UnsupportedContract))
+                .await;
+            return;
+        }
+    };
+    // validate contract withdraw configuration
+    let withdraw_config: &AnchorWithdrawConfig = match &contract_config
+        .withdraw_config
+    {
+        Some(cfg) => cfg,
+        None => {
+            tracing::error!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain);
+            let _ = stream
+                .send(Error(format!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain)))
                 .await;
             return;
         }
@@ -126,7 +139,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     // check the fee
     // TODO: Match this up in the context of variable transfers
     let expected_fee = calculate_fee(
-        contract_config.withdraw_config.withdraw_fee_percentage,
+        withdraw_config.withdraw_fee_percentage,
         cmd.ext_data.ext_amount.as_u128().into(),
     );
     let (_, unacceptable_fee) =

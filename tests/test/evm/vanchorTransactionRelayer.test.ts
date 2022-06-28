@@ -27,6 +27,7 @@ import {
 } from '../../lib/localTestnet.js';
 import {
   EnabledContracts,
+  LeavesCacheResponse,
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
@@ -220,13 +221,15 @@ describe('Vanchor Transaction relayer', function () {
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made. Each VAnchor deposit generates 2 leaf entries
     const chainId = localChain1.underlyingChainId.toString(16);
-    const response = await webbRelayer.getLeaves(
+    const response = await webbRelayer.getLeavesEvm(
       chainId,
       vanchor1.contract.address
     );
-    console.log(response);
-
-    expect(response.leaves.length).to.equal(10);
+    expect(response.status).equal(200);
+    let leavesStore = response.json() as Promise<LeavesCacheResponse>;
+    leavesStore.then(resp => {
+      expect(resp.leaves.length).to.equal(10);
+    });
   });
 
   after(async () => {

@@ -47,6 +47,10 @@ const fn default_port() -> u16 {
 const fn enable_leaves_watcher_default() -> bool {
     true
 }
+/// Data query access is set to `true` by default.
+const fn enable_data_query_default() -> bool {
+    true
+}
 /// The maximum events per step is set to `100` by default.
 const fn max_events_per_step_default() -> u64 {
     100
@@ -77,6 +81,15 @@ pub struct WebbRelayerConfig {
     /// For Experimental Options
     #[serde(default)]
     pub experimental: ExperimentalConfig,
+    /// Configuration for running relayer
+    ///
+    /// by deafult all features are enabled
+    /// Features:
+    /// 1. Data quering for leafs
+    /// 2. Governance relaying
+    /// 3. Private transaction relaying
+    #[serde(default)]
+    pub features: FeaturesConfig,
 }
 /// EvmChainConfig is the configuration for the EVM based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -195,6 +208,26 @@ pub struct ExperimentalConfig {
     pub smart_anchor_updates: bool,
     pub smart_anchor_updates_retries: u32,
 }
+/// FeaturesConfig is the configuration for running relayer with option.
+#[derive(Debug, Clone, Copy, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct FeaturesConfig {
+    /// Enable data quering for leafs
+    pub data_query: bool,
+    /// Enable governance relaying
+    pub governance_relay: bool,
+    /// Enable private tx relaying
+    pub private_tx_relay: bool,
+}
+impl Default for FeaturesConfig {
+    fn default() -> Self {
+        Self {
+            data_query: true,
+            governance_relay: true,
+            private_tx_relay: true,
+        }
+    }
+}
 /// TxQueueConfig is the configuration for the TxQueue.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -215,6 +248,8 @@ impl Default for TxQueueConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EventsWatcherConfig {
+    #[serde(default = "enable_data_query_default")]
+    pub enable_data_query: bool,
     #[serde(default = "enable_leaves_watcher_default")]
     /// if it is enabled for this chain or not.
     pub enabled: bool,
@@ -239,7 +274,7 @@ pub struct AnchorWithdrawConfig {
     #[serde(rename(serialize = "withdrawFeePercentage"))]
     pub withdraw_fee_percentage: f64,
     /// A hex value of the gaslimit when doing a withdraw relay transaction on this chain.
-    #[serde(skip_serializing)]
+    #[serde(rename(serialize = "withdrawGaslimit"))]
     pub withdraw_gaslimit: U256,
 }
 
@@ -319,14 +354,14 @@ pub struct AnchorContractConfig {
     /// The size of this contract
     pub size: f64,
     /// Anchor withdraw configuration.
-    #[serde(flatten)]
-    pub withdraw_config: AnchorWithdrawConfig,
+    #[serde(rename(serialize = "withdrawConfig"))]
+    pub withdraw_config: Option<AnchorWithdrawConfig>,
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Vec<LinkedAnchorConfig>,
+    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
 }
 
 /// VAnchorContractConfig represents the configuration for the VAnchor contract.
@@ -341,14 +376,14 @@ pub struct VAnchorContractConfig {
     /// The size of this contract
     pub size: f64,
     /// Anchor withdraw configuration.
-    #[serde(flatten)]
-    pub withdraw_config: AnchorWithdrawConfig,
+    #[serde(rename(serialize = "withdrawConfig"))]
+    pub withdraw_config: Option<AnchorWithdrawConfig>,
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Vec<LinkedAnchorConfig>,
+    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -728,17 +763,179 @@ fn postloading_process(
             Contract::Anchor(cfg) => Some(cfg),
             _ => None,
         });
+        let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
+            Contract::Anchor(cfg) => Some(cfg),
+            _ => None,
+        });
         for anchor in anchors {
-            for linked_anchor in &anchor.linked_anchors {
-                let chain = linked_anchor.chain.to_lowercase();
-                let chain_defined = config.evm.contains_key(&chain);
-                if !chain_defined {
-                    tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
-                        which is required by the Anchor Contract ({}) defined on {} chain.
-                        Please, define it manually, to allow the relayer to work properly.",
-                        chain,
-                        anchor.common.address,
-                        chain_name
+            // validate config for data querying
+            if config.features.data_query {
+                // check if events watcher is enabled
+                if !anchor.events_watcher.enabled {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable data querying,
+                        event-watcher should also be enabled for ({})",
+                        anchor.common.address
+                    );
+                }
+                // check if data-query is enabled in evenst-watcher config
+                if !anchor.events_watcher.enable_data_query {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable data querying,
+                        enable-data-query in events-watcher config should also be enabled for ({})",
+                        anchor.common.address
+                    );
+                }
+            }
+            // validate config for governance relaying
+            if config.features.governance_relay {
+                // check if proposal signing backend is configured
+                if anchor.proposal_signing_backend.is_none() {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable governance relaying,
+                        proposal-signing-backend should be configured for ({})",
+                        anchor.common.address
+                    );
+                }
+                // check if event watchers is enabled
+                if !anchor.events_watcher.enabled {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable governance relaying,
+                        event-watcher should also be enabled for ({})",
+                        anchor.common.address
+                    );
+                }
+                // check if linked anchor is configured
+                match &anchor.linked_anchors {
+                    None => {
+                        tracing::warn!(
+                            "!!WARNING!!: In order to enable governance relaying,
+                            linked-anchors should also be configured for ({})",
+                            anchor.common.address
+                        );
+                    }
+                    Some(linked_anchors) => {
+                        if linked_anchors.is_empty() {
+                            tracing::warn!(
+                                "!!WARNING!!: In order to enable governance relaying,
+                                linked-anchors cannot be empty.
+                                Please congigure Linked anchors for ({})",
+                                anchor.common.address
+                            );
+                        } else {
+                            for linked_anchor in linked_anchors {
+                                let chain = linked_anchor.chain.to_lowercase();
+                                let chain_defined =
+                                    config.evm.contains_key(&chain);
+                                if !chain_defined {
+                                    tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
+                                        which is required by the Anchor Contract ({}) defined on {} chain.
+                                        Please, define it manually, to allow the relayer to work properly.",
+                                        chain,
+                                        anchor.common.address,
+                                        chain_name
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // validate config for private transaction relaying
+            if config.features.private_tx_relay {
+                // check if withdraw fee is configured
+                if anchor.withdraw_config.is_none() {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable private transaction relaying,
+                        withdraw-config should also be configured for ({})",
+                        anchor.common.address
+                    );
+                }
+            }
+        }
+        // validation checks for vanchor
+        for anchor in vanchors {
+            // validate config for data querying
+            if config.features.data_query {
+                // check if events watcher is enabled
+                if !anchor.events_watcher.enabled {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable data querying,
+                        event-watcher should also be enabled for ({})",
+                        anchor.common.address
+                    );
+                }
+                // check if data-query is enabled in evenst-watcher config
+                if !anchor.events_watcher.enable_data_query {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable data querying,
+                        enable-data-query in events-watcher config should also be enabled for ({})",
+                        anchor.common.address
+                    );
+                }
+            }
+            // validate config for governance relaying
+            if config.features.governance_relay {
+                // check if proposal signing backend is configured
+                if anchor.proposal_signing_backend.is_none() {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable governance relaying,
+                        proposal-signing-backend should be configured for ({})",
+                        anchor.common.address
+                    );
+                }
+                // check if event watchers is enabled
+                if !anchor.events_watcher.enabled {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable governance relaying,
+                        event-watcher should also be enabled for ({})",
+                        anchor.common.address
+                    );
+                }
+                // check if linked anchor is configured
+                match &anchor.linked_anchors {
+                    None => {
+                        tracing::warn!(
+                            "!!WARNING!!: In order to enable governance relaying,
+                            linked-anchors should also be configured for ({})",
+                            anchor.common.address
+                        );
+                    }
+                    Some(linked_anchors) => {
+                        if linked_anchors.is_empty() {
+                            tracing::warn!(
+                                "!!WARNING!!: In order to enable governance relaying,
+                                linked-anchors cannot be empty.
+                                Please congigure Linked anchors for ({})",
+                                anchor.common.address
+                            );
+                        } else {
+                            for linked_anchor in linked_anchors {
+                                let chain = linked_anchor.chain.to_lowercase();
+                                let chain_defined =
+                                    config.evm.contains_key(&chain);
+                                if !chain_defined {
+                                    tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
+                                        which is required by the Anchor Contract ({}) defined on {} chain.
+                                        Please, define it manually, to allow the relayer to work properly.",
+                                        chain,
+                                        anchor.common.address,
+                                        chain_name
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // validate config for private transaction relaying
+            if config.features.private_tx_relay {
+                // check if withdraw fee is configured
+                if anchor.withdraw_config.is_none() {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable private transaction relaying,
+                        withdraw-config should also be configured for ({})",
+                        anchor.common.address
                     );
                 }
             }
