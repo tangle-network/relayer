@@ -1,0 +1,9 @@
+port = 9955
+
+[substrate.webbeggnet]
+enabled=true
+http-endpoint = "https://standalone.webb.tools"
+ws-endpoint = "wss://standalone.webb.tools"
+runtime = "WebbProtocol"
+suri = "//Alice"
+pallets = []
