@@ -104,7 +104,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it.only('number of deposits made should be equal to number of leaves in cache', async () => {
+  it('number of deposits made should be equal to number of leaves in cache', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     //create vanchor

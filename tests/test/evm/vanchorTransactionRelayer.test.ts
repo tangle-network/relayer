@@ -166,7 +166,7 @@ describe('Vanchor Transaction relayer', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it.only('number of deposits made should be equal to number of leaves in cache', async () => {
+  it('number of deposits made should be equal to number of leaves in cache', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
 
@@ -203,9 +203,6 @@ describe('Vanchor Transaction relayer', function () {
         originChainId: localChain1.chainId.toString(),
         chainId: localChain1.chainId.toString(),
       });
-
-      // Print the commitment to match against leaves
-      console.log(depositUtxo.commitment);
 
       await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
     }
