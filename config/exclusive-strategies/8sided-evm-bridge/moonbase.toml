@@ -1,0 +1,84 @@
+# Block which represents properties for a network
+[evm.moonbase]
+# Http(s) Endpoint for quick Req/Res
+http-endpoint = <MOONBASE_HTTPS_API_KEY>
+# Websocket Endpoint for long living connections
+ws-endpoint = <MOONBASE_WSS_API_KEY>
+# Block Explorer
+# Optinal, and used for generating clickable links
+# for transactions that happen on this chain.
+explorer = "https://moonbase.moonscan.io/"
+# chain specific id from evm opcode
+chain-id = 1287
+# The Private Key of this account on this network
+# the format is more dynamic here:
+# 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
+#    private key.
+#    Example: 0x8917174396171783496173419137618235192359106130478137647163400318
+#
+# 2. if it starts with '$' then it would be considered as an Enviroment variable
+#    of a hex-encoded private key.
+#    Example: $MOONBASE_PRIVATE_KEY
+#
+# 3. if it starts with '> ' then it would be considered as a command that
+#    the relayer would execute and the output of this command would be the
+#    hex encoded private key.
+#    Example: > ./getKey.sh moonbase-privatekey
+#
+# 4. if it doesn't contains special characters and has 12 or 24 words in it
+#    then we should process it as a mnemonic string: 'word two three four ...'
+private-key = "$MOONBASE_PRIVATE_KEY"
+# Value to indicate that the relayer should enable services for this chain
+enabled = true
+
+# Block which represents the configuration for a supported contract on the network
+[[evm.moonbase.contracts]]
+# The contract can be one of these values
+# - Anchor (Fixed Anchor)
+# - VAnchor (Variable Anchor)
+# - SignatureBridge
+contract = "VAnchor"
+# The address of the contract
+address = "0x0D8D947EB29284a8f7c28E8bAA978E913bf6F5AF"
+# The deployed block number of the contract. When a relayer does not have information for
+# this contract in its store, it will start to sync and query for relevant historical data
+# starting at this block number
+deployed-at = 2384295
+# The minimum size configured for deposit / withdraw on the contract
+size = 0.01
+# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
+# and the polling interval specifies the period of time (in ms) that the events-watcher thread
+# will wait before issuing another query for new events.
+events-watcher = { enabled = true, polling-interval = 15000 }
+# Configuration for private transaction relaying which determines the fee taken by this relayer 
+withdraw-fee-percentage = 0
+# Value for private transaction relaying which specifies the maximum amount of gas which will be
+# used when submitting a withdraw transaction
+withdraw-gaslimit = "0x350000"
+# Entries for this anchor contract's connected edges.
+# These fields are used to determine the generation of AnchorUpdate proposals
+linked-anchors = [
+  { chain = "ropsten", address = "0x53590FF8d6FddC12e9651017F5399d06Dc925C71" },
+  { chain = "rinkeby", address = "0x5CaedaFEf2Fd8B4DF34B2d16134204dFC6b3F6b3" },
+  { chain = "arbitrumtestnet", address = "0x5353cede4b8fea148fb1f66f45d3ec27bff2224d" },
+  { chain = "optimismtestnet", address = "0xB6836ace175ca5144b966F0633fCf0057E47595B" },
+  { chain = "goerli", address = "0xE24A63Ebb690d0d6C241FDd4aA8ad90421f91D8a" },
+  { chain = "kovan", address = "0x1066C35e76c565cbd65FB3a6CB4C6B3161C302B4"},
+  { chain = "polygontestnet", address = "0xe76187266aDFcEcd7CACa83B8F76d7333a592E81"}
+]
+# Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
+# When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
+# the signed proposals to the configured SignatureBridge of the relevant chains.
+proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
+
+[[evm.moonbase.contracts]]
+contract = "SignatureBridge"
+address = "0xEF1E339E9374Fd580FE6a0eB8d74e024b0E78E00"
+# The deployed block number of the contract. When a relayer does not have information for
+# this contract in its store, it will start to sync and query for relevant historical data
+# starting at this block number
+deployed-at = 2384295
+# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
+# and the polling interval specifies the period of time (in ms) that the events-watcher thread
+# will wait before issuing another query for new events.
+events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }

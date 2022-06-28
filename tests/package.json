@@ -33,7 +33,7 @@
     "@truffle/hdwallet-provider": "^2.0.3",
     "@webb-tools/api": "0.1.4-87",
     "@webb-tools/api-derive": "0.1.4-87",
-    "@webb-tools/protocol-solidity": "0.2.1",
+    "@webb-tools/protocol-solidity": "0.2.2",
     "@webb-tools/sdk-core": "0.1.4-87",
     "@webb-tools/types": "0.1.4-87",
     "@webb-tools/test-utils": "0.1.4-87",
