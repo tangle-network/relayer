@@ -1,9 +1,9 @@
 # Block which represents properties for a network
 [evm.moonbase]
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = <MOONBASE_HTTPS_API_KEY>
+http-endpoint = "https://moonbeam-alpha.api.onfinality.io/public"
 # Websocket Endpoint for long living connections
-ws-endpoint = <MOONBASE_WSS_API_KEY>
+ws-endpoint = "wss://moonbeam-alpha.api.onfinality.io/public-ws"
 # Block Explorer
 # Optinal, and used for generating clickable links
 # for transactions that happen on this chain.
