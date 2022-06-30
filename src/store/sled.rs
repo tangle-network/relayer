@@ -401,7 +401,7 @@ impl ProposalStore for SledStore {
         let tree = self.db.open_tree("proposal_store")?;
         match tree.get(&data_hash)? {
             Some(bytes) => {
-                let proposal: Self::Proposal = serde_json::from_slice(&bytes)?;
+                let proposal = serde_json::from_slice(&bytes)?;
                 Ok(Some(proposal))
             }
             None => {
