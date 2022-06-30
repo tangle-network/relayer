@@ -39,11 +39,11 @@ enabled = true
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0x5353cede4b8fea148fb1f66f45d3ec27bff2224d"
+address = "0x4953110789d0cb6de126f4ea88890670ccfe6906"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 13299500
+deployed-at = 13335776
 # The minimum size configured for deposit / withdraw on the contract
 size = 0.01
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
@@ -58,13 +58,13 @@ withdraw-gaslimit = "0x350000"
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { chain = "ropsten", address = "0x53590FF8d6FddC12e9651017F5399d06Dc925C71" },
-  { chain = "rinkeby", address = "0x5CaedaFEf2Fd8B4DF34B2d16134204dFC6b3F6b3" },
-  { chain = "goerli", address = "0xE24A63Ebb690d0d6C241FDd4aA8ad90421f91D8a" },
-  { chain = "polygontestnet", address = "0xe76187266aDFcEcd7CACa83B8F76d7333a592E81" },
-  { chain = "optimismtestnet", address = "0xB6836ace175ca5144b966F0633fCf0057E47595B" },
-  { chain = "kovan", address = "0x1066C35e76c565cbd65FB3a6CB4C6B3161C302B4"},
-  { chain = "moonbase", address = "0x0D8D947EB29284a8f7c28E8bAA978E913bf6F5AF"}
+  { chain = "ropsten", address = "0x66e04f6ae26c310e39f5bf24d873909e6d3b64c7" },
+  { chain = "rinkeby", address = "0x91127f21d63029eb5b2de05b4b1e9fd3497ee95b" },
+  { chain = "goerli", address = "0x682faa319bf7bae7f0cb68435e857d22bf976e17" },
+  { chain = "polygontestnet", address = "0x1371efed369498718bee3eb5d58e5d3dec86be85" },
+  { chain = "optimismtestnet", address = "0x5353cede4b8fea148fb1f66f45d3ec27bff2224d" },
+  { chain = "kovan", address = "0x148e8037ea12834117f3efd9e8990c16c1ff5653"},
+  { chain = "moonbase", address = "0x0c5f4951f42eec082bd1356b9b41928b4f0e7542"}
 ]
 # Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
@@ -73,11 +73,11 @@ proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_K
 
 [[evm.arbitrumtestnet.contracts]]
 contract = "SignatureBridge"
-address = "0xe86026cb01b2d0d3bc7a68f460fc779ab5a28835"
+address = "0x1371efed369498718bee3eb5d58e5d3dec86be85"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 13299500
+deployed-at = 13335776
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
