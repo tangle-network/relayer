@@ -66,19 +66,3 @@ linked-anchors = [
   { chain = "rinkeby", address = "0x91127f21d63029eb5b2de05b4b1e9fd3497ee95b"},
   { chain = "moonbase", address = "0x0c5f4951f42eec082bd1356b9b41928b4f0e7542"}
 ]
-# Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
-# When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
-# the signed proposals to the configured SignatureBridge of the relevant chains.
-proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
-
-[[evm.goerli.contracts]]
-contract = "SignatureBridge"
-address = "0x93447fd245b940934b3133c7b6ed89d98faaf8d7"
-# The deployed block number of the contract. When a relayer does not have information for
-# this contract in its store, it will start to sync and query for relevant historical data
-# starting at this block number
-deployed-at = 7146565
-# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
-# and the polling interval specifies the period of time (in ms) that the events-watcher thread
-# will wait before issuing another query for new events.
-events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }

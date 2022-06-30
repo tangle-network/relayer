@@ -66,19 +66,3 @@ linked-anchors = [
   { chain = "kovan", address = "0x148e8037ea12834117f3efd9e8990c16c1ff5653"},
   { chain = "moonbase", address = "0x0c5f4951f42eec082bd1356b9b41928b4f0e7542"}
 ]
-# Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
-# When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
-# the signed proposals to the configured SignatureBridge of the relevant chains.
-proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
-
-[[evm.ropsten.contracts]]
-contract = "SignatureBridge"
-address = "0x980ee2e9ddfc6479652ad0c717572188511e0c4d"
-# The deployed block number of the contract. When a relayer does not have information for
-# this contract in its store, it will start to sync and query for relevant historical data
-# starting at this block number
-deployed-at = 12497372
-# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
-# and the polling interval specifies the period of time (in ms) that the events-watcher thread
-# will wait before issuing another query for new events.
-events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
