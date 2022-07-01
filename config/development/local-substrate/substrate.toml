@@ -2,8 +2,10 @@ port = 9955
 
 [substrate.localnode]
 enabled=true
-http-endpoint = "http://localhost:9933/"
-ws-endpoint = "ws://localhost:9944/"
+http-endpoint = "http://localhost:9944"
+ws-endpoint = "ws://localhost:9944"
 runtime = "WebbProtocol"
 suri = "//Alice//stash"
-pallets = []
+[[substrate.localnode.pallets]]
+pallet = "VAnchorBn254"
+events-watcher = { enabled = true ,polling-interval = 10000 , print-progress-interval = 0}

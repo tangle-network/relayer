@@ -57,6 +57,7 @@ pub struct AnchorRelayTransaction<Id, P, R, E, I, B> {
 
 /// Proof data object for VAnchor proofs on any chain
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ProofData<P, R, E> {
     /// Encoded proof
     pub proof: P,
@@ -74,6 +75,7 @@ pub struct ProofData<P, R, E> {
 
 /// External data for the VAnchor on any chain.
 #[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ExtData<E, I, B, A> {
     /// Recipient identifier of the withdrawn funds
     pub recipient: I,
@@ -100,5 +102,5 @@ pub struct VAnchorRelayTransaction<Id, P, R, E, I, B, A> {
     /// The zero-knowledge proof data structure for VAnchor transactions
     pub proof_data: ProofData<P, R, E>,
     /// The external data structure for arbitrary inputs
-    pub ext_data: ExtData<E, I, B, A>,
+    pub ext_data: ExtData<P, I, B, A>,
 }

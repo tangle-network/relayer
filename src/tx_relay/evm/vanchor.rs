@@ -159,16 +159,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
         relayer: cmd.ext_data.relayer,
         fee: cmd.ext_data.fee,
         ext_amount: cmd.ext_data.ext_amount,
-        encrypted_output_1: cmd
-            .ext_data
-            .encrypted_output1
-            .to_fixed_bytes()
-            .into(),
-        encrypted_output_2: cmd
-            .ext_data
-            .encrypted_output2
-            .to_fixed_bytes()
-            .into(),
+        encrypted_output_1: cmd.ext_data.encrypted_output1,
+        encrypted_output_2: cmd.ext_data.encrypted_output2,
     };
 
     let proof = Proof {
