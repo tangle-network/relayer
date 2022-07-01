@@ -181,7 +181,6 @@ export class WebbRelayer {
   public async anchorWithdraw(
     chainName: string,
     anchorAddress: string,
-    proof: `0x${string}`,
     publicInputs: IFixedAnchorPublicInputs,
     extData: IFixedAnchorExtData
   ): Promise<`0x${string}`> {
@@ -189,7 +188,7 @@ export class WebbRelayer {
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-    const input = { chainName, anchorAddress, proof, publicInputs, extData };
+    const input = { chainName, anchorAddress, publicInputs, extData };
     return txHashOrReject(ws, input);
   }
 
@@ -282,13 +281,11 @@ async function txHashOrReject(
   {
     chainName,
     anchorAddress,
-    proof,
     publicInputs,
     extData,
   }: {
     chainName: string;
     anchorAddress: string;
-    proof: `0x${string}`;
     publicInputs: IFixedAnchorPublicInputs;
     extData: IFixedAnchorExtData;
   }
@@ -348,7 +345,7 @@ async function txHashOrReject(
         anchor: {
           chain: chainName,
           id: anchorAddress,
-          proof,
+          proof: publicInputs.proof,
           roots: publicInputs._roots,
           nullifierHash: publicInputs._nullifierHash,
           extDataHash: publicInputs._extDataHash,

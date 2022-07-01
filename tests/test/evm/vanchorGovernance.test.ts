@@ -17,13 +17,13 @@
 
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import { Utxo } from '@webb-tools/utils';
+import { CircomUtxo } from '@webb-tools/sdk-core';
 import { ethers, BigNumber } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import { EnabledContracts, WebbRelayer } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { u8aToHex } from '@polkadot/util';
+import { u8aToHex, hexToU8a } from '@polkadot/util';
 
 describe('VAnchor Governance Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -186,30 +186,26 @@ describe('VAnchor Governance Relayer', function () {
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
-    const dummyInputs = Array(2)
-      .fill(null)
-      .map(
-        () =>
-          new Utxo({
-            originChainId: BigNumber.from(localChain1.chainId),
-            chainId: BigNumber.from(localChain1.chainId),
-          })
-      );
-    const depositUtxo = new Utxo({
-      amount: BigNumber.from(1),
-      originChainId: BigNumber.from(localChain1.chainId),
-      chainId: BigNumber.from(localChain1.chainId),
+
+    const depositUtxo = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: '1',
+      originChainId: localChain1.chainId.toString(),
+      chainId: localChain1.chainId.toString(),
     });
-    const merkleProof = dummyInputs.map((x) =>
-      signatureVBridge.getVAnchor(Number(x.originChainId)).getMerkleProof(x)
-    );
-    await vanchor1.bridgedTransact(
-      dummyInputs,
+
+    const leaves = vanchor1.tree.elements().map((el) => hexToU8a(el.toHexString()));
+
+    await vanchor1.transact(
+      [],
       [depositUtxo],
-      0,
+      {
+        [localChain1.chainId]: leaves
+      },
       '0',
       '0',
-      merkleProof
+      '0'
     );
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
