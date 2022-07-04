@@ -400,34 +400,107 @@ fn start_substrate_vanchor_event_watcher(
 ) -> anyhow::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
-            "Substrate vanchor events watcher is disabled for ({}).",
+            "Substrate V-Anchor events watcher is disabled for ({}).",
             node_name,
         );
         return Ok(());
     }
     tracing::debug!(
-        "Substrate vanchor events watcher for ({}) Started.",
+        "Substrate V-Anchor events watcher for ({}) Started.",
         node_name,
     );
-    let node_name2 = node_name.clone();
+
+    let my_ctx = ctx.clone();
+    let my_config = config.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
     let task = async move {
-        let leaves_watcher = SubstrateVAnchorLeavesWatcher::default();
-        let watcher = leaves_watcher.run(node_name, chain_id, client, store);
-        tokio::select! {
-            _ = watcher => {
-                tracing::warn!(
-                    "Substrate vanchor leaves watcher stopped for ({})",
-                    node_name2,
+        let watcher = SubstrateVAnchorLeavesWatcher::default();
+        let substrate_leaves_watcher_task = watcher.run(
+            node_name.clone(),
+            chain_id,
+            client.clone(),
+            store.clone(),
+        );
+        let proposal_signing_backend = make_substrate_proposal_signing_backend(
+            &my_ctx,
+            store.clone(),
+            chain_id,
+            &my_config.linked_anchors[..],
+            my_config.proposal_signing_backend,
+        )
+        .await?;
+        match proposal_signing_backend {
+            ProposalSigningBackendSelector::Dkg(backend) => {
+                let watcher = SubstrateVAnchorWatcher::new(
+                    backend,
+                    &my_config.linked_anchors,
                 );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping substrate vanchor leaves watcher for ({})",
-                    node_name2,
+                let substrate_vanchor_watcher_task = watcher.run(
+                    node_name.clone(),
+                    chain_id,
+                    client.clone(),
+                    store.clone(),
                 );
-            },
-        }
+                tokio::select! {
+                    _ = substrate_vanchor_watcher_task => {
+                        tracing::warn!(
+                            "Substrate V-Anchor watcher (DKG Backend) task stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = substrate_leaves_watcher_task => {
+                        tracing::warn!(
+                            "Substrate V-Anchor leaves watcher stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Substrate V-Anchor watcher (DKG Backend) for ({})",
+                            node_name,
+                        );
+                    },
+                }
+            }
+            ProposalSigningBackendSelector::Mocked(backend) => {
+                let watcher = SubstrateVAnchorWatcher::new(
+                    backend,
+                    &my_config.linked_anchors[..],
+                );
+                let substrate_vanchor_watcher_task = watcher.run(
+                    node_name.clone(),
+                    chain_id,
+                    client.clone(),
+                    store.clone(),
+                );
+                tokio::select! {
+                    _ = substrate_vanchor_watcher_task => {
+                        tracing::warn!(
+                            "Substrate V-Anchor watcher (Mocked Backend) task stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = substrate_leaves_watcher_task => {
+                        tracing::warn!(
+                            "Substrate V-Anchor leaves watcher stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Substrate V-Anchor watcher (Mocked Backend) for ({})",
+                            node_name,
+                        );
+                    },
+                }
+            }
+            ProposalSigningBackendSelector::None => {
+                tracing::debug!(
+                    "No backend configured for proposal signing..!"
+                );
+            }
+        };
+        Result::<_, anyhow::Error>::Ok(())
     };
     // kick off the watcher.
     tokio::task::spawn(task);

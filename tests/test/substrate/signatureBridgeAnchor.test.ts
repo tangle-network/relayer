@@ -15,7 +15,7 @@
  *
  */
 // This our basic Substrate Anchor Transaction Relayer Tests.
-// These are for testing mocked proposal signing backend for substrate
+// These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import '@webb-tools/types';
 import getPort, { portNumbers } from 'get-port';
@@ -23,7 +23,7 @@ import temp from 'temp';
 import path from 'path';
 import isCi from 'is-ci';
 import { ethers } from 'ethers';
-import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
+import { WebbRelayer, Pallet, getChainIdType,toFixedHex, createResourceId, convertToHexNumber } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 import {
@@ -34,11 +34,19 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { BigNumber } from 'ethers';
 import { Note, NoteGenInput } from '@webb-tools/sdk-core';
-
-describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
+import {
+  encodeResourceIdUpdateProposal,
+  ResourceIdUpdateProposal,
+} from '../../lib/substrateWebbProposals.js';
+import { ChainIdType } from '../../lib/webbProposals.js';
+import pkg from 'secp256k1';
+const { ecdsaSign } = pkg;
+describe.only('Substrate Signature Bridge Relaying On Anchor Deposit <> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
+
+  let webbRelayer: WebbRelayer;
 
   // Governer key
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
@@ -46,9 +54,10 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
   // slice 0x04 from public key
   let uncompressedKey = governorWallet._signingKey().publicKey.slice(4);
 
-  let webbRelayer: WebbRelayer;
+  let typedSourceChainId = getChainIdType(1080);
 
   before(async () => {
+    // now we start webb-protocol on substrate
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
@@ -93,7 +102,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       linkedAnchors: [
         {
           chain: 1080,
-          tree: 5,
+          tree: 9,
         },
       ],
     });
@@ -106,13 +115,11 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     let setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(
       Array.from(hexToU8a(uncompressedKey))
     );
-    // execute sudo transaction.
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
 
-    //whitelist chain
-    let whitelistChainCall = api.tx.signatureBridge!.whitelistChain!(1080);
-    // execute sudo transaction.
-    await aliceNode.sudoExecuteTransaction(whitelistChainCall);
+     //whitelist chain
+     let whitelistChainCall2 = api.tx.signatureBridge!.whitelistChain!(typedSourceChainId);
+     await aliceNode.sudoExecuteTransaction(whitelistChainCall2);
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
@@ -125,11 +132,18 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('Simple Anchor Deposit', async () => {
+  it('Relayer should create and relay anchor update proposal to signature bridge for execution', async () => {
     const api = await aliceNode.api();
+    // create anchor
+    const treeId = await createAnchor(api, aliceNode);
+    
     const account = createAccount('//Dave');
-    const note = await makeDeposit(api, aliceNode, account);
-    const typedSourceChainId = 2199023255553;
+    // now we set resource through proposal execution
+    let setResourceIdProposalCall = await setResourceIdProposal(api,PK1,treeId);
+    const txSigned = await setResourceIdProposalCall.signAsync(account);
+    await aliceNode.executeTransaction(txSigned);
+    
+    const note = await makeDeposit(api, aliceNode, treeId);
 
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
@@ -144,7 +158,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
       event: {
-        call: 'execute_proposal_with_signature',
+        call: 'executed_proposal_with_signature',
       },
     });
   });
@@ -156,40 +170,63 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
   });
 });
 
-// Helper methods, we can move them somewhere if we end up using them again.
-
-function currencyToUnitI128(currencyAmount: number) {
-  let bn = BigNumber.from(currencyAmount);
-  return bn.mul(1_000_000_000_000);
+async function createAnchor(api: ApiPromise, aliceNode: LocalProtocolSubstrate) : Promise<number> {
+  let createAnchorCall = api.tx.anchorBn254.create(10000000000000, 100, 32,0);
+     // execute sudo transaction.
+    await aliceNode.sudoExecuteTransaction(createAnchorCall);
+    // get latest treeId created for anchor
+    const treeIds = await api.query.anchorBn254.anchors.keys();
+    const sorted = treeIds.map((id) => Number(id.toHuman())).sort().reverse();
+    const treeId = sorted[0] || 9;
+    return treeId
 }
 
-async function createAnchor(
-  api: ApiPromise,
-  aliceNode: LocalProtocolSubstrate,
-  typedSourceChainId: number
-) {
+async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId:number): Promise<SubmittableExtrinsic<'promise'>>{
   // set resource ID
-  let resourceId = new Uint8Array([
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    5, 2, 0, 0, 0, 4, 56,
-  ]);
-  let resource = [...Buffer.from('test')];
-
-  //create anchor and resource to anchor
-  // create(depositSize, srcId, resourceId, maxEdges, depth, assetId)
-  let createAnchorCall = api.tx.anchorHandlerBn254!
-    .executeAnchorCreateProposal!(
-    currencyToUnitI128(100).toString(),
-    typedSourceChainId,
-    resourceId,
-    10,
-    3,
-    0
+  let chainID = 1080;
+  let resourceId = createResourceId(chainID,treeId);
+  let functionSignature = toFixedHex(0,4);
+  let nonce = BigNumber.from(1);
+  let newResourceId = resourceId;
+  let targetSystem = '0x0109000000';
+  let palletIndex = convertToHexNumber(44);
+  let callIndex = convertToHexNumber(2);
+  
+  const resourceIdUpdateProposalPayload: ResourceIdUpdateProposal = {
+    header: {
+      resourceId,
+      functionSignature: functionSignature,
+      nonce: nonce.toNumber(),
+      chainIdType: ChainIdType.SUBSTRATE,
+      chainId: chainID,
+    },
+    newResourceId,
+    targetSystem,
+    palletIndex,
+    callIndex,
+  };
+  // encode resourse update proposal
+  let proposalBytes = encodeResourceIdUpdateProposal(
+    resourceIdUpdateProposalPayload
   );
-  await aliceNode.sudoExecuteTransaction(createAnchorCall);
+  let hash = ethers.utils.keccak256(proposalBytes);
+  let msg = ethers.utils.arrayify(hash);
+
+  // sign the message
+  const sigObj = ecdsaSign(msg, hexToU8a(PK1));
+  let signature = new Uint8Array([...sigObj.signature, sigObj.recid])
+  // execute proposal call to handler
+  let executeSetProposalCall = api.tx.anchorHandlerBn254!.executeSetResourceProposal!(resourceId,targetSystem);
+  let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
+   getChainIdType(chainID),
+   executeSetProposalCall,
+   u8aToHex(proposalBytes),
+   u8aToHex(signature)
+  );
+  return setResourceCall
 }
 
-async function createAnchorDepositTx(api: ApiPromise): Promise<{
+async function createAnchorDepositTx(api: ApiPromise, treeId: number): Promise<{
   tx: SubmittableExtrinsic<'promise'>;
   note: Note;
 }> {
@@ -198,10 +235,10 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     version: 'v2',
     sourceChain: '2199023256632',
     targetChain: '2199023256632',
-    sourceIdentifyingData: `5`,
-    targetIdentifyingData: `5`,
+    sourceIdentifyingData: treeId.toString(),
+    targetIdentifyingData: treeId.toString(),
     tokenSymbol: 'WEBB',
-    amount: '1',
+    amount: '100',
     denomination: '18',
     backend: 'Arkworks',
     hashFunction: 'Poseidon',
@@ -210,10 +247,6 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     exponentiation: '5',
   };
   const note = await Note.generateNote(noteInput);
-  // @ts-ignore
-  const treeIds = await api.query.anchorBn254.anchors.keys();
-  const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
-  const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
   // @ts-ignore
   const tx = api.tx.anchorBn254.deposit(treeId, leaf);
@@ -228,12 +261,12 @@ function createAccount(accountId: string): any {
 }
 
 async function makeDeposit(
-  api: any,
-  aliceNode: any,
-  account: any
+  api: ApiPromise,
+  aliceNode: LocalProtocolSubstrate,
+  treeId: number,
 ): Promise<Note> {
-  const { tx, note } = await createAnchorDepositTx(api);
-
+  const { tx, note } = await createAnchorDepositTx(api,treeId);
+  const account = createAccount('//Dave');
   // send the deposit transaction.
   const txSigned = await tx.signAsync(account);
 

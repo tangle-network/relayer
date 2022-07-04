@@ -2,7 +2,7 @@ use webb::substrate::subxt::sp_runtime::AccountId32;
 use webb::substrate::{
     protocol_substrate_runtime::api::{
         runtime_types::{
-            webb_primitives::types::vanchor, webb_standalone_runtime::Element,
+            webb_primitives::runtime::Element, webb_primitives::types::vanchor,
         },
         RuntimeApi,
     },

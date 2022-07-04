@@ -23,7 +23,7 @@ import {
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
-import { BigNumber } from 'ethers';
+import { BigNumber, BigNumberish, ethers } from 'ethers';
 import { FullChainInfo } from './localTestnet';
 import { FullNodeInfo } from './substrateNodeBase';
 
@@ -638,4 +638,41 @@ function parseRelayTxMessage(o: any): ParsedRelayerMessage {
   } else {
     return { kind: 'unknown' };
   }
+}
+
+export function getChainIdType(chainID: number = 31337): number {
+  const CHAIN_TYPE = '0x0200';
+  const chainIdType = CHAIN_TYPE + toFixedHex(chainID, 4).substr(2);
+  return Number(BigInt(chainIdType));
+}
+
+/** BigNumber to hex string of specified length */
+export function toFixedHex(number: BigNumberish, length: number): string {
+  let result =
+    '0x' +
+    (number instanceof Buffer
+      ? number.toString('hex')
+      : BigNumber.from(number.toString()).toHexString().replace('0x', '')
+    ).padStart(length * 2, '0');
+  if (result.indexOf('-') > -1) {
+    result = '-' + result.replace('-', '');
+  }
+  return result;
+}
+export function toHex(
+  covertThis: ethers.utils.BytesLike | number | bigint,
+  padding: number
+): string {
+  return ethers.utils.hexZeroPad(ethers.utils.hexlify(covertThis), padding);
+}
+
+export function createResourceId(chainID: number, treeId: number): string {
+  return toHex(
+    toHex(treeId, 26) + toHex(getChainIdType(chainID), 6).substr(2),
+    32
+  );
+}
+
+export function convertToHexNumber(number: number): string {
+  return BigNumber.from(number.toString()).toHexString();
 }
