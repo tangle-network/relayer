@@ -19,8 +19,8 @@
 
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import { Utxo } from '@webb-tools/utils';
-import { ethers, BigNumber } from 'ethers';
+import { CircomUtxo } from '@webb-tools/sdk-core';
+import { ethers } from 'ethers';
 import temp from 'temp';
 import {
   LocalChain,
@@ -167,15 +167,11 @@ describe('Vanchor Transaction relayer', function () {
   });
 
   it('number of deposits made should be equal to number of leaves in cache', async () => {
-    this.retries(0);
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
-
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
 
-    // set signer
+    // set signers
     await vanchor1.setSigner(wallet1);
-
-    // set signer
     await vanchor2.setSigner(wallet2);
 
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
@@ -197,27 +193,30 @@ describe('Vanchor Transaction relayer', function () {
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
     
-    // Make multiple deposits
-    const noOfDeposit = 5;
-    for (let i = 0, len = noOfDeposit; i < len; i++) {
+    // Make 5 deposits
+    for (let i = 0; i < 5; i++) {
       // Define inputs/outputs utxo for transact function
-      const depositUtxo = new Utxo({
-        amount: BigNumber.from(1e2),
-        originChainId: BigNumber.from(localChain1.chainId),
-        chainId: BigNumber.from(localChain1.chainId),
+      const depositUtxo = await CircomUtxo.generateUtxo({
+        curve: 'Bn254',
+        backend: 'Circom',
+        amount: 1e2.toString(),
+        originChainId: localChain1.chainId.toString(),
+        chainId: localChain1.chainId.toString(),
       });
+
       await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
     }
-    // now we wait for all deposit to be saved in LeafStorageCache
+
+    // now we wait for all deposits to be saved in LeafStorageCache
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
       event: {
-        leaf_index: (noOfDeposit * 2 - 1).toString(),
+        leaf_index: '9',
       },
     });
 
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
-    // are equal to no of deposits made.
+    // are equal to no of deposits made. Each VAnchor deposit generates 2 leaf entries
     const chainId = localChain1.underlyingChainId.toString(16);
     const response = await webbRelayer.getLeavesEvm(
       chainId,
@@ -226,7 +225,7 @@ describe('Vanchor Transaction relayer', function () {
     expect(response.status).equal(200);
     let leavesStore = response.json() as Promise<LeavesCacheResponse>;
     leavesStore.then(resp => {
-      expect(noOfDeposit * 2).to.equal(resp.leaves.length);
+      expect(resp.leaves.length).to.equal(10);
     });
   });
 

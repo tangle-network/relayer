@@ -196,7 +196,7 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config set', func
     let webbBalanceOfRecipient = await token.getBalance(recipient.address);
     let initialBalanceOfRecipient = webbBalanceOfRecipient.toBigInt();
 
-    const { args, publicInputs, extData } = await anchor1.setupWithdraw(
+    const { publicInputs, extData } = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
       recipient.address,
@@ -207,14 +207,12 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config set', func
       ).toBigInt(),
       0
     );
-    const [proofEncoded, roots, nullifierHash, extDataHash] = args;
     // ping the relayer!
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
       localChain1.underlyingChainId.toString(),
       anchor1.getAddress(),
-      proofEncoded,
       publicInputs,
       extData
     );

@@ -40,7 +40,7 @@ import {
   Note,
   NoteGenInput,
   ProvingManagerSetupInput,
-  ProvingManagerWrapper,
+  ArkworksProvingManager,
 } from '@webb-tools/sdk-core';
 
 describe('Substrate Anchor Transaction Relayer', function() {
@@ -122,11 +122,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
     // chainId
     const chainId = 1080;
     const chainIdHex = chainId.toString(16);
-    //@ts-ignore
-    const treeIds = await api.query.anchorBn254.anchors?.keys();
-    //@ts-ignore
-    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
-    //@ts-ignore
+    const treeIds = await api.query.anchorBn254.anchors.keys();
+    const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
     const treeId = sorted[0] || 5;
     
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
@@ -151,8 +148,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
     );
 
     // get the initial balance
-    // @ts-ignore
-    let { nonce, data: balance } = await api.query.system.account(
+    let { data: balance } = await api.query.system.account(
       withdrawalProof.recipient
     );
     let initialBalance = balance.free.toBigInt();
@@ -185,9 +181,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
     expect(txHash).to.be.not.null;
 
     // get the balance after withdrawal is done and see if it increases
-    // @ts-ignore
-    const { nonce: nonceAfter, data: balanceAfter } = await api.query.system!
-      .account!(withdrawalProof.recipient);
+    const { data: balanceAfter } = await api.query.system.account(withdrawalProof.recipient);
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     expect(balanceAfterWithdraw > initialBalance);
   });
@@ -566,13 +560,17 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
   tx: SubmittableExtrinsic<'promise'>;
   note: Note;
 }> {
+  const treeIds = await api.query.anchorBn254.anchors.keys();
+  const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
+  const treeId = sorted[0] || 5;
+
   const noteInput: NoteGenInput = {
     protocol: 'anchor',
     version: 'v2',
     sourceChain: '2199023256632',
     targetChain: '2199023256632',
-    sourceIdentifyingData: `5`,
-    targetIdentifyingData: `5`,
+    sourceIdentifyingData: treeId.toString(),
+    targetIdentifyingData: treeId.toString(),
     tokenSymbol: 'WEBB',
     amount: '1',
     denomination: '18',
@@ -583,12 +581,7 @@ async function createAnchorDepositTx(api: ApiPromise): Promise<{
     exponentiation: '5',
   };
   const note = await Note.generateNote(noteInput);
-  // @ts-ignore
-  const treeIds = await api.query.anchorBn254.anchors.keys();
-  const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
-  const treeId = sorted[0] || 5;
   const leaf = note.getLeaf();
-  // @ts-ignore
   const tx = api.tx.anchorBn254.deposit(treeId, leaf);
   return { tx, note };
 }
@@ -627,15 +620,11 @@ async function createAnchorWithdrawProof(
       '0x',
       ''
     );
-    //@ts-ignore
-    const treeIds = await api.query.anchorBn254.anchors?.keys();
-    //@ts-ignore
-    const sorted = treeIds?.map((id) => Number(id.toHuman()[0])).sort();
-    //@ts-ignore
+    const treeIds = await api.query.anchorBn254.anchors.keys();
+    const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
     const treeId = sorted[0] || 5;
-    //@ts-ignore
-    const getLeaves = api.rpc.mt.getLeaves;
-    const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 511);
+    const leafCount: number = await api.derive.merkleTreeBn254.getLeafCountForTree(treeId)
+    const treeLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(treeId, 0, leafCount-1);
 
     //@ts-ignore
     const getNeighborRoots = api.rpc.lt.getNeighborRoots;
@@ -643,15 +632,13 @@ async function createAnchorWithdrawProof(
 
     let neighborRootsU8: Uint8Array[] = new Array(neighborRoots.length);
     for (let i = 0; i < neighborRootsU8.length; i++) {
-      // @ts-ignore
       neighborRootsU8[i] = hexToU8a(neighborRoots[0].toString());
     }
 
     // Get tree root on chain
-    // @ts-ignore
     const treeRoot = await api.query.merkleTreeBn254.trees(treeId);
 
-    const provingManager = new ProvingManagerWrapper('direct-call');
+    const provingManager = new ArkworksProvingManager(null);
     const leafHex = u8aToHex(note.getLeaf());
 
     const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
@@ -662,7 +649,6 @@ async function createAnchorWithdrawProof(
       .trim();
 
     // make a root set from the tree root
-    // @ts-ignore
     const rootValue = treeRoot.toHuman() as { root: string };
 
     const treeRootArray = [hexToU8a(rootValue.root), ...neighborRootsU8];

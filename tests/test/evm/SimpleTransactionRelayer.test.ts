@@ -18,7 +18,7 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
+import { Anchors, Bridges, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
@@ -192,7 +192,7 @@ describe('Simple Transaction Relayer With No Proposal Signing Banckend', functio
     let webbBalanceOfRecipient = await token.getBalance(recipient.address);
     let initialBalanceOfRecipient = webbBalanceOfRecipient.toBigInt();
 
-    const { args, publicInputs, extData } = await anchor1.setupWithdraw(
+    const { publicInputs, extData } = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
       recipient.address,
@@ -203,14 +203,12 @@ describe('Simple Transaction Relayer With No Proposal Signing Banckend', functio
       ).toBigInt(),
       0
     );
-    const [proofEncoded, roots, nullifierHash, extDataHash] = args;
     // ping the relayer!
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
       localChain1.underlyingChainId.toString(),
       anchor1.getAddress(),
-      proofEncoded,
       publicInputs,
       extData
     );
@@ -233,7 +231,7 @@ describe('Simple Transaction Relayer With No Proposal Signing Banckend', functio
 async function setUpAnchor(
   signatureBridge: Bridges.SignatureBridge,
   chainId: number
-): Promise<any> {
+): Promise<Anchors.Anchor> {
   const anchor1 = signatureBridge.getAnchor(
     chainId,
     ethers.utils.parseEther('1')
