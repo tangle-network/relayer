@@ -42,7 +42,8 @@ import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 import {
   Note,
   ProvingManagerSetupInput,
-  ProvingManagerWrapper,
+  ArkworksProvingManager,
+  Utxo,
 } from '@webb-tools/sdk-core';
 
 import {
@@ -134,7 +135,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -259,31 +260,25 @@ async function vanchorDeposit(treeId: number, api: ApiPromise, aliceNode: LocalP
       Number(outputChainId.toString()),
       0
     );
-    const note2 = note1.getDefaultUtxoNote();
+    const note2 = await note1.getDefaultUtxoNote();
     const publicAmount = currencyToUnitI128(10);
     const notes = [note1, note2];
     // Output UTXOs configs
-    const output1 = new JsUtxo(
-      'Bn254',
-      'Arkworks',
-      2,
-      2,
-      publicAmount.toString(),
+    const output1 = await Utxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Arkworks',
+      amount: publicAmount.toString(),
       chainId,
-      undefined
-    );
-    const output2 = new JsUtxo(
-      'Bn254',
-      'Arkworks',
-      2,
-      2,
-      '0',
+    });
+    const output2 = await Utxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Arkworks',
+      amount: '0',
       chainId,
-      undefined
-    );
+    });
 
     // Configure a new proving manager with direct call
-    const provingManager = new ProvingManagerWrapper('direct-call');
+    const provingManager = new ArkworksProvingManager(null);
     const leavesMap: any = {};
 
     const address = account.address;
@@ -301,7 +296,7 @@ async function vanchorDeposit(treeId: number, api: ApiPromise, aliceNode: LocalP
     const setup: ProvingManagerSetupInput<'vanchor'> = {
       chainId: outputChainId.toString(),
       indices: [0, 0],
-      inputNotes: notes.map((note) => note.serialize()),
+      inputNotes: notes,
       leavesMap: leavesMap,
       output: [output1, output2],
       encryptedCommitments: [comEnc1, comEnc2],
@@ -330,7 +325,7 @@ async function vanchorDeposit(treeId: number, api: ApiPromise, aliceNode: LocalP
       roots: rootsSet,
       inputNullifiers: data.inputUtxos.map((input) => `0x${input.nullifier}`),
       outputCommitments: data.outputNotes.map((note) =>
-        u8aToHex(note.getLeafCommitment())
+        u8aToHex(note.note.getLeafCommitment())
       ),
       extDataHash: data.extDataHash,
     };
