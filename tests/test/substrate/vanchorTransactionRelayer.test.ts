@@ -31,7 +31,7 @@ import {
   UsageMode,
   defaultEventsWatcherValue,
 } from '../../lib/substrateNodeBase.js';
-import { BigNumber } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
@@ -51,6 +51,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
   let bobNode: LocalProtocolSubstrate;
 
   let webbRelayer: WebbRelayer;
+  const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -87,6 +88,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
     });
 
     // Wait until we are ready and connected

@@ -135,7 +135,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
