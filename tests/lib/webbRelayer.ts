@@ -24,9 +24,8 @@ import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 import { BigNumber, BigNumberish, ethers } from 'ethers';
-import { FullChainInfo } from './localTestnet';
-import { FullNodeInfo } from './substrateNodeBase';
 
+import { ChainIdType } from '../lib/webbProposals.js';
 export type WebbRelayerOptions = {
   port: number;
   tmp: boolean;
@@ -637,9 +636,13 @@ function parseRelayTxMessage(o: any): ParsedRelayerMessage {
   }
 }
 
-export function getChainIdType(chainID: number = 31337): number {
-  const CHAIN_TYPE = '0x0200';
-  const chainIdType = CHAIN_TYPE + toFixedHex(chainID, 4).substr(2);
+// get typed chainId
+export function getChainIdType(
+  chainType: ChainIdType,
+  chainID: number
+): number {
+  const chainIdType =
+    toFixedHex(chainType, 2) + toFixedHex(chainID, 4).substr(2);
   return Number(BigInt(chainIdType));
 }
 
@@ -661,13 +664,6 @@ export function toHex(
   padding: number
 ): string {
   return ethers.utils.hexZeroPad(ethers.utils.hexlify(covertThis), padding);
-}
-
-export function createResourceId(chainID: number, treeId: number): string {
-  return toHex(
-    toHex(treeId, 26) + toHex(getChainIdType(chainID), 6).substr(2),
-    32
-  );
 }
 
 export function convertToHexNumber(number: number): string {

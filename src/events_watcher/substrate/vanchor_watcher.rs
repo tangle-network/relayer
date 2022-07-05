@@ -24,18 +24,18 @@ use webb::substrate::{protocol_substrate_runtime, subxt};
 use webb_proposals::substrate::AnchorUpdateProposal;
 
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
-pub struct SubstrateVAnchorWatcher<'a, B> {
+pub struct SubstrateVAnchorWatcher<B> {
     proposal_signing_backend: B,
-    linked_anchors: &'a [SubstrateLinkedAnchorConfig],
+    linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
 }
 
-impl<'a, B> SubstrateVAnchorWatcher<'a, B>
+impl<B> SubstrateVAnchorWatcher<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal>,
 {
     pub fn new(
         proposal_signing_backend: B,
-        linked_anchors: &'a [SubstrateLinkedAnchorConfig],
+        linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
     ) -> Self {
         Self {
             proposal_signing_backend,
@@ -45,7 +45,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<'a, B> super::SubstrateEventWatcher for SubstrateVAnchorWatcher<'a, B>
+impl<B> super::SubstrateEventWatcher for SubstrateVAnchorWatcher<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {
@@ -110,7 +110,7 @@ where
         let mut merkle_root = [0; 32];
         merkle_root.copy_from_slice(&root.encode());
         // update linked anchors
-        for anchor in self.linked_anchors {
+        for anchor in &self.linked_anchors {
             let anchor_chain_id =
                 webb_proposals::TypedChainId::Substrate(anchor.chain);
             let anchor_target_system =

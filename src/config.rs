@@ -443,7 +443,7 @@ pub struct AnchorBn254PalletConfig {
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     ///A List of linked Anchor on this chain.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
+    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
 }
 
 /// SignatureBridgePalletConfig represents the configuration for the SignatureBridge pallet.
@@ -467,7 +467,7 @@ pub struct VAnchorBn254PalletConfig {
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor on this chain.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
+    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
 }
 
 /// Enumerates the supported different signing backends configurations.

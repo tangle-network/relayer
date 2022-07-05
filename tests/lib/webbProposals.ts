@@ -580,7 +580,7 @@ export function decodeRescueTokensProposal(
  * - 2 bytes of the `chainIdType` encoded as the last 2 bytes just before the `chainId`.
  * - 4 bytes of the `chainId` which is the last 4 bytes.
  */
-function makeResourceId(
+export function makeResourceId(
   addr: string,
   chainIdType: ChainIdType,
   chainId: number

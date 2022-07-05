@@ -296,15 +296,18 @@ fn start_substrate_anchor_event_watcher(
             &my_ctx,
             store.clone(),
             chain_id,
-            &my_config.linked_anchors[..],
+            my_config.linked_anchors.clone(),
             my_config.proposal_signing_backend,
         )
         .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
+                // its safe to use unwrap on linked_anchors here
+                // since this option is always going to return Some(value).
+                // linked_anchors are validated in make_proposal_signing_backend() method
                 let watcher = SubstrateAnchorWatcher::new(
                     backend,
-                    &my_config.linked_anchors,
+                    my_config.linked_anchors.unwrap(),
                 );
                 let substrate_anchor_watcher_task = watcher.run(
                     node_name.clone(),
@@ -334,9 +337,11 @@ fn start_substrate_anchor_event_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
+                // its safe to use unwrap on linked_anchors here
+                // since this option is always going to return Some(value).
                 let watcher = SubstrateAnchorWatcher::new(
                     backend,
-                    &my_config.linked_anchors[..],
+                    my_config.linked_anchors.unwrap(),
                 );
                 let substrate_anchor_watcher_task = watcher.run(
                     node_name.clone(),
@@ -366,9 +371,20 @@ fn start_substrate_anchor_event_watcher(
                 }
             }
             ProposalSigningBackendSelector::None => {
-                tracing::debug!(
-                    "No backend configured for proposal signing..!"
-                );
+                tokio::select! {
+                    _ = substrate_leaves_watcher_task => {
+                        tracing::warn!(
+                            "Substrate Anchor leaves watcher stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Substrate Anchor watcher (Mocked Backend) for ({})",
+                            node_name,
+                        );
+                    },
+                }
             }
         };
         Result::<_, anyhow::Error>::Ok(())
@@ -425,15 +441,18 @@ fn start_substrate_vanchor_event_watcher(
             &my_ctx,
             store.clone(),
             chain_id,
-            &my_config.linked_anchors[..],
+            my_config.linked_anchors.clone(),
             my_config.proposal_signing_backend,
         )
         .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
+                // its safe to use unwrap on linked_anchors here
+                // since this option is always going to return Some(value).
+                // linked_anchors are validated in make_proposal_signing_backend() method
                 let watcher = SubstrateVAnchorWatcher::new(
                     backend,
-                    &my_config.linked_anchors,
+                    my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
                     node_name.clone(),
@@ -463,9 +482,11 @@ fn start_substrate_vanchor_event_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
+                // its safe to use unwrap on linked_anchors here
+                // since this option is always going to return Some(value).
                 let watcher = SubstrateVAnchorWatcher::new(
                     backend,
-                    &my_config.linked_anchors[..],
+                    my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
                     node_name.clone(),
@@ -495,9 +516,20 @@ fn start_substrate_vanchor_event_watcher(
                 }
             }
             ProposalSigningBackendSelector::None => {
-                tracing::debug!(
-                    "No backend configured for proposal signing..!"
-                );
+                tokio::select! {
+                    _ = substrate_leaves_watcher_task => {
+                        tracing::warn!(
+                            "Substrate V-Anchor leaves watcher stopped for ({})",
+                            node_name,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping Substrate V-Anchor watcher (Mocked Backend) for ({})",
+                            node_name,
+                        );
+                    },
+                }
             }
         };
         Result::<_, anyhow::Error>::Ok(())
@@ -1136,9 +1168,29 @@ async fn make_substrate_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
     chain_id: U256,
-    linked_anchors: &[SubstrateLinkedAnchorConfig],
+    linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> anyhow::Result<ProposalSigningBackendSelector> {
+    // Check if contract is configured with governance support for the relayer.
+    if !ctx.config.features.governance_relay {
+        tracing::warn!("Governance relaying is not enabled for relayer");
+        return Ok(ProposalSigningBackendSelector::None);
+    }
+    // check if linked anchors are provided.
+    let linked_anchors = match linked_anchors {
+        Some(anchors) => {
+            if anchors.is_empty() {
+                tracing::warn!("Misconfigured Network: Linked anchors cannot be empty for governance relaying");
+                return Ok(ProposalSigningBackendSelector::None);
+            } else {
+                anchors
+            }
+        }
+        None => {
+            tracing::warn!("Misconfigured Network: Linked anchors must be configured for governance relaying");
+            return Ok(ProposalSigningBackendSelector::None);
+        }
+    };
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
         Some(ProposalSigningBackendConfig::DkgNode(c)) => {
@@ -1183,6 +1235,9 @@ async fn make_substrate_proposal_signing_backend(
                 .build();
             Ok(ProposalSigningBackendSelector::Mocked(backend))
         }
-        None => Ok(ProposalSigningBackendSelector::None),
+        None => {
+            tracing::warn!("Misconfigured Network: Proposal signing backend must be configured for governance relaying");
+            Ok(ProposalSigningBackendSelector::None)
+        }
     }
 }

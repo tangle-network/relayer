@@ -23,7 +23,7 @@ import temp from 'temp';
 import path from 'path';
 import isCi from 'is-ci';
 import { ethers } from 'ethers';
-import { WebbRelayer, Pallet, getChainIdType,toFixedHex, createResourceId, convertToHexNumber } from '../../lib/webbRelayer.js';
+import { WebbRelayer, Pallet, getChainIdType,toFixedHex, convertToHexNumber, toHex } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 import {
@@ -38,7 +38,7 @@ import {
   encodeResourceIdUpdateProposal,
   ResourceIdUpdateProposal,
 } from '../../lib/substrateWebbProposals.js';
-import { ChainIdType } from '../../lib/webbProposals.js';
+import { ChainIdType, makeResourceId } from '../../lib/webbProposals.js';
 import pkg from 'secp256k1';
 const { ecdsaSign } = pkg;
 describe('Substrate Signature Bridge Relaying On Anchor Deposit <> Mocked Backend', function () {
@@ -54,8 +54,8 @@ describe('Substrate Signature Bridge Relaying On Anchor Deposit <> Mocked Backen
   // slice 0x04 from public key
   let uncompressedKey = governorWallet._signingKey().publicKey.slice(4);
 
-  let typedSourceChainId = getChainIdType(1080);
-
+  let typedSourceChainId = getChainIdType(ChainIdType.SUBSTRATE, 1080);
+  
   before(async () => {
     // now we start webb-protocol on substrate
     const usageMode: UsageMode = isCi
@@ -184,7 +184,7 @@ async function createAnchor(api: ApiPromise, aliceNode: LocalProtocolSubstrate) 
 async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId:number): Promise<SubmittableExtrinsic<'promise'>>{
   // set resource ID
   let chainID = 1080;
-  let resourceId = createResourceId(chainID,treeId);
+  let resourceId = makeResourceId(toHex(treeId, 20),ChainIdType.SUBSTRATE,chainID);
   let functionSignature = toFixedHex(0,4);
   let nonce = BigNumber.from(1);
   let newResourceId = resourceId;
@@ -218,7 +218,7 @@ async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId:number)
   // execute proposal call to handler
   let executeSetProposalCall = api.tx.anchorHandlerBn254!.executeSetResourceProposal!(resourceId,targetSystem);
   let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
-   getChainIdType(chainID),
+   getChainIdType(ChainIdType.SUBSTRATE, chainID),
    executeSetProposalCall,
    u8aToHex(proposalBytes),
    u8aToHex(signature)

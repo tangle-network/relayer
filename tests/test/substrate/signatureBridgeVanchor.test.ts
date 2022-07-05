@@ -18,7 +18,6 @@
 // In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
 
 import '@webb-tools/types';
-import { JsUtxo } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -26,7 +25,7 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { ethers} from 'ethers';
-import { WebbRelayer,Pallet, getChainIdType,toFixedHex, createResourceId, convertToHexNumber } from '../../lib/webbRelayer.js';
+import { WebbRelayer,Pallet,toFixedHex, convertToHexNumber, toHex, getChainIdType } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import {
@@ -50,7 +49,7 @@ import {
     encodeResourceIdUpdateProposal,
     ResourceIdUpdateProposal,
 } from '../../lib/substrateWebbProposals.js';
-import { ChainIdType } from '../../lib/webbProposals.js';
+import { ChainIdType, makeResourceId } from '../../lib/webbProposals.js';
 import pkg from 'secp256k1';
 const { ecdsaSign } = pkg;
 
@@ -65,7 +64,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
   let governorWallet = new ethers.Wallet(PK1)
   // slice 0x04 from public key
   let uncompressedKey = governorWallet._signingKey().publicKey.slice(4);
-  let typedSourceChainId = getChainIdType(1080);
+  let typedSourceChainId = getChainIdType(ChainIdType.SUBSTRATE, 1080);
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -190,7 +189,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
 async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId: number): Promise<SubmittableExtrinsic<'promise'>>{
     // set resource ID
   let chainID = 1080;
-  let resourceId = createResourceId(chainID,treeId);
+  let resourceId = makeResourceId(toHex(treeId, 20),ChainIdType.SUBSTRATE,chainID);
   let functionSignature = toFixedHex(0,4);
   let nonce = BigNumber.from(1);
   let newResourceId = resourceId;
@@ -221,7 +220,7 @@ async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId: number
     // execute proposal call to handler 
     let executeSetProposalCall = api.tx.vAnchorHandlerBn254!.executeSetResourceProposal!(resourceId,targetSystem);
     let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
-     getChainIdType(chainID),
+     getChainIdType(ChainIdType.SUBSTRATE, chainID),
      executeSetProposalCall,
      u8aToHex(proposalBytes),
      u8aToHex(signature)
