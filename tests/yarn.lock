@@ -2845,7 +2845,7 @@
   resolved "https://registry.yarnpkg.com/@ungap/promise-all-settled/-/promise-all-settled-1.1.2.tgz#aa58042711d6e3275dd37dc597e5d31e8c290a44"
   integrity sha512-sL/cEvJWAnClXw0wHk85/2L0G6Sj8UB0Ctc1TEMbKSsmpRosqhwj9gWgFRZSrBr2f9tiXISwNhCPmlfqUqyb9Q==
 
-"@webb-tools/anchors@^0.2.2":
+"@webb-tools/anchors@0.2.2", "@webb-tools/anchors@^0.2.2":
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/@webb-tools/anchors/-/anchors-0.2.2.tgz#894ed3f690bae68c4e04fdc3cc58339ed56b7077"
   integrity sha512-b2PU8v4Z/XspCiczwbPlTIrG80I0AuTnNV6xH5qLODgLB+rlnBOKUY8aJbGjB5McY4yzYmZEvPgWzycbtxbOTg==
@@ -2904,7 +2904,7 @@
     "@typechain/hardhat" "^2.3.0"
     ethers "5.5.1"
 
-"@webb-tools/interfaces@^0.2.2":
+"@webb-tools/interfaces@0.2.2", "@webb-tools/interfaces@^0.2.2":
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/@webb-tools/interfaces/-/interfaces-0.2.2.tgz#c59abedb2bfbd665d24b4b8d119d0bbc2f6edcb3"
   integrity sha512-MPN+M4LphS7XhSF4TrU7AhcXEZeKzTm0gF/8pJ3TMFIJs3E3yjiFfOOAj/9OeLXy+O/KY66FwkBjFhDSyPsUZw==
@@ -2957,7 +2957,7 @@
     ethers "5.5.1"
     ganache "7.1.0"
 
-"@webb-tools/tokens@^0.2.2":
+"@webb-tools/tokens@0.2.2", "@webb-tools/tokens@^0.2.2":
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/@webb-tools/tokens/-/tokens-0.2.2.tgz#82bef3c5d5bf49c4c5ebbcfab79bfd3c34586818"
   integrity sha512-ppkI6FOxKe+UL6GyoD17H6pJ9c/tU83ROPcCzhqzs/kyGHivornEUbAF5yWhM5eKW1Qw9Si9kNWcvujf+CFsPQ==
@@ -2987,7 +2987,7 @@
     "@webb-tools/sdk-core" "0.1.4-87"
     ethers "5.5.1"
 
-"@webb-tools/vbridge@^0.2.2":
+"@webb-tools/vbridge@0.2.2", "@webb-tools/vbridge@^0.2.2":
   version "0.2.2"
   resolved "https://registry.yarnpkg.com/@webb-tools/vbridge/-/vbridge-0.2.2.tgz#d3533c35a30143ffc2ee0e0c4943eb71caeb3ef5"
   integrity sha512-YBGPmRAQoyAXK8TKDU4oqWeraOeJ4rzE820AlhTjcHcjNL1/fneJctAw6nkJNwtfmUxfM83DrF/KT/T/lBqPLg==

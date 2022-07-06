@@ -10,7 +10,8 @@
   "scripts": {
     "lint": "eslint . --ext .ts",
     "test": "NODE_OPTIONS=--openssl-legacy-provider mocha",
-    "format": "prettier -w **/*.ts"
+    "format": "prettier -w **/*.ts",
+    "sim": "NODE_OPTIONS=--openssl-legacy-provider node --experimental-wasm-modules --loader ts-node/esm relay-roots-sim.ts"
   },
   "engines": {
     "node": "17.x.x"
@@ -34,6 +35,10 @@
     "@webb-tools/api": "0.1.4-87",
     "@webb-tools/api-derive": "0.1.4-87",
     "@webb-tools/protocol-solidity": "0.2.2",
+    "@webb-tools/interfaces": "0.2.2",
+    "@webb-tools/anchors": "0.2.2",
+    "@webb-tools/vbridge": "0.2.2",
+    "@webb-tools/tokens": "0.2.2",
     "@webb-tools/sdk-core": "0.1.4-87",
     "@webb-tools/types": "0.1.4-87",
     "@webb-tools/test-utils": "0.1.4-87",

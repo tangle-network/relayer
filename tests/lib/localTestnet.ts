@@ -83,7 +83,7 @@ export function startGanacheServer(
   return ganacheServer;
 }
 
-type LocalChainOpts = {
+export type LocalChainOpts = {
   name: string;
   port: number;
   chainId: number;

@@ -5,6 +5,8 @@
 **/*.rs.bk
 .env
 
+# Ignore configurations in the 'sensitive' subfolder
+config/sensitive
 tests/node_modules
 store/
 .cargo/
