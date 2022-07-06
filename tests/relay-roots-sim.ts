@@ -50,8 +50,6 @@ async function deploySignatureVBridge(
     webbTokens: existingWebbTokens
   }
 
-  console.log(bridgeInput);
-
   const zkComponentsSmall = await fetchComponentsFromFilePaths(
     path.resolve(
       `./protocol-solidity-fixtures/fixtures/vanchor_2/8/poseidon_vanchor_2_8.wasm`
@@ -74,8 +72,6 @@ async function deploySignatureVBridge(
       `./protocol-solidity-fixtures/fixtures/vanchor_16/8/circuit_final.zkey`
     )
   );
-
-  console.log(governorConfig);
 
   return VBridge.deployVariableAnchorBridge(
     bridgeInput,
@@ -216,7 +212,6 @@ async function runSim () {
 
       /* deposit */
       const depositAnchor = await vbridge.getVAnchor(chains[i]!.chainId);
-      console.log('depositAnchor maxedges: ', await depositAnchor.contract.maxEdges());
 
       const leavesMapBeforeDeposit: Record<number, Uint8Array[]> = {
         [chains[i]!.chainId]: leaves[i]!,
@@ -230,7 +225,7 @@ async function runSim () {
         curve: 'Bn254',
         chainId: chains[withdrawAnchorIndex]!.chainId.toString(),
         originChainId: chains[i]!.chainId.toString(),
-        amount: '1',
+        amount: '10000000',
       });
 
       const dummyOutput1 = await CircomUtxo.generateUtxo({
@@ -278,9 +273,15 @@ async function runSim () {
           }),
           new Promise((_r, rej) => setTimeout(() => rej("missed root relay"), 10000))
         ]);
+        await new Promise((res) => setTimeout(() => res("allow time for root relay"), 5000));
         const withdrawAnchor = await vbridge.getVAnchor(chains[withdrawAnchorIndex]!.chainId);
         const edgeIndex = await withdrawAnchor.contract.edgeIndex(chains[i]!.chainId);
         const edgeList = await withdrawAnchor.contract.edgeList(edgeIndex);
+
+        // clear the logs so previous iterations of the loop do not cause the waitForEvent to
+        // execute prematurely
+        webbRelayer.clearLogs();
+
         // If there was an edge that existed, make sure the root was relayed properly
         if (valueUtxoIndex != 0 && edgeList.root !== latestDepositRoot) {
           console.log('edgeList root: ', edgeList.root);
@@ -289,6 +290,7 @@ async function runSim () {
         }
       } catch (e) {
         console.log('error relaying root');
+        console.log('Successful transaction count: ', txCount);
         failedRootRelay = true;
         break;
       }
