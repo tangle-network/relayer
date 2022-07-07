@@ -225,7 +225,7 @@ where
                                 target: crate::probe::TARGET,
                                 tracing::Level::DEBUG,
                                 kind = %crate::probe::Kind::SignatureBridge,
-                                call = "executed_proposal_with_signature",
+                                call = "execute_proposal_with_signature",
                                 chain_id = %chain_id,
                                 data = ?data_hex,
                                 signature = ?signature_hex,
