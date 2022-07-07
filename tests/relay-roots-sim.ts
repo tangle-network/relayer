@@ -9,7 +9,6 @@ import path from 'path';
 import temp from 'temp';
 import getPort, { portNumbers } from 'get-port';
 import { CircomUtxo } from '@webb-tools/sdk-core';
-import { hexToU8a } from '@polkadot/util';
 
 export async function fetchComponentsFromFilePaths(wasmPath: string, witnessCalculatorPath: string, zkeyPath: string) {
   const wasm: Buffer = await fs.readFileSync(path.resolve(wasmPath));
@@ -186,7 +185,7 @@ async function runSim () {
     port: relayerPort,
     tmp: true,
     configDir: tmpDirPath,
-    showLogs: false,
+    showLogs: true,
     verbosity: 3,
   });
   await webbRelayer.waitUntilReady();
@@ -199,10 +198,10 @@ async function runSim () {
   let demeterLeaves: Uint8Array[] = [];
   let leaves = [hermesLeaves, athenaLeaves, demeterLeaves];
 
-  // loop and create transactions for deposit/withdraw with the following steps:
-  //  - deposit on chain 1, withdraw on chain 3
-  //  - deposit on chain 2, withdraw on chain 1
-  //  - deposit on chain 3, withdraw on chain 2
+  // loop and create transactions for deposit with the following steps:
+  //  - deposit on chain 1,
+  //  - deposit on chain 2,
+  //  - deposit on chain 3
   while (txCount < 100 && !failedRootRelay) {
     for (let i = 0; i < chains.length; i++) {
       const withdrawAnchorIndex = i > 0 ? i - 1 : chains.length - 1;
@@ -294,83 +293,6 @@ async function runSim () {
         failedRootRelay = true;
         break;
       }
-
-      /* withdraw */
-      // const withdrawAnchor = await vbridge.getVAnchor(chains[withdrawAnchorIndex]!.chainId);
-
-      // const edgeIndex = await withdrawAnchor.contract.edgeIndex(chains[i]!.chainId);
-      // console.log('Edge list of withdraw: ', await withdrawAnchor.contract.edgeList(edgeIndex));
-
-      // const leavesMapBeforeWithdraw: Record<number, Uint8Array[]> = {
-      //   [chains[i]!.chainId]: leaves[i]!,
-      //   [chains[withdrawAnchorIndex]!.chainId]: leaves[withdrawAnchorIndex]!,
-      // };
-
-      // console.log(leavesMapBeforeWithdraw);
-
-      // // Form the outputs for the withdraw flow, for consistency with leaf storage
-      // const dummyOutput2 = await CircomUtxo.generateUtxo({
-      //   backend: 'Circom',
-      //   curve: 'Bn254',
-      //   chainId: chains[withdrawAnchorIndex]!.chainId.toString(),
-      //   originChainId: chains[withdrawAnchorIndex]!.chainId.toString(),
-      //   amount: '0',
-      // });
-
-      // const dummyOutput3 = await CircomUtxo.generateUtxo({
-      //   backend: 'Circom',
-      //   curve: 'Bn254',
-      //   chainId: chains[withdrawAnchorIndex]!.chainId.toString(),
-      //   originChainId: chains[withdrawAnchorIndex]!.chainId.toString(),
-      //   amount: '0',
-      // });
-
-      // // Regenerate the input UTXOs, to supply the appropriate index.
-      // const newUtxo = await CircomUtxo.generateUtxo({
-      //   curve: 'Bn254',
-      //   backend: 'Circom',
-      //   amount: outputUtxo.amount,
-      //   originChainId: outputUtxo.originChainId,
-      //   chainId: outputUtxo.chainId,
-      //   blinding: hexToU8a(outputUtxo.blinding),
-      //   keypair: outputUtxo.keypair,
-      //   privateKey: hexToU8a(outputUtxo.secret_key),
-      //   index: valueUtxoIndex.toString()
-      // });
-
-      // await withdrawAnchor.transact(
-      //   [newUtxo],
-      //   [dummyOutput2, dummyOutput3],
-      //   leavesMapBeforeWithdraw,
-      //   0,
-      //   '0x0000000000000000000000000000000000000000',
-      //   '0x0000000000000000000000000000000000000000'
-      // );
-
-      // leaves[withdrawAnchorIndex]!.push(dummyOutput2.commitment);
-      // leaves[withdrawAnchorIndex]!.push(dummyOutput3.commitment);
-
-      // // Wait for the relayer to relay the roots, allow for 10 seconds to relay the root before
-      // // assuming the root relay was missed.
-      // try {
-      //   const result = await Promise.race([
-      //     await webbRelayer.waitForEvent({
-      //       kind: 'tx_queue',
-      //       event: {
-      //         ty: 'EVM',
-      //         chain_id: chains[i]!.underlyingChainId.toString(),
-      //         finalized: true,
-      //       },
-      //     }),
-      //     new Promise((_r, rej) => setTimeout(() => rej("missed root relay"), 10000))
-      //   ]);
-      //   await new Promise((res) => setTimeout(() => res("success"), 6000));
-
-      // } catch (e) {
-      //   console.log('error relaying root');
-      //   failedRootRelay = true;
-      //   break;
-      // }
     }
   }
 
