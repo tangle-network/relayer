@@ -21,6 +21,7 @@ use futures::TryFutureExt;
 use rand::Rng;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::middleware::SignerMiddleware;
+use webb::evm::ethers::prelude::Signer;
 use webb::evm::ethers::providers::Middleware;
 
 use crate::context::RelayerContext;
@@ -90,6 +91,7 @@ where
     pub async fn run(self) -> Result<(), anyhow::Error> {
         let provider = self.ctx.evm_provider(&self.chain_name).await?;
         let wallet = self.ctx.evm_wallet(&self.chain_name).await?;
+        let my_address = wallet.address();
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
         let chain_config = self
             .ctx
@@ -122,6 +124,11 @@ where
                 if let Some(raw_tx) = maybe_tx {
                     let my_tx_hash = raw_tx.sighash(chain_id.as_u64());
                     tx_hash = my_tx_hash;
+                    let nonce = client
+                        .get_transaction_count(my_address, None)
+                        .map_err(anyhow::Error::from)
+                        .await?;
+                    let tx_nonce = raw_tx.nonce().cloned().unwrap_or(nonce);
                     let pending_tx = client
                         .send_transaction(raw_tx.clone(), None)
                         .map_err(anyhow::Error::from);
@@ -136,6 +143,7 @@ where
                                 chain_id = %chain_id.as_u64(),
                                 pending = true,
                                 %tx_hash,
+                                %tx_nonce,
                             );
 
                             let tx_hash_string = format!("0x{:x}", tx_hash);
@@ -188,6 +196,7 @@ where
                                 chain_id = %chain_id.as_u64(),
                                 errored = true,
                                 %tx_hash,
+                                %tx_nonce,
                                 error = %e,
                             );
 
@@ -222,6 +231,7 @@ where
                                 chain_id = %chain_id.as_u64(),
                                 finalized = true,
                                 %tx_hash,
+                                %tx_nonce,
                             );
                         }
                         Ok(None) => {
@@ -271,6 +281,7 @@ where
                                 chain_id = %chain_id.as_u64(),
                                 errored = true,
                                 %tx_hash,
+                                %tx_nonce,
                                 error = %e,
                             );
                         }

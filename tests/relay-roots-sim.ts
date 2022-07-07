@@ -9,6 +9,7 @@ import path from 'path';
 import temp from 'temp';
 import getPort, { portNumbers } from 'get-port';
 import { CircomUtxo } from '@webb-tools/sdk-core';
+import { sleep } from './lib/sleep.js';
 
 export async function fetchComponentsFromFilePaths(wasmPath: string, witnessCalculatorPath: string, zkeyPath: string) {
   const wasm: Buffer = await fs.readFileSync(path.resolve(wasmPath));
@@ -81,7 +82,7 @@ async function deploySignatureVBridge(
   )
 }
 
-async function startChains (): Promise<LocalChain[]> {
+async function startChains(): Promise<LocalChain[]> {
   const populatedAccounts = [
     {
       secretKey: '0x0000000000000000000000000000000000000000000000000000000000000001',
@@ -110,7 +111,7 @@ async function startChains (): Promise<LocalChain[]> {
     populatedAccounts,
     enabledContracts
   }
-  
+
   const localHermes = new LocalChain(hermesOpts);
 
   const athenaOpts: LocalChainOpts = {
@@ -120,7 +121,7 @@ async function startChains (): Promise<LocalChain[]> {
     populatedAccounts,
     enabledContracts
   }
-  
+
   const localAthena = new LocalChain(athenaOpts);
 
   const demeterOpts: LocalChainOpts = {
@@ -130,13 +131,13 @@ async function startChains (): Promise<LocalChain[]> {
     populatedAccounts,
     enabledContracts
   }
-  
+
   const localDemeter = new LocalChain(demeterOpts);
 
   return [localHermes, localAthena, localDemeter];
 }
 
-async function runSim () {
+async function runSim() {
 
   const deployerPK = '0x0000000000000000000000000000000000000000000000000000000000000001';
 
@@ -146,6 +147,7 @@ async function runSim () {
   const athenaWallet = new ethers.Wallet(deployerPK, athenaChain!.provider());
   const demeterWallet = new ethers.Wallet(deployerPK, demeterChain!.provider());
 
+  const deployerAddress = hermesWallet.address;
   // const hermesToken = await hermesChain.deployToken('Test token', 'TEST', hermesWallet);
   // const athenaToken = await athenaChain.deployToken('Test token', 'TEST', athenaWallet);
   // const demeterToken = await demeterChain.deployToken('Test token', 'TEST', demeterWallet);
@@ -205,7 +207,7 @@ async function runSim () {
   while (txCount < 100 && !failedRootRelay) {
     for (let i = 0; i < chains.length; i++) {
       const withdrawAnchorIndex = i > 0 ? i - 1 : chains.length - 1;
-      
+
       // This index will be the index to prove against on the withdraw
       const valueUtxoIndex = leaves[i]!.length;
 
@@ -260,24 +262,32 @@ async function runSim () {
       // Wait for the relayer to relay the roots, allow for 10 seconds to relay the root before
       // assuming the root relay was missed.
       try {
-        webbRelayer.clearLogs();
+        let currentChain = chains[withdrawAnchorIndex]!;
+        await webbRelayer.waitForEvent({
+          kind: 'tx_queue',
+          event: {
+            ty: 'EVM',
+            chain_id: currentChain.underlyingChainId.toString(),
+            pending: true,
+          },
+        });
         const result = await Promise.race([
           // now we wait for the tx queue on that chain to execute the transaction.
-          await webbRelayer.waitForEvent({
+          webbRelayer.waitForEvent({
             kind: 'tx_queue',
             event: {
               ty: 'EVM',
-              chain_id: chains[withdrawAnchorIndex]!.underlyingChainId.toString(),
+              chain_id: currentChain.underlyingChainId.toString(),
               finalized: true,
             },
           }),
-          new Promise((_r, rej) => setTimeout(() => rej("missed root relay"), 10000))
+          sleep(10_000),
         ]);
-        await new Promise((res) => setTimeout(() => res("allow time for root relay"), 5000));
+        await sleep(5_000);
+        webbRelayer.clearLogs();
         const withdrawAnchor = await vbridge.getVAnchor(chains[withdrawAnchorIndex]!.chainId);
         const edgeIndex = await withdrawAnchor.contract.edgeIndex(chains[i]!.chainId);
         const edgeList = await withdrawAnchor.contract.edgeList(edgeIndex);
-
         // If there was an edge that existed, make sure the root was relayed properly
         if (valueUtxoIndex != 0 && edgeList.root !== latestDepositRoot) {
           console.log('edgeList root: ', edgeList.root);
@@ -287,7 +297,6 @@ async function runSim () {
       } catch (e) {
         console.log('error relaying root');
         console.log('Successful transaction count: ', txCount);
-        console.log(webbRelayer.dumpLogs());
         failedRootRelay = true;
         break;
       }
