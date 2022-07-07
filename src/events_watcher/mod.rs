@@ -287,18 +287,17 @@ where
             max_elapsed_time: None,
             ..Default::default()
         };
+        let my_chain_id =
+            client.get_chainid().map_err(anyhow::Error::from).await?;
+        let my_address = contract.address();
+        let bridge_key = BridgeKey::new(my_address, my_chain_id);
+        let key = SledQueueKey::from_bridge_key(bridge_key);
         let task = || async {
-            let my_address = contract.address();
-            let my_chain_id =
-                client.get_chainid().map_err(anyhow::Error::from).await?;
-            let bridge_key = BridgeKey::new(my_address, my_chain_id);
-            let key = SledQueueKey::from_bridge_key(bridge_key);
             while let Some(command) = store.dequeue_item(key)? {
                 let result =
                     self.handle_cmd(store.clone(), &contract, command).await;
                 match result {
                     Ok(_) => {
-                        tokio::time::sleep(Duration::from_millis(500)).await;
                         continue;
                     }
                     Err(e) => {
@@ -308,10 +307,10 @@ where
                         return Err(backoff::Error::transient(e));
                     }
                 }
-                // sleep for a bit to avoid overloading the db.
             }
+            tokio::time::sleep(Duration::from_millis(20)).await;
             // whenever this loop stops, we will restart the whole task again.
-            // that way we never have to worry about closed channels.
+            // that way we never have to worry about empty queues.
             Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
         };
         backoff::future::retry(backoff, task).await?;

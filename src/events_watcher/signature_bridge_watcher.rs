@@ -180,17 +180,6 @@ where
         contract: &SignatureBridgeContract<<Self as EventWatcher>::Middleware>,
         (data, signature): (Vec<u8>, Vec<u8>),
     ) -> anyhow::Result<()> {
-        tracing::event!(
-            target: crate::probe::TARGET,
-            tracing::Level::DEBUG,
-            kind = %crate::probe::Kind::SignatureBridge,
-            call = "execute_proposal_with_signature",
-            starting = true,
-            chain_id = %chain_id.as_u64(),
-            data = ?data_hex,
-            signature = ?signature_hex,
-            data_hash = ?hex::encode(data_hash),
-        );
         // before doing anything, we need to do just two things:
         // 1. check if we already have this transaction in the queue.
         // 2. if not, check if the signature is valid.
