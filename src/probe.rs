@@ -37,4 +37,7 @@ pub enum Kind {
     /// Relayer Leaves Store state on a specific chain/node.
     #[display(fmt = "leaves_store")]
     LeavesStore,
+    /// Relayer Event watcher state on a specific chain/node.
+    #[display(fmt = "event_watcher")]
+    EventWatcher,
 }

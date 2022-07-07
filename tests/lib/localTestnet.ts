@@ -54,7 +54,7 @@ export type ExportedConfigOptions = {
 // Default Events watcher for the contracts.
 export const defaultEventsWatcherValue: EventsWatcher = {
   enabled: true,
-  pollingInterval: 1000,
+  pollingInterval: 500,
   printProgressInterval: 60_000,
 };
 
@@ -402,6 +402,9 @@ export class LocalChain {
       beneficiary: wallet.address,
       privateKey: wallet.privateKey,
       contracts: contracts,
+      txQueue: {
+        maxSleepInterval: 1001,
+      },
     };
     return chainInfo;
   }
@@ -445,9 +448,10 @@ export class LocalChain {
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
-      'contracts'
+      'contracts' | 'tx-queue'
     > & {
       contracts: ConvertedContract[];
+      'tx-queue'?: ConvertToKebabCase<TxQueueConfig>;
     };
     type FullConfigFile = {
       evm: {
@@ -464,6 +468,11 @@ export class LocalChain {
       'chain-id': config.chainId,
       beneficiary: config.beneficiary,
       'private-key': config.privateKey,
+      'tx-queue': config.txQueue
+        ? {
+            'max-sleep-interval': config?.txQueue.maxSleepInterval,
+          }
+        : undefined,
       contracts: config.contracts.map((contract) => ({
         contract: contract.contract,
         address: contract.address,
@@ -512,8 +521,13 @@ export class LocalChain {
   }
 }
 
+export type TxQueueConfig = {
+  maxSleepInterval: number;
+};
+
 export type FullChainInfo = ChainInfo & {
   httpEndpoint: string;
   wsEndpoint: string;
   privateKey: string;
+  txQueue?: TxQueueConfig;
 };

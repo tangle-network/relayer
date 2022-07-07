@@ -260,6 +260,7 @@ async function runSim () {
       // Wait for the relayer to relay the roots, allow for 10 seconds to relay the root before
       // assuming the root relay was missed.
       try {
+        webbRelayer.clearLogs();
         const result = await Promise.race([
           // now we wait for the tx queue on that chain to execute the transaction.
           await webbRelayer.waitForEvent({
@@ -277,10 +278,6 @@ async function runSim () {
         const edgeIndex = await withdrawAnchor.contract.edgeIndex(chains[i]!.chainId);
         const edgeList = await withdrawAnchor.contract.edgeList(edgeIndex);
 
-        // clear the logs so previous iterations of the loop do not cause the waitForEvent to
-        // execute prematurely
-        webbRelayer.clearLogs();
-
         // If there was an edge that existed, make sure the root was relayed properly
         if (valueUtxoIndex != 0 && edgeList.root !== latestDepositRoot) {
           console.log('edgeList root: ', edgeList.root);
@@ -290,6 +287,7 @@ async function runSim () {
       } catch (e) {
         console.log('error relaying root');
         console.log('Successful transaction count: ', txCount);
+        console.log(webbRelayer.dumpLogs());
         failedRootRelay = true;
         break;
       }

@@ -134,7 +134,7 @@ struct Opts {
     /// A level of verbosity, and can be used multiple times
     #[structopt(short, long, parse(from_occurrences))]
     verbose: i32,
-    /// Directory that contains configration files.
+    /// Directory that contains configuration files.
     #[structopt(
         short = "c",
         long = "config-dir",

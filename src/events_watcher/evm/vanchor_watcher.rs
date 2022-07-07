@@ -57,12 +57,28 @@ where
         &self,
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
-        (event, _): (Self::Events, LogMeta),
+        (event, log): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         use VAnchorContractEvents::*;
+        let chain_id = wrapper.contract.client().get_chainid().await?;
+        tracing::event!(
+            target: crate::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %crate::probe::Kind::EventWatcher,
+            chain_id = %chain_id,
+            block_number = %log.block_number,
+            ?event,
+        );
         let event_data = match event {
             InsertionFilter(data) => data,
-            _ => return Ok(()),
+            _ => {
+                tracing::debug!(
+                    target: crate::probe::TARGET,
+                    ?event,
+                    "Ignoring event because it is not an insertion filter event"
+                );
+                return Ok(());
+            }
         };
         // Only construct the `AnchorUpdateProposal` if this condition evaluates to `true`: `leaf_index % 2 != 0`
         // The reason behind this is that `VAnchor` on every `transact` call, emits two events,
