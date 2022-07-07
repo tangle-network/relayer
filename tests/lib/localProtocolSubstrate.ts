@@ -71,6 +71,14 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
         `--${opts.authority}`
       );
       const proc = spawn(opts.usageMode.nodePath, startArgs);
+      if (opts.enableLogging) {
+        proc.stdout.on('data', (data: Buffer) => {
+          console.log(data.toString());
+        });
+        proc.stderr.on('data', (data: Buffer) => {
+          console.error(data.toString());
+        });
+      }
       return new LocalProtocolSubstrate(opts, proc);
     }
   }

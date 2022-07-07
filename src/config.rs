@@ -441,9 +441,9 @@ pub struct AnchorBn254PalletConfig {
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
-    /// A List of linked Anchor Contracts (on other chains) to this contract.
+    ///A List of linked Anchor on this chain.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
+    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
 }
 
 /// SignatureBridgePalletConfig represents the configuration for the SignatureBridge pallet.
@@ -462,6 +462,12 @@ pub struct VAnchorBn254PalletConfig {
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+    /// A List of linked Anchor on this chain.
+    #[serde(rename(serialize = "linkedAnchors"), default)]
+    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
 }
 
 /// Enumerates the supported different signing backends configurations.

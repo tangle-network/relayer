@@ -14,25 +14,26 @@
  * limitations under the License.
  *
  */
-// This our basic Substrate VAnchor Transaction Relayer Tests.
-// These are for testing the basic relayer functionality. which is just to relay transactions for us.
+// This is Substrate VAnchor Transaction Relayer Tests.
+// In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
 
 import '@webb-tools/types';
-import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { WebbRelayer, Pallet, LeavesCacheResponse } from '../../lib/webbRelayer.js';
+import { ethers} from 'ethers';
+import { WebbRelayer,Pallet,toFixedHex, convertToHexNumber, toHex, getChainIdType } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
+import { SubmittableExtrinsic } from '@polkadot/api/types';
 import {
   UsageMode,
   defaultEventsWatcherValue,
 } from '../../lib/substrateNodeBase.js';
-import { BigNumber, ethers } from 'ethers';
-import { Keyring } from '@polkadot/api';
+import { BigNumber } from 'ethers';
+import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
@@ -42,16 +43,28 @@ import {
   ProvingManagerSetupInput,
   ArkworksProvingManager,
   Utxo,
-  VAnchorProof,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate VAnchor Transaction Relayer Tests', function () {
+import {
+    encodeResourceIdUpdateProposal,
+    ResourceIdUpdateProposal,
+} from '../../lib/substrateWebbProposals.js';
+import { ChainIdType, makeResourceId } from '../../lib/webbProposals.js';
+import pkg from 'secp256k1';
+const { ecdsaSign } = pkg;
+
+describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
-
   let webbRelayer: WebbRelayer;
+  
+  // Governer key
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
+  let governorWallet = new ethers.Wallet(PK1)
+  // slice 0x04 from public key
+  let uncompressedKey = governorWallet._signingKey().publicKey.slice(4);
+  let typedSourceChainId = getChainIdType(ChainIdType.SUBSTRATE, 1080);
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -65,6 +78,10 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const enabledPallets: Pallet[] = [
       {
         pallet: 'VAnchorBn254',
+        eventsWatcher: defaultEventsWatcherValue,
+      },
+      {
+        pallet: 'SignatureBridge',
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
@@ -89,11 +106,27 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+      linkedAnchors: [
+        {
+          chain: 1080,
+          tree: 9,
+        },
+      ],
     });
 
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
+
+    //force set maintainer
+    let setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(
+        Array.from(hexToU8a(uncompressedKey))
+    );
+    await aliceNode.sudoExecuteTransaction(setMaintainerCall);
+  
+    //whitelist chain
+    let whitelistChainCall = api.tx.signatureBridge!.whitelistChain!(typedSourceChainId);
+    await aliceNode.sudoExecuteTransaction(whitelistChainCall);
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
@@ -106,17 +139,97 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('number of deposits made should be equal to number of leaves in cache', async () => {
+  it('Relayer should create and relay anchor update proposal to signature bridge for execution', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     //create vanchor
     let createVAnchorCall = api.tx.vAnchorBn254!.create!(1, 30, 0);
-    // execute sudo transaction.
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
 
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
 
+    // now we set resource through proposal execution
+    let setResourceIdProposalCall = await setResourceIdProposal(api,PK1,treeId);
+    const txSigned = await setResourceIdProposalCall.signAsync(account);
+    await aliceNode.executeTransaction(txSigned);
+
+    // vanchor deposit
+    await vanchorDeposit(treeId,api, aliceNode);
+
+    // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
+    await webbRelayer.waitForEvent({
+      kind: 'signing_backend',
+      event: {
+        backend: 'Mocked',
+      },
+    });
+
+    // now we wait for the proposals to verified and executed by signature bridge
+
+    await webbRelayer.waitForEvent({
+      kind: 'signature_bridge',
+      event: {
+        call: 'executed_proposal_with_signature',
+      },
+    });
+
+    
+  });
+
+  after(async () => {
+    await aliceNode?.stop();
+    await bobNode?.stop();
+    await webbRelayer?.stop();
+  });
+});
+
+// Helper methods, we can move them somewhere if we end up using them again.
+
+async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId: number): Promise<SubmittableExtrinsic<'promise'>>{
+    // set resource ID
+  let chainID = 1080;
+  let resourceId = makeResourceId(toHex(treeId, 20),ChainIdType.SUBSTRATE,chainID);
+  let functionSignature = toFixedHex(0,4);
+  let nonce = BigNumber.from(1);
+  let newResourceId = resourceId;
+  let targetSystem = '0x0109000000';
+  let palletIndex = convertToHexNumber(46);
+  let callIndex = convertToHexNumber(2);
+    const resourceIdUpdateProposalPayload: ResourceIdUpdateProposal = {
+      header: {
+        resourceId,
+        functionSignature: functionSignature,
+        nonce: nonce.toNumber(),
+        chainIdType: ChainIdType.SUBSTRATE,
+        chainId: 1080,
+      },
+      newResourceId,
+      targetSystem,
+      palletIndex,
+      callIndex,
+    };
+    let proposalBytes = encodeResourceIdUpdateProposal(
+      resourceIdUpdateProposalPayload
+    );
+    let hash = ethers.utils.keccak256(proposalBytes);
+    let msg = ethers.utils.arrayify(hash);
+    // sign the message
+    const sigObj = ecdsaSign(msg, hexToU8a(PK1));
+    let signature = new Uint8Array([...sigObj.signature, sigObj.recid])
+    // execute proposal call to handler 
+    let executeSetProposalCall = api.tx.vAnchorHandlerBn254!.executeSetResourceProposal!(resourceId,targetSystem);
+    let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
+     getChainIdType(ChainIdType.SUBSTRATE, chainID),
+     executeSetProposalCall,
+     u8aToHex(proposalBytes),
+     u8aToHex(signature)
+    );
+    return setResourceCall
+  }
+
+async function vanchorDeposit(treeId: number, api: ApiPromise, aliceNode: LocalProtocolSubstrate) {
+    const account = createAccount('//Dave');
     const chainId = '2199023256632';
     const outputChainId = BigInt(chainId);
     const secret = randomAsU8a();
@@ -195,7 +308,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       fee: fee.toString(),
     };
 
-    const data = await provingManager.prove('vanchor', setup) as VAnchorProof;
+    const data = await provingManager.prove('vanchor', setup);
     const extData = {
       relayer: address,
       recipient: address,
@@ -228,36 +341,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     );
     const txSigned = await transactCall.signAsync(account);
     await aliceNode.executeTransaction(txSigned);
-
-    // now we wait for all deposit to be saved in LeafStorageCache.
-    await webbRelayer.waitForEvent({
-      kind: 'leaves_store',
-      event: {
-        leaf_index: indexBeforeInsetion + 2,
-      },
-    });
-
-    // chainId
-    const chainIdentifier = 1080;
-    const chainIdHex = chainIdentifier.toString(16);
-    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
-    // are equal to no of deposits made.
-    const response = await webbRelayer.getLeavesSubstrate(chainIdHex, treeId.toString());
-    expect(response.status).equal(200);
-    let leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    leavesStore.then(resp => {
-      expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
-    });
-  });
-
-  after(async () => {
-    await aliceNode?.stop();
-    await bobNode?.stop();
-    await webbRelayer?.stop();
-  });
-});
-
-// Helper methods, we can move them somewhere if we end up using them again.
+}
 
 function currencyToUnitI128(currencyAmount: number) {
   let bn = BigNumber.from(currencyAmount);

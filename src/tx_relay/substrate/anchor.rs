@@ -1,6 +1,6 @@
 use webb::substrate::{
     protocol_substrate_runtime::api::{
-        runtime_types::webb_standalone_runtime::Element, RuntimeApi,
+        runtime_types::webb_primitives::runtime::Element, RuntimeApi,
     },
     subxt::{self, DefaultConfig, PairSigner},
 };

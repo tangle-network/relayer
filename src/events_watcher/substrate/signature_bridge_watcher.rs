@@ -178,9 +178,11 @@ where
             signature = ?signature_hex,
         );
         // todo! transaction queue
+        let src_chain_id =
+            webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
         let execute_proposal_tx =
             api.tx().signature_bridge().execute_proposal(
-                chain_id.as_u64(),
+                src_chain_id.chain_id(),
                 proposal_encoded_call,
                 data,
                 signature,
@@ -219,6 +221,15 @@ where
                     match maybe_success {
                         Ok(events) => {
                             tracing::debug!(?events, "tx finalized",);
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::SignatureBridge,
+                                call = "execute_proposal_with_signature",
+                                chain_id = %chain_id,
+                                data = ?data_hex,
+                                signature = ?signature_hex,
+                            );
                         }
                         Err(err) => {
                             tracing::error!(error = %err, "tx failed");

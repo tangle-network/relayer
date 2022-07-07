@@ -18,18 +18,18 @@ use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
 use std::sync::Arc;
-use webb::substrate::protocol_substrate_runtime::api::anchor_bn254;
+use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
 use webb::substrate::{protocol_substrate_runtime, subxt};
 use webb_proposals::substrate::AnchorUpdateProposal;
 
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
-pub struct SubstrateAnchorWatcher<B> {
+pub struct SubstrateVAnchorWatcher<B> {
     proposal_signing_backend: B,
     linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
 }
 
-impl<B> SubstrateAnchorWatcher<B>
+impl<B> SubstrateVAnchorWatcher<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal>,
 {
@@ -45,11 +45,11 @@ where
 }
 
 #[async_trait::async_trait]
-impl<B> super::SubstrateEventWatcher for SubstrateAnchorWatcher<B>
+impl<B> super::SubstrateEventWatcher for SubstrateVAnchorWatcher<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {
-    const TAG: &'static str = "Substrate Anchor Watcher";
+    const TAG: &'static str = "Substrate V-Anchor Watcher";
 
     type RuntimeConfig = subxt::DefaultConfig;
 
@@ -60,7 +60,7 @@ where
 
     type Event = protocol_substrate_runtime::api::Event;
 
-    type FilteredEvent = anchor_bn254::events::Deposit;
+    type FilteredEvent = v_anchor_bn254::events::Transaction;
 
     type Store = SledStore;
 
@@ -71,7 +71,10 @@ where
         api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> anyhow::Result<()> {
-        // fetch chain_id
+        tracing::debug!(
+            event = ?event,
+            "V-Anchor new leaf event",
+        );
         let chain_id =
             api.constants().linkable_tree_bn254().chain_identifier()?;
 
@@ -88,7 +91,7 @@ where
             .await?;
         let tree = match tree {
             Some(t) => t,
-            None => return Err(anyhow::anyhow!("anchor not found")),
+            None => return Err(anyhow::anyhow!("V-Anchor not found")),
         };
         // fetch proposal nonce
         let proposal_nonce = api
@@ -96,7 +99,6 @@ where
             .signature_bridge()
             .proposal_nonce(Some(at_hash))
             .await?;
-
         let root = tree.root;
         let latest_leaf_index = tree.leaf_count;
         let tree_id = event.tree_id;
@@ -129,7 +131,7 @@ where
                 .merkle_root(merkle_root)
                 .latest_leaf_index(latest_leaf_index)
                 .target(target_system.into_fixed_bytes())
-                .pallet_index(44)
+                .pallet_index(46)
                 .build();
 
             let can_sign_proposal = self
@@ -142,7 +144,7 @@ where
                     .await?;
             } else {
                 tracing::warn!(
-                    "Anchor update proposal is not supported by the signing backend"
+                    "V-Anchor update proposal is not supported by the signing backend"
                 );
             }
         }
