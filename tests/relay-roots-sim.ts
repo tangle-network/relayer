@@ -219,8 +219,6 @@ async function runSim() {
         [chains[withdrawAnchorIndex]!.chainId]: leaves[withdrawAnchorIndex]!,
       };
 
-      console.log(leavesMapBeforeDeposit);
-
       const outputUtxo = await CircomUtxo.generateUtxo({
         backend: 'Circom',
         curve: 'Bn254',
@@ -263,7 +261,7 @@ async function runSim() {
       // assuming the root relay was missed.
       try {
         let currentChain = chains[withdrawAnchorIndex]!;
-        await webbRelayer.waitForEvent({
+        const pendingTx = await webbRelayer.waitForEvent({
           kind: 'tx_queue',
           event: {
             ty: 'EVM',
@@ -279,9 +277,10 @@ async function runSim() {
               ty: 'EVM',
               chain_id: currentChain.underlyingChainId.toString(),
               finalized: true,
+              tx_hash: pendingTx.tx_hash,
             },
           }),
-          sleep(10_000),
+          sleep(15_000),
         ]);
         await sleep(5_000);
         webbRelayer.clearLogs();
@@ -295,7 +294,7 @@ async function runSim() {
           throw new Error('missed root relay!')
         }
       } catch (e) {
-        console.log('error relaying root');
+        console.log('error relaying root:', e);
         console.log('Successful transaction count: ', txCount);
         failedRootRelay = true;
         break;

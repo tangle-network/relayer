@@ -107,7 +107,7 @@ export class LocalChain {
         miner: {
           blockTime: 1,
         },
-        quiet: false,
+        quiet: true,
         enableLogging: opts.enableLogging,
       }
     );

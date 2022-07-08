@@ -283,10 +283,8 @@ where
         store: Arc<Self::Store>,
         contract: Self::Contract,
     ) -> anyhow::Result<()> {
-        let backoff = backoff::ExponentialBackoff {
-            max_elapsed_time: None,
-            ..Default::default()
-        };
+        // Immediately retry the operation if it fails.
+        let backoff = backoff::backoff::Zero {};
         let my_chain_id =
             client.get_chainid().map_err(anyhow::Error::from).await?;
         let my_address = contract.address();
@@ -294,6 +292,12 @@ where
         let key = SledQueueKey::from_bridge_key(bridge_key);
         let task = || async {
             while let Some(command) = store.dequeue_item(key)? {
+                tracing::event!(
+                    target: crate::probe::TARGET,
+                    tracing::Level::DEBUG,
+                    kind = %crate::probe::Kind::BridgeCommand,
+                    ?command,
+                );
                 let result =
                     self.handle_cmd(store.clone(), &contract, command).await;
                 match result {

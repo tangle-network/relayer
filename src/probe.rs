@@ -40,4 +40,7 @@ pub enum Kind {
     /// Relayer Event watcher state on a specific chain/node.
     #[display(fmt = "event_watcher")]
     EventWatcher,
+    /// Relayer Bridge Command Watcher state on a specific chain/node.
+    #[display(fmt = "bridge_command")]
+    BridgeCommand,
 }
