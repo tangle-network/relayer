@@ -104,6 +104,10 @@ export class LocalChain {
       opts.chainId,
       opts.populatedAccounts,
       {
+        miner: {
+          blockTime: 1,
+        },
+        quiet: false,
         enableLogging: opts.enableLogging,
       }
     );

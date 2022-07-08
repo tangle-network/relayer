@@ -52,7 +52,7 @@
     "dotenv": "^16.0.0",
     "ecpair": "^2.0.1",
     "ethers": "^5.5.4",
-    "ganache": "^7.0.5",
+    "ganache": "^7.3.2",
     "get-port": "6.1.2",
     "keccak": "^3.0.2",
     "node-cron": "^3.0.0",
