@@ -140,7 +140,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     // TODO: Match this up in the context of variable transfers
     let expected_fee = calculate_fee(
         withdraw_config.withdraw_fee_percentage,
-        cmd.ext_data.ext_amount.as_u128().into(),
+        cmd.ext_data.ext_amount.0.abs().as_u128().into(),
     );
     let (_, unacceptable_fee) =
         U256::overflowing_sub(cmd.ext_data.fee, expected_fee);
@@ -158,7 +158,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         recipient: cmd.ext_data.recipient,
         relayer: cmd.ext_data.relayer,
         fee: cmd.ext_data.fee,
-        ext_amount: cmd.ext_data.ext_amount,
+        ext_amount: cmd.ext_data.ext_amount.0,
         encrypted_output_1: cmd.ext_data.encrypted_output1,
         encrypted_output_2: cmd.ext_data.encrypted_output2,
     };
