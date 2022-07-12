@@ -167,7 +167,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         proof: cmd.proof_data.proof,
         roots: roots.into(),
         ext_data_hash: cmd.proof_data.ext_data_hash.to_fixed_bytes(),
-        public_amount: U256::from_little_endian(
+        public_amount: U256::from_big_endian(
             &cmd.proof_data.public_amount.to_fixed_bytes(),
         ),
         input_nullifiers: cmd

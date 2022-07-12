@@ -51,10 +51,10 @@ use webb::substrate::subxt::sp_core::Pair;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(transparent)]
-pub struct WebbI265(pub I256);
+pub struct WebbI256(pub I256);
 
-impl<'de> Deserialize<'de> for WebbI265 {
-    fn deserialize<D>(deserializer: D) -> Result<WebbI265, D::Error>
+impl<'de> Deserialize<'de> for WebbI256 {
+    fn deserialize<D>(deserializer: D) -> Result<WebbI256, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -62,7 +62,7 @@ impl<'de> Deserialize<'de> for WebbI265 {
         dbg!(&i128_str);
         let i128_val =
             I256::from_hex_str(&i128_str).map_err(serde::de::Error::custom)?;
-        Ok(WebbI265(i128_val))
+        Ok(WebbI256(i128_val))
     }
 }
 /// Type alias for mpsc::Sender<CommandResponse>
@@ -75,7 +75,7 @@ pub type EvmCommand = CommandType<
     H256,     // Element type
     Address,  // Account identifier
     U256,     // Balance type
-    WebbI265, // Signed amount type
+    WebbI256, // Signed amount type
 >;
 /// The command type for Substrate pallet txes
 pub type SubstrateCommand = CommandType<
