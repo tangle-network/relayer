@@ -22,12 +22,11 @@ use std::sync::Arc;
 
 use ethereum_types::{Address, H160, H256, U256, U64};
 use futures::prelude::*;
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use warp::ws::Message;
-use webb::evm::ethers::prelude::{Sign, I256};
+use webb::evm::ethers::prelude::I256;
 use webb::evm::ethers::{
     contract::ContractError,
     core::k256::SecretKey,
