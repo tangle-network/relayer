@@ -51,23 +51,9 @@ use crate::store::{
     QueueStore,
 };
 
-/// A module for listening on proposal events.
-mod proposal_handler_watcher;
+/// A module for listening on dkg events.
 #[doc(hidden)]
-pub use proposal_handler_watcher::*;
-
-/// A module for listening on Signature Bridge commands and events.
-mod signature_bridge_watcher;
-#[doc(hidden)]
-pub use signature_bridge_watcher::*;
-
-/// A module for listening on DKG Governor Changes event.
-mod governor_watcher;
-#[doc(hidden)]
-pub use governor_watcher::*;
-
-#[doc(hidden)]
-pub mod proposal_signing_backend;
+pub mod dkg;
 
 /// A module for listening on substrate events.
 #[doc(hidden)]

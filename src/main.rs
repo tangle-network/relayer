@@ -109,6 +109,8 @@ mod events_watcher;
 mod handler;
 /// A module used for debugging relayer lifecycle, sync state, or other relayer state.
 mod probe;
+/// A module containing proposal signing backend (dkg and mocked).
+mod proposal_signing_backend;
 /// A module for starting long-running tasks for event watching.
 mod service;
 /// A module for managing the storage of the relayer.
@@ -119,6 +121,7 @@ mod tx_queue;
 mod tx_relay;
 /// A module for common functionality.
 mod utils;
+
 /// Package identifier, where the default configuration & database are defined.
 /// If the user does not start the relayer with the `--config-dir`
 /// it will default to read from the default location depending on the OS.

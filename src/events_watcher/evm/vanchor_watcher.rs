@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 use super::VAnchorContractWrapper;
-use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
+use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
 use std::sync::Arc;
