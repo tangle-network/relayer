@@ -1,4 +1,4 @@
-use crate::config::PrivateKey;
+use crate::types::private_key::PrivateKey;
 use crate::store::sled::SledQueueKey;
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 use ethereum_types::H256;

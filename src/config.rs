@@ -38,6 +38,7 @@ use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::{Public};
 
 use crate::types::private_key::PrivateKey;
+use crate::types::rpc_url::RpcUrl;
 use crate::types::suri::Suri;
 
 /// The default port the relayer will listen on. Defaults to 9955.
@@ -101,10 +102,10 @@ pub struct EvmChainConfig {
     pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
     #[serde(skip_serializing)]
-    pub http_endpoint: url::Url,
+    pub http_endpoint: RpcUrl,
     /// Websocket Endpoint for long living connections
     #[serde(skip_serializing)]
-    pub ws_endpoint: url::Url,
+    pub ws_endpoint: RpcUrl,
     /// Block Explorer for this chain.
     ///
     /// Optional, and only used for printing a clickable links
@@ -151,10 +152,10 @@ pub struct SubstrateConfig {
     pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
     #[serde(skip_serializing)]
-    pub http_endpoint: url::Url,
+    pub http_endpoint: RpcUrl,
     /// Websocket Endpoint for long living connections
     #[serde(skip_serializing)]
-    pub ws_endpoint: url::Url,
+    pub ws_endpoint: RpcUrl,
     /// Block Explorer for this Substrate node.
     ///
     /// Optional, and only used for printing a clickable links
