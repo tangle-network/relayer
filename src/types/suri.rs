@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use webb::substrate::subxt::sp_core::sr25519::{Pair as Sr25519Pair};
+use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::subxt::sp_core::Pair;
 
 #[derive(Clone)]

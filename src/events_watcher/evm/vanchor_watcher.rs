@@ -16,8 +16,8 @@ use super::VAnchorContractWrapper;
 use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::{EventHashStore, LeafCacheStore};
-use std::sync::Arc;
 use ethereum_types::H256;
+use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb::evm::ethers::providers;
@@ -91,7 +91,7 @@ where
                     block_number = %log.block_number
                 );
                 data
-            },
+            }
             _ => return Ok(()),
         };
         // Only construct the `AnchorUpdateProposal` if this condition evaluates to `true`: `leaf_index % 2 != 0`

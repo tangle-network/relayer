@@ -117,10 +117,10 @@ mod store;
 mod tx_queue;
 /// Transaction relaying handlers
 mod tx_relay;
-/// A module for common functionality.
-mod utils;
 /// Types and basic trait implementations for commonly used structs/types
 mod types;
+/// A module for common functionality.
+mod utils;
 
 /// Package identifier, where the default configuration & database are defined.
 /// If the user does not start the relayer with the `--config-dir`

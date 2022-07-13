@@ -35,7 +35,7 @@ use std::path::Path;
 
 use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
-use webb::substrate::subxt::sp_core::sr25519::{Public};
+use webb::substrate::subxt::sp_core::sr25519::Public;
 
 use crate::types::private_key::PrivateKey;
 use crate::types::rpc_url::RpcUrl;
@@ -162,6 +162,9 @@ pub struct SubstrateConfig {
     /// for transactions and contracts.
     #[serde(skip_serializing)]
     pub explorer: Option<url::Url>,
+    /// chain specific id.
+    #[serde(rename(serialize = "chainId"))]
+    pub chain_id: u64,
     /// Interprets the string in order to generate a key Pair. in the
     /// case that the pair can be expressed as a direct derivation from a seed (some cases, such as Sr25519 derivations
     /// with path components, cannot).
@@ -596,8 +599,8 @@ fn postloading_process(
         .filter(|(_, chain)| chain.enabled)
         .collect::<HashMap<_, _>>();
     // 2. insert them again, as lowercased.
-    for (k, v) in old_evm {
-        config.evm.insert(k.to_lowercase(), v);
+    for (_, v) in old_evm {
+        config.evm.insert(v.chain_id.to_string(), v);
     }
     // do the same for substrate
     let old_substrate = config
@@ -605,11 +608,11 @@ fn postloading_process(
         .drain()
         .filter(|(_, chain)| chain.enabled)
         .collect::<HashMap<_, _>>();
-    for (k, v) in old_substrate {
-        config.substrate.insert(k.to_lowercase(), v);
+    for (_, v) in old_substrate {
+        config.substrate.insert(v.chain_id.to_string(), v);
     }
     // check that all required chains are already present in the config.
-    for (chain_name, chain_config) in &config.evm {
+    for (chain_id, chain_config) in &config.evm {
         let anchors = chain_config.contracts.iter().filter_map(|c| match c {
             Contract::Anchor(cfg) => Some(cfg),
             _ => None,
@@ -684,7 +687,7 @@ fn postloading_process(
                                         Please, define it manually, to allow the relayer to work properly.",
                                         chain,
                                         anchor.common.address,
-                                        chain_name
+                                        chain_id
                                     );
                                 }
                             }
@@ -771,7 +774,7 @@ fn postloading_process(
                                         Please, define it manually, to allow the relayer to work properly.",
                                         chain,
                                         anchor.common.address,
-                                        chain_name
+                                        chain_id
                                     );
                                 }
                             }

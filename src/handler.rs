@@ -275,6 +275,7 @@ pub async fn handle_leaves_cache_evm(
             warp::http::StatusCode::FORBIDDEN,
         ));
     }
+
     // check if chain is supported
     let chain = match ctx.config.evm.get(&chain_id.to_string()) {
         Some(v) => v,

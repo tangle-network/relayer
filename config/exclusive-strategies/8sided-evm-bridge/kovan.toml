@@ -1,9 +1,9 @@
 # Block which represents properties for a network
 [evm.kovan]
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "https://kovan.infura.io/v3"
+http-endpoint = "$KOVAN_HTTPS_URL"
 # Websocket Endpoint for long living connections
-ws-endpoint = "wss://kovan.infura.io/v3"
+ws-endpoint = "$KOVAN_WSS_URL"
 # Block Explorer
 # Optinal, and used for generating clickable links
 # for transactions that happen on this chain.

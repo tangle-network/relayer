@@ -737,8 +737,11 @@ async fn start_evm_vanchor_events_watcher(
             }
             ProposalSigningBackendSelector::None => {
                 let leaves_watcher = VAnchorLeavesWatcher::default();
-                let vanchor_leaves_watcher =
-                    leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
+                let vanchor_leaves_watcher = leaves_watcher.run(
+                    client.clone(),
+                    store.clone(),
+                    wrapper.clone(),
+                );
                 tokio::select! {
                     _ = vanchor_leaves_watcher => {
                         tracing::warn!(
