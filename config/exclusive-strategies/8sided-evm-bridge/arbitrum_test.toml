@@ -1,9 +1,9 @@
 # Block which represents properties for a network
 [evm.arbitrumtestnet]
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = <ARBITRUM_TESTNET_HTTPS_API_KEY>
+http-endpoint = "$ARBITRUM_TESTNET_HTTPS_API_KEY"
 # Websocket Endpoint for long living connections
-ws-endpoint = <ARBITRUM_TESTNET_WSS_API_KEY>
+ws-endpoint = "$ARBITRUM_TESTNET_WSS_API_KEY"
 # Block Explorer
 # Optinal, and used for generating clickable links
 # for transactions that happen on this chain.

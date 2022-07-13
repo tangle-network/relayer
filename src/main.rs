@@ -119,6 +119,9 @@ mod tx_queue;
 mod tx_relay;
 /// A module for common functionality.
 mod utils;
+/// Types and basic trait implementations for commonly used structs/types
+mod types;
+
 /// Package identifier, where the default configuration & database are defined.
 /// If the user does not start the relayer with the `--config-dir`
 /// it will default to read from the default location depending on the OS.

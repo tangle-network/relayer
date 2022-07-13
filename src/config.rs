@@ -32,12 +32,13 @@
 //! These config files can be changed to your preferences.
 use std::collections::HashMap;
 use std::path::Path;
-use std::str::FromStr;
 
-use ethereum_types::{Address, Secret, U256};
+use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
-use webb::substrate::subxt::sp_core::sr25519::{Pair as Sr25519Pair, Public};
-use webb::substrate::subxt::sp_core::Pair;
+use webb::substrate::subxt::sp_core::sr25519::{Public};
+
+use crate::types::private_key::PrivateKey;
+use crate::types::suri::Suri;
 
 /// The default port the relayer will listen on. Defaults to 9955.
 const fn default_port() -> u16 {
@@ -500,163 +501,6 @@ pub struct MockedProposalSigningBackendConfig {
     pub private_key: PrivateKey,
 }
 
-/// PrivateKey represents a private key.
-#[derive(Clone)]
-pub struct PrivateKey(Secret);
-
-impl std::fmt::Debug for PrivateKey {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("PrivateKey").finish()
-    }
-}
-
-impl std::ops::Deref for PrivateKey {
-    type Target = Secret;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<'de> Deserialize<'de> for PrivateKey {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct PrivateKeyVistor;
-        impl<'de> serde::de::Visitor<'de> for PrivateKeyVistor {
-            type Value = Secret;
-
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter,
-            ) -> std::fmt::Result {
-                formatter.write_str(
-                    "hex string or an env var containing a hex string in it",
-                )
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                if value.starts_with("0x") {
-                    // hex value
-                    let maybe_hex = Secret::from_str(value);
-                    match maybe_hex {
-                        Ok(val) => Ok(val),
-                        Err(e) => Err(serde::de::Error::custom(format!("{}\n got {} but expected a 66 string (including the 0x prefix)", e, value.len()))),
-                    }
-                } else if value.starts_with('$') {
-                    // env
-                    let var = value.strip_prefix('$').unwrap_or(value);
-                    tracing::trace!("Reading {} from env", var);
-                    let val = std::env::var(var).map_err(|e| {
-                        serde::de::Error::custom(format!(
-                            "error while loading this env {}: {}",
-                            var, e,
-                        ))
-                    })?;
-                    let maybe_hex = Secret::from_str(&val);
-                    match maybe_hex {
-                        Ok(val) => Ok(val),
-                        Err(e) => Err(serde::de::Error::custom(format!("{}\n expected a 66 chars string (including the 0x prefix) but found {} char", e,  val.len()))),
-                    }
-                } else if value.starts_with('>') {
-                    todo!("Implement command execution to extract the private key")
-                } else {
-                    todo!("Parse the string as mnemonic seed.")
-                }
-            }
-        }
-
-        let secret = deserializer.deserialize_str(PrivateKeyVistor)?;
-        Ok(Self(secret))
-    }
-}
-
-#[derive(Clone)]
-pub struct Suri(Sr25519Pair);
-
-impl std::fmt::Debug for Suri {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("SubstratePrivateKey").finish()
-    }
-}
-
-impl From<Suri> for Sr25519Pair {
-    fn from(suri: Suri) -> Self {
-        suri.0
-    }
-}
-
-impl std::ops::Deref for Suri {
-    type Target = Sr25519Pair;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<'de> Deserialize<'de> for Suri {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct PrivateKeyVistor;
-        impl<'de> serde::de::Visitor<'de> for PrivateKeyVistor {
-            type Value = Sr25519Pair;
-
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter,
-            ) -> std::fmt::Result {
-                formatter.write_str(
-                    "hex string, dervation path or an env var containing a hex string in it",
-                )
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                if value.starts_with('$') {
-                    // env
-                    let var = value.strip_prefix('$').unwrap_or(value);
-                    tracing::trace!("Reading {} from env", var);
-                    let val = std::env::var(var).map_err(|e| {
-                        serde::de::Error::custom(format!(
-                            "error while loading this env {}: {}",
-                            var, e,
-                        ))
-                    })?;
-                    let maybe_pair =
-                        Sr25519Pair::from_string_with_seed(&val, None);
-                    match maybe_pair {
-                        Ok((pair, _)) => Ok(pair),
-                        Err(e) => {
-                            Err(serde::de::Error::custom(format!("{:?}", e)))
-                        }
-                    }
-                } else if value.starts_with('>') {
-                    todo!("Implement command execution to extract the private key")
-                } else {
-                    let maybe_pair =
-                        Sr25519Pair::from_string_with_seed(value, None);
-                    match maybe_pair {
-                        Ok((pair, _)) => Ok(pair),
-                        Err(e) => {
-                            Err(serde::de::Error::custom(format!("{:?}", e)))
-                        }
-                    }
-                }
-            }
-        }
-
-        let secret = deserializer.deserialize_str(PrivateKeyVistor)?;
-        Ok(Self(secret))
-    }
-}
 /// Load the configuration files and
 ///
 /// Returns `Ok(WebbRelayerConfig)` on success, or `Err(anyhow::Error)` on failure.
