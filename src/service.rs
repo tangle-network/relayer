@@ -36,10 +36,11 @@ use webb::substrate::{
 
 use crate::config::*;
 use crate::context::RelayerContext;
+use crate::events_watcher::dkg::*;
 use crate::events_watcher::evm::*;
-use crate::events_watcher::proposal_signing_backend::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
+use crate::proposal_signing_backend::*;
 use crate::store::sled::SledStore;
 use crate::tx_queue::TxQueue;
 
