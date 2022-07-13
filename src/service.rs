@@ -690,6 +690,9 @@ async fn start_evm_vanchor_events_watcher(
             "VAnchor events watcher for ({}) Started.",
             contract_address,
         );
+        let leaves_watcher = VAnchorLeavesWatcher::default();
+        let vanchor_leaves_watcher =
+            leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
@@ -706,6 +709,12 @@ async fn start_evm_vanchor_events_watcher(
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
                             "VAnchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = vanchor_leaves_watcher => {
+                        tracing::warn!(
+                            "VAnchor leaves watcher stopped for ({})",
                             contract_address,
                         );
                     },
@@ -727,6 +736,12 @@ async fn start_evm_vanchor_events_watcher(
                             contract_address,
                         );
                     },
+                    _ = vanchor_leaves_watcher => {
+                        tracing::warn!(
+                            "VAnchor leaves watcher stopped for ({})",
+                            contract_address,
+                        );
+                    },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
                             "Stopping VAnchor watcher for ({})",
@@ -736,12 +751,6 @@ async fn start_evm_vanchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::None => {
-                let leaves_watcher = VAnchorLeavesWatcher::default();
-                let vanchor_leaves_watcher = leaves_watcher.run(
-                    client.clone(),
-                    store.clone(),
-                    wrapper.clone(),
-                );
                 tokio::select! {
                     _ = vanchor_leaves_watcher => {
                         tracing::warn!(

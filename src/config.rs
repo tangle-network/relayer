@@ -54,7 +54,7 @@ const fn enable_data_query_default() -> bool {
     true
 }
 /// The maximum events per step is set to `100` by default.
-const fn max_events_per_step_default() -> u64 {
+const fn max_blocks_per_step_default() -> u64 {
     100
 }
 /// The print progress interval is set to `7_000` by default.
@@ -262,8 +262,8 @@ pub struct EventsWatcherConfig {
     #[serde(rename(serialize = "pollingInterval"))]
     pub polling_interval: u64,
     /// The maximum number of events to fetch in one request.
-    #[serde(skip_serializing, default = "max_events_per_step_default")]
-    pub max_events_per_step: u64,
+    #[serde(skip_serializing, default = "max_blocks_per_step_default")]
+    pub max_blocks_per_step: u64,
     /// print sync progress frequency in milliseconds
     /// if it is zero, means no progress will be printed.
     #[serde(skip_serializing, default = "print_progress_interval_default")]
