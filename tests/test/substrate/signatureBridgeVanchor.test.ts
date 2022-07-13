@@ -170,7 +170,8 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
       event: {
-        call: 'executed_proposal_with_signature',
+        call: 'execute_proposal_with_signature',
+        finalized: true,
       },
     });
 
