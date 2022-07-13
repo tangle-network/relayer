@@ -268,8 +268,14 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 - `chain_id`
 - `contract address`
 
+For evm
 ```
-/api/v1/leaves/4/0x626fec5ffa7bf1ee8ced7dabde545630473e3abb
+/api/v1/leaves/evm/4/0x626fec5ffa7bf1ee8ced7dabde545630473e3abb
+```
+
+For substrate, since it dosent have contract address we use `tree_id`
+```
+/api/v1/leaves/substrate/4/9
 ```
 
 <details>
