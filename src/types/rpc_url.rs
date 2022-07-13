@@ -63,7 +63,7 @@ impl<'de> Deserialize<'de> for RpcUrl {
                         }
                     }
                 } else {
-                    let maybe_rpc_url = url::Url::parse(&value);
+                    let maybe_rpc_url = url::Url::parse(value);
                     match maybe_rpc_url {
                         Ok(url) => Ok(url),
                         Err(e) => {
