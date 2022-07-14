@@ -80,7 +80,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
                 .webb_config
                 .evm
                 .values()
-                .find(|c| c.chain_id == u64::from(id))
+                .find(|c| c.chain_id == id)
                 .and_then(|c| {
                     c.contracts.iter().find(|contract| {
                         matches!(contract, Contract::SignatureBridge(_))

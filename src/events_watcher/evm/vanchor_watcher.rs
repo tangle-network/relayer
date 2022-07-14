@@ -13,10 +13,10 @@
 // limitations under the License.
 //
 use super::VAnchorContractWrapper;
+use crate::config::LinkedAnchorConfig;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
-use crate::store::{EventHashStore, LeafCacheStore};
-use ethereum_types::H256;
+use crate::store::EventHashStore;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
@@ -58,40 +58,11 @@ where
         &self,
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
-        (event, log): (Self::Events, LogMeta),
+        (event, _): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         use VAnchorContractEvents::*;
         let event_data = match event {
-            InsertionFilter(data) => {
-                let commitment = data.commitment;
-                let leaf_index = data.leaf_index;
-                let value = (leaf_index, H256::from_slice(&commitment));
-                let chain_id = wrapper.contract.client().get_chainid().await?;
-                store.insert_leaves(
-                    (chain_id, wrapper.contract.address()),
-                    &[value],
-                )?;
-                store.insert_last_deposit_block_number(
-                    (chain_id, wrapper.contract.address()),
-                    log.block_number,
-                )?;
-                let events_bytes = serde_json::to_vec(&data)?;
-                store.store_event(&events_bytes)?;
-                tracing::trace!(
-                    %log.block_number,
-                    "detected block number",
-                );
-                tracing::event!(
-                    target: crate::probe::TARGET,
-                    tracing::Level::DEBUG,
-                    kind = %crate::probe::Kind::LeavesStore,
-                    leaf_index = %value.0,
-                    leaf = %value.1,
-                    chain_id = %chain_id,
-                    block_number = %log.block_number
-                );
-                data
-            }
+            InsertionFilter(data) => data,
             _ => return Ok(()),
         };
         // Only construct the `AnchorUpdateProposal` if this condition evaluates to `true`: `leaf_index % 2 != 0`
@@ -129,9 +100,39 @@ where
                 return Ok(());
             }
         };
-        for linked_anchor in linked_anchors {
-            let dest_chain = linked_anchor.chain.to_lowercase();
-            let maybe_chain = wrapper.webb_config.evm.get(&dest_chain);
+        
+        // replace the names of the linked anchors with their chain ids
+        let regenerated_linked_anchors: Vec<LinkedAnchorConfig> = linked_anchors.into_iter()
+            .map(|a| {
+                let target_chain = &wrapper.webb_config.evm.values().find(|c| {
+                    c.name == a.chain
+                });
+
+                match target_chain {
+                    Some(config) => {
+                        return LinkedAnchorConfig {
+                            chain: config.chain_id.to_string(),
+                            address: a.address
+                        };
+                    }
+                    None => {
+                        tracing::warn!("Misconfigured Network: Linked anchor entry does not match a supported chain");
+                        return LinkedAnchorConfig {
+                            chain: "".to_string(),
+                            address: a.address
+                        };
+                    }
+                }
+            })
+            .filter(|a| {
+                a.chain != "".to_string()
+            })
+            .collect::<Vec<LinkedAnchorConfig>>();
+
+        for linked_anchor in regenerated_linked_anchors {
+            let dest_chain = &linked_anchor.chain;
+            tracing::debug!("Looking for destination chain indexed on {}", dest_chain);
+            let maybe_chain = wrapper.webb_config.evm.get(dest_chain);
             let dest_chain = match maybe_chain {
                 Some(chain) => chain,
                 None => continue,

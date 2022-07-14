@@ -35,7 +35,7 @@ use crate::utils::ClickableLink;
 #[derive(Clone)]
 pub struct TxQueue<S: QueueStore<TypedTransaction>> {
     ctx: RelayerContext,
-    chain_name: String,
+    chain_id: String,
     store: Arc<S>,
 }
 
@@ -50,7 +50,7 @@ where
     /// # Arguments
     ///
     /// * `ctx` - RelayContext reference that holds the configuration
-    /// * `chain_name` - The name of the chain that this queue is for
+    /// * `chain_id` - The chainId that this queue is for
     /// * `store` - [Sled](https://sled.rs)-based database store
     ///
     /// # Examples
@@ -59,10 +59,10 @@ where
     /// use crate::tx_queue::TxQueue;
     /// let tx_queue = TxQueue::new(ctx, chain_name.clone(), store);
     /// ```
-    pub fn new(ctx: RelayerContext, chain_name: String, store: Arc<S>) -> Self {
+    pub fn new(ctx: RelayerContext, chain_id: String, store: Arc<S>) -> Self {
         Self {
             ctx,
-            chain_name,
+            chain_id,
             store,
         }
     }
@@ -86,16 +86,16 @@ where
     ///     }
     /// };
     /// ```
-    #[tracing::instrument(skip_all, fields(chain = %self.chain_name))]
+    #[tracing::instrument(skip_all, fields(chain = %self.chain_id))]
     pub async fn run(self) -> Result<(), anyhow::Error> {
-        let provider = self.ctx.evm_provider(&self.chain_name).await?;
-        let wallet = self.ctx.evm_wallet(&self.chain_name).await?;
+        let provider = self.ctx.evm_provider(&self.chain_id).await?;
+        let wallet = self.ctx.evm_wallet(&self.chain_id).await?;
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
         let chain_config = self
             .ctx
             .config
             .evm
-            .get(&self.chain_name)
+            .get(&self.chain_id)
             .context("Chain not configured")?;
         let chain_id = client.get_chainid().await?;
         let store = self.store;

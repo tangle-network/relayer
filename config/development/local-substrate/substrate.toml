@@ -1,6 +1,7 @@
 port = 9955
 
 [substrate.localnode]
+name="localnode"
 enabled=true
 http-endpoint = "http://localhost:9933"
 ws-endpoint = "ws://localhost:9944"
