@@ -260,7 +260,7 @@ describe('EVM Transaction Relayer', function () {
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
-      localChain1.underlyingChainId.toString(),
+      localChain1.underlyingChainId,
       anchor1.getAddress(),
       publicInputs,
       extData
@@ -295,7 +295,7 @@ describe('EVM Transaction Relayer', function () {
     // now send the withdrawal request with a wrong recipient address
     try {
       await webbRelayer.anchorWithdraw(
-        localChain1.underlyingChainId.toString(),
+        localChain1.underlyingChainId,
         wallet2.address,
         publicInputs,
         extData
@@ -330,7 +330,7 @@ describe('EVM Transaction Relayer', function () {
     // now send the withdrawal request with a wrong recipient address
     try {
       await webbRelayer.anchorWithdraw(
-        localChain1.underlyingChainId.toString(),
+        localChain1.underlyingChainId,
         anchor1.getAddress(),
         publicInputs,
         extData
@@ -365,7 +365,7 @@ describe('EVM Transaction Relayer', function () {
     // now send the withdrawal request with a wrong recipient address
     try {
       await webbRelayer.anchorWithdraw(
-        localChain1.underlyingChainId.toString(),
+        localChain1.underlyingChainId,
         anchor1.getAddress(),
         publicInputs,
         extData

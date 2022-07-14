@@ -1,9 +1,11 @@
 # Block which represents properties for a network
 [evm.demeter]
+# The name that the chain is indexed on, for linkable anchors
+name = "demeter"
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "http://localhost:5003"
+http-endpoint = "$DEMETER_HTTP_URL"
 # Websocket Endpoint for long living connections
-ws-endpoint = "ws://localhost:5003"
+ws-endpoint = "$DEMETER_WS_URL"
 # chain specific id from evm opcode
 chain-id = 5003
 # The Private Key of this account on this network
@@ -57,7 +59,7 @@ linked-anchors = [
 # Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
 # the signed proposals to the configured SignatureBridge of the relevant chains.
-proposal-signing-backend = { type = "Mocked", private-key = "0x0000000000000000000000000000000000000000000000000000000000000001" }
+proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
 
 [[evm.demeter.contracts]]
 contract = "Anchor"
@@ -70,7 +72,7 @@ linked-anchors = [
   { chain = "hermes", address = "0xaC361518Bb9535D0E3172DC45a4e56d71a7FDFc4" },
   { chain = "athena", address = "0x3d3955aAe5Bdf9E6547A140Baad4BC57Fa4EBA17" },
 ]
-proposal-signing-backend = { type = "Mocked", private-key = "0x0000000000000000000000000000000000000000000000000000000000000001" }
+proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
 
 [[evm.demeter.contracts]]
 contract = "VAnchor"
@@ -83,7 +85,7 @@ linked-anchors = [
   { chain = "hermes", address = "0xb824C5F99339C7E486a1b452B635886BE82bc8b7" },
   { chain = "athena", address = "0xFEe587E68c470DAE8147B46bB39fF230A29D4769"},
 ]
-proposal-signing-backend = { type = "Mocked", private-key = "0x0000000000000000000000000000000000000000000000000000000000000001" }
+proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
 
 [[evm.demeter.contracts]]
 contract = "SignatureBridge"

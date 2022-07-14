@@ -1,9 +1,9 @@
 # Block which represents properties for a network
 [evm.polygontestnet]
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = <POLYGON_TESTNET_HTTPS_API_KEY>
+http-endpoint = "$POLYGON_TESTNET_HTTPS_URL"
 # Websocket Endpoint for long living connections
-ws-endpoint = <POLYGON_TESTNET_WSS_API_KEY>
+ws-endpoint = "$POLYGON_TESTNET_WSS_URL"
 # Block Explorer
 # Optinal, and used for generating clickable links
 # for transactions that happen on this chain.
@@ -27,7 +27,7 @@ chain-id = 80001
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "$POLYGONTESTNET_PRIVATE_KEY"
+private-key = "$POLYGON_TESTNET_PRIVATE_KEY"
 # Value to indicate that the relayer should enable services for this chain
 enabled = true
 

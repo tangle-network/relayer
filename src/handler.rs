@@ -101,6 +101,11 @@ pub async fn accept_connection(
 }
 /// Sets up a websocket channels for message sending.
 ///
+/// This is primarily used for transaction relaying. The intention is
+/// that a user will send formatted relay requests to the relayer using
+/// the websocket. The command will be extracted and sent to `handle_cmd`
+/// if successfully deserialized.
+///
 /// Returns `Ok(())` on success
 ///
 /// # Arguments
@@ -130,6 +135,8 @@ where
     match serde_json::from_str(v) {
         Ok(cmd) => {
             handle_cmd(ctx.clone(), cmd, my_tx).await;
+            // Send back the response, usually a transaction hash
+            // from processing the transaction relaying command.
             res_stream
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
@@ -275,6 +282,7 @@ pub async fn handle_leaves_cache_evm(
             warp::http::StatusCode::FORBIDDEN,
         ));
     }
+
     // check if chain is supported
     let chain = match ctx.config.evm.get(&chain_id.to_string()) {
         Some(v) => v,

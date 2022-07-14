@@ -82,6 +82,13 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
       return new LocalProtocolSubstrate(opts, proc);
     }
   }
+  // get chainId
+  public async getChainId(): Promise<number> {
+    const api = await super.api();
+    //@ts-ignore
+    let chainId = api.consts.linkableTreeBn254.chainIdentifier.toNumber();
+    return chainId;
+  }
 
   public async exportConfig(
     opts: ExportedConfigOptions
@@ -104,6 +111,7 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
       runtime: 'WebbProtocol',
       pallets: enabledPallets,
       suri: opts.suri,
+      chainId: opts.chainId,
     };
     return nodeInfo;
   }

@@ -1,6 +1,6 @@
-use crate::config::PrivateKey;
 use crate::store::sled::SledQueueKey;
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
+use crate::types::private_key::PrivateKey;
 use ethereum_types::H256;
 use std::collections::HashMap;
 use std::sync::Arc;

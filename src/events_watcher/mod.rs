@@ -72,7 +72,7 @@ pub trait WatchableContract: Send + Sync {
     fn polling_interval(&self) -> Duration;
 
     /// How many events to fetch at one request.
-    fn max_events_per_step(&self) -> types::U64;
+    fn max_blocks_per_step(&self) -> types::U64;
 
     /// The frequency of printing the sync progress.
     fn print_progress_interval(&self) -> Duration;
@@ -117,7 +117,7 @@ pub trait EventWatcher {
             ..Default::default()
         };
         let task = || async {
-            let step = contract.max_events_per_step();
+            let step = contract.max_blocks_per_step();
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
             let chain_id =

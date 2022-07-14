@@ -15,7 +15,8 @@
 use super::VAnchorContractWrapper;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
-use crate::store::EventHashStore;
+use crate::store::{EventHashStore, LeafCacheStore};
+use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
@@ -57,11 +58,40 @@ where
         &self,
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
-        (event, _): (Self::Events, LogMeta),
+        (event, log): (Self::Events, LogMeta),
     ) -> anyhow::Result<()> {
         use VAnchorContractEvents::*;
         let event_data = match event {
-            InsertionFilter(data) => data,
+            InsertionFilter(data) => {
+                let commitment = data.commitment;
+                let leaf_index = data.leaf_index;
+                let value = (leaf_index, H256::from_slice(&commitment));
+                let chain_id = wrapper.contract.client().get_chainid().await?;
+                store.insert_leaves(
+                    (chain_id, wrapper.contract.address()),
+                    &[value],
+                )?;
+                store.insert_last_deposit_block_number(
+                    (chain_id, wrapper.contract.address()),
+                    log.block_number,
+                )?;
+                let events_bytes = serde_json::to_vec(&data)?;
+                store.store_event(&events_bytes)?;
+                tracing::trace!(
+                    %log.block_number,
+                    "detected block number",
+                );
+                tracing::event!(
+                    target: crate::probe::TARGET,
+                    tracing::Level::DEBUG,
+                    kind = %crate::probe::Kind::LeavesStore,
+                    leaf_index = %value.0,
+                    leaf = %value.1,
+                    chain_id = %chain_id,
+                    block_number = %log.block_number
+                );
+                data
+            }
             _ => return Ok(()),
         };
         // Only construct the `AnchorUpdateProposal` if this condition evaluates to `true`: `leaf_index % 2 != 0`

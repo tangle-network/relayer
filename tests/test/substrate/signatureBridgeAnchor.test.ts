@@ -95,9 +95,16 @@ describe('Substrate Signature Bridge Relaying On Anchor Deposit <> Mocked Backen
       ports: 'auto',
     });
 
+    // Wait until we are ready and connected
+    const api = await aliceNode.api();
+    await api.isReady;
+
+    let chainId = await aliceNode.getChainId();
+
     // set proposal signing backend and linked anchors
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
+      chainId: chainId,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       linkedAnchors: [
         {
@@ -106,10 +113,6 @@ describe('Substrate Signature Bridge Relaying On Anchor Deposit <> Mocked Backen
         },
       ],
     });
-
-    // Wait until we are ready and connected
-    const api = await aliceNode.api();
-    await api.isReady;
 
     //force set maintainer
     let setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(
@@ -136,10 +139,13 @@ describe('Substrate Signature Bridge Relaying On Anchor Deposit <> Mocked Backen
     const api = await aliceNode.api();
     // create anchor
     const treeId = await createAnchor(api, aliceNode);
-    
     const account = createAccount('//Dave');
+
+    // chainId
+    let chainId = await aliceNode.getChainId();
+
     // now we set resource through proposal execution
-    let setResourceIdProposalCall = await setResourceIdProposal(api,PK1,treeId);
+    let setResourceIdProposalCall = await setResourceIdProposal(api,PK1,treeId,chainId);
     const txSigned = await setResourceIdProposalCall.signAsync(account);
     await aliceNode.executeTransaction(txSigned);
     
@@ -182,10 +188,9 @@ async function createAnchor(api: ApiPromise, aliceNode: LocalProtocolSubstrate) 
     return treeId
 }
 
-async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId:number): Promise<SubmittableExtrinsic<'promise'>>{
+async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId:number, chainId: number): Promise<SubmittableExtrinsic<'promise'>>{
   // set resource ID
-  let chainID = 1080;
-  let resourceId = makeResourceId(toHex(treeId, 20),ChainIdType.SUBSTRATE,chainID);
+  let resourceId = makeResourceId(toHex(treeId, 20),ChainIdType.SUBSTRATE,chainId);
   let functionSignature = toFixedHex(0,4);
   let nonce = BigNumber.from(1);
   let newResourceId = resourceId;
@@ -199,7 +204,7 @@ async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId:number)
       functionSignature: functionSignature,
       nonce: nonce.toNumber(),
       chainIdType: ChainIdType.SUBSTRATE,
-      chainId: chainID,
+      chainId: chainId,
     },
     newResourceId,
     targetSystem,
@@ -219,7 +224,7 @@ async function setResourceIdProposal(api:ApiPromise, PK1: string, treeId:number)
   // execute proposal call to handler
   let executeSetProposalCall = api.tx.anchorHandlerBn254!.executeSetResourceProposal!(resourceId,targetSystem);
   let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
-   getChainIdType(ChainIdType.SUBSTRATE, chainID),
+   getChainIdType(ChainIdType.SUBSTRATE, chainId),
    executeSetProposalCall,
    u8aToHex(proposalBytes),
    u8aToHex(signature)

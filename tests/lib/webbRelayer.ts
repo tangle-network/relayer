@@ -178,7 +178,7 @@ export class WebbRelayer {
   }
 
   public async anchorWithdraw(
-    chainName: string,
+    chainId: number,
     anchorAddress: string,
     publicInputs: IFixedAnchorPublicInputs,
     extData: IFixedAnchorExtData
@@ -187,12 +187,12 @@ export class WebbRelayer {
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-    const input = { chainName, anchorAddress, publicInputs, extData };
+    const input = { chainId, anchorAddress, publicInputs, extData };
     return txHashOrReject(ws, input);
   }
 
   public async substrateMixerWithdraw(inputs: {
-    chain: string;
+    chainId: number;
     id: number;
     proof: number[];
     root: number[];
@@ -209,7 +209,7 @@ export class WebbRelayer {
     const cmd = {
       substrate: {
         mixer: {
-          chain: inputs.chain,
+          chainId: inputs.chainId,
           id: inputs.id,
           proof: inputs.proof,
           root: inputs.root,
@@ -225,7 +225,7 @@ export class WebbRelayer {
   }
 
   public async substrateAnchorWithdraw(inputs: {
-    chain: string;
+    chainId: number;
     id: number;
     proof: number[];
     roots: number[][];
@@ -245,7 +245,7 @@ export class WebbRelayer {
     const cmd = {
       substrate: {
         anchor: {
-          chain: inputs.chain,
+          chainId: inputs.chainId,
           id: inputs.id,
           proof: inputs.proof,
           roots: inputs.roots,
@@ -261,6 +261,8 @@ export class WebbRelayer {
     };
     return substrateTxHashOrReject(ws, cmd);
   }
+
+  public async substrateVanchorWithdraw(): Promise<void> {}
 }
 
 export function calculateRelayerFees(
@@ -278,12 +280,12 @@ export function calculateRelayerFees(
 async function txHashOrReject(
   ws: WebSocket,
   {
-    chainName,
+    chainId,
     anchorAddress,
     publicInputs,
     extData,
   }: {
-    chainName: string;
+    chainId: number;
     anchorAddress: string;
     publicInputs: IFixedAnchorPublicInputs;
     extData: IFixedAnchorExtData;
@@ -342,7 +344,7 @@ async function txHashOrReject(
     const cmd = {
       evm: {
         anchor: {
-          chain: chainName,
+          chainId: chainId,
           id: anchorAddress,
           proof: publicInputs.proof,
           roots: publicInputs._roots,
