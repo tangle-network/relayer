@@ -683,8 +683,11 @@ fn postloading_process(
                         } else {
                             for linked_anchor in linked_anchors {
                                 let chain = linked_anchor.chain.clone();
-                                let chain_defined =
-                                    config.evm.clone().into_values().find(|x| x.name.eq(&chain));
+                                let chain_defined = config
+                                    .evm
+                                    .clone()
+                                    .into_values()
+                                    .find(|x| x.name.eq(&chain));
                                 if chain_defined.is_none() {
                                     tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
                                         which is required by the Anchor Contract ({}) defined on {} chain.
@@ -770,8 +773,11 @@ fn postloading_process(
                         } else {
                             for linked_anchor in linked_anchors {
                                 let chain = linked_anchor.chain.clone();
-                                let chain_defined =
-                                    config.evm.clone().into_values().find(|x| x.name.eq(&chain));
+                                let chain_defined = config
+                                    .evm
+                                    .clone()
+                                    .into_values()
+                                    .find(|x| x.name.eq(&chain));
                                 if chain_defined.is_none() {
                                     tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
                                         which is required by the Anchor Contract ({}) defined on {} chain.

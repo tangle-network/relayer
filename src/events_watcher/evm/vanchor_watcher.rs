@@ -130,7 +130,7 @@ where
                 return Ok(());
             }
         };
-        
+
         // replace the names of the linked anchors with their chain ids
         let regenerated_linked_anchors: Vec<LinkedAnchorConfig> = linked_anchors.into_iter()
             .map(|a| {
@@ -161,7 +161,6 @@ where
 
         for linked_anchor in regenerated_linked_anchors {
             let dest_chain = &linked_anchor.chain;
-            tracing::debug!("Looking for destination chain indexed on {}", dest_chain);
             let maybe_chain = wrapper.webb_config.evm.get(dest_chain);
             let dest_chain = match maybe_chain {
                 Some(chain) => chain,

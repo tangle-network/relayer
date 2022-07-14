@@ -131,7 +131,11 @@ pub async fn ignite(
             }
         }
         // start the transaction queue after starting other tasks.
-        start_tx_queue(ctx.clone(), chain_config.chain_id.to_string().clone(), store.clone())?;
+        start_tx_queue(
+            ctx.clone(),
+            chain_config.chain_id.to_string().clone(),
+            store.clone(),
+        )?;
     }
     // now, we start substrate service/tasks
     for (node_name, node_config) in &ctx.config.substrate {
