@@ -109,6 +109,8 @@ mod events_watcher;
 mod handler;
 /// A module used for debugging relayer lifecycle, sync state, or other relayer state.
 mod probe;
+/// A module containing proposal signing backend (dkg and mocked).
+mod proposal_signing_backend;
 /// A module for starting long-running tasks for event watching.
 mod service;
 /// A module for managing the storage of the relayer.
