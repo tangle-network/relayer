@@ -25,7 +25,6 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { ethers } from 'ethers';
 import { WebbRelayer, Pallet, LeavesCacheResponse } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
@@ -49,11 +48,6 @@ describe('Substrate Anchor Transaction Relayer', function() {
   let bobNode: LocalProtocolSubstrate;
 
   let webbRelayer: WebbRelayer;
-
-  // Governer key
-  const PK1 = u8aToHex(ethers.utils.randomBytes(32));
-  // propotocl susbtrate node chainId
-  const chainId = 1080;
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -86,14 +80,17 @@ describe('Substrate Anchor Transaction Relayer', function() {
       ports: 'auto',
     });
 
-    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
-      suri: '//Charlie',
-    });
-
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
 
+    let chainId = await aliceNode.getChainId();
+
+    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
+      suri: '//Charlie',
+      chainId: chainId
+    });
+    
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
@@ -121,6 +118,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
       },
     });
     // chainId
+    let chainId = await aliceNode.getChainId();
     const chainIdHex = chainId.toString(16);
     const treeIds = await api.query.anchorBn254.anchors.keys();
     const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
@@ -156,6 +154,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
       Array.from(withdrawalProof.treeRoot),
       Array.from(withdrawalProof.neighborRoot),
     ];
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     const txHash = await webbRelayer.substrateAnchorWithdraw({
       chainId: chainId,
@@ -202,7 +202,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
     ];
 
     const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
@@ -253,6 +254,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
       Array.from(withdrawalProof.treeRoot),
       Array.from(withdrawalProof.neighborRoot),
     ];
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid proof
@@ -301,7 +304,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
       Array.from(withdrawalProof.treeRoot),
       Array.from(withdrawalProof.neighborRoot),
     ];
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
@@ -353,7 +357,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
         )
       ),
     ];
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid roots
@@ -405,7 +410,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
       ),
       Array.from(withdrawalProof.neighborRoot),
     ];
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid roots
@@ -455,7 +461,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
     ];
 
     const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
@@ -513,7 +520,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
     }
     const invalidNullifierHash = u8aToHex(nullifierHash);
     expect(withdrawalProof.nullifierHash).to.not.eq(invalidNullifierHash);
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address

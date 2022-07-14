@@ -261,6 +261,8 @@ export class WebbRelayer {
     };
     return substrateTxHashOrReject(ws, cmd);
   }
+
+  public async substrateVanchorWithdraw(): Promise<void> {}
 }
 
 export function calculateRelayerFees(

@@ -69,6 +69,7 @@ export type ExportedConfigOptions = {
   proposalSigningBackend?: ProposalSigningBackend;
   linkedAnchors?: SubstrateLinkedAnchor[];
   features?: FeaturesConfig;
+  chainId: number;
 };
 
 // Default Events watcher for the pallets.

@@ -118,6 +118,13 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       return null;
     }
   }
+  // get chainId
+  public async getChainId(): Promise<number> {
+    const api = await super.api();
+    //@ts-ignore
+    let chainId = api.consts.dkgProposals.chainIdentifier.toNumber();
+    return chainId;
+  }
 
   public async exportConfig(
     opts: ExportedConfigOptions
@@ -131,7 +138,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       runtime: 'DKG',
       pallets: this.opts.enabledPallets ?? [],
       suri: opts.suri,
-      chainId: 1080
+      chainId: opts.chainId,
     };
     return nodeInfo;
   }

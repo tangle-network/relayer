@@ -97,9 +97,11 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       enableLogging: false,
       enabledPallets,
     });
-
+    // get chainId
+    let chainId = await charlieNode.getChainId();
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
+      chainId: chainId,
     });
 
     // we need to wait until the public key is on chain.
