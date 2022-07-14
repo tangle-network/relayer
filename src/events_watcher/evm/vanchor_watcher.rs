@@ -132,7 +132,7 @@ where
         };
 
         // replace the names of the linked anchors with their chain ids
-        let regenerated_linked_anchors: Vec<LinkedAnchorConfig> = linked_anchors.into_iter()
+        let regenerated_linked_anchors: Vec<LinkedAnchorConfig> = linked_anchors.iter()
             .map(|a| {
                 let target_chain = &wrapper.webb_config.evm.values().find(|c| {
                     c.name == a.chain
@@ -140,22 +140,22 @@ where
 
                 match target_chain {
                     Some(config) => {
-                        return LinkedAnchorConfig {
+                        LinkedAnchorConfig {
                             chain: config.chain_id.to_string(),
                             address: a.address
-                        };
+                        }
                     }
                     None => {
                         tracing::warn!("Misconfigured Network: Linked anchor entry does not match a supported chain");
-                        return LinkedAnchorConfig {
+                        LinkedAnchorConfig {
                             chain: "".to_string(),
                             address: a.address
-                        };
+                        }
                     }
                 }
             })
             .filter(|a| {
-                a.chain != "".to_string()
+                a.chain != *""
             })
             .collect::<Vec<LinkedAnchorConfig>>();
 
