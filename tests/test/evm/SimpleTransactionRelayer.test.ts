@@ -207,7 +207,7 @@ describe('Simple Transaction Relayer With No Proposal Signing Banckend', functio
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
-      localChain1.underlyingChainId.toString(),
+      localChain1.underlyingChainId,
       anchor1.getAddress(),
       publicInputs,
       extData

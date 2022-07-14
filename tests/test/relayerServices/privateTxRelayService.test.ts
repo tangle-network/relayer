@@ -211,7 +211,7 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config set', func
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
-      localChain1.underlyingChainId.toString(),
+      localChain1.underlyingChainId,
       anchor1.getAddress(),
       publicInputs,
       extData

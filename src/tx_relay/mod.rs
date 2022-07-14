@@ -8,7 +8,7 @@ pub mod substrate;
 #[serde(rename_all = "camelCase")]
 pub struct MixerRelayTransaction<Id, P, E, I, B> {
     /// one of the supported chains of this relayer
-    pub chain: String,
+    pub chain_id: u64,
     /// The tree id of the mixer's underlying tree
     pub id: Id,
     /// The zero-knowledge proof bytes
@@ -32,7 +32,7 @@ pub struct MixerRelayTransaction<Id, P, E, I, B> {
 #[serde(rename_all = "camelCase")]
 pub struct AnchorRelayTransaction<Id, P, R, E, I, B> {
     /// one of the supported chains of this relayer
-    pub chain: String,
+    pub chain_id: u64,
     /// The tree id of the mixer's underlying tree
     pub id: Id,
     /// The zero-knowledge proof bytes
@@ -96,7 +96,7 @@ pub struct ExtData<E, I, B, A> {
 #[serde(rename_all = "camelCase")]
 pub struct VAnchorRelayTransaction<Id, P, R, E, I, B, A> {
     /// one of the supported chains of this relayer
-    pub chain: String,
+    pub chain_id: u64,
     /// The tree id of the mixer's underlying tree
     pub id: Id,
     /// The zero-knowledge proof data structure for VAnchor transactions

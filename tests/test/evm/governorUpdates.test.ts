@@ -107,8 +107,10 @@ describe.skip('SignatureBridge Governor Updates', function () {
       enabledPallets,
     });
 
+    let chainId = await charlieNode.getChainId();
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
+      chainId: chainId
     });
 
 

@@ -85,15 +85,17 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       ports: 'auto',
       enableLogging: false,
     });
-
-    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
-      suri: '//Charlie',
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
-    });
-
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
+
+    let chainId = await aliceNode.getChainId();
+
+    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
+      suri: '//Charlie',
+      chainId: chainId,
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+    });
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
@@ -238,7 +240,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     });
 
     // chainId
-    const chainIdentifier = 1080;
+    let chainIdentifier = await aliceNode.getChainId();
     const chainIdHex = chainIdentifier.toString(16);
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.

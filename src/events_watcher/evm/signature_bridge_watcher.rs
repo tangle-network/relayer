@@ -73,8 +73,8 @@ impl<M: Middleware> super::WatchableContract
         Duration::from_millis(self.config.events_watcher.polling_interval)
     }
 
-    fn max_events_per_step(&self) -> types::U64 {
-        self.config.events_watcher.max_events_per_step.into()
+    fn max_blocks_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_blocks_per_step.into()
     }
 
     fn print_progress_interval(&self) -> Duration {

@@ -36,10 +36,11 @@ use webb::substrate::{
 
 use crate::config::*;
 use crate::context::RelayerContext;
+use crate::events_watcher::dkg::*;
 use crate::events_watcher::evm::*;
-use crate::events_watcher::proposal_signing_backend::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
+use crate::proposal_signing_backend::*;
 use crate::store::sled::SledStore;
 use crate::tx_queue::TxQueue;
 
@@ -416,13 +417,13 @@ fn start_substrate_vanchor_event_watcher(
 ) -> anyhow::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
-            "Substrate V-Anchor events watcher is disabled for ({}).",
+            "Substrate VAnchor events watcher is disabled for ({}).",
             node_name,
         );
         return Ok(());
     }
     tracing::debug!(
-        "Substrate V-Anchor events watcher for ({}) Started.",
+        "Substrate VAnchor events watcher for ({}) Started.",
         node_name,
     );
 
@@ -463,19 +464,19 @@ fn start_substrate_vanchor_event_watcher(
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
-                            "Substrate V-Anchor watcher (DKG Backend) task stopped for ({})",
+                            "Substrate VAnchor watcher (DKG Backend) task stopped for ({})",
                             node_name,
                         );
                     },
                     _ = substrate_leaves_watcher_task => {
                         tracing::warn!(
-                            "Substrate V-Anchor leaves watcher stopped for ({})",
+                            "Substrate VAnchor leaves watcher stopped for ({})",
                             node_name,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping Substrate V-Anchor watcher (DKG Backend) for ({})",
+                            "Stopping Substrate VAnchor watcher (DKG Backend) for ({})",
                             node_name,
                         );
                     },
@@ -497,19 +498,19 @@ fn start_substrate_vanchor_event_watcher(
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
-                            "Substrate V-Anchor watcher (Mocked Backend) task stopped for ({})",
+                            "Substrate VAnchor watcher (Mocked Backend) task stopped for ({})",
                             node_name,
                         );
                     },
                     _ = substrate_leaves_watcher_task => {
                         tracing::warn!(
-                            "Substrate V-Anchor leaves watcher stopped for ({})",
+                            "Substrate VAnchor leaves watcher stopped for ({})",
                             node_name,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping Substrate V-Anchor watcher (Mocked Backend) for ({})",
+                            "Stopping Substrate VAnchor watcher (Mocked Backend) for ({})",
                             node_name,
                         );
                     },
@@ -519,13 +520,13 @@ fn start_substrate_vanchor_event_watcher(
                 tokio::select! {
                     _ = substrate_leaves_watcher_task => {
                         tracing::warn!(
-                            "Substrate V-Anchor leaves watcher stopped for ({})",
+                            "Substrate VAnchor leaves watcher stopped for ({})",
                             node_name,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping Substrate V-Anchor watcher (Mocked Backend) for ({})",
+                            "Stopping Substrate VAnchor watcher (Mocked Backend) for ({})",
                             node_name,
                         );
                     },
@@ -732,19 +733,19 @@ async fn start_evm_vanchor_events_watcher(
                 tokio::select! {
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
-                            "V-anchor watcher task stopped for ({})",
+                            "VAnchor watcher task stopped for ({})",
                             contract_address,
                         );
                     },
                     _ = vanchor_leaves_watcher => {
                         tracing::warn!(
-                            "V-anchor leaves watcher stopped for ({})",
+                            "VAnchor leaves watcher stopped for ({})",
                             contract_address,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping V-anchor watcher for ({})",
+                            "Stopping VAnchor watcher for ({})",
                             contract_address,
                         );
                     },
@@ -754,13 +755,13 @@ async fn start_evm_vanchor_events_watcher(
                 tokio::select! {
                     _ = vanchor_leaves_watcher => {
                         tracing::warn!(
-                            "V-anchor leaves watcher stopped for ({})",
+                            "VAnchor leaves watcher stopped for ({})",
                             contract_address,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping V-anchor watcher for ({})",
+                            "Stopping VAnchor watcher for ({})",
                             contract_address,
                         );
                     },

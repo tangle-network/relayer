@@ -51,23 +51,9 @@ use crate::store::{
     QueueStore,
 };
 
-/// A module for listening on proposal events.
-mod proposal_handler_watcher;
+/// A module for listening on dkg events.
 #[doc(hidden)]
-pub use proposal_handler_watcher::*;
-
-/// A module for listening on Signature Bridge commands and events.
-mod signature_bridge_watcher;
-#[doc(hidden)]
-pub use signature_bridge_watcher::*;
-
-/// A module for listening on DKG Governor Changes event.
-mod governor_watcher;
-#[doc(hidden)]
-pub use governor_watcher::*;
-
-#[doc(hidden)]
-pub mod proposal_signing_backend;
+pub mod dkg;
 
 /// A module for listening on substrate events.
 #[doc(hidden)]
@@ -86,7 +72,7 @@ pub trait WatchableContract: Send + Sync {
     fn polling_interval(&self) -> Duration;
 
     /// How many events to fetch at one request.
-    fn max_events_per_step(&self) -> types::U64;
+    fn max_blocks_per_step(&self) -> types::U64;
 
     /// The frequency of printing the sync progress.
     fn print_progress_interval(&self) -> Duration;
@@ -131,7 +117,7 @@ pub trait EventWatcher {
             ..Default::default()
         };
         let task = || async {
-            let step = contract.max_events_per_step();
+            let step = contract.max_blocks_per_step();
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
             let chain_id =

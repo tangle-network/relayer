@@ -25,6 +25,7 @@ use webb::evm::ethers::types;
 
 pub mod anchor_leaves_watcher;
 pub mod anchor_watcher;
+pub mod signature_bridge_watcher;
 pub mod vanchor_leaves_watcher;
 pub mod vanchor_watcher;
 
@@ -32,6 +33,8 @@ pub mod vanchor_watcher;
 pub use anchor_leaves_watcher::*;
 #[doc(hidden)]
 pub use anchor_watcher::*;
+#[doc(hidden)]
+pub use signature_bridge_watcher::*;
 #[doc(hidden)]
 pub use vanchor_leaves_watcher::*;
 #[doc(hidden)]
@@ -92,8 +95,8 @@ where
         Duration::from_millis(self.config.events_watcher.polling_interval)
     }
 
-    fn max_events_per_step(&self) -> types::U64 {
-        self.config.events_watcher.max_events_per_step.into()
+    fn max_blocks_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_blocks_per_step.into()
     }
 
     fn print_progress_interval(&self) -> Duration {
@@ -155,8 +158,8 @@ where
         Duration::from_millis(self.config.events_watcher.polling_interval)
     }
 
-    fn max_events_per_step(&self) -> types::U64 {
-        self.config.events_watcher.max_events_per_step.into()
+    fn max_blocks_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_blocks_per_step.into()
     }
 
     fn print_progress_interval(&self) -> Duration {

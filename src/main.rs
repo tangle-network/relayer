@@ -109,6 +109,8 @@ mod events_watcher;
 mod handler;
 /// A module used for debugging relayer lifecycle, sync state, or other relayer state.
 mod probe;
+/// A module containing proposal signing backend (dkg and mocked).
+mod proposal_signing_backend;
 /// A module for starting long-running tasks for event watching.
 mod service;
 /// A module for managing the storage of the relayer.
@@ -117,8 +119,11 @@ mod store;
 mod tx_queue;
 /// Transaction relaying handlers
 mod tx_relay;
+/// Types and basic trait implementations for commonly used structs/types
+mod types;
 /// A module for common functionality.
 mod utils;
+
 /// Package identifier, where the default configuration & database are defined.
 /// If the user does not start the relayer with the `--config-dir`
 /// it will default to read from the default location depending on the OS.
@@ -345,6 +350,7 @@ fn build_relayer(
 
     // First check the x-forwarded-for with 'real_ip' for reverse proxy setups
     // This code identifies the client's ip address and sends it back to them
+    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
     let ip_filter = warp::path("ip")
         .and(warp::get())
         .and(real_ip(vec![proxy_addr]))
@@ -356,6 +362,7 @@ fn build_relayer(
         .boxed();
 
     // Define the handling of a request for this relayer's information (supported networks)
+    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
     let info_filter = warp::path("info")
         .and(warp::get())
         .and(ctx_filter)
@@ -364,6 +371,7 @@ fn build_relayer(
 
     // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
     // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
+    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
     let evm_store = Arc::new(store.clone());
     let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
     let ctx_arc = Arc::new(ctx.clone());
@@ -387,6 +395,8 @@ fn build_relayer(
         .map(move || Arc::clone(&substrate_store))
         .boxed();
     let ctx_arc = Arc::new(ctx.clone());
+
+    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
     let leaves_cache_filter_substrate = warp::path("leaves")
         .and(warp::path("substrate"))
         .and(store_filter)

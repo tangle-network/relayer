@@ -33,9 +33,9 @@ pub async fn handle_substrate_anchor_relay_tx<'a>(
     let nullifier_hash_element = Element(cmd.nullifier_hash);
     let refresh_commitment_element = Element(cmd.refresh_commitment);
 
-    let requested_chain = cmd.chain.to_lowercase();
+    let requested_chain = cmd.chain_id;
     let maybe_client = ctx
-        .substrate_provider::<DefaultConfig>(&requested_chain)
+        .substrate_provider::<DefaultConfig>(&requested_chain.to_string())
         .await;
     let client = match maybe_client {
         Ok(c) => c,
@@ -50,12 +50,15 @@ pub async fn handle_substrate_anchor_relay_tx<'a>(
         subxt::SubstrateExtrinsicParams<DefaultConfig>,
     >>();
 
-    let pair = match ctx.substrate_wallet(&cmd.chain).await {
+    let pair = match ctx.substrate_wallet(&cmd.chain_id.to_string()).await {
         Ok(v) => v,
         Err(e) => {
             tracing::error!("Misconfigured Network: {}", e);
             let _ = stream
-                .send(Error(format!("Misconfigured Network: {:?}", cmd.chain)))
+                .send(Error(format!(
+                    "Misconfigured Network: {:?}",
+                    cmd.chain_id
+                )))
                 .await;
             return;
         }
