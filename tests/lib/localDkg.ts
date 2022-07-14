@@ -131,6 +131,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       runtime: 'DKG',
       pallets: this.opts.enabledPallets ?? [],
       suri: opts.suri,
+      chainId: 1080
     };
     return nodeInfo;
   }

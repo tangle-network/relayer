@@ -234,6 +234,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
       enabled: config.enabled,
       'http-endpoint': config.httpEndpoint,
       'ws-endpoint': config.wsEndpoint,
+      'chain-id': config.chainId,
       runtime: config.runtime,
       suri: config.suri,
       pallets: config.pallets.map((c: Pallet) => {
@@ -353,4 +354,5 @@ export type FullNodeInfo = NodeInfo & {
   httpEndpoint: string;
   wsEndpoint: string;
   suri: string;
+  chainId: number;
 };

@@ -52,6 +52,8 @@ describe('Substrate Anchor Transaction Relayer', function() {
 
   // Governer key
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
+  // propotocl susbtrate node chainId
+  const chainId = 1080;
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -86,7 +88,6 @@ describe('Substrate Anchor Transaction Relayer', function() {
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
     });
 
     // Wait until we are ready and connected
@@ -120,7 +121,6 @@ describe('Substrate Anchor Transaction Relayer', function() {
       },
     });
     // chainId
-    const chainId = 1080;
     const chainIdHex = chainId.toString(16);
     const treeIds = await api.query.anchorBn254.anchors.keys();
     const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
@@ -156,10 +156,9 @@ describe('Substrate Anchor Transaction Relayer', function() {
       Array.from(withdrawalProof.treeRoot),
       Array.from(withdrawalProof.neighborRoot),
     ];
-
     // now we need to submit the withdrawal transaction.
     const txHash = await webbRelayer.substrateAnchorWithdraw({
-      chain: aliceNode.name,
+      chainId: chainId,
       id: withdrawalProof.id,
       proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
       roots: roots,
@@ -208,7 +207,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateAnchorWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         roots: roots,
@@ -258,7 +257,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
     try {
       // try to withdraw with invalid proof
       await webbRelayer.substrateAnchorWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(invalidProofBytes)),
         roots: roots,
@@ -307,7 +306,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateAnchorWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         roots: roots,
@@ -359,7 +358,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
     try {
       // try to withdraw with invalid roots
       await webbRelayer.substrateAnchorWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         roots: invalidRoots,
@@ -411,7 +410,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
     try {
       // try to withdraw with invalid roots
       await webbRelayer.substrateAnchorWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         roots: invalidRoots,
@@ -461,7 +460,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateAnchorWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         roots: roots,
@@ -519,7 +518,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateAnchorWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         roots: roots,

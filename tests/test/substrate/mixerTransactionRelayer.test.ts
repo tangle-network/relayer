@@ -29,6 +29,8 @@ describe('Substrate Mixer Transaction Relayer', function() {
   let bobNode: LocalProtocolSubstrate;
 
   let webbRelayer: WebbRelayer;
+  // propotocl susbtrate node chainId
+  const chainId = 1080;
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -90,7 +92,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
     let initialBalance = balance.free.toBigInt();
     // now we need to submit the withdrawal transaction.
     const txHash = await webbRelayer.substrateMixerWithdraw({
-      chain: aliceNode.name,
+      chainId: chainId,
       id: withdrawalProof.id,
       proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
       root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -126,7 +128,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -170,7 +172,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(invalidProofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -210,7 +212,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -252,7 +254,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(invalidRootBytes)),
@@ -287,7 +289,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -329,7 +331,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),

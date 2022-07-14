@@ -104,6 +104,7 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
       runtime: 'WebbProtocol',
       pallets: enabledPallets,
       suri: opts.suri,
+      chainId: 1080,
     };
     return nodeInfo;
   }
