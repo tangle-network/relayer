@@ -2979,7 +2979,7 @@
     "@polkadot/typegen" "8.7.1"
     "@polkadot/types" "8.7.1"
 
-"@webb-tools/utils@^0.2.1":
+"@webb-tools/utils@0.2.1", "@webb-tools/utils@^0.2.1":
   version "0.2.1"
   resolved "https://registry.yarnpkg.com/@webb-tools/utils/-/utils-0.2.1.tgz#09ce2ddfb5dc293f2d278f7b8df1e7672de47cab"
   integrity sha512-0M8VGCLyI4b/cX1YYwvfk7Ewv48ktXuS6gQYdwp2nG2jMFaC+Y1IcodPH0i5jfh2AzXwtpny5SGfkjZ29xQf8A==
