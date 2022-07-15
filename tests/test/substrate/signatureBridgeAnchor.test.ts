@@ -254,7 +254,6 @@ async function createAnchorDepositTx(api: ApiPromise, treeId: number): Promise<{
   };
   const note = await Note.generateNote(noteInput);
   const leaf = note.getLeaf();
-  // @ts-ignore
   const tx = api.tx.anchorBn254.deposit(treeId, leaf);
   return { tx, note };
 }

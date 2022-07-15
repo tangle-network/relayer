@@ -232,6 +232,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
       features?: ConvertToKebabCase<FeaturesConfig>;
     };
     const convertedConfig: ConvertedConfig = {
+      name: config.name,
       enabled: config.enabled,
       'http-endpoint': config.httpEndpoint,
       'ws-endpoint': config.wsEndpoint,
@@ -296,7 +297,6 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
 
 async function createApiPromise(endpoint: string) {
   return ApiPromise.create(
-    // @ts-ignore
     options({
       provider: new WsProvider(endpoint) as any,
       rpc: {
@@ -352,6 +352,7 @@ async function createApiPromise(endpoint: string) {
 }
 
 export type FullNodeInfo = NodeInfo & {
+  name: string;
   httpEndpoint: string;
   wsEndpoint: string;
   suri: string;
