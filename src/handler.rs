@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use ethereum_types::{Address, H160, H256, U256, U64};
 use futures::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use warp::ws::Message;
@@ -48,17 +48,33 @@ use crate::tx_relay::{
 };
 use webb::substrate::subxt::sp_core::Pair;
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
+pub struct WebbI256(pub I256);
+
+impl<'de> Deserialize<'de> for WebbI256 {
+    fn deserialize<D>(deserializer: D) -> Result<WebbI256, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let i128_str = String::deserialize(deserializer)?;
+        dbg!(&i128_str);
+        let i128_val =
+            I256::from_hex_str(&i128_str).map_err(serde::de::Error::custom)?;
+        Ok(WebbI256(i128_val))
+    }
+}
 /// Type alias for mpsc::Sender<CommandResponse>
 pub type CommandStream = mpsc::Sender<CommandResponse>;
 /// The command type for EVM txes
 pub type EvmCommand = CommandType<
-    Address, // Contract address
-    Bytes,   // Proof bytes
-    Bytes,   // Roots format
-    H256,    // Element type
-    Address, // Account identifier
-    U256,    // Balance type
-    I256,    // Signed amount type
+    Address,  // Contract address
+    Bytes,    // Proof bytes
+    Bytes,    // Roots format
+    H256,     // Element type
+    Address,  // Account identifier
+    U256,     // Balance type
+    WebbI256, // Signed amount type
 >;
 /// The command type for Substrate pallet txes
 pub type SubstrateCommand = CommandType<
