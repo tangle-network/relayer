@@ -14,25 +14,27 @@
 //
 use super::*;
 use crate::config;
+use crate::store::sled::SledStore;
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 use webb::evm::contract::protocol_solidity::{
-    FixedDepositAnchorContract, VAnchorContract,
+    FixedDepositAnchorContract, FixedDepositAnchorContractEvents,
+    VAnchorContract,
 };
 use webb::evm::ethers::prelude::{Contract, Middleware};
 use webb::evm::ethers::types;
 
-pub mod anchor_leaves_watcher;
-pub mod anchor_watcher;
+pub mod anchor_deposit_handler;
+pub mod anchor_leaves_handler;
 pub mod signature_bridge_watcher;
 pub mod vanchor_leaves_watcher;
 pub mod vanchor_watcher;
 
 #[doc(hidden)]
-pub use anchor_leaves_watcher::*;
+pub use anchor_deposit_handler::*;
 #[doc(hidden)]
-pub use anchor_watcher::*;
+pub use anchor_leaves_handler::*;
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
 #[doc(hidden)]
@@ -167,4 +169,29 @@ where
             self.config.events_watcher.print_progress_interval,
         )
     }
+}
+
+type HttpProvider = providers::Provider<providers::Http>;
+
+/// An Anchor Leaves Event Handler that watches for Deposit events and save the leaves to the store.
+/// It serves as a cache for leaves that could be used by dApp for proof generation.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct AnchorLeavesEventHandler;
+
+/// An Anchor Contract Watcher that watches for the Anchor contract events and calls the event
+/// handlers.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct AnchorContractWatcher;
+
+#[async_trait::async_trait]
+impl super::EventWatcher for AnchorContractWatcher {
+    const TAG: &'static str = "Anchor Contract Watcher";
+
+    type Middleware = HttpProvider;
+
+    type Contract = AnchorContractWrapper<Self::Middleware>;
+
+    type Events = FixedDepositAnchorContractEvents;
+
+    type Store = SledStore;
 }

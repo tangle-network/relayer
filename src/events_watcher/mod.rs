@@ -78,6 +78,16 @@ pub trait WatchableContract: Send + Sync {
     fn print_progress_interval(&self) -> Duration;
 }
 
+pub type EventHandlerFor<W> = Box<
+    dyn EventHandler<
+            Middleware = <W as EventWatcher>::Middleware,
+            Contract = <W as EventWatcher>::Contract,
+            Events = <W as EventWatcher>::Events,
+            Store = <W as EventWatcher>::Store,
+        > + Send
+        + Sync,
+>;
+
 /// A trait for watching events from a watchable contract.
 /// EventWatcher trait exists for deployments that are smart-contract / EVM based
 #[async_trait::async_trait]
@@ -88,14 +98,6 @@ pub trait EventWatcher {
         + WatchableContract;
     type Events: contract::EthLogDecode;
     type Store: HistoryStore + EventHashStore;
-
-    async fn handle_event(
-        &self,
-        store: Arc<Self::Store>,
-        contract: &Self::Contract,
-        (event, log): (Self::Events, contract::LogMeta),
-    ) -> anyhow::Result<()>;
-
     /// Returns a task that should be running in the background
     /// that will watch events
     #[tracing::instrument(
@@ -111,11 +113,9 @@ pub trait EventWatcher {
         client: Arc<Self::Middleware>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
+        handlers: Vec<EventHandlerFor<Self>>,
     ) -> anyhow::Result<()> {
-        let backoff = backoff::ExponentialBackoff {
-            max_elapsed_time: None,
-            ..Default::default()
-        };
+        let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             let step = contract.max_blocks_per_step();
             // saves the last time we printed sync progress.
@@ -154,13 +154,20 @@ pub trait EventWatcher {
                     tracing::trace!("Found #{} events", found_events.len());
 
                     for (event, log) in found_events {
-                        let result = self
-                            .handle_event(
-                                store.clone(),
-                                &contract,
-                                (event, log.clone()),
-                            )
-                            .await;
+                        // try to handle the event with all the handlers, simultaneously.
+                        //
+                        // if any of the handlers fail, it will cancel the rest of the handlers.
+                        // and we will retry the event again.
+                        let result = futures::future::try_join_all(
+                            handlers.iter().map(|handler| {
+                                handler.handle_event(
+                                    store.clone(),
+                                    &contract,
+                                    (event, log),
+                                )
+                            }),
+                        )
+                        .await;
                         match result {
                             Ok(_) => {
                                 store.set_last_block_number(
@@ -234,6 +241,22 @@ pub trait EventWatcher {
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }
+}
+
+#[async_trait::async_trait]
+pub trait EventHandler {
+    type Middleware: providers::Middleware + 'static;
+    type Contract: Deref<Target = contract::Contract<Self::Middleware>>
+        + WatchableContract;
+    type Events: contract::EthLogDecode;
+    type Store: HistoryStore + EventHashStore;
+
+    async fn handle_event(
+        &self,
+        store: Arc<Self::Store>,
+        contract: &Self::Contract,
+        (event, log): (Self::Events, contract::LogMeta),
+    ) -> anyhow::Result<()>;
 }
 
 /// A Bridge Watcher is a trait for Bridge contracts that not specific for watching events from that contract,
