@@ -37,15 +37,15 @@ enabled = true
 # - Anchor (Fixed Anchor)
 # - VAnchor (Variable Anchor)
 # - SignatureBridge
-contract = "Anchor"
+contract = "VAnchor"
 # The address of the contract
-address = "0xcd75Ad7AC9C9325105f798c476E84176648F391A"
+address = "0xcbD945E77ADB65651F503723aC322591f3435cC5"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
 deployed-at = 1
 # The minimum size configured for deposit / withdraw on the contract
-size = 1
+size = 0.01
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
@@ -59,38 +59,12 @@ withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" 
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { chain = "hermes", address = "0xbfce6B877Ebff977bB6e80B24FbBb7bC4eBcA4df" },
-  { chain = "demeter", address = "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"},
+  { chain = "hermes", address = "0x510C6297cC30A058F41eb4AF1BFC9953EaD8b577" },
+  { chain = "demeter", address = "0x7758F98C1c487E5653795470eEab6C4698bE541b"},
 ]
 # Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
 # the signed proposals to the configured SignatureBridge of the relevant chains.
-proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
-
-[[evm.athena.contracts]]
-contract = "Anchor"
-address = "0x3d3955aAe5Bdf9E6547A140Baad4BC57Fa4EBA17"
-deployed-at = 1
-size = 0.01
-events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
-withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
-linked-anchors = [
-  { chain = "hermes", address = "0xaC361518Bb9535D0E3172DC45a4e56d71a7FDFc4" },
-  { chain = "demeter", address = "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"},
-]
-proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
-
-[[evm.athena.contracts]]
-contract = "VAnchor"
-address = "0xFEe587E68c470DAE8147B46bB39fF230A29D4769"
-deployed-at = 1
-size = 0.01
-events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
-withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
-linked-anchors = [
-  { chain = "hermes", address = "0xb824C5F99339C7E486a1b452B635886BE82bc8b7" },
-  { chain = "demeter", address = "0xdB587ef6aaA16b5719CDd3AaB316F0E70473e9Be"},
-]
 proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
 
 [[evm.athena.contracts]]
