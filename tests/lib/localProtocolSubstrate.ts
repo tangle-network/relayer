@@ -85,7 +85,6 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
   // get chainId
   public async getChainId(): Promise<number> {
     const api = await super.api();
-    //@ts-ignore
     let chainId = api.consts.linkableTreeBn254.chainIdentifier.toNumber();
     return chainId;
   }
@@ -105,6 +104,7 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
       }
     }
     const nodeInfo: FullNodeInfo = {
+      name: 'localSubstrate',
       enabled: true,
       httpEndpoint: `http://127.0.0.1:${ports.http}`,
       wsEndpoint: `ws://127.0.0.1:${ports.ws}`,

@@ -97,6 +97,8 @@ pub struct WebbRelayerConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EvmChainConfig {
+    /// String that groups configuration for this chain on a human-readable name.
+    pub name: String,
     /// Boolean indicating EVM based networks are enabled or not.
     #[serde(default)]
     pub enabled: bool,
@@ -112,9 +114,9 @@ pub struct EvmChainConfig {
     /// for transactions and contracts.
     #[serde(skip_serializing)]
     pub explorer: Option<url::Url>,
-    /// chain specific id.
+    /// chain specific id (output of chainId opcode on EVM networks)
     #[serde(rename(serialize = "chainId"))]
-    pub chain_id: u64,
+    pub chain_id: u32,
     /// The Private Key of this account on this network
     /// the format is more dynamic here:
     /// 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
@@ -147,6 +149,8 @@ pub struct EvmChainConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SubstrateConfig {
+    /// String that groups configuration for this chain on a human-readable name.
+    pub name: String,
     /// Boolean indicating Substrate networks are enabled or not.
     #[serde(default)]
     pub enabled: bool,
@@ -162,9 +166,9 @@ pub struct SubstrateConfig {
     /// for transactions and contracts.
     #[serde(skip_serializing)]
     pub explorer: Option<url::Url>,
-    /// chain specific id.
+    /// chain specific id (output of ChainIdentifier constant on LinkableTree Pallet)
     #[serde(rename(serialize = "chainId"))]
-    pub chain_id: u64,
+    pub chain_id: u32,
     /// Interprets the string in order to generate a key Pair. in the
     /// case that the pair can be expressed as a direct derivation from a seed (some cases, such as Sr25519 derivations
     /// with path components, cannot).
@@ -678,10 +682,13 @@ fn postloading_process(
                             );
                         } else {
                             for linked_anchor in linked_anchors {
-                                let chain = linked_anchor.chain.to_lowercase();
-                                let chain_defined =
-                                    config.evm.contains_key(&chain);
-                                if !chain_defined {
+                                let chain = linked_anchor.chain.clone();
+                                let chain_defined = config
+                                    .evm
+                                    .clone()
+                                    .into_values()
+                                    .find(|x| x.name.eq(&chain));
+                                if chain_defined.is_none() {
                                     tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
                                         which is required by the Anchor Contract ({}) defined on {} chain.
                                         Please, define it manually, to allow the relayer to work properly.",
@@ -765,10 +772,13 @@ fn postloading_process(
                             );
                         } else {
                             for linked_anchor in linked_anchors {
-                                let chain = linked_anchor.chain.to_lowercase();
-                                let chain_defined =
-                                    config.evm.contains_key(&chain);
-                                if !chain_defined {
+                                let chain = linked_anchor.chain.clone();
+                                let chain_defined = config
+                                    .evm
+                                    .clone()
+                                    .into_values()
+                                    .find(|x| x.name.eq(&chain));
+                                if chain_defined.is_none() {
                                     tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
                                         which is required by the Anchor Contract ({}) defined on {} chain.
                                         Please, define it manually, to allow the relayer to work properly.",

@@ -83,12 +83,13 @@ pub async fn ignite(
     tracing::debug!("Relayer configuration  : {:?}", ctx.config);
 
     // now we go through each chain, in our configuration
-    for (chain_name, chain_config) in &ctx.config.evm {
+    for chain_config in ctx.config.evm.values() {
         if !chain_config.enabled {
             continue;
         }
+        let chain_name = &chain_config.name;
         let chain_id = U256::from(chain_config.chain_id);
-        let provider = ctx.evm_provider(chain_name).await?;
+        let provider = ctx.evm_provider(&chain_id.to_string()).await?;
         let client = Arc::new(provider);
         tracing::debug!(
             "Starting Background Services for ({}) chain.",
@@ -130,7 +131,11 @@ pub async fn ignite(
             }
         }
         // start the transaction queue after starting other tasks.
-        start_tx_queue(ctx.clone(), chain_name.clone(), store.clone())?;
+        start_tx_queue(
+            ctx.clone(),
+            chain_config.chain_id.to_string().clone(),
+            store.clone(),
+        )?;
     }
     // now, we start substrate service/tasks
     for (node_name, node_config) in &ctx.config.substrate {
@@ -1034,25 +1039,25 @@ async fn start_substrate_signature_bridge_events_watcher(
 /// * `store` -[Sled](https://sled.rs)-based database store
 fn start_tx_queue(
     ctx: RelayerContext,
-    chain_name: String,
+    chain_id: String,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
-    let tx_queue = TxQueue::new(ctx, chain_name.clone(), store);
+    let tx_queue = TxQueue::new(ctx, chain_id.clone(), store);
 
-    tracing::debug!("Transaction Queue for ({}) Started.", chain_name);
+    tracing::debug!("Transaction Queue for ({}) Started.", chain_id);
     let task = async move {
         tokio::select! {
             _ = tx_queue.run() => {
                 tracing::warn!(
                     "Transaction Queue task stopped for ({})",
-                    chain_name,
+                    chain_id,
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
                     "Stopping Transaction Queue for ({})",
-                    chain_name,
+                    chain_id,
                 );
             },
         }
@@ -1081,6 +1086,7 @@ async fn make_proposal_signing_backend(
         tracing::warn!("Governance relaying is not enabled for relayer");
         return Ok(ProposalSigningBackendSelector::None);
     }
+
     // We do this by checking if linked anchors are provided.
     let linked_anchors = match linked_anchors {
         Some(anchors) => {
@@ -1096,6 +1102,34 @@ async fn make_proposal_signing_backend(
             return Ok(ProposalSigningBackendSelector::None);
         }
     };
+
+    // replace the names of the linked anchors with their chain ids
+    let regenerated_linked_anchors: Vec<LinkedAnchorConfig> = linked_anchors.iter()
+        .map(|a| {
+            let target_chain = ctx.config.evm.values().find(|c| {
+                c.name == a.chain
+            });
+
+            match target_chain {
+                Some(config) => {
+                    LinkedAnchorConfig {
+                        chain: config.chain_id.to_string(),
+                        address: a.address
+                    }
+                }
+                None => {
+                    tracing::warn!("Misconfigured Network: Linked anchor entry does not match a supported chain");
+                    LinkedAnchorConfig {
+                        chain: "".to_string(),
+                        address: a.address
+                    }
+                }
+            }
+        })
+        .filter(|a| {
+            a.chain != *""
+        })
+        .collect::<Vec<LinkedAnchorConfig>>();
 
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
@@ -1119,11 +1153,11 @@ async fn make_proposal_signing_backend(
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
             // which is a bit simpler than the DkgProposalSigningBackend.
             // get only the linked chains to that anchor.
-            let linked_chains = linked_anchors
+            let linked_chains = regenerated_linked_anchors
                 .iter()
                 .flat_map(|c| ctx.config.evm.get(&c.chain));
             // then will have to go through our configruation to retrieve the correct
-            // signature bridges that are configrued on the linked chains.
+            // signature bridges that are configured on the linked chains.
             // Note: this assumes that every network will only have one signature bridge configured for it.
             let signature_bridges = linked_chains
                 .flat_map(|chain_config| {
