@@ -33,32 +33,6 @@ function printConfig(vbridge: VBridge.VBridge, chains: LocalChain[]) {
     console.log(`WebbToken for chain ${chain.name}: ${tokenAddress}`);
   }
 }
-type WebbProposalKind = 'TokenAdd' | 'TokenRemove' | 'WrappingFeeUpdate';
-async function forceSubmitUnsignedProposal(
-  node: LocalDkg,
-  opts: {
-    kind: WebbProposalKind;
-    data: `0x${string}`;
-  }
-) {
-  let api = await node.api();
-  let kind = api.createType(
-    'DkgRuntimePrimitivesProposalProposalKind',
-    opts.kind
-  );
-  const proposal = api
-    .createType('DkgRuntimePrimitivesProposal', {
-      Unsigned: {
-        kind,
-        data: opts.data,
-      },
-    })
-    .toU8a();
-  let call = api.tx.dkgProposalHandler.forceSubmitUnsignedProposal(proposal);
-  let txHash = await node.sudoExecuteTransaction(call);
-  return txHash;
-}
-
 async function run() {
   /* setup constants */
   const configDirPath = path.resolve('demo/config');
@@ -124,8 +98,6 @@ async function run() {
     enabledPallets,
     enableLogging: false,
   });
-
-  let runningNodes = [aliceDkgNode, bobDkgNode, charlieDkgNode];
 
   // After starting nodes, wrap all code in a try block to catch any error and terminate process
   try {
@@ -357,7 +329,7 @@ async function run() {
     /* forceIncrease the nonce on the dkg. This is done because deployment implementation requires
       a transferOwnership call to the dkg. 
     */
-    const forceIncrementNonce = await api.tx.dkg!.manualIncrementNonce!();
+    const forceIncrementNonce = api.tx.dkg!.manualIncrementNonce!();
     await timeout(
       charlieDkgNode.sudoExecuteTransaction(forceIncrementNonce),
       30_000
@@ -365,9 +337,18 @@ async function run() {
 
     /* startup the relayer --- Manually */
 
+    console.log('Please run the relayer manually like the following:');
+    console.log(`cargo run -- -vvv --tmp -c ${configDirPath}`);
+
     /* CLI for doing actions which create tokenAdd proposals, etc. */
     printConfig(signatureVBridge, [hermesChain, athenaChain, demeterChain]);
-    const options = ['print config', 'exit', 'add token', 'deposit'];
+    const options = [
+      'print config',
+      'exit',
+      'add token' /** 'deposit'*/,
+      ,
+      'print tokens',
+    ];
 
     const questions = [
       {
@@ -427,6 +408,14 @@ async function run() {
           'proposalData: ',
           u8aToHex(encodeTokenAddProposal(tokenAddProposalPayload))
         );
+      } else if (answers.action === 'print tokens') {
+        const governedTokenWrapper = Tokens.GovernedTokenWrapper.connect(
+          hermesWebbTokenAddress!,
+          hermesDeployerWallet
+        );
+        const tokens =
+          await governedTokenWrapper.contract.functions.getTokens();
+        console.log('Tokens in the wrapper: ', JSON.stringify(tokens, null, 2));
       } else if (answers.action === 'deposit') {
         const depositUtxo = await CircomUtxo.generateUtxo({
           curve: 'Bn254',
@@ -436,16 +425,13 @@ async function run() {
           chainId: hermesChain.chainId.toString(),
         });
 
-        await hermesAnchor.transact(
-          [],
-          [depositUtxo],
-          {},
-          0,
-          '0x0000000000000000000000000000000000000003',
-          '0x0000000000000000000000000000000000000003'
-        );
+        await hermesAnchor.transact([], [depositUtxo], {}, 0, '0', '0');
       } else if (answers.action === 'exit') {
         running = false;
+        await aliceDkgNode.stop();
+        await charlieDkgNode.stop();
+        await bobDkgNode.stop();
+        process.exit(0);
       }
     }
   } catch (e) {
@@ -453,6 +439,8 @@ async function run() {
   }
 }
 
-run().catch(async (e) => {
-  console.log(e.message);
-});
+run()
+  .then(() => process.exit(0))
+  .catch(async (e) => {
+    console.log(e.message);
+  });

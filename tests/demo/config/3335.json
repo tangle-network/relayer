@@ -25,7 +25,7 @@
           "events-watcher": {
             "enabled": true,
             "polling-interval": 1000,
-            "print-progress-interval": 60000
+            "print-progress-interval": 10000
           },
           "linked-anchors": [
             {
