@@ -291,7 +291,6 @@ fn load_config<P>(
 where
     P: AsRef<Path>,
 {
-    tracing::debug!("Getting default dirs for webb relayer");
     let dirs = ProjectDirs::from(
         crate::PACKAGE_ID[0],
         crate::PACKAGE_ID[1],

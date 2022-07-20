@@ -1,0 +1,55 @@
+{
+  "evm": {
+    "3334": {
+      "name": "3334",
+      "enabled": true,
+      "http-endpoint": "http://127.0.0.1:3334",
+      "ws-endpoint": "ws://127.0.0.1:3334",
+      "chain-id": 3334,
+      "beneficiary": "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf",
+      "private-key": "0x0000000000000000000000000000000000000000000000000000000000000001",
+      "contracts": [
+        {
+          "contract": "VAnchor",
+          "address": "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C",
+          "deployed-at": 1,
+          "size": 1,
+          "proposal-signing-backend": {
+            "type": "DKGNode",
+            "node": "charlieDkg"
+          },
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          },
+          "linked-anchors": [
+            {
+              "chain": "3333",
+              "address": "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"
+            },
+            {
+              "chain": "3335",
+              "address": "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"
+            }
+          ]
+        },
+        {
+          "contract": "SignatureBridge",
+          "address": "0x2946259E0334f33A064106302415aD3391BeD384",
+          "deployed-at": 1,
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          }
+        }
+      ]
+    }
+  },
+  "features": {
+    "data-query": true,
+    "governance-relay": true,
+    "private-tx-relay": true
+  }
+}

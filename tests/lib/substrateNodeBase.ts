@@ -211,6 +211,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     opts: ExportedConfigOptions
   ): Promise<void> {
     const config = await this.exportConfig(opts);
+    console.log(config);
     // don't mind my typescript typing here XD
     type ConvertedPallet = Omit<
       ConvertToKebabCase<Pallet>,

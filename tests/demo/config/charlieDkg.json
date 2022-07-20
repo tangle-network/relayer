@@ -1,0 +1,34 @@
+{
+  "substrate": {
+    "charlieDkg": {
+      "name": "localDKG",
+      "enabled": true,
+      "http-endpoint": "http://127.0.0.1:9935",
+      "ws-endpoint": "ws://127.0.0.1:9946",
+      "chain-id": 2,
+      "runtime": "DKG",
+      "suri": "//Charlie",
+      "pallets": [
+        {
+          "pallet": "DKGProposalHandler",
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 3000
+          }
+        },
+        {
+          "pallet": "DKG",
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 3000
+          }
+        }
+      ]
+    }
+  },
+  "features": {
+    "data-query": true,
+    "governance-relay": true,
+    "private-tx-relay": true
+  }
+}

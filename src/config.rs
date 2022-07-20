@@ -32,6 +32,7 @@
 //! These config files can be changed to your preferences.
 use std::collections::HashMap;
 use std::path::Path;
+use std::fs;
 
 use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
@@ -556,7 +557,10 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
                 continue;
             }
         };
-        let file = config::File::from(config_file).format(format);
+        let file = config::File::from(config_file.clone()).format(format);
+        let contents = fs::read_to_string(config_file)?;
+        tracing::debug!("file contents: {}", contents);
+        
         if let Err(e) = cfg.merge(file) {
             tracing::warn!("Error while loading config file: {} skipping!", e);
             continue;
