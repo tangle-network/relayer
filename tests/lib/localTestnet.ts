@@ -154,7 +154,7 @@ export class LocalChain {
       throw new Error('Need a wallet for each chain');
     }
 
-    for (let i=0; i<chains.length; i++) {
+    for (let i = 0; i < chains.length; i++) {
       wallets[i]!.connect(chains[i]!.provider());
       assetRecord[chains[i]!.chainId] = [tokens[i]!.contract.address];
       deployers[chains[i]!.chainId] = wallets[i]!;
@@ -166,14 +166,14 @@ export class LocalChain {
         asset: assetRecord,
       },
       chainIDs: chainIdsArray,
-      webbTokens: new Map()
-    }
-    const deployerConfig = { 
-      ...deployers
-    }
+      webbTokens: new Map(),
+    };
+    const deployerConfig = {
+      ...deployers,
+    };
     const governorConfig = {
-      ...deployers
-    }
+      ...deployers,
+    };
 
     console.log('bridgeInput: ', bridgeInput);
     console.log('deployerConfig: ', deployerConfig);
@@ -183,30 +183,54 @@ export class LocalChain {
 
     let zkComponentsSmall: Utility.ZkComponents;
     let zkComponentsLarge: Utility.ZkComponents;
-  
+
     if (isEightSided) {
       zkComponentsSmall = await fetchComponentsFromFilePaths(
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_2/8/poseidon_vanchor_2_8.wasm'),
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_2/8/witness_calculator.cjs'),
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_2/8/circuit_final.zkey')
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_2/8/poseidon_vanchor_2_8.wasm'
+        ),
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_2/8/witness_calculator.cjs'
+        ),
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_2/8/circuit_final.zkey'
+        )
       );
-  
+
       zkComponentsLarge = await fetchComponentsFromFilePaths(
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_16/8/poseidon_vanchor_16_8.wasm'),
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_16/8/witness_calculator.cjs'),
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_16/8/circuit_final.zkey')
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_16/8/poseidon_vanchor_16_8.wasm'
+        ),
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_16/8/witness_calculator.cjs'
+        ),
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_16/8/circuit_final.zkey'
+        )
       );
     } else {
       zkComponentsSmall = await fetchComponentsFromFilePaths(
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm'),
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_2/2/witness_calculator.cjs'),
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_2/2/circuit_final.zkey')
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm'
+        ),
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_2/2/witness_calculator.cjs'
+        ),
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_2/2/circuit_final.zkey'
+        )
       );
-  
+
       zkComponentsLarge = await fetchComponentsFromFilePaths(
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm'),
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_16/2/witness_calculator.cjs'),
-        path.resolve('./protocol-solidity-fixtures/fixtures/vanchor_16/2/circuit_final.zkey')
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm'
+        ),
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_16/2/witness_calculator.cjs'
+        ),
+        path.resolve(
+          './protocol-solidity-fixtures/fixtures/vanchor_16/2/circuit_final.zkey'
+        )
       );
     }
 
@@ -218,7 +242,7 @@ export class LocalChain {
       zkComponentsLarge
     );
 
-    for (let i=0; i<chains.length; i++) {
+    for (let i = 0; i < chains.length; i++) {
       chains[i]!.signatureVBridge = signatureBridge;
     }
 

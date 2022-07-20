@@ -1,6 +1,9 @@
 import { LocalChain } from '../lib/localTestnet.js';
 import { LocalDkg } from '../lib/localDkg.js';
-import { defaultEventsWatcherValue, UsageMode } from '../lib/substrateNodeBase.js';
+import {
+  defaultEventsWatcherValue,
+  UsageMode,
+} from '../lib/substrateNodeBase.js';
 import path from 'path';
 import { EnabledContracts, Pallet } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
@@ -10,18 +13,24 @@ import { timeout } from '../lib/timeout.js';
 import inquirer from 'inquirer';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo } from '@webb-tools/sdk-core';
-import { encodeTokenAddProposal, ChainIdType, TokenAddProposal } from '../lib/webbProposals.js';
+import {
+  encodeTokenAddProposal,
+  ChainIdType,
+  TokenAddProposal,
+} from '../lib/webbProposals.js';
 import { u8aToHex } from '@polkadot/util';
 
-function printConfig(vbridge: VBridge.VBridge, chains: LocalChain[]){
+function printConfig(vbridge: VBridge.VBridge, chains: LocalChain[]) {
   for (let chain of chains) {
     const bridgeSide = vbridge.getVBridgeSide(chain.chainId);
     const vanchor = vbridge.getVAnchor(chain.chainId);
     const tokenAddress = vbridge.getWebbTokenAddress(chain.chainId);
 
     console.log(`VAnchor for chain ${chain.name}: ${vanchor.contract.address}`);
-    console.log(`BridgeSide for chain ${chain.name}: ${bridgeSide.contract.address}`);
-    console.log(`WebbToken for chain ${chain.name}: ${tokenAddress}`)
+    console.log(
+      `BridgeSide for chain ${chain.name}: ${bridgeSide.contract.address}`
+    );
+    console.log(`WebbToken for chain ${chain.name}: ${tokenAddress}`);
   }
 }
 type WebbProposalKind = 'TokenAdd' | 'TokenRemove' | 'WrappingFeeUpdate';
@@ -43,21 +52,22 @@ async function forceSubmitUnsignedProposal(
         kind,
         data: opts.data,
       },
-    })  
+    })
     .toU8a();
   let call = api.tx.dkgProposalHandler.forceSubmitUnsignedProposal(proposal);
   let txHash = await node.sudoExecuteTransaction(call);
   return txHash;
 }
 
-async function run () {
-
+async function run() {
   /* setup constants */
   const configDirPath = path.resolve('demo/config');
   const usageMode: UsageMode = {
     mode: 'host',
-    nodePath: path.resolve('../../dkg-substrate/target/release/dkg-standalone-node'),
-  }
+    nodePath: path.resolve(
+      '../../dkg-substrate/target/release/dkg-standalone-node'
+    ),
+  };
 
   const enabledPallets: Pallet[] = [
     {
@@ -75,8 +85,10 @@ async function run () {
     },
   ];
 
-  const deployerPrivateKey = '0x0000000000000000000000000000000000000000000000000000000000000001';
-  const relayerPrivateKey = '0x0000000000000000000000000000000000000000000000000000000000000002';
+  const deployerPrivateKey =
+    '0x0000000000000000000000000000000000000000000000000000000000000001';
+  const relayerPrivateKey =
+    '0x0000000000000000000000000000000000000000000000000000000000000002';
 
   const populatedAccounts = [
     {
@@ -87,7 +99,7 @@ async function run () {
       balance: ethers.utils.parseEther('1000').toHexString(),
       secretKey: relayerPrivateKey,
     },
-  ]
+  ];
 
   /* Deploy the DKG nodes and write the config for the DKG node */
   const aliceDkgNode = await LocalDkg.start({
@@ -95,14 +107,14 @@ async function run () {
     authority: 'alice',
     usageMode,
     ports: 'auto',
-    enabledPallets
+    enabledPallets,
   });
   const bobDkgNode = await LocalDkg.start({
     name: 'bobDkg',
     authority: 'bob',
     usageMode,
     ports: 'auto',
-    enabledPallets
+    enabledPallets,
   });
   const charlieDkgNode = await LocalDkg.start({
     name: 'charlieDkg',
@@ -110,21 +122,23 @@ async function run () {
     usageMode,
     ports: 'auto',
     enabledPallets,
-    enableLogging: true
+    enableLogging: false,
   });
 
   let runningNodes = [aliceDkgNode, bobDkgNode, charlieDkgNode];
 
   // After starting nodes, wrap all code in a try block to catch any error and terminate process
   try {
-
     // Only need to startup the relayer on one DKG node,
     // choose to write the config for charlie
     let chainId = await charlieDkgNode.getChainId();
-    await charlieDkgNode.writeConfig(`${configDirPath}/${charlieDkgNode.name}.json`, {
-      suri: '//Charlie',
-      chainId: chainId
-    });
+    await charlieDkgNode.writeConfig(
+      `${configDirPath}/${charlieDkgNode.name}.json`,
+      {
+        suri: '//Charlie',
+        chainId: chainId,
+      }
+    );
 
     /* Wait for the DKG to startup, and public key emitted. */
     await charlieDkgNode.waitForEvent({
@@ -133,7 +147,7 @@ async function run () {
     });
 
     /* Start the chains */
-    const hermesPort = await getPort({ port: portNumbers(3333,4444) });
+    const hermesPort = await getPort({ port: portNumbers(3333, 4444) });
     const hermesChain = new LocalChain({
       port: hermesPort,
       chainId: hermesPort,
@@ -143,13 +157,19 @@ async function run () {
       ganache: {
         miner: {
           blockTime: 1,
-        }
-      }
+        },
+      },
     });
-    const hermesDeployerWallet = new ethers.Wallet(deployerPrivateKey, hermesChain.provider());
-    const hermesRelayerWallet = new ethers.Wallet(relayerPrivateKey, hermesChain.provider());
+    const hermesDeployerWallet = new ethers.Wallet(
+      deployerPrivateKey,
+      hermesChain.provider()
+    );
+    const hermesRelayerWallet = new ethers.Wallet(
+      relayerPrivateKey,
+      hermesChain.provider()
+    );
 
-    const athenaPort = await getPort({ port: portNumbers(3333,4444) });
+    const athenaPort = await getPort({ port: portNumbers(3333, 4444) });
     const athenaChain = new LocalChain({
       port: athenaPort,
       chainId: athenaPort,
@@ -159,13 +179,19 @@ async function run () {
       ganache: {
         miner: {
           blockTime: 1,
-        }
-      }
+        },
+      },
     });
-    const athenaDeployerWallet = new ethers.Wallet(deployerPrivateKey, athenaChain.provider());
-    const athenaRelayerWallet = new ethers.Wallet(relayerPrivateKey, athenaChain.provider());
+    const athenaDeployerWallet = new ethers.Wallet(
+      deployerPrivateKey,
+      athenaChain.provider()
+    );
+    const athenaRelayerWallet = new ethers.Wallet(
+      relayerPrivateKey,
+      athenaChain.provider()
+    );
 
-    const demeterPort = await getPort({ port: portNumbers(3333,4444) });
+    const demeterPort = await getPort({ port: portNumbers(3333, 4444) });
     const demeterChain = new LocalChain({
       port: demeterPort,
       chainId: demeterPort,
@@ -175,16 +201,34 @@ async function run () {
       ganache: {
         miner: {
           blockTime: 1,
-        }
-      }
+        },
+      },
     });
-    const demeterDeployerWallet = new ethers.Wallet(deployerPrivateKey, demeterChain.provider());
-    const demeterRelayerWallet = new ethers.Wallet(relayerPrivateKey, demeterChain.provider());
+    const demeterDeployerWallet = new ethers.Wallet(
+      deployerPrivateKey,
+      demeterChain.provider()
+    );
+    const demeterRelayerWallet = new ethers.Wallet(
+      relayerPrivateKey,
+      demeterChain.provider()
+    );
 
     /* deploy EVM contracts and write the config */
-    const hermesWETH = await hermesChain.deployToken('WETH', 'WETH', hermesDeployerWallet);
-    const athenaWETH = await athenaChain.deployToken('WETH', 'WETH', athenaDeployerWallet);
-    const demeterWETH = await athenaChain.deployToken('WETH', 'WETH', demeterDeployerWallet);
+    const hermesWETH = await hermesChain.deployToken(
+      'WETH',
+      'WETH',
+      hermesDeployerWallet
+    );
+    const athenaWETH = await athenaChain.deployToken(
+      'WETH',
+      'WETH',
+      athenaDeployerWallet
+    );
+    const demeterWETH = await athenaChain.deployToken(
+      'WETH',
+      'WETH',
+      demeterDeployerWallet
+    );
 
     const signatureVBridge = await LocalChain.deployVBridge(
       [hermesChain, athenaChain, demeterChain],
@@ -200,7 +244,7 @@ async function run () {
       withdrawConfig: {
         withdrawFeePercentage: 0,
         withdrawGaslimit: '0x350000',
-      }
+      },
     });
     await athenaChain.writeConfig(`${configDirPath}/${athenaChain.name}.json`, {
       signatureVBridge,
@@ -211,43 +255,70 @@ async function run () {
       withdrawConfig: {
         withdrawFeePercentage: 0,
         withdrawGaslimit: '0x350000',
-      }
-    });
-    await demeterChain.writeConfig(`${configDirPath}/${demeterChain.name}.json`, {
-      signatureVBridge,
-      proposalSigningBackend: {
-        type: 'DKGNode',
-        node: charlieDkgNode.name,
       },
-      withdrawConfig: {
-        withdrawFeePercentage: 0,
-        withdrawGaslimit: '0x350000',
-      }
     });
+    await demeterChain.writeConfig(
+      `${configDirPath}/${demeterChain.name}.json`,
+      {
+        signatureVBridge,
+        proposalSigningBackend: {
+          type: 'DKGNode',
+          node: charlieDkgNode.name,
+        },
+        withdrawConfig: {
+          withdrawFeePercentage: 0,
+          withdrawGaslimit: '0x350000',
+        },
+      }
+    );
 
     /* Set permissions for the anchor */
     const hermesAnchor = signatureVBridge.getVAnchor(hermesChain.chainId);
     await hermesAnchor.setSigner(hermesDeployerWallet);
-    const hermesWebbTokenAddress = signatureVBridge.getWebbTokenAddress(hermesChain.chainId);
-    let token = await Tokens.MintableToken.tokenFromAddress(hermesWebbTokenAddress!, hermesDeployerWallet);
+    const hermesWebbTokenAddress = signatureVBridge.getWebbTokenAddress(
+      hermesChain.chainId
+    );
+    let token = await Tokens.MintableToken.tokenFromAddress(
+      hermesWebbTokenAddress!,
+      hermesDeployerWallet
+    );
     let tx = await token.approveSpending(hermesAnchor.contract.address);
     await tx.wait();
-    await token.mintTokens(hermesDeployerWallet.address, '1000000000000000000000');
+    await token.mintTokens(
+      hermesDeployerWallet.address,
+      '1000000000000000000000'
+    );
 
     const athenaAnchor = signatureVBridge.getVAnchor(athenaChain.chainId);
-    const athenaWebbTokenAddress = signatureVBridge.getWebbTokenAddress(athenaChain.chainId);
-    token = await Tokens.MintableToken.tokenFromAddress(athenaWebbTokenAddress!, athenaDeployerWallet);
+    const athenaWebbTokenAddress = signatureVBridge.getWebbTokenAddress(
+      athenaChain.chainId
+    );
+    token = await Tokens.MintableToken.tokenFromAddress(
+      athenaWebbTokenAddress!,
+      athenaDeployerWallet
+    );
     tx = await token.approveSpending(athenaAnchor.contract.address);
     await tx.wait();
-    await token.mintTokens(hermesDeployerWallet.address, '1000000000000000000000');
+    await token.mintTokens(
+      hermesDeployerWallet.address,
+      '1000000000000000000000'
+    );
 
     const demeterAnchor = signatureVBridge.getVAnchor(demeterChain.chainId);
     await demeterAnchor.setSigner(demeterDeployerWallet);
-    const demeterWebbTokenAddress = signatureVBridge.getWebbTokenAddress(demeterChain.chainId);
-    token = await Tokens.MintableToken.tokenFromAddress(demeterWebbTokenAddress!, demeterDeployerWallet);
+    const demeterWebbTokenAddress = signatureVBridge.getWebbTokenAddress(
+      demeterChain.chainId
+    );
+    token = await Tokens.MintableToken.tokenFromAddress(
+      demeterWebbTokenAddress!,
+      demeterDeployerWallet
+    );
     tx = await token.approveSpending(demeterAnchor.contract.address);
     await tx.wait();
-    await token.mintTokens(hermesDeployerWallet.address, '1000000000000000000000');
+    await token.mintTokens(
+      hermesDeployerWallet.address,
+      '1000000000000000000000'
+    );
 
     const api = await charlieDkgNode.api();
     const resourceId1 = await hermesAnchor.createResourceId();
@@ -264,16 +335,22 @@ async function run () {
     /* Transfer ownership of the bridge to the address derived from public key */
     const dkgPublicKey = await charlieDkgNode.fetchDkgPublicKey();
     const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey!);
-    
-    const hermesBridgeSide = signatureVBridge.getVBridgeSide(hermesChain.chainId);
+
+    const hermesBridgeSide = signatureVBridge.getVBridgeSide(
+      hermesChain.chainId
+    );
     tx = await hermesBridgeSide.transferOwnership(governorAddress, 1);
     await tx.wait();
 
-    const athenaBridgeSide = signatureVBridge.getVBridgeSide(athenaChain.chainId);
+    const athenaBridgeSide = signatureVBridge.getVBridgeSide(
+      athenaChain.chainId
+    );
     tx = await athenaBridgeSide.transferOwnership(governorAddress, 1);
     await tx.wait();
 
-    const demeterBridgeSide = signatureVBridge.getVBridgeSide(demeterChain.chainId);
+    const demeterBridgeSide = signatureVBridge.getVBridgeSide(
+      demeterChain.chainId
+    );
     tx = await demeterBridgeSide.transferOwnership(governorAddress, 1);
     await tx.wait();
 
@@ -297,21 +374,21 @@ async function run () {
         type: 'list',
         name: 'action',
         choices: options,
-        message: 'Choose an action'
+        message: 'Choose an action',
       },
       {
         type: 'input',
         name: 'tokenAddress',
         message: 'Enter the token address:',
         when(answers) {
-          return answers.action === 'add token'
-        }
-      }
+          return answers.action === 'add token';
+        },
+      },
     ];
 
     let running = true;
 
-    while(running) {
+    while (running) {
       const answers = await inquirer.prompt(questions);
 
       if (answers.action === 'print config') {
@@ -346,25 +423,26 @@ async function run () {
           newTokenAddress: testToken.contract.address,
         };
         console.log(JSON.stringify(tokenAddProposalPayload, null, 2));
-        console.log('proposalData: ', u8aToHex(encodeTokenAddProposal(tokenAddProposalPayload)));
+        console.log(
+          'proposalData: ',
+          u8aToHex(encodeTokenAddProposal(tokenAddProposalPayload))
+        );
       } else if (answers.action === 'deposit') {
-        
-
         const depositUtxo = await CircomUtxo.generateUtxo({
           curve: 'Bn254',
           backend: 'Circom',
-          amount: 1e9.toString(),
+          amount: (1e9).toString(),
           originChainId: hermesChain.chainId.toString(),
           chainId: hermesChain.chainId.toString(),
         });
-        
+
         await hermesAnchor.transact(
           [],
           [depositUtxo],
           {},
           0,
           '0x0000000000000000000000000000000000000003',
-          '0x0000000000000000000000000000000000000003',
+          '0x0000000000000000000000000000000000000003'
         );
       } else if (answers.action === 'exit') {
         running = false;

@@ -18,9 +18,11 @@
 /// This Could be through a Docker Container or a Local Compiled node.
 
 import '@webb-tools/types';
-import { spawn } from 'child_process';
+import { execSync, spawn } from 'child_process';
 import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import isCI from 'is-ci';
+import path from 'path';
+import fs from 'fs';
 import * as TinySecp256k1 from 'tiny-secp256k1';
 import {
   FullNodeInfo,
@@ -78,8 +80,21 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       }
       return new LocalDkg(opts, proc);
     } else {
+      const gitRoot = execSync('git rev-parse --show-toplevel').toString();
+      const basePath = path.join(
+        gitRoot,
+        'tests',
+        'node_modules',
+        'tmp',
+        'db',
+        opts.authority
+      );
+      // check if the base path exists, and if so, delete it.
+      if (fs.existsSync(basePath)) {
+        fs.rmdirSync(basePath, { recursive: true });
+      }
       startArgs.push(
-        '--tmp',
+        `--base-path=${basePath}`,
         '--rpc-cors',
         'all',
         '--rpc-methods=unsafe',
