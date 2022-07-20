@@ -11,7 +11,7 @@
     "lint": "eslint . --ext .ts",
     "test": "NODE_OPTIONS=--openssl-legacy-provider mocha",
     "format": "prettier -w **/*.ts",
-    "demo": "NODE_OPTIONS=\"--loader ts-node/esm\" node demo/demo.ts"
+    "demo": "NODE_OPTIONS=\"--loader ts-node/esm --openssl-legacy-provider\" node demo/demo.ts"
   },
   "engines": {
     "node": "17.x.x"

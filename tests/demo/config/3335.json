@@ -1,11 +1,11 @@
 {
   "evm": {
-    "3333": {
-      "name": "3333",
+    "3335": {
+      "name": "3335",
       "enabled": true,
-      "http-endpoint": "http://127.0.0.1:3333",
-      "ws-endpoint": "ws://127.0.0.1:3333",
-      "chain-id": 3333,
+      "http-endpoint": "http://127.0.0.1:3335",
+      "ws-endpoint": "ws://127.0.0.1:3335",
+      "chain-id": 3335,
       "beneficiary": "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf",
       "private-key": "0x0000000000000000000000000000000000000000000000000000000000000001",
       "contracts": [
@@ -18,6 +18,10 @@
             "type": "DKGNode",
             "node": "charlieDkg"
           },
+          "withdraw-config": {
+            "withdraw-fee-percentage": 0,
+            "withdraw-gaslimit": "0x350000"
+          },
           "events-watcher": {
             "enabled": true,
             "polling-interval": 1000,
@@ -25,11 +29,11 @@
           },
           "linked-anchors": [
             {
-              "chain": "3334",
+              "chain": "3333",
               "address": "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"
             },
             {
-              "chain": "3335",
+              "chain": "3334",
               "address": "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"
             }
           ]
