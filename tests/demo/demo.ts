@@ -43,7 +43,7 @@ async function forceSubmitUnsignedProposal(
         kind,
         data: opts.data,
       },
-    })
+    })  
     .toU8a();
   let call = api.tx.dkgProposalHandler.forceSubmitUnsignedProposal(proposal);
   let txHash = await node.sudoExecuteTransaction(call);
@@ -109,7 +109,8 @@ async function run () {
     authority: 'charlie',
     usageMode,
     ports: 'auto',
-    enabledPallets
+    enabledPallets,
+    enableLogging: true
   });
 
   let runningNodes = [aliceDkgNode, bobDkgNode, charlieDkgNode];
@@ -140,7 +141,6 @@ async function run () {
       populatedAccounts,
       enabledContracts,
       ganache: {
-        quiet: false,
         miner: {
           blockTime: 1,
         }
@@ -345,10 +345,8 @@ async function run () {
           },
           newTokenAddress: testToken.contract.address,
         };
-        await forceSubmitUnsignedProposal(charlieDkgNode, {
-          kind: 'TokenAdd',
-          data: u8aToHex(encodeTokenAddProposal(tokenAddProposalPayload)),
-        });
+        console.log(JSON.stringify(tokenAddProposalPayload, null, 2));
+        console.log('proposalData: ', u8aToHex(encodeTokenAddProposal(tokenAddProposalPayload)));
       } else if (answers.action === 'deposit') {
         
 
