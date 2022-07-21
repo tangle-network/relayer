@@ -175,7 +175,7 @@ pub trait EventWatcher {
                             )
                         });
                         let result = futures::future::join_all(tasks).await;
-                        // this event will be marked as handled if at lest one handler succeeded.
+                        // this event will be marked as handled if at least one handler succeeded.
                         // this because, for the failed events, we arleady tried to handle them
                         // many times (at this point), and there is no point in trying again.
                         let mark_as_handled = result.iter().any(|r| r.is_ok());
