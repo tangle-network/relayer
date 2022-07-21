@@ -104,6 +104,14 @@ pub trait EventWatcher {
     type Store: HistoryStore + EventHashStore;
     /// Returns a task that should be running in the background
     /// that will watch events
+    #[tracing::instrument(
+        skip_all,
+        fields(
+            chain_id = %client.get_chainid().await?,
+            address = %contract.address(),
+            tag = %Self::TAG,
+        ),
+    )]
     async fn run(
         &self,
         client: Arc<Self::Middleware>,
