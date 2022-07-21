@@ -37,7 +37,7 @@ pub enum Kind {
     /// Relayer Leaves Store state on a specific chain/node.
     #[display(fmt = "leaves_store")]
     LeavesStore,
-    /// When the Relayer sees a new Merkle Tree insertation event on a specific chain/node.
+    /// When the Relayer sees a new Merkle Tree insertion event on a specific chain/node.
     #[display(fmt = "mt_insert")]
-    MerkleTreeInsertation,
+    MerkleTreeInsertion,
 }

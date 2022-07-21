@@ -63,6 +63,10 @@ pub mod substrate;
 #[doc(hidden)]
 pub mod evm;
 
+/// A module that contains helpers for retry logic.
+#[doc(hidden)]
+mod retry;
+
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
     /// The block number where this contract is deployed.
@@ -100,14 +104,6 @@ pub trait EventWatcher {
     type Store: HistoryStore + EventHashStore;
     /// Returns a task that should be running in the background
     /// that will watch events
-    #[tracing::instrument(
-        skip_all,
-        fields(
-            chain_id = %client.get_chainid().await?,
-            address = %contract.address(),
-            tag = %Self::TAG,
-        ),
-    )]
     async fn run(
         &self,
         client: Arc<Self::Middleware>,
@@ -154,40 +150,50 @@ pub trait EventWatcher {
                     tracing::trace!("Found #{} events", found_events.len());
 
                     for (event, log) in found_events {
-                        // try to handle the event with all the handlers, simultaneously.
-                        //
-                        // if any of the handlers fail, it will cancel the rest of the handlers.
-                        // and we will retry the event again.
-                        let result = futures::future::try_join_all(
-                            handlers.iter().map(|handler| {
-                                handler.handle_event(
-                                    store.clone(),
-                                    &contract,
-                                    (event.clone(), log.clone()),
-                                )
-                            }),
-                        )
-                        .await;
-                        match result {
-                            Ok(_) => {
-                                store.set_last_block_number(
-                                    (chain_id, contract.address()),
-                                    log.block_number,
-                                )?;
-                                tracing::trace!(
-                                    "event handled successfully. at #{}",
-                                    log.block_number
-                                );
+                        // wraps each handler future in a retry logic, that will retry the handler
+                        // if it fails, up to `MAX_RETRY_COUNT`, after this it will ignore that event for
+                        // that specific handler.
+                        const MAX_RETRY_COUNT: usize = 5;
+                        let tasks = handlers.iter().map(|handler| {
+                            let backoff = retry::ConstantWithMaxRetryCount::new(
+                                Duration::from_millis(100),
+                                MAX_RETRY_COUNT,
+                            );
+                            handler.handle_event_with_retry(
+                                store.clone(),
+                                &contract,
+                                (event.clone(), log.clone()),
+                                backoff,
+                            )
+                        });
+                        let result = futures::future::join_all(tasks).await;
+                        // this event will be marked as handled if at lest one handler succeeded.
+                        // this because, for the failed events, we arleady tried to handle them
+                        // many times (at this point), and there is no point in trying again.
+                        let mark_as_handled = result.iter().any(|r| r.is_ok());
+                        // also, for all the failed event handlers, we should print what went
+                        // wrong.
+                        result.iter().for_each(|r| {
+                            if let Err(e) = r {
+                                tracing::error!("{}", e);
                             }
-                            Err(e) => {
-                                tracing::error!(
-                                    "Error while handling event: {}",
-                                    e
-                                );
-                                tracing::warn!("Restarting event watcher ...");
-                                // this a transient error, so we will retry again.
-                                return Err(backoff::Error::transient(e));
-                            }
+                        });
+                        if mark_as_handled {
+                            store.set_last_block_number(
+                                (chain_id, contract.address()),
+                                log.block_number,
+                            )?;
+                            tracing::trace!(
+                                "event handled successfully. at #{}",
+                                log.block_number
+                            );
+                        } else {
+                            tracing::error!("Error while handling event, all handlers failed.");
+                            tracing::warn!("Restarting event watcher ...");
+                            // this a transient error, so we will retry again.
+                            return Err(backoff::Error::transient(
+                                anyhow::anyhow!("force restart"),
+                            ));
                         }
                     }
                     // move forward.
@@ -248,7 +254,7 @@ pub trait EventHandler {
     type Middleware: providers::Middleware + 'static;
     type Contract: Deref<Target = contract::Contract<Self::Middleware>>
         + WatchableContract;
-    type Events: contract::EthLogDecode;
+    type Events: contract::EthLogDecode + Clone;
     type Store: HistoryStore + EventHashStore;
 
     async fn handle_event(
@@ -258,6 +264,33 @@ pub trait EventHandler {
         (event, log): (Self::Events, contract::LogMeta),
     ) -> anyhow::Result<()>;
 }
+
+/// An Auxiliary trait to handle events with retry logic.
+///
+/// this trait is automatically implemented for all the event handlers.
+#[async_trait::async_trait]
+trait EventHandlerWithRetry: EventHandler {
+    async fn handle_event_with_retry(
+        &self,
+        store: Arc<Self::Store>,
+        contract: &Self::Contract,
+        (event, log): (Self::Events, contract::LogMeta),
+        backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
+    ) -> anyhow::Result<()> {
+        let wrapped_task = || {
+            self.handle_event(
+                store.clone(),
+                contract,
+                (event.clone(), log.clone()),
+            )
+            .map_err(backoff::Error::transient)
+        };
+        backoff::future::retry(backoff, wrapped_task).await?;
+        Ok(())
+    }
+}
+
+impl<T> EventHandlerWithRetry for T where T: EventHandler + ?Sized {}
 
 /// A Bridge Watcher is a trait for Bridge contracts that not specific for watching events from that contract,
 /// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers
