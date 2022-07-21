@@ -65,7 +65,7 @@ impl RelayerContext {
     ///
     /// # Arguments
     ///
-    /// * `chain_name` - A string representing the chain name.
+    /// * `chain_id` - A string representing the chain id.
     ///
     /// # Examples
     ///
@@ -90,7 +90,7 @@ impl RelayerContext {
     ///
     /// # Arguments
     ///
-    /// * `chain_name` - A string representing the chain name.
+    /// * `chain_id` - A string representing the chain id.
     ///
     /// # Examples
     ///

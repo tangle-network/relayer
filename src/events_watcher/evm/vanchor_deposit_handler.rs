@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 use super::VAnchorContractWrapper;
+use crate::config::LinkedAnchorConfig;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
@@ -112,9 +113,38 @@ where
                 return Ok(());
             }
         };
-        for linked_anchor in linked_anchors {
-            let dest_chain = linked_anchor.chain.to_lowercase();
-            let maybe_chain = wrapper.webb_config.evm.get(&dest_chain);
+
+        // replace the names of the linked anchors with their chain ids
+        let regenerated_linked_anchors: Vec<LinkedAnchorConfig> = linked_anchors.iter()
+            .map(|a| {
+                let target_chain = &wrapper.webb_config.evm.values().find(|c| {
+                    c.name == a.chain
+                });
+
+                match target_chain {
+                    Some(config) => {
+                        LinkedAnchorConfig {
+                            chain: config.chain_id.to_string(),
+                            address: a.address
+                        }
+                    }
+                    None => {
+                        tracing::warn!("Misconfigured Network: Linked anchor entry does not match a supported chain");
+                        LinkedAnchorConfig {
+                            chain: "".to_string(),
+                            address: a.address
+                        }
+                    }
+                }
+            })
+            .filter(|a| {
+                a.chain != *""
+            })
+            .collect::<Vec<LinkedAnchorConfig>>();
+
+        for linked_anchor in regenerated_linked_anchors {
+            let dest_chain = &linked_anchor.chain;
+            let maybe_chain = wrapper.webb_config.evm.get(dest_chain);
             let dest_chain = match maybe_chain {
                 Some(chain) => chain,
                 None => continue,

@@ -478,6 +478,7 @@ export interface Evm {
 }
 
 export interface ChainInfo {
+  name: string;
   enabled: boolean;
   chainId: number;
   beneficiary?: string;

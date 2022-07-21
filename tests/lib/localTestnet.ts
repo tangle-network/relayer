@@ -382,6 +382,7 @@ export class LocalChain {
     ];
 
     const chainInfo: FullChainInfo = {
+      name: this.underlyingChainId.toString(),
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
@@ -442,6 +443,7 @@ export class LocalChain {
       },
     ];
     const chainInfo: FullChainInfo = {
+      name: this.underlyingChainId.toString(),
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
@@ -457,6 +459,7 @@ export class LocalChain {
     opts: ExportedConfigOptions
   ): Promise<FullChainInfo> {
     const chainInfo: FullChainInfo = {
+      name: this.underlyingChainId.toString(),
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
@@ -505,6 +508,7 @@ export class LocalChain {
     };
 
     const convertedConfig: ConvertedConfig = {
+      name: config.name,
       enabled: config.enabled,
       'http-endpoint': config.httpEndpoint,
       'ws-endpoint': config.wsEndpoint,
