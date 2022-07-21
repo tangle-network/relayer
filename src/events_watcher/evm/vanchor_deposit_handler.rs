@@ -15,20 +15,19 @@
 use super::VAnchorContractWrapper;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
-use crate::store::{EventHashStore, LeafCacheStore};
+use crate::store::EventHashStore;
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-use webb::evm::ethers::providers;
 use webb_proposals::evm::AnchorUpdateProposal;
-type HttpProvider = providers::Provider<providers::Http>;
+
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
-pub struct VAnchorWatcher<B> {
+pub struct VAnchorDepositHandler<B> {
     proposal_signing_backend: B,
 }
 
-impl<B> VAnchorWatcher<B>
+impl<B> VAnchorDepositHandler<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal>,
 {
@@ -40,12 +39,11 @@ where
 }
 
 #[async_trait::async_trait]
-impl<B> super::EventWatcher for VAnchorWatcher<B>
+impl<B> super::EventHandler for VAnchorDepositHandler<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {
-    const TAG: &'static str = "VAnchor Watcher";
-    type Middleware = HttpProvider;
+    type Middleware = super::HttpProvider;
 
     type Contract = VAnchorContractWrapper<Self::Middleware>;
 
@@ -62,31 +60,16 @@ where
     ) -> anyhow::Result<()> {
         use VAnchorContractEvents::*;
         let event_data = match event {
-            InsertionFilter(data) => {
-                let commitment = data.commitment;
-                let leaf_index = data.leaf_index;
-                let value = (leaf_index, H256::from_slice(&commitment));
+            NewCommitmentFilter(data) => {
                 let chain_id = wrapper.contract.client().get_chainid().await?;
-                store.insert_leaves(
-                    (chain_id, wrapper.contract.address()),
-                    &[value],
-                )?;
-                store.insert_last_deposit_block_number(
-                    (chain_id, wrapper.contract.address()),
-                    log.block_number,
-                )?;
-                let events_bytes = serde_json::to_vec(&data)?;
-                store.store_event(&events_bytes)?;
-                tracing::trace!(
-                    %log.block_number,
-                    "detected block number",
-                );
+                let info =
+                    (data.index.as_u32(), H256::from_slice(&data.commitment));
                 tracing::event!(
                     target: crate::probe::TARGET,
                     tracing::Level::DEBUG,
-                    kind = %crate::probe::Kind::LeavesStore,
-                    leaf_index = %value.0,
-                    leaf = %value.1,
+                    kind = %crate::probe::Kind::MerkleTreeInsertation,
+                    leaf_index = %info.0,
+                    leaf = %info.1,
                     chain_id = %chain_id,
                     block_number = %log.block_number
                 );
@@ -104,10 +87,10 @@ where
             "VAnchor new leaf event",
         );
 
-        if event_data.leaf_index % 2 == 0 {
+        if event_data.index.as_u32() % 2 == 0 {
             tracing::debug!(
-                leaf_index = %event_data.leaf_index,
-                is_even_index = %event_data.leaf_index % 2 == 0,
+                leaf_index = %event_data.index,
+                is_even_index = %event_data.index.as_u32() % 2 == 0,
                 "VAnchor new leaf index does not satisfy the condition, skipping proposal.",
             );
             return Ok(());
@@ -116,9 +99,9 @@ where
         let client = wrapper.contract.client();
         let src_chain_id = client.get_chainid().await?;
         let root = wrapper.contract.get_last_root().call().await?;
-        let leaf_index = event_data.leaf_index;
+        let leaf_index = event_data.index.as_u32();
         let function_signature = [141, 9, 22, 157];
-        let nonce = event_data.leaf_index;
+        let nonce = leaf_index;
         let linked_anchors = match &wrapper.config.linked_anchors {
             Some(anchors) => anchors,
             None => {

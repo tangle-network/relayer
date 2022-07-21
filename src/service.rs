@@ -691,9 +691,7 @@ async fn start_evm_vanchor_events_watcher(
             "VAnchor events watcher for ({}) Started.",
             contract_address,
         );
-        let leaves_watcher = VAnchorLeavesWatcher::default();
-        let vanchor_leaves_watcher =
-            leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
+        let contract_watcher = VAnchorContractWatcher::default();
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
@@ -704,18 +702,18 @@ async fn start_evm_vanchor_events_watcher(
         .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
-                let watcher = VAnchorWatcher::new(backend);
-                let vanchor_watcher_task = watcher.run(client, store, wrapper);
+                let deposit_handler = VAnchorDepositHandler::new(backend);
+                let leaves_handler = VAnchorLeavesHandler::default();
+                let vanchor_watcher_task = contract_watcher.run(
+                    client,
+                    store,
+                    wrapper,
+                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
+                );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
                             "VAnchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = vanchor_leaves_watcher => {
-                        tracing::warn!(
-                            "VAnchor leaves watcher stopped for ({})",
                             contract_address,
                         );
                     },
@@ -728,18 +726,18 @@ async fn start_evm_vanchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
-                let watcher = VAnchorWatcher::new(backend);
-                let vanchor_watcher_task = watcher.run(client, store, wrapper);
+                let deposit_handler = VAnchorDepositHandler::new(backend);
+                let leaves_handler = VAnchorLeavesHandler::default();
+                let vanchor_watcher_task = contract_watcher.run(
+                    client,
+                    store,
+                    wrapper,
+                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
+                );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
                             "VAnchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = vanchor_leaves_watcher => {
-                        tracing::warn!(
-                            "VAnchor leaves watcher stopped for ({})",
                             contract_address,
                         );
                     },
@@ -752,10 +750,17 @@ async fn start_evm_vanchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::None => {
+                let leaves_handler = VAnchorLeavesHandler::default();
+                let vanchor_watcher_task = contract_watcher.run(
+                    client,
+                    store,
+                    wrapper,
+                    vec![Box::new(leaves_handler)],
+                );
                 tokio::select! {
-                    _ = vanchor_leaves_watcher => {
+                    _ = vanchor_watcher_task => {
                         tracing::warn!(
-                            "VAnchor leaves watcher stopped for ({})",
+                            "VAnchor watcher task stopped for ({})",
                             contract_address,
                         );
                     },
@@ -814,9 +819,7 @@ async fn start_evm_anchor_events_watcher(
             "Anchor events watcher for ({}) Started.",
             contract_address,
         );
-        let leaves_watcher = AnchorLeavesWatcher::default();
-        let anchor_leaves_watcher =
-            leaves_watcher.run(client.clone(), store.clone(), wrapper.clone());
+        let contract_watcher = AnchorContractWatcher::default();
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
@@ -827,18 +830,18 @@ async fn start_evm_anchor_events_watcher(
         .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
-                let watcher = AnchorWatcher::new(backend);
-                let anchor_watcher_task = watcher.run(client, store, wrapper);
+                let deposit_handler = AnchorDepositHandler::new(backend);
+                let leaves_handler = AnchorLeavesHandler::default();
+                let anchor_watcher_task = contract_watcher.run(
+                    client,
+                    store,
+                    wrapper,
+                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
+                );
                 tokio::select! {
                     _ = anchor_watcher_task => {
                         tracing::warn!(
                             "Anchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = anchor_leaves_watcher => {
-                        tracing::warn!(
-                            "Anchor leaves watcher stopped for ({})",
                             contract_address,
                         );
                     },
@@ -851,18 +854,18 @@ async fn start_evm_anchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
-                let watcher = AnchorWatcher::new(backend);
-                let anchor_watcher_task = watcher.run(client, store, wrapper);
+                let deposit_handler = AnchorDepositHandler::new(backend);
+                let leaves_handler = AnchorLeavesHandler::default();
+                let anchor_watcher_task = contract_watcher.run(
+                    client,
+                    store,
+                    wrapper,
+                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
+                );
                 tokio::select! {
                     _ = anchor_watcher_task => {
                         tracing::warn!(
                             "Anchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = anchor_leaves_watcher => {
-                        tracing::warn!(
-                            "Anchor leaves watcher stopped for ({})",
                             contract_address,
                         );
                     },
@@ -875,10 +878,17 @@ async fn start_evm_anchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::None => {
+                let leaves_handler = AnchorLeavesHandler::default();
+                let anchor_watcher_task = contract_watcher.run(
+                    client,
+                    store,
+                    wrapper,
+                    vec![Box::new(leaves_handler)],
+                );
                 tokio::select! {
-                    _ = anchor_leaves_watcher => {
+                    _ = anchor_watcher_task => {
                         tracing::warn!(
-                            "Anchor leaves watcher stopped for ({})",
+                            "Anchor watcher task stopped for ({})",
                             contract_address,
                         );
                     },
@@ -919,13 +929,19 @@ async fn start_signature_bridge_events_watcher(
     let wrapper =
         SignatureBridgeContractWrapper::new(config.clone(), client.clone());
     let task = async move {
-        tracing::debug!("Bridge watcher for ({}) Started.", contract_address);
+        tracing::debug!(
+            "Signature Bridge watcher for ({}) Started.",
+            contract_address
+        );
         let bridge_contract_watcher = SignatureBridgeContractWatcher::default();
+        let governance_transfer_handler =
+            SignatureBridgeGovernanceOwnershipTransferredHandler::default();
         let events_watcher_task = EventWatcher::run(
             &bridge_contract_watcher,
             client.clone(),
             store.clone(),
             wrapper.clone(),
+            vec![Box::new(governance_transfer_handler)],
         );
         let cmd_handler_task = BridgeWatcher::run(
             &bridge_contract_watcher,

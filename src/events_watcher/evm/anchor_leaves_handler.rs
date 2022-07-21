@@ -23,10 +23,10 @@ use webb::evm::ethers::prelude::{LogMeta, Middleware};
 /// An Anchor Leaves Event Handler that watches for Deposit events and save the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct AnchorLeavesEventHandler;
+pub struct AnchorLeavesHandler;
 
 #[async_trait::async_trait]
-impl super::EventHandler for AnchorLeavesEventHandler {
+impl super::EventHandler for AnchorLeavesHandler {
     type Middleware = super::HttpProvider;
 
     type Contract = AnchorContractWrapper<Self::Middleware>;

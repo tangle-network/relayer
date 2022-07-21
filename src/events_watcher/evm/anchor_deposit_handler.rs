@@ -24,11 +24,11 @@ use webb_proposals::evm::AnchorUpdateProposal;
 /// Represents an Anchor Contract Deposit Event Watcher which will use a configured signing backend for signing proposals.
 ///
 /// This mainly watching for Deposit events which then will create [`AnchorUpdateProposal`]s and send them to the signing backend.
-pub struct AnchorDepoistEventHandler<B> {
+pub struct AnchorDepositHandler<B> {
     proposal_signing_backend: B,
 }
 
-impl<B> AnchorDepoistEventHandler<B>
+impl<B> AnchorDepositHandler<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal>,
 {
@@ -40,7 +40,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<B> super::EventHandler for AnchorDepoistEventHandler<B>
+impl<B> super::EventHandler for AnchorDepositHandler<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {

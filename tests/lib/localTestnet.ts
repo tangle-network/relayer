@@ -180,14 +180,23 @@ export class LocalChain {
       'protocol-solidity-fixtures/fixtures/vanchor_2/2/witness_calculator.js'
     );
 
-    const witnessCalculatorCjsPath_2 = path.join(
+    let witnessCalculatorCjsPath_2 = path.join(
       gitRoot,
       'tests',
       'node_modules/@webb-tools/utils/witness_calculator_2.cjs'
     );
     // check if the cjs file exists, if not, copy the js file to the cjs file
-    if (!fs.existsSync(witnessCalculatorCjsPath_2)) {
+    if (
+      !fs.existsSync(witnessCalculatorCjsPath_2) &&
+      fs.existsSync(witnessCalculatorPath_2)
+    ) {
       fs.copyFileSync(witnessCalculatorPath_2, witnessCalculatorCjsPath_2);
+    } else {
+      witnessCalculatorCjsPath_2 = path.join(
+        gitRoot,
+        'tests',
+        'protocol-solidity-fixtures/fixtures/vanchor_2/2/witness_calculator.cjs'
+      );
     }
 
     const witnessCalculatorPath_16 = path.join(
@@ -196,14 +205,23 @@ export class LocalChain {
       'protocol-solidity-fixtures/fixtures/vanchor_16/2/witness_calculator.js'
     );
 
-    const witnessCalculatorCjsPath_16 = path.join(
+    let witnessCalculatorCjsPath_16 = path.join(
       gitRoot,
       'tests',
       'node_modules/@webb-tools/utils/witness_calculator_16.cjs'
     );
     // check if the cjs file exists, if not, copy the js file to the cjs file
-    if (!fs.existsSync(witnessCalculatorCjsPath_16)) {
+    if (
+      !fs.existsSync(witnessCalculatorCjsPath_16) &&
+      fs.existsSync(witnessCalculatorPath_16)
+    ) {
       fs.copyFileSync(witnessCalculatorPath_16, witnessCalculatorCjsPath_16);
+    } else {
+      witnessCalculatorCjsPath_16 = path.join(
+        gitRoot,
+        'tests',
+        'protocol-solidity-fixtures/fixtures/vanchor_16/2/witness_calculator.cjs'
+      );
     }
 
     const zkComponents_2 = await fetchComponentsFromFilePaths(

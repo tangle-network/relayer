@@ -96,7 +96,7 @@ pub trait EventWatcher {
     type Middleware: providers::Middleware + 'static;
     type Contract: Deref<Target = contract::Contract<Self::Middleware>>
         + WatchableContract;
-    type Events: contract::EthLogDecode;
+    type Events: contract::EthLogDecode + Clone;
     type Store: HistoryStore + EventHashStore;
     /// Returns a task that should be running in the background
     /// that will watch events
@@ -163,7 +163,7 @@ pub trait EventWatcher {
                                 handler.handle_event(
                                     store.clone(),
                                     &contract,
-                                    (event, log),
+                                    (event.clone(), log.clone()),
                                 )
                             }),
                         )

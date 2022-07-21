@@ -26,7 +26,7 @@ use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
 
 use crate::config;
-use crate::events_watcher::{BridgeWatcher, EventWatcher};
+use crate::events_watcher::{BridgeWatcher, EventHandler, EventWatcher};
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, QueueStore};
 
@@ -88,6 +88,9 @@ impl<M: Middleware> super::WatchableContract
 #[derive(Copy, Clone, Debug, Default)]
 pub struct SignatureBridgeContractWatcher;
 
+#[derive(Copy, Clone, Debug, Default)]
+pub struct SignatureBridgeGovernanceOwnershipTransferredHandler;
+
 #[async_trait::async_trait]
 impl EventWatcher for SignatureBridgeContractWatcher {
     const TAG: &'static str = "Signature Bridge Watcher";
@@ -99,7 +102,17 @@ impl EventWatcher for SignatureBridgeContractWatcher {
     type Events = SignatureBridgeContractEvents;
 
     type Store = SledStore;
+}
 
+#[async_trait::async_trait]
+impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
+    type Middleware = HttpProvider;
+
+    type Contract = SignatureBridgeContractWrapper<Self::Middleware>;
+
+    type Events = SignatureBridgeContractEvents;
+
+    type Store = SledStore;
     #[tracing::instrument(
         skip_all,
         fields(event_type = ?e.0),
