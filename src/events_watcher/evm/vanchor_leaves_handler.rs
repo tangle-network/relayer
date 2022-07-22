@@ -20,18 +20,15 @@ use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-use webb::evm::ethers::providers;
-type HttpProvider = providers::Provider<providers::Http>;
-/// An Anchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
+
+/// An VAnchor Leaves Handler that handles `NewCommitment` events and saves the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct VAnchorLeavesWatcher;
+pub struct VAnchorLeavesHandler;
 
 #[async_trait::async_trait]
-impl super::EventWatcher for VAnchorLeavesWatcher {
-    const TAG: &'static str = "Anchor Watcher For Leaves";
-
-    type Middleware = HttpProvider;
+impl super::EventHandler for VAnchorLeavesHandler {
+    type Middleware = super::HttpProvider;
 
     type Contract = VAnchorContractWrapper<Self::Middleware>;
 

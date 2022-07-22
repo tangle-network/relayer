@@ -106,7 +106,7 @@ describe('Simple Transaction Relayer With No Proposal Signing Banckend', functio
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
-      withdrawConfig: defaultWithdrawConfigValue
+      withdrawConfig: defaultWithdrawConfigValue,
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,

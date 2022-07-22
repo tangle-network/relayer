@@ -10,7 +10,7 @@
   "scripts": {
     "lint": "eslint . --ext .ts",
     "test": "NODE_OPTIONS=--openssl-legacy-provider mocha",
-    "format": "prettier -w **/*.ts"
+    "format": "prettier -w '**/*.ts'"
   },
   "engines": {
     "node": "17.x.x"

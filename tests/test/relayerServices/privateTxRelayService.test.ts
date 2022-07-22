@@ -108,7 +108,7 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config set', func
       signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       features: { dataQuery: false, governanceRelay: false },
-      withdrawConfig: defaultWithdrawConfigValue
+      withdrawConfig: defaultWithdrawConfigValue,
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
@@ -414,7 +414,6 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config not set', 
         'Misconfigured Network : (5001). Please set withdraw configuration.'
       );
     }
-    
   });
 
   after(async () => {

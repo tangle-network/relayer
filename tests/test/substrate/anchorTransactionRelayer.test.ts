@@ -25,7 +25,11 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { WebbRelayer, Pallet, LeavesCacheResponse } from '../../lib/webbRelayer.js';
+import {
+  WebbRelayer,
+  Pallet,
+  LeavesCacheResponse,
+} from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
   UsageMode,
@@ -42,7 +46,7 @@ import {
   ArkworksProvingManager,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Anchor Transaction Relayer', function() {
+describe('Substrate Anchor Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -53,11 +57,11 @@ describe('Substrate Anchor Transaction Relayer', function() {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../protocol-substrate/target/release/webb-standalone-node'
-        ),
-      };
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../protocol-substrate/target/release/webb-standalone-node'
+          ),
+        };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'AnchorBn254',
@@ -88,9 +92,9 @@ describe('Substrate Anchor Transaction Relayer', function() {
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
-      chainId: chainId
+      chainId: chainId,
     });
-    
+
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
@@ -123,13 +127,16 @@ describe('Substrate Anchor Transaction Relayer', function() {
     const treeIds = await api.query.anchorBn254.anchors.keys();
     const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
     const treeId = sorted[0] || 5;
-    
+
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
-    const response = await webbRelayer.getLeavesSubstrate(chainIdHex, treeId.toString());
+    const response = await webbRelayer.getLeavesSubstrate(
+      chainIdHex,
+      treeId.toString()
+    );
     expect(response.status).equal(200);
     let leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    leavesStore.then(resp => {
+    leavesStore.then((resp) => {
       expect(noOfDeposit).to.equal(resp.leaves.length);
     });
   });
@@ -180,7 +187,9 @@ describe('Substrate Anchor Transaction Relayer', function() {
     expect(txHash).to.be.not.null;
 
     // get the balance after withdrawal is done and see if it increases
-    const { data: balanceAfter } = await api.query.system.account(withdrawalProof.recipient);
+    const { data: balanceAfter } = await api.query.system.account(
+      withdrawalProof.recipient
+    );
     let balanceAfterWithdraw = balanceAfter.free.toBigInt();
     expect(balanceAfterWithdraw > initialBalance);
   });
@@ -283,7 +292,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
 
       // Expect an error to be thrown
       expect(e).to.not.be.null;
-      expect(e).to.match(/InvalidWithdrawProof|VerifyError/gmi);
+      expect(e).to.match(/InvalidWithdrawProof|VerifyError/gim);
     }
   });
 
@@ -334,7 +343,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.match(/InvalidWithdrawProof|VerifyError/gmi);
+      expect(e).to.match(/InvalidWithdrawProof|VerifyError/gim);
     }
   });
 
@@ -387,7 +396,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid neighbor roots
-      expect(e).to.match(/UnknownRoot|InvalidNeighborWithdrawRoot/gmi);
+      expect(e).to.match(/UnknownRoot|InvalidNeighborWithdrawRoot/gim);
     }
   });
 
@@ -440,7 +449,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates Unknown Root
-      expect(e).to.match(/UnknownRoot/gmi);
+      expect(e).to.match(/UnknownRoot/gim);
     }
   });
 
@@ -550,7 +559,7 @@ describe('Substrate Anchor Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.match(/InvalidWithdrawProof/gmi);
+      expect(e).to.match(/InvalidWithdrawProof/gim);
     }
   });
 
@@ -630,8 +639,14 @@ async function createAnchorWithdrawProof(
     const treeIds = await api.query.anchorBn254.anchors.keys();
     const sorted = treeIds.map((id) => Number(id.toHuman())).sort();
     const treeId = sorted[0] || 5;
-    const leafCount: number = await api.derive.merkleTreeBn254.getLeafCountForTree(treeId)
-    const treeLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(treeId, 0, leafCount-1);
+    const leafCount: number =
+      await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
+    const treeLeaves: Uint8Array[] =
+      await api.derive.merkleTreeBn254.getLeavesForTree(
+        treeId,
+        0,
+        leafCount - 1
+      );
 
     //@ts-ignore
     const getNeighborRoots = api.rpc.lt.getNeighborRoots;

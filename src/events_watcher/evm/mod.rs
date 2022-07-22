@@ -14,31 +14,33 @@
 //
 use super::*;
 use crate::config;
+use crate::store::sled::SledStore;
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 use webb::evm::contract::protocol_solidity::{
-    FixedDepositAnchorContract, VAnchorContract,
+    FixedDepositAnchorContract, FixedDepositAnchorContractEvents,
+    VAnchorContract, VAnchorContractEvents,
 };
 use webb::evm::ethers::prelude::{Contract, Middleware};
 use webb::evm::ethers::types;
 
-pub mod anchor_leaves_watcher;
-pub mod anchor_watcher;
+pub mod anchor_deposit_handler;
+pub mod anchor_leaves_handler;
 pub mod signature_bridge_watcher;
-pub mod vanchor_leaves_watcher;
-pub mod vanchor_watcher;
+pub mod vanchor_deposit_handler;
+pub mod vanchor_leaves_handler;
 
 #[doc(hidden)]
-pub use anchor_leaves_watcher::*;
+pub use anchor_deposit_handler::*;
 #[doc(hidden)]
-pub use anchor_watcher::*;
+pub use anchor_leaves_handler::*;
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
 #[doc(hidden)]
-pub use vanchor_leaves_watcher::*;
+pub use vanchor_deposit_handler::*;
 #[doc(hidden)]
-pub use vanchor_watcher::*;
+pub use vanchor_leaves_handler::*;
 
 /// AnchorContractWrapper contains FixedDepositAnchorContract contract along with configurations for Anchor contract, and Relayer.
 #[derive(Clone, Debug)]
@@ -167,4 +169,42 @@ where
             self.config.events_watcher.print_progress_interval,
         )
     }
+}
+
+type HttpProvider = providers::Provider<providers::Http>;
+
+/// An Anchor Contract Watcher that watches for the Anchor contract events and calls the event
+/// handlers.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct AnchorContractWatcher;
+
+#[async_trait::async_trait]
+impl super::EventWatcher for AnchorContractWatcher {
+    const TAG: &'static str = "Anchor Contract Watcher";
+
+    type Middleware = HttpProvider;
+
+    type Contract = AnchorContractWrapper<Self::Middleware>;
+
+    type Events = FixedDepositAnchorContractEvents;
+
+    type Store = SledStore;
+}
+
+/// An VAnchor Contract Watcher that watches for the Anchor contract events and calls the event
+/// handlers.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct VAnchorContractWatcher;
+
+#[async_trait::async_trait]
+impl super::EventWatcher for VAnchorContractWatcher {
+    const TAG: &'static str = "VAnchor Contract Watcher";
+
+    type Middleware = HttpProvider;
+
+    type Contract = VAnchorContractWrapper<Self::Middleware>;
+
+    type Events = VAnchorContractEvents;
+
+    type Store = SledStore;
 }

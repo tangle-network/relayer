@@ -110,9 +110,8 @@ describe.skip('SignatureBridge Governor Updates', function () {
     let chainId = await charlieNode.getChainId();
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
-      chainId: chainId
+      chainId: chainId,
     });
-
 
     // we need to wait until the public key is on chain.
     await charlieNode.waitForEvent({

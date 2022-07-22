@@ -25,7 +25,11 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { WebbRelayer, Pallet, LeavesCacheResponse } from '../../lib/webbRelayer.js';
+import {
+  WebbRelayer,
+  Pallet,
+  LeavesCacheResponse,
+} from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
   UsageMode,
@@ -197,7 +201,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       fee: fee.toString(),
     };
 
-    const data = await provingManager.prove('vanchor', setup) as VAnchorProof;
+    const data = (await provingManager.prove('vanchor', setup)) as VAnchorProof;
     const extData = {
       relayer: address,
       recipient: address,
@@ -244,10 +248,13 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const chainIdHex = chainIdentifier.toString(16);
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
-    const response = await webbRelayer.getLeavesSubstrate(chainIdHex, treeId.toString());
+    const response = await webbRelayer.getLeavesSubstrate(
+      chainIdHex,
+      treeId.toString()
+    );
     expect(response.status).equal(200);
     let leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    leavesStore.then(resp => {
+    leavesStore.then((resp) => {
       expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
     });
   });

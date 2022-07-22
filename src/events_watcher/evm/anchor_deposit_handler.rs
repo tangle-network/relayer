@@ -19,15 +19,16 @@ use crate::store::EventHashStore;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::FixedDepositAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-use webb::evm::ethers::providers;
 use webb_proposals::evm::AnchorUpdateProposal;
-type HttpProvider = providers::Provider<providers::Http>;
-/// Represents an Anchor Contract Watcher which will use a configured signing backend for signing proposals.
-pub struct AnchorWatcher<B> {
+
+/// Represents an Anchor Contract Deposit Event Watcher which will use a configured signing backend for signing proposals.
+///
+/// This mainly watching for Deposit events which then will create [`AnchorUpdateProposal`]s and send them to the signing backend.
+pub struct AnchorDepositHandler<B> {
     proposal_signing_backend: B,
 }
 
-impl<B> AnchorWatcher<B>
+impl<B> AnchorDepositHandler<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal>,
 {
@@ -39,12 +40,11 @@ where
 }
 
 #[async_trait::async_trait]
-impl<B> super::EventWatcher for AnchorWatcher<B>
+impl<B> super::EventHandler for AnchorDepositHandler<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {
-    const TAG: &'static str = "Anchor Watcher";
-    type Middleware = HttpProvider;
+    type Middleware = super::HttpProvider;
 
     type Contract = AnchorContractWrapper<Self::Middleware>;
 
