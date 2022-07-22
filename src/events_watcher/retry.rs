@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use backoff::backoff::Backoff;
 
-/// Contant is a backoff policy which always returns
+/// Constant with Max Retry Count is a backoff policy which always returns
 /// a constant duration, until it exceeds the maximum retry count.
 #[derive(Debug)]
 pub struct ConstantWithMaxRetryCount {
@@ -12,8 +12,9 @@ pub struct ConstantWithMaxRetryCount {
 }
 
 impl ConstantWithMaxRetryCount {
-    /// Creates a new Constant backoff with `interval` contant
-    /// backoff and max retry count `max_retry_count`.
+    /// Creates a new Constant backoff with `interval` and `max_retry_count`.
+    /// `interval` is the duration to wait between retries, and `max_retry_count` is the maximum
+    /// number of retries, after which we return `None` to indicate that we should stop retrying.
     pub fn new(interval: Duration, max_retry_count: usize) -> Self {
         Self {
             interval,

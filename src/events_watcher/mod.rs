@@ -163,6 +163,7 @@ pub trait EventWatcher {
                         // that specific handler.
                         const MAX_RETRY_COUNT: usize = 5;
                         let tasks = handlers.iter().map(|handler| {
+                            // a constant backoff with maximum retry count is used here.
                             let backoff = retry::ConstantWithMaxRetryCount::new(
                                 Duration::from_millis(100),
                                 MAX_RETRY_COUNT,
