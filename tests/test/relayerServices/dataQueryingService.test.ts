@@ -108,7 +108,7 @@ describe('Data Querying Service', function () {
       signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       features: { privateTxRelay: false },
-      withdrawConfig: defaultWithdrawConfigValue
+      withdrawConfig: defaultWithdrawConfigValue,
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,

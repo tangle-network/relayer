@@ -195,13 +195,15 @@ describe('VAnchor Governance Relayer', function () {
       chainId: localChain1.chainId.toString(),
     });
 
-    const leaves = vanchor1.tree.elements().map((el) => hexToU8a(el.toHexString()));
+    const leaves = vanchor1.tree
+      .elements()
+      .map((el) => hexToU8a(el.toHexString()));
 
     await vanchor1.transact(
       [],
       [depositUtxo],
       {
-        [localChain1.chainId]: leaves
+        [localChain1.chainId]: leaves,
       },
       '0',
       '0',

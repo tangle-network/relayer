@@ -109,8 +109,7 @@ describe('EVM Transaction Relayer', function () {
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
-      withdrawConfig: defaultWithdrawConfigValue
-      
+      withdrawConfig: defaultWithdrawConfigValue,
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
@@ -205,8 +204,8 @@ describe('EVM Transaction Relayer', function () {
     );
     expect(response.status).equal(200);
     let leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    leavesStore.then(resp => {
-        expect(noOfDeposit).to.equal(resp.leaves.length);
+    leavesStore.then((resp) => {
+      expect(noOfDeposit).to.equal(resp.leaves.length);
     });
   });
 
@@ -448,6 +447,7 @@ async function initWithdrawal(
   await webbRelayer.ping();
 
   return {
-    publicInputs, extData
+    publicInputs,
+    extData,
   };
 }

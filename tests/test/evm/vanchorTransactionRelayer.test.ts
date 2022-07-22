@@ -22,9 +22,7 @@ import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo } from '@webb-tools/sdk-core';
 import { ethers } from 'ethers';
 import temp from 'temp';
-import {
-  LocalChain,
-} from '../../lib/localTestnet.js';
+import { LocalChain } from '../../lib/localTestnet.js';
 import {
   EnabledContracts,
   LeavesCacheResponse,
@@ -192,14 +190,14 @@ describe('Vanchor Transaction relayer', function () {
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
-    
+
     // Make 5 deposits
     for (let i = 0; i < 5; i++) {
       // Define inputs/outputs utxo for transact function
       const depositUtxo = await CircomUtxo.generateUtxo({
         curve: 'Bn254',
         backend: 'Circom',
-        amount: 1e2.toString(),
+        amount: (1e2).toString(),
         originChainId: localChain1.chainId.toString(),
         chainId: localChain1.chainId.toString(),
       });
@@ -224,7 +222,7 @@ describe('Vanchor Transaction relayer', function () {
     );
     expect(response.status).equal(200);
     let leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    leavesStore.then(resp => {
+    leavesStore.then((resp) => {
       expect(resp.leaves.length).to.equal(10);
     });
   });

@@ -20,25 +20,25 @@ import {
   Note,
   NoteGenInput,
   ProvingManagerSetupInput,
-  ArkworksProvingManager
+  ArkworksProvingManager,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Mixer Transaction Relayer', function() {
+describe('Substrate Mixer Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
 
   let webbRelayer: WebbRelayer;
-  
+
   before(async () => {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../protocol-substrate/target/release/webb-standalone-node'
-        ),
-      };
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../protocol-substrate/target/release/webb-standalone-node'
+          ),
+        };
 
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
@@ -57,14 +57,14 @@ describe('Substrate Mixer Transaction Relayer', function() {
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
-    
+
     let chainId = await aliceNode.getChainId();
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
-      chainId: chainId
+      chainId: chainId,
     });
-    
+
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
@@ -233,7 +233,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.match(/InvalidWithdrawProof/gmi);
+      expect(e).to.match(/InvalidWithdrawProof/gim);
     }
   });
 
@@ -276,7 +276,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       console.log(e);
       expect(e).to.not.be.null;
-      expect(e).to.match(/UnknownRoot/gmi);
+      expect(e).to.match(/UnknownRoot/gim);
     }
   });
 
@@ -312,7 +312,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.match(/InvalidWithdrawProof/gmi);
+      expect(e).to.match(/InvalidWithdrawProof/gim);
     }
   });
 
@@ -355,7 +355,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.match(/InvalidWithdrawProof/gmi);
+      expect(e).to.match(/InvalidWithdrawProof/gim);
     }
   });
 
@@ -428,8 +428,14 @@ async function createMixerWithdrawProof(
       ''
     );
     const treeId = 0;
-    const leafCount: number = await api.derive.merkleTreeBn254.getLeafCountForTree(treeId)
-    const treeLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(treeId, 0, leafCount-1);
+    const leafCount: number =
+      await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
+    const treeLeaves: Uint8Array[] =
+      await api.derive.merkleTreeBn254.getLeavesForTree(
+        treeId,
+        0,
+        leafCount - 1
+      );
     const provingManager = new ArkworksProvingManager(null);
     const leafHex = u8aToHex(note.getLeaf());
     const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
