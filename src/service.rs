@@ -142,6 +142,7 @@ pub async fn ignite(
         if !node_config.enabled {
             continue;
         }
+        let chain_id = U256::from(node_config.chain_id);
         match node_config.runtime {
             SubstrateRuntime::Dkg => {
                 let client = ctx
@@ -254,7 +255,12 @@ pub async fn ignite(
             }
         };
         // start the transaction queue after starting other tasks.
-        // start_substrate_tx_queue(ctx.clone(), node_name.clone(), chain_id, store.clone())?;
+        start_substrate_tx_queue(
+            ctx.clone(),
+            node_name.clone(),
+            chain_id,
+            store.clone(),
+        )?;
     }
     Ok(())
 }

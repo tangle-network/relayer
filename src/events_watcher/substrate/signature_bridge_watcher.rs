@@ -181,13 +181,13 @@ where
             data = ?data_hex,
             signature = ?signature_hex,
         );
-        
+
         // Enqueue transaction call data in substrate transaction queue
         let execute_proposal_call = execute_proposal {
             src_id: chain_id.as_u64(),
             call: Box::new(proposal_encoded_call),
             proposal_data: data,
-            signature: signature,
+            signature,
         };
         // SCALE encode call data to bytes (pallet u8, call u8, call params).
         let call_data = {
