@@ -32,12 +32,14 @@
 //! These config files can be changed to your preferences.
 use std::collections::HashMap;
 use std::path::Path;
-use std::str::FromStr;
 
-use ethereum_types::{Address, Secret, U256};
+use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
-use webb::substrate::subxt::sp_core::sr25519::{Pair as Sr25519Pair, Public};
-use webb::substrate::subxt::sp_core::Pair;
+use webb::substrate::subxt::sp_core::sr25519::Public;
+
+use crate::types::private_key::PrivateKey;
+use crate::types::rpc_url::RpcUrl;
+use crate::types::suri::Suri;
 
 /// The default port the relayer will listen on. Defaults to 9955.
 const fn default_port() -> u16 {
@@ -52,7 +54,7 @@ const fn enable_data_query_default() -> bool {
     true
 }
 /// The maximum events per step is set to `100` by default.
-const fn max_events_per_step_default() -> u64 {
+const fn max_blocks_per_step_default() -> u64 {
     100
 }
 /// The print progress interval is set to `7_000` by default.
@@ -95,24 +97,26 @@ pub struct WebbRelayerConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EvmChainConfig {
+    /// String that groups configuration for this chain on a human-readable name.
+    pub name: String,
     /// Boolean indicating EVM based networks are enabled or not.
     #[serde(default)]
     pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
     #[serde(skip_serializing)]
-    pub http_endpoint: url::Url,
+    pub http_endpoint: RpcUrl,
     /// Websocket Endpoint for long living connections
     #[serde(skip_serializing)]
-    pub ws_endpoint: url::Url,
+    pub ws_endpoint: RpcUrl,
     /// Block Explorer for this chain.
     ///
     /// Optional, and only used for printing a clickable links
     /// for transactions and contracts.
     #[serde(skip_serializing)]
     pub explorer: Option<url::Url>,
-    /// chain specific id.
+    /// chain specific id (output of chainId opcode on EVM networks)
     #[serde(rename(serialize = "chainId"))]
-    pub chain_id: u64,
+    pub chain_id: u32,
     /// The Private Key of this account on this network
     /// the format is more dynamic here:
     /// 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
@@ -145,21 +149,26 @@ pub struct EvmChainConfig {
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SubstrateConfig {
+    /// String that groups configuration for this chain on a human-readable name.
+    pub name: String,
     /// Boolean indicating Substrate networks are enabled or not.
     #[serde(default)]
     pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
     #[serde(skip_serializing)]
-    pub http_endpoint: url::Url,
+    pub http_endpoint: RpcUrl,
     /// Websocket Endpoint for long living connections
     #[serde(skip_serializing)]
-    pub ws_endpoint: url::Url,
+    pub ws_endpoint: RpcUrl,
     /// Block Explorer for this Substrate node.
     ///
     /// Optional, and only used for printing a clickable links
     /// for transactions and contracts.
     #[serde(skip_serializing)]
     pub explorer: Option<url::Url>,
+    /// chain specific id (output of ChainIdentifier constant on LinkableTree Pallet)
+    #[serde(rename(serialize = "chainId"))]
+    pub chain_id: u32,
     /// Interprets the string in order to generate a key Pair. in the
     /// case that the pair can be expressed as a direct derivation from a seed (some cases, such as Sr25519 derivations
     /// with path components, cannot).
@@ -260,8 +269,8 @@ pub struct EventsWatcherConfig {
     #[serde(rename(serialize = "pollingInterval"))]
     pub polling_interval: u64,
     /// The maximum number of events to fetch in one request.
-    #[serde(skip_serializing, default = "max_events_per_step_default")]
-    pub max_events_per_step: u64,
+    #[serde(skip_serializing, default = "max_blocks_per_step_default")]
+    pub max_blocks_per_step: u64,
     /// print sync progress frequency in milliseconds
     /// if it is zero, means no progress will be printed.
     #[serde(skip_serializing, default = "print_progress_interval_default")]
@@ -444,9 +453,9 @@ pub struct AnchorBn254PalletConfig {
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
-    /// A List of linked Anchor Contracts (on other chains) to this contract.
+    ///A List of linked Anchor on this chain.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
+    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
 }
 
 /// SignatureBridgePalletConfig represents the configuration for the SignatureBridge pallet.
@@ -465,6 +474,12 @@ pub struct VAnchorBn254PalletConfig {
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+    /// A List of linked Anchor on this chain.
+    #[serde(rename(serialize = "linkedAnchors"), default)]
+    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
 }
 
 /// Enumerates the supported different signing backends configurations.
@@ -497,163 +512,6 @@ pub struct MockedProposalSigningBackendConfig {
     pub private_key: PrivateKey,
 }
 
-/// PrivateKey represents a private key.
-#[derive(Clone)]
-pub struct PrivateKey(Secret);
-
-impl std::fmt::Debug for PrivateKey {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("PrivateKey").finish()
-    }
-}
-
-impl std::ops::Deref for PrivateKey {
-    type Target = Secret;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<'de> Deserialize<'de> for PrivateKey {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct PrivateKeyVistor;
-        impl<'de> serde::de::Visitor<'de> for PrivateKeyVistor {
-            type Value = Secret;
-
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter,
-            ) -> std::fmt::Result {
-                formatter.write_str(
-                    "hex string or an env var containing a hex string in it",
-                )
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                if value.starts_with("0x") {
-                    // hex value
-                    let maybe_hex = Secret::from_str(value);
-                    match maybe_hex {
-                        Ok(val) => Ok(val),
-                        Err(e) => Err(serde::de::Error::custom(format!("{}\n got {} but expected a 66 string (including the 0x prefix)", e, value.len()))),
-                    }
-                } else if value.starts_with('$') {
-                    // env
-                    let var = value.strip_prefix('$').unwrap_or(value);
-                    tracing::trace!("Reading {} from env", var);
-                    let val = std::env::var(var).map_err(|e| {
-                        serde::de::Error::custom(format!(
-                            "error while loading this env {}: {}",
-                            var, e,
-                        ))
-                    })?;
-                    let maybe_hex = Secret::from_str(&val);
-                    match maybe_hex {
-                        Ok(val) => Ok(val),
-                        Err(e) => Err(serde::de::Error::custom(format!("{}\n expected a 66 chars string (including the 0x prefix) but found {} char", e,  val.len()))),
-                    }
-                } else if value.starts_with('>') {
-                    todo!("Implement command execution to extract the private key")
-                } else {
-                    todo!("Parse the string as mnemonic seed.")
-                }
-            }
-        }
-
-        let secret = deserializer.deserialize_str(PrivateKeyVistor)?;
-        Ok(Self(secret))
-    }
-}
-
-#[derive(Clone)]
-pub struct Suri(Sr25519Pair);
-
-impl std::fmt::Debug for Suri {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("SubstratePrivateKey").finish()
-    }
-}
-
-impl From<Suri> for Sr25519Pair {
-    fn from(suri: Suri) -> Self {
-        suri.0
-    }
-}
-
-impl std::ops::Deref for Suri {
-    type Target = Sr25519Pair;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<'de> Deserialize<'de> for Suri {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        struct PrivateKeyVistor;
-        impl<'de> serde::de::Visitor<'de> for PrivateKeyVistor {
-            type Value = Sr25519Pair;
-
-            fn expecting(
-                &self,
-                formatter: &mut std::fmt::Formatter,
-            ) -> std::fmt::Result {
-                formatter.write_str(
-                    "hex string, dervation path or an env var containing a hex string in it",
-                )
-            }
-
-            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                if value.starts_with('$') {
-                    // env
-                    let var = value.strip_prefix('$').unwrap_or(value);
-                    tracing::trace!("Reading {} from env", var);
-                    let val = std::env::var(var).map_err(|e| {
-                        serde::de::Error::custom(format!(
-                            "error while loading this env {}: {}",
-                            var, e,
-                        ))
-                    })?;
-                    let maybe_pair =
-                        Sr25519Pair::from_string_with_seed(&val, None);
-                    match maybe_pair {
-                        Ok((pair, _)) => Ok(pair),
-                        Err(e) => {
-                            Err(serde::de::Error::custom(format!("{:?}", e)))
-                        }
-                    }
-                } else if value.starts_with('>') {
-                    todo!("Implement command execution to extract the private key")
-                } else {
-                    let maybe_pair =
-                        Sr25519Pair::from_string_with_seed(value, None);
-                    match maybe_pair {
-                        Ok((pair, _)) => Ok(pair),
-                        Err(e) => {
-                            Err(serde::de::Error::custom(format!("{:?}", e)))
-                        }
-                    }
-                }
-            }
-        }
-
-        let secret = deserializer.deserialize_str(PrivateKeyVistor)?;
-        Ok(Self(secret))
-    }
-}
 /// Load the configuration files and
 ///
 /// Returns `Ok(WebbRelayerConfig)` on success, or `Err(anyhow::Error)` on failure.
@@ -748,8 +606,8 @@ fn postloading_process(
         .filter(|(_, chain)| chain.enabled)
         .collect::<HashMap<_, _>>();
     // 2. insert them again, as lowercased.
-    for (k, v) in old_evm {
-        config.evm.insert(k.to_lowercase(), v);
+    for (_, v) in old_evm {
+        config.evm.insert(v.chain_id.to_string(), v);
     }
     // do the same for substrate
     let old_substrate = config
@@ -757,11 +615,11 @@ fn postloading_process(
         .drain()
         .filter(|(_, chain)| chain.enabled)
         .collect::<HashMap<_, _>>();
-    for (k, v) in old_substrate {
-        config.substrate.insert(k.to_lowercase(), v);
+    for (_, v) in old_substrate {
+        config.substrate.insert(v.chain_id.to_string(), v);
     }
     // check that all required chains are already present in the config.
-    for (chain_name, chain_config) in &config.evm {
+    for (chain_id, chain_config) in &config.evm {
         let anchors = chain_config.contracts.iter().filter_map(|c| match c {
             Contract::Anchor(cfg) => Some(cfg),
             _ => None,
@@ -827,16 +685,19 @@ fn postloading_process(
                             );
                         } else {
                             for linked_anchor in linked_anchors {
-                                let chain = linked_anchor.chain.to_lowercase();
-                                let chain_defined =
-                                    config.evm.contains_key(&chain);
-                                if !chain_defined {
+                                let chain = linked_anchor.chain.clone();
+                                let chain_defined = config
+                                    .evm
+                                    .clone()
+                                    .into_values()
+                                    .find(|x| x.name.eq(&chain));
+                                if chain_defined.is_none() {
                                     tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
                                         which is required by the Anchor Contract ({}) defined on {} chain.
                                         Please, define it manually, to allow the relayer to work properly.",
                                         chain,
                                         anchor.common.address,
-                                        chain_name
+                                        chain_id
                                     );
                                 }
                             }
@@ -914,16 +775,19 @@ fn postloading_process(
                             );
                         } else {
                             for linked_anchor in linked_anchors {
-                                let chain = linked_anchor.chain.to_lowercase();
-                                let chain_defined =
-                                    config.evm.contains_key(&chain);
-                                if !chain_defined {
+                                let chain = linked_anchor.chain.clone();
+                                let chain_defined = config
+                                    .evm
+                                    .clone()
+                                    .into_values()
+                                    .find(|x| x.name.eq(&chain));
+                                if chain_defined.is_none() {
                                     tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
                                         which is required by the Anchor Contract ({}) defined on {} chain.
                                         Please, define it manually, to allow the relayer to work properly.",
                                         chain,
                                         anchor.common.address,
-                                        chain_name
+                                        chain_id
                                     );
                                 }
                             }

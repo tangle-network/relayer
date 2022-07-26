@@ -1,0 +1,69 @@
+# Block which represents properties for a network
+[evm.goerli]
+# Http(s) Endpoint for quick Req/Res
+http-endpoint = "$GOERLI_HTTPS_URL"
+# Websocket Endpoint for long living connections
+ws-endpoint = "$GOERLI_WSS_URL"
+# Block Explorer
+# Optinal, and used for generating clickable links
+# for transactions that happen on this chain.
+explorer = "https://goerli.etherscan.io"
+# chain specific id from evm opcode
+chain-id = 5
+# The Private Key of this account on this network
+# the format is more dynamic here:
+# 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
+#    private key.
+#    Example: 0x8917174396171783496173419137618235192359106130478137647163400318
+#
+# 2. if it starts with '$' then it would be considered as an Enviroment variable
+#    of a hex-encoded private key.
+#    Example: $GOERLI_PRIVATE_KEY
+#
+# 3. if it starts with '> ' then it would be considered as a command that
+#    the relayer would execute and the output of this command would be the
+#    hex encoded private key.
+#    Example: > ./getKey.sh goerli-privatekey
+#
+# 4. if it doesn't contains special characters and has 12 or 24 words in it
+#    then we should process it as a mnemonic string: 'word two three four ...'
+private-key = "$GOERLI_PRIVATE_KEY"
+# Value to indicate that the relayer should enable services for this chain
+enabled = true
+
+# Block which represents the configuration for a supported contract on the network
+[[evm.goerli.contracts]]
+# The contract can be one of these values
+# - Anchor (Fixed Anchor)
+# - VAnchor (Variable Anchor)
+# - SignatureBridge
+contract = "VAnchor"
+# The address of the contract
+address = "0x682faa319bf7bae7f0cb68435e857d22bf976e17"
+# The deployed block number of the contract. When a relayer does not have information for
+# this contract in its store, it will start to sync and query for relevant historical data
+# starting at this block number
+deployed-at = 7146565
+# The minimum size configured for deposit / withdraw on the contract
+size = 0.01
+# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
+# and the polling interval specifies the period of time (in ms) that the events-watcher thread
+# will wait before issuing another query for new events.
+events-watcher = { enabled = true, polling-interval = 15000 }
+# Configuration related to withdraw (for private transaction relaying)
+#    - withdraw-gasLimit: Value which specifies the maximum amount of gas which will be used when
+#                         submitting a withdraw transaction
+#    - withdraw-fee-percentage: Value which specifies the fees that this relayer will collect upon
+#                               submitting a withdraw transaction
+withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
+# Entries for this anchor contract's connected edges.
+# These fields are used to determine the generation of AnchorUpdate proposals
+linked-anchors = [
+  { chain = "arbitrumtestnet", address = "0x4953110789d0cb6de126f4ea88890670ccfe6906" },
+  { chain = "ropsten", address = "0x66e04f6ae26c310e39f5bf24d873909e6d3b64c7" },
+  { chain = "kovan", address = "0x148e8037ea12834117f3efd9e8990c16c1ff5653" },
+  { chain = "polygontestnet", address = "0x1371efed369498718bee3eb5d58e5d3dec86be85" },
+  { chain = "optimismtestnet", address = "0x5353cede4b8fea148fb1f66f45d3ec27bff2224d" },
+  { chain = "rinkeby", address = "0x91127f21d63029eb5b2de05b4b1e9fd3497ee95b"},
+  { chain = "moonbase", address = "0x0c5f4951f42eec082bd1356b9b41928b4f0e7542"}
+]

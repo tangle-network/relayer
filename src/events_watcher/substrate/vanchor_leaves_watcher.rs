@@ -28,7 +28,7 @@ pub struct SubstrateVAnchorLeavesWatcher;
 
 #[async_trait::async_trait]
 impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
-    const TAG: &'static str = "Substrate vanchor leaves watcher";
+    const TAG: &'static str = "Substrate V-Anchor leaves watcher";
 
     type RuntimeConfig = subxt::DefaultConfig;
 

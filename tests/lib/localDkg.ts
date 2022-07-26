@@ -17,6 +17,7 @@
 /// A Helper Class to Start and Manage a Local DKG Node.
 /// This Could be through a Docker Container or a Local Compiled node.
 
+import '@webb-tools/types';
 import { spawn } from 'child_process';
 import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import isCI from 'is-ci';
@@ -118,6 +119,12 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       return null;
     }
   }
+  // get chainId
+  public async getChainId(): Promise<number> {
+    const api = await super.api();
+    let chainId = (await api.consts.dkgProposals.chainIdentifier).toNumber();
+    return chainId;
+  }
 
   public async exportConfig(
     opts: ExportedConfigOptions
@@ -125,12 +132,14 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     const host = isCI ? 'localhost' : '127.0.0.1';
     const nodeInfo: FullNodeInfo = {
+      name: 'localDKG',
       enabled: true,
       httpEndpoint: `http://${host}:${ports.http}`,
       wsEndpoint: `ws://${host}:${ports.ws}`,
       runtime: 'DKG',
       pallets: this.opts.enabledPallets ?? [],
       suri: opts.suri,
+      chainId: opts.chainId,
     };
     return nodeInfo;
   }

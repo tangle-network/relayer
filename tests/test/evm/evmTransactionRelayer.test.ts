@@ -18,7 +18,7 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
+import { Bridges, Tokens, Anchors } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
@@ -30,7 +30,6 @@ import {
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { IAnchor } from '@webb-tools/interfaces';
 import { IAnchorDeposit } from '@webb-tools/interfaces/src/anchor';
 import { u8aToHex } from '@polkadot/util';
 
@@ -110,8 +109,7 @@ describe('EVM Transaction Relayer', function () {
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
-      withdrawConfig: defaultWithdrawConfigValue
-      
+      withdrawConfig: defaultWithdrawConfigValue,
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
@@ -206,8 +204,8 @@ describe('EVM Transaction Relayer', function () {
     );
     expect(response.status).equal(200);
     let leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    leavesStore.then(resp => {
-        expect(noOfDeposit).to.equal(resp.leaves.length);
+    leavesStore.then((resp) => {
+      expect(noOfDeposit).to.equal(resp.leaves.length);
     });
   });
 
@@ -246,7 +244,7 @@ describe('EVM Transaction Relayer', function () {
     let webbBalanceOfRecipient = await token.getBalance(recipient.address);
     let initialBalanceOfRecipient = webbBalanceOfRecipient.toBigInt();
 
-    const { args, publicInputs, extData } = await anchor1.setupWithdraw(
+    const { publicInputs, extData } = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
       recipient.address,
@@ -257,14 +255,12 @@ describe('EVM Transaction Relayer', function () {
       ).toBigInt(),
       0
     );
-    const [proofEncoded, roots, nullifierHash, extDataHash] = args;
     // ping the relayer!
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
-      localChain1.underlyingChainId.toString(),
+      localChain1.underlyingChainId,
       anchor1.getAddress(),
-      proofEncoded,
       publicInputs,
       extData
     );
@@ -287,7 +283,7 @@ describe('EVM Transaction Relayer', function () {
       localChain1.chainId
     );
 
-    const [proofEncoded, publicInputs, extData] = await initWithdrawal(
+    const { publicInputs, extData } = await initWithdrawal(
       localChain1,
       webbRelayer,
       anchor1,
@@ -298,9 +294,8 @@ describe('EVM Transaction Relayer', function () {
     // now send the withdrawal request with a wrong recipient address
     try {
       await webbRelayer.anchorWithdraw(
-        localChain1.underlyingChainId.toString(),
+        localChain1.underlyingChainId,
         wallet2.address,
-        proofEncoded,
         publicInputs,
         extData
       );
@@ -320,7 +315,7 @@ describe('EVM Transaction Relayer', function () {
       localChain1.chainId
     );
 
-    const [proofEncoded, publicInputs, extData] = await initWithdrawal(
+    let { publicInputs, extData } = await initWithdrawal(
       localChain1,
       webbRelayer,
       anchor1,
@@ -329,13 +324,13 @@ describe('EVM Transaction Relayer', function () {
     );
 
     const invalidProof = '0xef4b4f4d7554be477e828636a4e69b3f44d18ec0';
+    publicInputs.proof = invalidProof;
 
     // now send the withdrawal request with a wrong recipient address
     try {
       await webbRelayer.anchorWithdraw(
-        localChain1.underlyingChainId.toString(),
+        localChain1.underlyingChainId,
         anchor1.getAddress(),
-        invalidProof,
         publicInputs,
         extData
       );
@@ -357,7 +352,7 @@ describe('EVM Transaction Relayer', function () {
       localChain1.chainId
     );
 
-    const [proofEncoded, publicInputs, extData] = await initWithdrawal(
+    const { publicInputs, extData } = await initWithdrawal(
       localChain1,
       webbRelayer,
       anchor1,
@@ -369,9 +364,8 @@ describe('EVM Transaction Relayer', function () {
     // now send the withdrawal request with a wrong recipient address
     try {
       await webbRelayer.anchorWithdraw(
-        localChain1.underlyingChainId.toString(),
+        localChain1.underlyingChainId,
         anchor1.getAddress(),
-        proofEncoded,
         publicInputs,
         extData
       );
@@ -391,7 +385,7 @@ describe('EVM Transaction Relayer', function () {
 async function setUpAnchor(
   signatureBridge: Bridges.SignatureBridge,
   chainId: number
-): Promise<any> {
+): Promise<Anchors.Anchor> {
   const anchor1 = signatureBridge.getAnchor(
     chainId,
     ethers.utils.parseEther('1')
@@ -401,7 +395,7 @@ async function setUpAnchor(
 }
 async function makeDeposit(
   signatureBridge: Bridges.SignatureBridge,
-  anchor: IAnchor,
+  anchor: Anchors.Anchor,
   wallet: ethers.Wallet,
   chainId: number
 ): Promise<IAnchorDeposit> {
@@ -426,7 +420,7 @@ async function makeDeposit(
 async function initWithdrawal(
   localChain: LocalChain,
   webbRelayer: WebbRelayer,
-  anchor: IAnchor,
+  anchor: Anchors.Anchor,
   wallet: ethers.Wallet,
   depositInfo: IAnchorDeposit
 ): Promise<any> {
@@ -441,7 +435,7 @@ async function initWithdrawal(
     localChain1Info?.contracts.find(
       (c) => c.address === anchor.contract.address
     )?.withdrawConfig?.withdrawFeePercentage ?? 0;
-  const { args, publicInputs, extData } = await anchor.setupWithdraw(
+  const { publicInputs, extData } = await anchor.setupWithdraw(
     depositInfo.deposit,
     depositInfo.index,
     recipient.address,
@@ -449,9 +443,11 @@ async function initWithdrawal(
     calculateRelayerFees(anchor.denomination!, relayerFeePercentage).toBigInt(),
     0
   );
-  const [proofEncoded, roots, nullifierHash, extDataHash] = args;
   // ping the relayer!
   await webbRelayer.ping();
 
-  return [proofEncoded, publicInputs, extData];
+  return {
+    publicInputs,
+    extData,
+  };
 }

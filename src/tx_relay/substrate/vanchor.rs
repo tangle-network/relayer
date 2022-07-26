@@ -2,7 +2,7 @@ use webb::substrate::subxt::sp_runtime::AccountId32;
 use webb::substrate::{
     protocol_substrate_runtime::api::{
         runtime_types::{
-            webb_primitives::types::vanchor, webb_standalone_runtime::Element,
+            webb_primitives::runtime::Element, webb_primitives::types::vanchor,
         },
         RuntimeApi,
     },
@@ -62,9 +62,9 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             encrypted_output2: cmd.ext_data.encrypted_output2.to_vec(),
         };
 
-    let requested_chain = cmd.chain.to_lowercase();
+    let requested_chain = cmd.chain_id;
     let maybe_client = ctx
-        .substrate_provider::<DefaultConfig>(&requested_chain)
+        .substrate_provider::<DefaultConfig>(&requested_chain.to_string())
         .await;
     let client = match maybe_client {
         Ok(c) => c,
@@ -79,12 +79,15 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         subxt::SubstrateExtrinsicParams<DefaultConfig>,
     >>();
 
-    let pair = match ctx.substrate_wallet(&cmd.chain).await {
+    let pair = match ctx.substrate_wallet(&cmd.chain_id.to_string()).await {
         Ok(v) => v,
         Err(e) => {
             tracing::error!("Misconfigured Network: {}", e);
             let _ = stream
-                .send(Error(format!("Misconfigured Network: {:?}", cmd.chain)))
+                .send(Error(format!(
+                    "Misconfigured Network: {:?}",
+                    cmd.chain_id
+                )))
                 .await;
             return;
         }

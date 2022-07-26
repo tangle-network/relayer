@@ -23,10 +23,9 @@ import {
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
-import { BigNumber } from 'ethers';
-import { FullChainInfo } from './localTestnet';
-import { FullNodeInfo } from './substrateNodeBase';
+import { BigNumber, BigNumberish, ethers } from 'ethers';
 
+import { ChainIdType } from '../lib/webbProposals.js';
 export type WebbRelayerOptions = {
   port: number;
   tmp: boolean;
@@ -179,9 +178,8 @@ export class WebbRelayer {
   }
 
   public async anchorWithdraw(
-    chainName: string,
+    chainId: number,
     anchorAddress: string,
-    proof: `0x${string}`,
     publicInputs: IFixedAnchorPublicInputs,
     extData: IFixedAnchorExtData
   ): Promise<`0x${string}`> {
@@ -189,12 +187,12 @@ export class WebbRelayer {
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-    const input = { chainName, anchorAddress, proof, publicInputs, extData };
+    const input = { chainId, anchorAddress, publicInputs, extData };
     return txHashOrReject(ws, input);
   }
 
   public async substrateMixerWithdraw(inputs: {
-    chain: string;
+    chainId: number;
     id: number;
     proof: number[];
     root: number[];
@@ -211,7 +209,7 @@ export class WebbRelayer {
     const cmd = {
       substrate: {
         mixer: {
-          chain: inputs.chain,
+          chainId: inputs.chainId,
           id: inputs.id,
           proof: inputs.proof,
           root: inputs.root,
@@ -227,7 +225,7 @@ export class WebbRelayer {
   }
 
   public async substrateAnchorWithdraw(inputs: {
-    chain: string;
+    chainId: number;
     id: number;
     proof: number[];
     roots: number[][];
@@ -247,7 +245,7 @@ export class WebbRelayer {
     const cmd = {
       substrate: {
         anchor: {
-          chain: inputs.chain,
+          chainId: inputs.chainId,
           id: inputs.id,
           proof: inputs.proof,
           roots: inputs.roots,
@@ -263,6 +261,8 @@ export class WebbRelayer {
     };
     return substrateTxHashOrReject(ws, cmd);
   }
+
+  public async substrateVanchorWithdraw(): Promise<void> {}
 }
 
 export function calculateRelayerFees(
@@ -280,15 +280,13 @@ export function calculateRelayerFees(
 async function txHashOrReject(
   ws: WebSocket,
   {
-    chainName,
+    chainId,
     anchorAddress,
-    proof,
     publicInputs,
     extData,
   }: {
-    chainName: string;
+    chainId: number;
     anchorAddress: string;
-    proof: `0x${string}`;
     publicInputs: IFixedAnchorPublicInputs;
     extData: IFixedAnchorExtData;
   }
@@ -346,9 +344,9 @@ async function txHashOrReject(
     const cmd = {
       evm: {
         anchor: {
-          chain: chainName,
+          chainId: chainId,
           id: anchorAddress,
-          proof,
+          proof: publicInputs.proof,
           roots: publicInputs._roots,
           nullifierHash: publicInputs._nullifierHash,
           extDataHash: publicInputs._extDataHash,
@@ -480,6 +478,7 @@ export interface Evm {
 }
 
 export interface ChainInfo {
+  name: string;
   enabled: boolean;
   chainId: number;
   beneficiary?: string;
@@ -638,4 +637,38 @@ function parseRelayTxMessage(o: any): ParsedRelayerMessage {
   } else {
     return { kind: 'unknown' };
   }
+}
+
+// get typed chainId
+export function getChainIdType(
+  chainType: ChainIdType,
+  chainID: number
+): number {
+  const chainIdType =
+    toFixedHex(chainType, 2) + toFixedHex(chainID, 4).substr(2);
+  return Number(BigInt(chainIdType));
+}
+
+/** BigNumber to hex string of specified length */
+export function toFixedHex(number: BigNumberish, length: number): string {
+  let result =
+    '0x' +
+    (number instanceof Buffer
+      ? number.toString('hex')
+      : BigNumber.from(number.toString()).toHexString().replace('0x', '')
+    ).padStart(length * 2, '0');
+  if (result.indexOf('-') > -1) {
+    result = '-' + result.replace('-', '');
+  }
+  return result;
+}
+export function toHex(
+  covertThis: ethers.utils.BytesLike | number | bigint,
+  padding: number
+): string {
+  return ethers.utils.hexZeroPad(ethers.utils.hexlify(covertThis), padding);
+}
+
+export function convertToHexNumber(number: number): string {
+  return BigNumber.from(number.toString()).toHexString();
 }

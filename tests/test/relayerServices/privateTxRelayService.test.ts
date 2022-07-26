@@ -108,7 +108,7 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config set', func
       signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       features: { dataQuery: false, governanceRelay: false },
-      withdrawConfig: defaultWithdrawConfigValue
+      withdrawConfig: defaultWithdrawConfigValue,
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
@@ -196,7 +196,7 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config set', func
     let webbBalanceOfRecipient = await token.getBalance(recipient.address);
     let initialBalanceOfRecipient = webbBalanceOfRecipient.toBigInt();
 
-    const { args, publicInputs, extData } = await anchor1.setupWithdraw(
+    const { publicInputs, extData } = await anchor1.setupWithdraw(
       depositInfo.deposit,
       depositInfo.index,
       recipient.address,
@@ -207,14 +207,12 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config set', func
       ).toBigInt(),
       0
     );
-    const [proofEncoded, roots, nullifierHash, extDataHash] = args;
     // ping the relayer!
     await webbRelayer.ping();
     // now send the withdrawal request.
     const txHash = await webbRelayer.anchorWithdraw(
-      localChain1.underlyingChainId.toString(),
+      localChain1.underlyingChainId,
       anchor1.getAddress(),
-      proofEncoded,
       publicInputs,
       extData
     );
@@ -416,7 +414,6 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config not set', 
         'Misconfigured Network : (5001). Please set withdraw configuration.'
       );
     }
-    
   });
 
   after(async () => {

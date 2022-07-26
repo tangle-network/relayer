@@ -18,7 +18,6 @@
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import '@webb-tools/types';
-import { JsUtxo } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -26,13 +25,17 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { WebbRelayer, Pallet, LeavesCacheResponse } from '../../lib/webbRelayer.js';
+import {
+  WebbRelayer,
+  Pallet,
+  LeavesCacheResponse,
+} from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
   UsageMode,
   defaultEventsWatcherValue,
 } from '../../lib/substrateNodeBase.js';
-import { BigNumber } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
@@ -41,7 +44,9 @@ import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 import {
   Note,
   ProvingManagerSetupInput,
-  ProvingManagerWrapper,
+  ArkworksProvingManager,
+  Utxo,
+  VAnchorProof,
 } from '@webb-tools/sdk-core';
 
 describe('Substrate VAnchor Transaction Relayer Tests', function () {
@@ -50,6 +55,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
   let bobNode: LocalProtocolSubstrate;
 
   let webbRelayer: WebbRelayer;
+  const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -83,14 +89,17 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       ports: 'auto',
       enableLogging: false,
     });
-
-    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
-      suri: '//Charlie',
-    });
-
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
+
+    let chainId = await aliceNode.getChainId();
+
+    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
+      suri: '//Charlie',
+      chainId: chainId,
+      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+    });
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
@@ -113,8 +122,6 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
 
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
-
-    const outputAmount = '15';
 
     const chainId = '2199023256632';
     const outputChainId = BigInt(chainId);
@@ -145,31 +152,25 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       Number(outputChainId.toString()),
       0
     );
-    const note2 = note1.getDefaultUtxoNote();
+    const note2 = await note1.getDefaultUtxoNote();
     const publicAmount = currencyToUnitI128(10);
     const notes = [note1, note2];
     // Output UTXOs configs
-    const output1 = new JsUtxo(
-      'Bn254',
-      'Arkworks',
-      2,
-      2,
-      publicAmount.toString(),
+    const output1 = await Utxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Arkworks',
+      amount: publicAmount.toString(),
       chainId,
-      undefined
-    );
-    const output2 = new JsUtxo(
-      'Bn254',
-      'Arkworks',
-      2,
-      2,
-      '0',
+    });
+    const output2 = await Utxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Arkworks',
+      amount: '0',
       chainId,
-      undefined
-    );
+    });
 
     // Configure a new proving manager with direct call
-    const provingManager = new ProvingManagerWrapper('direct-call');
+    const provingManager = new ArkworksProvingManager(null);
     const leavesMap: any = {};
 
     const address = account.address;
@@ -187,7 +188,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const setup: ProvingManagerSetupInput<'vanchor'> = {
       chainId: outputChainId.toString(),
       indices: [0, 0],
-      inputNotes: notes.map((note) => note.serialize()),
+      inputNotes: notes,
       leavesMap: leavesMap,
       output: [output1, output2],
       encryptedCommitments: [comEnc1, comEnc2],
@@ -200,7 +201,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       fee: fee.toString(),
     };
 
-    const data = await provingManager.prove('vanchor', setup);
+    const data = (await provingManager.prove('vanchor', setup)) as VAnchorProof;
     const extData = {
       relayer: address,
       recipient: address,
@@ -216,7 +217,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       roots: rootsSet,
       inputNullifiers: data.inputUtxos.map((input) => `0x${input.nullifier}`),
       outputCommitments: data.outputNotes.map((note) =>
-        u8aToHex(note.getLeafCommitment())
+        u8aToHex(note.note.getLeafCommitment())
       ),
       extDataHash: data.extDataHash,
     };
@@ -243,14 +244,17 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     });
 
     // chainId
-    const chainIdentifier = 1080;
+    let chainIdentifier = await aliceNode.getChainId();
     const chainIdHex = chainIdentifier.toString(16);
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
-    const response = await webbRelayer.getLeavesSubstrate(chainIdHex, treeId.toString());
+    const response = await webbRelayer.getLeavesSubstrate(
+      chainIdHex,
+      treeId.toString()
+    );
     expect(response.status).equal(200);
     let leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    leavesStore.then(resp => {
+    leavesStore.then((resp) => {
       expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
     });
   });

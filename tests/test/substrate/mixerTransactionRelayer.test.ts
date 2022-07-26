@@ -20,10 +20,10 @@ import {
   Note,
   NoteGenInput,
   ProvingManagerSetupInput,
-  ProvingManagerWrapper,
+  ArkworksProvingManager,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Mixer Transaction Relayer', function() {
+describe('Substrate Mixer Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -34,11 +34,11 @@ describe('Substrate Mixer Transaction Relayer', function() {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../protocol-substrate/target/release/webb-standalone-node'
-        ),
-      };
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../protocol-substrate/target/release/webb-standalone-node'
+          ),
+        };
 
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
@@ -54,13 +54,17 @@ describe('Substrate Mixer Transaction Relayer', function() {
       ports: 'auto',
     });
 
-    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
-      suri: '//Charlie',
-    });
-
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
+
+    let chainId = await aliceNode.getChainId();
+
+    await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
+      suri: '//Charlie',
+      chainId: chainId,
+    });
+
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
@@ -87,10 +91,12 @@ describe('Substrate Mixer Transaction Relayer', function() {
     let { nonce, data: balance } = await api.query.system.account(
       withdrawalProof.recipient
     );
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     let initialBalance = balance.free.toBigInt();
     // now we need to submit the withdrawal transaction.
     const txHash = await webbRelayer.substrateMixerWithdraw({
-      chain: aliceNode.name,
+      chainId: chainId,
       id: withdrawalProof.id,
       proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
       root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -121,12 +127,13 @@ describe('Substrate Mixer Transaction Relayer', function() {
     );
 
     const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -165,12 +172,13 @@ describe('Substrate Mixer Transaction Relayer', function() {
     }
     const invalidProofBytes = u8aToHex(proofBytes);
     expect(withdrawalProof.proofBytes).to.not.eq(invalidProofBytes);
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(invalidProofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -205,12 +213,13 @@ describe('Substrate Mixer Transaction Relayer', function() {
     );
 
     const invalidFee = 100;
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -224,7 +233,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.match(/InvalidWithdrawProof/gmi);
+      expect(e).to.match(/InvalidWithdrawProof/gim);
     }
   });
 
@@ -247,12 +256,13 @@ describe('Substrate Mixer Transaction Relayer', function() {
     }
     const invalidRootBytes = u8aToHex(rootBytes);
     expect(withdrawalProof.proofBytes).to.not.eq(invalidRootBytes);
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(invalidRootBytes)),
@@ -266,7 +276,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       console.log(e);
       expect(e).to.not.be.null;
-      expect(e).to.match(/UnknownRoot/gmi);
+      expect(e).to.match(/UnknownRoot/gim);
     }
   });
 
@@ -282,12 +292,13 @@ describe('Substrate Mixer Transaction Relayer', function() {
     );
 
     const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -301,7 +312,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.match(/InvalidWithdrawProof/gmi);
+      expect(e).to.match(/InvalidWithdrawProof/gim);
     }
   });
 
@@ -324,12 +335,13 @@ describe('Substrate Mixer Transaction Relayer', function() {
     }
     const invalidNullifierHash = u8aToHex(nullifierHash);
     expect(withdrawalProof.nullifierHash).to.not.eq(invalidNullifierHash);
-
+    // get chainId
+    let chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
       await webbRelayer.substrateMixerWithdraw({
-        chain: aliceNode.name,
+        chainId: chainId,
         id: withdrawalProof.id,
         proof: Array.from(hexToU8a(withdrawalProof.proofBytes)),
         root: Array.from(hexToU8a(withdrawalProof.root)),
@@ -343,7 +355,7 @@ describe('Substrate Mixer Transaction Relayer', function() {
       // Expect an error to be thrown
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
-      expect(e).to.match(/InvalidWithdrawProof/gmi);
+      expect(e).to.match(/InvalidWithdrawProof/gim);
     }
   });
 
@@ -416,10 +428,15 @@ async function createMixerWithdrawProof(
       ''
     );
     const treeId = 0;
-    //@ts-ignore
-    const getLeaves = api.rpc.mt.getLeaves;
-    const treeLeaves: Uint8Array[] = await getLeaves(treeId, 0, 500);
-    const provingManager = new ProvingManagerWrapper('direct-call');
+    const leafCount: number =
+      await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
+    const treeLeaves: Uint8Array[] =
+      await api.derive.merkleTreeBn254.getLeavesForTree(
+        treeId,
+        0,
+        leafCount - 1
+      );
+    const provingManager = new ArkworksProvingManager(null);
     const leafHex = u8aToHex(note.getLeaf());
     const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
     expect(leafIndex).to.be.greaterThan(-1);

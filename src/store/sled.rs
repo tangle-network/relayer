@@ -427,10 +427,7 @@ impl ProposalStore for SledStore {
     ) -> anyhow::Result<Option<Self::Proposal>> {
         let tree = self.db.open_tree("proposal_store")?;
         match tree.get(&data_hash)? {
-            Some(bytes) => {
-                let proposal: Self::Proposal = serde_json::from_slice(&bytes)?;
-                Ok(Some(proposal))
-            }
+            Some(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
             None => {
                 tracing::warn!(
                     "Proposal not seen yet; not found in the proposal storage."

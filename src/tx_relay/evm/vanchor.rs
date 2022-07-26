@@ -35,8 +35,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
         _ => return,
     };
 
-    let requested_chain = cmd.chain.to_lowercase();
-    let chain = match ctx.config.evm.get(&requested_chain) {
+    let requested_chain = cmd.chain_id;
+    let chain = match ctx.config.evm.get(&requested_chain.to_string()) {
         Some(v) => v,
         None => {
             tracing::warn!("Unsupported Chain: {}", requested_chain);
@@ -71,20 +71,23 @@ pub async fn handle_vanchor_relay_tx<'a>(
     {
         Some(cfg) => cfg,
         None => {
-            tracing::error!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain);
+            tracing::error!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain_id);
             let _ = stream
-                .send(Error(format!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain)))
+                .send(Error(format!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain_id)))
                 .await;
             return;
         }
     };
 
-    let wallet = match ctx.evm_wallet(&cmd.chain).await {
+    let wallet = match ctx.evm_wallet(&cmd.chain_id.to_string()).await {
         Ok(v) => v,
         Err(e) => {
             tracing::error!("Misconfigured Network: {}", e);
             let _ = stream
-                .send(Error(format!("Misconfigured Network: {:?}", cmd.chain)))
+                .send(Error(format!(
+                    "Misconfigured Network: {:?}",
+                    cmd.chain_id
+                )))
                 .await;
             return;
         }
@@ -114,11 +117,11 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     tracing::debug!(
         "Connecting to chain {:?} .. at {}",
-        cmd.chain,
+        cmd.chain_id,
         chain.http_endpoint
     );
     let _ = stream.send(Network(NetworkStatus::Connecting)).await;
-    let provider = match ctx.evm_provider(&cmd.chain).await {
+    let provider = match ctx.evm_provider(&cmd.chain_id.to_string()).await {
         Ok(value) => {
             let _ = stream.send(Network(NetworkStatus::Connected)).await;
             value
@@ -140,7 +143,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     // TODO: Match this up in the context of variable transfers
     let expected_fee = calculate_fee(
         withdraw_config.withdraw_fee_percentage,
-        cmd.ext_data.ext_amount.as_u128().into(),
+        cmd.ext_data.ext_amount.0.abs().as_u128().into(),
     );
     let (_, unacceptable_fee) =
         U256::overflowing_sub(cmd.ext_data.fee, expected_fee);
@@ -158,24 +161,16 @@ pub async fn handle_vanchor_relay_tx<'a>(
         recipient: cmd.ext_data.recipient,
         relayer: cmd.ext_data.relayer,
         fee: cmd.ext_data.fee,
-        ext_amount: cmd.ext_data.ext_amount,
-        encrypted_output_1: cmd
-            .ext_data
-            .encrypted_output1
-            .to_fixed_bytes()
-            .into(),
-        encrypted_output_2: cmd
-            .ext_data
-            .encrypted_output2
-            .to_fixed_bytes()
-            .into(),
+        ext_amount: cmd.ext_data.ext_amount.0,
+        encrypted_output_1: cmd.ext_data.encrypted_output1,
+        encrypted_output_2: cmd.ext_data.encrypted_output2,
     };
 
     let proof = Proof {
         proof: cmd.proof_data.proof,
         roots: roots.into(),
         ext_data_hash: cmd.proof_data.ext_data_hash.to_fixed_bytes(),
-        public_amount: U256::from_little_endian(
+        public_amount: U256::from_big_endian(
             &cmd.proof_data.public_amount.to_fixed_bytes(),
         ),
         input_nullifiers: cmd
@@ -191,6 +186,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
     };
     tracing::trace!(?proof, ?ext_data, "Client Proof");
     let call = contract.transact(proof, ext_data);
-    tracing::trace!("About to send Tx to {:?} Chain", cmd.chain);
+    tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
     handle_evm_tx(call, stream).await;
 }

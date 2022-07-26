@@ -108,7 +108,7 @@ describe('Governance Relaying Service', function () {
       signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       features: { dataQuery: false, privateTxRelay: false },
-      withdrawConfig: defaultWithdrawConfigValue
+      withdrawConfig: defaultWithdrawConfigValue,
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
@@ -251,9 +251,7 @@ describe('Governance Relaying Service', function () {
       );
     } catch (e) {
       // should fail since private transaction is not configured for the relayer
-      expect(e).to.contain(
-        'Private transaction relaying is not configured'
-      );
+      expect(e).to.contain('Private transaction relaying is not configured');
     }
   });
 

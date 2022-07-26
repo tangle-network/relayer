@@ -181,8 +181,8 @@ where
             data = ?data_hex,
             signature = ?signature_hex,
         );
-        // todo! transaction queue
-
+        
+        // Enqueue transaction call data in substrate transaction queue
         let execute_proposal_call = execute_proposal {
             src_id: chain_id.as_u64(),
             call: Box::new(proposal_encoded_call),

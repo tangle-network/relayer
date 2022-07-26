@@ -22,7 +22,7 @@ use std::sync::Arc;
 
 use ethereum_types::{Address, H160, H256, U256, U64};
 use futures::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use warp::ws::Message;
@@ -48,17 +48,33 @@ use crate::tx_relay::{
 };
 use webb::substrate::subxt::sp_core::Pair;
 
+#[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
+pub struct WebbI256(pub I256);
+
+impl<'de> Deserialize<'de> for WebbI256 {
+    fn deserialize<D>(deserializer: D) -> Result<WebbI256, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let i128_str = String::deserialize(deserializer)?;
+        dbg!(&i128_str);
+        let i128_val =
+            I256::from_hex_str(&i128_str).map_err(serde::de::Error::custom)?;
+        Ok(WebbI256(i128_val))
+    }
+}
 /// Type alias for mpsc::Sender<CommandResponse>
 pub type CommandStream = mpsc::Sender<CommandResponse>;
 /// The command type for EVM txes
 pub type EvmCommand = CommandType<
-    Address, // Contract address
-    Bytes,   // Proof bytes
-    Bytes,   // Roots format
-    H256,    // Element type
-    Address, // Account identifier
-    U256,    // Balance type
-    I256,    // Signed amount type
+    Address,  // Contract address
+    Bytes,    // Proof bytes
+    Bytes,    // Roots format
+    H256,     // Element type
+    Address,  // Account identifier
+    U256,     // Balance type
+    WebbI256, // Signed amount type
 >;
 /// The command type for Substrate pallet txes
 pub type SubstrateCommand = CommandType<
@@ -101,6 +117,11 @@ pub async fn accept_connection(
 }
 /// Sets up a websocket channels for message sending.
 ///
+/// This is primarily used for transaction relaying. The intention is
+/// that a user will send formatted relay requests to the relayer using
+/// the websocket. The command will be extracted and sent to `handle_cmd`
+/// if successfully deserialized.
+///
 /// Returns `Ok(())` on success
 ///
 /// # Arguments
@@ -130,6 +151,8 @@ where
     match serde_json::from_str(v) {
         Ok(cmd) => {
             handle_cmd(ctx.clone(), cmd, my_tx).await;
+            // Send back the response, usually a transaction hash
+            // from processing the transaction relaying command.
             res_stream
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
@@ -275,6 +298,7 @@ pub async fn handle_leaves_cache_evm(
             warp::http::StatusCode::FORBIDDEN,
         ));
     }
+
     // check if chain is supported
     let chain = match ctx.config.evm.get(&chain_id.to_string()) {
         Some(v) => v,

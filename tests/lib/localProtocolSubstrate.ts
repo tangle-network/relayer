@@ -71,8 +71,22 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
         `--${opts.authority}`
       );
       const proc = spawn(opts.usageMode.nodePath, startArgs);
+      if (opts.enableLogging) {
+        proc.stdout.on('data', (data: Buffer) => {
+          console.log(data.toString());
+        });
+        proc.stderr.on('data', (data: Buffer) => {
+          console.error(data.toString());
+        });
+      }
       return new LocalProtocolSubstrate(opts, proc);
     }
+  }
+  // get chainId
+  public async getChainId(): Promise<number> {
+    const api = await super.api();
+    let chainId = api.consts.linkableTreeBn254.chainIdentifier.toNumber();
+    return chainId;
   }
 
   public async exportConfig(
@@ -90,12 +104,14 @@ export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
       }
     }
     const nodeInfo: FullNodeInfo = {
+      name: 'localSubstrate',
       enabled: true,
       httpEndpoint: `http://127.0.0.1:${ports.http}`,
       wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
       runtime: 'WebbProtocol',
       pallets: enabledPallets,
       suri: opts.suri,
+      chainId: opts.chainId,
     };
     return nodeInfo;
   }

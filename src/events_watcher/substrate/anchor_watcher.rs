@@ -14,7 +14,7 @@
 //
 use super::BlockNumberOf;
 use crate::config::SubstrateLinkedAnchorConfig;
-use crate::events_watcher::proposal_signing_backend::ProposalSigningBackend;
+use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
 use std::sync::Arc;
@@ -24,18 +24,18 @@ use webb::substrate::{protocol_substrate_runtime, subxt};
 use webb_proposals::substrate::AnchorUpdateProposal;
 
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
-pub struct SubstrateAnchorWatcher<'a, B> {
+pub struct SubstrateAnchorWatcher<B> {
     proposal_signing_backend: B,
-    linked_anchors: &'a [SubstrateLinkedAnchorConfig],
+    linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
 }
 
-impl<'a, B> SubstrateAnchorWatcher<'a, B>
+impl<B> SubstrateAnchorWatcher<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal>,
 {
     pub fn new(
         proposal_signing_backend: B,
-        linked_anchors: &'a [SubstrateLinkedAnchorConfig],
+        linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
     ) -> Self {
         Self {
             proposal_signing_backend,
@@ -45,7 +45,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<'a, B> super::SubstrateEventWatcher for SubstrateAnchorWatcher<'a, B>
+impl<B> super::SubstrateEventWatcher for SubstrateAnchorWatcher<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {
@@ -90,11 +90,17 @@ where
             Some(t) => t,
             None => return Err(anyhow::anyhow!("anchor not found")),
         };
+        // fetch proposal nonce
+        let proposal_nonce = api
+            .storage()
+            .signature_bridge()
+            .proposal_nonce(Some(at_hash))
+            .await?;
 
         let root = tree.root;
         let latest_leaf_index = tree.leaf_count;
         let tree_id = event.tree_id;
-        let nonce = webb_proposals::Nonce::new(latest_leaf_index);
+        let nonce = webb_proposals::Nonce::new(proposal_nonce + 1);
         let function_signature = webb_proposals::FunctionSignature::new([0; 4]);
         let src_chain =
             webb_proposals::TypedChainId::Substrate(chain_id as u32);
@@ -102,7 +108,7 @@ where
         let mut merkle_root = [0; 32];
         merkle_root.copy_from_slice(&root.encode());
         // update linked anchors
-        for anchor in self.linked_anchors {
+        for anchor in &self.linked_anchors {
             let anchor_chain_id =
                 webb_proposals::TypedChainId::Substrate(anchor.chain);
             let anchor_target_system =
