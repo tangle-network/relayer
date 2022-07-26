@@ -155,7 +155,7 @@ describe('Substrate Signature Bridge Relaying On Anchor Deposit <> Mocked Backen
       api,
       PK1,
       treeId,
-      chainId,
+      chainId
     );
     const txSigned = await setResourceIdProposalCall.signAsync(account);
     await aliceNode.executeTransaction(txSigned);
