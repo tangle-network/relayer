@@ -38,7 +38,6 @@ use webb::substrate::subxt::{self, PairSigner};
 #[derive(Clone)]
 pub struct SubstrateTxQueue<S: QueueStore<Vec<u8>, Key = SledQueueKey>> {
     ctx: RelayerContext,
-    node_name: String,
     chain_id: U256,
     store: Arc<S>,
 }
@@ -64,15 +63,9 @@ where
     /// let tx_queue = SubstrateTxQueue::new(ctx, chain_name.clone(), store);
     /// ```
 
-    pub fn new(
-        ctx: RelayerContext,
-        node_name: String,
-        chain_id: U256,
-        store: Arc<S>,
-    ) -> Self {
+    pub fn new(ctx: RelayerContext, chain_id: U256, store: Arc<S>) -> Self {
         Self {
             ctx,
-            node_name,
             chain_id,
             store,
         }
@@ -97,7 +90,7 @@ where
     ///     }
     /// };
     /// ```
-    #[tracing::instrument(skip_all, fields(node = %self.node_name))]
+    #[tracing::instrument(skip_all, fields(node = %self.chain_id))]
     pub async fn run(self) -> Result<(), anyhow::Error> {
         let chain_config = self
             .ctx
@@ -105,7 +98,6 @@ where
             .substrate
             .get(&self.chain_id.to_string())
             .context("Chain not configured")?;
-        let node_name = self.node_name;
         let chain_id = self.chain_id;
         let store = self.store;
         let backoff = backoff::ExponentialBackoff {
@@ -115,11 +107,11 @@ where
         //  protocol-substrate client
         let client = self
             .ctx
-            .substrate_provider::<subxt::DefaultConfig>(&node_name)
+            .substrate_provider::<subxt::DefaultConfig>(&chain_id.to_string())
             .await?;
 
         // get pair
-        let pair = self.ctx.substrate_wallet(&node_name).await?;
+        let pair = self.ctx.substrate_wallet(&chain_id.to_string()).await?;
         let signer: PairSigner<subxt::DefaultConfig, Pair> =
             PairSigner::new(pair);
 
@@ -136,8 +128,9 @@ where
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
                 // dequeue transaction call data. This are call params stored as bytes
-                let call_data = store
-                    .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))?;
+                let call_data = store.dequeue_item(
+                    SledQueueKey::from_substrate_chain_id(chain_id),
+                )?;
                 // This are the steps to create encoded extrinsic which can be executed by rpc client
                 let account_nonce = if let Some(nonce) = signer.nonce() {
                     nonce

@@ -219,6 +219,14 @@ impl SledQueueKey {
         }
     }
 
+    /// Create a new SledQueueKey from an substrate chain id.
+    pub fn from_substrate_chain_id(chain_id: types::U256) -> Self {
+        Self::SubstrateTx {
+            chain_id,
+            optional_key: None,
+        }
+    }
+
     /// from_substrate_with_custom_key returns an Substrate specific SledQueueKey.
     pub fn from_substrate_with_custom_key(
         chain_id: types::U256,
