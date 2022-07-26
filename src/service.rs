@@ -41,7 +41,7 @@ use crate::events_watcher::proposal_signing_backend::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
 use crate::store::sled::SledStore;
-use crate::tx_queue::TxQueue;
+use crate::tx_queue::{SubstrateTxQueue, TxQueue};
 
 /// Type alias for providers
 type Client = providers::Provider<providers::Http>;
@@ -247,6 +247,8 @@ pub async fn ignite(
                 }
             }
         };
+        // start the transaction queue after starting other tasks.
+        // start_substrate_tx_queue(ctx.clone(), node_name.clone(), chain_id, store.clone())?;
     }
     Ok(())
 }
@@ -947,6 +949,51 @@ fn start_tx_queue(
                 tracing::trace!(
                     "Stopping Transaction Queue for ({})",
                     chain_name,
+                );
+            },
+        }
+    };
+    // kick off the tx_queue.
+    tokio::task::spawn(task);
+    Ok(())
+}
+
+/// Starts the transaction queue task
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `chain_name` - Name of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
+fn start_substrate_tx_queue(
+    ctx: RelayerContext,
+    node_name: String,
+    chain_id: U256,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let tx_queue =
+        SubstrateTxQueue::new(ctx, node_name.clone(), chain_id, store);
+
+    tracing::debug!(
+        "Substrate Transaction Queue for {}({}) Started.",
+        node_name,
+        chain_id
+    );
+    let task = async move {
+        tokio::select! {
+            _ = tx_queue.run() => {
+                tracing::warn!(
+                    "Substrate Transaction Queue task stopped for {}({})",
+                    node_name,chain_id
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping Substrate Transaction Queue for {}({})",
+                    node_name,chain_id,
                 );
             },
         }

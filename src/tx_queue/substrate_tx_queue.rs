@@ -12,60 +12,44 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use std::sync::Arc;
-use std::time::Duration;
-
+use crate::context::RelayerContext;
+use crate::store::sled::SledQueueKey;
+use crate::store::QueueStore;
 use anyhow::Context;
 use ethereum_types::U256;
 use futures::TryFutureExt;
 use rand::Rng;
-use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
+use std::convert::TryFrom;
+use std::sync::Arc;
+use std::time::Duration;
+use subxt::rpc::SubstrateTransactionStatus as TransactionStatus;
 
-use crate::context::RelayerContext;
-use crate::store::sled::SledQueueKey;
-use crate::store::QueueStore;
-use crate::utils::ClickableLink;
-use webb::substrate::scale::Decode;
+use webb::substrate::scale::{Compact, Encode};
+use webb::substrate::subxt::extrinsic::ExtrinsicParams;
+use webb::substrate::subxt::extrinsic::Signer;
+use webb::substrate::subxt::sp_core::blake2_256;
+use webb::substrate::subxt::sp_core::sr25519::Pair;
+use webb::substrate::subxt::{self, PairSigner};
 
-use webb::substrate::{
-    protocol_substrate_runtime,
-    subxt::{self, PairSigner, HasModuleError, Call},
-};
-
-/// The TxQueue stores transaction requests so the relayer can process them later.
+/// The SubstrateTxQueue stores transaction call params in bytes so the relayer can process them later.
 /// This prevents issues such as creating transactions with the same nonce.
 /// Randomized sleep intervals are used to prevent relayers from submitting
 /// the same transaction.
 #[derive(Clone)]
-pub struct  SubstrateTxQueue<'a, S, T, X, C, E, Evs>
-where
-    S: QueueStore<subxt::SubmittableExtrinsic<'a, T, X, C, E, Evs>, Key = SledQueueKey>,
-    T: subxt::Config,
-    X: subxt::extrinsic::ExtrinsicParams<T>,
-    C: Call + Send + Sync,
-    E: Decode + HasModuleError,
-    Evs: Decode,
-
-{
+pub struct SubstrateTxQueue<S: QueueStore<Vec<u8>, Key = SledQueueKey>> {
     ctx: RelayerContext,
     node_name: String,
     chain_id: U256,
     store: Arc<S>,
 }
 
-impl<'a, S, T, X, C, E, Evs> SubstrateTxQueue<'a, S, T, X, C, E, Evs>
+impl<S> SubstrateTxQueue<S>
 where
-    S: QueueStore<subxt::SubmittableExtrinsic<'a, T, X, C, E, Evs>, Key = SledQueueKey>,
-    T: subxt::Config,
-    X: subxt::extrinsic::ExtrinsicParams<T>,
-    C: Call + Send + Sync,
-    E: Decode + HasModuleError,
-    Evs: Decode,
+    S: QueueStore<Vec<u8>, Key = SledQueueKey>,
 {
-    
-    /// Creates a new TxQueue instance.
+    /// Creates a new SubstrateTxQueue instance.
     ///
-    /// Returns a TxQueue instance.
+    /// Returns a SubstrateTxQueue instance.
     ///
     /// # Arguments
     ///
@@ -76,10 +60,16 @@ where
     /// # Examples
     ///
     /// ```
-    /// use crate::tx_queue::TxQueue;
-    /// let tx_queue = TxQueue::new(ctx, chain_name.clone(), store);
+    /// use crate::tx_queue::SubstrateTxQueue;
+    /// let tx_queue = SubstrateTxQueue::new(ctx, chain_name.clone(), store);
     /// ```
-    pub fn new(ctx: RelayerContext, node_name: String, chain_id: U256, store: Arc<S>) -> Self {
+
+    pub fn new(
+        ctx: RelayerContext,
+        node_name: String,
+        chain_id: U256,
+        store: Arc<S>,
+    ) -> Self {
         Self {
             ctx,
             node_name,
@@ -87,14 +77,14 @@ where
             store,
         }
     }
-    /// Starts the TxQueue service.
+    /// Starts the SubstrateTxQueue service.
     ///
     /// Returns a future that resolves `Ok(())` on success, otherwise returns an error.
     ///
     /// # Examples
     ///
     /// ```
-    /// use crate::tx_queue::TxQueue;
+    /// use crate::tx_queue::SubstrateTxQueue;
     /// let tx_queue = TxQueue::new(ctx, chain_name.clone(), store);
     ///  let task = async move {
     ///     tokio::select! {
@@ -109,7 +99,12 @@ where
     /// ```
     #[tracing::instrument(skip_all, fields(node = %self.node_name))]
     pub async fn run(self) -> Result<(), anyhow::Error> {
-        let ctx = self.ctx;
+        let chain_config = self
+            .ctx
+            .config
+            .substrate
+            .get(&self.chain_id.to_string())
+            .context("Chain not configured")?;
         let node_name = self.node_name;
         let chain_id = self.chain_id;
         let store = self.store;
@@ -117,17 +112,16 @@ where
             max_elapsed_time: None,
             ..Default::default()
         };
-
-        let chain_config = self
+        //  protocol-substrate client
+        let client = self
             .ctx
-            .config
-            .substrate
-            .get(&self.node_name)
-            .context("Chain not configured")?;
+            .substrate_provider::<subxt::DefaultConfig>(&node_name)
+            .await?;
 
         // get pair
-        let pair = ctx.substrate_wallet(&node_name).await?;
-        let signer = PairSigner::new(pair);
+        let pair = self.ctx.substrate_wallet(&node_name).await?;
+        let signer: PairSigner<subxt::DefaultConfig, Pair> =
+            PairSigner::new(pair);
 
         tracing::event!(
             target: crate::probe::TARGET,
@@ -141,13 +135,87 @@ where
         let task = || async {
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
-                // dequeue submitable extrinsic
-                let tx = store
-                    .dequeue_item(SledQueueKey::from_substrate_chain_id(chain_id))?;
-                
-                let mut progress = tx
-                .sign_and_submit_then_watch_default(&signer)
-                .await?;
+                // dequeue transaction call data. This are call params stored as bytes
+                let call_data = store
+                    .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))?;
+                // This are the steps to create encoded extrinsic which can be executed by rpc client
+                let account_nonce = if let Some(nonce) = signer.nonce() {
+                    nonce
+                } else {
+                    client
+                        .rpc()
+                        .system_account_next_index(signer.account_id())
+                        .map_err(anyhow::Error::from)
+                        .await?
+                };
+
+                // 1.Construct our custom additional/extra params.
+                let additional_and_extra_params = {
+                    // Obtain spec version and transaction version from the runtime version of the client.
+                    let runtime = client
+                        .rpc()
+                        .runtime_version(None)
+                        .map_err(anyhow::Error::from)
+                        .await?;
+                    subxt::SubstrateExtrinsicParams::<subxt::DefaultConfig>::new(
+                        runtime.spec_version,
+                        runtime.transaction_version,
+                        account_nonce,
+                        *client.genesis(),
+                        Default::default(),
+                    )
+                };
+
+                // 2. Construct signature. This is compatible with the Encode impl
+                //    for SignedPayload (which is this payload of bytes that we'd like)
+                //    to sign. See:
+                //    https://github.com/paritytech/substrate/blob/9a6d706d8db00abb6ba183839ec98ecd9924b1f8/primitives/runtime/src/generic/unchecked_extrinsic.rs#L215)
+                let signature = {
+                    let mut bytes = Vec::new();
+                    call_data.encode_to(&mut bytes);
+                    additional_and_extra_params.encode_extra_to(&mut bytes);
+                    additional_and_extra_params
+                        .encode_additional_to(&mut bytes);
+                    if bytes.len() > 256 {
+                        signer.sign(&blake2_256(&bytes))
+                    } else {
+                        signer.sign(&bytes)
+                    }
+                };
+
+                // 3. Encode extrinsic, now that we have the parts we need. This is compatible
+                //    with the Encode impl for UncheckedExtrinsic (protocol version 4).
+                let extrinsic = {
+                    let mut encoded_inner = Vec::new();
+                    // "is signed" + transaction protocol version (4)
+                    (0b10000000 + 4u8).encode_to(&mut encoded_inner);
+                    // from address for signature
+                    signer.address().encode_to(&mut encoded_inner);
+                    // the signature bytes
+                    signature.encode_to(&mut encoded_inner);
+                    // attach custom extra params
+                    additional_and_extra_params
+                        .encode_extra_to(&mut encoded_inner);
+                    // and now, call data
+                    call_data.encode_to(&mut encoded_inner);
+                    // now, prefix byte length:
+                    let len = Compact(
+                        u32::try_from(encoded_inner.len())
+                            .expect("extrinsic size expected to be <4GB"),
+                    );
+                    let mut encoded = Vec::new();
+                    len.encode_to(&mut encoded);
+                    encoded.extend(encoded_inner);
+                    encoded
+                };
+                // encoded extinsic
+                let encoded_extrinsic = subxt::Encoded(extrinsic);
+                // watch_extrinsic submits and returns transaction subscription
+                let mut progress = client
+                    .rpc()
+                    .watch_extrinsic(&encoded_extrinsic)
+                    .map_err(anyhow::Error::from)
+                    .await?;
 
                 while let Some(event) = progress.next().await {
                     let e = match event {
@@ -165,44 +233,123 @@ where
                             continue; // keep going.
                         }
                     };
-        
+
                     match e {
-                        subxt::TransactionStatus::Future => {}
-                        subxt::TransactionStatus::Ready => {
-                            tracing::trace!("tx ready");
+                        TransactionStatus::Future => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "Future",
+
+                            );
                         }
-                        subxt::TransactionStatus::Broadcast(_) => {}
-                        subxt::TransactionStatus::InBlock(_) => {
-                            tracing::trace!("tx in block");
+                        TransactionStatus::Ready => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "Ready",
+
+                            );
                         }
-                        subxt::TransactionStatus::Retracted(_) => {
-                            tracing::warn!("tx retracted");
+                        TransactionStatus::Broadcast(_) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "Broadcast",
+
+                            );
                         }
-                        subxt::TransactionStatus::FinalityTimeout(_) => {
-                            tracing::warn!("tx timeout");
+                        TransactionStatus::InBlock(_) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "InBlock",
+
+                            );
                         }
-                        subxt::TransactionStatus::Finalized(v) => {
-                            let maybe_success = v.wait_for_success().await;
-                            match maybe_success {
-                                Ok(events) => {
-                                    tracing::debug!(?events, "tx finalized",);
-                                }
-                                Err(err) => {
-                                    tracing::error!(error = %err, "tx failed");
-                                    return Err(err.into());
-                                }
-                            }
+                        TransactionStatus::Retracted(_) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "Retracted",
+
+                            );
                         }
-                        subxt::TransactionStatus::Usurped(_) => {}
-                        subxt::TransactionStatus::Dropped => {
-                            tracing::warn!("tx dropped");
+                        TransactionStatus::FinalityTimeout(_) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "FinalityTimeout",
+
+                            );
                         }
-                        subxt::TransactionStatus::Invalid => {
-                            tracing::warn!("tx invalid");
+                        TransactionStatus::Finalized(_) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "Finalized",
+
+                            );
+                            // TODO wait for transaction sucsess
+                        }
+
+                        TransactionStatus::Usurped(_) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "Usurped",
+
+                            );
+                        }
+                        TransactionStatus::Dropped => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "Dropped",
+
+                            );
+                        }
+                        TransactionStatus::Invalid => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                Status = "Invalid",
+
+                            );
                         }
                     }
                 }
-    
+
                 // sleep for a random amount of time.
                 let max_sleep_interval =
                     chain_config.tx_queue.max_sleep_interval;

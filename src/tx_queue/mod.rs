@@ -13,6 +13,9 @@
 // limitations under the License.
 //
 
+mod evm_tx_queue;
 mod substrate_tx_queue;
+#[doc(hidden)]
+pub use evm_tx_queue::*;
 #[doc(hidden)]
 pub use substrate_tx_queue::*;
