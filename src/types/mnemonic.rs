@@ -31,9 +31,7 @@ impl<'de> Deserialize<'de> for Mnemonic {
                 &self,
                 formatter: &mut std::fmt::Formatter,
             ) -> std::fmt::Result {
-                formatter.write_str(
-                    "12 or 24 word mnemonic seed phrase",
-                )
+                formatter.write_str("12 or 24 word mnemonic seed phrase")
             }
 
             fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -43,7 +41,10 @@ impl<'de> Deserialize<'de> for Mnemonic {
                 let str_value: String;
                 if value.starts_with("0x") {
                     // hex value
-                    return Err(serde::de::Error::custom(format!("got {} but expected a 12/24 word list ", value)));
+                    return Err(serde::de::Error::custom(format!(
+                        "got {} but expected a 12/24 word list ",
+                        value
+                    )));
                 } else if value.starts_with('>') {
                     todo!("Implement command execution to extract the mnemonic")
                 } else if value.starts_with('$') {
@@ -56,11 +57,15 @@ impl<'de> Deserialize<'de> for Mnemonic {
                             var, e,
                         ))
                     })?;
-                    str_value = val; 
+                    str_value = val;
                 } else {
                     str_value = value.to_string();
                 }
-                let maybe_mnemonic = str_value.trim().split_ascii_whitespace().map(|v| v.to_string()).collect::<Vec<String>>();
+                let maybe_mnemonic = str_value
+                    .trim()
+                    .split_ascii_whitespace()
+                    .map(|v| v.to_string())
+                    .collect::<Vec<String>>();
                 match maybe_mnemonic.len() {
                     12 | 24 => Ok(maybe_mnemonic),
                     _ => Err(serde::de::Error::custom(format!("Expected a 12/24 word list string but found {} word list", maybe_mnemonic.len()))),

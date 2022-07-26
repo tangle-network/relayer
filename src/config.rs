@@ -27,7 +27,7 @@
 //! * `evm`: EVM based networks and the configuration. See [config/config-6sided-eth-bridge](./config/config-6sided-eth-bridge)
 //! for an example.
 //! * `substrate`: Substrate based networks and the configuration. See [config/local-substrate](./config/local-substrate) for an example.
-//! * `cosmwasm`: Cosmos-SDK based networks and the configuration. 
+//! * `cosmwasm`: Cosmos-SDK based networks and the configuration.
 //!
 //! Checkout [config](./config) for useful default configurations for many networks.
 //! These config files can be changed to your preferences.
@@ -38,9 +38,9 @@ use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::Public;
 
-use crate::types::{private_key::PrivateKey, mnemonic::Mnemonic};
 use crate::types::rpc_url::RpcUrl;
 use crate::types::suri::Suri;
+use crate::types::{mnemonic::Mnemonic, private_key::PrivateKey};
 
 /// The default port the relayer will listen on. Defaults to 9955.
 const fn default_port() -> u16 {
@@ -679,7 +679,11 @@ fn postloading_process(
         config.substrate.insert(v.chain_id.to_string(), v);
     }
     // do the same for cosmwasm
-    let old_cosmwasm = config.cosmwasm.drain().filter(|(_, chain)| chain.enabled).collect::<HashMap<_, _>>();
+    let old_cosmwasm = config
+        .cosmwasm
+        .drain()
+        .filter(|(_, chain)| chain.enabled)
+        .collect::<HashMap<_, _>>();
     for (_, v) in old_cosmwasm {
         config.cosmwasm.insert(v.chain_id.to_string(), v);
     }
