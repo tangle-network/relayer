@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 use super::BlockNumberOf;
-use crate::config::SubstrateLinkedAnchorConfig;
+use crate::config::SubstrateLinkedVAnchorConfig;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
@@ -26,7 +26,7 @@ use webb_proposals::substrate::AnchorUpdateProposal;
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
 pub struct SubstrateVAnchorWatcher<B> {
     proposal_signing_backend: B,
-    linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
+    linked_anchors: Vec<SubstrateLinkedVAnchorConfig>,
 }
 
 impl<B> SubstrateVAnchorWatcher<B>
@@ -35,7 +35,7 @@ where
 {
     pub fn new(
         proposal_signing_backend: B,
-        linked_anchors: Vec<SubstrateLinkedAnchorConfig>,
+        linked_anchors: Vec<SubstrateLinkedVAnchorConfig>,
     ) -> Self {
         Self {
             proposal_signing_backend,
@@ -131,7 +131,7 @@ where
                 .merkle_root(merkle_root)
                 .latest_leaf_index(latest_leaf_index)
                 .target(target_system.into_fixed_bytes())
-                .pallet_index(46)
+                .pallet_index(43)
                 .build();
 
             let can_sign_proposal = self

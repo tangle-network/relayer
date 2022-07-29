@@ -31,7 +31,7 @@ import {
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex } from '@polkadot/util';
 
-describe('Governance Relaying Service', function () {
+describe.skip('Governance Relaying Service', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

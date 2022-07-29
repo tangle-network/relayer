@@ -274,10 +274,10 @@ pub struct EventsWatcherConfig {
     pub print_progress_interval: u64,
 }
 
-/// AnchorWithdrawConfig is the configuration for the Anchor Withdraw.
+/// VAnchorWithdrawConfig is the configuration for the VAnchor Withdraw.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct AnchorWithdrawConfig {
+pub struct VAnchorWithdrawConfig {
     /// The fee percentage that your account will receive when you relay a transaction
     /// over this chain.
     #[serde(rename(serialize = "withdrawFeePercentage"))]
@@ -287,10 +287,10 @@ pub struct AnchorWithdrawConfig {
     pub withdraw_gaslimit: U256,
 }
 
-/// LinkedAnchorConfig is the configuration for the linked anchor.
+/// LinkedVAnchorConfig is the configuration for the linked Vanchor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct LinkedAnchorConfig {
+pub struct LinkedVAnchorConfig {
     /// The Chain name where this anchor belongs to.
     /// and it is case-insensitive.
     pub chain: String,
@@ -298,10 +298,10 @@ pub struct LinkedAnchorConfig {
     pub address: Address,
 }
 
-/// SubstrateLinkedAnchorConfig is the configuration for the linked anchor of substrate.
+/// SubstrateLinkedVAnchorConfig is the configuration for the linked Vanchor of substrate.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct SubstrateLinkedAnchorConfig {
+pub struct SubstrateLinkedVAnchorConfig {
     /// The Chain Id where this anchor belongs to.
     pub chain: u32,
     /// Tree Id of the anchor
@@ -313,7 +313,6 @@ pub struct SubstrateLinkedAnchorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
 pub enum Contract {
-    Anchor(AnchorContractConfig),
     VAnchor(VAnchorContractConfig),
     SignatureBridge(SignatureBridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
@@ -327,7 +326,6 @@ pub enum Pallet {
     Dkg(DKGPalletConfig),
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
-    AnchorBn254(AnchorBn254PalletConfig),
     SignatureBridge(SignatureBridgePalletConfig),
     VAnchorBn254(VAnchorBn254PalletConfig),
 }
@@ -351,28 +349,6 @@ pub struct CommonContractConfig {
     pub deployed_at: u64,
 }
 
-/// AnchorContractOverDKGConfig represents the configuration for the Anchor contract over DKG.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct AnchorContractConfig {
-    #[serde(flatten)]
-    pub common: CommonContractConfig,
-    /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
-    pub events_watcher: EventsWatcherConfig,
-    /// The size of this contract
-    pub size: f64,
-    /// Anchor withdraw configuration.
-    #[serde(rename(serialize = "withdrawConfig"))]
-    pub withdraw_config: Option<AnchorWithdrawConfig>,
-    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    #[serde(rename(serialize = "proposalSigningBackend"))]
-    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
-    /// A List of linked Anchor Contracts (on other chains) to this contract.
-    #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
-}
-
 /// VAnchorContractConfig represents the configuration for the VAnchor contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -386,13 +362,13 @@ pub struct VAnchorContractConfig {
     pub size: f64,
     /// Anchor withdraw configuration.
     #[serde(rename(serialize = "withdrawConfig"))]
-    pub withdraw_config: Option<AnchorWithdrawConfig>,
+    pub withdraw_config: Option<VAnchorWithdrawConfig>,
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
+    pub linked_anchors: Option<Vec<LinkedVAnchorConfig>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -440,21 +416,6 @@ pub struct DKGProposalHandlerPalletConfig {
     pub events_watcher: EventsWatcherConfig,
 }
 
-/// AnchorBn254PalletConfig represents the configuration for the AnchorBn254 pallet.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct AnchorBn254PalletConfig {
-    /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
-    pub events_watcher: EventsWatcherConfig,
-    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    #[serde(rename(serialize = "proposalSigningBackend"))]
-    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
-    ///A List of linked Anchor on this chain.
-    #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
-}
-
 /// SignatureBridgePalletConfig represents the configuration for the SignatureBridge pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -476,7 +437,7 @@ pub struct VAnchorBn254PalletConfig {
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor on this chain.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
+    pub linked_anchors: Option<Vec<SubstrateLinkedVAnchorConfig>>,
 }
 
 /// Enumerates the supported different signing backends configurations.
@@ -618,11 +579,11 @@ fn postloading_process(
     // check that all required chains are already present in the config.
     for (chain_id, chain_config) in &config.evm {
         let anchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::Anchor(cfg) => Some(cfg),
+            Contract::VAnchor(cfg) => Some(cfg),
             _ => None,
         });
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::Anchor(cfg) => Some(cfg),
+            Contract::VAnchor(cfg) => Some(cfg),
             _ => None,
         });
         for anchor in anchors {

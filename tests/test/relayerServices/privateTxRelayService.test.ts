@@ -31,7 +31,7 @@ import {
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex } from '@polkadot/util';
 
-describe('Private Transaction Relaying Service <<>> Withdrawal Config set', function () {
+describe.skip('Private Transaction Relaying Service <<>> Withdrawal Config set', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -232,7 +232,7 @@ describe('Private Transaction Relaying Service <<>> Withdrawal Config set', func
   });
 });
 
-describe('Private Transaction Relaying Service <<>> Withdrawal Config not set', function () {
+describe.skip('Private Transaction Relaying Service <<>> Withdrawal Config not set', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

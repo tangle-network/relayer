@@ -19,94 +19,21 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 use webb::evm::contract::protocol_solidity::{
-    FixedDepositAnchorContract, FixedDepositAnchorContractEvents,
     VAnchorContract, VAnchorContractEvents,
 };
 use webb::evm::ethers::prelude::{Contract, Middleware};
 use webb::evm::ethers::types;
 
-pub mod anchor_deposit_handler;
-pub mod anchor_leaves_handler;
 pub mod signature_bridge_watcher;
 pub mod vanchor_deposit_handler;
 pub mod vanchor_leaves_handler;
 
-#[doc(hidden)]
-pub use anchor_deposit_handler::*;
-#[doc(hidden)]
-pub use anchor_leaves_handler::*;
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
 #[doc(hidden)]
 pub use vanchor_deposit_handler::*;
 #[doc(hidden)]
 pub use vanchor_leaves_handler::*;
-
-/// AnchorContractWrapper contains FixedDepositAnchorContract contract along with configurations for Anchor contract, and Relayer.
-#[derive(Clone, Debug)]
-pub struct AnchorContractWrapper<M>
-where
-    M: Middleware,
-{
-    pub config: config::AnchorContractConfig,
-    pub webb_config: config::WebbRelayerConfig,
-    pub contract: FixedDepositAnchorContract<M>,
-}
-
-impl<M> AnchorContractWrapper<M>
-where
-    M: Middleware,
-{
-    /// Creates a new AnchorContractOverDKGWrapper.
-    pub fn new(
-        config: config::AnchorContractConfig,
-        webb_config: config::WebbRelayerConfig,
-        client: Arc<M>,
-    ) -> Self {
-        Self {
-            contract: FixedDepositAnchorContract::new(
-                config.common.address,
-                client,
-            ),
-            config,
-            webb_config,
-        }
-    }
-}
-
-impl<M> ops::Deref for AnchorContractWrapper<M>
-where
-    M: Middleware,
-{
-    type Target = Contract<M>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.contract
-    }
-}
-
-impl<M> super::WatchableContract for AnchorContractWrapper<M>
-where
-    M: Middleware,
-{
-    fn deployed_at(&self) -> types::U64 {
-        self.config.common.deployed_at.into()
-    }
-
-    fn polling_interval(&self) -> Duration {
-        Duration::from_millis(self.config.events_watcher.polling_interval)
-    }
-
-    fn max_blocks_per_step(&self) -> types::U64 {
-        self.config.events_watcher.max_blocks_per_step.into()
-    }
-
-    fn print_progress_interval(&self) -> Duration {
-        Duration::from_millis(
-            self.config.events_watcher.print_progress_interval,
-        )
-    }
-}
 
 // VAnchorContractWrapper contains VAnchorContract contract along with configurations for Anchor contract, and Relayer.
 #[derive(Clone, Debug)]
@@ -177,19 +104,6 @@ type HttpProvider = providers::Provider<providers::Http>;
 /// handlers.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct AnchorContractWatcher;
-
-#[async_trait::async_trait]
-impl super::EventWatcher for AnchorContractWatcher {
-    const TAG: &'static str = "Anchor Contract Watcher";
-
-    type Middleware = HttpProvider;
-
-    type Contract = AnchorContractWrapper<Self::Middleware>;
-
-    type Events = FixedDepositAnchorContractEvents;
-
-    type Store = SledStore;
-}
 
 /// An VAnchor Contract Watcher that watches for the Anchor contract events and calls the event
 /// handlers.

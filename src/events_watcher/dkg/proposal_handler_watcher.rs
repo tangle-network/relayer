@@ -126,6 +126,12 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
                 );
                 None
             }
+            TypedChainId::Ink(_) => {
+                tracing::warn!(
+                    "Unhandled `ProposalSigned` Event with Ink chain id"
+                );
+                None
+            }
         };
         tracing::debug!(?maybe_bridge_key, "Sending Proposal to the bridge");
         // now we just signal the bridge with the proposal.
