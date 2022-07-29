@@ -46,7 +46,7 @@ import {
   ArkworksProvingManager,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Anchor Transaction Relayer', function () {
+describe.skip('Substrate Anchor Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;

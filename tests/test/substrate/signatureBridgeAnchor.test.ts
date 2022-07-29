@@ -49,7 +49,7 @@ import { ChainIdType, makeResourceId } from '../../lib/webbProposals.js';
 import pkg from 'secp256k1';
 const { ecdsaSign } = pkg;
 
-describe('Substrate Signature Bridge Relaying On Anchor Deposit <> Mocked Backend', function () {
+describe.skip('Substrate Signature Bridge Relaying On Anchor Deposit <> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
