@@ -124,6 +124,13 @@ where
                 function_signature,
                 nonce,
             );
+            // pallet index
+            let pallet_index = {
+                let locked_metadata = api.client.metadata();
+                let metadata = locked_metadata.read();
+                let pallet = metadata.pallet("VAnchorHandlerBn254")?;
+                pallet.index()
+            };
             // create anchor update proposal
             let proposal = AnchorUpdateProposal::builder()
                 .header(header)
@@ -131,7 +138,7 @@ where
                 .merkle_root(merkle_root)
                 .latest_leaf_index(latest_leaf_index)
                 .target(target_system.into_fixed_bytes())
-                .pallet_index(43)
+                .pallet_index(pallet_index)
                 .build();
 
             let can_sign_proposal = self
