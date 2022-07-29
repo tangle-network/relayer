@@ -123,7 +123,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       linkedAnchors: [
         {
           chain: 1080,
-          tree: 9,
+          tree: 6,
         },
       ],
     });
@@ -217,11 +217,12 @@ async function setResourceIdProposal(
     ChainIdType.SUBSTRATE,
     chainId
   );
+
   let functionSignature = toFixedHex(0, 4);
   let nonce = BigNumber.from(1);
   let newResourceId = resourceId;
-  let targetSystem = '0x0109000000';
-  let palletIndex = convertToHexNumber(46);
+  let targetSystem = '0x0106000000';
+  let palletIndex = convertToHexNumber(43);
   let callIndex = convertToHexNumber(2);
   const resourceIdUpdateProposalPayload: ResourceIdUpdateProposal = {
     header: {
