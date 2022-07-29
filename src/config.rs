@@ -274,10 +274,10 @@ pub struct EventsWatcherConfig {
     pub print_progress_interval: u64,
 }
 
-/// AnchorWithdrawConfig is the configuration for the Anchor Withdraw.
+/// VAnchorWithdrawConfig is the configuration for the VAnchor Withdraw.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct AnchorWithdrawConfig {
+pub struct VAnchorWithdrawConfig {
     /// The fee percentage that your account will receive when you relay a transaction
     /// over this chain.
     #[serde(rename(serialize = "withdrawFeePercentage"))]
@@ -287,10 +287,10 @@ pub struct AnchorWithdrawConfig {
     pub withdraw_gaslimit: U256,
 }
 
-/// LinkedAnchorConfig is the configuration for the linked anchor.
+/// LinkedVAnchorConfig is the configuration for the linked Vanchor.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct LinkedAnchorConfig {
+pub struct LinkedVAnchorConfig {
     /// The Chain name where this anchor belongs to.
     /// and it is case-insensitive.
     pub chain: String,
@@ -298,10 +298,10 @@ pub struct LinkedAnchorConfig {
     pub address: Address,
 }
 
-/// SubstrateLinkedAnchorConfig is the configuration for the linked anchor of substrate.
+/// SubstrateLinkedVAnchorConfig is the configuration for the linked Vanchor of substrate.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
-pub struct SubstrateLinkedAnchorConfig {
+pub struct SubstrateLinkedVAnchorConfig {
     /// The Chain Id where this anchor belongs to.
     pub chain: u32,
     /// Tree Id of the anchor
@@ -313,7 +313,6 @@ pub struct SubstrateLinkedAnchorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
 pub enum Contract {
-    Anchor(AnchorContractConfig),
     VAnchor(VAnchorContractConfig),
     SignatureBridge(SignatureBridgeContractConfig),
     GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
@@ -327,7 +326,6 @@ pub enum Pallet {
     Dkg(DKGPalletConfig),
     DKGProposals(DKGProposalsPalletConfig),
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
-    AnchorBn254(AnchorBn254PalletConfig),
     SignatureBridge(SignatureBridgePalletConfig),
     VAnchorBn254(VAnchorBn254PalletConfig),
 }
@@ -351,28 +349,6 @@ pub struct CommonContractConfig {
     pub deployed_at: u64,
 }
 
-/// AnchorContractOverDKGConfig represents the configuration for the Anchor contract over DKG.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct AnchorContractConfig {
-    #[serde(flatten)]
-    pub common: CommonContractConfig,
-    /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
-    pub events_watcher: EventsWatcherConfig,
-    /// The size of this contract
-    pub size: f64,
-    /// Anchor withdraw configuration.
-    #[serde(rename(serialize = "withdrawConfig"))]
-    pub withdraw_config: Option<AnchorWithdrawConfig>,
-    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    #[serde(rename(serialize = "proposalSigningBackend"))]
-    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
-    /// A List of linked Anchor Contracts (on other chains) to this contract.
-    #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
-}
-
 /// VAnchorContractConfig represents the configuration for the VAnchor contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -386,13 +362,13 @@ pub struct VAnchorContractConfig {
     pub size: f64,
     /// Anchor withdraw configuration.
     #[serde(rename(serialize = "withdrawConfig"))]
-    pub withdraw_config: Option<AnchorWithdrawConfig>,
+    pub withdraw_config: Option<VAnchorWithdrawConfig>,
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
+    pub linked_anchors: Option<Vec<LinkedVAnchorConfig>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -440,21 +416,6 @@ pub struct DKGProposalHandlerPalletConfig {
     pub events_watcher: EventsWatcherConfig,
 }
 
-/// AnchorBn254PalletConfig represents the configuration for the AnchorBn254 pallet.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct AnchorBn254PalletConfig {
-    /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
-    pub events_watcher: EventsWatcherConfig,
-    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    #[serde(rename(serialize = "proposalSigningBackend"))]
-    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
-    ///A List of linked Anchor on this chain.
-    #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
-}
-
 /// SignatureBridgePalletConfig represents the configuration for the SignatureBridge pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -476,7 +437,7 @@ pub struct VAnchorBn254PalletConfig {
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor on this chain.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
+    pub linked_anchors: Option<Vec<SubstrateLinkedVAnchorConfig>>,
 }
 
 /// Enumerates the supported different signing backends configurations.
@@ -617,103 +578,10 @@ fn postloading_process(
     }
     // check that all required chains are already present in the config.
     for (chain_id, chain_config) in &config.evm {
-        let anchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::Anchor(cfg) => Some(cfg),
-            _ => None,
-        });
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::Anchor(cfg) => Some(cfg),
+            Contract::VAnchor(cfg) => Some(cfg),
             _ => None,
         });
-        for anchor in anchors {
-            // validate config for data querying
-            if config.features.data_query {
-                // check if events watcher is enabled
-                if !anchor.events_watcher.enabled {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable data querying,
-                        event-watcher should also be enabled for ({})",
-                        anchor.common.address
-                    );
-                }
-                // check if data-query is enabled in evenst-watcher config
-                if !anchor.events_watcher.enable_data_query {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable data querying,
-                        enable-data-query in events-watcher config should also be enabled for ({})",
-                        anchor.common.address
-                    );
-                }
-            }
-            // validate config for governance relaying
-            if config.features.governance_relay {
-                // check if proposal signing backend is configured
-                if anchor.proposal_signing_backend.is_none() {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable governance relaying,
-                        proposal-signing-backend should be configured for ({})",
-                        anchor.common.address
-                    );
-                }
-                // check if event watchers is enabled
-                if !anchor.events_watcher.enabled {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable governance relaying,
-                        event-watcher should also be enabled for ({})",
-                        anchor.common.address
-                    );
-                }
-                // check if linked anchor is configured
-                match &anchor.linked_anchors {
-                    None => {
-                        tracing::warn!(
-                            "!!WARNING!!: In order to enable governance relaying,
-                            linked-anchors should also be configured for ({})",
-                            anchor.common.address
-                        );
-                    }
-                    Some(linked_anchors) => {
-                        if linked_anchors.is_empty() {
-                            tracing::warn!(
-                                "!!WARNING!!: In order to enable governance relaying,
-                                linked-anchors cannot be empty.
-                                Please congigure Linked anchors for ({})",
-                                anchor.common.address
-                            );
-                        } else {
-                            for linked_anchor in linked_anchors {
-                                let chain = linked_anchor.chain.clone();
-                                let chain_defined = config
-                                    .evm
-                                    .clone()
-                                    .into_values()
-                                    .find(|x| x.name.eq(&chain));
-                                if chain_defined.is_none() {
-                                    tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
-                                        which is required by the Anchor Contract ({}) defined on {} chain.
-                                        Please, define it manually, to allow the relayer to work properly.",
-                                        chain,
-                                        anchor.common.address,
-                                        chain_id
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // validate config for private transaction relaying
-            if config.features.private_tx_relay {
-                // check if withdraw fee is configured
-                if anchor.withdraw_config.is_none() {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable private transaction relaying,
-                        withdraw-config should also be configured for ({})",
-                        anchor.common.address
-                    );
-                }
-            }
-        }
         // validation checks for vanchor
         for anchor in vanchors {
             // validate config for data querying

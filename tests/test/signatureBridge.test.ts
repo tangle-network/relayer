@@ -331,7 +331,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   });
 });
 
-describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
+describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

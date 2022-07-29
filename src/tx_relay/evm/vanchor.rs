@@ -8,7 +8,7 @@ use webb::evm::{
     ethers::prelude::{Signer, SignerMiddleware},
 };
 
-use crate::config::AnchorWithdrawConfig;
+use crate::config::VAnchorWithdrawConfig;
 use crate::{
     context::RelayerContext,
     handler::{
@@ -66,7 +66,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         }
     };
     // validate contract withdraw configuration
-    let withdraw_config: &AnchorWithdrawConfig = match &contract_config
+    let withdraw_config: &VAnchorWithdrawConfig = match &contract_config
         .withdraw_config
     {
         Some(cfg) => cfg,
