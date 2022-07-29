@@ -578,103 +578,10 @@ fn postloading_process(
     }
     // check that all required chains are already present in the config.
     for (chain_id, chain_config) in &config.evm {
-        let anchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::VAnchor(cfg) => Some(cfg),
-            _ => None,
-        });
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
             Contract::VAnchor(cfg) => Some(cfg),
             _ => None,
         });
-        for anchor in anchors {
-            // validate config for data querying
-            if config.features.data_query {
-                // check if events watcher is enabled
-                if !anchor.events_watcher.enabled {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable data querying,
-                        event-watcher should also be enabled for ({})",
-                        anchor.common.address
-                    );
-                }
-                // check if data-query is enabled in evenst-watcher config
-                if !anchor.events_watcher.enable_data_query {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable data querying,
-                        enable-data-query in events-watcher config should also be enabled for ({})",
-                        anchor.common.address
-                    );
-                }
-            }
-            // validate config for governance relaying
-            if config.features.governance_relay {
-                // check if proposal signing backend is configured
-                if anchor.proposal_signing_backend.is_none() {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable governance relaying,
-                        proposal-signing-backend should be configured for ({})",
-                        anchor.common.address
-                    );
-                }
-                // check if event watchers is enabled
-                if !anchor.events_watcher.enabled {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable governance relaying,
-                        event-watcher should also be enabled for ({})",
-                        anchor.common.address
-                    );
-                }
-                // check if linked anchor is configured
-                match &anchor.linked_anchors {
-                    None => {
-                        tracing::warn!(
-                            "!!WARNING!!: In order to enable governance relaying,
-                            linked-anchors should also be configured for ({})",
-                            anchor.common.address
-                        );
-                    }
-                    Some(linked_anchors) => {
-                        if linked_anchors.is_empty() {
-                            tracing::warn!(
-                                "!!WARNING!!: In order to enable governance relaying,
-                                linked-anchors cannot be empty.
-                                Please congigure Linked anchors for ({})",
-                                anchor.common.address
-                            );
-                        } else {
-                            for linked_anchor in linked_anchors {
-                                let chain = linked_anchor.chain.clone();
-                                let chain_defined = config
-                                    .evm
-                                    .clone()
-                                    .into_values()
-                                    .find(|x| x.name.eq(&chain));
-                                if chain_defined.is_none() {
-                                    tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
-                                        which is required by the Anchor Contract ({}) defined on {} chain.
-                                        Please, define it manually, to allow the relayer to work properly.",
-                                        chain,
-                                        anchor.common.address,
-                                        chain_id
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // validate config for private transaction relaying
-            if config.features.private_tx_relay {
-                // check if withdraw fee is configured
-                if anchor.withdraw_config.is_none() {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable private transaction relaying,
-                        withdraw-config should also be configured for ({})",
-                        anchor.common.address
-                    );
-                }
-            }
-        }
         // validation checks for vanchor
         for anchor in vanchors {
             // validate config for data querying
