@@ -183,7 +183,8 @@ where
         // call data bytes (pallet u8, call u8, call params).
         let call_data = {
             let mut bytes = Vec::new();
-            let metadata = api.client.metadata();
+            let locked_metadata = api.client.metadata();
+            let metadata = locked_metadata.read();
             let pallet = metadata.pallet(ExecuteProposal::PALLET)?;
             bytes.push(pallet.index());
             execute_proposal_call.encode_to(&mut bytes);
@@ -266,7 +267,8 @@ where
         // call data bytes (pallet u8, call u8, call params).
         let call_data = {
             let mut bytes = Vec::new();
-            let metadata = api.client.metadata();
+            let locked_metadata = api.client.metadata();
+            let metadata = locked_metadata.read();
             let pallet = metadata.pallet(SetMaintainer::PALLET)?;
             bytes.push(pallet.index());
             set_maintainer_call.encode_to(&mut bytes);
