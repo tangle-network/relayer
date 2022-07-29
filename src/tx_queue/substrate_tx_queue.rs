@@ -36,12 +36,14 @@ use webb::substrate::subxt::{self, PairSigner};
 /// Randomized sleep intervals are used to prevent relayers from submitting
 /// the same transaction.
 #[derive(Clone)]
-pub struct SubstrateTxQueue<S: QueueStore<Vec<u8>, Key = SledQueueKey>> {
+pub struct SubstrateTxQueue<S>
+where
+    S: QueueStore<Vec<u8>, Key = SledQueueKey>,
+{
     ctx: RelayerContext,
     chain_id: U256,
     store: Arc<S>,
 }
-
 impl<S> SubstrateTxQueue<S>
 where
     S: QueueStore<Vec<u8>, Key = SledQueueKey>,
@@ -91,7 +93,11 @@ where
     /// };
     /// ```
     #[tracing::instrument(skip_all, fields(node = %self.chain_id))]
-    pub async fn run(self) -> Result<(), anyhow::Error> {
+    pub async fn run<X>(self) -> Result<(), anyhow::Error>
+    where
+        X: subxt::extrinsic::ExtrinsicParams<subxt::DefaultConfig>,
+        <X as ExtrinsicParams<subxt::DefaultConfig>>::OtherParams: Default,
+    {
         let chain_config = self
             .ctx
             .config
@@ -126,223 +132,230 @@ where
 
         let task = || async {
             loop {
-                tracing::trace!("Checking for any txs in the queue ...");
+                tracing::debug!("Checking for any txs in the queue ...");
                 // dequeue transaction call data. This are call params stored as bytes
-                let call_data = store.dequeue_item(
+                let maybe_call_data = store.dequeue_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),
                 )?;
-                // This are the steps to create encoded extrinsic which can be executed by rpc client
-                let account_nonce = if let Some(nonce) = signer.nonce() {
-                    nonce
-                } else {
-                    client
-                        .rpc()
-                        .system_account_next_index(signer.account_id())
-                        .map_err(anyhow::Error::from)
-                        .await?
-                };
-
-                // 1.Construct our custom additional/extra params.
-                let additional_and_extra_params = {
-                    // Obtain spec version and transaction version from the runtime version of the client.
-                    let runtime = client
-                        .rpc()
-                        .runtime_version(None)
-                        .map_err(anyhow::Error::from)
-                        .await?;
-                    subxt::SubstrateExtrinsicParams::<subxt::DefaultConfig>::new(
-                        runtime.spec_version,
-                        runtime.transaction_version,
-                        account_nonce,
-                        *client.genesis(),
-                        Default::default(),
-                    )
-                };
-
-                // 2. Construct signature. This is compatible with the Encode impl
-                //    for SignedPayload (which is this payload of bytes that we'd like)
-                //    to sign. See:
-                //    https://github.com/paritytech/substrate/blob/9a6d706d8db00abb6ba183839ec98ecd9924b1f8/primitives/runtime/src/generic/unchecked_extrinsic.rs#L215)
-                let signature = {
-                    let mut bytes = Vec::new();
-                    call_data.encode_to(&mut bytes);
-                    additional_and_extra_params.encode_extra_to(&mut bytes);
-                    additional_and_extra_params
-                        .encode_additional_to(&mut bytes);
-                    if bytes.len() > 256 {
-                        signer.sign(&blake2_256(&bytes))
-                    } else {
-                        signer.sign(&bytes)
-                    }
-                };
-
-                // 3. Encode extrinsic, now that we have the parts we need. This is compatible
-                //    with the Encode impl for UncheckedExtrinsic (protocol version 4).
-                let extrinsic = {
-                    let mut encoded_inner = Vec::new();
-                    // "is signed" + transaction protocol version (4)
-                    (0b10000000 + 4u8).encode_to(&mut encoded_inner);
-                    // from address for signature
-                    signer.address().encode_to(&mut encoded_inner);
-                    // the signature bytes
-                    signature.encode_to(&mut encoded_inner);
-                    // attach custom extra params
-                    additional_and_extra_params
-                        .encode_extra_to(&mut encoded_inner);
-                    // and now, call data
-                    call_data.encode_to(&mut encoded_inner);
-                    // now, prefix byte length:
-                    let len = Compact(
-                        u32::try_from(encoded_inner.len())
-                            .expect("extrinsic size expected to be <4GB"),
+                if let Some(call_data) = maybe_call_data {
+                    let call_data = subxt::Encoded(call_data);
+                    tracing::debug!(
+                        "Transaction call in hex : {:?}",
+                        hex::encode(&call_data.encode())
                     );
-                    let mut encoded = Vec::new();
-                    len.encode_to(&mut encoded);
-                    encoded.extend(encoded_inner);
-                    encoded
-                };
-                // encoded extinsic
-                let encoded_extrinsic = subxt::Encoded(extrinsic);
-                // watch_extrinsic submits and returns transaction subscription
-                let mut progress = client
-                    .rpc()
-                    .watch_extrinsic(&encoded_extrinsic)
-                    .map_err(anyhow::Error::from)
-                    .await?;
+                    // This are the steps to create encoded extrinsic which can be executed by rpc client
+                    let account_nonce = if let Some(nonce) = signer.nonce() {
+                        nonce
+                    } else {
+                        client
+                            .rpc()
+                            .system_account_next_index(signer.account_id())
+                            .map_err(anyhow::Error::from)
+                            .await?
+                    };
 
-                while let Some(event) = progress.next().await {
-                    let e = match event {
-                        Ok(e) => e,
-                        Err(err) => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                errored = true,
-                                error = %err,
-                            );
-                            continue; // keep going.
+                    // 1.Construct our custom additional/extra params.
+                    let additional_and_extra_params = {
+                        // Obtain spec version and transaction version from the runtime version of the client.
+                        let runtime = client
+                            .rpc()
+                            .runtime_version(None)
+                            .map_err(anyhow::Error::from)
+                            .await?;
+                        X::new(
+                            runtime.spec_version,
+                            runtime.transaction_version,
+                            account_nonce,
+                            *client.genesis(),
+                            Default::default(),
+                        )
+                    };
+
+                    // 2. Construct signature. This is compatible with the Encode impl
+                    //    for SignedPayload (which is this payload of bytes that we'd like)
+                    //    to sign. See:
+                    //    https://github.com/paritytech/substrate/blob/9a6d706d8db00abb6ba183839ec98ecd9924b1f8/primitives/runtime/src/generic/unchecked_extrinsic.rs#L215)
+                    let signature = {
+                        let mut bytes = Vec::new();
+                        call_data.encode_to(&mut bytes);
+                        additional_and_extra_params.encode_extra_to(&mut bytes);
+                        additional_and_extra_params
+                            .encode_additional_to(&mut bytes);
+                        if bytes.len() > 256 {
+                            signer.sign(&blake2_256(&bytes))
+                        } else {
+                            signer.sign(&bytes)
                         }
                     };
 
-                    match e {
-                        TransactionStatus::Future => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "Future",
+                    // 3. Encode extrinsic, now that we have the parts we need. This is compatible
+                    //    with the Encode impl for UncheckedExtrinsic (protocol version 4).
+                    let extrinsic = {
+                        let mut encoded_inner = Vec::new();
+                        // "is signed" + transaction protocol version (4)
+                        (0b10000000 + 4u8).encode_to(&mut encoded_inner);
+                        // from address for signature
+                        signer.address().encode_to(&mut encoded_inner);
+                        // the signature bytes
+                        signature.encode_to(&mut encoded_inner);
+                        // attach custom extra params
+                        additional_and_extra_params
+                            .encode_extra_to(&mut encoded_inner);
+                        // and now, call data
+                        call_data.encode_to(&mut encoded_inner);
+                        // now, prefix byte length:
+                        let len = Compact(
+                            u32::try_from(encoded_inner.len())
+                                .expect("extrinsic size expected to be <4GB"),
+                        );
+                        let mut encoded = Vec::new();
+                        len.encode_to(&mut encoded);
+                        encoded.extend(encoded_inner);
+                        encoded
+                    };
+                    // encoded extinsic
+                    let encoded_extrinsic = subxt::Encoded(extrinsic);
+                    // watch_extrinsic submits and returns transaction subscription
+                    let mut progress = client
+                        .rpc()
+                        .watch_extrinsic(&encoded_extrinsic)
+                        .map_err(anyhow::Error::from)
+                        .await?;
 
-                            );
-                        }
-                        TransactionStatus::Ready => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "Ready",
+                    while let Some(event) = progress.next().await {
+                        let e = match event {
+                            Ok(e) => e,
+                            Err(err) => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    errored = true,
+                                    error = %err,
+                                );
+                                continue; // keep going.
+                            }
+                        };
 
-                            );
-                        }
-                        TransactionStatus::Broadcast(_) => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "Broadcast",
+                        match e {
+                            TransactionStatus::Future => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "Future",
 
-                            );
-                        }
-                        TransactionStatus::InBlock(_) => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "InBlock",
+                                );
+                            }
+                            TransactionStatus::Ready => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "Ready",
 
-                            );
-                        }
-                        TransactionStatus::Retracted(_) => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "Retracted",
+                                );
+                            }
+                            TransactionStatus::Broadcast(_) => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "Broadcast",
 
-                            );
-                        }
-                        TransactionStatus::FinalityTimeout(_) => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "FinalityTimeout",
+                                );
+                            }
+                            TransactionStatus::InBlock(_) => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "InBlock",
 
-                            );
-                        }
-                        TransactionStatus::Finalized(_) => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "Finalized",
+                                );
+                            }
+                            TransactionStatus::Retracted(_) => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "Retracted",
 
-                            );
-                            // TODO wait for transaction sucsess
-                        }
+                                );
+                            }
+                            TransactionStatus::FinalityTimeout(_) => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "FinalityTimeout",
 
-                        TransactionStatus::Usurped(_) => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "Usurped",
+                                );
+                            }
+                            TransactionStatus::Finalized(_) => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "Finalized",
+                                    finalized = true,
 
-                            );
-                        }
-                        TransactionStatus::Dropped => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "Dropped",
+                                );
+                                // TODO wait for transaction success
+                            }
 
-                            );
-                        }
-                        TransactionStatus::Invalid => {
-                            tracing::event!(
-                                target: crate::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %crate::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
-                                Status = "Invalid",
+                            TransactionStatus::Usurped(_) => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "Usurped",
 
-                            );
+                                );
+                            }
+                            TransactionStatus::Dropped => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "Dropped",
+
+                                );
+                            }
+                            TransactionStatus::Invalid => {
+                                tracing::event!(
+                                    target: crate::probe::TARGET,
+                                    tracing::Level::DEBUG,
+                                    kind = %crate::probe::Kind::TxQueue,
+                                    ty = "SUBSTRATE",
+                                    chain_id = %chain_id.as_u64(),
+                                    status = "Invalid",
+
+                                );
+                            }
                         }
                     }
                 }
-
                 // sleep for a random amount of time.
                 let max_sleep_interval =
                     chain_config.tx_queue.max_sleep_interval;

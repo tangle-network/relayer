@@ -58,7 +58,7 @@ type WebbProtocolClient = subxt::Client<subxt::DefaultConfig>;
 /// Type alias for the WebbProtocol RuntimeApi
 type WebbProtocolRuntime = WebbProtocolRuntimeApi<
     subxt::DefaultConfig,
-    subxt::PolkadotExtrinsicParams<subxt::DefaultConfig>,
+    subxt::SubstrateExtrinsicParams<subxt::DefaultConfig>,
 >;
 /// Type alias for [Sled](https://sled.rs)-based database store
 type Store = crate::store::sled::SledStore;
@@ -142,7 +142,6 @@ pub async fn ignite(
         if !node_config.enabled {
             continue;
         }
-        let chain_id = U256::from(node_config.chain_id);
         match node_config.runtime {
             SubstrateRuntime::Dkg => {
                 let client = ctx
@@ -198,6 +197,12 @@ pub async fn ignite(
                         }
                     }
                 }
+                // start the transaction queue for dkg-substrate extrinsics after starting other tasks.
+                start_dkg_substrate_tx_queue(
+                    ctx.clone(),
+                    chain_id,
+                    store.clone(),
+                )?;
             }
             SubstrateRuntime::WebbProtocol => {
                 let client = ctx
@@ -252,10 +257,15 @@ pub async fn ignite(
                         }
                     }
                 }
+
+                // start the transaction queue for protocol-substrate  after starting other tasks.
+                start_protocol_substrate_tx_queue(
+                    ctx.clone(),
+                    chain_id,
+                    store.clone(),
+                )?;
             }
         };
-        // start the transaction queue after starting other tasks.
-        start_substrate_tx_queue(ctx.clone(), chain_id, store.clone())?;
     }
     Ok(())
 }
@@ -1015,10 +1025,8 @@ async fn start_substrate_signature_bridge_events_watcher(
         );
         let cmd_handler_task = SubstrateBridgeWatcher::run(
             &substrate_bridge_watcher,
-            node_name.clone(),
             chain_id,
             client.clone(),
-            ctx.clone(),
             store.clone(),
         );
         tokio::select! {
@@ -1086,7 +1094,7 @@ fn start_tx_queue(
     Ok(())
 }
 
-/// Starts the Substrate transaction queue task
+/// Starts the transaction queue task for protocol-substrate extrinsic
 ///
 /// Returns Ok(()) if successful, or an error if not.
 ///
@@ -1095,26 +1103,73 @@ fn start_tx_queue(
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `chain_name` - Name of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
-fn start_substrate_tx_queue(
+fn start_protocol_substrate_tx_queue(
     ctx: RelayerContext,
     chain_id: U256,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
+
     let tx_queue = SubstrateTxQueue::new(ctx, chain_id, store);
 
-    tracing::debug!("Substrate Transaction Queue for ({}) Started.", chain_id);
+    tracing::debug!(
+        "Transaction Queue for Protocol-Substrate node({}) Started.",
+        chain_id
+    );
     let task = async move {
         tokio::select! {
-            _ = tx_queue.run() => {
+            _ = tx_queue.run::<subxt::SubstrateExtrinsicParams<subxt::DefaultConfig>>() => {
                 tracing::warn!(
-                    "Substrate Transaction Queue task stopped for ({})",
+                    "Transaction Queue task stopped for Protocol-Substrate node({})",
                     chain_id
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
-                    "Stopping Substrate Transaction Queue for ({})",
+                    "Stopping Transaction Queue for Protocol-Substrate node({})",
+                    chain_id
+                );
+            },
+        }
+    };
+    // kick off the substrate tx_queue.
+    tokio::task::spawn(task);
+    Ok(())
+}
+
+/// Starts the transaction queue task for dkg-substrate extrinsics
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `chain_name` - Name of the chain
+/// * `store` -[Sled](https://sled.rs)-based database store
+fn start_dkg_substrate_tx_queue(
+    ctx: RelayerContext,
+    chain_id: U256,
+    store: Arc<Store>,
+) -> anyhow::Result<()> {
+    let mut shutdown_signal = ctx.shutdown_signal();
+
+    let tx_queue = SubstrateTxQueue::new(ctx, chain_id, store);
+
+    tracing::debug!(
+        "Transaction Queue for Dkg-Substrate node({}) Started.",
+        chain_id
+    );
+    let task = async move {
+        tokio::select! {
+            _ = tx_queue.run::<subxt::PolkadotExtrinsicParams<subxt::DefaultConfig>>() => {
+                tracing::warn!(
+                    "Transaction Queue task stopped for Dkg-Substrate node({})",
+                    chain_id
+                );
+            },
+            _ = shutdown_signal.recv() => {
+                tracing::trace!(
+                    "Stopping Transaction Queue for Dkg-Substrate node({})",
                     chain_id
                 );
             },

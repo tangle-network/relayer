@@ -14,20 +14,18 @@
 //
 
 use std::sync::Arc;
-use crate::context::RelayerContext;
 use webb::substrate::subxt::sp_core::hashing::keccak_256;
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standalone_runtime::Call;
-use webb::substrate::protocol_substrate_runtime::api::runtime_types::pallet_signature_bridge::pallet::Call::execute_proposal;
-use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::ExecuteProposal;
+use webb::substrate::protocol_substrate_runtime::api::runtime_types::pallet_signature_bridge::pallet::Call as SignatureBridgeCall;
+use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
 use super::{BlockNumberOf, SubstrateEventWatcher};
 use crate::events_watcher::SubstrateBridgeWatcher;
 use crate::store::sled::{SledQueueKey,SledStore};
 use crate::store::{BridgeCommand, QueueStore};
 use ethereum_types::U256;
-use futures::StreamExt;
 use webb::substrate::{
     protocol_substrate_runtime,
-    subxt::{self, PairSigner, Call as OtherCall},
+    subxt::{self, Call as OtherCall},
 };
 use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
@@ -88,10 +86,8 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
     #[tracing::instrument(skip_all)]
     async fn handle_cmd(
         &self,
-        node_name: String,
         chain_id: U256,
         store: Arc<Self::Store>,
-        ctx: RelayerContext,
         api: Arc<Self::Api>,
         cmd: BridgeCommand,
     ) -> anyhow::Result<()> {
@@ -100,10 +96,8 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
         match cmd {
             ExecuteProposalWithSignature { data, signature } => {
                 self.execute_proposal_with_signature(
-                    node_name,
                     chain_id,
                     store,
-                    ctx,
                     api.clone(),
                     (data, signature),
                 )
@@ -115,10 +109,8 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
                 signature,
             } => {
                 self.transfer_ownership_with_signature(
-                    node_name,
                     chain_id,
                     store,
-                    &ctx,
                     api.clone(),
                     (public_key, nonce, signature),
                 )
@@ -136,13 +128,13 @@ where
     #[tracing::instrument(skip_all)]
     async fn execute_proposal_with_signature(
         &self,
-        _node_name: String,
         chain_id: U256,
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
-        _ctx: RelayerContext,
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
         (data, signature): (Vec<u8>, Vec<u8>),
     ) -> anyhow::Result<()> {
+        let typed_chain_id =
+            webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
         let data_hex = hex::encode(&data);
         let signature_hex = hex::encode(&signature);
         // parse proposal call
@@ -150,7 +142,6 @@ where
         let proposal_encoded_call: Call =
             scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())?;
 
-        tracing::debug!("decoded proposal call : {:?}", proposal_encoded_call);
         // get current maintainer
         let current_maintainer =
             api.storage().signature_bridge().maintainer(None).await?;
@@ -182,23 +173,23 @@ where
             signature = ?signature_hex,
         );
 
-        // Enqueue transaction call data in substrate transaction queue
-        let execute_proposal_call = execute_proposal {
-            src_id: chain_id.as_u64(),
+        // Enqueue transaction call data in protocol-substrate transaction queue
+        let execute_proposal_call = SignatureBridgeCall::execute_proposal {
+            src_id: typed_chain_id.chain_id(),
             call: Box::new(proposal_encoded_call),
             proposal_data: data,
             signature,
         };
-        // SCALE encode call data to bytes (pallet u8, call u8, call params).
+        // call data bytes (pallet u8, call u8, call params).
         let call_data = {
             let mut bytes = Vec::new();
             let metadata = api.client.metadata();
             let pallet = metadata.pallet(ExecuteProposal::PALLET)?;
             bytes.push(pallet.index());
-            bytes.push(pallet.call_index::<ExecuteProposal>()?);
             execute_proposal_call.encode_to(&mut bytes);
             bytes
         };
+
         let data_hash = utils::keccak256(&execute_proposal_call.encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
@@ -207,7 +198,7 @@ where
         QueueStore::<Vec<u8>>::enqueue_item(&store, tx_key, call_data)?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
-            "Enqueued the proposal for execution in the substrate tx queue",
+            "Enqueued execute-proposal call for execution through protocol-substrate tx queue",
         );
         Ok(())
     }
@@ -215,10 +206,8 @@ where
     #[tracing::instrument(skip_all)]
     async fn transfer_ownership_with_signature(
         &self,
-        node_name: String,
         chain_id: U256,
-        _store: Arc<<Self as SubstrateEventWatcher>::Store>,
-        ctx: &RelayerContext,
+        store: Arc<<Self as SubstrateEventWatcher>::Store>,
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> anyhow::Result<()> {
@@ -268,63 +257,32 @@ where
             %nonce,
             signature = %hex::encode(&signature),
         );
+        // Enqueue transaction call data in protocol-substrate transaction queue
+        let set_maintainer_call = SignatureBridgeCall::set_maintainer {
+            message: new_maintainer,
+            signature,
+        };
 
-        let set_maintainer_tx = api
-            .tx()
-            .signature_bridge()
-            .set_maintainer(new_maintainer, signature)?;
+        // call data bytes (pallet u8, call u8, call params).
+        let call_data = {
+            let mut bytes = Vec::new();
+            let metadata = api.client.metadata();
+            let pallet = metadata.pallet(SetMaintainer::PALLET)?;
+            bytes.push(pallet.index());
+            set_maintainer_call.encode_to(&mut bytes);
+            bytes
+        };
 
-        let pair = ctx.substrate_wallet(&node_name).await?;
-        let signer = PairSigner::new(pair);
-        let mut progress = set_maintainer_tx
-            .sign_and_submit_then_watch_default(&signer)
-            .await?;
-        while let Some(event) = progress.next().await {
-            let e = match event {
-                Ok(e) => e,
-                Err(err) => {
-                    tracing::error!(error = %err, "failed to watch for tx events");
-                    return Err(err.into());
-                }
-            };
-
-            match e {
-                subxt::TransactionStatus::Future => {}
-                subxt::TransactionStatus::Ready => {
-                    tracing::trace!("tx ready");
-                }
-                subxt::TransactionStatus::Broadcast(_) => {}
-                subxt::TransactionStatus::InBlock(_) => {
-                    tracing::trace!("tx in block");
-                }
-                subxt::TransactionStatus::Retracted(_) => {
-                    tracing::warn!("tx retracted");
-                }
-                subxt::TransactionStatus::FinalityTimeout(_) => {
-                    tracing::warn!("tx timeout");
-                }
-                subxt::TransactionStatus::Finalized(v) => {
-                    let maybe_success = v.wait_for_success().await;
-                    match maybe_success {
-                        Ok(events) => {
-                            tracing::debug!(?events, "tx finalized",);
-                        }
-                        Err(err) => {
-                            tracing::error!(error = %err, "tx failed");
-                            return Err(err.into());
-                        }
-                    }
-                }
-                subxt::TransactionStatus::Usurped(_) => {}
-                subxt::TransactionStatus::Dropped => {
-                    tracing::warn!("tx dropped");
-                }
-                subxt::TransactionStatus::Invalid => {
-                    tracing::warn!("tx invalid");
-                }
-            }
-        }
-
+        let data_hash = utils::keccak256(&set_maintainer_call.encode());
+        let tx_key = SledQueueKey::from_substrate_with_custom_key(
+            chain_id,
+            make_execute_proposal_key(data_hash),
+        );
+        QueueStore::<Vec<u8>>::enqueue_item(&store, tx_key, call_data)?;
+        tracing::debug!(
+            data_hash = ?hex::encode(data_hash),
+            "Enqueued set-maintainer call for execution through protocol-substrate tx queue",
+        );
         Ok(())
     }
 }

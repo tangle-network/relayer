@@ -23,14 +23,12 @@
 //! The event watcher calls into a storage for handling of important state. The run implementation
 //! of an event watcher polls for blocks. Implementations of the event watcher trait define an
 //! action to take when the specified event is found in a block at the `handle_event` api.
+use ethereum_types::{U256, U64};
+use futures::prelude::*;
 use std::cmp;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
-
-use crate::context::RelayerContext;
-use ethereum_types::{U256, U64};
-use futures::prelude::*;
 
 use webb::{
     evm::ethers::{
@@ -585,10 +583,8 @@ where
 {
     async fn handle_cmd(
         &self,
-        node_name: String,
         chain_id: U256,
         store: Arc<Self::Store>,
-        ctx: RelayerContext,
         client: Arc<Self::Api>,
         cmd: BridgeCommand,
     ) -> anyhow::Result<()>;
@@ -598,17 +594,14 @@ where
     #[tracing::instrument(
         skip_all,
         fields(
-            node = %node_name,
             chain_id = %chain_id,
             tag = %Self::TAG
         )
     )]
     async fn run(
         &self,
-        node_name: String,
         chain_id: U256,
         client: subxt::Client<Self::RuntimeConfig>,
-        ctx: RelayerContext,
         store: Arc<Self::Store>,
     ) -> anyhow::Result<()> {
         let backoff = backoff::ExponentialBackoff {
@@ -628,14 +621,7 @@ where
             let key = SledQueueKey::from_bridge_key(bridge_key);
             while let Some(command) = store.dequeue_item(key)? {
                 let result = self
-                    .handle_cmd(
-                        node_name.clone(),
-                        chain_id,
-                        store.clone(),
-                        ctx.clone(),
-                        api.clone(),
-                        command,
-                    )
+                    .handle_cmd(chain_id, store.clone(), api.clone(), command)
                     .await;
                 match result {
                     Ok(_) => {
