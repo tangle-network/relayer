@@ -238,7 +238,13 @@ pub async fn handle_relayer_info(
         .values_mut()
         .filter(|v| v.beneficiary.is_none())
         .try_for_each(|v| {
-            let key = SecretKey::from_bytes(v.private_key.as_bytes())?;
+            let key = v.private_key.as_ref().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "No private key found for chain id {}",
+                    v.chain_id
+                )
+            })?;
+            let key = SecretKey::from_bytes(key.as_bytes())?;
             let wallet = LocalWallet::from(key);
             v.beneficiary = Some(wallet.address());
             Result::<_, anyhow::Error>::Ok(())
@@ -248,7 +254,10 @@ pub async fn handle_relayer_info(
         .values_mut()
         .filter(|v| v.beneficiary.is_none())
         .try_for_each(|v| {
-            v.beneficiary = Some(v.suri.public());
+            let suri = v.suri.as_ref().ok_or_else(|| {
+                anyhow::anyhow!("No SURI found for chain id {}", v.chain_id)
+            })?;
+            v.beneficiary = Some(suri.public());
             Result::<_, anyhow::Error>::Ok(())
         });
     Ok(warp::reply::json(&RelayerInformationResponse { config }))

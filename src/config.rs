@@ -135,7 +135,7 @@ pub struct EvmChainConfig {
     /// 4. if it doesn't contains special characters and has 12 or 24 words in it
     ///   then we should process it as a mnemonic string: 'word two three four ...'
     #[serde(skip_serializing)]
-    pub private_key: PrivateKey,
+    pub private_key: Option<PrivateKey>,
     /// Optionally, a user can specify an account to receive rewards for relaying
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
@@ -199,7 +199,7 @@ pub struct SubstrateConfig {
     ///
     /// `None` is returned if no matches are found.
     #[serde(skip_serializing)]
-    pub suri: Suri,
+    pub suri: Option<Suri>,
     /// Optionally, a user can specify an account to receive rewards for relaying
     pub beneficiary: Option<Public>,
     /// Which Substrate Runtime to use?
