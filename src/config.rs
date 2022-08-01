@@ -694,7 +694,7 @@ fn postloading_process(
             _ => None,
         });
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::Anchor(cfg) => Some(cfg),
+            Contract::VAnchor(cfg) => Some(cfg),
             _ => None,
         });
         for anchor in anchors {
@@ -883,7 +883,7 @@ fn postloading_process(
             _ => None,
         });
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::Anchor(cfg) => Some(cfg),
+            Contract::VAnchor(cfg) => Some(cfg),
             _ => None,
         });
         for anchor in anchors {
