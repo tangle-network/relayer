@@ -98,16 +98,6 @@ pub async fn ignite(
 
         for contract in &chain_config.contracts {
             match contract {
-                Contract::Anchor(config) => {
-                    start_evm_anchor_events_watcher(
-                        ctx,
-                        config,
-                        chain_id,
-                        client.clone(),
-                        store.clone(),
-                    )
-                    .await?;
-                }
                 Contract::VAnchor(config) => {
                     start_evm_vanchor_events_watcher(
                         ctx,
@@ -159,6 +149,7 @@ pub async fn ignite(
                     | TypedChainId::RococoParachain(id)
                     | TypedChainId::Cosmos(id)
                     | TypedChainId::Solana(id) => id,
+                    TypedChainId::Ink(id) => id,
                 };
                 let chain_id = U256::from(chain_id);
                 for pallet in &node_config.pallets {
@@ -186,9 +177,6 @@ pub async fn ignite(
                         Pallet::DKGProposals(_) => {
                             // TODO(@shekohex): start the dkg proposals service
                         }
-                        Pallet::AnchorBn254(_) => {
-                            unreachable!()
-                        }
                         Pallet::SignatureBridge(_) => {
                             unreachable!()
                         }
@@ -209,16 +197,6 @@ pub async fn ignite(
                 let chain_id = U256::from(chain_id);
                 for pallet in &node_config.pallets {
                     match pallet {
-                        Pallet::AnchorBn254(config) => {
-                            start_substrate_anchor_event_watcher(
-                                ctx,
-                                config,
-                                client.clone(),
-                                node_name.clone(),
-                                chain_id,
-                                store.clone(),
-                            )?;
-                        }
                         Pallet::VAnchorBn254(config) => {
                             start_substrate_vanchor_event_watcher(
                                 ctx,
@@ -254,149 +232,6 @@ pub async fn ignite(
             }
         };
     }
-    Ok(())
-}
-/// Starts the event watcher for Substrate anchor events.
-///
-/// Returns Ok(()) if successful, or an error if not.
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `config` - AnchorBn254 configuration
-/// * `client` - WebbProtocol client
-/// * `node_name` - Name of the node
-/// * `chain_id` - An U256 representing the chain id of the chain
-/// * `store` -[Sled](https://sled.rs)-based database store
-fn start_substrate_anchor_event_watcher(
-    ctx: &RelayerContext,
-    config: &AnchorBn254PalletConfig,
-    client: WebbProtocolClient,
-    node_name: String,
-    chain_id: U256,
-    store: Arc<Store>,
-) -> anyhow::Result<()> {
-    if !config.events_watcher.enabled {
-        tracing::warn!(
-            "Substrate anchor events watcher is disabled for ({}).",
-            node_name,
-        );
-        return Ok(());
-    }
-    tracing::debug!(
-        "Substrate anchor events watcher for ({}) Started.",
-        node_name,
-    );
-    let my_ctx = ctx.clone();
-    let my_config = config.clone();
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let task = async move {
-        let watcher = SubstrateAnchorLeavesWatcher::default();
-        let substrate_leaves_watcher_task = watcher.run(
-            node_name.clone(),
-            chain_id,
-            client.clone(),
-            store.clone(),
-        );
-        let proposal_signing_backend = make_substrate_proposal_signing_backend(
-            &my_ctx,
-            store.clone(),
-            chain_id,
-            my_config.linked_anchors.clone(),
-            my_config.proposal_signing_backend,
-        )
-        .await?;
-        match proposal_signing_backend {
-            ProposalSigningBackendSelector::Dkg(backend) => {
-                // its safe to use unwrap on linked_anchors here
-                // since this option is always going to return Some(value).
-                // linked_anchors are validated in make_proposal_signing_backend() method
-                let watcher = SubstrateAnchorWatcher::new(
-                    backend,
-                    my_config.linked_anchors.unwrap(),
-                );
-                let substrate_anchor_watcher_task = watcher.run(
-                    node_name.clone(),
-                    chain_id,
-                    client.clone(),
-                    store.clone(),
-                );
-                tokio::select! {
-                    _ = substrate_anchor_watcher_task => {
-                        tracing::warn!(
-                            "Substrate Anchor watcher (DKG Backend) task stopped for ({})",
-                            node_name,
-                        );
-                    },
-                    _ = substrate_leaves_watcher_task => {
-                        tracing::warn!(
-                            "Substrate Anchor leaves watcher stopped for ({})",
-                            node_name,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping Substrate Anchor watcher (DKG Backend) for ({})",
-                            node_name,
-                        );
-                    },
-                }
-            }
-            ProposalSigningBackendSelector::Mocked(backend) => {
-                // its safe to use unwrap on linked_anchors here
-                // since this option is always going to return Some(value).
-                let watcher = SubstrateAnchorWatcher::new(
-                    backend,
-                    my_config.linked_anchors.unwrap(),
-                );
-                let substrate_anchor_watcher_task = watcher.run(
-                    node_name.clone(),
-                    chain_id,
-                    client.clone(),
-                    store.clone(),
-                );
-                tokio::select! {
-                    _ = substrate_anchor_watcher_task => {
-                        tracing::warn!(
-                            "Substrate Anchor watcher (Mocked Backend) task stopped for ({})",
-                            node_name,
-                        );
-                    },
-                    _ = substrate_leaves_watcher_task => {
-                        tracing::warn!(
-                            "Substrate Anchor leaves watcher stopped for ({})",
-                            node_name,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping Substrate Anchor watcher (Mocked Backend) for ({})",
-                            node_name,
-                        );
-                    },
-                }
-            }
-            ProposalSigningBackendSelector::None => {
-                tokio::select! {
-                    _ = substrate_leaves_watcher_task => {
-                        tracing::warn!(
-                            "Substrate Anchor leaves watcher stopped for ({})",
-                            node_name,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping Substrate Anchor watcher (Mocked Backend) for ({})",
-                            node_name,
-                        );
-                    },
-                }
-            }
-        };
-        Result::<_, anyhow::Error>::Ok(())
-    };
-    // kick off the watcher.
-    tokio::task::spawn(task);
     Ok(())
 }
 
@@ -786,135 +621,6 @@ async fn start_evm_vanchor_events_watcher(
     Ok(())
 }
 
-/// Starts the event watcher for EVM Anchor events.
-///
-/// Returns Ok(()) if successful, or an error if not.
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `config` - Anchor contract configuration
-/// * `client` - EVM Chain api client
-/// * `store` -[Sled](https://sled.rs)-based database store
-async fn start_evm_anchor_events_watcher(
-    ctx: &RelayerContext,
-    config: &AnchorContractConfig,
-    chain_id: U256,
-    client: Arc<Client>,
-    store: Arc<Store>,
-) -> anyhow::Result<()> {
-    if !config.events_watcher.enabled {
-        tracing::warn!(
-            "Anchor events watcher is disabled for ({}).",
-            config.common.address,
-        );
-        return Ok(());
-    }
-    let wrapper = AnchorContractWrapper::new(
-        config.clone(),
-        ctx.config.clone(), // the original config to access all networks.
-        client.clone(),
-    );
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let contract_address = config.common.address;
-    let my_ctx = ctx.clone();
-    let my_config = config.clone();
-    let task = async move {
-        tracing::debug!(
-            "Anchor events watcher for ({}) Started.",
-            contract_address,
-        );
-        let contract_watcher = AnchorContractWatcher::default();
-        let proposal_signing_backend = make_proposal_signing_backend(
-            &my_ctx,
-            store.clone(),
-            chain_id,
-            my_config.linked_anchors,
-            my_config.proposal_signing_backend,
-        )
-        .await?;
-        match proposal_signing_backend {
-            ProposalSigningBackendSelector::Dkg(backend) => {
-                let deposit_handler = AnchorDepositHandler::new(backend);
-                let leaves_handler = AnchorLeavesHandler::default();
-                let anchor_watcher_task = contract_watcher.run(
-                    client,
-                    store,
-                    wrapper,
-                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
-                );
-                tokio::select! {
-                    _ = anchor_watcher_task => {
-                        tracing::warn!(
-                            "Anchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping Anchor watcher for ({})",
-                            contract_address,
-                        );
-                    },
-                }
-            }
-            ProposalSigningBackendSelector::Mocked(backend) => {
-                let deposit_handler = AnchorDepositHandler::new(backend);
-                let leaves_handler = AnchorLeavesHandler::default();
-                let anchor_watcher_task = contract_watcher.run(
-                    client,
-                    store,
-                    wrapper,
-                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
-                );
-                tokio::select! {
-                    _ = anchor_watcher_task => {
-                        tracing::warn!(
-                            "Anchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping Anchor watcher for ({})",
-                            contract_address,
-                        );
-                    },
-                }
-            }
-            ProposalSigningBackendSelector::None => {
-                let leaves_handler = AnchorLeavesHandler::default();
-                let anchor_watcher_task = contract_watcher.run(
-                    client,
-                    store,
-                    wrapper,
-                    vec![Box::new(leaves_handler)],
-                );
-                tokio::select! {
-                    _ = anchor_watcher_task => {
-                        tracing::warn!(
-                            "Anchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping Anchor watcher for ({})",
-                            contract_address,
-                        );
-                    },
-                }
-            }
-        };
-
-        Result::<_, anyhow::Error>::Ok(())
-    };
-    // kick off the watcher.
-    tokio::task::spawn(task);
-
-    Ok(())
-}
-
 /// Starts the event watcher for Signature Bridge contract.
 async fn start_signature_bridge_events_watcher(
     ctx: &RelayerContext,
@@ -1094,7 +800,7 @@ async fn make_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
     chain_id: U256,
-    linked_anchors: Option<Vec<LinkedAnchorConfig>>,
+    linked_anchors: Option<Vec<LinkedVAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> anyhow::Result<ProposalSigningBackendSelector> {
     // Check if contract is configured with governance support for the relayer.
@@ -1120,7 +826,7 @@ async fn make_proposal_signing_backend(
     };
 
     // replace the names of the linked anchors with their chain ids
-    let regenerated_linked_anchors: Vec<LinkedAnchorConfig> = linked_anchors.iter()
+    let regenerated_linked_anchors: Vec<LinkedVAnchorConfig> = linked_anchors.iter()
         .map(|a| {
             let target_chain = ctx.config.evm.values().find(|c| {
                 c.name == a.chain
@@ -1128,14 +834,14 @@ async fn make_proposal_signing_backend(
 
             match target_chain {
                 Some(config) => {
-                    LinkedAnchorConfig {
+                    LinkedVAnchorConfig {
                         chain: config.chain_id.to_string(),
                         address: a.address
                     }
                 }
                 None => {
                     tracing::warn!("Misconfigured Network: Linked anchor entry does not match a supported chain");
-                    LinkedAnchorConfig {
+                    LinkedVAnchorConfig {
                         chain: "".to_string(),
                         address: a.address
                     }
@@ -1145,7 +851,7 @@ async fn make_proposal_signing_backend(
         .filter(|a| {
             a.chain != *""
         })
-        .collect::<Vec<LinkedAnchorConfig>>();
+        .collect::<Vec<LinkedVAnchorConfig>>();
 
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
@@ -1219,7 +925,7 @@ async fn make_substrate_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
     chain_id: U256,
-    linked_anchors: Option<Vec<SubstrateLinkedAnchorConfig>>,
+    linked_anchors: Option<Vec<SubstrateLinkedVAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> anyhow::Result<ProposalSigningBackendSelector> {
     // Check if contract is configured with governance support for the relayer.
