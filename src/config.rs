@@ -207,6 +207,9 @@ pub struct SubstrateConfig {
     /// Supported pallets over this substrate node.
     #[serde(default)]
     pub pallets: Vec<Pallet>,
+    /// TxQueue configuration
+    #[serde(skip_serializing, default)]
+    pub tx_queue: TxQueueConfig,
 }
 /// ExperimentalConfig is the configuration for the Experimental Options.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]

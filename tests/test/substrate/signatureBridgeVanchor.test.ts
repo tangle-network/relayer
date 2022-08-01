@@ -184,12 +184,13 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       },
     });
 
-    // now we wait for the proposals to verified and executed by signature bridge
+    // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
 
     await webbRelayer.waitForEvent({
-      kind: 'signature_bridge',
+      kind: 'tx_queue',
       event: {
-        call: 'execute_proposal_with_signature',
+        ty: 'SUBSTRATE',
+        chain_id: chainId.toString(),
         finalized: true,
       },
     });
