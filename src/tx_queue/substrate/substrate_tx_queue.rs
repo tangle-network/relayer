@@ -248,7 +248,6 @@ where
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id.as_u64(),
                                     status = "Future",
-
                                 );
                             }
                             TransactionStatus::Ready => {
