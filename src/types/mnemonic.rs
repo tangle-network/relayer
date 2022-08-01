@@ -1,8 +1,9 @@
+use bip39::{Language, Mnemonic as BipMnemonic};
 use serde::Deserialize;
 
 /// Mnemonic represents a mnemonic.
 #[derive(Clone)]
-pub struct Mnemonic(Vec<String>);
+pub struct Mnemonic(BipMnemonic);
 
 impl std::fmt::Debug for Mnemonic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -11,7 +12,7 @@ impl std::fmt::Debug for Mnemonic {
 }
 
 impl std::ops::Deref for Mnemonic {
-    type Target = Vec<String>;
+    type Target = BipMnemonic;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -25,7 +26,7 @@ impl<'de> Deserialize<'de> for Mnemonic {
     {
         struct MnemonicVistor;
         impl<'de> serde::de::Visitor<'de> for MnemonicVistor {
-            type Value = Vec<String>;
+            type Value = BipMnemonic;
 
             fn expecting(
                 &self,
@@ -38,38 +39,14 @@ impl<'de> Deserialize<'de> for Mnemonic {
             where
                 E: serde::de::Error,
             {
-                let str_value: String;
-                if value.starts_with("0x") {
-                    // hex value
-                    return Err(serde::de::Error::custom(format!(
-                        "got {} but expected a 12/24 word list ",
-                        value
-                    )));
-                } else if value.starts_with('>') {
-                    todo!("Implement command execution to extract the mnemonic")
-                } else if value.starts_with('$') {
-                    // env
-                    let var = value.strip_prefix('$').unwrap_or(value);
-                    tracing::trace!("Reading {} from env", var);
-                    let val = std::env::var(var).map_err(|e| {
+                BipMnemonic::from_phrase(value, Language::English).map_err(
+                    |_| {
                         serde::de::Error::custom(format!(
-                            "error while loading this env {}: {}",
-                            var, e,
+                            "Cannot get the mnemonic from string: {}",
+                            value
                         ))
-                    })?;
-                    str_value = val;
-                } else {
-                    str_value = value.to_string();
-                }
-                let maybe_mnemonic = str_value
-                    .trim()
-                    .split_ascii_whitespace()
-                    .map(|v| v.to_string())
-                    .collect::<Vec<String>>();
-                match maybe_mnemonic.len() {
-                    12 | 24 => Ok(maybe_mnemonic),
-                    _ => Err(serde::de::Error::custom(format!("Expected a 12/24 word list string but found {} word list", maybe_mnemonic.len()))),
-                }
+                    },
+                )
             }
         }
 

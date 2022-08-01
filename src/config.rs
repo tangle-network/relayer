@@ -38,7 +38,9 @@ use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::Public;
 
-use crate::types::{rpc_url::RpcUrl, suri::Suri, mnemonic::Mnemonic, private_key::PrivateKey};
+use crate::types::{
+    mnemonic::Mnemonic, private_key::PrivateKey, rpc_url::RpcUrl, suri::Suri,
+};
 
 /// The default port the relayer will listen on. Defaults to 9955.
 const fn default_port() -> u16 {
