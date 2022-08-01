@@ -213,6 +213,9 @@ pub struct SubstrateConfig {
     /// Supported pallets over this substrate node.
     #[serde(default)]
     pub pallets: Vec<Pallet>,
+    /// TxQueue configuration
+    #[serde(skip_serializing, default)]
+    pub tx_queue: TxQueueConfig,
 }
 /// CosmwasmConfig is the configuration for the Cosmwasm based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
