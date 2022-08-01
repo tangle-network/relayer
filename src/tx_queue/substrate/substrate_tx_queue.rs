@@ -125,7 +125,7 @@ where
             target: crate::probe::TARGET,
             tracing::Level::DEBUG,
             kind = %crate::probe::Kind::TxQueue,
-            ty = "Substrate",
+            ty = "SUBSTRATE",
             chain_id = %chain_id.as_u64(),
             starting = true,
         );
@@ -139,7 +139,7 @@ where
                 )?;
                 if let Some(call_data) = maybe_call_data {
                     let call_data = subxt::Encoded(call_data);
-                    tracing::debug!(
+                    tracing::trace!(
                         "Transaction call in hex : {:?}",
                         hex::encode(&call_data.encode())
                     );
@@ -259,7 +259,6 @@ where
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id.as_u64(),
                                     status = "Ready",
-
                                 );
                             }
                             TransactionStatus::Broadcast(_) => {
@@ -270,7 +269,6 @@ where
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id.as_u64(),
                                     status = "Broadcast",
-
                                 );
                             }
                             TransactionStatus::InBlock(_) => {
@@ -281,7 +279,6 @@ where
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id.as_u64(),
                                     status = "InBlock",
-
                                 );
                             }
                             TransactionStatus::Retracted(_) => {
@@ -292,7 +289,6 @@ where
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id.as_u64(),
                                     status = "Retracted",
-
                                 );
                             }
                             TransactionStatus::FinalityTimeout(_) => {
@@ -303,7 +299,6 @@ where
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id.as_u64(),
                                     status = "FinalityTimeout",
-
                                 );
                             }
                             TransactionStatus::Finalized(_) => {
@@ -315,7 +310,6 @@ where
                                     chain_id = %chain_id.as_u64(),
                                     status = "Finalized",
                                     finalized = true,
-
                                 );
                                 // TODO wait for transaction success
                             }
@@ -328,7 +322,6 @@ where
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id.as_u64(),
                                     status = "Usurped",
-
                                 );
                             }
                             TransactionStatus::Dropped => {
@@ -339,7 +332,6 @@ where
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id.as_u64(),
                                     status = "Dropped",
-
                                 );
                             }
                             TransactionStatus::Invalid => {
@@ -350,7 +342,6 @@ where
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id.as_u64(),
                                     status = "Invalid",
-
                                 );
                             }
                         }

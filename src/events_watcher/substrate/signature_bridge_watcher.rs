@@ -16,7 +16,6 @@
 use std::sync::Arc;
 use webb::substrate::subxt::sp_core::hashing::keccak_256;
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standalone_runtime::Call;
-use webb::substrate::protocol_substrate_runtime::api::runtime_types::pallet_signature_bridge::pallet::Call as SignatureBridgeCall;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
 use super::{BlockNumberOf, SubstrateEventWatcher};
 use crate::events_watcher::SubstrateBridgeWatcher;
@@ -25,12 +24,13 @@ use crate::store::{BridgeCommand, QueueStore};
 use ethereum_types::U256;
 use webb::substrate::{
     protocol_substrate_runtime,
-    subxt::{self, Call as OtherCall},
+    subxt,
 };
 use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
 use webb::substrate::scale;
 use webb::substrate::scale::Encode;
+use crate::tx_queue::substrate::call_data;
 
 /// A SignatureBridge contract events & commands watcher.
 #[derive(Copy, Clone, Debug, Default)]
@@ -174,23 +174,18 @@ where
         );
 
         // Enqueue transaction call data in protocol-substrate transaction queue
-        let execute_proposal_call = SignatureBridgeCall::execute_proposal {
+        let execute_proposal_call = ExecuteProposal {
             src_id: typed_chain_id.chain_id(),
             call: Box::new(proposal_encoded_call),
             proposal_data: data,
             signature,
         };
-        // call data bytes (pallet u8, call u8, call params).
-        let call_data = {
-            let mut bytes = Vec::new();
-            let locked_metadata = api.client.metadata();
-            let metadata = locked_metadata.read();
-            let pallet = metadata.pallet(ExecuteProposal::PALLET)?;
-            bytes.push(pallet.index());
-            execute_proposal_call.encode_to(&mut bytes);
-            bytes
-        };
-
+        // construct call data (pallet u8, call u8, call params).
+        let locked_metadata = api.client.metadata();
+        let call_data = call_data::encode_call_data(
+            locked_metadata,
+            execute_proposal_call.clone(),
+        )?;
         let data_hash = utils::keccak256(&execute_proposal_call.encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
@@ -259,21 +254,16 @@ where
             signature = %hex::encode(&signature),
         );
         // Enqueue transaction call data in protocol-substrate transaction queue
-        let set_maintainer_call = SignatureBridgeCall::set_maintainer {
+        let set_maintainer_call = SetMaintainer {
             message: new_maintainer,
             signature,
         };
-
-        // call data bytes (pallet u8, call u8, call params).
-        let call_data = {
-            let mut bytes = Vec::new();
-            let locked_metadata = api.client.metadata();
-            let metadata = locked_metadata.read();
-            let pallet = metadata.pallet(SetMaintainer::PALLET)?;
-            bytes.push(pallet.index());
-            set_maintainer_call.encode_to(&mut bytes);
-            bytes
-        };
+        // construct call data (pallet u8, call u8, call params).
+        let locked_metadata = api.client.metadata();
+        let call_data = call_data::encode_call_data(
+            locked_metadata,
+            set_maintainer_call.clone(),
+        )?;
 
         let data_hash = utils::keccak256(&set_maintainer_call.encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(

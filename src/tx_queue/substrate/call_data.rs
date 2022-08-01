@@ -12,5 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-pub mod evm;
-pub mod substrate;
+use parking_lot::RwLock;
+use std::sync::Arc;
+use webb::substrate::subxt::{Call, Metadata};
+// call data bytes (pallet u8, call u8, call params).
+pub fn encode_call_data<C: Call>(
+    metadata: Arc<RwLock<Metadata>>,
+    call: C,
+) -> anyhow::Result<Vec<u8>> {
+    let mut bytes = Vec::new();
+    let metadata = metadata.read();
+    let pallet = metadata.pallet(C::PALLET)?;
+    bytes.push(pallet.index());
+    bytes.push(pallet.call_index::<C>()?);
+    call.encode_to(&mut bytes);
+    Ok(bytes)
+}
