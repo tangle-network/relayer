@@ -332,22 +332,31 @@ where
         store: Arc<Self::Store>,
         contract: Self::Contract,
     ) -> anyhow::Result<()> {
-        let backoff = backoff::ExponentialBackoff {
-            max_elapsed_time: None,
-            ..Default::default()
-        };
+        let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             let my_address = contract.address();
             let my_chain_id =
                 client.get_chainid().map_err(anyhow::Error::from).await?;
             let bridge_key = BridgeKey::new(my_address, my_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
-            while let Some(command) = store.dequeue_item(key)? {
-                let result =
-                    self.handle_cmd(store.clone(), &contract, command).await;
+            loop {
+                let result = match store.dequeue_item(key)? {
+                    Some(cmd) => {
+                        self.handle_cmd(store.clone(), &contract, cmd).await
+                    }
+                    None => {
+                        // yeild back to the runtime, to allow for other tasks
+                        // to make progress, instead of this busy loop.
+                        tokio::task::yield_now().await;
+                        // the small sleep here just in case the runtime decides to
+                        // run this task again immediately.
+                        tokio::time::sleep(Duration::from_millis(10)).await;
+                        continue;
+                    }
+                };
                 match result {
                     Ok(_) => {
-                        tokio::time::sleep(Duration::from_millis(500)).await;
+                        tracing::debug!(?key, "Handled command successfully");
                         continue;
                     }
                     Err(e) => {
@@ -357,11 +366,7 @@ where
                         return Err(backoff::Error::transient(e));
                     }
                 }
-                // sleep for a bit to avoid overloading the db.
             }
-            // whenever this loop stops, we will restart the whole task again.
-            // that way we never have to worry about closed channels.
-            Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())
@@ -411,10 +416,7 @@ pub trait SubstrateEventWatcher {
         client: subxt::Client<Self::RuntimeConfig>,
         store: Arc<Self::Store>,
     ) -> anyhow::Result<()> {
-        let backoff = backoff::ExponentialBackoff {
-            max_elapsed_time: None,
-            ..Default::default()
-        };
+        let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
             let mut instant = std::time::Instant::now();
@@ -578,7 +580,6 @@ pub trait SubstrateEventWatcher {
 pub trait SubstrateBridgeWatcher: SubstrateEventWatcher
 where
     Self::Store: ProposalStore<Proposal = ()>
-        + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
         + QueueStore<BridgeCommand, Key = SledQueueKey>,
 {
     async fn handle_cmd(
@@ -604,10 +605,7 @@ where
         client: subxt::Client<Self::RuntimeConfig>,
         store: Arc<Self::Store>,
     ) -> anyhow::Result<()> {
-        let backoff = backoff::ExponentialBackoff {
-            max_elapsed_time: None,
-            ..Default::default()
-        };
+        let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
             let client_api = client.clone();
@@ -619,13 +617,31 @@ where
                 webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
             let bridge_key = BridgeKey::new(target_system, my_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
-            while let Some(command) = store.dequeue_item(key)? {
-                let result = self
-                    .handle_cmd(chain_id, store.clone(), api.clone(), command)
-                    .await;
+            loop {
+                let result = match store.dequeue_item(key)? {
+                    Some(cmd) => {
+                        self.handle_cmd(
+                            chain_id,
+                            store.clone(),
+                            api.clone(),
+                            cmd,
+                        )
+                        .await
+                    }
+                    None => {
+                        // yeild back to the runtime, to allow for other tasks
+                        // to make progress, instead of this busy loop.
+                        tokio::task::yield_now().await;
+                        // the small sleep here just in case the runtime decides to
+                        // run this task again immediately.
+                        tokio::time::sleep(Duration::from_millis(10)).await;
+                        continue;
+                    }
+                };
+
                 match result {
                     Ok(_) => {
-                        tokio::time::sleep(Duration::from_millis(500)).await;
+                        tracing::debug!(?key, "Handled command successfully");
                         continue;
                     }
                     Err(e) => {
@@ -635,11 +651,7 @@ where
                         return Err(backoff::Error::transient(e));
                     }
                 }
-                // sleep for a bit to avoid overloading the db.
             }
-            // whenever this loop stops, we will restart the whole task again.
-            // that way we never have to worry about closed channels.
-            Err(backoff::Error::transient(anyhow::anyhow!("Restarting")))
         };
         backoff::future::retry(backoff, task).await?;
         Ok(())
