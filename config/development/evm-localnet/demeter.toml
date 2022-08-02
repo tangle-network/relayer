@@ -48,13 +48,13 @@ size = 0.01
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
-events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
+events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 60000 }
 withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { chain = "hermes", address = "0xbfce6B877Ebff977bB6e80B24FbBb7bC4eBcA4df" },
-  { chain = "athena", address = "0xcd75Ad7AC9C9325105f798c476E84176648F391A"},
+  { chain = "5001", address = "0xbfce6B877Ebff977bB6e80B24FbBb7bC4eBcA4df" },
+  { chain = "5002", address = "0xcd75Ad7AC9C9325105f798c476E84176648F391A"},
 ]
 # Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
@@ -65,4 +65,4 @@ proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_K
 contract = "SignatureBridge"
 address = "0x2946259E0334f33A064106302415aD3391BeD384"
 deployed-at = 1
-events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
+events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 60000 }

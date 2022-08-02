@@ -752,10 +752,8 @@ fn postloading_process(
                                 let chain = linked_anchor.chain.clone();
                                 let chain_defined = config
                                     .evm
-                                    .clone()
-                                    .into_values()
-                                    .find(|x| x.name.eq(&chain));
-                                if chain_defined.is_none() {
+                                    .contains_key(&chain);
+                                if !chain_defined {
                                     tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
                                         which is required by the Anchor Contract ({}) defined on {} chain.
                                         Please, define it manually, to allow the relayer to work properly.",
