@@ -106,7 +106,11 @@ impl RelayerContext {
             "Chain {} not configured or enabled",
             chain_name
         ))?;
-        let key = SecretKey::from_bytes(chain_config.private_key.as_bytes())?;
+        let private_key =
+            chain_config.private_key.as_ref().ok_or_else(|| {
+                anyhow::anyhow!("Chain {} has no private key", chain_name)
+            })?;
+        let key = SecretKey::from_bytes(private_key.as_bytes())?;
         let chain_id = chain_config.chain_id;
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
@@ -164,7 +168,10 @@ impl RelayerContext {
             .get(chain_id)
             .cloned()
             .context(format!("Chain {} not configured or enabled", chain_id))?;
-        Ok(node_config.suri.into())
+        let suri_key = node_config.suri.ok_or_else(|| {
+            anyhow::anyhow!("Chain {} has no SURI defined", chain_id)
+        })?;
+        Ok(suri_key.into())
     }
 }
 

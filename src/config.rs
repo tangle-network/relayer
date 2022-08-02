@@ -141,7 +141,7 @@ pub struct EvmChainConfig {
     /// 4. if it doesn't contains special characters and has 12 or 24 words in it
     ///   then we should process it as a mnemonic string: 'word two three four ...'
     #[serde(skip_serializing)]
-    pub private_key: PrivateKey,
+    pub private_key: Option<PrivateKey>,
     /// Optionally, a user can specify an account to receive rewards for relaying
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
@@ -205,7 +205,7 @@ pub struct SubstrateConfig {
     ///
     /// `None` is returned if no matches are found.
     #[serde(skip_serializing)]
-    pub suri: Suri,
+    pub suri: Option<Suri>,
     /// Optionally, a user can specify an account to receive rewards for relaying
     pub beneficiary: Option<Public>,
     /// Which Substrate Runtime to use?
@@ -525,6 +525,40 @@ pub struct MockedProposalSigningBackendConfig {
     /// The private key of the current Governor.
     #[serde(skip_serializing)]
     pub private_key: PrivateKey,
+}
+
+impl WebbRelayerConfig {
+    /// Makes sure that the config is valid, by going
+    /// through the whole config and doing some basic checks.
+    #[allow(unused)] // TODO(@shekohex): remove this once we convert the relayer into a crate.
+    pub fn verify(&self) -> anyhow::Result<()> {
+        // The first check is to make sure that the private key is there when needed.
+        // to say more on the above check, we **must** have a private key in the following conditions:
+        // 1. We are running the relayer as a private transaction relayer.
+        // 2. we are running the relayer as a governance system.
+        //
+        // However, if we are running the relayer as only a data serving relayer, we don't need a private key.
+        let check_features =
+            self.features.governance_relay || self.features.private_tx_relay;
+        let check_evm = check_features
+            && self
+                .evm
+                .iter()
+                .filter(|(_k, v)| v.enabled)
+                .all(|(_k, v)| v.private_key.is_some());
+        let check_substrate = check_features
+            && self
+                .substrate
+                .iter()
+                .filter(|(_k, v)| v.enabled)
+                .all(|(_k, v)| v.suri.is_some());
+        (check_evm && check_substrate).then_some(()).ok_or_else(|| {
+            anyhow::anyhow!(
+                "The config is invalid. \
+                 Either the private key is missing or the SURI is missing."
+            )
+        })
+    }
 }
 
 /// Load the configuration files and
