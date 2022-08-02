@@ -922,34 +922,6 @@ async fn make_proposal_signing_backend(
         }
     };
 
-    // replace the names of the linked anchors with their chain ids
-    let regenerated_linked_anchors: Vec<LinkedVAnchorConfig> = linked_anchors.iter()
-        .map(|a| {
-            let target_chain = ctx.config.evm.values().find(|c| {
-                c.name == a.chain
-            });
-
-            match target_chain {
-                Some(config) => {
-                    LinkedVAnchorConfig {
-                        chain: config.chain_id.to_string(),
-                        address: a.address
-                    }
-                }
-                None => {
-                    tracing::warn!("Misconfigured Network: Linked anchor entry does not match a supported chain");
-                    LinkedVAnchorConfig {
-                        chain: "".to_string(),
-                        address: a.address
-                    }
-                }
-            }
-        })
-        .filter(|a| {
-            a.chain != *""
-        })
-        .collect::<Vec<LinkedVAnchorConfig>>();
-
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
         Some(ProposalSigningBackendConfig::DkgNode(c)) => {
@@ -972,9 +944,9 @@ async fn make_proposal_signing_backend(
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
             // which is a bit simpler than the DkgProposalSigningBackend.
             // get only the linked chains to that anchor.
-            let linked_chains = regenerated_linked_anchors
+            let linked_chains = linked_anchors
                 .iter()
-                .flat_map(|c| ctx.config.evm.get(&c.chain));
+                .flat_map(|c| ctx.config.evm.get(&c.chain_id.to_string()));
             // then will have to go through our configruation to retrieve the correct
             // signature bridges that are configured on the linked chains.
             // Note: this assumes that every network will only have one signature bridge configured for it.
