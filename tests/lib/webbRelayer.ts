@@ -504,6 +504,7 @@ export interface EventsWatcher {
 
 export interface LinkedAnchor {
   chain: string;
+  chainId: string;
   address: string;
 }
 

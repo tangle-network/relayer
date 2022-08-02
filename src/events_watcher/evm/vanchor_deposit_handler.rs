@@ -113,8 +113,8 @@ where
             }
         };
         for linked_anchor in linked_anchors {
-            let dest_chain = linked_anchor.chain.to_lowercase();
-            let maybe_chain = wrapper.webb_config.evm.get(&dest_chain);
+            let dest_chain = &linked_anchor.chain_id;
+            let maybe_chain = wrapper.webb_config.evm.get(dest_chain);
             let dest_chain = match maybe_chain {
                 Some(chain) => chain,
                 None => continue,

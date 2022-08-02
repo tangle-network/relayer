@@ -318,10 +318,14 @@ export class LocalChain {
         withdrawConfig: opts.withdrawConfig,
         eventsWatcher: defaultEventsWatcherValue,
         linkedAnchors: await Promise.all(
-          otherAnchors.map(async (anchor) => ({
-            chain: (await anchor.contract.getChainId()).toString(),
-            address: anchor.getAddress(),
-          }))
+          otherAnchors.map(async (anchor) => {
+            const chainId = await anchor.contract.getChainId();
+            return {
+              chain: `${chainId}`,
+              chainId: chainId.toString(),
+              address: anchor.getAddress(),
+            };
+          })
         ),
       },
       {
@@ -376,10 +380,14 @@ export class LocalChain {
           printProgressInterval: 60_000,
         },
         linkedAnchors: await Promise.all(
-          otherAnchors.map(async (anchor) => ({
-            chain: (await anchor.contract.getChainId()).toString(),
-            address: anchor.getAddress(),
-          }))
+          otherAnchors.map(async (anchor) => {
+            const chainId = await anchor.contract.getChainId();
+            return {
+              chain: `${chainId}`,
+              chainId: chainId.toString(),
+              address: anchor.getAddress(),
+            };
+          })
         ),
       },
       {
