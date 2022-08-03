@@ -14,7 +14,7 @@ tracing-futures = "^0.2"
 tracing-subscriber = { version = "0.3.1", features = ["parking_lot", "env-filter"] }
 tracing-test = "0.2"
 url = { version = "^2.2", features = ["serde"] }
-sled = { version = "^0.34", features = ["compression"] }
+sled = { version = "^0.34" }
 futures = { version = "^0.3", default-features = false }
 backoff = { version = "0.4.0", features = ["tokio"] }
 serde = { version = "^1", default-features = false, features = ["derive"] }
@@ -34,7 +34,7 @@ hex = { version = "0.4", default-features = false }
 native-tls = { version = "^0.2", features = ["vendored"] }
 # Used by ethers (but we need it to be vendored with the lib).
 openssl = { version = "0.10", features = ["vendored"], optional = true }
-webb = { version = "0.4.4", default-features = false }
+webb = { version = "0.5.1", default-features = false }
 webb-proposals = { version = "0.3.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.12"
 thiserror = "^1.0"
