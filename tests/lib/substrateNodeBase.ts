@@ -212,12 +212,14 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   ): Promise<void> {
     const config = await this.exportConfig(opts);
     // don't mind my typescript typing here XD
+    type ConvertedSubstrateLinkedAnchor = ConvertToKebabCase<SubstrateLinkedAnchor>;
     type ConvertedPallet = Omit<
       ConvertToKebabCase<Pallet>,
-      'events-watcher' | 'proposal-signing-backend'
+      'events-watcher' | 'proposal-signing-backend' | 'linked-anchors'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
       'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
+      'linked-anchors'?: ConvertedSubstrateLinkedAnchor[];
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -259,7 +261,11 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
                 }
               : undefined,
 
-          'linked-anchors': c.linkedAnchors,
+          'linked-anchors': c.linkedAnchors?.map((a: SubstrateLinkedAnchor) => ({
+            chain: a.chain,
+            'chain-id': a.chainId,
+            tree: a.tree,
+          })),
         };
         return convertedPallet;
       }),

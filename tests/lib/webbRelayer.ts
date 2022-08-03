@@ -509,6 +509,7 @@ export interface LinkedAnchor {
 }
 
 export interface SubstrateLinkedAnchor {
+  chainId: string;
   chain: number;
   tree: number;
 }

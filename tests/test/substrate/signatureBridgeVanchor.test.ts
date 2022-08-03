@@ -123,6 +123,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       linkedAnchors: [
         {
           chain: 1080,
+          chainId: `${chainId}`,
           tree: 6,
         },
       ],
