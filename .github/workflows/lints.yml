@@ -3,7 +3,7 @@ on: [push, pull_request]
 name: Lints
 
 env:
-  DEV_PACKAGES: build-essential musl musl-dev musl-tools libssl-dev linux-musl-dev pkg-config
+  DEV_PACKAGES: build-essential musl musl-dev musl-tools libssl-dev pkg-config
 
 jobs:
   clippy:
