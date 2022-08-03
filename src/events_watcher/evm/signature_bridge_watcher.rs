@@ -19,6 +19,7 @@ use std::time::Duration;
 use webb::evm::contract::protocol_solidity::{
     SignatureBridgeContract, SignatureBridgeContractEvents,
 };
+use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;
@@ -134,6 +135,10 @@ impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
                     chain_id,
                     make_transfer_ownership_key(v.new_owner.to_fixed_bytes())
                 );
+                let exist_tx = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+                if !exist_tx {
+                    return Ok(());
+                }
                 let result = QueueStore::<TypedTransaction>::remove_item(&store, tx_key);
                 if result.is_ok() {
                     tracing::debug!("Removed pending transfer ownership tx from txqueue")

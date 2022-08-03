@@ -7,6 +7,7 @@ on:
 name: Webb Relayer Release
 env:
   BIN: webb-relayer
+  DEV_PACKAGES: build-essential musl musl-dev musl-tools libssl-dev pkg-config
 
 jobs:
   # This job downloads and stores `cross` as an artifact, so that it can be
@@ -41,6 +42,7 @@ jobs:
       matrix:
         target:
           - x86_64-apple-darwin
+          - aarch64-apple-darwin
     steps:
       - uses: actions/checkout@v2
       - name: Cache Cargo
@@ -90,6 +92,8 @@ jobs:
           - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl
     steps:
+      - name: install system build dependencies
+        run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
       - uses: actions/checkout@v2
       - name: Cache Cargo
         uses: actions/cache@v2

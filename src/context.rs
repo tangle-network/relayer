@@ -110,7 +110,7 @@ impl RelayerContext {
             chain_config.private_key.as_ref().ok_or_else(|| {
                 anyhow::anyhow!("Chain {} has no private key", chain_name)
             })?;
-        let key = SecretKey::from_bytes(private_key.as_bytes())?;
+        let key = SecretKey::from_be_bytes(private_key.as_bytes())?;
         let chain_id = chain_config.chain_id;
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)

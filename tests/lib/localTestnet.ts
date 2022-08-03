@@ -448,7 +448,10 @@ export class LocalChain {
     type ConvertedLinkedAnchor = ConvertToKebabCase<LinkedAnchor>;
     type ConvertedContract = Omit<
       ConvertToKebabCase<Contract>,
-      'events-watcher' | 'proposal-signing-backend' | 'withdraw-config' | 'linked-anchors'
+      | 'events-watcher'
+      | 'proposal-signing-backend'
+      | 'withdraw-config'
+      | 'linked-anchors'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
       'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;

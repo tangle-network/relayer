@@ -119,8 +119,9 @@ where
                     .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))?;
                 let maybe_explorer = &chain_config.explorer;
                 let mut tx_hash: H256;
-                if let Some(raw_tx) = maybe_tx {
-                    let my_tx_hash = raw_tx.sighash(chain_id.as_u64());
+                if let Some(mut raw_tx) = maybe_tx {
+                    let raw_tx = raw_tx.set_chain_id(chain_id.as_u64()).clone();
+                    let my_tx_hash = raw_tx.sighash();
                     tx_hash = my_tx_hash;
                     let pending_tx = client
                         .send_transaction(raw_tx.clone(), None)

@@ -1,8 +1,8 @@
 [package]
 name = "webb-relayer"
-version = "0.3.3"
+version = "0.4.0"
 authors = ["Shady Khalifa <shekohex@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 parking_lot = "^0.12"
@@ -14,7 +14,7 @@ tracing-futures = "^0.2"
 tracing-subscriber = { version = "0.3.1", features = ["parking_lot", "env-filter"] }
 tracing-test = "0.2"
 url = { version = "^2.2", features = ["serde"] }
-sled = { version = "^0.34", features = ["compression"] }
+sled = { version = "^0.34" }
 futures = { version = "^0.3", default-features = false }
 backoff = { version = "0.4.0", features = ["tokio"] }
 serde = { version = "^1", default-features = false, features = ["derive"] }
@@ -32,9 +32,11 @@ hex = { version = "0.4", default-features = false }
 # just to make it compile on linux where the openssl is not available.
 # until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
 native-tls = { version = "^0.2", features = ["vendored"] }
-webb = { version = "0.4.4", default-features = false }
-webb-proposals = { version = "0.3.4", default-features = false, features = ["scale"] }
-ethereum-types = "0.12"
+# Used by ethers (but we need it to be vendored with the lib).
+openssl = { version = "0.10", features = ["vendored"], optional = true }
+webb = { version = "0.5.1", default-features = false }
+webb-proposals = { version = "0.4.4", default-features = false, features = ["scale"] }
+ethereum-types = "0.13"
 thiserror = "^1.0"
 glob = "^0.3"
 headers = "0.3.5"

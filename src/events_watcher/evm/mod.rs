@@ -21,7 +21,8 @@ use std::time::Duration;
 use webb::evm::contract::protocol_solidity::{
     VAnchorContract, VAnchorContractEvents,
 };
-use webb::evm::ethers::prelude::{Contract, Middleware};
+use webb::evm::ethers::contract::Contract;
+use webb::evm::ethers::prelude::Middleware;
 use webb::evm::ethers::types;
 
 pub mod signature_bridge_watcher;

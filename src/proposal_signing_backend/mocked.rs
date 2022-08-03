@@ -8,7 +8,7 @@ use typed_builder::TypedBuilder;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::utils::keccak256;
-use webb_proposals::{Proposal, TargetSystem, TypedChainId};
+use webb_proposals::{ProposalTrait, TargetSystem, TypedChainId};
 
 /// A ProposalSigningBackend that uses the Governor's private key to sign proposals.
 #[derive(TypedBuilder)]
@@ -42,7 +42,7 @@ where
             })
     }
     fn signer(&self, chain_id: TypedChainId) -> anyhow::Result<LocalWallet> {
-        let key = SecretKey::from_bytes(self.private_key.as_bytes())?;
+        let key = SecretKey::from_be_bytes(self.private_key.as_bytes())?;
         let signer = LocalWallet::from(key)
             .with_chain_id(chain_id.underlying_chain_id());
         Ok(signer)
@@ -53,7 +53,7 @@ where
 impl<S, P> super::ProposalSigningBackend<P> for MockedProposalSigningBackend<S>
 where
     S: QueueStore<BridgeCommand, Key = SledQueueKey> + Send + Sync + 'static,
-    P: Proposal + Sync + 'static + Send,
+    P: ProposalTrait + Sync + 'static + Send,
 {
     async fn can_handle_proposal(&self, proposal: &P) -> anyhow::Result<bool> {
         let dest_chain_id = proposal.header().resource_id().typed_chain_id();
@@ -70,7 +70,7 @@ where
         let signer = self.signer(dest_chain_id)?;
         let proposal_bytes = proposal.to_vec();
         let hash = keccak256(&proposal_bytes);
-        let signature = signer.sign_hash(H256::from(hash), false);
+        let signature = signer.sign_hash(H256::from(hash));
         let bridge_key = BridgeKey::new(target_system, dest_chain_id);
         tracing::debug!(
             %bridge_key,

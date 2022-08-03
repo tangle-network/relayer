@@ -2,11 +2,16 @@ on: [push, pull_request]
 
 name: Lints
 
+env:
+  DEV_PACKAGES: build-essential musl musl-dev musl-tools libssl-dev pkg-config
+
 jobs:
   clippy:
     name: Rust Clippy
     runs-on: ubuntu-latest
     steps:
+      - name: install system build dependencies
+        run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
       - name: Checkout sources
         uses: actions/checkout@v2
       - name: Cache Cargo
