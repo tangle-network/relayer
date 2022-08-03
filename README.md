@@ -60,22 +60,6 @@ Relayers who fulfill the role of an oracle listen to the Anchor Protocol instanc
 
 For additional information, please refer to the [Webb Relayer Rust Docs](https://webb-tools.github.io/relayer/) 📝. Have feedback on how to improve the relayer network? Or have a specific question to ask? Checkout the [Relayer Feedback Discussion](https://github.com/webb-tools/feedback/discussions/categories/webb-relayer-feedback) 💬.
 
-### Top-level directory layout
-
-```
-├── config.rs               # Functionality related to parsing of configurable values.
-├── context.rs              # Access the parsed configuration and generate providers and wallets.
-├── events_watcher          # Sync to different network types (EVM, Substrate), and act on different events.
-├── handler.rs              # Logic for what to do when a client is interacting with this relayer.
-├── main.rs                 # Build and start the relayer.
-├── probe.rs                # Debugging relayer lifecycle, sync state, or other relayer state.
-├── service.rs              # The entry for tasks once the relayer is operating.
-├── store                   # Logic for storing information with different backends.
-├── tx_queue.rs             # A queue for orderly handling of transactions.
-├── tx_relay                # Transaction relay handlers for different chains and protocols
-└── utils.rs                # Common functionality.
-```
-
 ### Prerequisites
 
 This repo uses Rust so it is required to have a Rust developer environment set up. First install and configure rustup:
@@ -115,8 +99,10 @@ cargo build --release
 
 Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM Local Network configuration to get up and running immediately. You can follow this [guide](https://docs.webb.tools/how-to-guides/v1/evm-bridge/local-bridge/) to use the relayer for the EVM bridge! You will have to configure an `.env` file in the root directory as well. See below configuration section for more details.
 
-```
-cargo run -- -c ./config/evm-localnet -vvv
+```bash
+# Update your local env file
+cp ./config/development/evm-localnet/.env.example .env
+cargo run -- -c ./config/development/evm-localnet -vvv
 ```
 
 > Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
@@ -126,7 +112,7 @@ cargo run -- -c ./config/evm-localnet -vvv
 To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer. You can follow this [guide](https://docs.webb.tools/how-to-guides/v1/substrate-mixer/local-mixer/) to use the relayer for the Substrate mixer!
 
 ```
-cargo run -- -c config/local-substrate -vvv
+cargo run -- -c ./config/development/local-substrate -vvv
 ```
 
 ### Run 🏃
@@ -167,6 +153,7 @@ webb-relayer -vv -c ./config
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
 | `http-endpoint` | Http(s) Endpoint for quick Req/Res                                                                                                 | Required               |
 | `ws-endpoint`   | Websocket Endpoint for long living connections                                                                                     | Required               |
+| `name`          | The Chain/Node name                                                                                                                | Required               |
 | `explorer`      | Block explorer, used for generating clickable links for transactions that happens on this chain.                                   | Optional               |
 | `chain-id`      | Chain specific id.                                                                                                                 | Required               |
 | `private-key`   | The Private Key of this account on this network. See [PrivateKey Docs for secure setup]()                                          | Required               |
@@ -179,14 +166,12 @@ webb-relayer -vv -c ./config
 
 | Field                      | Description                                                                                            | Optionality                        |
 | -------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------- |
-| `contract`                 | Chain contract. Must be either: </br> - Anchor </br> - SignatureBridge </br> - GovernanceBravoDelegate | Required                           |
+| `contract`                 | Chain contract. Must be either: </br> - VAnchor </br> - SignatureBridge </br>                          | Required                           |
 | `address`                  | The address of this contract on this chain.                                                            | Required                           |
 | `deployed-at`              | The block number where this contract got deployed at.                                                  | Required                           |
-| `size`                     | The size of this contract. **Note**: only available for `Anchor` and `Anchor2` contracts.              | Optional                           |
 | `events-watcher`           | Control the events watcher for this contract.                                                          | Optional                           |
-| `withdraw-fee-percentage`  | The fee percentage that your account will receive when you relay a transaction over this chain.        | Optional                           |
-| `withdraw-gaslimit`        | A hex value of the gaslimit when doing a withdraw relay transaction on this chain.                     | Optional                           |
-| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`)             | Required if the contract is Anchor |
+| `withdraw-config`          | Config the fees and gas limits of your private transaction relayer.                                    | Optional                           |
+| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`)             | Optional                           |
 
 ### Docker 🐳
 
@@ -265,8 +250,9 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 
 ##### Parameters
 
+- `target_system` (Could be `evm` or `substrate`).
 - `chain_id`
-- `contract address`
+- `contract_address`
 
 ##### For evm
 ```
