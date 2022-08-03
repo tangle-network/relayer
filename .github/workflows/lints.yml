@@ -2,6 +2,9 @@ on: [push, pull_request]
 
 name: Lints
 
+env:
+  DEV_PACKAGES: build-essential musl musl-dev musl-tools libssl-dev linux-musl-dev pkg-config
+
 jobs:
   clippy:
     name: Rust Clippy

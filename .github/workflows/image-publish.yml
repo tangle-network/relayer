@@ -11,6 +11,7 @@ on:
 
 env:
   IMAGE_NAME: relayer
+  DEV_PACKAGES: build-essential musl musl-dev musl-tools libssl-dev linux-musl-dev pkg-config
 
 jobs:
   # This job downloads and stores `cross` as an artifact, so that it can be
