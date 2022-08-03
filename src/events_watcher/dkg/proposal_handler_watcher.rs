@@ -71,8 +71,8 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         );
         let maybe_bridge_key = match event.target_chain {
             TypedChainId::None => {
-                tracing::warn!(
-                    "Received `ProposalSigned` Event with no chain id"
+                tracing::debug!(
+                    "Received `ProposalSigned` Event with no chain id, ignoring",
                 );
                 None
             }

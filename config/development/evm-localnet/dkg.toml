@@ -2,6 +2,7 @@
 name = "localdkg"
 http-endpoint = "$LOCAL_DKG_HTTP_URL"
 ws-endpoint = "$LOCAL_DKG_WS_URL"
+chain-id = 5
 runtime = "DKG"
 suri = "$LOCAL_DKG_SURI"
 

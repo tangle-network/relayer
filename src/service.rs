@@ -80,7 +80,10 @@ pub async fn ignite(
     ctx: &RelayerContext,
     store: Arc<Store>,
 ) -> anyhow::Result<()> {
-    tracing::debug!("Relayer configuration  : {:?}", ctx.config);
+    tracing::debug!(
+        "Relayer configuration: {}",
+        serde_json::to_string_pretty(&ctx.config)?
+    );
 
     // now we go through each chain, in our configuration
     for chain_config in ctx.config.evm.values() {
