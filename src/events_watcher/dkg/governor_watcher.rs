@@ -78,6 +78,12 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
         // next is that we need to uncompress the public key.
         let public_key_uncompressed =
             decompress_public_key(public_key_compressed)?;
+        tracing::debug!(
+            %at_hash,
+            public_key_uncompressed = %hex::encode(&public_key_uncompressed),
+            %refresh_nonce,
+            "DKG Public Key Changed",
+        );
         let bridge_keys = self
             .webb_config
             .evm

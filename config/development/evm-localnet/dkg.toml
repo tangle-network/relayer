@@ -9,3 +9,7 @@ suri = "$LOCAL_DKG_SURI"
 [[substrate.localdkg.pallets]]
 pallet = "DKGProposalHandler"
 events-watcher = { enabled = true, polling-interval = 6000, print-progress-interval = 60000 }
+
+[[substrate.localdkg.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true, polling-interval = 6000, print-progress-interval = 60000 }

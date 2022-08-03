@@ -127,8 +127,8 @@ where
                 subxt::TransactionStatus::Finalized(v) => {
                     let maybe_success = v.wait_for_success().await;
                     match maybe_success {
-                        Ok(events) => {
-                            tracing::debug!(?events, "tx finalized",);
+                        Ok(_events) => {
+                            tracing::debug!("tx finalized");
                         }
                         Err(err) => {
                             tracing::error!(error = %err, "tx failed");

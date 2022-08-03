@@ -134,6 +134,10 @@ impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
                     chain_id,
                     make_transfer_ownership_key(v.new_owner.to_fixed_bytes())
                 );
+                let exist_tx = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+                if !exist_tx {
+                    return Ok(());
+                }
                 let result = QueueStore::<TypedTransaction>::remove_item(&store, tx_key);
                 if result.is_ok() {
                     tracing::debug!("Removed pending transfer ownership tx from txqueue")

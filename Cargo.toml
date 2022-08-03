@@ -1,8 +1,8 @@
 [package]
 name = "webb-relayer"
-version = "0.3.3"
+version = "0.4.0"
 authors = ["Shady Khalifa <shekohex@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 parking_lot = "^0.12"
