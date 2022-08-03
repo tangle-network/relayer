@@ -36,7 +36,7 @@ import {
   defaultEventsWatcherValue,
 } from '../../lib/substrateNodeBase.js';
 import { BigNumber, ethers } from 'ethers';
-import { Keyring } from '@polkadot/api';
+import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
@@ -107,25 +107,68 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
 
   it('number of deposits made should be equal to number of leaves in cache', async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Dave');
     //create vanchor
     let createVAnchorCall = api.tx.vAnchorBn254!.create!(1, 30, 0);
     // execute sudo transaction.
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
-
+    // get treeId
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
 
-    const chainId = '2199023256632';
-    const outputChainId = BigInt(chainId);
-    const secret = randomAsU8a();
+    const chainId = 2199023256632;
+    // get leafs count before making transaction
+    const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
+      Number(treeId)
+    );
+    // vanchor deposit
+    await vanchorDeposit(aliceNode, treeId, chainId);
+
+    const indexBeforeInsetion = Math.max(leafsCount - 1, 0);
+    // now we wait for all deposit to be saved in LeafStorageCache.
+    await webbRelayer.waitForEvent({
+      kind: 'leaves_store',
+      event: {
+        leaf_index: indexBeforeInsetion + 2,
+      },
+    });
+
+    // chainId
+    let chainIdentifier = await aliceNode.getChainId();
+    const chainIdHex = chainIdentifier.toString(16);
+    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
+    // are equal to no of deposits made.
+    const response = await webbRelayer.getLeavesSubstrate(
+      chainIdHex,
+      treeId.toString()
+    );
+    expect(response.status).equal(200);
+    let leavesStore = response.json() as Promise<LeavesCacheResponse>;
+    leavesStore.then((resp) => {
+      expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
+    });
+  });
+
+  after(async () => {
+    await aliceNode?.stop();
+    await bobNode?.stop();
+    await webbRelayer?.stop();
+  });
+});
+
+// Helper methods, we can move them somewhere if we end up using them again.
+
+async function vanchorDeposit(aliceNode: LocalProtocolSubstrate, treeId: number, chainId: number) {
+  const api = await aliceNode.api();
+  const account = createAccount('//Dave');
+  const outputChainId = BigInt(chainId);
+  const secret = randomAsU8a();
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
       .toString()
@@ -160,13 +203,13 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       curve: 'Bn254',
       backend: 'Arkworks',
       amount: publicAmount.toString(),
-      chainId,
+      chainId: chainId.toString(),
     });
     const output2 = await Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Arkworks',
       amount: '0',
-      chainId,
+      chainId: chainId.toString(),
     });
 
     // Configure a new proving manager with direct call
@@ -221,10 +264,6 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       ),
       extDataHash: data.extDataHash,
     };
-    const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
-      Number(treeId)
-    );
-    const indexBeforeInsetion = Math.max(leafsCount - 1, 0);
 
     // now we call the vanchor transact
     let transactCall = api.tx.vAnchorBn254!.transact!(
@@ -234,39 +273,8 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     );
     const txSigned = await transactCall.signAsync(account);
     await aliceNode.executeTransaction(txSigned);
-
-    // now we wait for all deposit to be saved in LeafStorageCache.
-    await webbRelayer.waitForEvent({
-      kind: 'leaves_store',
-      event: {
-        leaf_index: indexBeforeInsetion + 2,
-      },
-    });
-
-    // chainId
-    let chainIdentifier = await aliceNode.getChainId();
-    const chainIdHex = chainIdentifier.toString(16);
-    // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
-    // are equal to no of deposits made.
-    const response = await webbRelayer.getLeavesSubstrate(
-      chainIdHex,
-      treeId.toString()
-    );
-    expect(response.status).equal(200);
-    let leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    leavesStore.then((resp) => {
-      expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
-    });
-  });
-
-  after(async () => {
-    await aliceNode?.stop();
-    await bobNode?.stop();
-    await webbRelayer?.stop();
-  });
-});
-
-// Helper methods, we can move them somewhere if we end up using them again.
+    
+}
 
 function currencyToUnitI128(currencyAmount: number) {
   let bn = BigNumber.from(currencyAmount);

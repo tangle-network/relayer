@@ -64,6 +64,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
   before(async () => {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
+    const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
       ? { mode: 'host', nodePath: 'dkg-standalone-node' }
       : {
@@ -160,6 +161,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
+    let relayerWallet = new ethers.Wallet(relayerPk, localChain1.provider());
     // Deploy the token.
     const localToken1 = await localChain1.deployToken(
       'Webb Token',
@@ -183,10 +185,13 @@ describe.skip('SignatureBridge Governor Updates', function () {
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', node: charlieNode.name },
+      relayerWallet: relayerWallet
+      
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', node: charlieNode.name },
+      relayerWallet: relayerWallet
     });
     // fetch the dkg public key.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();

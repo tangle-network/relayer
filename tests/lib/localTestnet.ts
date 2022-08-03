@@ -15,7 +15,7 @@
  *
  */
 import fs from 'fs';
-import { ethers } from 'ethers';
+import { ethers, Wallet } from 'ethers';
 import ganache, { Server } from 'ganache';
 import { Bridges, Utility, VBridge } from '@webb-tools/protocol-solidity';
 import {
@@ -49,6 +49,7 @@ export type ExportedConfigOptions = {
   proposalSigningBackend?: ProposalSigningBackend;
   features?: FeaturesConfig;
   withdrawConfig?: WithdrawConfig;
+  relayerWallet: Wallet;
 };
 
 // Default Events watcher for the contracts.
@@ -170,8 +171,8 @@ export class LocalChain {
       [otherChain.chainId]: otherWallet,
     };
     const defaultInitialGovernors: GovernorConfig = initialGovernors ?? {
-      [this.chainId]: localWallet,
-      [otherChain.chainId]: otherWallet,
+      [this.chainId]: localWallet.address,
+      [otherChain.chainId]: otherWallet.address,
     };
 
     const witnessCalculatorCjsPath_2 = path.join(
@@ -254,8 +255,8 @@ export class LocalChain {
       [otherChain.chainId]: otherWallet,
     };
     const defaultInitialGovernors: GovernorConfig = initialGovernors ?? {
-      [this.chainId]: localWallet,
-      [otherChain.chainId]: otherWallet,
+      [this.chainId]: localWallet.address,
+      [otherChain.chainId]: otherWallet.address,
     };
     const witnessCalculatorCjsPath = path.join(
       gitRoot,
@@ -298,7 +299,7 @@ export class LocalChain {
       ethers.utils.parseEther('1')
     );
     const side = bridge.getBridgeSide(this.chainId);
-    const wallet = side.governor;
+    const wallet = side.governor as ethers.Wallet;
     const otherChainIds = Array.from(bridge.bridgeSides.keys()).filter(
       (chainId) => chainId !== this.chainId
     );
@@ -354,7 +355,8 @@ export class LocalChain {
     }
     const localAnchor = bridge.getVAnchor(this.chainId);
     const side = bridge.getVBridgeSide(this.chainId);
-    const wallet = side.governor;
+    // relayer address mu
+    const wallet = opts.relayerWallet;
     const otherChainIds = Array.from(bridge.vBridgeSides.keys()).filter(
       (chainId) => chainId !== this.chainId
     );
@@ -424,7 +426,7 @@ export class LocalChain {
         return this.getAnchorChainConfig(opts);
       }
       if (contract.contract == 'VAnchor') {
-        return this.getVAnchorChainConfig(opts);
+        return this.getVAnchorChainConfig(opts, );
       }
     }
     return chainInfo;

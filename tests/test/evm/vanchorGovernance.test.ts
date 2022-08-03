@@ -39,6 +39,7 @@ describe('VAnchor Governance Relayer', function () {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const GOV = u8aToHex(ethers.utils.randomBytes(32));
+    const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
@@ -89,6 +90,7 @@ describe('VAnchor Governance Relayer', function () {
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
+    let relayerWallet = new ethers.Wallet(relayerPk, localChain1.provider());
     // Deploy the token.
     const localToken1 = await localChain1.deployToken(
       'Webb Token',
@@ -109,18 +111,20 @@ describe('VAnchor Governance Relayer', function () {
       wallet1,
       wallet2,
       {
-        [localChain1.chainId]: govWallet,
-        [localChain2.chainId]: govWallet,
+        [localChain1.chainId]: govWallet.address,
+        [localChain2.chainId]: govWallet.address,
       }
     );
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      relayerWallet: relayerWallet
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      relayerWallet: relayerWallet
     });
     const governorAddress = govWallet.address;
     const sides = signatureVBridge.vBridgeSides.values();
