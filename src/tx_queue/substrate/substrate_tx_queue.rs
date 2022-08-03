@@ -132,7 +132,7 @@ where
 
         let task = || async {
             loop {
-                tracing::debug!("Checking for any txs in the queue ...");
+                tracing::trace!("Checking for any txs in the queue ...");
                 // dequeue transaction call data. This are call params stored as bytes
                 let maybe_call_data = store.dequeue_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),

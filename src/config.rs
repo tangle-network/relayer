@@ -351,6 +351,8 @@ pub struct LinkedVAnchorConfig {
     /// The Chain name where this anchor belongs to.
     /// and it is case-insensitive.
     pub chain: String,
+    /// The chain ID
+    pub chain_id: String,
     /// The Anchor Contract Address.
     pub address: Address,
 }
@@ -361,6 +363,8 @@ pub struct LinkedVAnchorConfig {
 pub struct SubstrateLinkedVAnchorConfig {
     /// The Chain Id where this anchor belongs to.
     pub chain: u32,
+    /// The chain ID
+    pub chain_id: String,
     /// Tree Id of the anchor
     #[serde(rename(serialize = "tree"))]
     pub tree: u32,
@@ -415,8 +419,6 @@ pub struct VAnchorContractConfig {
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
-    /// The size of this contract
-    pub size: f64,
     /// Anchor withdraw configuration.
     #[serde(rename(serialize = "withdrawConfig"))]
     pub withdraw_config: Option<VAnchorWithdrawConfig>,
@@ -749,17 +751,15 @@ fn postloading_process(
                             );
                         } else {
                             for linked_anchor in linked_anchors {
-                                let chain = linked_anchor.chain.clone();
                                 let chain_defined = config
                                     .evm
-                                    .clone()
-                                    .into_values()
-                                    .find(|x| x.name.eq(&chain));
-                                if chain_defined.is_none() {
-                                    tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
+                                    .contains_key(&linked_anchor.chain_id);
+                                if !chain_defined {
+                                    tracing::warn!("!!WARNING!!: chain {} with id {} is not defined in the config.
                                         which is required by the Anchor Contract ({}) defined on {} chain.
                                         Please, define it manually, to allow the relayer to work properly.",
-                                        chain,
+                                        linked_anchor.chain,
+                                        linked_anchor.chain_id,
                                         anchor.common.address,
                                         chain_id
                                     );

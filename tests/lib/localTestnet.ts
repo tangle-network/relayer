@@ -33,6 +33,7 @@ import {
   EnabledContracts,
   EventsWatcher,
   FeaturesConfig,
+  LinkedAnchor,
   ProposalSigningBackend,
   WithdrawConfig,
 } from './webbRelayer';
@@ -318,10 +319,14 @@ export class LocalChain {
         withdrawConfig: opts.withdrawConfig,
         eventsWatcher: defaultEventsWatcherValue,
         linkedAnchors: await Promise.all(
-          otherAnchors.map(async (anchor) => ({
-            chain: (await anchor.contract.getChainId()).toString(),
-            address: anchor.getAddress(),
-          }))
+          otherAnchors.map(async (anchor) => {
+            const chainId = await anchor.contract.getChainId();
+            return {
+              chain: `${chainId}`,
+              chainId: chainId.toString(),
+              address: anchor.getAddress(),
+            };
+          })
         ),
       },
       {
@@ -376,10 +381,14 @@ export class LocalChain {
           printProgressInterval: 60_000,
         },
         linkedAnchors: await Promise.all(
-          otherAnchors.map(async (anchor) => ({
-            chain: (await anchor.contract.getChainId()).toString(),
-            address: anchor.getAddress(),
-          }))
+          otherAnchors.map(async (anchor) => {
+            const chainId = await anchor.contract.getChainId();
+            return {
+              chain: `${chainId}`,
+              chainId: chainId.toString(),
+              address: anchor.getAddress(),
+            };
+          })
         ),
       },
       {
@@ -436,13 +445,15 @@ export class LocalChain {
   ): Promise<void> {
     const config = await this.exportConfig(opts);
     // don't mind my typescript typing here XD
+    type ConvertedLinkedAnchor = ConvertToKebabCase<LinkedAnchor>;
     type ConvertedContract = Omit<
       ConvertToKebabCase<Contract>,
-      'events-watcher' | 'proposal-signing-backend' | 'withdraw-config'
+      'events-watcher' | 'proposal-signing-backend' | 'withdraw-config' | 'linked-anchors'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
       'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
       'withdraw-config'?: ConvertToKebabCase<WithdrawConfig>;
+      'linked-anchors'?: ConvertedLinkedAnchor[];
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -470,7 +481,6 @@ export class LocalChain {
         contract: contract.contract,
         address: contract.address,
         'deployed-at': contract.deployedAt,
-        size: contract.size,
         'proposal-signing-backend':
           contract.proposalSigningBackend?.type === 'Mocked'
             ? {
@@ -496,7 +506,11 @@ export class LocalChain {
           'print-progress-interval':
             contract.eventsWatcher.printProgressInterval,
         },
-        'linked-anchors': contract.linkedAnchors,
+        'linked-anchors': contract?.linkedAnchors?.map((anchor) => ({
+          chain: anchor.chain,
+          'chain-id': anchor.chainId,
+          address: anchor.address,
+        })),
       })),
     };
     const fullConfigFile: FullConfigFile = {

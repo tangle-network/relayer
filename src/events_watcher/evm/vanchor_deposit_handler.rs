@@ -112,12 +112,28 @@ where
                 return Ok(());
             }
         };
+        let linked_anchor_display = linked_anchors
+            .iter()
+            .map(|v| format!("Chain Id: {} at {}", v.chain_id, v.address))
+            .collect::<Vec<_>>();
+        tracing::debug!(
+            len = linked_anchors.len(),
+            anchors = ?linked_anchor_display,
+            "Updating Linked Anchors"
+        );
         for linked_anchor in linked_anchors {
-            let dest_chain = linked_anchor.chain.to_lowercase();
-            let maybe_chain = wrapper.webb_config.evm.get(&dest_chain);
+            let dest_chain = &linked_anchor.chain_id;
+            let maybe_chain = wrapper.webb_config.evm.get(dest_chain);
             let dest_chain = match maybe_chain {
                 Some(chain) => chain,
-                None => continue,
+                None => {
+                    tracing::warn!(
+                        %dest_chain,
+                        chain_name = %linked_anchor.chain,
+                        "Chain Id: {dest_chain} not found in the config, skipping ...",
+                    );
+                    continue;
+                }
             };
             let target_system =
                 webb_proposals::TargetSystem::new_contract_address(
@@ -149,12 +165,12 @@ where
                     .await?;
             } else {
                 tracing::warn!(
+                    ?proposal,
                     "Anchor update proposal is not supported by the signing backend"
                 );
             }
         }
         // mark this event as processed.
-
         let events_bytes = serde_json::to_vec(&event_data)?;
         store.store_event(&events_bytes)?;
         Ok(())

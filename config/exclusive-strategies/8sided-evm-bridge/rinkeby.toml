@@ -44,8 +44,6 @@ address = "0x91127f21d63029eb5b2de05b4b1e9fd3497ee95b"
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
 deployed-at = 10943907
-# The minimum size configured for deposit / withdraw on the contract
-size = 0.01
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.

@@ -18,7 +18,7 @@
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo } from '@webb-tools/sdk-core';
-import { ethers, BigNumber } from 'ethers';
+import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import { EnabledContracts, WebbRelayer } from '../../lib/webbRelayer.js';
