@@ -76,6 +76,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: install-cross
     steps:
+      - name: install system build dependencies
+        run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
       - uses: actions/checkout@v2
         with:
           fetch-depth: 50

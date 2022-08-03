@@ -91,6 +91,8 @@ jobs:
           - x86_64-unknown-linux-gnu
           - x86_64-unknown-linux-musl
     steps:
+      - name: install system build dependencies
+        run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
       - uses: actions/checkout@v2
       - name: Cache Cargo
         uses: actions/cache@v2

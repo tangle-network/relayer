@@ -47,6 +47,8 @@ jobs:
       packages: write
       contents: read
     steps:
+      - name: install system build dependencies
+        run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
       - uses: actions/checkout@v2
       - name: Cache Cargo
         uses: actions/cache@v2
