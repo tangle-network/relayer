@@ -32,6 +32,8 @@ hex = { version = "0.4", default-features = false }
 # just to make it compile on linux where the openssl is not available.
 # until ethers-rs solve this issue: https://github.com/gakonst/ethers-rs/issues/325
 native-tls = { version = "^0.2", features = ["vendored"] }
+# Used by ethers (but we need it to be vendored with the lib).
+openssl = { version = "0.10", features = ["vendored"], optional = true }
 webb = { version = "0.4.4", default-features = false }
 webb-proposals = { version = "0.3.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.12"
