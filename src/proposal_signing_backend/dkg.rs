@@ -3,7 +3,7 @@ use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{T
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::{dkg_runtime, subxt};
-use webb_proposals::Proposal;
+use webb_proposals::{ProposalTrait};
 use webb::substrate::scale::{Encode, Decode};
 
 type DkgConfig = subxt::DefaultConfig;
@@ -45,7 +45,7 @@ where
 impl<P> super::ProposalSigningBackend<P>
     for DkgProposalSigningBackend<DkgRuntimeApi, DkgConfig>
 where
-    P: Proposal + Sync + 'static + Send,
+    P: ProposalTrait + Sync + 'static + Send,
 {
     async fn can_handle_proposal(&self, proposal: &P) -> anyhow::Result<bool> {
         let header = proposal.header();
@@ -169,5 +169,6 @@ fn webb_proposals_typed_chain_converter(
         }
         webb_proposals::TypedChainId::Cosmos(id) => TypedChainId::Cosmos(id),
         webb_proposals::TypedChainId::Solana(id) => TypedChainId::Solana(id),
+        webb_proposals::TypedChainId::Ink(id) => TypedChainId::Ink(id),
     }
 }

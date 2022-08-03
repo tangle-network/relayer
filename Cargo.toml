@@ -35,8 +35,8 @@ native-tls = { version = "^0.2", features = ["vendored"] }
 # Used by ethers (but we need it to be vendored with the lib).
 openssl = { version = "0.10", features = ["vendored"], optional = true }
 webb = { version = "0.5.1", default-features = false }
-webb-proposals = { version = "0.3.4", default-features = false, features = ["scale"] }
-ethereum-types = "0.12"
+webb-proposals = { version = "0.4.4", default-features = false, features = ["scale"] }
+ethereum-types = "0.13"
 thiserror = "^1.0"
 glob = "^0.3"
 headers = "0.3.5"

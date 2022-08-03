@@ -42,8 +42,7 @@ impl SledStore {
         let db = sled::Config::new()
             .path(path)
             .temporary(cfg!(test))
-            .use_compression(true)
-            .compression_factor(18)
+            .mode(sled::Mode::HighThroughput)
             .open()?;
         Ok(Self { db })
     }
@@ -449,8 +448,7 @@ impl ProposalStore for SledStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ethereum_types::Address;
-    use webb::evm::contract::protocol_solidity::WithdrawalFilter;
+    use webb::evm::contract::protocol_solidity::NewNullifierFilter;
     use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
     use webb::evm::ethers::types::transaction::request::TransactionRequest;
 
@@ -461,7 +459,8 @@ mod tests {
         ) -> Self {
             let key = {
                 let mut bytes = [0u8; 64];
-                let tx_hash = tx.sighash(chain_id.as_u64());
+                let tx_hash =
+                    tx.clone().set_chain_id(chain_id.as_u64()).sighash();
                 bytes[..32].copy_from_slice(tx_hash.as_fixed_bytes());
                 bytes
             };
@@ -594,10 +593,8 @@ mod tests {
         let store = SledStore::open(tmp.path()).unwrap();
 
         let events = (0..20)
-            .map(|_| WithdrawalFilter {
-                to: Address::random(),
-                relayer: Address::random(),
-                fee: types::U256::zero(),
+            .map(|_| NewNullifierFilter {
+                nullifier: types::H256::random().to_fixed_bytes(),
             })
             .collect::<Vec<_>>();
 

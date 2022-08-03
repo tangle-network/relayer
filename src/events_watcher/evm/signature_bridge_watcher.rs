@@ -19,6 +19,7 @@ use std::time::Duration;
 use webb::evm::contract::protocol_solidity::{
     SignatureBridgeContract, SignatureBridgeContractEvents,
 };
+use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::providers;

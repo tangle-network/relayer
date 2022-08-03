@@ -244,7 +244,7 @@ pub async fn handle_relayer_info(
                     v.chain_id
                 )
             })?;
-            let key = SecretKey::from_bytes(key.as_bytes())?;
+            let key = SecretKey::from_be_bytes(key.as_bytes())?;
             let wallet = LocalWallet::from(key);
             v.beneficiary = Some(wallet.address());
             Result::<_, anyhow::Error>::Ok(())
