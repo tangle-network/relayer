@@ -34,6 +34,7 @@ use webb::evm::ethers::{
     signers::{LocalWallet, Signer},
     types::Bytes,
 };
+use webb::substrate::subxt::sp_core::Pair;
 use webb::substrate::subxt::sp_runtime::AccountId32;
 
 use crate::context::RelayerContext;
@@ -42,7 +43,6 @@ use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
 use crate::tx_relay::{MixerRelayTransaction, VAnchorRelayTransaction};
-use webb::substrate::subxt::sp_core::Pair;
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(transparent)]
@@ -54,7 +54,6 @@ impl<'de> Deserialize<'de> for WebbI256 {
         D: Deserializer<'de>,
     {
         let i128_str = String::deserialize(deserializer)?;
-        dbg!(&i128_str);
         let i128_val =
             I256::from_hex_str(&i128_str).map_err(serde::de::Error::custom)?;
         Ok(WebbI256(i128_val))
@@ -100,7 +99,7 @@ pub type SubstrateCommand = CommandType<
 pub async fn accept_connection(
     ctx: &RelayerContext,
     stream: warp::ws::WebSocket,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     let (mut tx, mut rx) = stream.split();
 
     // Wait for client to send over text (such as relay transaction requests)
@@ -135,7 +134,7 @@ pub async fn handle_text<TX>(
     ctx: &RelayerContext,
     v: &str,
     tx: &mut TX,
-) -> anyhow::Result<()>
+) -> crate::Result<()>
 where
     TX: Sink<Message> + Unpin,
     TX::Error: Error + Send + Sync + 'static,
@@ -149,20 +148,23 @@ where
             handle_cmd(ctx.clone(), cmd, my_tx).await;
             // Send back the response, usually a transaction hash
             // from processing the transaction relaying command.
-            res_stream
+            let result = res_stream
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
                 .inspect(|v| tracing::trace!("Sending: {}", v))
                 .map(Message::text)
                 .map(Result::Ok)
                 .forward(tx)
+                .map_err(|_| crate::Error::FailedToSendResponse)
                 .await?;
         }
         Err(e) => {
             tracing::warn!("Got invalid payload: {:?}", e);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
-            tx.send(Message::text(value)).await?
+            tx.send(Message::text(value))
+                .map_err(|_| crate::Error::FailedToSendResponse)
+                .await?;
         }
     };
     Ok(())
@@ -238,27 +240,21 @@ pub async fn handle_relayer_info(
         .values_mut()
         .filter(|v| v.beneficiary.is_none())
         .try_for_each(|v| {
-            let key = v.private_key.as_ref().ok_or_else(|| {
-                anyhow::anyhow!(
-                    "No private key found for chain id {}",
-                    v.chain_id
-                )
-            })?;
+            let key =
+                v.private_key.as_ref().ok_or(crate::Error::MissingSecrets)?;
             let key = SecretKey::from_be_bytes(key.as_bytes())?;
             let wallet = LocalWallet::from(key);
             v.beneficiary = Some(wallet.address());
-            Result::<_, anyhow::Error>::Ok(())
+            crate::Result::Ok(())
         });
     let _ = config
         .substrate
         .values_mut()
         .filter(|v| v.beneficiary.is_none())
         .try_for_each(|v| {
-            let suri = v.suri.as_ref().ok_or_else(|| {
-                anyhow::anyhow!("No SURI found for chain id {}", v.chain_id)
-            })?;
+            let suri = v.suri.as_ref().ok_or(crate::Error::MissingSecrets)?;
             v.beneficiary = Some(suri.public());
-            Result::<_, anyhow::Error>::Ok(())
+            crate::Result::Ok(())
         });
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
 }

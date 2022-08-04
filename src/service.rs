@@ -79,7 +79,7 @@ type Store = crate::store::sled::SledStore;
 pub async fn ignite(
     ctx: &RelayerContext,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     tracing::debug!(
         "Relayer configuration: {}",
         serde_json::to_string_pretty(&ctx.config)?
@@ -270,7 +270,7 @@ fn start_substrate_vanchor_event_watcher(
     node_name: String,
     chain_id: U256,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
             "Substrate VAnchor events watcher is disabled for ({}).",
@@ -415,7 +415,7 @@ fn start_dkg_proposal_handler(
     node_name: String,
     chain_id: U256,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     // check first if we should start the events watcher for this contract.
     if !config.events_watcher.enabled {
         tracing::warn!(
@@ -473,7 +473,7 @@ fn start_dkg_pallet_watcher(
     node_name: String,
     chain_id: U256,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     // check first if we should start the events watcher for this pallet.
     if !config.events_watcher.enabled {
         tracing::warn!(
@@ -525,7 +525,7 @@ async fn start_evm_vanchor_events_watcher(
     chain_id: U256,
     client: Arc<Client>,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
             "VAnchor events watcher is disabled for ({}).",
@@ -643,7 +643,7 @@ async fn start_signature_bridge_events_watcher(
     config: &SignatureBridgeContractConfig,
     client: Arc<Client>,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
             "Signature Bridge events watcher is disabled for ({}).",
@@ -710,7 +710,7 @@ async fn start_substrate_signature_bridge_events_watcher(
     node_name: String,
     chain_id: U256,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
             "Substrate Signature Bridge events watcher is disabled for ({}).",
@@ -777,7 +777,7 @@ fn start_tx_queue(
     ctx: RelayerContext,
     chain_id: String,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
     let tx_queue = TxQueue::new(ctx, chain_id.clone(), store);
 
@@ -816,7 +816,7 @@ fn start_protocol_substrate_tx_queue(
     ctx: RelayerContext,
     chain_id: U256,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
 
     let tx_queue = SubstrateTxQueue::new(ctx, chain_id, store);
@@ -859,7 +859,7 @@ fn start_dkg_substrate_tx_queue(
     ctx: RelayerContext,
     chain_id: U256,
     store: Arc<Store>,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
 
     let tx_queue = SubstrateTxQueue::new(ctx, chain_id, store);
@@ -902,7 +902,7 @@ async fn make_proposal_signing_backend(
     chain_id: U256,
     linked_anchors: Option<Vec<LinkedVAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
-) -> anyhow::Result<ProposalSigningBackendSelector> {
+) -> crate::Result<ProposalSigningBackendSelector> {
     // Check if contract is configured with governance support for the relayer.
     if !ctx.config.features.governance_relay {
         tracing::warn!("Governance relaying is not enabled for relayer");
@@ -999,7 +999,7 @@ async fn make_substrate_proposal_signing_backend(
     chain_id: U256,
     linked_anchors: Option<Vec<SubstrateLinkedVAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
-) -> anyhow::Result<ProposalSigningBackendSelector> {
+) -> crate::Result<ProposalSigningBackendSelector> {
     // Check if contract is configured with governance support for the relayer.
     if !ctx.config.features.governance_relay {
         tracing::warn!("Governance relaying is not enabled for relayer");

@@ -58,7 +58,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         store: Arc<Self::Store>,
         _api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         tracing::event!(
             target: crate::probe::TARGET,
             tracing::Level::DEBUG,

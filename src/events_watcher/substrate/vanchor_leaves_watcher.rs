@@ -48,7 +48,7 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         // fetch leaf_index from merkle tree at given block_number
         let at_hash = api
             .storage()

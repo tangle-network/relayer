@@ -42,7 +42,7 @@ impl super::EventHandler for VAnchorLeavesHandler {
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         use VAnchorContractEvents::*;
         match event {
             NewCommitmentFilter(deposit) => {

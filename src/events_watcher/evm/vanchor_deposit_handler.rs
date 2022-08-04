@@ -57,7 +57,7 @@ where
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         use VAnchorContractEvents::*;
         let event_data = match event {
             NewCommitmentFilter(data) => {

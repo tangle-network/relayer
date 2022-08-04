@@ -19,7 +19,7 @@ use webb::substrate::subxt::{Call, Metadata};
 pub fn encode_call_data<C: Call>(
     metadata: Arc<RwLock<Metadata>>,
     call: C,
-) -> anyhow::Result<Vec<u8>> {
+) -> crate::Result<Vec<u8>> {
     let mut bytes = Vec::new();
     let metadata = metadata.read();
     let pallet = metadata.pallet(C::PALLET)?;

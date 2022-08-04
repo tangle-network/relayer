@@ -116,7 +116,7 @@ pub trait EventWatcher {
         store: Arc<Self::Store>,
         contract: Self::Contract,
         handlers: Vec<EventHandlerFor<Self>>,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             let step = contract.max_blocks_per_step();
@@ -269,7 +269,7 @@ pub trait EventHandler {
         store: Arc<Self::Store>,
         contract: &Self::Contract,
         (event, log): (Self::Events, contract::LogMeta),
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 }
 
 /// An Auxiliary trait to handle events with retry logic.
@@ -283,7 +283,7 @@ trait EventHandlerWithRetry: EventHandler {
         contract: &Self::Contract,
         (event, log): (Self::Events, contract::LogMeta),
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let wrapped_task = || {
             self.handle_event(
                 store.clone(),
@@ -314,7 +314,7 @@ where
         store: Arc<Self::Store>,
         contract: &Self::Contract,
         cmd: BridgeCommand,
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 
     /// Returns a task that should be running in the background
     /// that will watch for all commands
@@ -331,7 +331,7 @@ where
         client: Arc<Self::Middleware>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             let my_address = contract.address();
@@ -397,7 +397,7 @@ pub trait SubstrateEventWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 
     /// Returns a task that should be running in the background
     /// that will watch events
@@ -415,7 +415,7 @@ pub trait SubstrateEventWatcher {
         chain_id: U256,
         client: subxt::Client<Self::RuntimeConfig>,
         store: Arc<Self::Store>,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
@@ -588,7 +588,7 @@ where
         store: Arc<Self::Store>,
         client: Arc<Self::Api>,
         cmd: BridgeCommand,
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 
     /// Returns a task that should be running in the background
     /// that will watch events
@@ -604,7 +604,7 @@ where
         chain_id: U256,
         client: subxt::Client<Self::RuntimeConfig>,
         store: Arc<Self::Store>,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
@@ -693,7 +693,7 @@ mod tests {
             _store: Arc<Self::Store>,
             _api: Arc<Self::Api>,
             (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        ) -> anyhow::Result<()> {
+        ) -> crate::Result<()> {
             tracing::debug!(
                 "Received `Remarked` Event: {:?} at block number: #{}",
                 event,
@@ -703,7 +703,7 @@ mod tests {
         }
     }
 
-    fn setup_logger() -> anyhow::Result<()> {
+    fn setup_logger() -> crate::Result<()> {
         let log_level = tracing::Level::TRACE;
         let env_filter = tracing_subscriber::EnvFilter::from_default_env()
             .add_directive(format!("webb_relayer={}", log_level).parse()?);
@@ -720,7 +720,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "need to be run manually"]
-    async fn substrate_event_watcher_should_work() -> anyhow::Result<()> {
+    async fn substrate_event_watcher_should_work() -> crate::Result<()> {
         setup_logger()?;
         let node_name = String::from("test-node");
         let chain_id = U256::from(5u32);
