@@ -21,9 +21,11 @@ import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
 import { ethers } from 'ethers';
+import retry from 'async-retry';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import {
+  defaultWithdrawConfigValue,
   EnabledContracts,
   LeavesCacheResponse,
   WebbRelayer,
@@ -40,12 +42,15 @@ describe.only('Vanchor Transaction relayer', function () {
   let signatureVBridge: VBridge.VBridge;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
+  let govWallet: ethers.Wallet;
 
   let webbRelayer: WebbRelayer;
 
   before(async () => {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
+    const GOV = u8aToHex(ethers.utils.randomBytes(32));
+    
     const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
     // first we need to start local evm node.
     const localChain1Port = await getPort({
@@ -87,7 +92,7 @@ describe.only('Vanchor Transaction relayer', function () {
       name: 'Athena',
       populatedAccounts: [
         {
-          secretKey: PK2,
+          secretKey: PK1,
           balance: ethers.utils
             .parseEther('100000000000000000000000')
             .toHexString(),
@@ -104,6 +109,7 @@ describe.only('Vanchor Transaction relayer', function () {
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
+    govWallet =  new ethers.Wallet(GOV);
     const relayerWallet1 = new ethers.Wallet(relayerPk, localChain1.provider());
     const relayerWallet2 = new ethers.Wallet(relayerPk, localChain2.provider());
     // Deploy the token.
@@ -129,12 +135,16 @@ describe.only('Vanchor Transaction relayer', function () {
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+      features: { dataQuery: false, governanceRelay: true },
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      withdrawConfig: defaultWithdrawConfigValue,
       relayerWallet: relayerWallet1
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      features: { dataQuery: false, governanceRelay: true },
+      withdrawConfig: defaultWithdrawConfigValue,
       relayerWallet: relayerWallet2
     });
 
@@ -172,6 +182,11 @@ describe.only('Vanchor Transaction relayer', function () {
       ethers.utils.parseEther('100000000000000000000000')
     );
 
+    // Set governor
+    const governorAddress = wallet1.address;
+    const currentGovernor = await signatureVBridge.getVBridgeSide(localChain1.chainId).contract.governor();
+    expect(currentGovernor).to.eq(governorAddress);
+   
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
@@ -217,9 +232,22 @@ describe.only('Vanchor Transaction relayer', function () {
       originChainId: localChain1.chainId.toString(),
       chainId: localChain2.chainId.toString(),
     });
+    const leaves1 = vanchor1.tree
+      .elements()
+      .map((el) => hexToU8a(el.toHexString()));
+    console.log("leaves before deposit");
     await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
-    await sleep(20000);
-
+    
+    // now we wait for the tx queue on that chain to execute the transaction.
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain2.underlyingChainId.toString(),
+        finalized: true,
+      },
+    });
+    
     // Create the setupTransaction
     const randomKeypair = new Keypair();
 
@@ -256,7 +284,29 @@ describe.only('Vanchor Transaction relayer', function () {
     const leaves = vanchor1.tree
       .elements()
       .map((el) => hexToU8a(el.toHexString()));
+     console.log("leaves after deposit : ", leaves);
+    
+     const leaves2 = vanchor2.tree
+     .elements()
+     .map((el) => hexToU8a(el.toHexString()));
+     console.log("leaves after deposit : ", leaves2);
 
+    // all is good, last thing is to check for the roots.
+    const srcChainRoot = await vanchor1.contract.getLastRoot();
+    const neigborRoots = await vanchor2.contract.getLatestNeighborRoots();
+    const edges = await vanchor2.contract.getLatestNeighborEdges();
+    const isKnownNeighborRoot = neigborRoots.some(
+      (root: string) => root === srcChainRoot
+    );
+    console.log({
+      srcChainRoot,
+      neigborRoots,
+      edges,
+      isKnownNeighborRoot,
+    });
+   
+    
+    
     const depositUtxoIndex = vanchor1.tree.getIndexByElement(u8aToHex(depositUtxo.commitment));
     console.log(ethers.BigNumber.from(depositUtxo.commitment).toHexString());
     console.log(vanchor1.tree.elements());
