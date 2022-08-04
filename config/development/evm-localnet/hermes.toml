@@ -63,8 +63,8 @@ linked-anchors = [
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
 # the signed proposals to the configured SignatureBridge of the relevant chains.
 
-#proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
-proposal-signing-backend = { type = "DKGNode", node = "5" }
+proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
+#proposal-signing-backend = { type = "DKGNode", node = "5" }
 
 [[evm.hermes.contracts]]
 contract = "SignatureBridge"
