@@ -222,6 +222,8 @@ export class LocalChain {
       zkComponents_2,
       zkComponents_16
     );
+      console.log('finished deployment of vBridge');
+
     this.signatureVBridge = vBridge;
     return vBridge;
   }
@@ -426,7 +428,7 @@ export class LocalChain {
         return this.getAnchorChainConfig(opts);
       }
       if (contract.contract == 'VAnchor') {
-        return this.getVAnchorChainConfig(opts, );
+        return this.getVAnchorChainConfig(opts);
       }
     }
     return chainInfo;

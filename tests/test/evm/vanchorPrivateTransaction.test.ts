@@ -19,21 +19,21 @@
 
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import { CircomUtxo, Keypair, randomBN, Utxo } from '@webb-tools/sdk-core';
-import { BigNumber, ethers } from 'ethers';
+import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
+import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import {
-  calculateRelayerFees,
-  defaultWithdrawConfigValue,
   EnabledContracts,
   LeavesCacheResponse,
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { u8aToHex , hexToU8a} from '@polkadot/util';
+import { u8aToHex } from '@polkadot/util';
+import { hexToU8a } from '@webb-tools/utils';
+import { sleep } from '../../lib/sleep.js';
 // const assert = require('assert');
-describe.only('Vanchor Private Transaction relayer', function () {
+describe.only('Vanchor Transaction relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -92,13 +92,20 @@ describe.only('Vanchor Private Transaction relayer', function () {
             .parseEther('100000000000000000000000')
             .toHexString(),
         },
+        {
+          secretKey: relayerPk,
+          balance: ethers.utils
+            .parseEther('100000000000000000000000')
+            .toHexString(),
+        }
       ],
       enabledContracts: enabledContracts,
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
-    let relayerWallet = new ethers.Wallet(relayerPk, localChain1.provider());
+    const relayerWallet1 = new ethers.Wallet(relayerPk, localChain1.provider());
+    const relayerWallet2 = new ethers.Wallet(relayerPk, localChain2.provider());
     // Deploy the token.
     const localToken1 = await localChain1.deployToken(
       'Webb Token',
@@ -123,15 +130,12 @@ describe.only('Vanchor Private Transaction relayer', function () {
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
-      features: { dataQuery: false, governanceRelay: false },
-      withdrawConfig: defaultWithdrawConfigValue,
-      relayerWallet: relayerWallet
+      relayerWallet: relayerWallet1
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
-      features: { dataQuery: false, governanceRelay: false },
-      relayerWallet: relayerWallet
+      relayerWallet: relayerWallet2
     });
 
     // get the vanhor on localchain1
@@ -201,96 +205,111 @@ describe.only('Vanchor Private Transaction relayer', function () {
       wallet1.address,
       ethers.utils.parseEther('100000000000000000000000')
     );
-    
-    // get allowance 
-    await token.getAllowance(vanchor1.contract.address, '10000000000000000000000');
-    // approve the anchor to spend the minted funds
-  
-    const tx = await token.approveSpending(tokenAddress);
-    await tx.wait();
     // check webbBalance
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
 
-    const recipient = new ethers.Wallet(
-      ethers.utils.randomBytes(32),
-      localChain1.provider()
-    );
-    const relayerInfo = await webbRelayer.info();
-    const localChain1Info = relayerInfo.evm[localChain1.underlyingChainId];
-
-    const relayerFeePercentage =
-      localChain1Info?.contracts.find(
-        (c) => c.address === vanchor1.contract.address
-      )?.withdrawConfig?.withdrawFeePercentage ?? 0;
-
-   
-    let inputs:Utxo[] = [];
-    const randomKeypair = new Keypair();
-
-    while (inputs.length !== 2 && inputs.length < 16) {
-      inputs.push(await CircomUtxo.generateUtxo({
-        curve: 'Bn254',
-        backend: 'Circom',
-        chainId: localChain1.chainId.toString(),
-        originChainId: localChain1.chainId.toString(),
-        amount: '0',
-        blinding: hexToU8a(randomBN(31).toHexString()),
-        keypair: randomKeypair
-      }));
-    }
-
     const depositUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
-      amount: '1000',
+      amount: (1e2).toString(),
       originChainId: localChain1.chainId.toString(),
-      chainId: localChain1.chainId.toString(),
+      chainId: localChain2.chainId.toString(),
     });
+    await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
+    await sleep(20000);
 
-    const dummyUtxo = await CircomUtxo.generateUtxo({
+    // Create the setupTransaction
+    const randomKeypair = new Keypair();
+
+    let extAmount = ethers.BigNumber.from(0)
+      .sub(ethers.utils.parseEther(depositUtxo.amount))
+
+    const dummyOutput1 = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: '0',
-      chainId: localChain1.chainId.toString(),
+      chainId: localChain2.chainId.toString(),
       keypair: randomKeypair,
     });
 
-    const outputs = [depositUtxo, dummyUtxo];
+    const dummyOutput2 = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: '0',
+      chainId: localChain2.chainId.toString(),
+      keypair: randomKeypair,
+    });
+
+    const dummyInput = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: '0',
+      chainId: localChain2.chainId.toString(),
+      originChainId: localChain2.chainId.toString(),
+      keypair: randomKeypair,
+    })
+
+    const recipient = '0x0000000001000000000100000000010000000001';
+
     const leaves = vanchor1.tree
       .elements()
       .map((el) => hexToU8a(el.toHexString()));
-    
+
+    const depositUtxoIndex = vanchor1.tree.getIndexByElement(u8aToHex(depositUtxo.commitment));
+    console.log(ethers.BigNumber.from(depositUtxo.commitment).toHexString());
+    console.log(vanchor1.tree.elements());
+    console.log('depositUtxoIndex: ', depositUtxoIndex);
+
+    const regeneratedUtxo = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: depositUtxo.amount,
+      chainId: depositUtxo.chainId,
+      originChainId: depositUtxo.originChainId,
+      blinding: hexToU8a(depositUtxo.blinding),
+      privateKey: hexToU8a(depositUtxo.secret_key),
+      keypair: randomKeypair,
+      index: depositUtxoIndex.toString(),
+    })
+
     const leavesMap = {
       [localChain1.chainId]: leaves,
     };
-    
-    let extAmount = BigNumber.from(relayerFeePercentage)
-      .add(outputs.reduce((sum, x) => sum.add(x.amount), BigNumber.from(0)))
-      .sub(inputs.reduce((sum, x) => sum.add(x.amount), BigNumber.from(0)))
 
-    
-    const { extData,publicInputs } = await vanchor1.setupTransaction(
-      inputs,
-      [depositUtxo, dummyUtxo],
+    await vanchor2.update();
+
+    const { extData,publicInputs } = await vanchor2.setupTransaction(
+      [regeneratedUtxo, dummyInput],
+      [dummyOutput1, dummyOutput2],
       extAmount,
-      relayerFeePercentage,
-      recipient.address,
-      wallet1.address,
+      0,
+      recipient,
+      wallet2.address,
       leavesMap,
     );
-    console.log("ExtData : ", extData);
-    console.log("publicInputs : ", publicInputs);
-    // now send the withdrawal request.
-    const txHash = await webbRelayer.vanchorWithdraw(
-      localChain1.underlyingChainId,
-      vanchor1.getAddress(),
-      publicInputs,
-      extData
-    );
-    expect(txHash).to.be.string;
 
+    // // now we wait for all deposits to be saved in LeafStorageCache
+    // await webbRelayer.waitForEvent({
+    //   kind: 'leaves_store',
+    //   event: {
+    //     leaf_index: '9',
+    //   },
+    // });
+
+    // // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
+    // // are equal to no of deposits made. Each VAnchor deposit generates 2 leaf entries
+    // const chainId = localChain1.underlyingChainId.toString(16);
+    // const response = await webbRelayer.getLeavesEvm(
+    //   chainId,
+    //   vanchor1.contract.address
+    // );
+    // expect(response.status).equal(200);
+    // let leavesStore = response.json() as Promise<LeavesCacheResponse>;
+    // leavesStore.then((resp) => {
+    //   expect(resp.leaves.length).to.equal(10);
+    // });
   });
 
   after(async () => {
