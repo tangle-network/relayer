@@ -1,13 +1,13 @@
 # Block which represents properties for a network
-[evm.athena]
+[evm.hermes]
 # The name that the chain is indexed on, for linkable anchors
-name = "athena"
+name = "hermes"
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "$ATHENA_HTTP_URL"
+http-endpoint = "$HERMES_HTTP_URL"
 # Websocket Endpoint for long living connections
-ws-endpoint = "$ATHENA_WS_URL"
+ws-endpoint = "$HERMES_WS_URL"
 # chain specific id from evm opcode
-chain-id = 5002
+chain-id = 5001
 # The Private Key of this account on this network
 # the format is more dynamic here:
 # 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
@@ -25,21 +25,20 @@ chain-id = 5002
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "$ATHENA_PRIVATE_KEY"
-
+private-key = "$HERMES_PRIVATE_KEY"
 tx-queue = { max-sleep-interval = 1500 }
 # Value to indicate that the relayer should enable services for this chain
 enabled = true
 
 # Block which represents the configuration for a supported contract on the network
-[[evm.athena.contracts]]
+[[evm.hermes.contracts]]
 # The contract can be one of these values
 # - Anchor (Fixed Anchor)
 # - VAnchor (Variable Anchor)
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0xcd75Ad7AC9C9325105f798c476E84176648F391A"
+address = "0xbfce6B877Ebff977bB6e80B24FbBb7bC4eBcA4df"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
@@ -57,19 +56,18 @@ withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" 
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { chain = "hermes", chain-id = "5001", address = "0xbfce6B877Ebff977bB6e80B24FbBb7bC4eBcA4df" },
+  { chain = "athena", chain-id = "5002", address = "0xcd75Ad7AC9C9325105f798c476E84176648F391A" },
   { chain = "demeter", chain-id = "5003", address = "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"},
 ]
-
 # Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
 # the signed proposals to the configured SignatureBridge of the relevant chains.
 
-proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
-# proposal-signing-backend = { type = "DKGNode", node = "5" }
+#proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
+proposal-signing-backend = { type = "DKGNode", node = "5" }
 
-[[evm.athena.contracts]]
+[[evm.hermes.contracts]]
 contract = "SignatureBridge"
-address = "0x51a240271AB8AB9f9a21C82d9a85396b704E164d"
+address = "0xDe09E74d4888Bc4e65F589e8c13Bce9F71DdF4c7"
 deployed-at = 1
 events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 60000 }
