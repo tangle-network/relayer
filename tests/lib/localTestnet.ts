@@ -222,7 +222,6 @@ export class LocalChain {
       zkComponents_2,
       zkComponents_16
     );
-      console.log('finished deployment of vBridge');
 
     this.signatureVBridge = vBridge;
     return vBridge;
