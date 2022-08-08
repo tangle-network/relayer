@@ -93,7 +93,10 @@ pub type EventHandlerFor<W> = Box<
 /// A trait for watching events from a watchable contract.
 /// EventWatcher trait exists for deployments that are smart-contract / EVM based
 #[async_trait::async_trait]
-pub trait EventWatcher {
+pub trait EventWatcher
+where
+    <Self::Middleware as providers::Middleware>::Error: Into<crate::Error>,
+{
     const TAG: &'static str;
     type Middleware: providers::Middleware + 'static;
     type Contract: Deref<Target = contract::Contract<Self::Middleware>>
@@ -105,7 +108,7 @@ pub trait EventWatcher {
     #[tracing::instrument(
         skip_all,
         fields(
-            chain_id = %client.get_chainid().await?,
+            chain_id = ?client.get_chainid().await,
             address = %contract.address(),
             tag = %Self::TAG,
         ),
@@ -122,18 +125,15 @@ pub trait EventWatcher {
             let step = contract.max_blocks_per_step();
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
-            let chain_id =
-                client.get_chainid().map_err(anyhow::Error::from).await?;
+            let chain_id = client.get_chainid().map_err(Into::into).await?;
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
                     (chain_id, contract.address()),
                     contract.deployed_at(),
                 )?;
-                let current_block_number = client
-                    .get_block_number()
-                    .map_err(anyhow::Error::from)
-                    .await?;
+                let current_block_number =
+                    client.get_block_number().map_err(Into::into).await?;
                 tracing::trace!(
                     "Latest block number: #{}",
                     current_block_number
@@ -150,7 +150,7 @@ pub trait EventWatcher {
                         .to_block(dest_block);
                     let found_events = events_filter
                         .query_with_meta()
-                        .map_err(anyhow::Error::from)
+                        .map_err(Into::into)
                         .await?;
 
                     tracing::trace!("Found #{} events", found_events.len());
@@ -199,7 +199,7 @@ pub trait EventWatcher {
                             tracing::warn!("Restarting event watcher ...");
                             // this a transient error, so we will retry again.
                             return Err(backoff::Error::transient(
-                                anyhow::anyhow!("force restart"),
+                                crate::Error::ForceRestart,
                             ));
                         }
                     }
@@ -251,7 +251,10 @@ pub trait EventWatcher {
                 }
             }
         };
-        backoff::future::retry(backoff, task).await?;
+        if let Err(e) = backoff::future::retry(backoff, task).await {
+            tracing::error!("{}", e);
+            return Err(crate::Error::TaskStoppedUpnormally);
+        }
         Ok(())
     }
 }
@@ -308,6 +311,7 @@ where
     Self::Store: ProposalStore<Proposal = ()>
         + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
         + QueueStore<BridgeCommand, Key = SledQueueKey>,
+    <Self::Middleware as providers::Middleware>::Error: Into<crate::Error>,
 {
     async fn handle_cmd(
         &self,
@@ -321,7 +325,7 @@ where
     #[tracing::instrument(
         skip_all,
         fields(
-            chain_id = %client.get_chainid().await?,
+            chain_id = ?client.get_chainid().await,
             address = %contract.address(),
             tag = %Self::TAG,
         ),
@@ -335,8 +339,7 @@ where
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             let my_address = contract.address();
-            let my_chain_id =
-                client.get_chainid().map_err(anyhow::Error::from).await?;
+            let my_chain_id = client.get_chainid().map_err(Into::into).await?;
             let bridge_key = BridgeKey::new(my_address, my_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
@@ -427,16 +430,16 @@ pub trait SubstrateEventWatcher {
             loop {
                 // now we start polling for new events.
                 // get the latest seen block number.
-                let block = store.get_last_block_number(
-                    (node_name.clone(), chain_id),
-                    1u64.into(),
-                )?;
+                let block = store
+                    .get_last_block_number(
+                        (node_name.clone(), chain_id),
+                        1u64.into(),
+                    )
+                    .map_err(Into::into)?;
                 let latest_head =
-                    rpc.finalized_head().map_err(anyhow::Error::from).await?;
-                let maybe_latest_header = rpc
-                    .header(Some(latest_head))
-                    .map_err(anyhow::Error::from)
-                    .await?;
+                    rpc.finalized_head().map_err(Into::into).await?;
+                let maybe_latest_header =
+                    rpc.header(Some(latest_head)).map_err(Into::into).await?;
                 let latest_header = if let Some(header) = maybe_latest_header {
                     header
                 } else {
@@ -447,7 +450,7 @@ pub trait SubstrateEventWatcher {
                     scale::Encode::encode(&latest_header.number());
                 let current_block_number: u32 =
                     scale::Decode::decode(&mut &current_block_number_bytes[..])
-                        .map_err(anyhow::Error::from)?;
+                        .map_err(Into::into)?;
                 let current_block_number = U64::from(current_block_number);
                 tracing::trace!(
                     "Latest block number: #{}",
@@ -464,13 +467,13 @@ pub trait SubstrateEventWatcher {
                     // so first we get the hash of the block we want to start from.
                     let maybe_from = rpc
                         .block_hash(Some(block.as_u32().into()))
-                        .map_err(anyhow::Error::from)
+                        .map_err(Into::into)
                         .await?;
                     let from = maybe_from.unwrap_or(latest_head);
                     tracing::trace!(?from, "Querying events");
                     let events =
                         subxt::events::at::<_, Self::Event>(&client, from)
-                            .map_err(anyhow::Error::from)
+                            .map_err(Into::into)
                             .await?;
                     let found_events = events
                         .find::<Self::FilteredEvent>()
@@ -482,7 +485,7 @@ pub trait SubstrateEventWatcher {
                     for (block_hash, event) in found_events {
                         let maybe_header = rpc
                             .header(Some(block_hash))
-                            .map_err(anyhow::Error::from)
+                            .map_err(Into::into)
                             .await?;
                         let header = if let Some(header) = maybe_header {
                             header
@@ -509,7 +512,7 @@ pub trait SubstrateEventWatcher {
                                     scale::Decode::decode(
                                         &mut &current_block_number_bytes[..],
                                     )
-                                    .map_err(anyhow::Error::from)?;
+                                    .map_err(Into::into)?;
                                 let current_block_number =
                                     U64::from(current_block_number);
                                 store.set_last_block_number(
@@ -706,7 +709,11 @@ mod tests {
     fn setup_logger() -> crate::Result<()> {
         let log_level = tracing::Level::TRACE;
         let env_filter = tracing_subscriber::EnvFilter::from_default_env()
-            .add_directive(format!("webb_relayer={}", log_level).parse()?);
+            .add_directive(
+                format!("webb_relayer={}", log_level)
+                    .parse()
+                    .expect("Valid filter"),
+            );
         tracing_subscriber::fmt()
             .with_target(true)
             .without_time()

@@ -93,7 +93,7 @@ where
     /// };
     /// ```
     #[tracing::instrument(skip_all, fields(node = %self.chain_id))]
-    pub async fn run<X>(self) -> Result<(), anyhow::Error>
+    pub async fn run<X>(self) -> crate::Result<()>
     where
         X: subxt::extrinsic::ExtrinsicParams<subxt::DefaultConfig>,
         <X as ExtrinsicParams<subxt::DefaultConfig>>::OtherParams: Default,

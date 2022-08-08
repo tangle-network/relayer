@@ -37,8 +37,8 @@ where
         self.signature_bridges
             .get(&chain_id)
             .cloned()
-            .ok_or_else(|| {
-                anyhow::anyhow!("no bridge for chain id {:?}", chain_id)
+            .ok_or_else(|| crate::Error::BridgeNotFound {
+                typed_chain_id: chain_id,
             })
     }
     fn signer(&self, chain_id: TypedChainId) -> crate::Result<LocalWallet> {

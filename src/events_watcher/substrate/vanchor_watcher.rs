@@ -91,7 +91,7 @@ where
             .await?;
         let tree = match tree {
             Some(t) => t,
-            None => return Err(anyhow::anyhow!("V-Anchor not found")),
+            None => return Err(crate::Error::Generic("No tree found")),
         };
         // fetch proposal nonce
         let proposal_nonce = api
