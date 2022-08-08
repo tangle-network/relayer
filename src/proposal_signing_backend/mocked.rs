@@ -34,12 +34,11 @@ where
         &self,
         chain_id: TypedChainId,
     ) -> crate::Result<TargetSystem> {
-        self.signature_bridges
-            .get(&chain_id)
-            .cloned()
-            .ok_or_else(|| crate::Error::BridgeNotFound {
+        self.signature_bridges.get(&chain_id).cloned().ok_or(
+            crate::Error::BridgeNotFound {
                 typed_chain_id: chain_id,
-            })
+            },
+        )
     }
     fn signer(&self, chain_id: TypedChainId) -> crate::Result<LocalWallet> {
         let key = SecretKey::from_be_bytes(self.private_key.as_bytes())?;

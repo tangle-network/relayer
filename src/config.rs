@@ -643,7 +643,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
         }
         Err(e) => {
             tracing::error!("{}", e);
-            return Err(e.into());
+            Err(e.into())
         }
     }
 }

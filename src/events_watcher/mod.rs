@@ -82,7 +82,6 @@ pub trait WatchableContract: Send + Sync {
 
 pub type EventHandlerFor<W> = Box<
     dyn EventHandler<
-            Middleware = <W as EventWatcher>::Middleware,
             Contract = <W as EventWatcher>::Contract,
             Events = <W as EventWatcher>::Events,
             Store = <W as EventWatcher>::Store,
@@ -93,13 +92,9 @@ pub type EventHandlerFor<W> = Box<
 /// A trait for watching events from a watchable contract.
 /// EventWatcher trait exists for deployments that are smart-contract / EVM based
 #[async_trait::async_trait]
-pub trait EventWatcher
-where
-    <Self::Middleware as providers::Middleware>::Error: Into<crate::Error>,
-{
+pub trait EventWatcher {
     const TAG: &'static str;
-    type Middleware: providers::Middleware + 'static;
-    type Contract: Deref<Target = contract::Contract<Self::Middleware>>
+    type Contract: Deref<Target = contract::Contract<providers::Provider<providers::Http>>>
         + WatchableContract;
     type Events: contract::EthLogDecode + Clone;
     type Store: HistoryStore + EventHashStore;
@@ -115,7 +110,7 @@ where
     )]
     async fn run(
         &self,
-        client: Arc<Self::Middleware>,
+        client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
         handlers: Vec<EventHandlerFor<Self>>,
@@ -125,15 +120,22 @@ where
             let step = contract.max_blocks_per_step();
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
-            let chain_id = client.get_chainid().map_err(Into::into).await?;
+            let chain_id = client
+                .get_chainid()
+                .map_err(Into::into)
+                .map_err(backoff::Error::transient)
+                .await?;
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
                     (chain_id, contract.address()),
                     contract.deployed_at(),
                 )?;
-                let current_block_number =
-                    client.get_block_number().map_err(Into::into).await?;
+                let current_block_number = client
+                    .get_block_number()
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)
+                    .await?;
                 tracing::trace!(
                     "Latest block number: #{}",
                     current_block_number
@@ -151,6 +153,7 @@ where
                     let found_events = events_filter
                         .query_with_meta()
                         .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
                         .await?;
 
                     tracing::trace!("Found #{} events", found_events.len());
@@ -251,18 +254,14 @@ where
                 }
             }
         };
-        if let Err(e) = backoff::future::retry(backoff, task).await {
-            tracing::error!("{}", e);
-            return Err(crate::Error::TaskStoppedUpnormally);
-        }
+        backoff::future::retry(backoff, task).await?;
         Ok(())
     }
 }
 
 #[async_trait::async_trait]
 pub trait EventHandler {
-    type Middleware: providers::Middleware + 'static;
-    type Contract: Deref<Target = contract::Contract<Self::Middleware>>
+    type Contract: Deref<Target = contract::Contract<providers::Provider<providers::Http>>>
         + WatchableContract;
     type Events: contract::EthLogDecode + Clone;
     type Store: HistoryStore + EventHashStore;
@@ -311,7 +310,6 @@ where
     Self::Store: ProposalStore<Proposal = ()>
         + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
         + QueueStore<BridgeCommand, Key = SledQueueKey>,
-    <Self::Middleware as providers::Middleware>::Error: Into<crate::Error>,
 {
     async fn handle_cmd(
         &self,
@@ -332,14 +330,18 @@ where
     )]
     async fn run(
         &self,
-        client: Arc<Self::Middleware>,
+        client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             let my_address = contract.address();
-            let my_chain_id = client.get_chainid().map_err(Into::into).await?;
+            let my_chain_id = client
+                .get_chainid()
+                .map_err(Into::into)
+                .map_err(backoff::Error::transient)
+                .await?;
             let bridge_key = BridgeKey::new(my_address, my_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
@@ -435,11 +437,18 @@ pub trait SubstrateEventWatcher {
                         (node_name.clone(), chain_id),
                         1u64.into(),
                     )
-                    .map_err(Into::into)?;
-                let latest_head =
-                    rpc.finalized_head().map_err(Into::into).await?;
-                let maybe_latest_header =
-                    rpc.header(Some(latest_head)).map_err(Into::into).await?;
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)?;
+                let latest_head = rpc
+                    .finalized_head()
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)
+                    .await?;
+                let maybe_latest_header = rpc
+                    .header(Some(latest_head))
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)
+                    .await?;
                 let latest_header = if let Some(header) = maybe_latest_header {
                     header
                 } else {
@@ -450,7 +459,8 @@ pub trait SubstrateEventWatcher {
                     scale::Encode::encode(&latest_header.number());
                 let current_block_number: u32 =
                     scale::Decode::decode(&mut &current_block_number_bytes[..])
-                        .map_err(Into::into)?;
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)?;
                 let current_block_number = U64::from(current_block_number);
                 tracing::trace!(
                     "Latest block number: #{}",
@@ -468,12 +478,14 @@ pub trait SubstrateEventWatcher {
                     let maybe_from = rpc
                         .block_hash(Some(block.as_u32().into()))
                         .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
                         .await?;
                     let from = maybe_from.unwrap_or(latest_head);
                     tracing::trace!(?from, "Querying events");
                     let events =
                         subxt::events::at::<_, Self::Event>(&client, from)
                             .map_err(Into::into)
+                            .map_err(backoff::Error::transient)
                             .await?;
                     let found_events = events
                         .find::<Self::FilteredEvent>()
@@ -486,6 +498,7 @@ pub trait SubstrateEventWatcher {
                         let maybe_header = rpc
                             .header(Some(block_hash))
                             .map_err(Into::into)
+                            .map_err(backoff::Error::transient)
                             .await?;
                         let header = if let Some(header) = maybe_header {
                             header
@@ -512,7 +525,8 @@ pub trait SubstrateEventWatcher {
                                     scale::Decode::decode(
                                         &mut &current_block_number_bytes[..],
                                     )
-                                    .map_err(Into::into)?;
+                                    .map_err(Into::into)
+                                    .map_err(backoff::Error::transient)?;
                                 let current_block_number =
                                     U64::from(current_block_number);
                                 store.set_last_block_number(

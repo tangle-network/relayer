@@ -96,9 +96,7 @@ pub struct SignatureBridgeGovernanceOwnershipTransferredHandler;
 impl EventWatcher for SignatureBridgeContractWatcher {
     const TAG: &'static str = "Signature Bridge Watcher";
 
-    type Middleware = HttpProvider;
-
-    type Contract = SignatureBridgeContractWrapper<Self::Middleware>;
+    type Contract = SignatureBridgeContractWrapper<HttpProvider>;
 
     type Events = SignatureBridgeContractEvents;
 
@@ -107,9 +105,7 @@ impl EventWatcher for SignatureBridgeContractWatcher {
 
 #[async_trait::async_trait]
 impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
-    type Middleware = HttpProvider;
-
-    type Contract = SignatureBridgeContractWrapper<Self::Middleware>;
+    type Contract = SignatureBridgeContractWrapper<HttpProvider>;
 
     type Events = SignatureBridgeContractEvents;
 
@@ -195,7 +191,7 @@ where
     async fn execute_proposal_with_signature(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
-        contract: &SignatureBridgeContract<<Self as EventWatcher>::Middleware>,
+        contract: &SignatureBridgeContract<HttpProvider>,
         (data, signature): (Vec<u8>, Vec<u8>),
     ) -> crate::Result<()> {
         // before doing anything, we need to do just two things:
@@ -266,7 +262,7 @@ where
     async fn transfer_ownership_with_signature(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
-        contract: &SignatureBridgeContract<<Self as EventWatcher>::Middleware>,
+        contract: &SignatureBridgeContract<HttpProvider>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> crate::Result<()> {
         // before doing anything, we need to do just two things:

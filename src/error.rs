@@ -50,6 +50,12 @@ pub enum Error {
     ),
     #[error(transparent)]
     ScaleCodec(#[from] webb::substrate::scale::Error),
+    #[error(transparent)]
+    Sled(#[from] sled::Error),
+    #[error(transparent)]
+    SledTransaction(
+        #[from] sled::transaction::TransactionError<std::io::Error>,
+    ),
     #[error("{}", _0)]
     Generic(&'static str),
     #[error("Bridge not found for: {:?}", typed_chain_id)]

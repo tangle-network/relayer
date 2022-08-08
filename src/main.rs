@@ -163,7 +163,7 @@ struct Opts {
 /// * `args` - The command line arguments.
 #[paw::main]
 #[tokio::main]
-async fn main(args: Opts) -> crate::Result<()> {
+async fn main(args: Opts) -> anyhow::Result<()> {
     setup_logger(args.verbose)?;
     match dotenv::dotenv() {
         Ok(_) => {
@@ -293,7 +293,7 @@ fn setup_logger(verbosity: i32) -> crate::Result<()> {
 /// ```
 fn load_config<P>(
     config_dir: Option<P>,
-) -> crate::Result<config::WebbRelayerConfig>
+) -> anyhow::Result<config::WebbRelayerConfig>
 where
     P: AsRef<Path>,
 {
@@ -313,7 +313,7 @@ where
         return Err(anyhow::anyhow!("{} is not a directory", path.display()));
     }
     tracing::trace!("Loading Config from {} ..", path.display());
-    config::load(path)
+    config::load(path).map_err(Into::into)
 }
 /// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
 /// instantiates the database store. Allows clients to interact with the relayer.
@@ -453,7 +453,7 @@ fn build_relayer(
 /// let args = Args::default();
 /// let store = create_store(&args).await?;
 /// ```
-async fn create_store(opts: &Opts) -> crate::Result<store::sled::SledStore> {
+async fn create_store(opts: &Opts) -> anyhow::Result<store::sled::SledStore> {
     // check if we shall use the temp dir.
     if opts.tmp {
         tracing::debug!("Using temp dir for store");

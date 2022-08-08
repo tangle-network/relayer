@@ -148,7 +148,7 @@ where
             handle_cmd(ctx.clone(), cmd, my_tx).await;
             // Send back the response, usually a transaction hash
             // from processing the transaction relaying command.
-            let result = res_stream
+            res_stream
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
                 .inspect(|v| tracing::trace!("Sending: {}", v))

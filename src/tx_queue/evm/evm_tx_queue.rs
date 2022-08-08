@@ -98,7 +98,7 @@ where
             })?;
         let chain_id = client
             .get_chainid()
-            .map_err(|e| {
+            .map_err(|_| {
                 crate::Error::Generic("Failed to fetch chain id from client")
             })
             .await?;

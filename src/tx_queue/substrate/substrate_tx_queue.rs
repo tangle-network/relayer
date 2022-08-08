@@ -15,7 +15,6 @@
 use crate::context::RelayerContext;
 use crate::store::sled::SledQueueKey;
 use crate::store::QueueStore;
-use anyhow::Context;
 use ethereum_types::U256;
 use futures::TryFutureExt;
 use rand::Rng;
@@ -103,7 +102,9 @@ where
             .config
             .substrate
             .get(&self.chain_id.to_string())
-            .context("Chain not configured")?;
+            .ok_or(crate::Error::NodeNotFound {
+                chain_id: self.chain_id.to_string(),
+            })?;
         let chain_id = self.chain_id;
         let store = self.store;
         let backoff = backoff::ExponentialBackoff {
@@ -150,7 +151,8 @@ where
                         client
                             .rpc()
                             .system_account_next_index(signer.account_id())
-                            .map_err(anyhow::Error::from)
+                            .map_err(Into::into)
+                            .map_err(backoff::Error::transient)
                             .await?
                     };
 
@@ -160,7 +162,8 @@ where
                         let runtime = client
                             .rpc()
                             .runtime_version(None)
-                            .map_err(anyhow::Error::from)
+                            .map_err(Into::into)
+                            .map_err(backoff::Error::transient)
                             .await?;
                         X::new(
                             runtime.spec_version,
@@ -219,7 +222,8 @@ where
                     let mut progress = client
                         .rpc()
                         .watch_extrinsic(&encoded_extrinsic)
-                        .map_err(anyhow::Error::from)
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
                         .await?;
 
                     while let Some(event) = progress.next().await {

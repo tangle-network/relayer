@@ -389,7 +389,7 @@ fn start_substrate_vanchor_event_watcher(
                 }
             }
         };
-        Result::<_, anyhow::Error>::Ok(())
+        crate::Result::Ok(())
     };
     // kick off the watcher.
     tokio::task::spawn(task);
@@ -630,7 +630,7 @@ async fn start_evm_vanchor_events_watcher(
             }
         };
 
-        Result::<_, anyhow::Error>::Ok(())
+        crate::Result::Ok(())
     };
     // kick off the watcher.
     tokio::task::spawn(task);

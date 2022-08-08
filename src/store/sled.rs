@@ -408,7 +408,8 @@ where
             }
             None => {
                 // not found!
-                anyhow::bail!("item with key {} not found in queue", key);
+                tracing::trace!("item with key {} not found in queue", key);
+                Ok(None)
             }
         }
     }
