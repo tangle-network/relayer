@@ -108,9 +108,9 @@ pub enum Error {
     /// a backgorund task failed and force restarted.
     #[error("Task Force Restarted from an error")]
     ForceRestart,
-    /// a backgorund task failed and stopped upnormally.
-    #[error("Task Stopped Upnormally")]
-    TaskStoppedUpnormally,
+    /// a backgorund task failed and stopped Apnormally.
+    #[error("Task Stopped Apnormally")]
+    TaskStoppedApnormally,
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.
