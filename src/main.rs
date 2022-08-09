@@ -103,6 +103,8 @@ use crate::context::RelayerContext;
 mod config;
 /// A module for managing the context of the relayer.
 mod context;
+/// A module containing all possible error types.
+mod error;
 /// A module that listens for events on a given chain.
 mod events_watcher;
 /// A module containing a collection of executable routines.
@@ -123,6 +125,8 @@ mod tx_relay;
 mod types;
 /// A module for common functionality.
 mod utils;
+
+pub use crate::error::{Error, Result};
 
 /// Package identifier, where the default configuration & database are defined.
 /// If the user does not start the relayer with the `--config-dir`
@@ -245,7 +249,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
 /// let arg = 3;
 /// setup_logger(arg)?;
 /// ```
-fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
+fn setup_logger(verbosity: i32) -> crate::Result<()> {
     use tracing::Level;
     let log_level = match verbosity {
         0 => Level::ERROR,
@@ -254,9 +258,11 @@ fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
         3 => Level::DEBUG,
         _ => Level::TRACE,
     };
-
+    let directive_1 = format!("webb_relayer={}", log_level)
+        .parse()
+        .expect("valid log level");
     let env_filter = tracing_subscriber::EnvFilter::from_default_env()
-        .add_directive(format!("webb_relayer={}", log_level).parse()?);
+        .add_directive(directive_1);
     let logger = tracing_subscriber::fmt()
         .with_target(true)
         .with_max_level(log_level)
@@ -307,7 +313,7 @@ where
         return Err(anyhow::anyhow!("{} is not a directory", path.display()));
     }
     tracing::trace!("Loading Config from {} ..", path.display());
-    config::load(path)
+    config::load(path).map_err(Into::into)
 }
 /// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
 /// instantiates the database store. Allows clients to interact with the relayer.
@@ -329,7 +335,7 @@ where
 fn build_relayer(
     ctx: RelayerContext,
     store: store::sled::SledStore,
-) -> anyhow::Result<(SocketAddr, impl Future<Output = ()> + 'static)> {
+) -> crate::Result<(SocketAddr, impl Future<Output = ()> + 'static)> {
     let port = ctx.config.port;
     let ctx_arc = Arc::new(ctx.clone());
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();

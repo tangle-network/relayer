@@ -33,15 +33,14 @@ where
     fn bridge_metadata(
         &self,
         chain_id: TypedChainId,
-    ) -> anyhow::Result<TargetSystem> {
-        self.signature_bridges
-            .get(&chain_id)
-            .cloned()
-            .ok_or_else(|| {
-                anyhow::anyhow!("no bridge for chain id {:?}", chain_id)
-            })
+    ) -> crate::Result<TargetSystem> {
+        self.signature_bridges.get(&chain_id).cloned().ok_or(
+            crate::Error::BridgeNotFound {
+                typed_chain_id: chain_id,
+            },
+        )
     }
-    fn signer(&self, chain_id: TypedChainId) -> anyhow::Result<LocalWallet> {
+    fn signer(&self, chain_id: TypedChainId) -> crate::Result<LocalWallet> {
         let key = SecretKey::from_be_bytes(self.private_key.as_bytes())?;
         let signer = LocalWallet::from(key)
             .with_chain_id(chain_id.underlying_chain_id());
@@ -55,13 +54,13 @@ where
     S: QueueStore<BridgeCommand, Key = SledQueueKey> + Send + Sync + 'static,
     P: ProposalTrait + Sync + 'static + Send,
 {
-    async fn can_handle_proposal(&self, proposal: &P) -> anyhow::Result<bool> {
+    async fn can_handle_proposal(&self, proposal: &P) -> crate::Result<bool> {
         let dest_chain_id = proposal.header().resource_id().typed_chain_id();
         let known_bridge = self.signature_bridges.contains_key(&dest_chain_id);
         Ok(known_bridge)
     }
 
-    async fn handle_proposal(&self, proposal: &P) -> anyhow::Result<()> {
+    async fn handle_proposal(&self, proposal: &P) -> crate::Result<()> {
         // the way this one works is that we get the hash of the proposal bytes,
         // the we use the hash to be signed by the signer.
         // Read more here: https://bit.ly/3rqNYTU

@@ -82,7 +82,6 @@ pub trait WatchableContract: Send + Sync {
 
 pub type EventHandlerFor<W> = Box<
     dyn EventHandler<
-            Middleware = <W as EventWatcher>::Middleware,
             Contract = <W as EventWatcher>::Contract,
             Events = <W as EventWatcher>::Events,
             Store = <W as EventWatcher>::Store,
@@ -95,8 +94,7 @@ pub type EventHandlerFor<W> = Box<
 #[async_trait::async_trait]
 pub trait EventWatcher {
     const TAG: &'static str;
-    type Middleware: providers::Middleware + 'static;
-    type Contract: Deref<Target = contract::Contract<Self::Middleware>>
+    type Contract: Deref<Target = contract::Contract<providers::Provider<providers::Http>>>
         + WatchableContract;
     type Events: contract::EthLogDecode + Clone;
     type Store: HistoryStore + EventHashStore;
@@ -105,25 +103,28 @@ pub trait EventWatcher {
     #[tracing::instrument(
         skip_all,
         fields(
-            chain_id = %client.get_chainid().await?,
+            chain_id = ?client.get_chainid().await,
             address = %contract.address(),
             tag = %Self::TAG,
         ),
     )]
     async fn run(
         &self,
-        client: Arc<Self::Middleware>,
+        client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
         handlers: Vec<EventHandlerFor<Self>>,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             let step = contract.max_blocks_per_step();
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
-            let chain_id =
-                client.get_chainid().map_err(anyhow::Error::from).await?;
+            let chain_id = client
+                .get_chainid()
+                .map_err(Into::into)
+                .map_err(backoff::Error::transient)
+                .await?;
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
@@ -132,7 +133,8 @@ pub trait EventWatcher {
                 )?;
                 let current_block_number = client
                     .get_block_number()
-                    .map_err(anyhow::Error::from)
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)
                     .await?;
                 tracing::trace!(
                     "Latest block number: #{}",
@@ -150,7 +152,8 @@ pub trait EventWatcher {
                         .to_block(dest_block);
                     let found_events = events_filter
                         .query_with_meta()
-                        .map_err(anyhow::Error::from)
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
                         .await?;
 
                     tracing::trace!("Found #{} events", found_events.len());
@@ -199,7 +202,7 @@ pub trait EventWatcher {
                             tracing::warn!("Restarting event watcher ...");
                             // this a transient error, so we will retry again.
                             return Err(backoff::Error::transient(
-                                anyhow::anyhow!("force restart"),
+                                crate::Error::ForceRestart,
                             ));
                         }
                     }
@@ -258,8 +261,7 @@ pub trait EventWatcher {
 
 #[async_trait::async_trait]
 pub trait EventHandler {
-    type Middleware: providers::Middleware + 'static;
-    type Contract: Deref<Target = contract::Contract<Self::Middleware>>
+    type Contract: Deref<Target = contract::Contract<providers::Provider<providers::Http>>>
         + WatchableContract;
     type Events: contract::EthLogDecode + Clone;
     type Store: HistoryStore + EventHashStore;
@@ -269,7 +271,7 @@ pub trait EventHandler {
         store: Arc<Self::Store>,
         contract: &Self::Contract,
         (event, log): (Self::Events, contract::LogMeta),
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 }
 
 /// An Auxiliary trait to handle events with retry logic.
@@ -283,7 +285,7 @@ trait EventHandlerWithRetry: EventHandler {
         contract: &Self::Contract,
         (event, log): (Self::Events, contract::LogMeta),
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let wrapped_task = || {
             self.handle_event(
                 store.clone(),
@@ -314,29 +316,32 @@ where
         store: Arc<Self::Store>,
         contract: &Self::Contract,
         cmd: BridgeCommand,
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 
     /// Returns a task that should be running in the background
     /// that will watch for all commands
     #[tracing::instrument(
         skip_all,
         fields(
-            chain_id = %client.get_chainid().await?,
+            chain_id = ?client.get_chainid().await,
             address = %contract.address(),
             tag = %Self::TAG,
         ),
     )]
     async fn run(
         &self,
-        client: Arc<Self::Middleware>,
+        client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             let my_address = contract.address();
-            let my_chain_id =
-                client.get_chainid().map_err(anyhow::Error::from).await?;
+            let my_chain_id = client
+                .get_chainid()
+                .map_err(Into::into)
+                .map_err(backoff::Error::transient)
+                .await?;
             let bridge_key = BridgeKey::new(my_address, my_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
@@ -397,7 +402,7 @@ pub trait SubstrateEventWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 
     /// Returns a task that should be running in the background
     /// that will watch events
@@ -415,7 +420,7 @@ pub trait SubstrateEventWatcher {
         chain_id: U256,
         client: subxt::Client<Self::RuntimeConfig>,
         store: Arc<Self::Store>,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
@@ -427,15 +432,22 @@ pub trait SubstrateEventWatcher {
             loop {
                 // now we start polling for new events.
                 // get the latest seen block number.
-                let block = store.get_last_block_number(
-                    (node_name.clone(), chain_id),
-                    1u64.into(),
-                )?;
-                let latest_head =
-                    rpc.finalized_head().map_err(anyhow::Error::from).await?;
+                let block = store
+                    .get_last_block_number(
+                        (node_name.clone(), chain_id),
+                        1u64.into(),
+                    )
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)?;
+                let latest_head = rpc
+                    .finalized_head()
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)
+                    .await?;
                 let maybe_latest_header = rpc
                     .header(Some(latest_head))
-                    .map_err(anyhow::Error::from)
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)
                     .await?;
                 let latest_header = if let Some(header) = maybe_latest_header {
                     header
@@ -447,7 +459,8 @@ pub trait SubstrateEventWatcher {
                     scale::Encode::encode(&latest_header.number());
                 let current_block_number: u32 =
                     scale::Decode::decode(&mut &current_block_number_bytes[..])
-                        .map_err(anyhow::Error::from)?;
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)?;
                 let current_block_number = U64::from(current_block_number);
                 tracing::trace!(
                     "Latest block number: #{}",
@@ -464,13 +477,15 @@ pub trait SubstrateEventWatcher {
                     // so first we get the hash of the block we want to start from.
                     let maybe_from = rpc
                         .block_hash(Some(block.as_u32().into()))
-                        .map_err(anyhow::Error::from)
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
                         .await?;
                     let from = maybe_from.unwrap_or(latest_head);
                     tracing::trace!(?from, "Querying events");
                     let events =
                         subxt::events::at::<_, Self::Event>(&client, from)
-                            .map_err(anyhow::Error::from)
+                            .map_err(Into::into)
+                            .map_err(backoff::Error::transient)
                             .await?;
                     let found_events = events
                         .find::<Self::FilteredEvent>()
@@ -482,7 +497,8 @@ pub trait SubstrateEventWatcher {
                     for (block_hash, event) in found_events {
                         let maybe_header = rpc
                             .header(Some(block_hash))
-                            .map_err(anyhow::Error::from)
+                            .map_err(Into::into)
+                            .map_err(backoff::Error::transient)
                             .await?;
                         let header = if let Some(header) = maybe_header {
                             header
@@ -509,7 +525,8 @@ pub trait SubstrateEventWatcher {
                                     scale::Decode::decode(
                                         &mut &current_block_number_bytes[..],
                                     )
-                                    .map_err(anyhow::Error::from)?;
+                                    .map_err(Into::into)
+                                    .map_err(backoff::Error::transient)?;
                                 let current_block_number =
                                     U64::from(current_block_number);
                                 store.set_last_block_number(
@@ -588,7 +605,7 @@ where
         store: Arc<Self::Store>,
         client: Arc<Self::Api>,
         cmd: BridgeCommand,
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 
     /// Returns a task that should be running in the background
     /// that will watch events
@@ -604,7 +621,7 @@ where
         chain_id: U256,
         client: subxt::Client<Self::RuntimeConfig>,
         store: Arc<Self::Store>,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
@@ -693,7 +710,7 @@ mod tests {
             _store: Arc<Self::Store>,
             _api: Arc<Self::Api>,
             (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        ) -> anyhow::Result<()> {
+        ) -> crate::Result<()> {
             tracing::debug!(
                 "Received `Remarked` Event: {:?} at block number: #{}",
                 event,
@@ -703,10 +720,14 @@ mod tests {
         }
     }
 
-    fn setup_logger() -> anyhow::Result<()> {
+    fn setup_logger() -> crate::Result<()> {
         let log_level = tracing::Level::TRACE;
         let env_filter = tracing_subscriber::EnvFilter::from_default_env()
-            .add_directive(format!("webb_relayer={}", log_level).parse()?);
+            .add_directive(
+                format!("webb_relayer={}", log_level)
+                    .parse()
+                    .expect("Valid filter"),
+            );
         tracing_subscriber::fmt()
             .with_target(true)
             .without_time()
@@ -720,7 +741,7 @@ mod tests {
 
     #[tokio::test]
     #[ignore = "need to be run manually"]
-    async fn substrate_event_watcher_should_work() -> anyhow::Result<()> {
+    async fn substrate_event_watcher_should_work() -> crate::Result<()> {
         setup_logger()?;
         let node_name = String::from("test-node");
         let chain_id = U256::from(5u32);

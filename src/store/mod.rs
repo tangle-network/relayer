@@ -204,21 +204,21 @@ pub trait HistoryStore: Clone + Send + Sync {
         &self,
         key: K,
         block_number: types::U64,
-    ) -> anyhow::Result<types::U64>;
+    ) -> crate::Result<types::U64>;
     /// Get the last block number for that contract.
     /// if not found, returns the `default_block_number`.
     fn get_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         default_block_number: types::U64,
-    ) -> anyhow::Result<types::U64>;
+    ) -> crate::Result<types::U64>;
 
     /// an easy way to call the `get_last_block_number`
     /// where the default block number is `1`.
     fn get_last_block_number_or_default<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         self.get_last_block_number(key, types::U64::one())
     }
 }
@@ -230,15 +230,15 @@ pub trait HistoryStore: Clone + Send + Sync {
 pub trait EventHashStore: Send + Sync + Clone {
     /// Store the event in the store.
     /// the key is the hash of the event.
-    fn store_event(&self, event: &[u8]) -> anyhow::Result<()>;
+    fn store_event(&self, event: &[u8]) -> crate::Result<()>;
 
     /// Check if the event is stored in the store.
     /// the key is the hash of the event.
-    fn contains_event(&self, event: &[u8]) -> anyhow::Result<bool>;
+    fn contains_event(&self, event: &[u8]) -> crate::Result<bool>;
 
     /// Delete the event from the store.
     /// the key is the hash of the event.
-    fn delete_event(&self, event: &[u8]) -> anyhow::Result<()>;
+    fn delete_event(&self, event: &[u8]) -> crate::Result<()>;
 }
 
 /// A Leaf Cache Store is a simple trait that would help in
@@ -249,13 +249,13 @@ pub trait LeafCacheStore: HistoryStore {
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<Self::Output>;
+    ) -> crate::Result<Self::Output>;
 
     fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         leaves: &[(u32, types::H256)],
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 
     // The last deposit info is sent to the client on leaf request
     // So they can verify when the last transaction was sent to maintain
@@ -263,13 +263,13 @@ pub trait LeafCacheStore: HistoryStore {
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<types::U64>;
+    ) -> crate::Result<types::U64>;
 
     fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         block_number: types::U64,
-    ) -> anyhow::Result<types::U64>;
+    ) -> crate::Result<types::U64>;
 }
 
 /// A Command sent to the Bridge to execute different actions.
@@ -302,15 +302,15 @@ where
 {
     type Key: QueueKey;
     /// Insert an item into the queue.
-    fn enqueue_item(&self, key: Self::Key, item: Item) -> anyhow::Result<()>;
+    fn enqueue_item(&self, key: Self::Key, item: Item) -> crate::Result<()>;
     /// Get an item from the queue, and removes it.
-    fn dequeue_item(&self, key: Self::Key) -> anyhow::Result<Option<Item>>;
+    fn dequeue_item(&self, key: Self::Key) -> crate::Result<Option<Item>>;
     /// Get an item from the queue, without removing it.
-    fn peek_item(&self, key: Self::Key) -> anyhow::Result<Option<Item>>;
+    fn peek_item(&self, key: Self::Key) -> crate::Result<Option<Item>>;
     /// Check if the item is in the queue.
-    fn has_item(&self, key: Self::Key) -> anyhow::Result<bool>;
+    fn has_item(&self, key: Self::Key) -> crate::Result<bool>;
     /// Remove an item from the queue.
-    fn remove_item(&self, key: Self::Key) -> anyhow::Result<Option<Item>>;
+    fn remove_item(&self, key: Self::Key) -> crate::Result<Option<Item>>;
 }
 
 impl<S, T> QueueStore<T> for Arc<S>
@@ -320,32 +320,32 @@ where
 {
     type Key = S::Key;
 
-    fn enqueue_item(&self, key: Self::Key, item: T) -> anyhow::Result<()> {
+    fn enqueue_item(&self, key: Self::Key, item: T) -> crate::Result<()> {
         S::enqueue_item(self, key, item)
     }
 
-    fn dequeue_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+    fn dequeue_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
         S::dequeue_item(self, key)
     }
 
-    fn peek_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+    fn peek_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
         S::peek_item(self, key)
     }
 
-    fn has_item(&self, key: Self::Key) -> anyhow::Result<bool> {
+    fn has_item(&self, key: Self::Key) -> crate::Result<bool> {
         S::has_item(self, key)
     }
 
-    fn remove_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+    fn remove_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
         S::remove_item(self, key)
     }
 }
 /// ProposalStore is a simple trait for inserting and removing proposals.
 pub trait ProposalStore {
     type Proposal: Serialize + DeserializeOwned;
-    fn insert_proposal(&self, proposal: Self::Proposal) -> anyhow::Result<()>;
+    fn insert_proposal(&self, proposal: Self::Proposal) -> crate::Result<()>;
     fn remove_proposal(
         &self,
         data_hash: &[u8],
-    ) -> anyhow::Result<Option<Self::Proposal>>;
+    ) -> crate::Result<Option<Self::Proposal>>;
 }

@@ -21,7 +21,6 @@
 use std::convert::TryFrom;
 use std::time::Duration;
 
-use anyhow::Context;
 use tokio::sync::broadcast;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
@@ -76,12 +75,12 @@ impl RelayerContext {
     pub async fn evm_provider(
         &self,
         chain_id: &str,
-    ) -> anyhow::Result<Provider<Http>> {
-        let chain_config = self
-            .config
-            .evm
-            .get(chain_id)
-            .context(format!("Chain {} not configured or enabled", chain_id))?;
+    ) -> crate::Result<Provider<Http>> {
+        let chain_config = self.config.evm.get(chain_id).ok_or_else(|| {
+            crate::Error::ChainNotFound {
+                chain_id: chain_id.to_string(),
+            }
+        })?;
         let provider = Provider::try_from(chain_config.http_endpoint.as_str())?
             .interval(Duration::from_millis(5u64));
         Ok(provider)
@@ -101,15 +100,17 @@ impl RelayerContext {
     pub async fn evm_wallet(
         &self,
         chain_name: &str,
-    ) -> anyhow::Result<LocalWallet> {
-        let chain_config = self.config.evm.get(chain_name).context(format!(
-            "Chain {} not configured or enabled",
-            chain_name
-        ))?;
-        let private_key =
-            chain_config.private_key.as_ref().ok_or_else(|| {
-                anyhow::anyhow!("Chain {} has no private key", chain_name)
+    ) -> crate::Result<LocalWallet> {
+        let chain_config =
+            self.config.evm.get(chain_name).ok_or_else(|| {
+                crate::Error::ChainNotFound {
+                    chain_id: chain_name.to_string(),
+                }
             })?;
+        let private_key = chain_config
+            .private_key
+            .as_ref()
+            .ok_or(crate::Error::MissingSecrets)?;
         let key = SecretKey::from_be_bytes(private_key.as_bytes())?;
         let chain_id = chain_config.chain_id;
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
@@ -130,20 +131,17 @@ impl RelayerContext {
     pub async fn substrate_provider<C: subxt::Config>(
         &self,
         chain_id: &str,
-    ) -> anyhow::Result<subxt::Client<C>> {
-        let node_config = self
-            .config
-            .substrate
-            .get(chain_id)
-            .context(format!("Node {} not configured or enabled", chain_id))?;
+    ) -> crate::Result<subxt::Client<C>> {
+        let node_config =
+            self.config.substrate.get(chain_id).ok_or_else(|| {
+                crate::Error::NodeNotFound {
+                    chain_id: chain_id.to_string(),
+                }
+            })?;
         let client = subxt::ClientBuilder::new()
             .set_url(node_config.ws_endpoint.as_str())
             .build()
-            .await
-            .context(format!(
-                "connecting to {} using {}",
-                chain_id, node_config.ws_endpoint
-            ))?;
+            .await?;
         Ok(client)
     }
     /// Sets up and returns a Substrate wallet for the relayer.
@@ -161,16 +159,16 @@ impl RelayerContext {
     pub async fn substrate_wallet(
         &self,
         chain_id: &str,
-    ) -> anyhow::Result<Sr25519Pair> {
+    ) -> crate::Result<Sr25519Pair> {
         let node_config = self
             .config
             .substrate
             .get(chain_id)
             .cloned()
-            .context(format!("Chain {} not configured or enabled", chain_id))?;
-        let suri_key = node_config.suri.ok_or_else(|| {
-            anyhow::anyhow!("Chain {} has no SURI defined", chain_id)
-        })?;
+            .ok_or_else(|| crate::Error::NodeNotFound {
+                chain_id: chain_id.to_string(),
+            })?;
+        let suri_key = node_config.suri.ok_or(crate::Error::MissingSecrets)?;
         Ok(suri_key.into())
     }
 }

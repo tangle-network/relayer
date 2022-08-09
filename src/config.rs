@@ -533,7 +533,7 @@ impl WebbRelayerConfig {
     /// Makes sure that the config is valid, by going
     /// through the whole config and doing some basic checks.
     #[allow(unused)] // TODO(@shekohex): remove this once we convert the relayer into a crate.
-    pub fn verify(&self) -> anyhow::Result<()> {
+    pub fn verify(&self) -> crate::Result<()> {
         // The first check is to make sure that the private key is there when needed.
         // to say more on the above check, we **must** have a private key in the following conditions:
         // 1. We are running the relayer as a private transaction relayer.
@@ -554,12 +554,9 @@ impl WebbRelayerConfig {
                 .iter()
                 .filter(|(_k, v)| v.enabled)
                 .all(|(_k, v)| v.suri.is_some());
-        (check_evm && check_substrate).then_some(()).ok_or_else(|| {
-            anyhow::anyhow!(
-                "The config is invalid. \
-                 Either the private key is missing or the SURI is missing."
-            )
-        })
+        (check_evm && check_substrate)
+            .then_some(())
+            .ok_or(crate::Error::MissingSecrets)
     }
 }
 
@@ -577,7 +574,7 @@ impl WebbRelayerConfig {
 /// let path = "/path/to/config.toml";
 /// config::load(path);
 /// ```
-pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
+pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
     // A pattern that covers all toml or json files in the config directory and subdirectories.
     let toml_pattern = format!("{}/**/*.toml", path.as_ref().display());
@@ -646,7 +643,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
         }
         Err(e) => {
             tracing::error!("{}", e);
-            anyhow::bail!("Error while loading config files")
+            Err(e.into())
         }
     }
 }
@@ -655,7 +652,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> anyhow::Result<WebbRelayerConfig> {
 /// the format of the configuration
 fn postloading_process(
     mut config: WebbRelayerConfig,
-) -> anyhow::Result<WebbRelayerConfig> {
+) -> crate::Result<WebbRelayerConfig> {
     tracing::trace!("Checking configration sanity ...");
     tracing::trace!(
         "postloaded config: {}",

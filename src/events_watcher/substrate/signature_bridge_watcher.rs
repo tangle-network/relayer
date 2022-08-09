@@ -58,7 +58,7 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
         _store: Arc<Self::Store>,
         _api: Arc<Self::Api>,
         (event, _block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         // todo
         // if the ownership is transferred to the new owner, we need to
         // to check our txqueue and remove any pending tx that was trying to
@@ -90,7 +90,7 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
         cmd: BridgeCommand,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         use BridgeCommand::*;
         tracing::trace!("Got cmd {:?}", cmd);
         match cmd {
@@ -132,7 +132,7 @@ where
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
         (data, signature): (Vec<u8>, Vec<u8>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let typed_chain_id =
             webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
         let data_hex = hex::encode(&data);
@@ -206,7 +206,7 @@ where
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let new_maintainer = public_key.clone();
         // get current maintainer
         let current_maintainer =

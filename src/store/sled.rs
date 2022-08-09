@@ -38,7 +38,7 @@ impl std::fmt::Debug for SledStore {
 
 impl SledStore {
     /// Create a new SledStore.
-    pub fn open<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> {
+    pub fn open<P: AsRef<Path>>(path: P) -> crate::Result<Self> {
         let db = sled::Config::new()
             .path(path)
             .temporary(cfg!(test))
@@ -47,7 +47,7 @@ impl SledStore {
         Ok(Self { db })
     }
     /// Creates a temporary SledStore.
-    pub fn temporary() -> anyhow::Result<Self> {
+    pub fn temporary() -> crate::Result<Self> {
         let dir = tempfile::tempdir()?;
         Self::open(dir.path())
     }
@@ -59,7 +59,7 @@ impl HistoryStore for SledStore {
         &self,
         key: K,
         block_number: types::U64,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         let tree = self.db.open_tree("last_block_numbers")?;
         let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
         block_number.to_little_endian(&mut bytes);
@@ -76,7 +76,7 @@ impl HistoryStore for SledStore {
         &self,
         key: K,
         default_block_number: types::U64,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         let tree = self.db.open_tree("last_block_numbers")?;
         let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
@@ -94,7 +94,7 @@ impl LeafCacheStore for SledStore {
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<Self::Output> {
+    ) -> crate::Result<Self::Output> {
         let key: HistoryStoreKey = key.into();
         let tree = self.db.open_tree(format!(
             "leaves/{}/{}",
@@ -115,7 +115,7 @@ impl LeafCacheStore for SledStore {
         &self,
         key: K,
         leaves: &[(u32, types::H256)],
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let key: HistoryStoreKey = key.into();
 
         let tree = self.db.open_tree(format!(
@@ -132,7 +132,7 @@ impl LeafCacheStore for SledStore {
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         let tree = self.db.open_tree("last_deposit_block_number")?;
         let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
@@ -146,7 +146,7 @@ impl LeafCacheStore for SledStore {
         &self,
         key: K,
         block_number: types::U64,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         let tree = self.db.open_tree("last_deposit_block_number")?;
         let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
         block_number.to_little_endian(&mut bytes);
@@ -160,21 +160,21 @@ impl LeafCacheStore for SledStore {
 }
 
 impl EventHashStore for SledStore {
-    fn store_event(&self, event: &[u8]) -> anyhow::Result<()> {
+    fn store_event(&self, event: &[u8]) -> crate::Result<()> {
         let tree = self.db.open_tree("event_hashes")?;
         let hash = ethers::utils::keccak256(event);
         tree.insert(hash, &[])?;
         Ok(())
     }
 
-    fn contains_event(&self, event: &[u8]) -> anyhow::Result<bool> {
+    fn contains_event(&self, event: &[u8]) -> crate::Result<bool> {
         let tree = self.db.open_tree("event_hashes")?;
         let hash = ethers::utils::keccak256(event);
         let exists = tree.contains_key(hash)?;
         Ok(exists)
     }
 
-    fn delete_event(&self, event: &[u8]) -> anyhow::Result<()> {
+    fn delete_event(&self, event: &[u8]) -> crate::Result<()> {
         let tree = self.db.open_tree("event_hashes")?;
         let hash = ethers::utils::keccak256(event);
         tree.remove(hash)?;
@@ -302,7 +302,7 @@ where
     type Key = SledQueueKey;
 
     #[tracing::instrument(skip_all, fields(key = %key))]
-    fn enqueue_item(&self, key: Self::Key, item: T) -> anyhow::Result<()> {
+    fn enqueue_item(&self, key: Self::Key, item: T) -> crate::Result<()> {
         let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
         let item_bytes = serde_json::to_vec(&item)?;
         // we do everything inside a single transaction
@@ -343,7 +343,7 @@ where
     }
 
     #[tracing::instrument(skip_all, fields(key = %key))]
-    fn dequeue_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+    fn dequeue_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
         let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
         // now we create a lazy iterator that will scan
         // over all saved items in the queue
@@ -366,7 +366,7 @@ where
     }
 
     #[tracing::instrument(skip_all, fields(key = %key))]
-    fn peek_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+    fn peek_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
         // this method, is similar to dequeue_tx, expect we don't
         // remove anything from the queue.
         let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
@@ -381,7 +381,7 @@ where
     }
 
     #[tracing::instrument(skip_all, fields(key = %key))]
-    fn has_item(&self, key: Self::Key) -> anyhow::Result<bool> {
+    fn has_item(&self, key: Self::Key) -> crate::Result<bool> {
         let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
         if let Some(k) = key.item_key() {
             tree.contains_key(&k[..]).map_err(Into::into)
@@ -391,7 +391,7 @@ where
     }
 
     #[tracing::instrument(skip_all, fields(key = %key))]
-    fn remove_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+    fn remove_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
         let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
         let inner_key = match key.item_key() {
             Some(k) => k,
@@ -408,7 +408,8 @@ where
             }
             None => {
                 // not found!
-                anyhow::bail!("item with key {} not found in queue", key);
+                tracing::trace!("item with key {} not found in queue", key);
+                Ok(None)
             }
         }
     }
@@ -418,7 +419,7 @@ impl ProposalStore for SledStore {
     type Proposal = ();
 
     #[tracing::instrument(skip_all)]
-    fn insert_proposal(&self, proposal: Self::Proposal) -> anyhow::Result<()> {
+    fn insert_proposal(&self, proposal: Self::Proposal) -> crate::Result<()> {
         let tree = self.db.open_tree("proposal_store")?;
         tree.insert(&"TODO", serde_json::to_vec(&proposal)?.as_slice())?;
         Ok(())
@@ -431,7 +432,7 @@ impl ProposalStore for SledStore {
     fn remove_proposal(
         &self,
         data_hash: &[u8],
-    ) -> anyhow::Result<Option<Self::Proposal>> {
+    ) -> crate::Result<Option<Self::Proposal>> {
         let tree = self.db.open_tree("proposal_store")?;
         match tree.get(&data_hash)? {
             Some(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),

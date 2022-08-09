@@ -115,9 +115,7 @@ pub struct VAnchorContractWatcher;
 impl super::EventWatcher for VAnchorContractWatcher {
     const TAG: &'static str = "VAnchor Contract Watcher";
 
-    type Middleware = HttpProvider;
-
-    type Contract = VAnchorContractWrapper<Self::Middleware>;
+    type Contract = VAnchorContractWrapper<HttpProvider>;
 
     type Events = VAnchorContractEvents;
 

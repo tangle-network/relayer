@@ -60,7 +60,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         // we got that the signature of the DKG public key changed.
         // that means the DKG Public Key itself changed.
         // so we need to query the public key from the storage:
@@ -139,7 +139,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
 
 /// Decompress the compressed public key and return the uncompressed public key.
 /// **Note:** it also removes the 0x04 prefix, so the result is the uncompressed public key without the prefix.
-pub fn decompress_public_key(compressed: Vec<u8>) -> anyhow::Result<Vec<u8>> {
+pub fn decompress_public_key(compressed: Vec<u8>) -> crate::Result<Vec<u8>> {
     let result = libsecp256k1::PublicKey::parse_slice(
         &compressed,
         Some(libsecp256k1::PublicKeyFormat::Compressed),

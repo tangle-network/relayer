@@ -15,7 +15,6 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use anyhow::Context;
 use ethereum_types::H256;
 use futures::TryFutureExt;
 use rand::Rng;
@@ -87,17 +86,22 @@ where
     /// };
     /// ```
     #[tracing::instrument(skip_all, fields(chain = %self.chain_id))]
-    pub async fn run(self) -> Result<(), anyhow::Error> {
+    pub async fn run(self) -> crate::Result<()> {
         let provider = self.ctx.evm_provider(&self.chain_id).await?;
         let wallet = self.ctx.evm_wallet(&self.chain_id).await?;
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
-        let chain_config = self
-            .ctx
-            .config
-            .evm
-            .get(&self.chain_id)
-            .context("Chain not configured")?;
-        let chain_id = client.get_chainid().await?;
+        let chain_config =
+            self.ctx.config.evm.get(&self.chain_id).ok_or_else(|| {
+                crate::Error::ChainNotFound {
+                    chain_id: self.chain_id.clone(),
+                }
+            })?;
+        let chain_id = client
+            .get_chainid()
+            .map_err(|_| {
+                crate::Error::Generic("Failed to fetch chain id from client")
+            })
+            .await?;
         let store = self.store;
         let backoff = backoff::ExponentialBackoff {
             max_elapsed_time: None,
@@ -123,9 +127,8 @@ where
                     let raw_tx = raw_tx.set_chain_id(chain_id.as_u64()).clone();
                     let my_tx_hash = raw_tx.sighash();
                     tx_hash = my_tx_hash;
-                    let pending_tx = client
-                        .send_transaction(raw_tx.clone(), None)
-                        .map_err(anyhow::Error::from);
+                    let pending_tx =
+                        client.send_transaction(raw_tx.clone(), None);
                     let tx = match pending_tx.await {
                         Ok(pending) => {
                             tx_hash = *pending;
