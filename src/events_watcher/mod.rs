@@ -80,6 +80,7 @@ pub trait WatchableContract: Send + Sync {
     fn print_progress_interval(&self) -> Duration;
 }
 
+/// A helper type to extract the [`EventHandler`] from the [`EventWatcher`] trait.
 pub type EventHandlerFor<W> = Box<
     dyn EventHandler<
             Contract = <W as EventWatcher>::Contract,
@@ -93,10 +94,14 @@ pub type EventHandlerFor<W> = Box<
 /// EventWatcher trait exists for deployments that are smart-contract / EVM based
 #[async_trait::async_trait]
 pub trait EventWatcher {
+    /// A Helper tag used to identify the event watcher during the logs.
     const TAG: &'static str;
+    /// The contract that this event watcher is watching.
     type Contract: Deref<Target = contract::Contract<providers::Provider<providers::Http>>>
         + WatchableContract;
+    /// The Events that this event watcher is interested in.
     type Events: contract::EthLogDecode + Clone;
+    /// The Storage backend that will be used to store the required state for this event watcher
     type Store: HistoryStore + EventHashStore;
     /// Returns a task that should be running in the background
     /// that will watch events
@@ -259,13 +264,29 @@ pub trait EventWatcher {
     }
 }
 
+/// A trait that defines a handler for a specific set of event types.
+///
+/// The handlers are implemented separately from the watchers, so that we can have
+/// one event watcher and many event handlers that will run in parallel.
 #[async_trait::async_trait]
 pub trait EventHandler {
+    /// The Type of contract this handler is for, Must be the same as the contract type in the
+    /// watcher.
     type Contract: Deref<Target = contract::Contract<providers::Provider<providers::Http>>>
         + WatchableContract;
+    /// The type of event this handler is for.
     type Events: contract::EthLogDecode + Clone;
+    /// The storage backend that this handler will use.
     type Store: HistoryStore + EventHashStore;
 
+    /// a method to be called with the event information,
+    /// it is up to the handler to decide what to do with the event.
+    ///
+    /// If this method returned an error, the handler will be considered as failed and will
+    /// be discarded. to have a retry mechanism, use the [`EventHandlerWithRetry::handle_event_with_retry`] method
+    /// which does exactly what it says.
+    ///
+    /// If this method returns Ok(true), the event will be marked as handled.
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
@@ -278,7 +299,17 @@ pub trait EventHandler {
 ///
 /// this trait is automatically implemented for all the event handlers.
 #[async_trait::async_trait]
-trait EventHandlerWithRetry: EventHandler {
+pub trait EventHandlerWithRetry: EventHandler {
+    /// A method to be called with the event information,
+    /// it is up to the handler to decide what to do with the event.
+    ///
+    /// If this method returned an error, the handler will be considered as failed and will
+    /// be retried again, depends on the retry strategy. if you do not care about the retry
+    /// strategy, use the [`EventHandler::handle_event`] method instead.
+    ///
+    /// If this method returns Ok(true), the event will be marked as handled.
+    ///
+    /// **Note**: this method is automatically implemented for all the event handlers.
     async fn handle_event_with_retry(
         &self,
         store: Arc<Self::Store>,
@@ -311,6 +342,11 @@ where
         + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
         + QueueStore<BridgeCommand, Key = SledQueueKey>,
 {
+    /// A method to be called with the [`BridgeCommand`] information to
+    /// be executed by the Bridge command handler.
+    ///
+    /// If this method returned an error, the handler will be considered as failed and will
+    /// be retry again, depends on the retry strategy.
     async fn handle_cmd(
         &self,
         store: Arc<Self::Store>,
@@ -385,6 +421,7 @@ pub type BlockNumberOf<T> =
 /// Represents a Substrate event watcher.
 #[async_trait::async_trait]
 pub trait SubstrateEventWatcher {
+    /// A helper unique tag to help identify the event watcher in the tracing logs.
     const TAG: &'static str;
     /// The Config of this Runtime, mostly it will be [`subxt::DefaultConfig`]
     type RuntimeConfig: subxt::Config + Send + Sync + 'static;
@@ -395,8 +432,13 @@ pub trait SubstrateEventWatcher {
     type Event: scale::Decode + Send + Sync + 'static;
     /// The kind of event that this watcher is watching.
     type FilteredEvent: subxt::Event + Send + Sync + 'static;
+    /// The Storage backend, used by the event watcher to store its state.
     type Store: HistoryStore;
 
+    /// A method to be called with the event information,
+    /// it is up to the handler to decide what to do with the event.
+    /// If this method returned an error, the handler will be considered as failed and will
+    /// be retried again, depends on the retry strategy.
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
@@ -599,6 +641,8 @@ where
     Self::Store: ProposalStore<Proposal = ()>
         + QueueStore<BridgeCommand, Key = SledQueueKey>,
 {
+    /// A method that is called when a command is received that needs to be
+    /// handled and executed.
     async fn handle_cmd(
         &self,
         chain_id: U256,
@@ -720,29 +764,10 @@ mod tests {
         }
     }
 
-    fn setup_logger() -> crate::Result<()> {
-        let log_level = tracing::Level::TRACE;
-        let env_filter = tracing_subscriber::EnvFilter::from_default_env()
-            .add_directive(
-                format!("webb_relayer={}", log_level)
-                    .parse()
-                    .expect("Valid filter"),
-            );
-        tracing_subscriber::fmt()
-            .with_target(true)
-            .without_time()
-            .with_max_level(log_level)
-            .with_env_filter(env_filter)
-            .with_test_writer()
-            .compact()
-            .init();
-        Ok(())
-    }
-
     #[tokio::test]
+    #[tracing_test::traced_test]
     #[ignore = "need to be run manually"]
     async fn substrate_event_watcher_should_work() -> crate::Result<()> {
-        setup_logger()?;
         let node_name = String::from("test-node");
         let chain_id = U256::from(5u32);
         let store = Arc::new(SledStore::temporary()?);

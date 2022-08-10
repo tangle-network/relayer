@@ -1,11 +1,13 @@
 use serde::Deserialize;
 
+/// An RPC URL Wrapper around [`url::Url`] to support the `serde` deserialization
+/// from environment variables.
 #[derive(derive_more::Display, Clone)]
 pub struct RpcUrl(url::Url);
 
 impl std::fmt::Debug for RpcUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("RpcUrl").finish()
+        f.debug_tuple("RpcUrl").field(&self.0).finish()
     }
 }
 

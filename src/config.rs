@@ -272,6 +272,8 @@ pub struct ExperimentalConfig {
     /// Enable the Smart Anchor Updates when it comes to signaling
     /// the bridge to create the proposals.
     pub smart_anchor_updates: bool,
+    /// How many retries to attempt to check if the anchor is updated
+    /// or not, before actually sending our update.
     pub smart_anchor_updates_retries: u32,
 }
 /// FeaturesConfig is the configuration for running relayer with option.
@@ -314,6 +316,7 @@ impl Default for TxQueueConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EventsWatcherConfig {
+    /// Should we also enable data queries endpoint?
     #[serde(default = "enable_data_query_default")]
     pub enable_data_query: bool,
     #[serde(default = "enable_leaves_watcher_default")]
@@ -374,28 +377,36 @@ pub struct SubstrateLinkedVAnchorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
 pub enum Contract {
+    /// The VAnchor contract configuration.
     VAnchor(VAnchorContractConfig),
+    /// The Signature Bridge contract configuration.
     SignatureBridge(SignatureBridgeContractConfig),
-    GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
 
 /// Enumerates the supported pallets configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "pallet")]
 pub enum Pallet {
+    /// `dkg-metadata` or as named in the runtime as `DKG` pallet.
     #[serde(rename = "DKG")]
     Dkg(DKGPalletConfig),
+    /// `dkg-proposals` or as named in the runtime as `DKGProposals` pallet.
     DKGProposals(DKGProposalsPalletConfig),
+    /// `dkg-proposal-handler` or as named in the runtime as `DKGProposalHandler` pallet.
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
+    /// `signature-bridge` or as named in the runtime as `SignatureBridge` pallet.
     SignatureBridge(SignatureBridgePalletConfig),
+    /// `vanchor-bn256` or as named in the runtime as `VAnchorBn256` pallet.
     VAnchorBn254(VAnchorBn254PalletConfig),
 }
 
 /// Enumerates the supported Substrate runtimes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SubstrateRuntime {
+    /// The DKG runtime. (dkg-substrate)
     #[serde(rename = "DKG")]
     Dkg,
+    /// The Webb Protocol runtime. (protocol-substrate)
     WebbProtocol,
 }
 
@@ -414,6 +425,7 @@ pub struct CommonContractConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct VAnchorContractConfig {
+    /// Common contract configuration.
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
@@ -430,23 +442,16 @@ pub struct VAnchorContractConfig {
     pub linked_anchors: Option<Vec<LinkedVAnchorConfig>>,
 }
 
+/// Signature Bridge contract configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SignatureBridgeContractConfig {
+    /// Common contract configuration.
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
-}
-
-/// GovernanceBravoDelegateContractConfig represents the configuration for the GovernanceBravoDelegate contract.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct GovernanceBravoDelegateContractConfig {
-    #[serde(flatten)]
-    pub common: CommonContractConfig,
-    // TODO(@shekohex): add more fields here...
 }
 
 /// DKGProposalsPalletConfig represents the configuration for the DKGProposals pallet.

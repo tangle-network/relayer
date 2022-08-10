@@ -34,12 +34,18 @@ pub mod sled;
 /// HistoryStoreKey contains the keys used to store the history of events.
 #[derive(Eq, PartialEq, Hash)]
 pub enum HistoryStoreKey {
+    /// EVM Queue Key
     Evm {
+        /// Chain id
         chain_id: types::U256,
+        /// Contract address.
         address: types::H160,
     },
+    /// Substrate Queue Key
     Substrate {
+        /// Chain id
         chain_id: types::U256,
+        /// Merkle Tree id.
         tree_id: String,
     },
 }
@@ -48,16 +54,20 @@ pub enum HistoryStoreKey {
 /// It is a combination of the Chain ID and the target system of the Bridge system.
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct BridgeKey {
+    /// The Target System of this Bridge key.
     pub target_system: webb_proposals::TargetSystem,
+    /// The Chain ID of this Bridge key.
     pub chain_id: webb_proposals::TypedChainId,
 }
 /// A way to convert an arbitrary type to a TargetSystem.
 pub trait IntoTargetSystem {
+    /// Consumes Self and returns a TargetSystem.
     fn into_target_system(self) -> webb_proposals::TargetSystem;
 }
 
 /// A way to convert an arbitrary type to a TypedChainId.
 pub trait IntoTypedChainId {
+    /// Consumes Self and returns a TypedChainId.
     fn into_typed_chain_id(self) -> webb_proposals::TypedChainId;
 }
 
@@ -98,6 +108,7 @@ impl IntoTypedChainId for u32 {
 }
 
 impl BridgeKey {
+    /// Creates new BridgeKey from a TargetSystem and a ChainId.
     pub fn new<TargetSystem, ChainId>(
         target_system: TargetSystem,
         chain_id: ChainId,
@@ -244,13 +255,16 @@ pub trait EventHashStore: Send + Sync + Clone {
 /// A Leaf Cache Store is a simple trait that would help in
 /// getting the leaves and insert them with a simple API.
 pub trait LeafCacheStore: HistoryStore {
+    /// The Output type which is the leaf.
     type Output: IntoIterator<Item = types::H256>;
 
+    /// Get the leaves for the given key.
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
     ) -> crate::Result<Self::Output>;
 
+    /// Insert the leaves for the given key.
     fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
@@ -265,6 +279,7 @@ pub trait LeafCacheStore: HistoryStore {
         key: K,
     ) -> crate::Result<types::U64>;
 
+    /// Set the last deposit block number for the given key.
     fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,

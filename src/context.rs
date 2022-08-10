@@ -31,6 +31,7 @@ use crate::config;
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
 pub struct RelayerContext {
+    /// The configuration of the relayer.
     pub config: config::WebbRelayerConfig,
     /// Broadcasts a shutdown signal to all active connections.
     ///
