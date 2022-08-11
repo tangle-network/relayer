@@ -271,9 +271,9 @@ pub trait LeafCacheStore: HistoryStore {
         leaves: &[(u32, types::H256)],
     ) -> crate::Result<()>;
 
-    // The last deposit info is sent to the client on leaf request
-    // So they can verify when the last transaction was sent to maintain
-    // their own state of mixers.
+    /// The last deposit info is sent to the client on leaf request
+    /// So they can verify when the last transaction was sent to maintain
+    /// their own state of mixers.
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
@@ -290,20 +290,35 @@ pub trait LeafCacheStore: HistoryStore {
 /// A Command sent to the Bridge to execute different actions.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum BridgeCommand {
+    /// A Command sent to the Signature Bridge to execute a proposal with signature
     ExecuteProposalWithSignature {
+        /// The proposal to execute (encoded as bytes)
         data: Vec<u8>,
+        /// The signature of the hash of the proposal bytes, Signed by the proposal signing
+        /// backend.
         signature: Vec<u8>,
     },
+    /// A Command sent to the Signature Bridge to transfer the ownership with a signature.
     TransferOwnershipWithSignature {
+        /// The new owner public key.
         public_key: Vec<u8>,
+        /// The nonce of this transfer.
         nonce: u32,
+        /// The signature of the hash of the nonce+public key, Signed by the proposal signing
+        /// backend.
         signature: Vec<u8>,
     },
 }
 
 /// A trait for retrieving queue keys
 pub trait QueueKey {
+    /// The Queue name, used as a prefix for the keys.
     fn queue_name(&self) -> String;
+    /// an _optional_ different key for the same value stored in the queue.
+    ///
+    /// This useful for the case when you want to have a direct access to a specific key in the queue.
+    /// For example, if you want to remove an item from the queue, you can use this key to directly
+    /// remove it from the queue.
     fn item_key(&self) -> Option<[u8; 64]>;
 }
 
@@ -315,6 +330,7 @@ pub trait QueueStore<Item>
 where
     Item: Serialize + DeserializeOwned + Clone,
 {
+    /// The type of the queue key.
     type Key: QueueKey;
     /// Insert an item into the queue.
     fn enqueue_item(&self, key: Self::Key, item: Item) -> crate::Result<()>;
@@ -357,8 +373,11 @@ where
 }
 /// ProposalStore is a simple trait for inserting and removing proposals.
 pub trait ProposalStore {
+    /// The type of the Proposal.
     type Proposal: Serialize + DeserializeOwned;
+    /// Insert a proposal into the store.
     fn insert_proposal(&self, proposal: Self::Proposal) -> crate::Result<()>;
+    /// Remove a proposal from the store.
     fn remove_proposal(
         &self,
         data_hash: &[u8],

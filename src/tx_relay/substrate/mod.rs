@@ -9,7 +9,9 @@ use webb::substrate::subxt::{
 
 use crate::handler::{CommandResponse, CommandStream, WithdrawStatus};
 
+/// Substrate Mixer Transactional Relayer.
 pub mod mixer;
+/// Substrate Variable Anchor Transactional Relayer.
 pub mod vanchor;
 
 /// Handles a submitted Substrate transaction by processing its `TransactionProgress`.

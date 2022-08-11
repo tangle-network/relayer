@@ -15,7 +15,9 @@
 use parking_lot::RwLock;
 use std::sync::Arc;
 use webb::substrate::subxt::{Call, Metadata};
-// call data bytes (pallet u8, call u8, call params).
+/// A helper function to encode the Call data into bytes.
+///
+/// The call data bytes (pallet u8, call u8, call params).
 pub fn encode_call_data<C: Call>(
     metadata: Arc<RwLock<Metadata>>,
     call: C,
