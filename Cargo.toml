@@ -6,6 +6,8 @@ edition = "2021"
 description = "The Webb Relayer toolkit" 
 license = "Apache-2.0"
 
+[lib]
+doctest = false
 
 [[bin]]
 name = "webb-relayer"
