@@ -31,8 +31,8 @@
 //!
 //! Checkout [config](./config) for useful default configurations for many networks.
 //! These config files can be changed to your preferences.
-use std::collections::HashMap;
 use std::path::Path;
+use std::{collections::HashMap, path::PathBuf};
 
 use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
@@ -565,39 +565,39 @@ impl WebbRelayerConfig {
     }
 }
 
-/// Load the configuration files and
+/// A helper function that will search for all config files in the given directory and return them as a vec
+/// of the paths.
 ///
-/// Returns `Ok(WebbRelayerConfig)` on success, or `Err(anyhow::Error)` on failure.
-///
-/// # Arguments
-///
-/// * `path` - The path to the configuration file
-///
-/// # Example
-///
-/// ```
-/// let path = "/path/to/config.toml";
-/// config::load(path);
-/// ```
-pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
-    let mut cfg = config::Config::new();
+/// Supported file extensions are:
+/// - `.toml`.
+/// - `.json`.
+pub fn search_config_files<P: AsRef<Path>>(
+    base_dir: P,
+) -> crate::Result<Vec<PathBuf>> {
     // A pattern that covers all toml or json files in the config directory and subdirectories.
-    let toml_pattern = format!("{}/**/*.toml", path.as_ref().display());
-    let json_pattern = format!("{}/**/*.json", path.as_ref().display());
+    let toml_pattern = format!("{}/**/*.toml", base_dir.as_ref().display());
+    let json_pattern = format!("{}/**/*.json", base_dir.as_ref().display());
     tracing::trace!(
         "Loading config files from {} and {}",
         toml_pattern,
         json_pattern
     );
-    // then get an iterator over all matching files
-    let config_files = glob::glob(&toml_pattern)?
-        .flatten()
-        .chain(glob::glob(&json_pattern)?.flatten());
+    let toml_files = glob::glob(&toml_pattern)?;
+    let json_files = glob::glob(&json_pattern)?;
+    toml_files
+        .chain(json_files)
+        .map(|v| v.map_err(crate::Error::from))
+        .collect()
+}
+
+/// Try to parse the [`WebbRelayerConfig`] from the given config file(s).
+pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
+    let mut cfg = config::Config::new();
     let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
 
     // read through all config files for the first time
     // build up a collection of [contracts]
-    for config_file in config_files {
+    for config_file in files {
         tracing::trace!("Loading config file: {}", config_file.display());
         // get file extension
         let ext = config_file
@@ -612,7 +612,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
                 continue;
             }
         };
-        let file = config::File::from(config_file).format(format);
+        let file = config::File::from(config_file.as_path()).format(format);
         if let Err(e) = cfg.merge(file) {
             tracing::warn!("Error while loading config file: {} skipping!", e);
             continue;
@@ -651,6 +651,26 @@ pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
             Err(e.into())
         }
     }
+}
+
+/// Load the configuration files and
+///
+/// Returns `Ok(WebbRelayerConfig)` on success, or `Err(anyhow::Error)` on failure.
+///
+/// # Arguments
+///
+/// * `path` - The path to the configuration file
+///
+/// # Example
+///
+/// ```
+/// let path = "/path/to/config.toml";
+/// config::load(path);
+/// ```
+///
+/// it is the same as using the [`search_config_files`] and [`parse_from_files`] functions combined.
+pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
+    parse_from_files(&search_config_files(path)?)
 }
 
 /// The postloading_process exists to validate configuration and standardize

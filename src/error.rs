@@ -19,6 +19,9 @@ pub enum Error {
     /// Error while iterating over a glob pattern.
     #[error(transparent)]
     GlobPattern(#[from] glob::PatternError),
+    /// Error from Glob Iterator.
+    #[error(transparent)]
+    Glob(#[from] glob::GlobError),
     /// Error while parsing a URL.
     #[error(transparent)]
     Url(#[from] url::ParseError),
