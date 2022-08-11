@@ -78,9 +78,9 @@ type Store = crate::store::sled::SledStore;
 /// ```
 /// let ctx = RelayerContext::new(config);
 /// let store = create_store(&args).await?;
-/// let (addr, server) = build_web_relayer(ctx.clone(), store.clone())?;
+/// let (addr, server) = build_web_services(ctx.clone(), store.clone())?;
 /// ```
-pub async fn build_web_relayer(
+pub fn build_web_services(
     ctx: RelayerContext,
     store: crate::store::sled::SledStore,
 ) -> crate::Result<(

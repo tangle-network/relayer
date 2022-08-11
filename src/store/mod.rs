@@ -31,6 +31,12 @@ use webb::evm::ethers::types;
 pub mod mem;
 /// A module for setting up and managing a [Sled](https://sled.rs)-based database.
 pub mod sled;
+
+/// A store that uses [`sled`](https://sled.rs) as the backend.
+pub use self::sled::SledStore;
+/// A store that uses in memory data structures as the backend.
+pub use mem::InMemoryStore;
+
 /// HistoryStoreKey contains the keys used to store the history of events.
 #[derive(Eq, PartialEq, Hash)]
 pub enum HistoryStoreKey {

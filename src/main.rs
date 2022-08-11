@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
+//! Webb Relayer Binary.
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
@@ -20,14 +22,11 @@ use std::sync::Arc;
 
 use anyhow::Context;
 use directories_next::ProjectDirs;
-use futures::Future;
-use std::net::SocketAddr;
 use structopt::StructOpt;
 use tokio::signal::unix;
-use warp::Filter;
-use warp_real_ip::real_ip;
 
 use webb_relayer::context::RelayerContext;
+use webb_relayer::{config, store};
 /// Package identifier, where the default configuration & database are defined.
 /// If the user does not start the relayer with the `--config-dir`
 /// it will default to read from the default location depending on the OS.
@@ -88,7 +87,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
     let (addr, server) =
-        webb_relayer::service::build_web_relayer(ctx.clone(), store.clone())?;
+        webb_relayer::service::build_web_services(ctx.clone(), store.clone())?;
     tracing::info!("Starting the server on {}", addr);
     // start the server.
     let server_handle = tokio::spawn(server);
@@ -230,11 +229,11 @@ where
 /// let args = Args::default();
 /// let store = create_store(&args).await?;
 /// ```
-async fn create_store(opts: &Opts) -> anyhow::Result<store::sled::SledStore> {
+async fn create_store(opts: &Opts) -> anyhow::Result<store::SledStore> {
     // check if we shall use the temp dir.
     if opts.tmp {
         tracing::debug!("Using temp dir for store");
-        let store = store::sled::SledStore::temporary()?;
+        let store = store::SledStore::temporary()?;
         return Ok(store);
     }
     let dirs = ProjectDirs::from(
@@ -252,6 +251,6 @@ async fn create_store(opts: &Opts) -> anyhow::Result<store::sled::SledStore> {
         None => p.join("store"),
     };
 
-    let store = store::sled::SledStore::open(db_path)?;
+    let store = store::SledStore::open(db_path)?;
     Ok(store)
 }

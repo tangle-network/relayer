@@ -17,6 +17,12 @@ impl From<RpcUrl> for url::Url {
     }
 }
 
+impl From<url::Url> for RpcUrl {
+    fn from(url: url::Url) -> Self {
+        RpcUrl(url)
+    }
+}
+
 impl std::ops::Deref for RpcUrl {
     type Target = url::Url;
 
