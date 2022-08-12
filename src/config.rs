@@ -272,7 +272,7 @@ pub struct ExperimentalConfig {
     /// Enable the Smart Anchor Updates when it comes to signaling
     /// the bridge to create the proposals.
     pub smart_anchor_updates: bool,
-    /// How many retries to attempt to check if the anchor is updated
+    /// The number of retries to check if an anchor is updated before sending our update
     /// or not, before actually sending our update.
     pub smart_anchor_updates_retries: u32,
 }
@@ -316,7 +316,7 @@ impl Default for TxQueueConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EventsWatcherConfig {
-    /// Should we also enable data queries endpoint?
+    /// A flag for enabling API endpoints for querying data from the relayer.
     #[serde(default = "enable_data_query_default")]
     pub enable_data_query: bool,
     #[serde(default = "enable_leaves_watcher_default")]
