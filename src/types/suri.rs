@@ -2,12 +2,13 @@ use serde::Deserialize;
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::subxt::sp_core::Pair;
 
+/// [`Substrate Uri`](https://polkadot.js.org/docs/keyring/start/suri/)
 #[derive(Clone)]
 pub struct Suri(Sr25519Pair);
 
 impl std::fmt::Debug for Suri {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("SubstratePrivateKey").finish()
+        f.debug_tuple("Substrate Uri").finish()
     }
 }
 

@@ -185,15 +185,23 @@ impl EventHashStore for SledStore {
 /// SledQueueKey is a key for a queue in Sled.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SledQueueKey {
+    /// Queue Key for EVM based Transaction Queue.
     EvmTx {
+        /// EVM Chain Id.
         chain_id: types::U256,
+        /// an optional key for this transaction.
         optional_key: Option<[u8; 64]>,
     },
+    /// Queue Key for Substrate based Transaction Queue.
     SubstrateTx {
+        /// Substrate Chain Id.
         chain_id: types::U256,
+        /// an optional key for this transaction.
         optional_key: Option<[u8; 64]>,
     },
+    /// Queue Key for Bridge Watcher Command Queue.
     BridgeCmd {
+        /// Specific Bridge Key.
         bridge_key: BridgeKey,
     },
 }

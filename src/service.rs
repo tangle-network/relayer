@@ -62,6 +62,138 @@ type WebbProtocolRuntime = WebbProtocolRuntimeApi<
 >;
 /// Type alias for [Sled](https://sled.rs)-based database store
 type Store = crate::store::sled::SledStore;
+
+/// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
+/// instantiates the database store. Allows clients to interact with the relayer.
+///
+/// Returns `Ok((addr, server))` on success, or `Err(anyhow::Error)` on failure.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `store` - [Sled](https://sled.rs)-based database store
+///
+/// # Examples
+///
+/// ```
+/// let ctx = RelayerContext::new(config);
+/// let store = create_store(&args).await?;
+/// let (addr, server) = build_web_services(ctx.clone(), store.clone())?;
+/// ```
+pub fn build_web_services(
+    ctx: RelayerContext,
+    store: crate::store::sled::SledStore,
+) -> crate::Result<(
+    std::net::SocketAddr,
+    impl core::future::Future<Output = ()> + 'static,
+)> {
+    use warp::Filter;
+
+    let port = ctx.config.port;
+    let ctx_arc = Arc::new(ctx.clone());
+    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
+
+    // the websocket server for users to submit relay transaction requests
+    let ws_filter = warp::path("ws")
+        .and(warp::ws())
+        .and(ctx_filter.clone())
+        .map(|ws: warp::ws::Ws, ctx: Arc<RelayerContext>| {
+            ws.on_upgrade(|socket| async move {
+                let _ = crate::handler::accept_connection(ctx.as_ref(), socket)
+                    .await;
+            })
+        })
+        .boxed();
+
+    // get the ip of the caller.
+    let proxy_addr = [127, 0, 0, 1].into();
+
+    // First check the x-forwarded-for with 'real_ip' for reverse proxy setups
+    // This code identifies the client's ip address and sends it back to them
+    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
+    let ip_filter = warp::path("ip")
+        .and(warp::get())
+        .and(warp_real_ip::real_ip(vec![proxy_addr]))
+        .and_then(crate::handler::handle_ip_info)
+        .or(warp::path("ip")
+            .and(warp::get())
+            .and(warp::addr::remote())
+            .and_then(crate::handler::handle_socket_info))
+        .boxed();
+
+    // Define the handling of a request for this relayer's information (supported networks)
+    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
+    let info_filter = warp::path("info")
+        .and(warp::get())
+        .and(ctx_filter)
+        .and_then(crate::handler::handle_relayer_info)
+        .boxed();
+
+    // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
+    // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
+    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
+    let evm_store = Arc::new(store.clone());
+    let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
+    let ctx_arc = Arc::new(ctx.clone());
+    let leaves_cache_filter_evm = warp::path("leaves")
+        .and(warp::path("evm"))
+        .and(store_filter)
+        .and(warp::path::param())
+        .and(warp::path::param())
+        .and_then(move |store, chain_id, contract| {
+            crate::handler::handle_leaves_cache_evm(
+                store,
+                chain_id,
+                contract,
+                Arc::clone(&ctx_arc),
+            )
+        })
+        .boxed();
+    // leaf api handler for substrate
+    let substrate_store = Arc::new(store);
+    let store_filter = warp::any()
+        .map(move || Arc::clone(&substrate_store))
+        .boxed();
+    let ctx_arc = Arc::new(ctx.clone());
+
+    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
+    let leaves_cache_filter_substrate = warp::path("leaves")
+        .and(warp::path("substrate"))
+        .and(store_filter)
+        .and(warp::path::param())
+        .and(warp::path::param())
+        .and_then(move |store, chain_id, contract| {
+            crate::handler::handle_leaves_cache_substrate(
+                store,
+                chain_id,
+                contract,
+                Arc::clone(&ctx_arc),
+            )
+        })
+        .boxed();
+    // Code that will map the request handlers above to a defined http endpoint.
+    let routes = ip_filter
+        .or(info_filter)
+        .or(leaves_cache_filter_evm)
+        .or(leaves_cache_filter_substrate)
+        .boxed(); // will add more routes here.
+    let http_filter =
+        warp::path("api").and(warp::path("v1")).and(routes).boxed();
+
+    let cors = warp::cors().allow_any_origin();
+    let service = http_filter
+        .or(ws_filter)
+        .with(cors)
+        .with(warp::trace::request());
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let shutdown_signal = async move {
+        shutdown_signal.recv().await;
+    };
+    warp::serve(service)
+        .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), shutdown_signal)
+        .map_err(Into::into)
+}
+
 /// Starts all background services for all chains configured in the config file.
 ///
 /// Returns a future that resolves when all services are started successfully.
@@ -120,7 +252,6 @@ pub async fn ignite(
                     )
                     .await?;
                 }
-                Contract::GovernanceBravoDelegate(_) => {}
             }
         }
         // start the transaction queue after starting other tasks.

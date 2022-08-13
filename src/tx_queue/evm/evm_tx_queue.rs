@@ -159,10 +159,7 @@ where
                                     tx_hash_string,
                                 );
                             }
-                            let result = pending
-                                .interval(Duration::from_millis(1000))
-                                .await;
-                            result
+                            pending.interval(Duration::from_millis(1000)).await
                         }
                         Err(e) => {
                             let tx_hash_string = format!("0x{:x}", tx_hash);

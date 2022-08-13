@@ -44,6 +44,9 @@ use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
 use crate::tx_relay::{MixerRelayTransaction, VAnchorRelayTransaction};
 
+/// A wrapper type around [`I256`] that implements a correct way for [`Serialize`] and [`Deserialize`].
+///
+/// This supports the signed integer hex values that are not originally supported by the [`I256`] type.
 #[derive(Debug, Clone, Serialize)]
 #[serde(transparent)]
 pub struct WebbI256(pub I256);
@@ -436,8 +439,11 @@ pub async fn handle_leaves_cache_substrate(
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Command {
+    /// Substrate specific subcommand.
     Substrate(SubstrateCommand),
+    /// EVM specific subcommand.
     Evm(EvmCommand),
+    /// Ping?
     Ping(),
 }
 
@@ -445,7 +451,9 @@ pub enum Command {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CommandType<Id, P, R, E, I, B, A> {
+    /// Webb Mixer.
     Mixer(MixerRelayTransaction<Id, P, E, I, B>),
+    /// Webb Variable Anchors.
     VAnchor(VAnchorRelayTransaction<Id, P, R, E, I, B, A>),
 }
 
@@ -453,10 +461,15 @@ pub enum CommandType<Id, P, R, E, I, B, A> {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CommandResponse {
+    /// Pong?
     Pong(),
+    /// Network Status
     Network(NetworkStatus),
+    /// Withdrawal Status
     Withdraw(WithdrawStatus),
+    /// An error occurred
     Error(String),
+    /// Unsupported feature or yet to be implemented.
     #[allow(unused)]
     Unimplemented(&'static str),
 }
@@ -464,32 +477,53 @@ pub enum CommandResponse {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NetworkStatus {
+    /// Relayer is connecting to the network.
     Connecting,
+    /// Relayer is connected to the network.
     Connected,
-    Failed { reason: String },
+    /// Network failure with error message.
+    Failed {
+        /// Error message
+        reason: String,
+    },
+    /// Relayer is disconnected from the network.
     Disconnected,
+    /// This contract is not supported by the relayer.
     UnsupportedContract,
+    /// This network (chain) is not supported by the relayer.
     UnsupportedChain,
+    /// Invalid Relayer address in the proof
     InvalidRelayerAddress,
 }
 /// Enumerates the withdraw status response of the relayer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WithdrawStatus {
+    /// The transaction is sent to the network.
     Sent,
+    /// The transaction is submitted to the network.
     Submitted {
+        /// The transaction hash.
         #[serde(rename = "txHash")]
         tx_hash: H256,
     },
+    /// The transaction is in the block.
     Finalized {
+        /// The transaction hash.
         #[serde(rename = "txHash")]
         tx_hash: H256,
     },
+    /// Valid transaction.
     Valid,
+    /// Invalid Merkle roots.
     InvalidMerkleRoots,
+    /// Transaction dropped from mempool, send it again.
     DroppedFromMemPool,
+    /// Invalid transaction.
     Errored {
+        /// Error Code.
         code: i32,
+        /// Error Message.
         reason: String,
     },
 }
@@ -540,6 +574,7 @@ pub async fn handle_evm(
     }
 }
 
+/// A helper function to extract the error code and the reason from EVM errors.
 pub fn into_withdraw_error<M: Middleware>(
     e: ContractError<M>,
 ) -> WithdrawStatus {

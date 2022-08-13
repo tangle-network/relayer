@@ -13,6 +13,12 @@ impl std::fmt::Debug for PrivateKey {
     }
 }
 
+impl From<Secret> for PrivateKey {
+    fn from(secret: Secret) -> Self {
+        PrivateKey(secret)
+    }
+}
+
 impl std::ops::Deref for PrivateKey {
     type Target = Secret;
 

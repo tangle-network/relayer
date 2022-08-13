@@ -31,8 +31,8 @@
 //!
 //! Checkout [config](./config) for useful default configurations for many networks.
 //! These config files can be changed to your preferences.
-use std::collections::HashMap;
 use std::path::Path;
+use std::{collections::HashMap, path::PathBuf};
 
 use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
@@ -272,6 +272,8 @@ pub struct ExperimentalConfig {
     /// Enable the Smart Anchor Updates when it comes to signaling
     /// the bridge to create the proposals.
     pub smart_anchor_updates: bool,
+    /// The number of retries to check if an anchor is updated before sending our update
+    /// or not, before actually sending our update.
     pub smart_anchor_updates_retries: u32,
 }
 /// FeaturesConfig is the configuration for running relayer with option.
@@ -314,6 +316,7 @@ impl Default for TxQueueConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EventsWatcherConfig {
+    /// A flag for enabling API endpoints for querying data from the relayer.
     #[serde(default = "enable_data_query_default")]
     pub enable_data_query: bool,
     #[serde(default = "enable_leaves_watcher_default")]
@@ -374,28 +377,36 @@ pub struct SubstrateLinkedVAnchorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
 pub enum Contract {
+    /// The VAnchor contract configuration.
     VAnchor(VAnchorContractConfig),
+    /// The Signature Bridge contract configuration.
     SignatureBridge(SignatureBridgeContractConfig),
-    GovernanceBravoDelegate(GovernanceBravoDelegateContractConfig),
 }
 
 /// Enumerates the supported pallets configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "pallet")]
 pub enum Pallet {
+    /// `dkg-metadata` or as named in the runtime as `DKG` pallet.
     #[serde(rename = "DKG")]
     Dkg(DKGPalletConfig),
+    /// `dkg-proposals` or as named in the runtime as `DKGProposals` pallet.
     DKGProposals(DKGProposalsPalletConfig),
+    /// `dkg-proposal-handler` or as named in the runtime as `DKGProposalHandler` pallet.
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
+    /// `signature-bridge` or as named in the runtime as `SignatureBridge` pallet.
     SignatureBridge(SignatureBridgePalletConfig),
+    /// `vanchor-bn256` or as named in the runtime as `VAnchorBn256` pallet.
     VAnchorBn254(VAnchorBn254PalletConfig),
 }
 
 /// Enumerates the supported Substrate runtimes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SubstrateRuntime {
+    /// The DKG runtime. (dkg-substrate)
     #[serde(rename = "DKG")]
     Dkg,
+    /// The Webb Protocol runtime. (protocol-substrate)
     WebbProtocol,
 }
 
@@ -414,6 +425,7 @@ pub struct CommonContractConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct VAnchorContractConfig {
+    /// Common contract configuration.
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
@@ -430,23 +442,16 @@ pub struct VAnchorContractConfig {
     pub linked_anchors: Option<Vec<LinkedVAnchorConfig>>,
 }
 
+/// Signature Bridge contract configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SignatureBridgeContractConfig {
+    /// Common contract configuration.
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
-}
-
-/// GovernanceBravoDelegateContractConfig represents the configuration for the GovernanceBravoDelegate contract.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct GovernanceBravoDelegateContractConfig {
-    #[serde(flatten)]
-    pub common: CommonContractConfig,
-    // TODO(@shekohex): add more fields here...
 }
 
 /// DKGProposalsPalletConfig represents the configuration for the DKGProposals pallet.
@@ -560,39 +565,39 @@ impl WebbRelayerConfig {
     }
 }
 
-/// Load the configuration files and
+/// A helper function that will search for all config files in the given directory and return them as a vec
+/// of the paths.
 ///
-/// Returns `Ok(WebbRelayerConfig)` on success, or `Err(anyhow::Error)` on failure.
-///
-/// # Arguments
-///
-/// * `path` - The path to the configuration file
-///
-/// # Example
-///
-/// ```
-/// let path = "/path/to/config.toml";
-/// config::load(path);
-/// ```
-pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
-    let mut cfg = config::Config::new();
+/// Supported file extensions are:
+/// - `.toml`.
+/// - `.json`.
+pub fn search_config_files<P: AsRef<Path>>(
+    base_dir: P,
+) -> crate::Result<Vec<PathBuf>> {
     // A pattern that covers all toml or json files in the config directory and subdirectories.
-    let toml_pattern = format!("{}/**/*.toml", path.as_ref().display());
-    let json_pattern = format!("{}/**/*.json", path.as_ref().display());
+    let toml_pattern = format!("{}/**/*.toml", base_dir.as_ref().display());
+    let json_pattern = format!("{}/**/*.json", base_dir.as_ref().display());
     tracing::trace!(
         "Loading config files from {} and {}",
         toml_pattern,
         json_pattern
     );
-    // then get an iterator over all matching files
-    let config_files = glob::glob(&toml_pattern)?
-        .flatten()
-        .chain(glob::glob(&json_pattern)?.flatten());
+    let toml_files = glob::glob(&toml_pattern)?;
+    let json_files = glob::glob(&json_pattern)?;
+    toml_files
+        .chain(json_files)
+        .map(|v| v.map_err(crate::Error::from))
+        .collect()
+}
+
+/// Try to parse the [`WebbRelayerConfig`] from the given config file(s).
+pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
+    let mut cfg = config::Config::new();
     let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
 
     // read through all config files for the first time
     // build up a collection of [contracts]
-    for config_file in config_files {
+    for config_file in files {
         tracing::trace!("Loading config file: {}", config_file.display());
         // get file extension
         let ext = config_file
@@ -607,7 +612,7 @@ pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
                 continue;
             }
         };
-        let file = config::File::from(config_file).format(format);
+        let file = config::File::from(config_file.as_path()).format(format);
         if let Err(e) = cfg.merge(file) {
             tracing::warn!("Error while loading config file: {} skipping!", e);
             continue;
@@ -646,6 +651,26 @@ pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
             Err(e.into())
         }
     }
+}
+
+/// Load the configuration files and
+///
+/// Returns `Ok(WebbRelayerConfig)` on success, or `Err(anyhow::Error)` on failure.
+///
+/// # Arguments
+///
+/// * `path` - The path to the configuration file
+///
+/// # Example
+///
+/// ```
+/// let path = "/path/to/config.toml";
+/// config::load(path);
+/// ```
+///
+/// it is the same as using the [`search_config_files`] and [`parse_from_files`] functions combined.
+pub fn load<P: AsRef<Path>>(path: P) -> crate::Result<WebbRelayerConfig> {
+    parse_from_files(&search_config_files(path)?)
 }
 
 /// The postloading_process exists to validate configuration and standardize
