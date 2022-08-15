@@ -88,7 +88,7 @@ Great! Now your Rust environment is ready! 🚀🚀
 ```
 git clone https://github.com/webb-tools/relayer.git
 
-cargo build --release
+cargo build --release --features cli
 ```
 
 <h2 id="usage"> Usage </h2>
