@@ -34,6 +34,7 @@ use webb::evm::ethers::{
     signers::{LocalWallet, Signer},
     types::Bytes,
 };
+use webb::substrate::subxt::sp_core::Pair;
 use webb::substrate::subxt::sp_runtime::AccountId32;
 
 use crate::context::RelayerContext;
@@ -42,8 +43,10 @@ use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
 use crate::tx_relay::{MixerRelayTransaction, VAnchorRelayTransaction};
-use webb::substrate::subxt::sp_core::Pair;
 
+/// A wrapper type around [`I256`] that implements a correct way for [`Serialize`] and [`Deserialize`].
+///
+/// This supports the signed integer hex values that are not originally supported by the [`I256`] type.
 #[derive(Debug, Clone, Serialize)]
 #[serde(transparent)]
 pub struct WebbI256(pub I256);
@@ -54,7 +57,6 @@ impl<'de> Deserialize<'de> for WebbI256 {
         D: Deserializer<'de>,
     {
         let i128_str = String::deserialize(deserializer)?;
-        dbg!(&i128_str);
         let i128_val =
             I256::from_hex_str(&i128_str).map_err(serde::de::Error::custom)?;
         Ok(WebbI256(i128_val))
@@ -100,7 +102,7 @@ pub type SubstrateCommand = CommandType<
 pub async fn accept_connection(
     ctx: &RelayerContext,
     stream: warp::ws::WebSocket,
-) -> anyhow::Result<()> {
+) -> crate::Result<()> {
     let (mut tx, mut rx) = stream.split();
 
     // Wait for client to send over text (such as relay transaction requests)
@@ -135,7 +137,7 @@ pub async fn handle_text<TX>(
     ctx: &RelayerContext,
     v: &str,
     tx: &mut TX,
-) -> anyhow::Result<()>
+) -> crate::Result<()>
 where
     TX: Sink<Message> + Unpin,
     TX::Error: Error + Send + Sync + 'static,
@@ -156,13 +158,16 @@ where
                 .map(Message::text)
                 .map(Result::Ok)
                 .forward(tx)
+                .map_err(|_| crate::Error::FailedToSendResponse)
                 .await?;
         }
         Err(e) => {
             tracing::warn!("Got invalid payload: {:?}", e);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
-            tx.send(Message::text(value)).await?
+            tx.send(Message::text(value))
+                .map_err(|_| crate::Error::FailedToSendResponse)
+                .await?;
         }
     };
     Ok(())
@@ -238,27 +243,21 @@ pub async fn handle_relayer_info(
         .values_mut()
         .filter(|v| v.beneficiary.is_none())
         .try_for_each(|v| {
-            let key = v.private_key.as_ref().ok_or_else(|| {
-                anyhow::anyhow!(
-                    "No private key found for chain id {}",
-                    v.chain_id
-                )
-            })?;
+            let key =
+                v.private_key.as_ref().ok_or(crate::Error::MissingSecrets)?;
             let key = SecretKey::from_be_bytes(key.as_bytes())?;
             let wallet = LocalWallet::from(key);
             v.beneficiary = Some(wallet.address());
-            Result::<_, anyhow::Error>::Ok(())
+            crate::Result::Ok(())
         });
     let _ = config
         .substrate
         .values_mut()
         .filter(|v| v.beneficiary.is_none())
         .try_for_each(|v| {
-            let suri = v.suri.as_ref().ok_or_else(|| {
-                anyhow::anyhow!("No SURI found for chain id {}", v.chain_id)
-            })?;
+            let suri = v.suri.as_ref().ok_or(crate::Error::MissingSecrets)?;
             v.beneficiary = Some(suri.public());
-            Result::<_, anyhow::Error>::Ok(())
+            crate::Result::Ok(())
         });
     Ok(warp::reply::json(&RelayerInformationResponse { config }))
 }
@@ -440,8 +439,11 @@ pub async fn handle_leaves_cache_substrate(
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Command {
+    /// Substrate specific subcommand.
     Substrate(SubstrateCommand),
+    /// EVM specific subcommand.
     Evm(EvmCommand),
+    /// Ping?
     Ping(),
 }
 
@@ -449,7 +451,9 @@ pub enum Command {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CommandType<Id, P, R, E, I, B, A> {
+    /// Webb Mixer.
     Mixer(MixerRelayTransaction<Id, P, E, I, B>),
+    /// Webb Variable Anchors.
     VAnchor(VAnchorRelayTransaction<Id, P, R, E, I, B, A>),
 }
 
@@ -457,10 +461,15 @@ pub enum CommandType<Id, P, R, E, I, B, A> {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CommandResponse {
+    /// Pong?
     Pong(),
+    /// Network Status
     Network(NetworkStatus),
+    /// Withdrawal Status
     Withdraw(WithdrawStatus),
+    /// An error occurred
     Error(String),
+    /// Unsupported feature or yet to be implemented.
     #[allow(unused)]
     Unimplemented(&'static str),
 }
@@ -468,32 +477,53 @@ pub enum CommandResponse {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum NetworkStatus {
+    /// Relayer is connecting to the network.
     Connecting,
+    /// Relayer is connected to the network.
     Connected,
-    Failed { reason: String },
+    /// Network failure with error message.
+    Failed {
+        /// Error message
+        reason: String,
+    },
+    /// Relayer is disconnected from the network.
     Disconnected,
+    /// This contract is not supported by the relayer.
     UnsupportedContract,
+    /// This network (chain) is not supported by the relayer.
     UnsupportedChain,
+    /// Invalid Relayer address in the proof
     InvalidRelayerAddress,
 }
 /// Enumerates the withdraw status response of the relayer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum WithdrawStatus {
+    /// The transaction is sent to the network.
     Sent,
+    /// The transaction is submitted to the network.
     Submitted {
+        /// The transaction hash.
         #[serde(rename = "txHash")]
         tx_hash: H256,
     },
+    /// The transaction is in the block.
     Finalized {
+        /// The transaction hash.
         #[serde(rename = "txHash")]
         tx_hash: H256,
     },
+    /// Valid transaction.
     Valid,
+    /// Invalid Merkle roots.
     InvalidMerkleRoots,
+    /// Transaction dropped from mempool, send it again.
     DroppedFromMemPool,
+    /// Invalid transaction.
     Errored {
+        /// Error Code.
         code: i32,
+        /// Error Message.
         reason: String,
     },
 }
@@ -544,6 +574,7 @@ pub async fn handle_evm(
     }
 }
 
+/// A helper function to extract the error code and the reason from EVM errors.
 pub fn into_withdraw_error<M: Middleware>(
     e: ContractError<M>,
 ) -> WithdrawStatus {

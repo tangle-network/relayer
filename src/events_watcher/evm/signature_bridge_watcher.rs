@@ -96,9 +96,7 @@ pub struct SignatureBridgeGovernanceOwnershipTransferredHandler;
 impl EventWatcher for SignatureBridgeContractWatcher {
     const TAG: &'static str = "Signature Bridge Watcher";
 
-    type Middleware = HttpProvider;
-
-    type Contract = SignatureBridgeContractWrapper<Self::Middleware>;
+    type Contract = SignatureBridgeContractWrapper<HttpProvider>;
 
     type Events = SignatureBridgeContractEvents;
 
@@ -107,9 +105,7 @@ impl EventWatcher for SignatureBridgeContractWatcher {
 
 #[async_trait::async_trait]
 impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
-    type Middleware = HttpProvider;
-
-    type Contract = SignatureBridgeContractWrapper<Self::Middleware>;
+    type Contract = SignatureBridgeContractWrapper<HttpProvider>;
 
     type Events = SignatureBridgeContractEvents;
 
@@ -123,7 +119,7 @@ impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         e: (Self::Events, LogMeta),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let event = e.0;
         match event {
             SignatureBridgeContractEvents::GovernanceOwnershipTransferredFilter(v) => {
@@ -158,7 +154,7 @@ impl BridgeWatcher for SignatureBridgeContractWatcher {
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         cmd: BridgeCommand,
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         use BridgeCommand::*;
         tracing::trace!("Got cmd {:?}", cmd);
         match cmd {
@@ -195,9 +191,9 @@ where
     async fn execute_proposal_with_signature(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
-        contract: &SignatureBridgeContract<<Self as EventWatcher>::Middleware>,
+        contract: &SignatureBridgeContract<HttpProvider>,
         (data, signature): (Vec<u8>, Vec<u8>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         // before doing anything, we need to do just two things:
         // 1. check if we already have this transaction in the queue.
         // 2. if not, check if the signature is valid.
@@ -266,9 +262,9 @@ where
     async fn transfer_ownership_with_signature(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
-        contract: &SignatureBridgeContract<<Self as EventWatcher>::Middleware>,
+        contract: &SignatureBridgeContract<HttpProvider>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         // before doing anything, we need to do just two things:
         // 1. check if we already have this transaction in the queue.
         // 2. if not, check if the signature is valid.

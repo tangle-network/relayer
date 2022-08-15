@@ -41,7 +41,7 @@ impl HistoryStore for InMemoryStore {
         &self,
         key: K,
         default_block_number: types::U64,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         let guard = self.last_block_numbers.read();
         let val = guard
             .get(&key.into())
@@ -55,7 +55,7 @@ impl HistoryStore for InMemoryStore {
         &self,
         key: K,
         block_number: types::U64,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         let mut guard = self.last_block_numbers.write();
         let val = guard.entry(key.into()).or_insert(block_number);
         let old = *val;
@@ -71,7 +71,7 @@ impl LeafCacheStore for InMemoryStore {
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<Self::Output> {
+    ) -> crate::Result<Self::Output> {
         let guard = self.store.read();
         let val = guard
             .get(&key.into())
@@ -88,7 +88,7 @@ impl LeafCacheStore for InMemoryStore {
         &self,
         key: K,
         leaves: &[(u32, types::H256)],
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let mut guard = self.store.write();
         guard
             .entry(key.into())
@@ -101,7 +101,7 @@ impl LeafCacheStore for InMemoryStore {
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         Ok(types::U64::from(0))
     }
 
@@ -110,7 +110,7 @@ impl LeafCacheStore for InMemoryStore {
         &self,
         key: K,
         block_number: types::U64,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         Ok(types::U64::from(0))
     }
 }

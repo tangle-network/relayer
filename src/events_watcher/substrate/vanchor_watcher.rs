@@ -70,7 +70,7 @@ where
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         tracing::debug!(
             event = ?event,
             "V-Anchor new leaf event",
@@ -91,7 +91,7 @@ where
             .await?;
         let tree = match tree {
             Some(t) => t,
-            None => return Err(anyhow::anyhow!("V-Anchor not found")),
+            None => return Err(crate::Error::Generic("No tree found")),
         };
         // fetch proposal nonce
         let proposal_nonce = api

@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-use super::VAnchorContractWrapper;
+use super::{HttpProvider, VAnchorContractWrapper};
 use crate::store::sled::SledStore;
 use crate::store::{EventHashStore, LeafCacheStore};
 use ethereum_types::H256;
@@ -28,9 +28,7 @@ pub struct VAnchorLeavesHandler;
 
 #[async_trait::async_trait]
 impl super::EventHandler for VAnchorLeavesHandler {
-    type Middleware = super::HttpProvider;
-
-    type Contract = VAnchorContractWrapper<Self::Middleware>;
+    type Contract = VAnchorContractWrapper<HttpProvider>;
 
     type Events = VAnchorContractEvents;
 
@@ -42,7 +40,7 @@ impl super::EventHandler for VAnchorLeavesHandler {
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         use VAnchorContractEvents::*;
         match event {
             NewCommitmentFilter(deposit) => {

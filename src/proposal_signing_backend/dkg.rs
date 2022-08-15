@@ -47,7 +47,7 @@ impl<P> super::ProposalSigningBackend<P>
 where
     P: ProposalTrait + Sync + 'static + Send,
 {
-    async fn can_handle_proposal(&self, proposal: &P) -> anyhow::Result<bool> {
+    async fn can_handle_proposal(&self, proposal: &P) -> crate::Result<bool> {
         let header = proposal.header();
         let resource_id = header.resource_id();
         let storage_api = self.api.storage().dkg_proposals();
@@ -74,7 +74,7 @@ where
         Ok(true)
     }
 
-    async fn handle_proposal(&self, proposal: &P) -> anyhow::Result<()> {
+    async fn handle_proposal(&self, proposal: &P) -> crate::Result<()> {
         let tx_api = self.api.tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();

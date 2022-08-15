@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use super::VAnchorContractWrapper;
+use super::{HttpProvider, VAnchorContractWrapper};
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
@@ -43,9 +43,7 @@ impl<B> super::EventHandler for VAnchorDepositHandler<B>
 where
     B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
 {
-    type Middleware = super::HttpProvider;
-
-    type Contract = VAnchorContractWrapper<Self::Middleware>;
+    type Contract = VAnchorContractWrapper<HttpProvider>;
 
     type Events = VAnchorContractEvents;
 
@@ -57,7 +55,7 @@ where
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         use VAnchorContractEvents::*;
         let event_data = match event {
             NewCommitmentFilter(data) => {

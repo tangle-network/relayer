@@ -1,6 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+/// EVM Transactional Relayer.
 pub mod evm;
+/// Substrate Transactional Relayer.
 pub mod substrate;
 
 /// Contains data that is relayed to the Mixers

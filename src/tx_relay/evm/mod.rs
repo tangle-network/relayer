@@ -9,6 +9,7 @@ use crate::handler::{
     into_withdraw_error, CommandResponse, CommandStream, WithdrawStatus,
 };
 
+/// Variable Anchor transaction relayer.
 pub mod vanchor;
 
 /// Submits a dry-run and then submits the actual transaction for an EVM transaction.

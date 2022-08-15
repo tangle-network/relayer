@@ -31,15 +31,27 @@ use webb::evm::ethers::types;
 pub mod mem;
 /// A module for setting up and managing a [Sled](https://sled.rs)-based database.
 pub mod sled;
+
+/// A store that uses [`sled`](https://sled.rs) as the backend.
+pub use self::sled::SledStore;
+/// A store that uses in memory data structures as the backend.
+pub use mem::InMemoryStore;
+
 /// HistoryStoreKey contains the keys used to store the history of events.
 #[derive(Eq, PartialEq, Hash)]
 pub enum HistoryStoreKey {
+    /// EVM Queue Key
     Evm {
+        /// Chain id
         chain_id: types::U256,
+        /// Contract address.
         address: types::H160,
     },
+    /// Substrate Queue Key
     Substrate {
+        /// Chain id
         chain_id: types::U256,
+        /// Merkle Tree id.
         tree_id: String,
     },
 }
@@ -48,16 +60,20 @@ pub enum HistoryStoreKey {
 /// It is a combination of the Chain ID and the target system of the Bridge system.
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct BridgeKey {
+    /// The Target System of this Bridge key.
     pub target_system: webb_proposals::TargetSystem,
+    /// The Chain ID of this Bridge key.
     pub chain_id: webb_proposals::TypedChainId,
 }
 /// A way to convert an arbitrary type to a TargetSystem.
 pub trait IntoTargetSystem {
+    /// Consumes Self and returns a TargetSystem.
     fn into_target_system(self) -> webb_proposals::TargetSystem;
 }
 
 /// A way to convert an arbitrary type to a TypedChainId.
 pub trait IntoTypedChainId {
+    /// Consumes Self and returns a TypedChainId.
     fn into_typed_chain_id(self) -> webb_proposals::TypedChainId;
 }
 
@@ -98,6 +114,7 @@ impl IntoTypedChainId for u32 {
 }
 
 impl BridgeKey {
+    /// Creates new BridgeKey from a TargetSystem and a ChainId.
     pub fn new<TargetSystem, ChainId>(
         target_system: TargetSystem,
         chain_id: ChainId,
@@ -204,21 +221,21 @@ pub trait HistoryStore: Clone + Send + Sync {
         &self,
         key: K,
         block_number: types::U64,
-    ) -> anyhow::Result<types::U64>;
+    ) -> crate::Result<types::U64>;
     /// Get the last block number for that contract.
     /// if not found, returns the `default_block_number`.
     fn get_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         default_block_number: types::U64,
-    ) -> anyhow::Result<types::U64>;
+    ) -> crate::Result<types::U64>;
 
     /// an easy way to call the `get_last_block_number`
     /// where the default block number is `1`.
     fn get_last_block_number_or_default<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<types::U64> {
+    ) -> crate::Result<types::U64> {
         self.get_last_block_number(key, types::U64::one())
     }
 }
@@ -230,65 +247,84 @@ pub trait HistoryStore: Clone + Send + Sync {
 pub trait EventHashStore: Send + Sync + Clone {
     /// Store the event in the store.
     /// the key is the hash of the event.
-    fn store_event(&self, event: &[u8]) -> anyhow::Result<()>;
+    fn store_event(&self, event: &[u8]) -> crate::Result<()>;
 
     /// Check if the event is stored in the store.
     /// the key is the hash of the event.
-    fn contains_event(&self, event: &[u8]) -> anyhow::Result<bool>;
+    fn contains_event(&self, event: &[u8]) -> crate::Result<bool>;
 
     /// Delete the event from the store.
     /// the key is the hash of the event.
-    fn delete_event(&self, event: &[u8]) -> anyhow::Result<()>;
+    fn delete_event(&self, event: &[u8]) -> crate::Result<()>;
 }
 
 /// A Leaf Cache Store is a simple trait that would help in
 /// getting the leaves and insert them with a simple API.
 pub trait LeafCacheStore: HistoryStore {
+    /// The Output type which is the leaf.
     type Output: IntoIterator<Item = types::H256>;
 
+    /// Get the leaves for the given key.
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<Self::Output>;
+    ) -> crate::Result<Self::Output>;
 
+    /// Insert the leaves for the given key.
     fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         leaves: &[(u32, types::H256)],
-    ) -> anyhow::Result<()>;
+    ) -> crate::Result<()>;
 
-    // The last deposit info is sent to the client on leaf request
-    // So they can verify when the last transaction was sent to maintain
-    // their own state of mixers.
+    /// The last deposit info is sent to the client on leaf request
+    /// So they can verify when the last transaction was sent to maintain
+    /// their own state of mixers.
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> anyhow::Result<types::U64>;
+    ) -> crate::Result<types::U64>;
 
+    /// Set the last deposit block number for the given key.
     fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
         block_number: types::U64,
-    ) -> anyhow::Result<types::U64>;
+    ) -> crate::Result<types::U64>;
 }
 
 /// A Command sent to the Bridge to execute different actions.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum BridgeCommand {
+    /// A Command sent to the Signature Bridge to execute a proposal with signature
     ExecuteProposalWithSignature {
+        /// The proposal to execute (encoded as bytes)
         data: Vec<u8>,
+        /// The signature of the hash of the proposal bytes, Signed by the proposal signing
+        /// backend.
         signature: Vec<u8>,
     },
+    /// A Command sent to the Signature Bridge to transfer the ownership with a signature.
     TransferOwnershipWithSignature {
+        /// The new owner public key.
         public_key: Vec<u8>,
+        /// The nonce of this transfer.
         nonce: u32,
+        /// The signature of the hash of the nonce+public key, Signed by the proposal signing
+        /// backend.
         signature: Vec<u8>,
     },
 }
 
 /// A trait for retrieving queue keys
 pub trait QueueKey {
+    /// The Queue name, used as a prefix for the keys.
     fn queue_name(&self) -> String;
+    /// an _optional_ different key for the same value stored in the queue.
+    ///
+    /// This useful for the case when you want to have a direct access to a specific key in the queue.
+    /// For example, if you want to remove an item from the queue, you can use this key to directly
+    /// remove it from the queue.
     fn item_key(&self) -> Option<[u8; 64]>;
 }
 
@@ -300,17 +336,18 @@ pub trait QueueStore<Item>
 where
     Item: Serialize + DeserializeOwned + Clone,
 {
+    /// The type of the queue key.
     type Key: QueueKey;
     /// Insert an item into the queue.
-    fn enqueue_item(&self, key: Self::Key, item: Item) -> anyhow::Result<()>;
+    fn enqueue_item(&self, key: Self::Key, item: Item) -> crate::Result<()>;
     /// Get an item from the queue, and removes it.
-    fn dequeue_item(&self, key: Self::Key) -> anyhow::Result<Option<Item>>;
+    fn dequeue_item(&self, key: Self::Key) -> crate::Result<Option<Item>>;
     /// Get an item from the queue, without removing it.
-    fn peek_item(&self, key: Self::Key) -> anyhow::Result<Option<Item>>;
+    fn peek_item(&self, key: Self::Key) -> crate::Result<Option<Item>>;
     /// Check if the item is in the queue.
-    fn has_item(&self, key: Self::Key) -> anyhow::Result<bool>;
+    fn has_item(&self, key: Self::Key) -> crate::Result<bool>;
     /// Remove an item from the queue.
-    fn remove_item(&self, key: Self::Key) -> anyhow::Result<Option<Item>>;
+    fn remove_item(&self, key: Self::Key) -> crate::Result<Option<Item>>;
 }
 
 impl<S, T> QueueStore<T> for Arc<S>
@@ -320,32 +357,35 @@ where
 {
     type Key = S::Key;
 
-    fn enqueue_item(&self, key: Self::Key, item: T) -> anyhow::Result<()> {
+    fn enqueue_item(&self, key: Self::Key, item: T) -> crate::Result<()> {
         S::enqueue_item(self, key, item)
     }
 
-    fn dequeue_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+    fn dequeue_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
         S::dequeue_item(self, key)
     }
 
-    fn peek_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+    fn peek_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
         S::peek_item(self, key)
     }
 
-    fn has_item(&self, key: Self::Key) -> anyhow::Result<bool> {
+    fn has_item(&self, key: Self::Key) -> crate::Result<bool> {
         S::has_item(self, key)
     }
 
-    fn remove_item(&self, key: Self::Key) -> anyhow::Result<Option<T>> {
+    fn remove_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
         S::remove_item(self, key)
     }
 }
 /// ProposalStore is a simple trait for inserting and removing proposals.
 pub trait ProposalStore {
+    /// The type of the Proposal.
     type Proposal: Serialize + DeserializeOwned;
-    fn insert_proposal(&self, proposal: Self::Proposal) -> anyhow::Result<()>;
+    /// Insert a proposal into the store.
+    fn insert_proposal(&self, proposal: Self::Proposal) -> crate::Result<()>;
+    /// Remove a proposal from the store.
     fn remove_proposal(
         &self,
         data_hash: &[u8],
-    ) -> anyhow::Result<Option<Self::Proposal>>;
+    ) -> crate::Result<Option<Self::Proposal>>;
 }
