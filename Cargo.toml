@@ -5,6 +5,10 @@ authors = ["Shady Khalifa <shekohex@gmail.com>"]
 edition = "2021"
 description = "The Webb Relayer toolkit" 
 license = "Apache-2.0"
+documentation = "https://docs.rs/webb-relayer"
+homepage = "https://webb.tools"
+repository = "https://github.com/webb-tools/relayer"
+exclude = ["tests", "config", ".github", "ci", "assets", "docker"]
 
 [lib]
 doctest = false
