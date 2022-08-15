@@ -1,6 +1,6 @@
 [package]
 name = "webb-relayer"
-version = "0.4.0"
+version = "0.4.1"
 authors = ["Shady Khalifa <shekohex@gmail.com>"]
 edition = "2021"
 description = "The Webb Relayer toolkit" 
