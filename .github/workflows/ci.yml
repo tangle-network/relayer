@@ -116,7 +116,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: ci/test.bash /tmp/cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-unknown-linux-musl'
-      - run: cargo build --features integration-tests,ci
+      - run: cargo build --features integration-tests,cli
         if: matrix.target == 'x86_64-unknown-linux-musl'
         shell: bash
       - name: Install NPM Packages.
