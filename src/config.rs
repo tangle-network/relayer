@@ -444,7 +444,6 @@ pub enum CosmwasmContract {
     SignatureBridge(CosmwasmSignatureBridgeContractConfig),
 }
 
-
 /// CommonContractConfig represents the common configuration for contracts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -673,7 +672,8 @@ pub fn search_config_files<P: AsRef<Path>>(
 pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
     let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
-    let cosmwasm_contracts: HashMap<String, Vec<CosmwasmContract>> = HashMap::new();
+    let cosmwasm_contracts: HashMap<String, Vec<CosmwasmContract>> =
+        HashMap::new();
 
     // read through all config files for the first time
     // build up a collection of [contracts]
@@ -719,7 +719,9 @@ pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
 
             // merge in all of the contracts into the config
             for (network_name, network_chain) in c.cosmwasm.iter_mut() {
-                if let Some(stored_contracts) = cosmwasm_contracts.get(network_name) {
+                if let Some(stored_contracts) =
+                    cosmwasm_contracts.get(network_name)
+                {
                     network_chain.contracts = stored_contracts.clone();
                 }
             }
