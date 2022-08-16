@@ -37,7 +37,7 @@ withdraw-config = { withdraw-fee-percentage = 0, withdraw-limit = "0" }
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { chain = "testing", address = "juno1l9neq7e5e9l48nwx9287u7f7lrq3jv5ejwuv52zxgwy6c49h2wlsgqa90h" },
+  { chain = "localjuno", address = "juno1l9neq7e5e9l48nwx9287u7f7lrq3jv5ejwuv52zxgwy6c49h2wlsgqa90h" },
 ]
 # Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit

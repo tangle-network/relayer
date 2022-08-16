@@ -887,7 +887,7 @@ fn postloading_process(
             }
         }
     }
-    for (chain_id, chain_config) in &config.cosmwasm {
+    for (chain_name, chain_config) in &config.cosmwasm {
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
             CosmwasmContract::VAnchor(cfg) => Some(cfg),
             _ => None,
@@ -959,7 +959,7 @@ fn postloading_process(
                                         Please, define it manually, to allow the relayer to work properly.",
                                         linked_anchor.chain,
                                         anchor.common.address,
-                                        chain_id
+                                        chain_name
                                     );
                                 }
                             }
@@ -980,6 +980,5 @@ fn postloading_process(
             }
         }
     }
-    println!("config: {:?}", config);
     Ok(config)
 }
