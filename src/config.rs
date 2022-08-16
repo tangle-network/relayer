@@ -261,7 +261,7 @@ pub struct CosmwasmConfig {
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
     #[serde(default)]
-    pub contracts: Vec<Contract>,
+    pub contracts: Vec<CosmwasmContract>,
     /// TxQueue configuration
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
@@ -374,6 +374,29 @@ pub struct SubstrateLinkedVAnchorConfig {
     pub tree: u32,
 }
 
+/// CosmwasmVAnchorWithdrawConfig is the configuration for the Cosmwasm VAnchor Withdraw.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmVAnchorWithdrawConfig {
+    /// The fee percentage that your account will receive when you relay a transaction
+    /// over this chain.
+    #[serde(rename(serialize = "withdrawFeePercentage"))]
+    pub withdraw_fee_percentage: u8,
+    /// A stringified value of the limit(Uint128) when doing a withdraw relay transaction on this chain.
+    #[serde(rename(serialize = "withdrawLimit"))]
+    pub withdraw_limit: String,
+}
+
+/// CosmwasmLinkedVAnchorConfig is the configuration for the cosmwasm linked Vanchor.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmLinkedVAnchorConfig {
+    /// The Chain name where this anchor belongs to.
+    pub chain: String,
+    /// The Anchor Contract Address.
+    pub address: String,
+}
+
 /// Enumerates the supported contract configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
@@ -410,6 +433,17 @@ pub enum SubstrateRuntime {
     /// The Webb Protocol runtime. (protocol-substrate)
     WebbProtocol,
 }
+
+/// Enumerates the supported cosmwasm-contract configurations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "contract")]
+pub enum CosmwasmContract {
+    /// The VAnchor contract configuration.
+    VAnchor(CosmwasmVAnchorContractConfig),
+    /// The Signature Bridge contract configuration.
+    SignatureBridge(CosmwasmSignatureBridgeContractConfig),
+}
+
 
 /// CommonContractConfig represents the common configuration for contracts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -450,6 +484,50 @@ pub struct SignatureBridgeContractConfig {
     /// Common contract configuration.
     #[serde(flatten)]
     pub common: CommonContractConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+}
+
+/// CosmwasmCommonContractConfig represents the cosmwasm common configuration for contracts.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmCommonContractConfig {
+    /// The address of this contract on this chain.
+    pub address: String,
+    /// the block number where this contract got deployed at.
+    #[serde(rename(serialize = "deployedAt"))]
+    pub deployed_at: u64,
+}
+
+/// CosmwasmVAnchorContractConfig represents the configuration for the Cosmwasm VAnchor contract.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmVAnchorContractConfig {
+    /// Common contract configuration.
+    #[serde(flatten)]
+    pub common: CosmwasmCommonContractConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+    /// Anchor withdraw configuration.
+    #[serde(rename(serialize = "withdrawConfig"))]
+    pub withdraw_config: Option<CosmwasmVAnchorWithdrawConfig>,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+    /// A List of linked Anchor Contracts (on other chains) to this contract.
+    #[serde(rename(serialize = "linkedAnchors"), default)]
+    pub linked_anchors: Option<Vec<CosmwasmLinkedVAnchorConfig>>,
+}
+
+/// Cosmwasm Signature Bridge contract configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmSignatureBridgeContractConfig {
+    /// Common contract configuration.
+    #[serde(flatten)]
+    pub common: CosmwasmCommonContractConfig,
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
@@ -595,6 +673,7 @@ pub fn search_config_files<P: AsRef<Path>>(
 pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
     let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
+    let cosmwasm_contracts: HashMap<String, Vec<CosmwasmContract>> = HashMap::new();
 
     // read through all config files for the first time
     // build up a collection of [contracts]
@@ -642,7 +721,7 @@ pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
 
             // merge in all of the contracts into the config
             for (network_name, network_chain) in c.cosmwasm.iter_mut() {
-                if let Some(stored_contracts) = contracts.get(network_name) {
+                if let Some(stored_contracts) = cosmwasm_contracts.get(network_name) {
                     network_chain.contracts = stored_contracts.clone();
                 }
             }
