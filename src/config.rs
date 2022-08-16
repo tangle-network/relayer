@@ -38,6 +38,7 @@ use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::Public;
 
+use crate::types::cw_chain_id::CWChainId;
 use crate::types::{
     mnemonic::Mnemonic, private_key::PrivateKey, rpc_url::RpcUrl, suri::Suri,
 };
@@ -240,7 +241,7 @@ pub struct CosmwasmConfig {
     pub explorer: Option<url::Url>,
     /// chain specific id (output of chainId opcode on Cosmwasm networks)
     #[serde(rename(serialize = "chainId"))]
-    pub chain_id: u32,
+    pub chain_id: CWChainId,
     /// The Mnemonic of this account on this network
     /// the format is more dynamic here:
     /// 1. if it starts with '$' then it would be considered as an Enviroment variable
@@ -621,6 +622,8 @@ pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
 
     // also merge in the environment (with a prefix of WEBB).
     cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
+
+    println!("cfg: {:?}", cfg);
 
     // and finally deserialize the config and post-process it
     let config: Result<

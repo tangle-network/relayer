@@ -4866,7 +4866,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -4895,6 +4895,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tiny-bip39 1.0.0",
+ "tiny-keccak",
  "tokio",
  "tokio-stream",
  "tracing",
