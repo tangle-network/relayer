@@ -218,7 +218,7 @@ where
         if qq {
             tracing::debug!(
                 proposal_data_hash = ?hex::encode(proposal_data_hash),
-                "SSkipping execution of this proposal :  Already Exists in Queue",
+                "Skipping execution of this proposal :  Already Exists in Queue",
             );
             return Ok(());
         }
