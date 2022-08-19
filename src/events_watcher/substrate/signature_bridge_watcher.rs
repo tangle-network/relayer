@@ -101,7 +101,7 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
                     api.clone(),
                     (data, signature),
                 )
-                .await?;
+                .await?
             }
             TransferOwnershipWithSignature {
                 public_key,
@@ -132,7 +132,7 @@ where
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
-    ) -> anyhow::Result<()> {
+    ) -> crate::Result<()> {
         let proposal_data_hex = hex::encode(&proposal_data);
         // 1. Verify proposal length. Proposal lenght should be greater than 40 bytes (proposal header(40B) + proposal body).
         if proposal_data.len() < 40 {
@@ -143,24 +143,7 @@ where
             return Ok(());
         }
 
-        // 2. Verify proposal nonce. Proposal nonce should be greater than signature bridge proposal nonce.
-        let bridge_proposal_nonce = api
-            .storage()
-            .signature_bridge()
-            .proposal_nonce(None)
-            .await?;
-
-        let proposal_nonce = parse_nonce_from_proposal_data(&proposal_data);
-
-        if proposal_nonce < bridge_proposal_nonce {
-            tracing::warn!(
-                proposal_data = ?proposal_data,
-                "Skipping execution of this proposal : Invalid Nonce",
-            );
-            return Ok(());
-        }
-
-        // 3. Verify proposal signature. Proposal should be signed by active maintainer/dkg-key
+        // 2. Verify proposal signature. Proposal should be signed by active maintainer/dkg-key
         let signature_hex = hex::encode(&signature);
 
         // get current maintainer
@@ -184,7 +167,7 @@ where
             return Ok(());
         }
 
-        // 4. Enqueue proposal for execution.
+        // 3. Enqueue proposal for execution.
         tracing::event!(
             target: crate::probe::TARGET,
             tracing::Level::DEBUG,
