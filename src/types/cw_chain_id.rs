@@ -7,7 +7,7 @@ pub struct CWChainId(u32);
 
 impl std::fmt::Debug for CWChainId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("CWChainId").finish()
+        f.debug_tuple("CWChainId").field(&self.0).finish()
     }
 }
 
