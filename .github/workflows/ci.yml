@@ -116,16 +116,14 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: ci/test.bash /tmp/cross ${{ matrix.target }}
         if: matrix.target == 'x86_64-unknown-linux-musl'
-      - run: cargo build --features integration-tests
+      - run: cargo build --features integration-tests,cli
         if: matrix.target == 'x86_64-unknown-linux-musl'
         shell: bash
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && git submodule update --init --recursive && yarn
       - name: Pull Docker Images used for testing.
-        run: |
-          docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:edge
-
+        run: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:edge
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && yarn test
