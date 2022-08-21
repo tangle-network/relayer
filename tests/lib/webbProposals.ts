@@ -15,6 +15,7 @@
  *
  */
 import { u8aToHex, hexToU8a, assert } from '@polkadot/util';
+import { toFixedHex } from '@webb-tools/sdk-core';
 
 const LE = true;
 const BE = false;
@@ -591,6 +592,24 @@ export function makeResourceId(
   const view = new DataView(rId.buffer);
   view.setUint16(26, chainIdType, BE); // 26 -> 28
   view.setUint32(28, chainId, BE); // 28 -> 32
+  return u8aToHex(rId);
+}
+
+/**
+ * A TargetSystem is 26 bytes hex encoded string of the following format
+ * PalletIndex: 1byte
+ * TreeId: 4 bytes
+ * we pad it with zero to make it 26 bytes
+ */
+export function makeSubstrateTargetSystem(
+  treeId: number,
+  palletIndex: string
+): string {
+  const rId = new Uint8Array(20);
+  let index = hexToU8a(palletIndex).slice(0, 1);
+  let treeBytes = hexToU8a(toFixedHex(treeId, 4));
+  rId.set(index, 15); // 15-16
+  rId.set(treeBytes, 16); // 16-20
   return u8aToHex(rId);
 }
 

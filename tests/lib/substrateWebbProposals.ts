@@ -29,10 +29,6 @@ export interface ResourceIdUpdateProposal {
    */
   readonly newResourceId: string;
   /**
-   * 32 bytes Hex-encoded string.
-   */
-  readonly targetSystem: string;
-  /**
    * 1 byte Hex-encoded string.
    */
   readonly palletIndex: string;
@@ -45,7 +41,7 @@ export function encodeResourceIdUpdateProposal(
   proposal: ResourceIdUpdateProposal
 ): Uint8Array {
   const header = encodeProposalHeader(proposal.header);
-  const resourceIdUpdateProposal = new Uint8Array(79);
+  const resourceIdUpdateProposal = new Uint8Array(74);
   resourceIdUpdateProposal.set(header, 0); // 0 -> 40
   const palletIndex = hexToU8a(proposal.palletIndex).slice(0, 1);
   resourceIdUpdateProposal.set(palletIndex, 40); // 40 -> 41
@@ -53,8 +49,6 @@ export function encodeResourceIdUpdateProposal(
   resourceIdUpdateProposal.set(callIndex, 41); // 40 -> 41
   const newResourceId = hexToU8a(proposal.newResourceId).slice(0, 32);
   resourceIdUpdateProposal.set(newResourceId, 42); // 42 -> 74
-  const targetSystem = hexToU8a(proposal.targetSystem).slice(0, 4);
-  resourceIdUpdateProposal.set(targetSystem, 74); // 74 -> 79
   return resourceIdUpdateProposal;
 }
 
@@ -62,14 +56,13 @@ export function decodeResourceIdUpdateProposal(
   data: Uint8Array
 ): ResourceIdUpdateProposal {
   const header = decodeProposalHeader(data.slice(0, 40)); // 0 -> 40
-  const palletIndex = u8aToHex(data.slice(72, 92)); // 40 -> 41
-  const callIndex = u8aToHex(data.slice(92, 112)); // 41 -> 42
-  const newResourceId = u8aToHex(data.slice(40, 72)); // 42 -> 74
-  const targetSystem = u8aToHex(data.slice(40, 72)); // 74 -> 106
+  const palletIndex = u8aToHex(data.slice(40, 41)); // 40 -> 41
+  const callIndex = u8aToHex(data.slice(41, 42)); // 41 -> 42
+  const newResourceId = u8aToHex(data.slice(42, 74)); // 42 -> 74
+
   return {
     header,
     newResourceId,
-    targetSystem,
     palletIndex,
     callIndex,
   };

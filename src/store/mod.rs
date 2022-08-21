@@ -89,9 +89,9 @@ impl IntoTargetSystem for types::Address {
     }
 }
 
-impl IntoTargetSystem for u32 {
+impl IntoTargetSystem for webb_proposals::SubstrateTargetSystem {
     fn into_target_system(self) -> webb_proposals::TargetSystem {
-        webb_proposals::TargetSystem::new_tree_id(self)
+        webb_proposals::TargetSystem::Substrate(self)
     }
 }
 
