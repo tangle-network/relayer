@@ -218,6 +218,34 @@ where
                     };
                     // encoded extinsic
                     let encoded_extrinsic = subxt::Encoded(extrinsic);
+                    // dry run test
+                    let dry_run_outcome =
+                        client.rpc().dry_run(&encoded_extrinsic.0, None).await;
+                    match dry_run_outcome {
+                        Ok(_) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                dry_run = "passed"
+                            );
+                        }
+                        Err(err) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id.as_u64(),
+                                errored = true,
+                                error = %err,
+                                dry_run = "failed"
+                            );
+                            continue; // keep going.
+                        }
+                    }
                     // watch_extrinsic submits and returns transaction subscription
                     let mut progress = client
                         .rpc()
