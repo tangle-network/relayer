@@ -1178,10 +1178,14 @@ async fn make_substrate_proposal_signing_backend(
                 .iter()
                 .flat_map(|anchor| {
                     // using chain_id to ensure that we have only one signature bridge
+                    let target =
+                        webb_proposals::SubstrateTargetSystem::builder()
+                            .pallet_index(0)
+                            .tree_id(chain_id.as_u32())
+                            .build();
                     let target_system =
-                        webb_proposals::TargetSystem::new_tree_id(
-                            chain_id.as_u32(),
-                        );
+                        webb_proposals::TargetSystem::Substrate(target);
+
                     let chain_id =
                         webb_proposals::TypedChainId::Substrate(anchor.chain);
                     Some((chain_id, target_system))

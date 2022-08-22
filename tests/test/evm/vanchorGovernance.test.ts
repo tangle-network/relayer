@@ -25,7 +25,7 @@ import { EnabledContracts, WebbRelayer } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 
-describe('VAnchor Governance Relayer', function () {
+describe.skip('VAnchor Governance Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

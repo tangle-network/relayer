@@ -95,17 +95,25 @@ where
         }
 
         let client = wrapper.contract.client();
-        let src_chain_id = client.get_chainid().await?;
+        let chain_id = client.get_chainid().await?;
         let root = wrapper.contract.get_last_root().call().await?;
         let leaf_index = event_data.index.as_u32();
         let function_signature = [141, 9, 22, 157];
         let nonce = leaf_index;
+        let src_chain_id = webb_proposals::TypedChainId::Evm(chain_id.as_u32());
+        let src_target_system =
+            webb_proposals::TargetSystem::new_contract_address(
+                wrapper.contract.address().to_fixed_bytes(),
+            );
+        let src_resource_id =
+            webb_proposals::ResourceId::new(src_target_system, src_chain_id);
+
         let linked_anchors = match &wrapper.config.linked_anchors {
             Some(anchors) => anchors,
             None => {
                 tracing::error!(
                     "Linked anchors not configured for : ({})",
-                    src_chain_id
+                    chain_id
                 );
                 return Ok(());
             }
@@ -133,14 +141,16 @@ where
                     continue;
                 }
             };
-            let target_system =
+            let anchor_target_system =
                 webb_proposals::TargetSystem::new_contract_address(
                     linked_anchor.address.to_fixed_bytes(),
                 );
-            let typed_chain_id =
+            let anchor_chain_id =
                 webb_proposals::TypedChainId::Evm(dest_chain.chain_id as _);
-            let resource_id =
-                webb_proposals::ResourceId::new(target_system, typed_chain_id);
+            let resource_id = webb_proposals::ResourceId::new(
+                anchor_target_system,
+                anchor_chain_id,
+            );
             let header = webb_proposals::ProposalHeader::new(
                 resource_id,
                 function_signature.into(),
@@ -148,10 +158,8 @@ where
             );
             let proposal = webb_proposals::evm::AnchorUpdateProposal::new(
                 header,
-                webb_proposals::TypedChainId::Evm(src_chain_id.as_u32()),
-                leaf_index,
                 root,
-                target_system.into_fixed_bytes(),
+                src_resource_id,
             );
             let can_sign_proposal = self
                 .proposal_signing_backend

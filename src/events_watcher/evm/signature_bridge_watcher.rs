@@ -192,17 +192,24 @@ where
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
         contract: &SignatureBridgeContract<HttpProvider>,
-        (data, signature): (Vec<u8>, Vec<u8>),
+        (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> crate::Result<()> {
-        // before doing anything, we need to do just two things:
-        // 1. check if we already have this transaction in the queue.
-        // 2. if not, check if the signature is valid.
+        let proposal_data_hex = hex::encode(&proposal_data);
+        // 1. Verify proposal length. Proposal lenght should be greater than 40 bytes (proposal header(40B) + proposal body).
+        if proposal_data.len() < 40 {
+            tracing::warn!(
+                proposal_data = ?proposal_data_hex,
+                "Skipping execution of this proposal :  Invalid Proposal",
+            );
+            return Ok(());
+        }
 
+        // 2. Verify if proposal already exists in transaction queue
         let chain_id = contract.get_chain_id().call().await?;
-        let data_hash = utils::keccak256(&data);
+        let proposal_data_hash = utils::keccak256(&proposal_data);
         let tx_key = SledQueueKey::from_evm_with_custom_key(
             chain_id,
-            make_execute_proposal_key(data_hash),
+            make_execute_proposal_key(proposal_data_hash),
         );
 
         // check if we already have a queued tx for this proposal.
@@ -210,50 +217,53 @@ where
         let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
         if qq {
             tracing::debug!(
-                data_hash = ?hex::encode(data_hash),
-                "Skipping execution of the proposal since it is already in tx queue",
+                proposal_data_hash = ?hex::encode(proposal_data_hash),
+                "Skipping execution of this proposal :  Already Exists in Queue",
             );
             return Ok(());
         }
 
-        // now we need to check if the signature is valid.
-        let (data_clone, signature_clone) = (data.clone(), signature.clone());
+        // 3. Verify proposal signature. Proposal should be signed by active maintainer/dkg-key
+        let (proposal_data_clone, signature_clone) =
+            (proposal_data.clone(), signature.clone());
         let is_signature_valid = contract
             .is_signature_from_governor(
-                data_clone.into(),
+                proposal_data_clone.into(),
                 signature_clone.into(),
             )
             .call()
             .await?;
 
-        let data_hex = hex::encode(&data);
         let signature_hex = hex::encode(&signature);
         if !is_signature_valid {
             tracing::warn!(
-                data = ?data_hex,
+                proposal_data = ?proposal_data_hex,
                 signature = ?signature_hex,
-                "Skipping execution of this proposal since signature is invalid",
+                "Skipping execution of this proposal : Invalid Signature ",
             );
             return Ok(());
         }
 
+        // 3. Enqueue proposal for execution.
         tracing::event!(
             target: crate::probe::TARGET,
             tracing::Level::DEBUG,
             kind = %crate::probe::Kind::SignatureBridge,
             call = "execute_proposal_with_signature",
             chain_id = %chain_id.as_u64(),
-            data = ?data_hex,
+            proposal_data = ?proposal_data_hex,
             signature = ?signature_hex,
-            data_hash = ?hex::encode(data_hash),
+            proposal_data_hash = ?hex::encode(proposal_data_hash),
         );
-        // I guess now we are ready to enqueue the transaction.
-        let call = contract
-            .execute_proposal_with_signature(data.into(), signature.into());
+        // Enqueue transaction call data in evm transaction queue
+        let call = contract.execute_proposal_with_signature(
+            proposal_data.into(),
+            signature.into(),
+        );
         QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
         tracing::debug!(
-            data_hash = ?hex::encode(data_hash),
-            "Enqueued the proposal for execution in the tx queue",
+            proposal_data_hash = ?hex::encode(proposal_data_hash),
+            "Enqueued execute-proposal call for execution through evm tx queue",
         );
         Ok(())
     }
