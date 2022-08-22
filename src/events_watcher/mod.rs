@@ -672,8 +672,11 @@ where
             let client_api = client.clone();
             let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
             // chain_id is used as tree_id, to ensure that we have one signature bridge
-            let target_system =
-                webb_proposals::TargetSystem::new_tree_id(chain_id.as_u32());
+            let target = webb_proposals::SubstrateTargetSystem::builder()
+                .pallet_index(0)
+                .tree_id(chain_id.as_u32())
+                .build();
+            let target_system = webb_proposals::TargetSystem::Substrate(target);
             let my_chain_id =
                 webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
             let bridge_key = BridgeKey::new(target_system, my_chain_id);

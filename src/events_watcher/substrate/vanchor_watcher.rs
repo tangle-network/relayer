@@ -93,28 +93,42 @@ where
             Some(t) => t,
             None => return Err(crate::Error::Generic("No tree found")),
         };
-        // fetch proposal nonce
-        let proposal_nonce = api
-            .storage()
-            .signature_bridge()
-            .proposal_nonce(Some(at_hash))
-            .await?;
+        // pallet index
+        let pallet_index = {
+            let locked_metadata = api.client.metadata();
+            let metadata = locked_metadata.read();
+            let pallet = metadata.pallet("VAnchorHandlerBn254")?;
+            pallet.index()
+        };
+
         let root = tree.root;
         let latest_leaf_index = tree.leaf_count;
         let tree_id = event.tree_id;
-        let nonce = webb_proposals::Nonce::new(proposal_nonce + 1);
-        let function_signature = webb_proposals::FunctionSignature::new([0; 4]);
-        let src_chain =
+        let nonce = webb_proposals::Nonce::new(latest_leaf_index);
+        let function_signature =
+            webb_proposals::FunctionSignature::new([0, 0, 0, 2]);
+        let src_chain_id =
             webb_proposals::TypedChainId::Substrate(chain_id as u32);
-        let target_system = webb_proposals::TargetSystem::new_tree_id(tree_id);
+        let target = webb_proposals::SubstrateTargetSystem::builder()
+            .pallet_index(pallet_index)
+            .tree_id(tree_id)
+            .build();
+        let src_target_system = webb_proposals::TargetSystem::Substrate(target);
+        let src_resource_id =
+            webb_proposals::ResourceId::new(src_target_system, src_chain_id);
         let mut merkle_root = [0; 32];
         merkle_root.copy_from_slice(&root.encode());
+
         // update linked anchors
         for anchor in &self.linked_anchors {
             let anchor_chain_id =
                 webb_proposals::TypedChainId::Substrate(anchor.chain);
+            let target = webb_proposals::SubstrateTargetSystem::builder()
+                .pallet_index(pallet_index)
+                .tree_id(anchor.tree)
+                .build();
             let anchor_target_system =
-                webb_proposals::TargetSystem::new_tree_id(anchor.tree);
+                webb_proposals::TargetSystem::Substrate(target);
             let resource_id = webb_proposals::ResourceId::new(
                 anchor_target_system,
                 anchor_chain_id,
@@ -124,21 +138,12 @@ where
                 function_signature,
                 nonce,
             );
-            // pallet index
-            let pallet_index = {
-                let locked_metadata = api.client.metadata();
-                let metadata = locked_metadata.read();
-                let pallet = metadata.pallet("VAnchorHandlerBn254")?;
-                pallet.index()
-            };
+
             // create anchor update proposal
             let proposal = AnchorUpdateProposal::builder()
                 .header(header)
-                .src_chain(src_chain)
+                .src_resource_id(src_resource_id)
                 .merkle_root(merkle_root)
-                .latest_leaf_index(latest_leaf_index)
-                .target(target_system.into_fixed_bytes())
-                .pallet_index(pallet_index)
                 .build();
 
             let can_sign_proposal = self

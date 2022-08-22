@@ -56,7 +56,11 @@ import {
   encodeResourceIdUpdateProposal,
   ResourceIdUpdateProposal,
 } from '../../lib/substrateWebbProposals.js';
-import { ChainIdType, makeResourceId } from '../../lib/webbProposals.js';
+import {
+  ChainIdType,
+  makeResourceId,
+  makeSubstrateTargetSystem,
+} from '../../lib/webbProposals.js';
 import pkg from 'secp256k1';
 const { ecdsaSign } = pkg;
 
@@ -212,19 +216,18 @@ async function setResourceIdProposal(
   treeId: number,
   chainId: number
 ): Promise<SubmittableExtrinsic<'promise'>> {
+  let functionSignature = toFixedHex(0, 4);
+  let nonce = BigNumber.from(1);
+  let palletIndex = convertToHexNumber(44);
+  let callIndex = convertToHexNumber(2);
+  let substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
   // set resource ID
   let resourceId = makeResourceId(
-    toHex(treeId, 20),
+    toHex(substrateTargetSystem, 20),
     ChainIdType.SUBSTRATE,
     chainId
   );
-
-  let functionSignature = toFixedHex(0, 4);
-  let nonce = BigNumber.from(1);
   let newResourceId = resourceId;
-  let targetSystem = '0x0106000000';
-  let palletIndex = convertToHexNumber(43);
-  let callIndex = convertToHexNumber(2);
   const resourceIdUpdateProposalPayload: ResourceIdUpdateProposal = {
     header: {
       resourceId,
@@ -234,7 +237,6 @@ async function setResourceIdProposal(
       chainId: 1080,
     },
     newResourceId,
-    targetSystem,
     palletIndex,
     callIndex,
   };
@@ -247,8 +249,8 @@ async function setResourceIdProposal(
   const sigObj = ecdsaSign(msg, hexToU8a(PK1));
   let signature = new Uint8Array([...sigObj.signature, sigObj.recid]);
   // execute proposal call to handler
-  let executeSetProposalCall = api.tx.vAnchorHandlerBn254!
-    .executeSetResourceProposal!(resourceId, targetSystem);
+  let executeSetProposalCall =
+    api.tx.vAnchorHandlerBn254!.executeSetResourceProposal!(resourceId);
   let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
     getChainIdType(ChainIdType.SUBSTRATE, chainId),
     executeSetProposalCall,

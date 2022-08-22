@@ -127,6 +127,36 @@ where
                     let raw_tx = raw_tx.set_chain_id(chain_id.as_u64()).clone();
                     let my_tx_hash = raw_tx.sighash();
                     tx_hash = my_tx_hash;
+                    // dry run test
+                    let dry_run_outcome =
+                        client.call(&raw_tx.clone(), None).await;
+                    match dry_run_outcome {
+                        Ok(_) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "EVM",
+                                chain_id = %chain_id.as_u64(),
+                                dry_run = "passed",
+                                %tx_hash,
+                            );
+                        }
+                        Err(err) => {
+                            tracing::event!(
+                                target: crate::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %crate::probe::Kind::TxQueue,
+                                ty = "EVM",
+                                chain_id = %chain_id.as_u64(),
+                                errored = true,
+                                error = %err,
+                                dry_run = "failed",
+                                %tx_hash,
+                            );
+                            continue; // keep going.
+                        }
+                    }
                     let pending_tx =
                         client.send_transaction(raw_tx.clone(), None);
                     let tx = match pending_tx.await {

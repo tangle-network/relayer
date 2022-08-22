@@ -101,7 +101,7 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
                     api.clone(),
                     (data, signature),
                 )
-                .await?;
+                .await?
             }
             TransferOwnershipWithSignature {
                 public_key,
@@ -131,24 +131,28 @@ where
         chain_id: U256,
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
         api: Arc<<Self as SubstrateEventWatcher>::Api>,
-        (data, signature): (Vec<u8>, Vec<u8>),
+        (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> crate::Result<()> {
-        let typed_chain_id =
-            webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
-        let data_hex = hex::encode(&data);
+        let proposal_data_hex = hex::encode(&proposal_data);
+        // 1. Verify proposal length. Proposal lenght should be greater than 40 bytes (proposal header(40B) + proposal body).
+        if proposal_data.len() < 40 {
+            tracing::warn!(
+                proposal_data = ?proposal_data_hex,
+                "Skipping execution of this proposal :  Invalid Proposal",
+            );
+            return Ok(());
+        }
+
+        // 2. Verify proposal signature. Proposal should be signed by active maintainer/dkg-key
         let signature_hex = hex::encode(&signature);
-        // parse proposal call
-        let parsed_proposal_bytes = parse_call_from_proposal_data(&data);
-        let proposal_encoded_call: Call =
-            scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())?;
 
         // get current maintainer
         let current_maintainer =
             api.storage().signature_bridge().maintainer(None).await?;
 
-        // now we need to check if the signature is valid.
+        // Verify proposal signature
         let is_signature_valid = validate_ecdsa_signature(
-            data.as_slice(),
+            proposal_data.as_slice(),
             signature.as_slice(),
             current_maintainer.as_slice(),
         )
@@ -156,28 +160,37 @@ where
 
         if !is_signature_valid {
             tracing::warn!(
-                data = ?data_hex,
+                proposal_data = ?proposal_data_hex,
                 signature = ?signature_hex,
-                "Skipping execution of this proposal since signature is invalid",
+                "Skipping execution of this proposal : Invalid Signature ",
             );
             return Ok(());
         }
 
+        // 3. Enqueue proposal for execution.
         tracing::event!(
             target: crate::probe::TARGET,
             tracing::Level::DEBUG,
             kind = %crate::probe::Kind::SignatureBridge,
             call = "execute_proposal_with_signature",
             chain_id = %chain_id,
-            data = ?data_hex,
+            proposal_data = ?proposal_data_hex,
             signature = ?signature_hex,
         );
+
+        // parse proposal call
+        let parsed_proposal_bytes =
+            parse_call_from_proposal_data(&proposal_data);
+        let proposal_encoded_call: Call =
+            scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())?;
+        let typed_chain_id =
+            webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
 
         // Enqueue transaction call data in protocol-substrate transaction queue
         let execute_proposal_call = ExecuteProposal {
             src_id: typed_chain_id.chain_id(),
             call: Box::new(proposal_encoded_call),
-            proposal_data: data,
+            proposal_data,
             signature,
         };
         // construct call data (pallet u8, call u8, call params).
@@ -277,6 +290,11 @@ where
         );
         Ok(())
     }
+}
+
+pub fn parse_nonce_from_proposal_data(proposal_data: &[u8]) -> u32 {
+    let nonce_bytes = proposal_data[36..40].try_into().unwrap_or_default();
+    u32::from_be_bytes(nonce_bytes)
 }
 
 pub fn parse_call_from_proposal_data(proposal_data: &[u8]) -> Vec<u8> {
