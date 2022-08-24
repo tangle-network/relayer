@@ -38,6 +38,7 @@ use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::Public;
 
+use crate::types::cw_chain_id::CWChainId;
 use crate::types::{
     mnemonic::Mnemonic, private_key::PrivateKey, rpc_url::RpcUrl, suri::Suri,
 };
@@ -240,7 +241,7 @@ pub struct CosmwasmConfig {
     pub explorer: Option<url::Url>,
     /// chain specific id (output of chainId opcode on Cosmwasm networks)
     #[serde(rename(serialize = "chainId"))]
-    pub chain_id: u32,
+    pub chain_id: CWChainId,
     /// The Mnemonic of this account on this network
     /// the format is more dynamic here:
     /// 1. if it starts with '$' then it would be considered as an Enviroment variable
@@ -260,7 +261,7 @@ pub struct CosmwasmConfig {
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
     #[serde(default)]
-    pub contracts: Vec<Contract>,
+    pub contracts: Vec<CosmwasmContract>,
     /// TxQueue configuration
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
@@ -373,6 +374,29 @@ pub struct SubstrateLinkedVAnchorConfig {
     pub tree: u32,
 }
 
+/// CosmwasmVAnchorWithdrawConfig is the configuration for the Cosmwasm VAnchor Withdraw.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmVAnchorWithdrawConfig {
+    /// The fee percentage that your account will receive when you relay a transaction
+    /// over this chain.
+    #[serde(rename(serialize = "withdrawFeePercentage"))]
+    pub withdraw_fee_percentage: u8,
+    /// A stringified value of the limit(Uint128) when doing a withdraw relay transaction on this chain.
+    #[serde(rename(serialize = "withdrawLimit"))]
+    pub withdraw_limit: String,
+}
+
+/// CosmwasmLinkedVAnchorConfig is the configuration for the cosmwasm linked Vanchor.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmLinkedVAnchorConfig {
+    /// The Chain name where this anchor belongs to.
+    pub chain: String,
+    /// The Anchor Contract Address.
+    pub address: String,
+}
+
 /// Enumerates the supported contract configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "contract")]
@@ -408,6 +432,16 @@ pub enum SubstrateRuntime {
     Dkg,
     /// The Webb Protocol runtime. (protocol-substrate)
     WebbProtocol,
+}
+
+/// Enumerates the supported cosmwasm-contract configurations.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "contract")]
+pub enum CosmwasmContract {
+    /// The VAnchor contract configuration.
+    VAnchor(CosmwasmVAnchorContractConfig),
+    /// The Signature Bridge contract configuration.
+    SignatureBridge(CosmwasmSignatureBridgeContractConfig),
 }
 
 /// CommonContractConfig represents the common configuration for contracts.
@@ -449,6 +483,50 @@ pub struct SignatureBridgeContractConfig {
     /// Common contract configuration.
     #[serde(flatten)]
     pub common: CommonContractConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+}
+
+/// CosmwasmCommonContractConfig represents the cosmwasm common configuration for contracts.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmCommonContractConfig {
+    /// The address of this contract on this chain.
+    pub address: String,
+    /// the block number where this contract got deployed at.
+    #[serde(rename(serialize = "deployedAt"))]
+    pub deployed_at: u64,
+}
+
+/// CosmwasmVAnchorContractConfig represents the configuration for the Cosmwasm VAnchor contract.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmVAnchorContractConfig {
+    /// Common contract configuration.
+    #[serde(flatten)]
+    pub common: CosmwasmCommonContractConfig,
+    /// Controls the events watcher
+    #[serde(rename(serialize = "eventsWatcher"))]
+    pub events_watcher: EventsWatcherConfig,
+    /// Anchor withdraw configuration.
+    #[serde(rename(serialize = "withdrawConfig"))]
+    pub withdraw_config: Option<CosmwasmVAnchorWithdrawConfig>,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+    /// A List of linked Anchor Contracts (on other chains) to this contract.
+    #[serde(rename(serialize = "linkedAnchors"), default)]
+    pub linked_anchors: Option<Vec<CosmwasmLinkedVAnchorConfig>>,
+}
+
+/// Cosmwasm Signature Bridge contract configuration.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct CosmwasmSignatureBridgeContractConfig {
+    /// Common contract configuration.
+    #[serde(flatten)]
+    pub common: CosmwasmCommonContractConfig,
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
@@ -594,6 +672,8 @@ pub fn search_config_files<P: AsRef<Path>>(
 pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
     let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
+    let cosmwasm_contracts: HashMap<String, Vec<CosmwasmContract>> =
+        HashMap::new();
 
     // read through all config files for the first time
     // build up a collection of [contracts]
@@ -639,7 +719,9 @@ pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
 
             // merge in all of the contracts into the config
             for (network_name, network_chain) in c.cosmwasm.iter_mut() {
-                if let Some(stored_contracts) = contracts.get(network_name) {
+                if let Some(stored_contracts) =
+                    cosmwasm_contracts.get(network_name)
+                {
                     network_chain.contracts = stored_contracts.clone();
                 }
             }
@@ -710,7 +792,7 @@ fn postloading_process(
         .filter(|(_, chain)| chain.enabled)
         .collect::<HashMap<_, _>>();
     for (_, v) in old_cosmwasm {
-        config.cosmwasm.insert(v.chain_id.to_string(), v);
+        config.cosmwasm.insert(v.name.to_string(), v);
     }
     // check that all required chains are already present in the config.
     for (chain_id, chain_config) in &config.evm {
@@ -787,6 +869,99 @@ fn postloading_process(
                                         linked_anchor.chain_id,
                                         anchor.common.address,
                                         chain_id
+                                    );
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // validate config for private transaction relaying
+            if config.features.private_tx_relay {
+                // check if withdraw fee is configured
+                if anchor.withdraw_config.is_none() {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable private transaction relaying,
+                        withdraw-config should also be configured for ({})",
+                        anchor.common.address
+                    );
+                }
+            }
+        }
+    }
+    for (chain_name, chain_config) in &config.cosmwasm {
+        let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
+            CosmwasmContract::VAnchor(cfg) => Some(cfg),
+            _ => None,
+        });
+        // validation checks for vanchor
+        for anchor in vanchors {
+            // validate config for data querying
+            if config.features.data_query {
+                // check if events watcher is enabled
+                if !anchor.events_watcher.enabled {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable data querying,
+                        event-watcher should also be enabled for ({})",
+                        anchor.common.address
+                    );
+                }
+                // check if data-query is enabled in evenst-watcher config
+                if !anchor.events_watcher.enable_data_query {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable data querying,
+                        enable-data-query in events-watcher config should also be enabled for ({})",
+                        anchor.common.address
+                    );
+                }
+            }
+            // validate config for governance relaying
+            if config.features.governance_relay {
+                // check if proposal signing backend is configured
+                if anchor.proposal_signing_backend.is_none() {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable governance relaying,
+                        proposal-signing-backend should be configured for ({})",
+                        anchor.common.address
+                    );
+                }
+                // check if event watchers is enabled
+                if !anchor.events_watcher.enabled {
+                    tracing::warn!(
+                        "!!WARNING!!: In order to enable governance relaying,
+                        event-watcher should also be enabled for ({})",
+                        anchor.common.address
+                    );
+                }
+                // check if linked anchor is configured
+                match &anchor.linked_anchors {
+                    None => {
+                        tracing::warn!(
+                            "!!WARNING!!: In order to enable governance relaying,
+                            linked-anchors should also be configured for ({})",
+                            anchor.common.address
+                        );
+                    }
+                    Some(linked_anchors) => {
+                        if linked_anchors.is_empty() {
+                            tracing::warn!(
+                                "!!WARNING!!: In order to enable governance relaying,
+                                linked-anchors cannot be empty.
+                                Please congigure Linked anchors for ({})",
+                                anchor.common.address
+                            );
+                        } else {
+                            for linked_anchor in linked_anchors {
+                                let chain_defined = config
+                                    .cosmwasm
+                                    .contains_key(&linked_anchor.chain);
+                                if !chain_defined {
+                                    tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
+                                        which is required by the Anchor Contract ({}) defined on {} chain.
+                                        Please, define it manually, to allow the relayer to work properly.",
+                                        linked_anchor.chain,
+                                        anchor.common.address,
+                                        chain_name
                                     );
                                 }
                             }
