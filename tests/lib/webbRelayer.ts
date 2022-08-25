@@ -19,6 +19,8 @@ import fetch from 'node-fetch';
 import {
   IFixedAnchorPublicInputs,
   IFixedAnchorExtData,
+  IVariableAnchorExtData,
+  IVariableAnchorPublicInputs,
 } from '@webb-tools/interfaces';
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
@@ -177,18 +179,42 @@ export class WebbRelayer {
     });
   }
 
-  public async anchorWithdraw(
+  public async vanchorWithdraw(
     chainId: number,
-    anchorAddress: string,
-    publicInputs: IFixedAnchorPublicInputs,
-    extData: IFixedAnchorExtData
+    vanchorAddress: string,
+    publicInputs: IVariableAnchorPublicInputs,
+    extData: IVariableAnchorExtData
   ): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-    const input = { chainId, anchorAddress, publicInputs, extData };
-    return txHashOrReject(ws, input);
+
+    const cmd = {
+      evm: {
+        vAnchor: {
+          chainId: chainId,
+          id: vanchorAddress,
+          extData: {
+            recipient: extData.recipient,
+            relayer: extData.relayer,
+            extAmount: extData.extAmount.replace('0x', '') as any,
+            fee: extData.fee.toString() as any,
+            encryptedOutput1: extData.encryptedOutput1,
+            encryptedOutput2: extData.encryptedOutput2,
+          },
+          proofData: {
+            proof: publicInputs.proof,
+            extDataHash: publicInputs.extDataHash,
+            publicAmount: publicInputs.publicAmount,
+            roots: publicInputs.roots,
+            outputCommitments: publicInputs.outputCommitments,
+            inputNullifiers: publicInputs.inputNullifiers,
+          },
+        },
+      },
+    };
+    return txHashOrReject(ws, cmd);
   }
 
   public async substrateMixerWithdraw(inputs: {
@@ -277,20 +303,7 @@ export function calculateRelayerFees(
   return feeBig;
 }
 
-async function txHashOrReject(
-  ws: WebSocket,
-  {
-    chainId,
-    anchorAddress,
-    publicInputs,
-    extData,
-  }: {
-    chainId: number;
-    anchorAddress: string;
-    publicInputs: IFixedAnchorPublicInputs;
-    extData: IFixedAnchorExtData;
-  }
-): Promise<`0x${string}`> {
+async function txHashOrReject(ws: WebSocket, cmd: any): Promise<`0x${string}`> {
   return new Promise((resolve, reject) => {
     ws.on('error', reject);
     ws.on('message', (data) => {
@@ -341,23 +354,7 @@ async function txHashOrReject(
         }
       }
     });
-    const cmd = {
-      evm: {
-        anchor: {
-          chainId: chainId,
-          id: anchorAddress,
-          proof: publicInputs.proof,
-          roots: publicInputs._roots,
-          nullifierHash: publicInputs._nullifierHash,
-          extDataHash: publicInputs._extDataHash,
-          refreshCommitment: extData._refreshCommitment,
-          recipient: extData._recipient,
-          relayer: extData._relayer,
-          fee: BigNumber.from(extData._fee).toHexString(),
-          refund: BigNumber.from(extData._refund).toHexString(),
-        },
-      },
-    };
+
     ws.send(JSON.stringify(cmd));
   });
 }
