@@ -5447,22 +5447,21 @@ dependencies = [
 
 [[package]]
 name = "webb-proposals"
-version = "0.4.4"
+version = "0.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7b9869641d13a639c137fd1b54b9e3b6d80b5cb0b10caac6dc00d6a9c1228590"
+checksum = "ea2ab97c42b53720c745a0a87eb734c3cb90a979ef0ddaae52c83bddb4bd858a"
 dependencies = [
  "num-traits",
  "parity-scale-codec",
  "scale-info",
  "schemars",
- "serde",
  "tiny-keccak",
  "typed-builder",
 ]
 
 [[package]]
 name = "webb-relayer"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -5491,6 +5490,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "tiny-bip39 1.0.0",
+ "tiny-keccak",
  "tokio",
  "tokio-stream",
  "tracing",
