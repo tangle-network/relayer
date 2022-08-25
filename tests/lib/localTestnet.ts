@@ -15,7 +15,7 @@
  *
  */
 import fs from 'fs';
-import { ethers } from 'ethers';
+import { ethers, Wallet } from 'ethers';
 import ganache, { Server } from 'ganache';
 import { Bridges, Utility, VBridge } from '@webb-tools/protocol-solidity';
 import {
@@ -50,6 +50,7 @@ export type ExportedConfigOptions = {
   proposalSigningBackend?: ProposalSigningBackend;
   features?: FeaturesConfig;
   withdrawConfig?: WithdrawConfig;
+  relayerWallet?: Wallet;
 };
 
 // Default Events watcher for the contracts.
@@ -359,7 +360,7 @@ export class LocalChain {
     }
     const localAnchor = bridge.getVAnchor(this.chainId);
     const side = bridge.getVBridgeSide(this.chainId);
-    const wallet = side.governor;
+    const wallet = opts.relayerWallet ?? side.governor;
     const otherChainIds = Array.from(bridge.vBridgeSides.keys()).filter(
       (chainId) => chainId !== this.chainId
     );
