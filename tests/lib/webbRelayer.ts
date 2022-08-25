@@ -179,36 +179,6 @@ export class WebbRelayer {
     });
   }
 
-  public async anchorWithdraw(
-    chainId: number,
-    anchorAddress: string,
-    publicInputs: IFixedAnchorPublicInputs,
-    extData: IFixedAnchorExtData
-  ): Promise<`0x${string}`> {
-    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
-    // create a new websocket connection to the relayer.
-    const ws = new WebSocket(wsEndpoint);
-    await new Promise((resolve) => ws.once('open', resolve));
-    const cmd = {
-      evm: {
-        anchor: {
-          chainId: chainId,
-          id: anchorAddress,
-          proof: publicInputs.proof,
-          roots: publicInputs._roots,
-          nullifierHash: publicInputs._nullifierHash,
-          extDataHash: publicInputs._extDataHash,
-          refreshCommitment: extData._refreshCommitment,
-          recipient: extData._recipient,
-          relayer: extData._relayer,
-          fee: BigNumber.from(extData._fee).toHexString(),
-          refund: BigNumber.from(extData._refund).toHexString(),
-        },
-      },
-    };
-    return txHashOrReject(ws, cmd);
-  }
-
   public async vanchorWithdraw(
     chainId: number,
     vanchorAddress: string,
