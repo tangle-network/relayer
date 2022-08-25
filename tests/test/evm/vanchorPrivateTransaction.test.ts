@@ -19,8 +19,12 @@
 
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
-import { ethers } from 'ethers';
+import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
+import {
+  IVariableAnchorExtData,
+  IVariableAnchorPublicInputs,
+} from '@webb-tools/interfaces';
+import { ethers, Wallet } from 'ethers';
 import retry from 'async-retry';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
@@ -31,10 +35,9 @@ import {
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
-import { sleep } from '../../lib/sleep.js';
 
 // const assert = require('assert');
-describe.only('Vanchor Private Tx relaying with mocked governor', function () {
+describe('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -190,16 +193,17 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
 
   it('should relay private transaction', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
-
-    // set signers
     await vanchor1.setSigner(govWallet1);
+
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    await vanchor2.setSigner(govWallet2);
 
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
@@ -230,9 +234,6 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       chainId: localChain2.chainId.toString(),
       keypair: randomKeypair,
     });
-    let leaves1 = vanchor1.tree
-      .elements()
-      .map((el) => hexToU8a(el.toHexString()));
 
     // SignatureVBridge will transact and update the anchors
     await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', govWallet1);
@@ -245,82 +246,21 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
-    let extAmount = ethers.BigNumber.from(0).sub(depositUtxo.amount);
-
-    const dummyOutput1 = await CircomUtxo.generateUtxo({
-      curve: 'Bn254',
-      backend: 'Circom',
-      amount: '0',
-      chainId: localChain2.chainId.toString(),
-      keypair: randomKeypair,
-    });
-
-    const dummyOutput2 = await CircomUtxo.generateUtxo({
-      curve: 'Bn254',
-      backend: 'Circom',
-      amount: '0',
-      chainId: localChain2.chainId.toString(),
-      keypair: randomKeypair,
-    });
-
-    const dummyInput = await CircomUtxo.generateUtxo({
-      curve: 'Bn254',
-      backend: 'Circom',
-      amount: '0',
-      chainId: localChain2.chainId.toString(),
-      originChainId: localChain2.chainId.toString(),
-      keypair: randomKeypair,
-    });
-
-    const recipient = '0x0000000001000000000100000000010000000001';
-
-    // Populate the leavesMap for generating the zkp against the source chain
-    //
-    leaves1 = vanchor1.tree.elements().map((el) => hexToU8a(el.toHexString()));
-
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
-    await vanchor2.setSigner(govWallet2);
-
-    const leaves2 = vanchor2.tree
-      .elements()
-      .map((el) => hexToU8a(el.toHexString()));
-
-    const depositUtxoIndex = vanchor1.tree.getIndexByElement(
-      u8aToHex(depositUtxo.commitment)
-    );
-
-    const regeneratedUtxo = await CircomUtxo.generateUtxo({
-      curve: 'Bn254',
-      backend: 'Circom',
-      amount: depositUtxo.amount,
-      chainId: depositUtxo.chainId,
-      originChainId: depositUtxo.originChainId,
-      blinding: hexToU8a(depositUtxo.blinding),
-      privateKey: hexToU8a(depositUtxo.secret_key),
-      keypair: randomKeypair,
-      index: depositUtxoIndex.toString(),
-    });
-
-    const leavesMap = {
-      [localChain1.chainId]: leaves1,
-      [localChain2.chainId]: leaves2,
-    };
-
-    const { extData, publicInputs } = await vanchor2.setupTransaction(
-      [regeneratedUtxo, dummyInput],
-      [dummyOutput1, dummyOutput2],
-      extAmount,
-      0,
-      recipient,
-      relayerWallet2.address,
-      leavesMap
+    let output = await vanchorWithdarProof(
+      depositUtxo,
+      localChain1,
+      localChain2,
+      randomKeypair,
+      vanchor1,
+      vanchor2,
+      relayerWallet2
     );
 
     await webbRelayer.vanchorWithdraw(
       5002,
       vanchor2.getAddress(),
-      publicInputs,
-      extData
+      output.publicInputs,
+      output.extData
     );
 
     await webbRelayer.waitForEvent({
@@ -331,9 +271,346 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
     });
   });
 
+  it('Should fail to withdraw with invalid root', async () => {
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    await vanchor1.setSigner(govWallet1);
+
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    await vanchor2.setSigner(govWallet2);
+
+    const tokenAddress = signatureVBridge.getWebbTokenAddress(
+      localChain1.chainId
+    )!;
+    // get token
+
+    const token = await Tokens.MintableToken.tokenFromAddress(
+      tokenAddress,
+      govWallet1
+    );
+    // mint tokens to the account everytime.
+    await token.mintTokens(
+      govWallet1.address,
+      ethers.utils.parseEther('100000000000000000000000')
+    );
+    // check webbBalance
+    const webbBalance = await token.getBalance(govWallet1.address);
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
+
+    const randomKeypair = new Keypair();
+
+    const depositUtxo = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: (1e2).toString(),
+      originChainId: localChain1.chainId.toString(),
+      chainId: localChain2.chainId.toString(),
+      keypair: randomKeypair,
+    });
+
+    // SignatureVBridge will transact and update the anchors
+    await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', govWallet1);
+
+    // now we wait for the relayer to see the transaction
+    await webbRelayer.waitForEvent({
+      kind: 'leaves_store',
+      event: {
+        leaf_index: '1',
+      },
+    });
+
+    let output = await vanchorWithdarProof(
+      depositUtxo,
+      localChain1,
+      localChain2,
+      randomKeypair,
+      vanchor1,
+      vanchor2,
+      relayerWallet2
+    );
+
+    const rootBytes = hexToU8a(output.publicInputs.roots);
+    // flip a bit in the proof, so it is invalid
+    rootBytes[0] = 0x42;
+
+    const invalidRootBytes = u8aToHex(rootBytes);
+    expect(output.publicInputs.roots).to.not.eq(invalidRootBytes);
+    output.publicInputs.roots = invalidRootBytes;
+    try {
+      await webbRelayer.vanchorWithdraw(
+        5002,
+        vanchor2.getAddress(),
+        output.publicInputs,
+        output.extData
+      );
+    } catch (e) {
+      // should fail since private transaction since invalid merkle root is provided.
+      expect(JSON.stringify(e)).to.contain('Cannot find your merkle root');
+    }
+  });
+
+  it('Should fail to withdraw with invalid proof', async () => {
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    await vanchor1.setSigner(govWallet1);
+
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    await vanchor2.setSigner(govWallet2);
+
+    const tokenAddress = signatureVBridge.getWebbTokenAddress(
+      localChain1.chainId
+    )!;
+    // get token
+
+    const token = await Tokens.MintableToken.tokenFromAddress(
+      tokenAddress,
+      govWallet1
+    );
+    // mint tokens to the account everytime.
+    await token.mintTokens(
+      govWallet1.address,
+      ethers.utils.parseEther('100000000000000000000000')
+    );
+    // check webbBalance
+    const webbBalance = await token.getBalance(govWallet1.address);
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
+
+    const randomKeypair = new Keypair();
+
+    const depositUtxo = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: (1e2).toString(),
+      originChainId: localChain1.chainId.toString(),
+      chainId: localChain2.chainId.toString(),
+      keypair: randomKeypair,
+    });
+
+    // SignatureVBridge will transact and update the anchors
+    await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', govWallet1);
+
+    // now we wait for the relayer to see the transaction
+    await webbRelayer.waitForEvent({
+      kind: 'leaves_store',
+      event: {
+        leaf_index: '1',
+      },
+    });
+
+    let output = await vanchorWithdarProof(
+      depositUtxo,
+      localChain1,
+      localChain2,
+      randomKeypair,
+      vanchor1,
+      vanchor2,
+      relayerWallet2
+    );
+
+    const proofBytes = hexToU8a(output.publicInputs.proof);
+    // flip a bit in the proof, so it is invalid
+    proofBytes[0] = 0x42;
+    const invalidProofBytes = u8aToHex(proofBytes);
+    expect(output.publicInputs.roots).to.not.eq(invalidProofBytes);
+    output.publicInputs.proof = invalidProofBytes;
+    try {
+      await webbRelayer.vanchorWithdraw(
+        5002,
+        vanchor2.getAddress(),
+        output.publicInputs,
+        output.extData
+      );
+    } catch (e) {
+      // should fail since private transaction since invalid proof is provided
+      expect(JSON.stringify(e)).to.contain(
+        'Exception while processing transaction'
+      );
+    }
+  });
+
+  it('Should fail to withdraw with invalid nullifier hash', async () => {
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    await vanchor1.setSigner(govWallet1);
+
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    await vanchor2.setSigner(govWallet2);
+
+    const tokenAddress = signatureVBridge.getWebbTokenAddress(
+      localChain1.chainId
+    )!;
+    // get token
+
+    const token = await Tokens.MintableToken.tokenFromAddress(
+      tokenAddress,
+      govWallet1
+    );
+    // mint tokens to the account everytime.
+    await token.mintTokens(
+      govWallet1.address,
+      ethers.utils.parseEther('100000000000000000000000')
+    );
+    // check webbBalance
+    const webbBalance = await token.getBalance(govWallet1.address);
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
+
+    const randomKeypair = new Keypair();
+
+    const depositUtxo = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: (1e2).toString(),
+      originChainId: localChain1.chainId.toString(),
+      chainId: localChain2.chainId.toString(),
+      keypair: randomKeypair,
+    });
+
+    // SignatureVBridge will transact and update the anchors
+    await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', govWallet1);
+
+    // now we wait for the relayer to see the transaction
+    await webbRelayer.waitForEvent({
+      kind: 'leaves_store',
+      event: {
+        leaf_index: '1',
+      },
+    });
+
+    let output = await vanchorWithdarProof(
+      depositUtxo,
+      localChain1,
+      localChain2,
+      randomKeypair,
+      vanchor1,
+      vanchor2,
+      relayerWallet2
+    );
+
+    const nullifierHash = hexToU8a(output.publicInputs.inputNullifiers[0]);
+    // flip a bit in the proof, so it is invalid
+    nullifierHash[0] = 0x42;
+
+    const invalidnullifierHash = u8aToHex(nullifierHash);
+    expect(output.publicInputs.inputNullifiers[0]).to.not.eq(
+      invalidnullifierHash
+    );
+    output.publicInputs.proof = invalidnullifierHash;
+    try {
+      await webbRelayer.vanchorWithdraw(
+        5002,
+        vanchor2.getAddress(),
+        output.publicInputs,
+        output.extData
+      );
+    } catch (e) {
+      // should fail since private transaction since invalid proof is provided
+      expect(JSON.stringify(e)).to.contain(
+        'Exception while processing transaction'
+      );
+    }
+  });
+
+  it('should fail to query leaves data api', async () => {
+    this.retries(0);
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    // It should fail since data querying is not configured for relayer
+    const chainId = localChain1.underlyingChainId.toString(16);
+    const response = await webbRelayer.getLeavesEvm(
+      chainId,
+      vanchor1.contract.address
+    );
+    //forbidden access
+    expect(response.status).equal(403);
+  });
+
   after(async () => {
     await localChain1?.stop();
     await localChain2?.stop();
     await webbRelayer?.stop();
   });
 });
+
+async function vanchorWithdarProof(
+  depositUtxo: Utxo,
+  localChain1: LocalChain,
+  localChain2: LocalChain,
+  randomKeypair: Keypair,
+  vanchor1: any,
+  vanchor2: any,
+  relayerWallet2: Wallet
+): Promise<{
+  extData: IVariableAnchorExtData;
+  publicInputs: IVariableAnchorPublicInputs;
+}> {
+  let extAmount = ethers.BigNumber.from(0).sub(depositUtxo.amount);
+
+  const dummyOutput1 = await CircomUtxo.generateUtxo({
+    curve: 'Bn254',
+    backend: 'Circom',
+    amount: '0',
+    chainId: localChain2.chainId.toString(),
+    keypair: randomKeypair,
+  });
+
+  const dummyOutput2 = await CircomUtxo.generateUtxo({
+    curve: 'Bn254',
+    backend: 'Circom',
+    amount: '0',
+    chainId: localChain2.chainId.toString(),
+    keypair: randomKeypair,
+  });
+
+  const dummyInput = await CircomUtxo.generateUtxo({
+    curve: 'Bn254',
+    backend: 'Circom',
+    amount: '0',
+    chainId: localChain2.chainId.toString(),
+    originChainId: localChain2.chainId.toString(),
+    keypair: randomKeypair,
+  });
+
+  const recipient = '0x0000000001000000000100000000010000000001';
+
+  // Populate the leavesMap for generating the zkp against the source chain
+  //
+  let leaves1 = vanchor1.tree
+    .elements()
+    .map((el) => hexToU8a(el.toHexString()));
+
+  const leaves2 = vanchor2.tree
+    .elements()
+    .map((el) => hexToU8a(el.toHexString()));
+
+  const depositUtxoIndex = vanchor1.tree.getIndexByElement(
+    u8aToHex(depositUtxo.commitment)
+  );
+
+  const regeneratedUtxo = await CircomUtxo.generateUtxo({
+    curve: 'Bn254',
+    backend: 'Circom',
+    amount: depositUtxo.amount,
+    chainId: depositUtxo.chainId,
+    originChainId: depositUtxo.originChainId,
+    blinding: hexToU8a(depositUtxo.blinding),
+    privateKey: hexToU8a(depositUtxo.secret_key),
+    keypair: randomKeypair,
+    index: depositUtxoIndex.toString(),
+  });
+
+  const leavesMap = {
+    [localChain1.chainId]: leaves1,
+    [localChain2.chainId]: leaves2,
+  };
+
+  const { extData, publicInputs } = await vanchor2.setupTransaction(
+    [regeneratedUtxo, dummyInput],
+    [dummyOutput1, dummyOutput2],
+    extAmount,
+    0,
+    recipient,
+    relayerWallet2.address,
+    leavesMap
+  );
+
+  return { extData, publicInputs };
+}
