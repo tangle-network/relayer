@@ -47,7 +47,7 @@ impl fmt::Display for ClickableLink<'_> {
 ///       eg: keccak256("juno-1") => 4c22bf61f15534242ee9dba16dceb4c976851b1788680fb5ee2a7b568a294d21
 ///   2. Slice the last 4 bytes & convert it to `u32` numeric value
 ///       eg: 8a294d21(hex) -> 2317962529(decimal)
-pub fn compute_chain_id(chain_id_str: &str) -> u32 {
+pub fn compute_cosmwasm_chain_id(chain_id_str: &str) -> u32 {
     let mut keccak = Keccak::v256();
     keccak.update(chain_id_str.as_bytes());
 
