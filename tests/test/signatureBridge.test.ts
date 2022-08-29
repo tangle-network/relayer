@@ -343,7 +343,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   });
 });
 
-describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
+describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -509,6 +509,11 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       chainId: localChain2.chainId.toString(),
       keypair: randomKeypair,
     });
+    
+    const bridgeSide = signatureBridge.getVBridgeSide(localChain1.chainId);
+    console.log(bridgeSide.governor);
+    const chainGovernor = await bridgeSide.contract.governor();
+    console.log(chainGovernor);
 
     // Make the deposit transaction
     await signatureBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
