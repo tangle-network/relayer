@@ -42,9 +42,7 @@ use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
 use crate::proposal_signing_backend::*;
 use crate::store::sled::SledStore;
-use crate::tx_queue::{
-    cosmos::CosmosTxQueue, evm::TxQueue, substrate::SubstrateTxQueue,
-};
+use crate::tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
 
 /// Type alias for providers
 type Client = providers::Provider<providers::Http>;
