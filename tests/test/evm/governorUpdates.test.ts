@@ -125,12 +125,12 @@ describe.skip('SignatureBridge Governor Updates', function () {
     });
     const enabledContracts: EnabledContracts[] = [
       {
-        contract: 'Anchor',
+        contract: 'VAnchor',
       },
     ];
     localChain1 = await LocalChain.init({
       port: localChain1Port,
-      chainId: 5001,
+      chainId: localChain1Port,
       name: 'Hermes',
       populatedAccounts: [
         {
@@ -147,7 +147,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
 
     localChain2 = await LocalChain.init({
       port: localChain2Port,
-      chainId: 5002,
+      chainId: localChain2Port,
       name: 'Athena',
       populatedAccounts: [
         {

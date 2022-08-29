@@ -37,7 +37,7 @@ import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 
 // const assert = require('assert');
-describe('Vanchor Private Tx relaying with mocked governor', function () {
+describe.only('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

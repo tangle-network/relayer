@@ -391,6 +391,7 @@ export class LocalChain {
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);
+    console.log(configString);
     fs.writeFileSync(path, configString);
   }
 }

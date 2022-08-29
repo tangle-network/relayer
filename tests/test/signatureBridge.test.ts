@@ -343,7 +343,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   });
 });
 
-describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function () {
+describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -354,9 +354,8 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
   let webbRelayer: WebbRelayer;
 
   before(async () => {
-    const PK1 = u8aToHex(ethers.utils.randomBytes(32));
-    const PK2 = u8aToHex(ethers.utils.randomBytes(32));
-    const GOV = u8aToHex(ethers.utils.randomBytes(32));
+    const PK1 = '0x0000000000000000000000000000000000000000000000000000000000000001';
+    const PK2 = '0x0000000000000000000000000000000000000000000000000000000000000002';
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
@@ -365,6 +364,9 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       {
         contract: 'VAnchor',
       },
+      {
+        contract: 'SignatureBridge',
+      }
     ];
 
     localChain1 = await LocalChain.init({
@@ -374,10 +376,6 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       populatedAccounts: [
         {
           secretKey: PK1,
-          balance: ethers.utils.parseEther('1000').toHexString(),
-        },
-        {
-          secretKey: GOV,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
@@ -395,10 +393,6 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       populatedAccounts: [
         {
           secretKey: PK2,
-          balance: ethers.utils.parseEther('1000').toHexString(),
-        },
-        {
-          secretKey: GOV,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
