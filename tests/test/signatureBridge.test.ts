@@ -350,12 +350,14 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
   let signatureBridge: VBridge.VBridge;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
+  let govWallet: ethers.Wallet;
 
   let webbRelayer: WebbRelayer;
 
   before(async () => {
     const PK1 = '0x0000000000000000000000000000000000000000000000000000000000000001';
     const PK2 = '0x0000000000000000000000000000000000000000000000000000000000000002';
+    const GOV = '0x0000000000000000000000000000000000000000000000000000000000000003';
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
@@ -375,6 +377,10 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       name: 'Hermes',
       populatedAccounts: [
         {
+          secretKey: GOV,
+          balance: ethers.utils.parseEther('1000').toHexString(),
+        },
+        {
           secretKey: PK1,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
@@ -392,6 +398,10 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       name: 'Athena',
       populatedAccounts: [
         {
+          secretKey: GOV,
+          balance: ethers.utils.parseEther('1000').toHexString(),
+        },
+        {
           secretKey: PK2,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
@@ -401,6 +411,7 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
+    govWallet = new ethers.Wallet(GOV, localChain2.provider());
     // Deploy the token.
     const localToken1 = await localChain1.deployToken(
       'Webb Token',
@@ -420,16 +431,20 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       localToken2,
       wallet1,
       wallet2,
+      {
+        [localChain1.chainId]: govWallet.address,
+        [localChain2.chainId]: govWallet.address,
+      },
     );
     console.log('Signature bridge deployed')
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
     });
 
     // get the anhor on localchain1
@@ -516,7 +531,7 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
     console.log(chainGovernor);
 
     // Make the deposit transaction
-    await signatureBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
+    await signatureBridge.transact([], [depositUtxo], 0, '0', '0', govWallet);
 
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({

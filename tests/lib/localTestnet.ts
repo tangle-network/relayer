@@ -206,11 +206,13 @@ export class LocalChain {
       const govEntries = Object.entries(initialGovernors);
 
       for (const entry of govEntries) {
-        console.log('entry: ', entry);
         const chainBridgeSide = this.signatureVBridge.getVBridgeSide(Number(entry[0]));
+        console.log('entry: ', entry);
+        console.log(await chainBridgeSide.contract.signer.getAddress());
         const nonce = await chainBridgeSide.contract.proposalNonce();
         let tx = await chainBridgeSide.transferOwnership(entry[1], nonce.toNumber());
         await tx.wait();
+        console.log('here');
       }
     }
 

@@ -38,12 +38,14 @@ describe('Vanchor Transaction relayer', function () {
   let signatureVBridge: VBridge.VBridge;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
+  let govWallet: ethers.Wallet;
 
   let webbRelayer: WebbRelayer;
 
   before(async () => {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
+    const GOV = u8aToHex(ethers.utils.randomBytes(32));
     // first we need to start local evm node.
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
@@ -89,6 +91,7 @@ describe('Vanchor Transaction relayer', function () {
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
+    govWallet = new ethers.Wallet(GOV, localChain2.provider());
     // Deploy the token.
     const localToken1 = await localChain1.deployToken(
       'Webb Token',
@@ -108,7 +111,11 @@ describe('Vanchor Transaction relayer', function () {
       localToken1,
       localToken2,
       wallet1,
-      wallet2
+      wallet2,
+      {
+        [localChain1.chainId]: govWallet.address,
+        [localChain2.chainId]: govWallet.address,
+      },
     );
 
     console.log('deployed vbridge');
