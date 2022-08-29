@@ -54,9 +54,9 @@ describe('Vanchor Transaction relayer', function () {
         contract: 'VAnchor',
       },
     ];
-    localChain1 = new LocalChain({
+    localChain1 = await LocalChain.init({
       port: localChain1Port,
-      chainId: 31337,
+      chainId: localChain1Port,
       name: 'Hermes',
       populatedAccounts: [
         {
@@ -72,9 +72,9 @@ describe('Vanchor Transaction relayer', function () {
     const localChain2Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-    localChain2 = new LocalChain({
+    localChain2 = await LocalChain.init({
       port: localChain2Port,
-      chainId: 5002,
+      chainId: localChain2Port,
       name: 'Athena',
       populatedAccounts: [
         {
@@ -101,6 +101,8 @@ describe('Vanchor Transaction relayer', function () {
       wallet2
     );
 
+    console.log('deploying vbridge...');
+
     signatureVBridge = await localChain1.deploySignatureVBridge(
       localChain2,
       localToken1,
@@ -108,6 +110,8 @@ describe('Vanchor Transaction relayer', function () {
       wallet1,
       wallet2
     );
+
+    console.log('deployed vbridge');
 
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
@@ -130,7 +134,8 @@ describe('Vanchor Transaction relayer', function () {
       tokenAddress,
       wallet1
     );
-    await token.approveSpending(vanchor1.contract.address);
+    let tx = await token.approveSpending(vanchor1.contract.address);
+    await tx.wait();
     await token.mintTokens(
       wallet1.address,
       ethers.utils.parseEther('100000000000000000000000')
@@ -147,7 +152,8 @@ describe('Vanchor Transaction relayer', function () {
       wallet2
     );
 
-    await token2.approveSpending(vanchor2.contract.address);
+    tx = await token2.approveSpending(vanchor2.contract.address);
+    await tx.wait();
     await token2.mintTokens(
       wallet2.address,
       ethers.utils.parseEther('100000000000000000000000')

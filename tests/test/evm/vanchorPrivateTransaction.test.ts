@@ -18,7 +18,7 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
+import { Anchors, Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
 import {
   IVariableAnchorExtData,
@@ -27,7 +27,7 @@ import {
 import { ethers, Wallet } from 'ethers';
 import retry from 'async-retry';
 import temp from 'temp';
-import { LocalChain } from '../../lib/localTestnet.js';
+import { LocalChain, setupVanchorEvmTx } from '../../lib/localTestnet.js';
 import {
   defaultWithdrawConfigValue,
   EnabledContracts,
@@ -63,9 +63,9 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
         contract: 'VAnchor',
       },
     ];
-    localChain1 = new LocalChain({
+    localChain1 = await LocalChain.init({
       port: localChain1Port,
-      chainId: 31337,
+      chainId: localChain1Port,
       name: 'Hermes',
       populatedAccounts: [
         {
@@ -87,9 +87,9 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const localChain2Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-    localChain2 = new LocalChain({
+    localChain2 = await LocalChain.init({
       port: localChain2Port,
-      chainId: 5002,
+      chainId: localChain2Port,
       name: 'Athena',
       populatedAccounts: [
         {
@@ -124,6 +124,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       govWallet2
     );
 
+    console.log('deploying vbridge...')
+
     signatureVBridge = await localChain1.deploySignatureVBridge(
       localChain2,
       localToken1,
@@ -131,6 +133,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       govWallet1,
       govWallet2
     );
+
+    console.log('deployed the vbridge');
 
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
@@ -157,7 +161,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       tokenAddress,
       govWallet1
     );
-    await token.approveSpending(vanchor1.contract.address);
+    let tx = await token.approveSpending(vanchor1.contract.address);
+    await tx.wait();
     await token.mintTokens(
       govWallet1.address,
       ethers.utils.parseEther('100000000000000000000000')
@@ -174,7 +179,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       govWallet2
     );
 
-    await token2.approveSpending(vanchor2.contract.address);
+    tx = await token2.approveSpending(vanchor2.contract.address);
+    await tx.wait();
     await token2.mintTokens(
       govWallet2.address,
       ethers.utils.parseEther('100000000000000000000000')
@@ -189,6 +195,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
+
     webbRelayer = new WebbRelayer({
       port: relayerPort,
       tmp: true,
@@ -209,7 +216,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       localChain1.chainId
     )!;
     // get token
-
     const token = await Tokens.MintableToken.tokenFromAddress(
       tokenAddress,
       govWallet1
@@ -246,7 +252,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
-    let output = await vanchorWithdarProof(
+    let output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
       localChain2,
@@ -257,7 +263,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     );
 
     await webbRelayer.vanchorWithdraw(
-      5002,
+      localChain2.underlyingChainId,
       vanchor2.getAddress(),
       output.publicInputs,
       output.extData
@@ -319,7 +325,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
-    let output = await vanchorWithdarProof(
+    let output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
       localChain2,
@@ -338,7 +344,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     output.publicInputs.roots = invalidRootBytes;
     try {
       await webbRelayer.vanchorWithdraw(
-        5002,
+        localChain2.underlyingChainId,
         vanchor2.getAddress(),
         output.publicInputs,
         output.extData
@@ -397,7 +403,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
-    let output = await vanchorWithdarProof(
+    let output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
       localChain2,
@@ -415,7 +421,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     output.publicInputs.proof = invalidProofBytes;
     try {
       await webbRelayer.vanchorWithdraw(
-        5002,
+        localChain2.underlyingChainId,
         vanchor2.getAddress(),
         output.publicInputs,
         output.extData
@@ -476,7 +482,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
-    let output = await vanchorWithdarProof(
+    let output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
       localChain2,
@@ -497,7 +503,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     output.publicInputs.proof = invalidnullifierHash;
     try {
       await webbRelayer.vanchorWithdraw(
-        5002,
+        localChain2.underlyingChainId,
         vanchor2.getAddress(),
         output.publicInputs,
         output.extData
@@ -529,88 +535,3 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     await webbRelayer?.stop();
   });
 });
-
-async function vanchorWithdarProof(
-  depositUtxo: Utxo,
-  localChain1: LocalChain,
-  localChain2: LocalChain,
-  randomKeypair: Keypair,
-  vanchor1: any,
-  vanchor2: any,
-  relayerWallet2: Wallet
-): Promise<{
-  extData: IVariableAnchorExtData;
-  publicInputs: IVariableAnchorPublicInputs;
-}> {
-  let extAmount = ethers.BigNumber.from(0).sub(depositUtxo.amount);
-
-  const dummyOutput1 = await CircomUtxo.generateUtxo({
-    curve: 'Bn254',
-    backend: 'Circom',
-    amount: '0',
-    chainId: localChain2.chainId.toString(),
-    keypair: randomKeypair,
-  });
-
-  const dummyOutput2 = await CircomUtxo.generateUtxo({
-    curve: 'Bn254',
-    backend: 'Circom',
-    amount: '0',
-    chainId: localChain2.chainId.toString(),
-    keypair: randomKeypair,
-  });
-
-  const dummyInput = await CircomUtxo.generateUtxo({
-    curve: 'Bn254',
-    backend: 'Circom',
-    amount: '0',
-    chainId: localChain2.chainId.toString(),
-    originChainId: localChain2.chainId.toString(),
-    keypair: randomKeypair,
-  });
-
-  const recipient = '0x0000000001000000000100000000010000000001';
-
-  // Populate the leavesMap for generating the zkp against the source chain
-  //
-  let leaves1 = vanchor1.tree
-    .elements()
-    .map((el) => hexToU8a(el.toHexString()));
-
-  const leaves2 = vanchor2.tree
-    .elements()
-    .map((el) => hexToU8a(el.toHexString()));
-
-  const depositUtxoIndex = vanchor1.tree.getIndexByElement(
-    u8aToHex(depositUtxo.commitment)
-  );
-
-  const regeneratedUtxo = await CircomUtxo.generateUtxo({
-    curve: 'Bn254',
-    backend: 'Circom',
-    amount: depositUtxo.amount,
-    chainId: depositUtxo.chainId,
-    originChainId: depositUtxo.originChainId,
-    blinding: hexToU8a(depositUtxo.blinding),
-    privateKey: hexToU8a(depositUtxo.secret_key),
-    keypair: randomKeypair,
-    index: depositUtxoIndex.toString(),
-  });
-
-  const leavesMap = {
-    [localChain1.chainId]: leaves1,
-    [localChain2.chainId]: leaves2,
-  };
-
-  const { extData, publicInputs } = await vanchor2.setupTransaction(
-    [regeneratedUtxo, dummyInput],
-    [dummyOutput1, dummyOutput2],
-    extAmount,
-    0,
-    recipient,
-    relayerWallet2.address,
-    leavesMap
-  );
-
-  return { extData, publicInputs };
-}

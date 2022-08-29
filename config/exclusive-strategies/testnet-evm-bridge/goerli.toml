@@ -1,15 +1,16 @@
 # Block which represents properties for a network
-[evm.moonbase]
+[evm.goerli]
+name = "goerli"
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "$MOONBASE_HTTPS_URL"
+http-endpoint = "$GOERLI_HTTPS_URL"
 # Websocket Endpoint for long living connections
-ws-endpoint = "$MOONBASE_WSS_URL"
+ws-endpoint = "$GOERLI_WSS_URL"
 # Block Explorer
 # Optinal, and used for generating clickable links
 # for transactions that happen on this chain.
-explorer = "https://moonbase.moonscan.io/"
+explorer = "https://goerli.etherscan.io"
 # chain specific id from evm opcode
-chain-id = 1287
+chain-id = 5
 # The Private Key of this account on this network
 # the format is more dynamic here:
 # 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
@@ -18,32 +19,32 @@ chain-id = 1287
 #
 # 2. if it starts with '$' then it would be considered as an Enviroment variable
 #    of a hex-encoded private key.
-#    Example: $MOONBASE_PRIVATE_KEY
+#    Example: $GOERLI_PRIVATE_KEY
 #
 # 3. if it starts with '> ' then it would be considered as a command that
 #    the relayer would execute and the output of this command would be the
 #    hex encoded private key.
-#    Example: > ./getKey.sh moonbase-privatekey
+#    Example: > ./getKey.sh goerli-privatekey
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "$MOONBASE_PRIVATE_KEY"
+private-key = "$GOERLI_PRIVATE_KEY"
 # Value to indicate that the relayer should enable services for this chain
 enabled = true
 
 # Block which represents the configuration for a supported contract on the network
-[[evm.moonbase.contracts]]
+[[evm.goerli.contracts]]
 # The contract can be one of these values
 # - Anchor (Fixed Anchor)
 # - VAnchor (Variable Anchor)
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0x0c5f4951f42eec082bd1356b9b41928b4f0e7542"
+address = "0x4e22da303c403daaf4653d3d9d63ef009bae89a6"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 2397382
+deployed-at = 7471990
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
@@ -57,11 +58,10 @@ withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" 
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { chain = "arbitrumtestnet", address = "0x4953110789d0cb6de126f4ea88890670ccfe6906" },
-  { chain = "rinkeby", address = "0x91127f21d63029eb5b2de05b4b1e9fd3497ee95b" },
-  { chain = "goerli", address = "0x682faa319bf7bae7f0cb68435e857d22bf976e17" },
-  { chain = "polygontestnet", address = "0x1371efed369498718bee3eb5d58e5d3dec86be85" },
-  { chain = "ropsten", address = "0x66e04f6ae26c310e39f5bf24d873909e6d3b64c7" },
-  { chain = "kovan", address = "0x148e8037ea12834117f3efd9e8990c16c1ff5653"},
-  { chain = "optimismtestnet", address = "0x5353cede4b8fea148fb1f66f45d3ec27bff2224d"}
+  { chain = "arbitrumtestnet", chain-id = "421613", address = "0x91a9a1e76fa609f6ba8fcd718a60b030678765ad" },
+  { chain = "ropsten", chain-id = "3", address = "0x35295fbb71273b84f66e70b8e341d408150dcaf9" },
+  { chain = "polygontestnet", chain-id = "80001", address = "0xe6b075ecc4ccbc6e66569b1a2984cc47e88ee246" },
+  { chain = "optimismtestnet", chain-id = "420", address = "0x12f2c4a1469b035e4459539e38ae68bc4dd5ba07" },
+  { chain = "rinkeby", chain-id = "4", address = "0x7ae23a95881bf8ab86174e89bd79199f398d19bf"},
+  { chain = "moonbase", chain-id = "1287", address = "0xc6b43568f0c39e3a68b597a3bb54a7b9e4308bf3"}
 ]

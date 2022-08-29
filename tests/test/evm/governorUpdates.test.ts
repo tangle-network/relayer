@@ -19,7 +19,7 @@
 
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
-import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
+import { VBridge, Tokens } from '@webb-tools/protocol-solidity';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
@@ -50,7 +50,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
-  let signatureBridge: Bridges.SignatureBridge;
+  let signatureBridge: VBridge.VBridge;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
 
@@ -128,7 +128,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
         contract: 'Anchor',
       },
     ];
-    localChain1 = new LocalChain({
+    localChain1 = await LocalChain.init({
       port: localChain1Port,
       chainId: 5001,
       name: 'Hermes',
@@ -145,7 +145,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
       port: portNumbers(3333, 4444),
     });
 
-    localChain2 = new LocalChain({
+    localChain2 = await LocalChain.init({
       port: localChain2Port,
       chainId: 5002,
       name: 'Athena',
@@ -172,7 +172,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
       wallet2
     );
 
-    signatureBridge = await localChain1.deploySignatureBridge(
+    signatureBridge = await localChain1.deploySignatureVBridge(
       localChain2,
       localToken1,
       localToken2,
@@ -181,11 +181,11 @@ describe.skip('SignatureBridge Governor Updates', function () {
     );
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
-      signatureBridge,
+      signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', node: charlieNode.name },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
-      signatureBridge,
+      signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', node: charlieNode.name },
     });
     // fetch the dkg public key.
@@ -195,7 +195,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     // verify the governor address is a valid ethereum address.
     expect(ethers.utils.isAddress(governorAddress)).to.be.true;
     // transfer ownership to the DKG.
-    const sides = signatureBridge.bridgeSides.values();
+    const sides = signatureBridge.vBridgeSides.values();
     for (const signatureSide of sides) {
       // now we transferOwnership, forcefully.
       const tx = await signatureSide.transferOwnership(governorAddress, 1);
@@ -216,9 +216,8 @@ describe.skip('SignatureBridge Governor Updates', function () {
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
-    const anchor = signatureBridge.getAnchor(
+    const anchor = signatureBridge.getVAnchor(
       localChain1.chainId,
-      ethers.utils.parseEther('1')
     )!;
     await anchor.setSigner(wallet1);
     // approve token spending
@@ -229,13 +228,13 @@ describe.skip('SignatureBridge Governor Updates', function () {
       tokenAddress,
       wallet1
     );
-    await token.approveSpending(anchor.contract.address);
+    let tx = await token.approveSpending(anchor.contract.address);
+    await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const anchor2 = signatureBridge.getAnchor(
+    const anchor2 = signatureBridge.getVAnchor(
       localChain2.chainId,
-      ethers.utils.parseEther('1')
     )!;
     await anchor2.setSigner(wallet2);
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
@@ -246,7 +245,8 @@ describe.skip('SignatureBridge Governor Updates', function () {
       wallet2
     );
 
-    await token2.approveSpending(anchor2.contract.address);
+    tx = await token2.approveSpending(anchor2.contract.address);
+    await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
     const api = await charlieNode.api();
@@ -307,7 +307,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
     expect(dkgPublicKey).to.not.be.null;
     const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey!);
-    const sides = signatureBridge.bridgeSides.values();
+    const sides = signatureBridge.vBridgeSides.values();
     for (const signatureSide of sides) {
       const contract = signatureSide.contract;
       const currentGovernor = await contract.governor();
