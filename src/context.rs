@@ -18,9 +18,7 @@
 //! # Relayer Context Module 🕸️
 //!
 //! A module for managing the context of the relayer.
-use cosmrs::bip32::secp256k1::PublicKey;
-use cosmrs::bip32::Mnemonic;
-use cosmrs::rpc::{query::Query, Client, HttpClient};
+use cosmrs::rpc::HttpClient;
 use cosmrs::AccountId;
 use std::convert::TryFrom;
 use std::time::Duration;
@@ -226,7 +224,7 @@ impl RelayerContext {
                     chain_id: chain_name.to_string(),
                 }
             })?;
-        let mnemonic = &chain_config.mnemonic;
+        let _mnemonic = &chain_config.mnemonic;
         let account_id = AccountId::new("juno", &[])
             .map_err(|_| crate::Error::Generic("Cannot setup wallet"))?;
         Ok(account_id)
