@@ -19,7 +19,7 @@
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import { u8aToHex } from '@polkadot/util';
+import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
@@ -298,7 +298,9 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       keypair: randomKeypair,
     });
 
+    
     // Make the deposit transaction
+   
     await signatureBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
 
     // wait until the signature bridge recives the execute call.
@@ -377,11 +379,11 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       name: 'Hermes',
       populatedAccounts: [
         {
-          secretKey: GOV,
+          secretKey: PK1,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
         {
-          secretKey: PK1,
+          secretKey: GOV,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
@@ -398,11 +400,11 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       name: 'Athena',
       populatedAccounts: [
         {
-          secretKey: GOV,
+          secretKey: PK2,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
         {
-          secretKey: PK2,
+          secretKey: GOV,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
@@ -411,7 +413,7 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
-    govWallet = new ethers.Wallet(GOV, localChain2.provider());
+    govWallet = new ethers.Wallet(GOV, localChain1.provider());
     // Deploy the token.
     const localToken1 = await localChain1.deployToken(
       'Webb Token',
@@ -525,13 +527,31 @@ describe.only('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       keypair: randomKeypair,
     });
     
-    const bridgeSide = signatureBridge.getVBridgeSide(localChain1.chainId);
-    console.log(bridgeSide.governor);
-    const chainGovernor = await bridgeSide.contract.governor();
-    console.log(chainGovernor);
+    const bridgeSide1 = signatureBridge.getVBridgeSide(localChain1.chainId);
+    const chainGovernor1 = await bridgeSide1.contract.governor();
+    console.log(chainGovernor1);
+    const bridgeSide2 = signatureBridge.getVBridgeSide(localChain2.chainId);
+    const chainGovernor2 = await bridgeSide2.contract.governor();
+    console.log(chainGovernor2);
+
 
     // Make the deposit transaction
-    await signatureBridge.transact([], [depositUtxo], 0, '0', '0', govWallet);
+
+    const leaves = anchor1.tree
+    .elements()
+    .map((el) => hexToU8a(el.toHexString()));
+
+    await anchor1.transact(
+      [],
+      [depositUtxo],
+      {
+        [localChain1.chainId]: leaves,
+      },
+      '0',
+      '0',
+      '0'
+    );
+    // await signatureBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
 
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
