@@ -112,7 +112,7 @@ cargo run --features cli -- -c ./config/development/evm-localnet -vvv
 To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer. You can follow this [guide](https://docs.webb.tools/how-to-guides/v1/substrate-mixer/local-mixer/) to use the relayer for the Substrate mixer!
 
 ```
-cargo run -- -c ./config/development/local-substrate -vvv
+cargo run --features cli -- -c ./config/development/local-substrate -vvv
 ```
 
 ### Run 🏃
