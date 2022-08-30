@@ -218,12 +218,18 @@ export class LocalChain {
         console.log('entry: ', entry);
         console.log(await chainBridgeSide.contract.signer.getAddress());
         const nonce = await chainBridgeSide.contract.proposalNonce();
-        let tx = await chainBridgeSide.transferOwnership(
-          entry[1],
-          nonce.toNumber()
-        );
-        await tx.wait();
-        console.log('here');
+        while (true) {
+          try {
+            let tx = await chainBridgeSide.transferOwnership(
+              entry[1],
+              nonce.toNumber()
+            );
+            await tx.wait();
+            break;
+          } catch (e) {
+            console.log(e);
+          }
+        }
       }
     }
 
