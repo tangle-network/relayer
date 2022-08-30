@@ -102,7 +102,7 @@ Eager to try out the Webb Relayer and see it in action? Run a relayer with our p
 ```bash
 # Update your local env file
 cp ./config/development/evm-localnet/.env.example .env
-cargo run -- -c ./config/development/evm-localnet -vvv
+cargo run --features cli -- -c ./config/development/evm-localnet -vvv
 ```
 
 > Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
