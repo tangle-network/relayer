@@ -39,7 +39,7 @@ export function encodeResourceIdUpdateProposal(
 export function decodeResourceIdUpdateProposal(
   data: Uint8Array
 ): SubstrateResourceIdUpdateProposal {
-  const header = ProposalHeader.fromBytes(data.slice(0, 40))
+  const header = ProposalHeader.fromBytes(data.slice(0, 40));
   const palletIndex = u8aToHex(data.slice(40, 41)); // 40 -> 41
   const callIndex = u8aToHex(data.slice(41, 42)); // 41 -> 42
   const newResourceId = u8aToHex(data.slice(42, 74)); // 42 -> 74

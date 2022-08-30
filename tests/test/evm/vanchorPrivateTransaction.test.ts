@@ -124,8 +124,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       govWallet2
     );
 
-    console.log('deploying vbridge...')
-
     signatureVBridge = await localChain1.deploySignatureVBridge(
       localChain2,
       localToken1,
@@ -133,8 +131,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       govWallet1,
       govWallet2
     );
-
-    console.log('deployed the vbridge');
 
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {

@@ -75,17 +75,23 @@ export class LocalChain {
   private localEvmChain: LocalEvmChain;
   public readonly endpoint: string;
   private signatureVBridge: VBridge.VBridge | null = null;
-  private constructor(private readonly opts: LocalChainOpts, localEvmChain: LocalEvmChain) {
+  private constructor(
+    private readonly opts: LocalChainOpts,
+    localEvmChain: LocalEvmChain
+  ) {
     this.localEvmChain = localEvmChain;
     this.endpoint = `http://127.0.0.1:${opts.port}`;
   }
 
-  public static async init (opts: LocalChainOpts) {
-    const evmChain = await LocalEvmChain.init(opts.name, opts.chainId, opts.populatedAccounts);
+  public static async init(opts: LocalChainOpts) {
+    const evmChain = await LocalEvmChain.init(
+      opts.name,
+      opts.chainId,
+      opts.populatedAccounts
+    );
     const localChain = new LocalChain(opts, evmChain);
     return localChain;
   }
-
 
   public get name(): string {
     return this.opts.name;
@@ -206,11 +212,16 @@ export class LocalChain {
       const govEntries = Object.entries(initialGovernors);
 
       for (const entry of govEntries) {
-        const chainBridgeSide = this.signatureVBridge.getVBridgeSide(Number(entry[0]));
+        const chainBridgeSide = this.signatureVBridge.getVBridgeSide(
+          Number(entry[0])
+        );
         console.log('entry: ', entry);
         console.log(await chainBridgeSide.contract.signer.getAddress());
         const nonce = await chainBridgeSide.contract.proposalNonce();
-        let tx = await chainBridgeSide.transferOwnership(entry[1], nonce.toNumber());
+        let tx = await chainBridgeSide.transferOwnership(
+          entry[1],
+          nonce.toNumber()
+        );
         await tx.wait();
         console.log('here');
       }

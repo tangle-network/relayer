@@ -115,7 +115,7 @@ describe('Vanchor Transaction relayer', function () {
       {
         [localChain1.chainId]: govWallet.address,
         [localChain2.chainId]: govWallet.address,
-      },
+      }
     );
 
     console.log('deployed vbridge');

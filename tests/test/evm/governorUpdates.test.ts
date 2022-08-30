@@ -216,9 +216,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
-    const anchor = signatureBridge.getVAnchor(
-      localChain1.chainId,
-    )!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
     await anchor.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureBridge.getWebbTokenAddress(
@@ -233,9 +231,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const anchor2 = signatureBridge.getVAnchor(
-      localChain2.chainId,
-    )!;
+    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId)!;
     await anchor2.setSigner(wallet2);
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
       localChain2.chainId
