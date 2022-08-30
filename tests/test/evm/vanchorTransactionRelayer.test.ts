@@ -29,7 +29,7 @@ import {
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { u8aToHex } from '@polkadot/util';
+import { hexToU8a, u8aToHex } from '@polkadot/util';
 // const assert = require('assert');
 describe('Vanchor Transaction relayer', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -104,8 +104,6 @@ describe('Vanchor Transaction relayer', function () {
       wallet2
     );
 
-    console.log('deploying vbridge...');
-
     signatureVBridge = await localChain1.deploySignatureVBridge(
       localChain2,
       localToken1,
@@ -117,8 +115,6 @@ describe('Vanchor Transaction relayer', function () {
         [localChain2.chainId]: govWallet.address,
       }
     );
-
-    console.log('deployed vbridge');
 
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
@@ -215,7 +211,20 @@ describe('Vanchor Transaction relayer', function () {
         chainId: localChain1.chainId.toString(),
       });
 
-      await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
+      const leaves = vanchor1.tree
+        .elements()
+        .map((el) => hexToU8a(el.toHexString()));
+
+      await vanchor1.transact(
+        [],
+        [depositUtxo],
+        {
+          [localChain1.chainId]: leaves,
+        },
+        '0',
+        '0',
+        '0'
+      );
     }
 
     // now we wait for all deposits to be saved in LeafStorageCache
