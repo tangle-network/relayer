@@ -186,6 +186,7 @@ impl RelayerContext {
     /// let chain_name = "localterra".to_string();
     /// let provider = ctx.cosmos_provider(chain_name).await?;
     /// ```
+    #[cfg(feature = "cosmwasm")]
     pub async fn cosmos_provider(
         &self,
         chain_id: &str,
@@ -214,6 +215,7 @@ impl RelayerContext {
     /// let chain_name = "localterra".to_string();
     /// let wallet = self.ctx.cosmos_wallet(&self.chain_name).await?;
     /// ```
+    #[cfg(feature = "cosmwasm")]
     pub async fn cosmos_wallet(
         &self,
         chain_name: &str,
