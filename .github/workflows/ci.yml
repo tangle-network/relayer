@@ -127,7 +127,7 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && dvc pull && yarn
       - name: Pull Docker Images used for testing.
-        run: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:edge
+        run: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:stable
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && yarn test
