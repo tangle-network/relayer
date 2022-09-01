@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
 #![warn(missing_docs)]
-
 //! # Relayer Context Module 🕸️
 //!
 //! A module for managing the context of the relayer.
+#[allow(unused)]
 use cosmrs::rpc::HttpClient;
+#[allow(unused)]
 use cosmrs::AccountId;
 use std::convert::TryFrom;
 use std::time::Duration;
