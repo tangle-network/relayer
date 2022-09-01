@@ -179,26 +179,26 @@ export class LocalChain {
     const witnessCalculatorCjsPath_2 = path.join(
       gitRoot,
       'tests',
-      'protocol-solidity-fixtures/fixtures/vanchor_2/2/witness_calculator.cjs'
+      'solidity-fixtures/vanchor_2/2/witness_calculator.cjs'
     );
 
     const witnessCalculatorCjsPath_16 = path.join(
       gitRoot,
       'tests',
-      'protocol-solidity-fixtures/fixtures/vanchor_16/2/witness_calculator.cjs'
+      'solidity-fixtures/vanchor_16/2/witness_calculator.cjs'
     );
 
     const zkComponents_2 = await fetchComponentsFromFilePaths(
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm'
+        'solidity-fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm'
       ),
       witnessCalculatorCjsPath_2,
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/vanchor_2/2/circuit_final.zkey'
+        'solidity-fixtures/vanchor_2/2/circuit_final.zkey'
       )
     );
 
@@ -206,13 +206,13 @@ export class LocalChain {
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm'
+        'solidity-fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm'
       ),
       witnessCalculatorCjsPath_16,
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/vanchor_16/2/circuit_final.zkey'
+        'solidity-fixtures/vanchor_16/2/circuit_final.zkey'
       )
     );
 
@@ -262,19 +262,19 @@ export class LocalChain {
     const witnessCalculatorCjsPath = path.join(
       gitRoot,
       'tests',
-      'protocol-solidity-fixtures/fixtures/anchor/2/witness_calculator.cjs'
+      'solidity-fixtures/anchor/2/witness_calculator.cjs'
     );
     const zkComponents = await fetchComponentsFromFilePaths(
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/anchor/2/poseidon_anchor_2.wasm'
+        'solidity-fixtures/anchor/2/poseidon_anchor_2.wasm'
       ),
       witnessCalculatorCjsPath,
       path.join(
         gitRoot,
         'tests',
-        'protocol-solidity-fixtures/fixtures/anchor/2/circuit_final.zkey'
+        'solidity-fixtures/anchor/2/circuit_final.zkey'
       )
     );
 

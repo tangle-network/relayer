@@ -298,7 +298,7 @@ Here is the basic setup you will need:
 4. While you are there, build the standalone node `cargo build --release -p webb-standalone-node`
 5. And then go back to the relayer `cd ../relayer`
 6. Run `cargo build --features integration-tests`
-7. Run `cd tests && git submodule update --init --recursive`
+7. Run `cd tests && dvc pull`
 8. Run `yarn install` (in `tests` dir)
 9. `yarn test`
 
