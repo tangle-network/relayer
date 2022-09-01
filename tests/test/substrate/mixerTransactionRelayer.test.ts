@@ -447,7 +447,7 @@ async function createMixerWithdrawProof(
     const provingKeyPath = path.join(
       gitRoot,
       'tests',
-      'protocol-substrate-fixtures',
+      'substrate-fixtures',
       'mixer',
       'bn254',
       'x5',

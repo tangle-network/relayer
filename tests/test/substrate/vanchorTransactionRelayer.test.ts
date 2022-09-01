@@ -135,7 +135,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       // tests path
       gitRoot,
       'tests',
-      'protocol-substrate-fixtures',
+      'substrate-fixtures',
       'vanchor',
       'bn254',
       'x5',
