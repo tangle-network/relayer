@@ -81,6 +81,13 @@ rustup update nightly
 
 Great! Now your Rust environment is ready! 🚀🚀
 
+Lastly, install 
+
+  - [DVC](https://dvc.org/) is used for fetching large ZK files and managing them alongside git
+  - [substrate.io](https://docs.substrate.io/main-docs/install/) may require additional dependencies
+
+🚀🚀 Your environment is complete! 🚀🚀
+
 ### Installation 💻
 
 #### Unix (Linux, macOS, WSL2, ..)
