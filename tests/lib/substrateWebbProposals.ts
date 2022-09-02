@@ -24,7 +24,6 @@ export interface SubstrateResourceIdUpdateProposal {
 export function encodeResourceIdUpdateProposal(
   proposal: SubstrateResourceIdUpdateProposal
 ): Uint8Array {
-  const header = proposal.header;
   const resourceIdUpdateProposal = new Uint8Array(74);
   resourceIdUpdateProposal.set(proposal.header.toU8a(), 0); // 0 -> 40
   const palletIndex = hexToU8a(proposal.palletIndex).slice(0, 1);

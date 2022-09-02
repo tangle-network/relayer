@@ -18,14 +18,10 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { Anchors, Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
-import {
-  IVariableAnchorExtData,
-  IVariableAnchorPublicInputs,
-} from '@webb-tools/interfaces';
-import { ethers, Wallet } from 'ethers';
-import retry from 'async-retry';
+import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
+import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
+
+import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain, setupVanchorEvmTx } from '../../lib/localTestnet.js';
 import {
