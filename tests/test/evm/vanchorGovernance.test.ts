@@ -49,7 +49,7 @@ describe.skip('VAnchor Governance Relayer', function () {
       },
     ];
 
-    localChain1 = new LocalChain({
+    localChain1 = await LocalChain.init({
       port: localChain1Port,
       chainId: 5001,
       name: 'Hermes',
@@ -70,7 +70,7 @@ describe.skip('VAnchor Governance Relayer', function () {
       port: portNumbers(3333, 4444),
     });
 
-    localChain2 = new LocalChain({
+    localChain2 = await LocalChain.init({
       port: localChain2Port,
       chainId: 5002,
       name: 'Athena',
@@ -109,8 +109,8 @@ describe.skip('VAnchor Governance Relayer', function () {
       wallet1,
       wallet2,
       {
-        [localChain1.chainId]: govWallet,
-        [localChain2.chainId]: govWallet,
+        [localChain1.chainId]: govWallet.address,
+        [localChain2.chainId]: govWallet.address,
       }
     );
     // save the chain configs.
@@ -140,7 +140,8 @@ describe.skip('VAnchor Governance Relayer', function () {
       tokenAddress,
       wallet1
     );
-    await token.approveSpending(vanchor.contract.address);
+    let tx = await token.approveSpending(vanchor.contract.address);
+    await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
@@ -154,7 +155,8 @@ describe.skip('VAnchor Governance Relayer', function () {
       wallet2
     );
 
-    await token2.approveSpending(vanchor2.contract.address);
+    tx = await token2.approveSpending(vanchor2.contract.address);
+    await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
     // now start the relayer

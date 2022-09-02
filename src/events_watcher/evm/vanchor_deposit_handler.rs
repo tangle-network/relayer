@@ -18,9 +18,12 @@ use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
 use ethereum_types::H256;
 use std::sync::Arc;
-use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
-use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb::evm::contract::protocol_solidity::{
+    v_anchor_contract, VAnchorContractEvents,
+};
+use webb::evm::ethers::prelude::{EthCall, LogMeta, Middleware};
 use webb_proposals::evm::AnchorUpdateProposal;
+use webb_proposals::FunctionSignature;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {
@@ -98,7 +101,11 @@ where
         let chain_id = client.get_chainid().await?;
         let root = wrapper.contract.get_last_root().call().await?;
         let leaf_index = event_data.index.as_u32();
-        let function_signature = [141, 9, 22, 157];
+        let function_signature_bytes =
+            v_anchor_contract::UpdateEdgeCall::selector().to_vec();
+        let mut buf = [0u8; 4];
+        buf.copy_from_slice(&function_signature_bytes);
+        let function_signature = FunctionSignature::from(buf);
         let nonce = leaf_index;
         let src_chain_id = webb_proposals::TypedChainId::Evm(chain_id.as_u32());
         let src_target_system =
@@ -153,7 +160,7 @@ where
             );
             let header = webb_proposals::ProposalHeader::new(
                 resource_id,
-                function_signature.into(),
+                function_signature,
                 nonce.into(),
             );
             let proposal = webb_proposals::evm::AnchorUpdateProposal::new(
