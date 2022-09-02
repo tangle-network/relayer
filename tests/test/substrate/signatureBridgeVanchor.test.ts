@@ -226,9 +226,14 @@
 //     chainId
 //   );
 //   const proposalHeader = new ProposalHeader(resourceId, functionSignature, nonce);
-//   const resourceIdUpdateProposal: SubstrateResourceIdUpdateProposal = (proposalHeader, resourceId.toString(), '');
+//   const resourceIdUpdateProposal: SubstrateResourceIdUpdateProposal = {
+//     header: proposalHeader,
+//     newResourceId: resourceId.toString(),
+//     palletIndex,
+//     callIndex
+//   };
 
-//   let proposalBytes = resourceIdUpdateProposal.toU8a();
+//   let proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
 //   let hash = ethers.utils.keccak256(proposalBytes);
 //   let msg = ethers.utils.arrayify(hash);
 //   // sign the message
