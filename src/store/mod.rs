@@ -128,6 +128,13 @@ impl BridgeKey {
             chain_id: chain_id.into_typed_chain_id(),
         }
     }
+    /// Creates new BridgeKey from ResourceId
+    pub fn from_resource_id(resource_id: webb_proposals::ResourceId) -> Self {
+        Self {
+            target_system: resource_id.target_system(),
+            chain_id: resource_id.typed_chain_id()
+        }
+    }
 }
 
 impl HistoryStoreKey {

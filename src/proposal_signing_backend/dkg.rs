@@ -6,6 +6,7 @@ use webb::substrate::{dkg_runtime, subxt};
 use webb_proposals::{ProposalTrait};
 use webb::substrate::scale::{Encode, Decode};
 
+
 type DkgConfig = subxt::DefaultConfig;
 type DkgRuntimeApi = dkg_runtime::api::RuntimeApi<
     DkgConfig,
@@ -42,12 +43,13 @@ where
 
 //AnchorUpdateProposal for evm
 #[async_trait::async_trait]
-impl<P> super::ProposalSigningBackend<P>
+impl super::ProposalSigningBackend
     for DkgProposalSigningBackend<DkgRuntimeApi, DkgConfig>
-where
-    P: ProposalTrait + Sync + 'static + Send,
 {
-    async fn can_handle_proposal(&self, proposal: &P) -> crate::Result<bool> {
+    async fn can_handle_proposal(
+        &self,
+        proposal: &(impl ProposalTrait + Sync + Send + 'static),
+    ) -> crate::Result<bool> {
         let header = proposal.header();
         let resource_id = header.resource_id();
         let storage_api = self.api.storage().dkg_proposals();
@@ -74,7 +76,10 @@ where
         Ok(true)
     }
 
-    async fn handle_proposal(&self, proposal: &P) -> crate::Result<()> {
+    async fn handle_proposal(
+        &self,
+        proposal: &(impl ProposalTrait + Sync + Send + 'static),
+    ) -> crate::Result<()> {
         let tx_api = self.api.tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();

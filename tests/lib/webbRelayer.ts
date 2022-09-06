@@ -17,8 +17,6 @@
 import WebSocket from 'ws';
 import fetch from 'node-fetch';
 import {
-  IFixedAnchorPublicInputs,
-  IFixedAnchorExtData,
   IVariableAnchorExtData,
   IVariableAnchorPublicInputs,
 } from '@webb-tools/interfaces';
@@ -499,17 +497,28 @@ export interface EventsWatcher {
   printProgressInterval?: number;
 }
 
-export interface LinkedAnchor {
-  chain: string;
+export type RawResourceId = {
+  type: 'Raw';
+  resourceId: `0x${string}`;
+};
+
+export type EvmLinkedAnchor = {
+  type: 'Evm';
   chainId: string;
   address: string;
-}
+};
 
-export interface SubstrateLinkedAnchor {
-  chainId: string;
-  chain: number;
+export type SubstrateLinkedAnchor = {
+  type: 'Substrate';
+  chainId: number;
+  pallet: number;
+  call: number;
   tree: number;
-}
+};
+export type LinkedAnchor =
+  | RawResourceId
+  | EvmLinkedAnchor
+  | SubstrateLinkedAnchor;
 
 export interface Substrate {
   [key: string]: NodeInfo;
@@ -525,7 +534,7 @@ export interface Pallet {
   pallet: PalletKind;
   eventsWatcher: EventsWatcher;
   proposalSigningBackend?: ProposalSigningBackend;
-  linkedAnchors?: SubstrateLinkedAnchor[];
+  linkedAnchors?: LinkedAnchor[];
 }
 
 export interface EnabledContracts {

@@ -64,7 +64,7 @@ import {
 import pkg from 'secp256k1';
 const { ecdsaSign } = pkg;
 
-describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
+describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -83,7 +83,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -119,18 +119,22 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     await api.isReady;
 
     let chainId = await aliceNode.getChainId();
+    let palletIndex = convertToHexNumber(44);
+    let substrateTargetSystem = makeSubstrateTargetSystem(6, palletIndex);
+    // resource ID1
+    let resourceId1 = makeResourceId(
+      toHex(substrateTargetSystem, 20),
+      ChainIdType.SUBSTRATE,
+      chainId
+    );
+    let res: `0x${string}` = `0x${resourceId1.slice(2)}`;
+    console.log('this ia resource : {}', res);
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
-      linkedAnchors: [
-        {
-          chain: 1080,
-          chainId: `${chainId}`,
-          tree: 6,
-        },
-      ],
+      linkedAnchors: [{ type: 'Raw', resourceId: res }],
     });
 
     //force set maintainer
@@ -150,7 +154,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });

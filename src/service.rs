@@ -21,7 +21,7 @@
 //! Services are tasks which the relayer constantly runs throughout its lifetime.
 //! Services handle keeping up to date with the configured chains.
 
-use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use ethereum_types::U256;
@@ -1031,7 +1031,7 @@ async fn make_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
     chain_id: U256,
-    linked_anchors: Option<Vec<LinkedVAnchorConfig>>,
+    linked_anchors: Option<Vec<LinkedAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> crate::Result<ProposalSigningBackendSelector> {
     // Check if contract is configured with governance support for the relayer.
@@ -1078,38 +1078,19 @@ async fn make_proposal_signing_backend(
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
             // which is a bit simpler than the DkgProposalSigningBackend.
             // get only the linked chains to that anchor.
-            let linked_chains = linked_anchors
-                .iter()
-                .flat_map(|c| ctx.config.evm.get(&c.chain_id.to_string()));
-            // then will have to go through our configruation to retrieve the correct
-            // signature bridges that are configured on the linked chains.
-            // Note: this assumes that every network will only have one signature bridge configured for it.
-            let signature_bridges = linked_chains
-                .flat_map(|chain_config| {
-                    // find the first signature bridge configured on that chain.
-                    chain_config
-                        .contracts
-                        .iter()
-                        .find(|contract| {
-                            matches!(contract, Contract::SignatureBridge(_))
-                        })
-                        .map(|contract| (contract, chain_config.chain_id))
-                })
-                .map(|(bridge_contract, chain_id)| match bridge_contract {
-                    Contract::SignatureBridge(c) => (c, chain_id),
-                    _ => unreachable!(),
-                })
-                .flat_map(|(bridge_config, chain_id)| {
-                    // then we just create the signature bridge metadata.
-                    let chain_id =
-                        webb_proposals::TypedChainId::Evm(chain_id as u32);
-                    let target_system =
-                        webb_proposals::TargetSystem::new_contract_address(
-                            bridge_config.common.address,
-                        );
-                    Some((chain_id, target_system))
-                })
-                .collect::<HashMap<_, _>>();
+            let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
+                HashSet::new();
+            linked_anchors.iter().for_each(|anchor| {
+                // using chain_id to ensure that we have only one signature bridge
+                let resource_id = match anchor {
+                    LinkedAnchorConfig::Raw(target) => {
+                        let bytes: [u8; 32] = target.resource_id.into();
+                        webb_proposals::ResourceId::from(bytes)
+                    }
+                    _ => unreachable!("unsupported"),
+                };
+                signature_bridges.insert(resource_id);
+            });
             let backend = MockedProposalSigningBackend::builder()
                 .store(store.clone())
                 .private_key(mocked.private_key)
@@ -1128,7 +1109,7 @@ async fn make_substrate_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
     chain_id: U256,
-    linked_anchors: Option<Vec<SubstrateLinkedVAnchorConfig>>,
+    linked_anchors: Option<Vec<LinkedAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> crate::Result<ProposalSigningBackendSelector> {
     // Check if contract is configured with governance support for the relayer.
@@ -1173,29 +1154,24 @@ async fn make_substrate_proposal_signing_backend(
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
             // which is a bit simpler than the DkgProposalSigningBackend.
             // get only the linked chains to that anchor.
-
-            let linked_chains = linked_anchors
-                .iter()
-                .flat_map(|anchor| {
-                    // using chain_id to ensure that we have only one signature bridge
-                    let target =
-                        webb_proposals::SubstrateTargetSystem::builder()
-                            .pallet_index(0)
-                            .tree_id(chain_id.as_u32())
-                            .build();
-                    let target_system =
-                        webb_proposals::TargetSystem::Substrate(target);
-
-                    let chain_id =
-                        webb_proposals::TypedChainId::Substrate(anchor.chain);
-                    Some((chain_id, target_system))
-                })
-                .collect::<HashMap<_, _>>();
+            let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
+                HashSet::new();
+            linked_anchors.iter().for_each(|anchor| {
+                // using chain_id to ensure that we have only one signature bridge
+                let resource_id = match anchor {
+                    LinkedAnchorConfig::Raw(target) => {
+                        let bytes: [u8; 32] = target.resource_id.into();
+                        webb_proposals::ResourceId::from(bytes)
+                    }
+                    _ => unreachable!("unsupported"),
+                };
+                signature_bridges.insert(resource_id);
+            });
 
             let backend = MockedProposalSigningBackend::builder()
                 .store(store.clone())
                 .private_key(mocked.private_key)
-                .signature_bridges(linked_chains)
+                .signature_bridges(signature_bridges)
                 .build();
             Ok(ProposalSigningBackendSelector::Mocked(backend))
         }

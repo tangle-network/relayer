@@ -65,6 +65,10 @@ pub mod evm;
 #[doc(hidden)]
 mod retry;
 
+/// A module to handel proposals
+#[doc(hidden)]
+mod proposal_handler;
+
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
     /// The block number where this contract is deployed.

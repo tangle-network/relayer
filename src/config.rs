@@ -31,10 +31,11 @@
 //!
 //! Checkout [config](./config) for useful default configurations for many networks.
 //! These config files can be changed to your preferences.
+use std::path::PathBuf;
+use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use std::{collections::HashMap, path::PathBuf};
-
-use ethereum_types::{Address, U256};
+use std::str::FromStr;
+use ethereum_types::{Address,H256, U256};
 use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::Public;
 
@@ -361,6 +362,39 @@ pub struct LinkedVAnchorConfig {
     pub address: Address,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type")]
+pub enum LinkedAnchorConfig {
+    Raw(RawResourceId),
+    Evm(EvmLinkedAnchorConfig),
+    Substrate(SubstrateLinkedAnchorConfig),
+}
+
+/// Linked anchor config for Evm based target system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct RawResourceId {
+    pub resource_id: H256,
+}
+
+/// Linked anchor config for Evm based target system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct EvmLinkedAnchorConfig {
+    pub chain_id: u32,
+    pub address: Address,
+}
+
+/// Linked anchor config for Substrate based target system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct SubstrateLinkedAnchorConfig {
+    pub chain_id: u32,
+    pub pallet: u8,
+    pub call: u8,
+    pub tree_id: u32,
+}
+
 /// SubstrateLinkedVAnchorConfig is the configuration for the linked Vanchor of substrate.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
@@ -473,7 +507,7 @@ pub struct VAnchorContractConfig {
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<LinkedVAnchorConfig>>,
+    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
 }
 
 /// Signature Bridge contract configuration.
@@ -579,7 +613,7 @@ pub struct VAnchorBn254PalletConfig {
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor on this chain.
     #[serde(rename(serialize = "linkedAnchors"), default)]
-    pub linked_anchors: Option<Vec<SubstrateLinkedVAnchorConfig>>,
+    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
 }
 
 /// Enumerates the supported different signing backends configurations.
@@ -794,6 +828,22 @@ fn postloading_process(
     for (_, v) in old_cosmwasm {
         config.cosmwasm.insert(v.name.to_string(), v);
     }
+
+    // linked_anchors
+    let mut chain_list: HashSet<webb_proposals::TypedChainId> = HashSet::new();
+    config.substrate.keys().map(|chain_id| {
+        let typed_chain_id = webb_proposals::TypedChainId::Substrate(
+            u32::from_str(chain_id).unwrap(),
+        );
+        chain_list.insert(typed_chain_id);
+    });
+
+    config.evm.keys().map(|chain_id| {
+        let typed_chain_id =
+            webb_proposals::TypedChainId::Evm(u32::from_str(chain_id).unwrap());
+        chain_list.insert(typed_chain_id);
+    });
+
     // check that all required chains are already present in the config.
     for (chain_id, chain_config) in &config.evm {
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
@@ -858,18 +908,37 @@ fn postloading_process(
                             );
                         } else {
                             for linked_anchor in linked_anchors {
-                                let chain_defined = config
-                                    .evm
-                                    .contains_key(&linked_anchor.chain_id);
-                                if !chain_defined {
-                                    tracing::warn!("!!WARNING!!: chain {} with id {} is not defined in the config.
-                                        which is required by the Anchor Contract ({}) defined on {} chain.
-                                        Please, define it manually, to allow the relayer to work properly.",
-                                        linked_anchor.chain,
-                                        linked_anchor.chain_id,
-                                        anchor.common.address,
-                                        chain_id
-                                    );
+                                match linked_anchor {
+                                    LinkedAnchorConfig::Substrate(target) => {
+                                        let typed_chain_id = webb_proposals::TypedChainId::Substrate(target.chain_id);
+                                        if !chain_list.contains(&typed_chain_id)
+                                        {
+                                            tracing::warn!("!!WARNING!!: Type: Substrate, chain with id {} is not defined in the config.
+                                                which is required by the Anchor Contract ({}) defined on {} chain.
+                                                Please, define it manually, to allow the relayer to work properly.",
+                                                target.chain_id,
+                                                anchor.common.address,
+                                                chain_id
+                                            );
+                                        }
+                                    }
+                                    LinkedAnchorConfig::Evm(target) => {
+                                        let typed_chain_id =
+                                            webb_proposals::TypedChainId::Evm(
+                                                target.chain_id,
+                                            );
+                                        if !chain_list.contains(&typed_chain_id)
+                                        {
+                                            tracing::warn!("!!WARNING!!: Type: Evm, chain with id {} is not defined in the config.
+                                                which is required by the Anchor Contract ({}) defined on {} chain.
+                                                Please, define it manually, to allow the relayer to work properly.",
+                                                target.chain_id,
+                                                anchor.common.address,
+                                                chain_id
+                                            );
+                                        }
+                                    }
+                                    LinkedAnchorConfig::Raw(target) => {}
                                 }
                             }
                         }

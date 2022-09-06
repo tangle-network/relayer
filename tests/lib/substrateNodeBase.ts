@@ -22,6 +22,7 @@ import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
 import {
   EventsWatcher,
   FeaturesConfig,
+  LinkedAnchor,
   NodeInfo,
   Pallet,
   ProposalSigningBackend,
@@ -67,7 +68,7 @@ export type SubstrateEvent = {
 export type ExportedConfigOptions = {
   suri: string;
   proposalSigningBackend?: ProposalSigningBackend;
-  linkedAnchors?: SubstrateLinkedAnchor[];
+  linkedAnchors?: LinkedAnchor[];
   features?: FeaturesConfig;
   chainId: number;
 };
@@ -212,15 +213,15 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   ): Promise<void> {
     const config = await this.exportConfig(opts);
     // don't mind my typescript typing here XD
-    type ConvertedSubstrateLinkedAnchor =
-      ConvertToKebabCase<SubstrateLinkedAnchor>;
+    type ConvertedLinkedAnchor =
+      ConvertToKebabCase<LinkedAnchor>;
     type ConvertedPallet = Omit<
       ConvertToKebabCase<Pallet>,
       'events-watcher' | 'proposal-signing-backend' | 'linked-anchors'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
       'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
-      'linked-anchors'?: ConvertedSubstrateLinkedAnchor[];
+      'linked-anchors'?: ConvertedLinkedAnchor[];
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -262,13 +263,26 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
                 }
               : undefined,
 
-          'linked-anchors': c.linkedAnchors?.map(
-            (a: SubstrateLinkedAnchor) => ({
-              chain: a.chain,
-              'chain-id': a.chainId,
-              tree: a.tree,
-            })
-          ),
+              'linked-anchors': c.linkedAnchors?.map((anchor: LinkedAnchor) =>
+              anchor.type === 'Evm'
+                ? {
+                    'chain-id': anchor.chainId,
+                    type: 'Evm',
+                    address: anchor.address,
+                  }
+                : anchor.type === 'Substrate'
+                ? {
+                    type: 'Substrate',
+                    'chain-id': anchor.chainId,
+                    tree: anchor.tree,
+                    call: anchor.call,
+                    pallet: anchor.pallet,
+                  }
+                : {
+                    type: 'Raw',
+                    'resource-id': anchor.resourceId,
+                  }
+            ),
         };
         return convertedPallet;
       }),

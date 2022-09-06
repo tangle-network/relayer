@@ -32,6 +32,7 @@ import {
   Contract,
   EnabledContracts,
   EventsWatcher,
+  EvmLinkedAnchor,
   FeaturesConfig,
   LinkedAnchor,
   ProposalSigningBackend,
@@ -322,11 +323,12 @@ export class LocalChain {
         linkedAnchors: await Promise.all(
           otherAnchors.map(async (anchor) => {
             const chainId = await anchor.contract.getChainId();
-            return {
-              chain: `${chainId}`,
+            let linkedAnchor: EvmLinkedAnchor = {
               chainId: chainId.toString(),
               address: anchor.getAddress(),
+              type: 'Evm',
             };
+            return linkedAnchor;
           })
         ),
       },
@@ -384,11 +386,12 @@ export class LocalChain {
         linkedAnchors: await Promise.all(
           otherAnchors.map(async (anchor) => {
             const chainId = await anchor.contract.getChainId();
-            return {
-              chain: `${chainId}`,
+            let linkedAnchor: EvmLinkedAnchor = {
               chainId: chainId.toString(),
               address: anchor.getAddress(),
+              type: 'Evm',
             };
+            return linkedAnchor;
           })
         ),
       },
@@ -510,11 +513,26 @@ export class LocalChain {
           'print-progress-interval':
             contract.eventsWatcher.printProgressInterval,
         },
-        'linked-anchors': contract?.linkedAnchors?.map((anchor) => ({
-          chain: anchor.chain,
-          'chain-id': anchor.chainId,
-          address: anchor.address,
-        })),
+        'linked-anchors': contract?.linkedAnchors?.map((anchor: LinkedAnchor) =>
+            anchor.type === 'Evm'
+              ? {
+                  'chain-id': anchor.chainId,
+                  type: 'Evm',
+                  address: anchor.address,
+                }
+              : anchor.type === 'Substrate'
+              ? {
+                  type: 'Substrate',
+                  'chain-id': anchor.chainId,
+                  tree: anchor.tree,
+                  call: anchor.call,
+                  pallet: anchor.pallet,
+                }
+              : {
+                  type: 'Raw',
+                  'resource-id': anchor.resourceId,
+                }
+          ),
       })),
     };
     const fullConfigFile: FullConfigFile = {
