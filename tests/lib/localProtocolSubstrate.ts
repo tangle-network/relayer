@@ -11,7 +11,7 @@ import {
 } from './substrateNodeBase.js';
 
 const STANDALONE_DOCKER_IMAGE_URL =
-  'ghcr.io/webb-tools/protocol-substrate-standalone-node:edge';
+  'ghcr.io/webb-tools/protocol-substrate-standalone-node:stable';
 
 export class LocalProtocolSubstrate extends SubstrateNodeBase<TypedEvent> {
   public static async start(
