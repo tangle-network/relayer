@@ -18,8 +18,8 @@
 
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
-import { Bridges, Tokens } from '@webb-tools/protocol-solidity';
-import { u8aToHex } from '@polkadot/util';
+import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
+import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
@@ -34,6 +34,7 @@ import {
   defaultEventsWatcherValue,
   UsageMode,
 } from '../lib/substrateNodeBase.js';
+import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -43,7 +44,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
-  let signatureBridge: Bridges.SignatureBridge;
+  let signatureBridge: VBridge.VBridge;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
 
@@ -121,9 +122,9 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       },
     ];
 
-    localChain1 = new LocalChain({
+    localChain1 = await LocalChain.init({
       port: localChain1Port,
-      chainId: 5001,
+      chainId: localChain1Port,
       name: 'Hermes',
       populatedAccounts: [
         {
@@ -138,9 +139,9 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       port: portNumbers(3333, 4444),
     });
 
-    localChain2 = new LocalChain({
+    localChain2 = await LocalChain.init({
       port: localChain2Port,
-      chainId: 5002,
+      chainId: localChain2Port,
       name: 'Athena',
       populatedAccounts: [
         {
@@ -165,7 +166,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       wallet2
     );
 
-    signatureBridge = await localChain1.deploySignatureBridge(
+    signatureBridge = await localChain1.deploySignatureVBridge(
       localChain2,
       localToken1,
       localToken2,
@@ -174,11 +175,11 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     );
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
-      signatureBridge,
+      signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', node: charlieNode.name },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
-      signatureBridge,
+      signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', node: charlieNode.name },
     });
     // fetch the dkg public key.
@@ -188,7 +189,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     // verify the governor address is a valid ethereum address.
     expect(ethers.utils.isAddress(governorAddress)).to.be.true;
     // transfer ownership to the DKG.
-    const sides = signatureBridge.bridgeSides.values();
+    const sides = signatureBridge.vBridgeSides.values();
     for (const signatureSide of sides) {
       // now we transferOwnership, forcefully.
       const tx = await signatureSide.transferOwnership(governorAddress, 1);
@@ -209,10 +210,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
-    const anchor = signatureBridge.getAnchor(
-      localChain1.chainId,
-      ethers.utils.parseEther('1')
-    )!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
     await anchor.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureBridge.getWebbTokenAddress(
@@ -222,14 +220,12 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       tokenAddress,
       wallet1
     );
-    await token.approveSpending(anchor.contract.address);
+    let tx = await token.approveSpending(anchor.contract.address);
+    await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const anchor2 = signatureBridge.getAnchor(
-      localChain2.chainId,
-      ethers.utils.parseEther('1')
-    )!;
+    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId)!;
     await anchor2.setSigner(wallet2);
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -239,7 +235,8 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       wallet2
     );
 
-    await token2.approveSpending(anchor2.contract.address);
+    tx = await token2.approveSpending(anchor2.contract.address);
+    await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
     const api = await charlieNode.api();
@@ -266,14 +263,8 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
   it('should handle AnchorUpdateProposal when a deposit happens using DKG proposal backend', async () => {
     // we will use chain1 as an example here.
-    const anchor1 = signatureBridge.getAnchor(
-      localChain1.chainId,
-      ethers.utils.parseEther('1')
-    );
-    const anchor2 = signatureBridge.getAnchor(
-      localChain2.chainId,
-      ethers.utils.parseEther('1')
-    );
+    const anchor1 = signatureBridge.getVAnchor(localChain1.chainId);
+    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId);
     await anchor1.setSigner(wallet1);
     const tokenAddress = signatureBridge.getWebbTokenAddress(
       localChain1.chainId
@@ -287,8 +278,22 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
-    // now we are ready to do the deposit.
-    await anchor1.deposit(localChain2.chainId);
+
+    // Create a deposit utxo
+    const randomKeypair = new Keypair();
+    const depositUtxo = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: (1e2).toString(),
+      originChainId: localChain1.chainId.toString(),
+      chainId: localChain2.chainId.toString(),
+      keypair: randomKeypair,
+    });
+
+    // Make the deposit transaction
+
+    await signatureBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
+
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
@@ -331,13 +336,14 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   });
 });
 
-describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function () {
+describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
-  let signatureBridge: Bridges.SignatureBridge;
+  let signatureBridge: VBridge.VBridge;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
+  let govWallet: ethers.Wallet;
 
   let webbRelayer: WebbRelayer;
 
@@ -351,13 +357,16 @@ describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function ()
 
     const enabledContracts: EnabledContracts[] = [
       {
-        contract: 'Anchor',
+        contract: 'VAnchor',
+      },
+      {
+        contract: 'SignatureBridge',
       },
     ];
 
-    localChain1 = new LocalChain({
+    localChain1 = await LocalChain.init({
       port: localChain1Port,
-      chainId: 5001,
+      chainId: localChain1Port,
       name: 'Hermes',
       populatedAccounts: [
         {
@@ -376,9 +385,9 @@ describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       port: portNumbers(3333, 4444),
     });
 
-    localChain2 = new LocalChain({
+    localChain2 = await LocalChain.init({
       port: localChain2Port,
-      chainId: 5002,
+      chainId: localChain2Port,
       name: 'Athena',
       populatedAccounts: [
         {
@@ -395,6 +404,7 @@ describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function ()
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
+    govWallet = new ethers.Wallet(GOV, localChain1.provider());
     // Deploy the token.
     const localToken1 = await localChain1.deployToken(
       'Webb Token',
@@ -407,39 +417,30 @@ describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       wallet2
     );
 
-    const govWallet = new ethers.Wallet(GOV);
-    signatureBridge = await localChain1.deploySignatureBridge(
+    signatureBridge = await localChain1.deploySignatureVBridge(
       localChain2,
       localToken1,
       localToken2,
       wallet1,
       wallet2,
       {
-        [localChain1.chainId]: govWallet,
-        [localChain2.chainId]: govWallet,
+        [localChain1.chainId]: govWallet.address,
+        [localChain2.chainId]: govWallet.address,
       }
     );
+
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
-      signatureBridge,
+      signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
-      signatureBridge,
+      signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
     });
-    const governorAddress = govWallet.address;
-    const sides = signatureBridge.bridgeSides.values();
-    for (const signatureSide of sides) {
-      // check that the new governor is the same as the one we just set.
-      const currentGovernor = await signatureSide.contract.governor();
-      expect(currentGovernor).to.eq(governorAddress);
-    }
+
     // get the anhor on localchain1
-    const anchor = signatureBridge.getAnchor(
-      localChain1.chainId,
-      ethers.utils.parseEther('1')
-    )!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
     await anchor.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureBridge.getWebbTokenAddress(
@@ -449,14 +450,12 @@ describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       tokenAddress,
       wallet1
     );
-    await token.approveSpending(anchor.contract.address);
+    let tx = await token.approveSpending(anchor.contract.address);
+    await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const anchor2 = signatureBridge.getAnchor(
-      localChain2.chainId,
-      ethers.utils.parseEther('1')
-    )!;
+    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId)!;
     await anchor2.setSigner(wallet2);
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -466,7 +465,8 @@ describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       wallet2
     );
 
-    await token2.approveSpending(anchor2.contract.address);
+    tx = await token2.approveSpending(anchor2.contract.address);
+    await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
     // now start the relayer
@@ -475,7 +475,7 @@ describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function ()
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
@@ -483,14 +483,8 @@ describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function ()
 
   it('should handle AnchorUpdateProposal when a deposit happens using mocked proposal backend', async () => {
     // we will use chain1 as an example here.
-    const anchor1 = signatureBridge.getAnchor(
-      localChain1.chainId,
-      ethers.utils.parseEther('1')
-    );
-    const anchor2 = signatureBridge.getAnchor(
-      localChain2.chainId,
-      ethers.utils.parseEther('1')
-    );
+    const anchor1 = signatureBridge.getVAnchor(localChain1.chainId);
+    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId);
     await anchor1.setSigner(wallet1);
     const tokenAddress = signatureBridge.getWebbTokenAddress(
       localChain1.chainId
@@ -503,8 +497,35 @@ describe.skip('Signature Bridge <> Mocked Proposal Signing Backend', function ()
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
-    // now we are ready to do the deposit.
-    await anchor1.deposit(localChain2.chainId);
+
+    // Create a deposit utxo
+    const randomKeypair = new Keypair();
+    const depositUtxo = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: (1e2).toString(),
+      originChainId: localChain1.chainId.toString(),
+      chainId: localChain2.chainId.toString(),
+      keypair: randomKeypair,
+    });
+
+    // Make the deposit transaction
+
+    const leaves = anchor1.tree
+      .elements()
+      .map((el) => hexToU8a(el.toHexString()));
+
+    await anchor1.transact(
+      [],
+      [depositUtxo],
+      {
+        [localChain1.chainId]: leaves,
+      },
+      '0',
+      '0',
+      '0'
+    );
+
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',

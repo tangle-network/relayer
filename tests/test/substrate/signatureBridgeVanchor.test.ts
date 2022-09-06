@@ -28,10 +28,6 @@ import { ethers } from 'ethers';
 import {
   WebbRelayer,
   Pallet,
-  toFixedHex,
-  convertToHexNumber,
-  toHex,
-  getChainIdType,
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -50,21 +46,23 @@ import {
   ProvingManagerSetupInput,
   ArkworksProvingManager,
   Utxo,
+  calculateTypedChainId,
+  ChainType,
+  toFixedHex,
+  ResourceId,
+  ResourceIdUpdateProposal,
+  ProposalHeader,
 } from '@webb-tools/sdk-core';
 
 import {
   encodeResourceIdUpdateProposal,
-  ResourceIdUpdateProposal,
+  SubstrateResourceIdUpdateProposal,
 } from '../../lib/substrateWebbProposals.js';
-import {
-  ChainIdType,
-  makeResourceId,
-  makeSubstrateTargetSystem,
-} from '../../lib/webbProposals.js';
 import pkg from 'secp256k1';
+import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
 const { ecdsaSign } = pkg;
 
-describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
+describe.skip('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -75,7 +73,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
   let governorWallet = new ethers.Wallet(PK1);
   // slice 0x04 from public key
   let uncompressedKey = governorWallet._signingKey().publicKey.slice(4);
-  let typedSourceChainId = getChainIdType(ChainIdType.SUBSTRATE, 1080);
+  let typedSourceChainId = calculateTypedChainId(ChainType.Substrate, 1080);
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -134,14 +132,14 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     });
 
     //force set maintainer
-    let setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(
-      Array.from(hexToU8a(uncompressedKey))
+    let setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
+      hexToU8a(uncompressedKey)
     );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
 
     //whitelist chain
     let whitelistChainCall =
-      api.tx.signatureBridge!.whitelistChain!(typedSourceChainId);
+      api.tx.signatureBridge.whitelistChain(typedSourceChainId);
     await aliceNode.sudoExecuteTransaction(whitelistChainCall);
 
     // now start the relayer
@@ -216,33 +214,26 @@ async function setResourceIdProposal(
   treeId: number,
   chainId: number
 ): Promise<SubmittableExtrinsic<'promise'>> {
-  let functionSignature = toFixedHex(0, 4);
-  let nonce = BigNumber.from(1);
-  let palletIndex = convertToHexNumber(44);
-  let callIndex = convertToHexNumber(2);
+  let functionSignature = hexToU8a('0x00000000', 32);
+  let nonce = 1;
+  let palletIndex = '0x2C';
+  let callIndex = '0x02';
   let substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
   // set resource ID
-  let resourceId = makeResourceId(
-    toHex(substrateTargetSystem, 20),
-    ChainIdType.SUBSTRATE,
+  let resourceId = new ResourceId(
+    toFixedHex(substrateTargetSystem, 20),
+    ChainType.Substrate,
     chainId
   );
-  let newResourceId = resourceId;
-  const resourceIdUpdateProposalPayload: ResourceIdUpdateProposal = {
-    header: {
-      resourceId,
-      functionSignature: functionSignature,
-      nonce: nonce.toNumber(),
-      chainIdType: ChainIdType.SUBSTRATE,
-      chainId: 1080,
-    },
-    newResourceId,
+  const proposalHeader = new ProposalHeader(resourceId, functionSignature, nonce);
+  const resourceIdUpdateProposal: SubstrateResourceIdUpdateProposal = {
+    header: proposalHeader,
+    newResourceId: resourceId.toString(),
     palletIndex,
-    callIndex,
+    callIndex
   };
-  let proposalBytes = encodeResourceIdUpdateProposal(
-    resourceIdUpdateProposalPayload
-  );
+
+  let proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
   let hash = ethers.utils.keccak256(proposalBytes);
   let msg = ethers.utils.arrayify(hash);
   // sign the message
@@ -250,9 +241,9 @@ async function setResourceIdProposal(
   let signature = new Uint8Array([...sigObj.signature, sigObj.recid]);
   // execute proposal call to handler
   let executeSetProposalCall =
-    api.tx.vAnchorHandlerBn254!.executeSetResourceProposal!(resourceId);
+    api.tx.vAnchorHandlerBn254.executeSetResourceProposal(resourceId.toU8a());
   let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
-    getChainIdType(ChainIdType.SUBSTRATE, chainId),
+    calculateTypedChainId(ChainType.Substrate, chainId),
     executeSetProposalCall,
     u8aToHex(proposalBytes),
     u8aToHex(signature)
