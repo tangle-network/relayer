@@ -333,8 +333,6 @@ async function vanchorDeposit(
     recipient: decodedAddress,
     extAmount: extAmount.toString(),
     fee: fee.toString(),
-    refund: '0',
-    token: decodedAddress
   };
 
   const data = await provingManager.prove('vanchor', setup);
@@ -342,8 +340,6 @@ async function vanchorDeposit(
     relayer: address,
     recipient: address,
     fee,
-    refund: '0',
-    token: decodedAddress,
     extAmount: extAmount,
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
@@ -399,7 +395,7 @@ async function generateVAnchorNote(
     targetChain: String(outputChainId),
     targetIdentifyingData: '1',
     tokenSymbol: 'WEBB',
-    version: 'v1',
+    version: 'v2',
     width: String(5),
   });
 
