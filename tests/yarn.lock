@@ -3279,17 +3279,7 @@
     ethers "5.7.0"
     ganache "7.4.1"
 
-"@webb-tools/tokens@0.2.5", "@webb-tools/tokens@^0.2.5":
-  version "0.2.5"
-  resolved "https://registry.yarnpkg.com/@webb-tools/tokens/-/tokens-0.2.5.tgz#9f2e1a0b284b475ac0d55779c61d2d297b389a21"
-  integrity sha512-0zO9xR6GB83WR9Vzhw42DIfW0ncrwF87aMYLlZunw84tVAx+2UabOt8qWOlZ2C4fl/W002ya4LYeFxgIfe8NwQ==
-  dependencies:
-    "@webb-tools/contracts" "^0.2.5"
-    "@webb-tools/sdk-core" "0.1.4-96"
-    "@webb-tools/utils" "^0.2.5"
-    ethers "5.5.1"
-
-"@webb-tools/tokens@^0.2.6":
+"@webb-tools/tokens@0.2.5", "@webb-tools/tokens@^0.2.5", "@webb-tools/tokens@^0.2.6":
   version "0.2.6"
   resolved "https://registry.yarnpkg.com/@webb-tools/tokens/-/tokens-0.2.6.tgz#33c84b5e27c565dab4a0f4f7bec08bdeffabd46e"
   integrity sha512-bkJ553CGmqVdbfwklRdJDe2MubNZ6LTmQUBhLIMUjLMq81bOg3q7HVsGZqIscOip2F9eDSeCeMe1/vF4fbtBeA==
