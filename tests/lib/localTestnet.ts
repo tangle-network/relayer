@@ -147,6 +147,7 @@ export class LocalChain {
         },
       },
       chainIDs: [this.chainId, otherChain.chainId],
+      // @ts-ignore
       webbTokens: webbTokens1,
     };
     const deployerConfig: DeployerConfig = {
