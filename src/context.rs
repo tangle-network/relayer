@@ -16,9 +16,9 @@
 //! # Relayer Context Module 🕸️
 //!
 //! A module for managing the context of the relayer.
-#[allow(unused)]
+#[cfg(feature = "cosmwasm")]
 use cosmrs::rpc::HttpClient;
-#[allow(unused)]
+#[cfg(feature = "cosmwasm")]
 use cosmrs::AccountId;
 use std::convert::TryFrom;
 use std::time::Duration;
