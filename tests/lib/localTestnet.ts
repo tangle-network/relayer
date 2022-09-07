@@ -497,6 +497,8 @@ export async function setupVanchorEvmTx(
     [dummyOutput1, dummyOutput2],
     extAmount,
     0,
+    0,
+    relayerWallet2.address,
     recipient,
     relayerWallet2.address,
     leavesMap
