@@ -81,6 +81,13 @@ rustup update nightly
 
 Great! Now your Rust environment is ready! 🚀🚀
 
+Lastly, install 
+
+  - [DVC](https://dvc.org/) is used for fetching large ZK files and managing them alongside git
+  - [substrate.io](https://docs.substrate.io/main-docs/install/) may require additional dependencies
+
+🚀🚀 Your environment is complete! 🚀🚀
+
 ### Installation 💻
 
 #### Unix (Linux, macOS, WSL2, ..)
@@ -298,7 +305,7 @@ Here is the basic setup you will need:
 4. While you are there, build the standalone node `cargo build --release -p webb-standalone-node`
 5. And then go back to the relayer `cd ../relayer`
 6. Run `cargo build --features integration-tests,cli`
-7. Run `cd tests && git submodule update --init --recursive`
+7. Run `cd tests && dvc pull`
 8. Run `yarn install` (in `tests` dir)
 9. `yarn test`
 

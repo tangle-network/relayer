@@ -42,6 +42,8 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 50
+      - name: Setup DVC
+        uses: iterative/setup-dvc@v1
       - name: Cache Cargo
         uses: actions/cache@v2
         with:
@@ -81,6 +83,8 @@ jobs:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 50
+      - name: Setup DVC
+        uses: iterative/setup-dvc@v1
       - name: Cache Cargo
         uses: actions/cache@v2
         with:
@@ -121,9 +125,9 @@ jobs:
         shell: bash
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: cd tests && git submodule update --init --recursive && yarn
+        run: cd tests && dvc pull && yarn
       - name: Pull Docker Images used for testing.
-        run: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:edge
+        run: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:stable
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && yarn test
