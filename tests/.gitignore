@@ -1,2 +1,4 @@
 yarn-error.log
 .env
+/solidity-fixtures
+/substrate-fixtures

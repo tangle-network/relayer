@@ -269,7 +269,7 @@ async function vanchorDeposit(
     // tests path
     gitRoot,
     'tests',
-    'protocol-substrate-fixtures',
+    'substrate-fixtures',
     'vanchor',
     'bn254',
     'x5',
