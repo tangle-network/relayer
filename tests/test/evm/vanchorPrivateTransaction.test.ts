@@ -269,6 +269,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       output.publicInputs,
       output.extData
     );
+    console.log("After withdraw");
 
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
