@@ -234,6 +234,11 @@ where
             .call()
             .await?;
 
+        let governor = contract.governor().call().await?;
+        tracing::debug!(
+            governor = ?hex::encode(governor),
+            "GOVERNOR",
+        );
         let signature_hex = hex::encode(&signature);
         if !is_signature_valid {
             tracing::warn!(

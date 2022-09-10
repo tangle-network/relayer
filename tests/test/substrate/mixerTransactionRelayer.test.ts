@@ -23,7 +23,7 @@ import {
   ArkworksProvingManager,
 } from '@webb-tools/sdk-core';
 
-describe('Substrate Mixer Transaction Relayer', function () {
+describe.skip('Substrate Mixer Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -447,7 +447,7 @@ async function createMixerWithdrawProof(
     const provingKeyPath = path.join(
       gitRoot,
       'tests',
-      'protocol-substrate-fixtures',
+      'substrate-fixtures',
       'mixer',
       'bn254',
       'x5',

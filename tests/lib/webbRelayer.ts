@@ -23,9 +23,8 @@ import {
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
-import { BigNumber, BigNumberish, ethers } from 'ethers';
+import { BigNumber } from 'ethers';
 
-import { ChainIdType } from '../lib/webbProposals.js';
 export type WebbRelayerOptions = {
   port: number;
   tmp: boolean;
@@ -645,38 +644,4 @@ function parseRelayTxMessage(o: any): ParsedRelayerMessage {
   } else {
     return { kind: 'unknown' };
   }
-}
-
-// get typed chainId
-export function getChainIdType(
-  chainType: ChainIdType,
-  chainID: number
-): number {
-  const chainIdType =
-    toFixedHex(chainType, 2) + toFixedHex(chainID, 4).substr(2);
-  return Number(BigInt(chainIdType));
-}
-
-/** BigNumber to hex string of specified length */
-export function toFixedHex(number: BigNumberish, length: number): string {
-  let result =
-    '0x' +
-    (number instanceof Buffer
-      ? number.toString('hex')
-      : BigNumber.from(number.toString()).toHexString().replace('0x', '')
-    ).padStart(length * 2, '0');
-  if (result.indexOf('-') > -1) {
-    result = '-' + result.replace('-', '');
-  }
-  return result;
-}
-export function toHex(
-  covertThis: ethers.utils.BytesLike | number | bigint,
-  padding: number
-): string {
-  return ethers.utils.hexZeroPad(ethers.utils.hexlify(covertThis), padding);
-}
-
-export function convertToHexNumber(number: number): string {
-  return BigNumber.from(number.toString()).toHexString();
 }

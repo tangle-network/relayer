@@ -361,7 +361,6 @@ where
         let (key, value) = match queue.next() {
             Some(Ok(v)) => v,
             _ => {
-                tracing::trace!("queue is empty ..");
                 return Ok(None);
             }
         };

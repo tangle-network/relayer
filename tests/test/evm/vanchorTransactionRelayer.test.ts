@@ -29,7 +29,7 @@ import {
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { u8aToHex } from '@polkadot/util';
+import { hexToU8a, u8aToHex } from '@polkadot/util';
 // const assert = require('assert');
 describe('Vanchor Transaction relayer', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -38,12 +38,14 @@ describe('Vanchor Transaction relayer', function () {
   let signatureVBridge: VBridge.VBridge;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
+  let govWallet: ethers.Wallet;
 
   let webbRelayer: WebbRelayer;
 
   before(async () => {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
+    const GOV = u8aToHex(ethers.utils.randomBytes(32));
     // first we need to start local evm node.
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
@@ -54,9 +56,9 @@ describe('Vanchor Transaction relayer', function () {
         contract: 'VAnchor',
       },
     ];
-    localChain1 = new LocalChain({
+    localChain1 = await LocalChain.init({
       port: localChain1Port,
-      chainId: 31337,
+      chainId: localChain1Port,
       name: 'Hermes',
       populatedAccounts: [
         {
@@ -72,9 +74,9 @@ describe('Vanchor Transaction relayer', function () {
     const localChain2Port = await getPort({
       port: portNumbers(3333, 4444),
     });
-    localChain2 = new LocalChain({
+    localChain2 = await LocalChain.init({
       port: localChain2Port,
-      chainId: 5002,
+      chainId: localChain2Port,
       name: 'Athena',
       populatedAccounts: [
         {
@@ -89,6 +91,7 @@ describe('Vanchor Transaction relayer', function () {
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
+    govWallet = new ethers.Wallet(GOV, localChain2.provider());
     // Deploy the token.
     const localToken1 = await localChain1.deployToken(
       'Webb Token',
@@ -106,7 +109,11 @@ describe('Vanchor Transaction relayer', function () {
       localToken1,
       localToken2,
       wallet1,
-      wallet2
+      wallet2,
+      {
+        [localChain1.chainId]: govWallet.address,
+        [localChain2.chainId]: govWallet.address,
+      }
     );
 
     // save the chain configs.
@@ -130,7 +137,8 @@ describe('Vanchor Transaction relayer', function () {
       tokenAddress,
       wallet1
     );
-    await token.approveSpending(vanchor1.contract.address);
+    let tx = await token.approveSpending(vanchor1.contract.address);
+    await tx.wait();
     await token.mintTokens(
       wallet1.address,
       ethers.utils.parseEther('100000000000000000000000')
@@ -147,7 +155,8 @@ describe('Vanchor Transaction relayer', function () {
       wallet2
     );
 
-    await token2.approveSpending(vanchor2.contract.address);
+    tx = await token2.approveSpending(vanchor2.contract.address);
+    await tx.wait();
     await token2.mintTokens(
       wallet2.address,
       ethers.utils.parseEther('100000000000000000000000')
@@ -202,7 +211,20 @@ describe('Vanchor Transaction relayer', function () {
         chainId: localChain1.chainId.toString(),
       });
 
-      await signatureVBridge.transact([], [depositUtxo], 0, '0', '0', wallet1);
+      const leaves = vanchor1.tree
+        .elements()
+        .map((el) => hexToU8a(el.toHexString()));
+
+      await vanchor1.transact(
+        [],
+        [depositUtxo],
+        {
+          [localChain1.chainId]: leaves,
+        },
+        '0',
+        '0',
+        '0'
+      );
     }
 
     // now we wait for all deposits to be saved in LeafStorageCache
