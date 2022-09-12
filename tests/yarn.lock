@@ -3181,7 +3181,7 @@
     "@webb-tools/utils" "^0.2.5"
     ethers "5.5.1"
 
-"@webb-tools/tokens@^0.2.6":
+"@webb-tools/tokens@0.2.6", "@webb-tools/tokens@^0.2.6":
   version "0.2.6"
   resolved "https://registry.yarnpkg.com/@webb-tools/tokens/-/tokens-0.2.6.tgz#33c84b5e27c565dab4a0f4f7bec08bdeffabd46e"
   integrity sha512-bkJ553CGmqVdbfwklRdJDe2MubNZ6LTmQUBhLIMUjLMq81bOg3q7HVsGZqIscOip2F9eDSeCeMe1/vF4fbtBeA==
