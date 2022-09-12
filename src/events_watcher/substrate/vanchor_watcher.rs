@@ -22,7 +22,6 @@ use std::sync::Arc;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
 use webb::substrate::{protocol_substrate_runtime, subxt};
-use webb_proposals::substrate::AnchorUpdateProposal;
 
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
 pub struct SubstrateVAnchorWatcher<B> {
@@ -78,7 +77,6 @@ where
         );
         let chain_id =
             api.constants().linkable_tree_bn254().chain_identifier()?;
-        let src_chain_id: u32 = 1080;
         let at_hash = api
             .storage()
             .system()
@@ -105,9 +103,6 @@ where
         let root = tree.root;
         let latest_leaf_index = tree.leaf_count;
         let tree_id = event.tree_id;
-        let nonce = webb_proposals::Nonce::new(latest_leaf_index);
-        let function_signature =
-            webb_proposals::FunctionSignature::new([0, 0, 0, 2]);
         let src_chain_id =
             webb_proposals::TypedChainId::Substrate(chain_id as u32);
         let target = webb_proposals::SubstrateTargetSystem::builder()
@@ -130,7 +125,7 @@ where
                 _ => unreachable!("unsupported"),
             };
 
-            let proposal_handled = match target_resource_id.target_system() {
+            let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
                         merkle_root,

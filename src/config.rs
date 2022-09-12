@@ -938,7 +938,7 @@ fn postloading_process(
                                             );
                                         }
                                     }
-                                    LinkedAnchorConfig::Raw(target) => {}
+                                    LinkedAnchorConfig::Raw(_) => {}
                                 }
                             }
                         }

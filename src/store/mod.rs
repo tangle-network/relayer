@@ -60,39 +60,14 @@ pub enum HistoryStoreKey {
 /// It is a combination of the Chain ID and the target system of the Bridge system.
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct BridgeKey {
-    /// The Target System of this Bridge key.
-    pub target_system: webb_proposals::TargetSystem,
     /// The Chain ID of this Bridge key.
     pub chain_id: webb_proposals::TypedChainId,
-}
-/// A way to convert an arbitrary type to a TargetSystem.
-pub trait IntoTargetSystem {
-    /// Consumes Self and returns a TargetSystem.
-    fn into_target_system(self) -> webb_proposals::TargetSystem;
 }
 
 /// A way to convert an arbitrary type to a TypedChainId.
 pub trait IntoTypedChainId {
     /// Consumes Self and returns a TypedChainId.
     fn into_typed_chain_id(self) -> webb_proposals::TypedChainId;
-}
-
-impl IntoTargetSystem for webb_proposals::TargetSystem {
-    fn into_target_system(self) -> webb_proposals::TargetSystem {
-        self
-    }
-}
-
-impl IntoTargetSystem for types::Address {
-    fn into_target_system(self) -> webb_proposals::TargetSystem {
-        webb_proposals::TargetSystem::new_contract_address(self)
-    }
-}
-
-impl IntoTargetSystem for webb_proposals::SubstrateTargetSystem {
-    fn into_target_system(self) -> webb_proposals::TargetSystem {
-        webb_proposals::TargetSystem::Substrate(self)
-    }
 }
 
 impl IntoTypedChainId for webb_proposals::TypedChainId {
@@ -115,23 +90,19 @@ impl IntoTypedChainId for u32 {
 
 impl BridgeKey {
     /// Creates new BridgeKey from a TargetSystem and a ChainId.
-    pub fn new<TargetSystem, ChainId>(
-        target_system: TargetSystem,
+    pub fn new<ChainId>(
         chain_id: ChainId,
     ) -> Self
     where
-        TargetSystem: IntoTargetSystem,
         ChainId: IntoTypedChainId,
     {
         Self {
-            target_system: target_system.into_target_system(),
             chain_id: chain_id.into_typed_chain_id(),
         }
     }
     /// Creates new BridgeKey from ResourceId
     pub fn from_resource_id(resource_id: webb_proposals::ResourceId) -> Self {
         Self {
-            target_system: resource_id.target_system(),
             chain_id: resource_id.typed_chain_id()
         }
     }
@@ -192,7 +163,7 @@ impl Display for HistoryStoreKey {
 
 impl Display for BridgeKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Bridge({:?}, {:?})", self.chain_id, self.target_system)
+        write!(f, "Bridge({:?})", self.chain_id)
     }
 }
 

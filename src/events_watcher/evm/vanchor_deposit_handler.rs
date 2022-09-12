@@ -22,7 +22,7 @@ use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-use webb_proposals::evm::AnchorUpdateProposal;
+
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {
@@ -100,8 +100,6 @@ where
         let chain_id = client.get_chainid().await?;
         let root = wrapper.contract.get_last_root().call().await?;
         let leaf_index = event_data.index.as_u32();
-        let function_signature = [141, 9, 22, 157];
-        let nonce = leaf_index;
         let src_chain_id = webb_proposals::TypedChainId::Evm(chain_id.as_u32());
         let src_target_system =
             webb_proposals::TargetSystem::new_contract_address(
@@ -130,7 +128,7 @@ where
                 _ => unreachable!("unsupported"),
             };
 
-            let proposal_handled = match target_resource_id.target_system() {
+            let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
                         root,

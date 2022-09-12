@@ -561,9 +561,8 @@ fn start_dkg_proposal_handler(
     );
     let node_name2 = node_name.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
-    let webb_config = ctx.config.clone();
     let task = async move {
-        let proposal_handler = ProposalHandlerWatcher::new(webb_config);
+        let proposal_handler = ProposalHandlerWatcher::default();
         let watcher = proposal_handler.run(node_name, chain_id, client, store);
         tokio::select! {
             _ = watcher => {

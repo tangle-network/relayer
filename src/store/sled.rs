@@ -287,9 +287,8 @@ impl QueueKey for SledQueueKey {
                 format!("substrate_tx_{}", chain_id)
             }
             Self::BridgeCmd { bridge_key, .. } => format!(
-                "bridge_cmd_{}_{}",
-                bridge_key.chain_id.chain_id(),
-                hex::encode(bridge_key.target_system.to_bytes())
+                "bridge_cmd_{}",
+                bridge_key.chain_id.chain_id()
             ),
         }
     }

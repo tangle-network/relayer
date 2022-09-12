@@ -33,7 +33,6 @@ import {
   Contract,
   EnabledContracts,
   EventsWatcher,
-  EvmLinkedAnchor,
   FeaturesConfig,
   LinkedAnchor,
   ProposalSigningBackend,
@@ -54,6 +53,7 @@ export type ExportedConfigOptions = {
   features?: FeaturesConfig;
   withdrawConfig?: WithdrawConfig;
   relayerWallet?: Wallet;
+  linkedAnchors?: LinkedAnchor[];
 };
 
 // Default Events watcher for the contracts.
@@ -123,6 +123,82 @@ export class LocalChain {
     wallet: ethers.Wallet
   ): Promise<MintableToken> {
     return MintableToken.createToken(name, symbol, wallet);
+  }
+  public async deployVBridge(
+    localToken: MintableToken,
+    localWallet: ethers.Wallet,
+  ): Promise<VBridge.VBridge> {
+    const gitRoot = child
+      .execSync('git rev-parse --show-toplevel')
+      .toString()
+      .trim();
+    let webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
+    webbTokens1.set(this.chainId, null!);
+    const vBridgeInput: VBridge.VBridgeInput = {
+      vAnchorInputs: {
+        asset: {
+          [this.chainId]: [localToken.contract.address],
+        },
+      },
+      chainIDs: [this.chainId],
+      webbTokens: webbTokens1,
+    };
+    const deployerConfig: DeployerConfig = {
+      [this.chainId]: localWallet,
+    };
+    const deployerGovernors: GovernorConfig = {
+      [this.chainId]: localWallet.address,
+    };
+
+    const witnessCalculatorCjsPath_2 = path.join(
+      gitRoot,
+      'tests',
+      'solidity-fixtures/vanchor_2/2/witness_calculator.cjs'
+    );
+
+    const witnessCalculatorCjsPath_16 = path.join(
+      gitRoot,
+      'tests',
+      'solidity-fixtures/vanchor_16/2/witness_calculator.cjs'
+    );
+
+    const zkComponents_2 = await fetchComponentsFromFilePaths(
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm'
+      ),
+      witnessCalculatorCjsPath_2,
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_2/2/circuit_final.zkey'
+      )
+    );
+
+    const zkComponents_16 = await fetchComponentsFromFilePaths(
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm'
+      ),
+      witnessCalculatorCjsPath_16,
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_16/2/circuit_final.zkey'
+      )
+    );
+
+    const vBridge = await VBridge.VBridge.deployVariableAnchorBridge(
+      vBridgeInput,
+      deployerConfig,
+      deployerGovernors,
+      zkComponents_2,
+      zkComponents_16
+    );
+
+    return vBridge;
   }
 
   public async deploySignatureVBridge(
@@ -209,117 +285,30 @@ export class LocalChain {
 
     this.signatureVBridge = vBridge;
 
-  public async deploySignatureBridge(
-    otherChain: LocalChain,
-    localToken: MintableToken,
-    otherToken: MintableToken,
-    localWallet: ethers.Wallet,
-    otherWallet: ethers.Wallet,
-    initialGovernors?: GovernorConfig
-  ): Promise<Bridges.SignatureBridge> {
-    const gitRoot = child
-      .execSync('git rev-parse --show-toplevel')
-      .toString()
-      .trim();
-    localWallet.connect(this.provider());
-    otherWallet.connect(otherChain.provider());
-    const bridgeInput: BridgeInput = {
-      anchorInputs: {
-        asset: {
-          [this.chainId]: [localToken.contract.address],
-          [otherChain.chainId]: [otherToken.contract.address],
-        },
-        anchorSizes: [ethers.utils.parseEther('1')],
-      },
-      chainIDs: [this.chainId, otherChain.chainId],
-    };
-    const deployerConfig: DeployerConfig = {
-      [this.chainId]: localWallet,
-      [otherChain.chainId]: otherWallet,
-    };
-    const defaultInitialGovernors: GovernorConfig = initialGovernors ?? {
-      [this.chainId]: localWallet,
-      [otherChain.chainId]: otherWallet,
-    };
-    const witnessCalculatorCjsPath = path.join(
-      gitRoot,
-      'tests',
-      'protocol-solidity-fixtures/fixtures/anchor/2/witness_calculator.cjs'
-    );
-    const zkComponents = await fetchComponentsFromFilePaths(
-      path.join(
-        gitRoot,
-        'tests',
-        'protocol-solidity-fixtures/fixtures/anchor/2/poseidon_anchor_2.wasm'
-      ),
-      witnessCalculatorCjsPath,
-      path.join(
-        gitRoot,
-        'tests',
-        'protocol-solidity-fixtures/fixtures/anchor/2/circuit_final.zkey'
-      )
-    );
+    if (initialGovernors) {
+      const govEntries = Object.entries(initialGovernors);
 
-    const val = await Bridges.SignatureBridge.deployFixedDepositBridge(
-      bridgeInput,
-      deployerConfig,
-      defaultInitialGovernors,
-      zkComponents
-    );
-    this.signatureBridge = val;
-    return val;
-  }
-
-  private async getAnchorChainConfig(
-    opts: ExportedConfigOptions
-  ): Promise<FullChainInfo> {
-    const bridge = opts.signatureBridge ?? this.signatureBridge;
-    if (!bridge) {
-      throw new Error('Signature bridge not deployed yet');
+      for (const entry of govEntries) {
+        const chainBridgeSide = this.signatureVBridge.getVBridgeSide(
+          Number(entry[0])
+        );
+        console.log('entry: ', entry);
+        console.log(await chainBridgeSide.contract.signer.getAddress());
+        const nonce = await chainBridgeSide.contract.proposalNonce();
+        while (true) {
+          try {
+            let tx = await chainBridgeSide.transferOwnership(
+              entry[1],
+              nonce.toNumber()
+            );
+            await tx.wait();
+            break;
+          } catch (e) {
+            console.log(e);
+          }
+        }
+      }
     }
-    const localAnchor = bridge.getAnchor(
-      this.chainId,
-      ethers.utils.parseEther('1')
-    );
-    const side = bridge.getBridgeSide(this.chainId);
-    const wallet = side.governor;
-    const otherChainIds = Array.from(bridge.bridgeSides.keys()).filter(
-      (chainId) => chainId !== this.chainId
-    );
-
-    const otherAnchors = otherChainIds.map((chainId) =>
-      bridge.getAnchor(chainId, ethers.utils.parseEther('1'))
-    );
-
-    let contracts: Contract[] = [
-      // first the local Anchor
-      {
-        contract: 'Anchor',
-        address: localAnchor.getAddress(),
-        deployedAt: 1,
-        size: 1, // Ethers
-        proposalSigningBackend: opts.proposalSigningBackend,
-        withdrawConfig: opts.withdrawConfig,
-        eventsWatcher: defaultEventsWatcherValue,
-        linkedAnchors: await Promise.all(
-          otherAnchors.map(async (anchor) => {
-            const chainId = await anchor.contract.getChainId();
-            let linkedAnchor: EvmLinkedAnchor = {
-              chainId: chainId.toString(),
-              address: anchor.getAddress(),
-              type: 'Evm',
-            };
-            return linkedAnchor;
-          })
-        ),
-      },
-      {
-        contract: 'SignatureBridge',
-        address: side.contract.address,
-        deployedAt: 1,
-        eventsWatcher: defaultEventsWatcherValue,
-      },
-    ];
 
     return vBridge;
   }
@@ -354,17 +343,7 @@ export class LocalChain {
           pollingInterval: 1000,
           printProgressInterval: 60_000,
         },
-        linkedAnchors: await Promise.all(
-          otherAnchors.map(async (anchor) => {
-            const chainId = await anchor.contract.getChainId();
-            let linkedAnchor: EvmLinkedAnchor = {
-              chainId: chainId.toString(),
-              address: anchor.getAddress(),
-              type: 'Evm',
-            };
-            return linkedAnchor;
-          })
-        ),
+        linkedAnchors: opts.linkedAnchors,
       },
       {
         contract: 'SignatureBridge',

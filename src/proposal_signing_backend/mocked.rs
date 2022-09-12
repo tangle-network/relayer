@@ -8,7 +8,7 @@ use typed_builder::TypedBuilder;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::utils::keccak256;
-use webb_proposals::{ProposalTrait, ResourceId, TargetSystem, TypedChainId};
+use webb_proposals::{ProposalTrait, ResourceId, TypedChainId};
 
 /// A ProposalSigningBackend that uses the Governor's private key to sign proposals.
 #[derive(TypedBuilder)]
@@ -61,13 +61,12 @@ where
         // Read more here: https://bit.ly/3rqNYTU
         // we will use chain_id as tree_id to ensure we have one brige key
         let resorce_id = proposal.header().resource_id();
-        let target_system = resorce_id.target_system();
         let dest_chain_id = resorce_id.typed_chain_id();
         let signer = self.signer(dest_chain_id)?;
         let proposal_bytes = proposal.to_vec();
         let hash = keccak256(&proposal_bytes);
         let signature = signer.sign_hash(H256::from(hash));
-        let bridge_key = BridgeKey::new(target_system, dest_chain_id);
+        let bridge_key = BridgeKey::new(dest_chain_id);
         tracing::debug!(
             %bridge_key,
             proposal = ?hex::encode(&proposal.to_vec()),

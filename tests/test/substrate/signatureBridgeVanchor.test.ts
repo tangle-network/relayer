@@ -70,9 +70,11 @@ describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocke
 
   // Governer key
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
+  let check  = new Uint8Array([0,0,0,2])
+  console.log(u8aToHex(check));
   let governorWallet = new ethers.Wallet(PK1);
   // slice 0x04 from public key
-  let uncompressedKey = governorWallet._signingKey().publicKey.slice(4);
+  let uncompressedKey = governorWallet._signingKey().publicKey.toString().slice(4);
   let typedSourceChainId = calculateTypedChainId(ChainType.Substrate, 1080);
 
   before(async () => {
@@ -81,7 +83,7 @@ describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocke
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../../protocol-substrate/target/release/webb-standalone-node'
+            '../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -117,17 +119,16 @@ describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocke
     await api.isReady;
 
     let chainId = await aliceNode.getChainId();
-    let palletIndex = convertToHexNumber(44);
+    let palletIndex = '0x2D';
     let substrateTargetSystem = makeSubstrateTargetSystem(6, palletIndex);
-    // resource ID1
-    let resourceId1 = makeResourceId(
-      toHex(substrateTargetSystem, 20),
-      ChainIdType.SUBSTRATE,
+    // set resource ID
+    let resourceId = new ResourceId(
+      toFixedHex(substrateTargetSystem, 20),
+      ChainType.Substrate,
       chainId
     );
-    let res: `0x${string}` = `0x${resourceId1.slice(2)}`;
-    console.log('this ia resource : {}', res);
-
+    let res: `0x${string}` = `0x${resourceId.toString().slice(2)}`;
+    
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
@@ -135,9 +136,9 @@ describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocke
       linkedAnchors: [{ type: 'Raw', resourceId: res }],
     });
 
-    //force set maintainer
-    let setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
-      hexToU8a(uncompressedKey)
+    // force set maintainer
+    let setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(
+      `0x${uncompressedKey}`
     );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
 
@@ -169,7 +170,7 @@ describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocke
 
     // chainId
     let chainId = await aliceNode.getChainId();
-
+    console.log("step1");
     // now we set resource through proposal execution
     let setResourceIdProposalCall = await setResourceIdProposal(
       api,
@@ -218,9 +219,9 @@ async function setResourceIdProposal(
   treeId: number,
   chainId: number
 ): Promise<SubmittableExtrinsic<'promise'>> {
-  let functionSignature = hexToU8a('0x00000000', 32);
+  let functionSignature = hexToU8a('0x00000002', 32);
   let nonce = 1;
-  let palletIndex = '0x2C';
+  let palletIndex = '0x2D';
   let callIndex = '0x02';
   let substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
   // set resource ID
@@ -235,6 +236,7 @@ async function setResourceIdProposal(
     newResourceId: resourceId.toString(),
     palletIndex,
     callIndex
+    
   };
 
   let proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);

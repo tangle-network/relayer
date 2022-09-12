@@ -14,10 +14,6 @@
 //
 use webb_proposals::ProposalTrait;
 use crate::proposal_signing_backend::ProposalSigningBackend;
-use webb::evm::contract::protocol_solidity::variable_anchor::v_anchor_contract::NewCommitmentFilter;
-use webb::substrate::{protocol_substrate_runtime, subxt};
-use std::sync::Arc;
-use webb::substrate::scale::Encode;
 
 pub async fn handle_proposal<P>(
     proposal: &(impl ProposalTrait + Sync + Send + 'static),
