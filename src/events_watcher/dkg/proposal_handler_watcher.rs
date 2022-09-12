@@ -68,16 +68,20 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
                 None
             }
             TypedChainId::Evm(id) => {
-                tracing::trace!("`ProposalSigned` Event with evm chain id : {}", id);
-                Some(BridgeKey::new(
-                    webb_proposals::TypedChainId::Evm(id),
-                ))
+                tracing::trace!(
+                    "`ProposalSigned` Event with evm chain id : {}",
+                    id
+                );
+                Some(BridgeKey::new(webb_proposals::TypedChainId::Evm(id)))
             }
             TypedChainId::Substrate(id) => {
-                tracing::trace!("`ProposalSigned` Event with substrate chain id : {}", id);
-                Some(BridgeKey::new(
-                    webb_proposals::TypedChainId::Substrate(id),
-                ))
+                tracing::trace!(
+                    "`ProposalSigned` Event with substrate chain id : {}",
+                    id
+                );
+                Some(BridgeKey::new(webb_proposals::TypedChainId::Substrate(
+                    id,
+                )))
             }
             TypedChainId::PolkadotParachain(_) => {
                 tracing::warn!("Unhandled `ProposalSigned` Event with polkadot parachain chain id");

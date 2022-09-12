@@ -25,10 +25,7 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { ethers } from 'ethers';
-import {
-  WebbRelayer,
-  Pallet,
-} from '../../lib/webbRelayer.js';
+import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import {
@@ -50,7 +47,6 @@ import {
   ChainType,
   toFixedHex,
   ResourceId,
-  ResourceIdUpdateProposal,
   ProposalHeader,
 } from '@webb-tools/sdk-core';
 
@@ -62,7 +58,7 @@ import pkg from 'secp256k1';
 import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
 const { ecdsaSign } = pkg;
 
-describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
+describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -70,11 +66,12 @@ describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocke
 
   // Governer key
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
-  let check  = new Uint8Array([0,0,0,2])
-  console.log(u8aToHex(check));
   let governorWallet = new ethers.Wallet(PK1);
   // slice 0x04 from public key
-  let uncompressedKey = governorWallet._signingKey().publicKey.toString().slice(4);
+  let uncompressedKey = governorWallet
+    ._signingKey()
+    .publicKey.toString()
+    .slice(4);
   let typedSourceChainId = calculateTypedChainId(ChainType.Substrate, 1080);
 
   before(async () => {
@@ -128,7 +125,7 @@ describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocke
       chainId
     );
     let res: `0x${string}` = `0x${resourceId.toString().slice(2)}`;
-    
+
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
@@ -170,7 +167,7 @@ describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocke
 
     // chainId
     let chainId = await aliceNode.getChainId();
-    console.log("step1");
+    console.log('step1');
     // now we set resource through proposal execution
     let setResourceIdProposalCall = await setResourceIdProposal(
       api,
@@ -230,13 +227,16 @@ async function setResourceIdProposal(
     ChainType.Substrate,
     chainId
   );
-  const proposalHeader = new ProposalHeader(resourceId, functionSignature, nonce);
+  const proposalHeader = new ProposalHeader(
+    resourceId,
+    functionSignature,
+    nonce
+  );
   const resourceIdUpdateProposal: SubstrateResourceIdUpdateProposal = {
     header: proposalHeader,
     newResourceId: resourceId.toString(),
     palletIndex,
-    callIndex
-    
+    callIndex,
   };
 
   let proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
@@ -316,6 +316,7 @@ async function vanchorDeposit(
   const address = account.address;
   const extAmount = currencyToUnitI128(10);
   const fee = 0;
+  const refund = 0;
   // Empty leaves
   leavesMap[outputChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);
@@ -339,6 +340,8 @@ async function vanchorDeposit(
     recipient: decodedAddress,
     extAmount: extAmount.toString(),
     fee: fee.toString(),
+    refund: String(refund),
+    token: decodedAddress,
   };
 
   const data = await provingManager.prove('vanchor', setup);
@@ -346,6 +349,8 @@ async function vanchorDeposit(
     relayer: address,
     recipient: address,
     fee,
+    refund: String(refund),
+    token: decodedAddress,
     extAmount: extAmount,
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),

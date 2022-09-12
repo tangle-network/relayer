@@ -286,10 +286,9 @@ impl QueueKey for SledQueueKey {
             Self::SubstrateTx { chain_id, .. } => {
                 format!("substrate_tx_{}", chain_id)
             }
-            Self::BridgeCmd { bridge_key, .. } => format!(
-                "bridge_cmd_{}",
-                bridge_key.chain_id.chain_id()
-            ),
+            Self::BridgeCmd { bridge_key, .. } => {
+                format!("bridge_cmd_{}", bridge_key.chain_id.chain_id())
+            }
         }
     }
 

@@ -23,7 +23,8 @@ import {
   IVariableAnchorExtData,
   IVariableAnchorPublicInputs,
 } from '@webb-tools/interfaces';
-import { MintableToken, GovernedTokenWrapper } from '@webb-tools/tokens';
+import { MintableToken } from '@webb-tools/tokens';
+import { GovernedTokenWrapper } from '@webb-tools/bridges/node_modules/@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import { LocalEvmChain } from '@webb-tools/test-utils';
 import path from 'path';
@@ -127,6 +128,7 @@ export class LocalChain {
   public async deployVBridge(
     localToken: MintableToken,
     localWallet: ethers.Wallet,
+    initialGovernor: ethers.Wallet
   ): Promise<VBridge.VBridge> {
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
@@ -147,7 +149,7 @@ export class LocalChain {
       [this.chainId]: localWallet,
     };
     const deployerGovernors: GovernorConfig = {
-      [this.chainId]: localWallet.address,
+      [this.chainId]: initialGovernor.address,
     };
 
     const witnessCalculatorCjsPath_2 = path.join(
@@ -213,7 +215,10 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    let webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
+    let webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
+      number,
+      GovernedTokenWrapper | undefined
+    >();
     webbTokens1.set(this.chainId, null!);
     webbTokens1.set(otherChain.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {
@@ -326,9 +331,7 @@ export class LocalChain {
     const otherChainIds = Array.from(bridge.vBridgeSides.keys()).filter(
       (chainId) => chainId !== this.chainId
     );
-    const otherAnchors = otherChainIds.map((chainId) =>
-      bridge.getVAnchor(chainId)
-    );
+
     let contracts: Contract[] = [
       // first the local Anchor
       {
@@ -461,25 +464,25 @@ export class LocalChain {
             contract.eventsWatcher.printProgressInterval,
         },
         'linked-anchors': contract?.linkedAnchors?.map((anchor: LinkedAnchor) =>
-            anchor.type === 'Evm'
-              ? {
-                  'chain-id': anchor.chainId,
-                  type: 'Evm',
-                  address: anchor.address,
-                }
-              : anchor.type === 'Substrate'
-              ? {
-                  type: 'Substrate',
-                  'chain-id': anchor.chainId,
-                  tree: anchor.tree,
-                  call: anchor.call,
-                  pallet: anchor.pallet,
-                }
-              : {
-                  type: 'Raw',
-                  'resource-id': anchor.resourceId,
-                }
-          ),
+          anchor.type === 'Evm'
+            ? {
+                'chain-id': anchor.chainId,
+                type: 'Evm',
+                address: anchor.address,
+              }
+            : anchor.type === 'Substrate'
+            ? {
+                type: 'Substrate',
+                'chain-id': anchor.chainId,
+                tree: anchor.tree,
+                call: anchor.call,
+                pallet: anchor.pallet,
+              }
+            : {
+                type: 'Raw',
+                'resource-id': anchor.resourceId,
+              }
+        ),
       })),
     };
     const fullConfigFile: FullConfigFile = {
@@ -493,6 +496,7 @@ export class LocalChain {
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);
+    console.log(configString);
     fs.writeFileSync(path, configString);
   }
 }
@@ -580,6 +584,8 @@ export async function setupVanchorEvmTx(
     [dummyOutput1, dummyOutput2],
     extAmount,
     0,
+    0,
+    relayerWallet2.address,
     recipient,
     relayerWallet2.address,
     leavesMap

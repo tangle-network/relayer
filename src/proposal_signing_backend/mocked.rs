@@ -45,7 +45,7 @@ where
 {
     async fn can_handle_proposal(
         &self,
-        proposal:&(impl ProposalTrait + Sync + Send + 'static),
+        proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> crate::Result<bool> {
         let resorce_id = proposal.header().resource_id();
         let known_bridge = self.signature_bridges.contains(&resorce_id);

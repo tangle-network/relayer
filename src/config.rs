@@ -31,12 +31,12 @@
 //!
 //! Checkout [config](./config) for useful default configurations for many networks.
 //! These config files can be changed to your preferences.
-use std::path::PathBuf;
+use ethereum_types::{Address, H256, U256};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::path::PathBuf;
 use std::str::FromStr;
-use ethereum_types::{Address,H256, U256};
-use serde::{Deserialize, Serialize};
 use webb::substrate::subxt::sp_core::sr25519::Public;
 
 use crate::types::cw_chain_id::CWChainId;

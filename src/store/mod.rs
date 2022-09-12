@@ -90,9 +90,7 @@ impl IntoTypedChainId for u32 {
 
 impl BridgeKey {
     /// Creates new BridgeKey from a TargetSystem and a ChainId.
-    pub fn new<ChainId>(
-        chain_id: ChainId,
-    ) -> Self
+    pub fn new<ChainId>(chain_id: ChainId) -> Self
     where
         ChainId: IntoTypedChainId,
     {
@@ -103,7 +101,7 @@ impl BridgeKey {
     /// Creates new BridgeKey from ResourceId
     pub fn from_resource_id(resource_id: webb_proposals::ResourceId) -> Self {
         Self {
-            chain_id: resource_id.typed_chain_id()
+            chain_id: resource_id.typed_chain_id(),
         }
     }
 }

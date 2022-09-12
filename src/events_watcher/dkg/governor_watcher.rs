@@ -104,9 +104,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
                 }
                 _ => None,
             })
-            .map(|(chain_id, address)| {
-                BridgeKey::new(U256::from(chain_id))
-            });
+            .map(|(chain_id, address)| BridgeKey::new(U256::from(chain_id)));
         // now we just signal every signature bridge to transfer the ownership.
         for bridge_key in bridge_keys {
             tracing::debug!(

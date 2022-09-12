@@ -30,6 +30,6 @@ pub trait ProposalSigningBackend {
     /// Send the Unsigned Proposal to the backend to start handling the signing process.
     async fn handle_proposal(
         &self,
-        proposal:&(impl ProposalTrait + Sync + Send + 'static),
+        proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> crate::Result<()>;
 }

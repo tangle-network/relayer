@@ -19,11 +19,10 @@
 
 // /**
 //  * Deploy VBridge with single Chain
-//  * Run Substrate node 
+//  * Run Substrate node
 //  * create new vanchor for substrate
-//  * Deposit 
+//  * Deposit
 //  */
-
 
 // import { expect } from 'chai';
 // import { Tokens, VBridge } from '@webb-tools/protocol-solidity';

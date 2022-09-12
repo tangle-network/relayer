@@ -6,7 +6,6 @@ use webb::substrate::{dkg_runtime, subxt};
 use webb_proposals::{ProposalTrait};
 use webb::substrate::scale::{Encode, Decode};
 
-
 type DkgConfig = subxt::DefaultConfig;
 type DkgRuntimeApi = dkg_runtime::api::RuntimeApi<
     DkgConfig,

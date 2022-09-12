@@ -23,7 +23,6 @@ use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 
-
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {
     proposal_signing_backend: B,
@@ -134,7 +133,7 @@ where
                         root,
                         leaf_index,
                         target_resource_id,
-                        src_resource_id
+                        src_resource_id,
                     );
                     proposal_handler::handle_proposal(
                         &proposal,
@@ -148,7 +147,7 @@ where
                             root,
                             leaf_index,
                             target_resource_id,
-                            src_resource_id
+                            src_resource_id,
                         );
                     proposal_handler::handle_proposal(
                         &proposal,

@@ -223,6 +223,7 @@ describe('Vanchor Transaction relayer', function () {
         },
         '0',
         '0',
+        '0',
         '0'
       );
     }

@@ -213,8 +213,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   ): Promise<void> {
     const config = await this.exportConfig(opts);
     // don't mind my typescript typing here XD
-    type ConvertedLinkedAnchor =
-      ConvertToKebabCase<LinkedAnchor>;
+    type ConvertedLinkedAnchor = ConvertToKebabCase<LinkedAnchor>;
     type ConvertedPallet = Omit<
       ConvertToKebabCase<Pallet>,
       'events-watcher' | 'proposal-signing-backend' | 'linked-anchors'
@@ -263,26 +262,26 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
                 }
               : undefined,
 
-              'linked-anchors': c.linkedAnchors?.map((anchor: LinkedAnchor) =>
-              anchor.type === 'Evm'
-                ? {
-                    'chain-id': anchor.chainId,
-                    type: 'Evm',
-                    address: anchor.address,
-                  }
-                : anchor.type === 'Substrate'
-                ? {
-                    type: 'Substrate',
-                    'chain-id': anchor.chainId,
-                    tree: anchor.tree,
-                    call: anchor.call,
-                    pallet: anchor.pallet,
-                  }
-                : {
-                    type: 'Raw',
-                    'resource-id': anchor.resourceId,
-                  }
-            ),
+          'linked-anchors': c.linkedAnchors?.map((anchor: LinkedAnchor) =>
+            anchor.type === 'Evm'
+              ? {
+                  'chain-id': anchor.chainId,
+                  type: 'Evm',
+                  address: anchor.address,
+                }
+              : anchor.type === 'Substrate'
+              ? {
+                  type: 'Substrate',
+                  'chain-id': anchor.chainId,
+                  tree: anchor.tree,
+                  call: anchor.call,
+                  pallet: anchor.pallet,
+                }
+              : {
+                  type: 'Raw',
+                  'resource-id': anchor.resourceId,
+                }
+          ),
         };
         return convertedPallet;
       }),

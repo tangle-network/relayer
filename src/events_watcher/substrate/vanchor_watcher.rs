@@ -131,9 +131,13 @@ where
                         merkle_root,
                         latest_leaf_index,
                         target_resource_id,
-                        src_resource_id
+                        src_resource_id,
                     );
-                    proposal_handler::handle_proposal(&proposal, &self.proposal_signing_backend).await
+                    proposal_handler::handle_proposal(
+                        &proposal,
+                        &self.proposal_signing_backend,
+                    )
+                    .await
                 }
                 webb_proposals::TargetSystem::Substrate(_) => {
                     let proposal =
@@ -141,9 +145,13 @@ where
                             merkle_root,
                             latest_leaf_index,
                             target_resource_id,
-                            src_resource_id
+                            src_resource_id,
                         );
-                    proposal_handler::handle_proposal(&proposal, &self.proposal_signing_backend).await
+                    proposal_handler::handle_proposal(
+                        &proposal,
+                        &self.proposal_signing_backend,
+                    )
+                    .await
                 }
             };
         }

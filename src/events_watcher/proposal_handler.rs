@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use webb_proposals::ProposalTrait;
 use crate::proposal_signing_backend::ProposalSigningBackend;
+use webb::evm::contract::protocol_solidity::v_anchor_contract;
+use webb::evm::ethers::prelude::EthCall;
+use webb_proposals::ProposalTrait;
 
 pub async fn handle_proposal<P>(
     proposal: &(impl ProposalTrait + Sync + Send + 'static),
@@ -43,17 +45,21 @@ pub fn evm_anchor_update_proposal(
     target_resource_id: webb_proposals::ResourceId,
     src_resource_id: webb_proposals::ResourceId,
 ) -> webb_proposals::evm::AnchorUpdateProposal {
-    let function_signature = [141, 9, 22, 157];
+    let function_signature_bytes =
+        v_anchor_contract::UpdateEdgeCall::selector().to_vec();
+    let mut buf = [0u8; 4];
+    buf.copy_from_slice(&function_signature_bytes);
+    let function_signature = webb_proposals::FunctionSignature::from(buf);
     let nonce = leaf_index;
     let header = webb_proposals::ProposalHeader::new(
         target_resource_id,
-        function_signature.into(),
+        function_signature,
         nonce.into(),
     );
     let proposal = webb_proposals::evm::AnchorUpdateProposal::new(
         header,
         merkle_root,
-        src_resource_id
+        src_resource_id,
     );
     return proposal;
 }
@@ -65,9 +71,9 @@ pub fn substrate_anchor_update_propsoal(
     target_resource_id: webb_proposals::ResourceId,
     src_resource_id: webb_proposals::ResourceId,
 ) -> webb_proposals::substrate::AnchorUpdateProposal {
-
     let nonce = webb_proposals::Nonce::new(leaf_index);
-    let function_signature = webb_proposals::FunctionSignature::new([0, 0, 0, 2]);
+    let function_signature =
+        webb_proposals::FunctionSignature::new([0, 0, 0, 2]);
     let header = webb_proposals::ProposalHeader::new(
         target_resource_id,
         function_signature,
