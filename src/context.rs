@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
 #![warn(missing_docs)]
-
 //! # Relayer Context Module 🕸️
 //!
 //! A module for managing the context of the relayer.
+#[cfg(feature = "cosmwasm")]
+use cosmrs::rpc::HttpClient;
+#[cfg(feature = "cosmwasm")]
+use cosmrs::AccountId;
 use std::convert::TryFrom;
 use std::time::Duration;
 
@@ -171,6 +173,63 @@ impl RelayerContext {
             })?;
         let suri_key = node_config.suri.ok_or(crate::Error::MissingSecrets)?;
         Ok(suri_key.into())
+    }
+    /// Returns a new `CosmosProvider` for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_id` - A string representing the chain id.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let chain_name = "localterra".to_string();
+    /// let provider = ctx.cosmos_provider(chain_name).await?;
+    /// ```
+    #[cfg(feature = "cosmwasm")]
+    pub async fn cosmos_provider(
+        &self,
+        chain_id: &str,
+    ) -> crate::Result<HttpClient> {
+        let chain_config =
+            self.config.cosmwasm.get(chain_id).ok_or_else(|| {
+                crate::Error::ChainNotFound {
+                    chain_id: chain_id.to_string(),
+                }
+            })?;
+        let provider = HttpClient::new(chain_config.http_endpoint.as_str())
+            .map_err(|_| {
+                crate::Error::Generic("Cannot create cosmos provider")
+            })?;
+        Ok(provider)
+    }
+    /// Sets up and returns an Cosmos-SDK wallet for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_id` - A string representing the chain id.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// let chain_name = "localterra".to_string();
+    /// let wallet = self.ctx.cosmos_wallet(&self.chain_name).await?;
+    /// ```
+    #[cfg(feature = "cosmwasm")]
+    pub async fn cosmos_wallet(
+        &self,
+        chain_name: &str,
+    ) -> crate::Result<AccountId> {
+        let chain_config =
+            self.config.cosmwasm.get(chain_name).ok_or_else(|| {
+                crate::Error::ChainNotFound {
+                    chain_id: chain_name.to_string(),
+                }
+            })?;
+        let _mnemonic = &chain_config.mnemonic;
+        let account_id = AccountId::new("juno", &[])
+            .map_err(|_| crate::Error::Generic("Cannot setup wallet"))?;
+        Ok(account_id)
     }
 }
 

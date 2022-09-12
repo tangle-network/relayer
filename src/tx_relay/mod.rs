@@ -87,6 +87,10 @@ pub struct ExtData<E, I, B, A> {
     pub ext_amount: A,
     /// Fee to pay the relayer
     pub fee: B,
+    /// Refund fee
+    pub refund: B,
+    /// Token address
+    pub token: I,
     /// First encrypted output commitment
     pub encrypted_output1: E,
     /// Second encrypted output commitment

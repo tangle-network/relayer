@@ -199,6 +199,13 @@ pub enum SledQueueKey {
         /// an optional key for this transaction.
         optional_key: Option<[u8; 64]>,
     },
+    /// Queue Key for cosmos based Transaction Queue.
+    CosmosTx {
+        /// cosmos-SDK Chain Id.
+        chain_id: types::U256,
+        /// an optional key for this transaction.
+        optional_key: Option<[u8; 64]>,
+    },
     /// Queue Key for Bridge Watcher Command Queue.
     BridgeCmd {
         /// Specific Bridge Key.
@@ -245,6 +252,25 @@ impl SledQueueKey {
         }
     }
 
+    /// Create a new SledQueueKey from an cosmos-sdk chain id.
+    pub fn from_cosmos_chain_id(chain_id: types::U256) -> Self {
+        Self::CosmosTx {
+            chain_id,
+            optional_key: None,
+        }
+    }
+
+    /// from_cosmos_with_custom_key returns an Cosmos-SDK chain specific SledQueueKey.
+    pub fn from_cosmos_with_custom_key(
+        chain_id: types::U256,
+        key: [u8; 64],
+    ) -> Self {
+        Self::CosmosTx {
+            chain_id,
+            optional_key: Some(key),
+        }
+    }
+
     /// from_bridge_key returns a Bridge specific SledQueueKey.
     pub fn from_bridge_key(bridge_key: BridgeKey) -> Self {
         Self::BridgeCmd { bridge_key }
@@ -272,6 +298,15 @@ impl fmt::Display for SledQueueKey {
                 chain_id,
                 optional_key.map(hex::encode)
             ),
+            Self::CosmosTx {
+                chain_id,
+                optional_key,
+            } => write!(
+                f,
+                "CosmosTx({}, {:?})",
+                chain_id,
+                optional_key.map(hex::encode)
+            ),
             Self::BridgeCmd { bridge_key } => {
                 write!(f, "BridgeCmd({})", bridge_key)
             }
@@ -286,6 +321,9 @@ impl QueueKey for SledQueueKey {
             Self::SubstrateTx { chain_id, .. } => {
                 format!("substrate_tx_{}", chain_id)
             }
+            Self::CosmosTx { chain_id, .. } => {
+                format!("cosmos_tx_{}", chain_id)
+            }
             Self::BridgeCmd { bridge_key, .. } => format!(
                 "bridge_cmd_{}_{}",
                 bridge_key.chain_id.chain_id(),
@@ -298,6 +336,7 @@ impl QueueKey for SledQueueKey {
         match self {
             Self::EvmTx { optional_key, .. } => *optional_key,
             Self::SubstrateTx { optional_key, .. } => *optional_key,
+            Self::CosmosTx { optional_key, .. } => *optional_key,
             Self::BridgeCmd { .. } => None,
         }
     }

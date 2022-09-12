@@ -161,7 +161,9 @@ pub async fn handle_vanchor_relay_tx<'a>(
         recipient: cmd.ext_data.recipient,
         relayer: cmd.ext_data.relayer,
         fee: cmd.ext_data.fee,
+        refund: cmd.ext_data.refund,
         ext_amount: cmd.ext_data.ext_amount.0,
+        token: cmd.ext_data.token,
         encrypted_output_1: cmd.ext_data.encrypted_output1,
         encrypted_output_2: cmd.ext_data.encrypted_output2,
     };
