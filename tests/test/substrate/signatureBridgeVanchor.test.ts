@@ -116,21 +116,11 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     await api.isReady;
 
     let chainId = await aliceNode.getChainId();
-    let palletIndex = '0x2D';
-    let substrateTargetSystem = makeSubstrateTargetSystem(6, palletIndex);
-    // set resource ID
-    let resourceId = new ResourceId(
-      toFixedHex(substrateTargetSystem, 20),
-      ChainType.Substrate,
-      chainId
-    );
-    let res: `0x${string}` = `0x${resourceId.toString().slice(2)}`;
-
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
-      linkedAnchors: [{ type: 'Raw', resourceId: res }],
+      linkedAnchors: [{ type: 'Substrate', treeId: 6, chainId, pallet: 45 }],
     });
 
     // force set maintainer

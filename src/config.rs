@@ -349,24 +349,15 @@ pub struct VAnchorWithdrawConfig {
     pub withdraw_gaslimit: U256,
 }
 
-/// LinkedVAnchorConfig is the configuration for the linked Vanchor.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct LinkedVAnchorConfig {
-    /// The Chain name where this anchor belongs to.
-    /// and it is case-insensitive.
-    pub chain: String,
-    /// The chain ID
-    pub chain_id: String,
-    /// The Anchor Contract Address.
-    pub address: Address,
-}
-
+/// LinkedAnchorConfig is configuration for the linked anchors. Linked anchor can be added in multiple ways
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum LinkedAnchorConfig {
+    ///  Linked anchor configuration for raw resource Id   
     Raw(RawResourceId),
+    /// Linked anchor configuration for evm based chains
     Evm(EvmLinkedAnchorConfig),
+    ///  Linked anchor configuration for substrate based chains
     Substrate(SubstrateLinkedAnchorConfig),
 }
 
@@ -374,6 +365,7 @@ pub enum LinkedAnchorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct RawResourceId {
+    /// Raw resource Id
     pub resource_id: H256,
 }
 
@@ -381,7 +373,9 @@ pub struct RawResourceId {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct EvmLinkedAnchorConfig {
+    /// The chain Id
     pub chain_id: u32,
+    /// The V-anchor Contract Address.
     pub address: Address,
 }
 
@@ -389,23 +383,59 @@ pub struct EvmLinkedAnchorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct SubstrateLinkedAnchorConfig {
+    /// chain Id
     pub chain_id: u32,
+    /// pallet index
     pub pallet: u8,
-    pub call: u8,
+    /// tree Id
     pub tree_id: u32,
 }
 
-/// SubstrateLinkedVAnchorConfig is the configuration for the linked Vanchor of substrate.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
-pub struct SubstrateLinkedVAnchorConfig {
-    /// The Chain Id where this anchor belongs to.
-    pub chain: u32,
-    /// The chain ID
-    pub chain_id: String,
-    /// Tree Id of the anchor
-    #[serde(rename(serialize = "tree"))]
-    pub tree: u32,
+impl LinkedAnchorConfig {
+    /// Convert linked anchor to Raw resource Id format
+    pub fn into_raw_resource_id(self) -> LinkedAnchorConfig {
+        match self {
+            LinkedAnchorConfig::Evm(config) => {
+                let target_system =
+                    webb_proposals::TargetSystem::new_contract_address(
+                        config.address,
+                    );
+                let typed_chain_id =
+                    webb_proposals::TypedChainId::Evm(config.chain_id);
+                let resource_id = webb_proposals::ResourceId::new(
+                    target_system,
+                    typed_chain_id,
+                );
+                let raw_resource_id = RawResourceId {
+                    resource_id: H256::from_slice(
+                        resource_id.to_bytes().as_slice(),
+                    ),
+                };
+                LinkedAnchorConfig::Raw(raw_resource_id)
+            }
+            LinkedAnchorConfig::Substrate(config) => {
+                let target = webb_proposals::SubstrateTargetSystem::builder()
+                    .pallet_index(config.pallet)
+                    .tree_id(config.tree_id)
+                    .build();
+                let target_system =
+                    webb_proposals::TargetSystem::Substrate(target);
+                let typed_chain_id =
+                    webb_proposals::TypedChainId::Substrate(config.chain_id);
+                let resource_id = webb_proposals::ResourceId::new(
+                    target_system,
+                    typed_chain_id,
+                );
+                let raw_resource_id = RawResourceId {
+                    resource_id: H256::from_slice(
+                        resource_id.to_bytes().as_slice(),
+                    ),
+                };
+                LinkedAnchorConfig::Raw(raw_resource_id)
+            }
+            _ => self,
+        }
+    }
 }
 
 /// CosmwasmVAnchorWithdrawConfig is the configuration for the Cosmwasm VAnchor Withdraw.
@@ -828,21 +858,50 @@ fn postloading_process(
     for (_, v) in old_cosmwasm {
         config.cosmwasm.insert(v.name.to_string(), v);
     }
-
-    // linked_anchors
+    // Contains list of all chain. It used to validate if linked anchor chain configuration is provided.
     let mut chain_list: HashSet<webb_proposals::TypedChainId> = HashSet::new();
-    config.substrate.keys().map(|chain_id| {
-        let typed_chain_id = webb_proposals::TypedChainId::Substrate(
-            u32::from_str(chain_id).unwrap(),
-        );
-        chain_list.insert(typed_chain_id);
-    });
-
-    config.evm.keys().map(|chain_id| {
+    // Convert linked anchor to Raw ResourceId type for evm chains
+    for (_, network_chain) in config.evm.iter_mut() {
         let typed_chain_id =
-            webb_proposals::TypedChainId::Evm(u32::from_str(chain_id).unwrap());
+            webb_proposals::TypedChainId::Evm(network_chain.chain_id);
         chain_list.insert(typed_chain_id);
-    });
+        network_chain.contracts.iter_mut().for_each(|c| match c {
+            Contract::VAnchor(cfg) => {
+                let linked_anchors = cfg.linked_anchors.clone();
+                if linked_anchors.is_some() {
+                    let linked_anchors: Vec<LinkedAnchorConfig> =
+                        linked_anchors
+                            .unwrap()
+                            .into_iter()
+                            .map(|anchor| anchor.into_raw_resource_id())
+                            .collect();
+                    cfg.linked_anchors = Some(linked_anchors);
+                }
+            }
+            _ => {}
+        })
+    }
+    // Convert linked anchor to Raw ResourceId type for substrate chains
+    for (_, network_chain) in config.substrate.iter_mut() {
+        let typed_chain_id =
+            webb_proposals::TypedChainId::Substrate(network_chain.chain_id);
+        chain_list.insert(typed_chain_id);
+        network_chain.pallets.iter_mut().for_each(|c| match c {
+            Pallet::VAnchorBn254(cfg) => {
+                let linked_anchors = cfg.linked_anchors.clone();
+                if linked_anchors.is_some() {
+                    let linked_anchors: Vec<LinkedAnchorConfig> =
+                        linked_anchors
+                            .unwrap()
+                            .into_iter()
+                            .map(|anchor| anchor.into_raw_resource_id())
+                            .collect();
+                    cfg.linked_anchors = Some(linked_anchors);
+                }
+            }
+            _ => {}
+        })
+    }
 
     // check that all required chains are already present in the config.
     for (chain_id, chain_config) in &config.evm {

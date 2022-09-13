@@ -273,8 +273,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
               ? {
                   type: 'Substrate',
                   'chain-id': anchor.chainId,
-                  tree: anchor.tree,
-                  call: anchor.call,
+                  'tree-id': anchor.treeId,
                   pallet: anchor.pallet,
                 }
               : {

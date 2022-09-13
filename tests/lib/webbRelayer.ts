@@ -511,8 +511,7 @@ export type SubstrateLinkedAnchor = {
   type: 'Substrate';
   chainId: number;
   pallet: number;
-  call: number;
-  tree: number;
+  treeId: number;
 };
 export type LinkedAnchor =
   | RawResourceId

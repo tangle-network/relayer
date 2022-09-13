@@ -471,8 +471,7 @@ export class LocalChain {
             ? {
                 type: 'Substrate',
                 'chain-id': anchor.chainId,
-                tree: anchor.tree,
-                call: anchor.call,
+                'tree-id': anchor.treeId,
                 pallet: anchor.pallet,
               }
             : {
@@ -493,7 +492,6 @@ export class LocalChain {
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);
-    console.log(configString);
     fs.writeFileSync(path, configString);
   }
 }

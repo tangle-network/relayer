@@ -65,7 +65,7 @@ import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
-describe.only('Cross chain transaction <<>> Mocked Backend', function () {
+describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -430,7 +430,7 @@ async function vanchorDeposit(
     curve: 'Bn254',
     backend: 'Arkworks',
     amount: publicAmount.toString(),
-    chainId: typedTargetChainId,
+    chainId: typedSourceChainId,
   });
   const output2 = await Utxo.generateUtxo({
     curve: 'Bn254',
@@ -451,7 +451,11 @@ async function vanchorDeposit(
   leavesMap[typedTargetChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);
   const root = tree.unwrap().root.toHex();
-  const rootsSet = [hexToU8a(root), hexToU8a(root)];
+  const neighborRoots: string[] = await (api.rpc as any).lt
+    .getNeighborRoots(treeId)
+    .then((roots: any) => roots.toHuman());
+  console.log('neighbor roots: ', neighborRoots);
+  const rootsSet = [hexToU8a(root), hexToU8a(neighborRoots[0])];
   const decodedAddress = decodeAddress(address);
   const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
   const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);

@@ -14,14 +14,13 @@
 //
 use std::sync::Arc;
 
+use crate::config;
+use crate::store::sled::{SledQueueKey, SledStore};
+use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 use ethereum_types::U256;
 use webb::substrate::dkg_runtime::api::dkg;
 use webb::substrate::subxt::PolkadotExtrinsicParams;
 use webb::substrate::{dkg_runtime, subxt};
-
-use crate::config::{self, Contract};
-use crate::store::sled::{SledQueueKey, SledStore};
-use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 
 use super::{BlockNumberOf, SubstrateEventWatcher};
 
@@ -88,23 +87,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
             .webb_config
             .evm
             .values()
-            .map(|c| (c.chain_id, &c.contracts))
-            .flat_map(|(chain_id, contracts)| {
-                // find first signature bridge contract for this chain.
-                contracts
-                    .iter()
-                    .find(|contract| {
-                        matches!(contract, Contract::SignatureBridge(_))
-                    })
-                    .map(|contract| (chain_id, contract))
-            })
-            .flat_map(|(chain_id, contract)| match contract {
-                Contract::SignatureBridge(contract_config) => {
-                    Some((chain_id, contract_config.common.address))
-                }
-                _ => None,
-            })
-            .map(|(chain_id, address)| BridgeKey::new(U256::from(chain_id)));
+            .map(|c| BridgeKey::new(U256::from(c.chain_id)));
         // now we just signal every signature bridge to transfer the ownership.
         for bridge_key in bridge_keys {
             tracing::debug!(
