@@ -310,6 +310,16 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     console.log('Withdraw on substrate');
     // now we withdraw on substrate chain
 
+    // dummy Deposit Note. Input note is directed toward source chain
+      const depositNote = await generateVAnchorNote(
+        0,
+        typedSourceChainId,
+        typedSourceChainId,
+        0
+      );
+      // substrate vanchor deposit
+      await vanchorDeposit(typedTargetChainId.toString(),depositNote, treeId, api, aliceNode);
+
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
       kind: 'signing_backend',
@@ -388,6 +398,7 @@ async function setResourceIdProposal(
 }
 
 async function vanchorDeposit(
+  typedTargetChainId: string,
   depositNote: Note,
   treeId: number,
   api: ApiPromise,
@@ -395,7 +406,6 @@ async function vanchorDeposit(
 ) {
   const account = createAccount('//Dave');
   const typedSourceChainId = depositNote.note.sourceChainId;
-  const typedTargetChainId = depositNote.note.targetChainId;
   console.log('typedSourceChainId : ', typedSourceChainId);
   console.log('typedTargetChainId : ', typedTargetChainId);
   const secret = randomAsU8a();
@@ -427,7 +437,7 @@ async function vanchorDeposit(
     curve: 'Bn254',
     backend: 'Arkworks',
     amount: publicAmount.toString(),
-    chainId: typedSourceChainId,
+    chainId: typedTargetChainId,
   });
   const output2 = await Utxo.generateUtxo({
     curve: 'Bn254',

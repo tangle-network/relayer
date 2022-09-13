@@ -52,6 +52,7 @@ import {
   toFixedHex,
   ResourceId,
   ProposalHeader,
+  CircomUtxo,
 } from '@webb-tools/sdk-core';
 
 import {
@@ -65,7 +66,7 @@ import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
-describe.only('Cross chain transaction <<>> Mocked Backend', function () {
+describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -220,6 +221,10 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
   });
 
   it('Substrate to Evm cross chain transaction', async () => {
+    const amount1 = (1e13).toString();
+    const amount2 = currencyToUnitI128(10).toString();
+    console.log("amount1: ", amount1);
+    console.log("amount2: ", amount2);
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(wallet1);
 
@@ -260,7 +265,7 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
     );
     const txSigned = await setResourceIdProposalCall.signAsync(account);
     await aliceNode.executeTransaction(txSigned);
-
+    
     // dummy Deposit Note. Input note is directed toward source chain
     const depositNote = await generateVAnchorNote(
       0,
@@ -294,13 +299,14 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
     const leaves = vanchor1.tree
       .elements()
       .map((el) => hexToU8a(el.toHexString()));
-    const publicAmount = currencyToUnitI128(10);
-    const withdrawUtxo = await Utxo.generateUtxo({
+    const publicAmount = (1e13).toString();
+
+    const withdrawUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
-      backend: 'Arkworks',
-      amount: publicAmount.toString(),
+      backend: 'Circom',
+      amount: publicAmount,
+      originChainId: typedSourceChainId.toString(),
       chainId: localChain1.chainId.toString(),
-      originChainId: localChain1.chainId.toString(),
     });
     let res = await vanchor1.transact(
       [],
