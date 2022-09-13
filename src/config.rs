@@ -857,7 +857,7 @@ fn postloading_process(
     for (_, v) in old_cosmwasm {
         config.cosmwasm.insert(v.name.to_string(), v);
     }
-    // Contains list of all chain. It used to validate if linked anchor chain configuration is provided.
+    //Chain list is used to validate if linked anchor configuration is provided to the relayer.
     let mut chain_list: HashSet<webb_proposals::TypedChainId> = HashSet::new();
     // Convert linked anchor to Raw ResourceId type for evm chains
     for (_, network_chain) in config.evm.iter_mut() {
@@ -963,36 +963,22 @@ fn postloading_process(
                         } else {
                             for linked_anchor in linked_anchors {
                                 match linked_anchor {
-                                    LinkedAnchorConfig::Substrate(target) => {
-                                        let typed_chain_id = webb_proposals::TypedChainId::Substrate(target.chain_id);
-                                        if !chain_list.contains(&typed_chain_id)
-                                        {
-                                            tracing::warn!("!!WARNING!!: Type: Substrate, chain with id {} is not defined in the config.
-                                                which is required by the Anchor Contract ({}) defined on {} chain.
-                                                Please, define it manually, to allow the relayer to work properly.",
-                                                target.chain_id,
-                                                anchor.common.address,
-                                                chain_id
-                                            );
-                                        }
-                                    }
-                                    LinkedAnchorConfig::Evm(target) => {
-                                        let typed_chain_id =
-                                            webb_proposals::TypedChainId::Evm(
-                                                target.chain_id,
-                                            );
+                                    LinkedAnchorConfig::Raw(raw_resource) => {
+                                        let bytes: [u8; 32] = raw_resource.resource_id.into();
+                                        let resource_id = webb_proposals::ResourceId::from(bytes);
+                                        let typed_chain_id = resource_id.typed_chain_id();
                                         if !chain_list.contains(&typed_chain_id)
                                         {
                                             tracing::warn!("!!WARNING!!: Type: Evm, chain with id {} is not defined in the config.
                                                 which is required by the Anchor Contract ({}) defined on {} chain.
                                                 Please, define it manually, to allow the relayer to work properly.",
-                                                target.chain_id,
+                                                typed_chain_id.chain_id(),
                                                 anchor.common.address,
                                                 chain_id
                                             );
                                         }
-                                    }
-                                    LinkedAnchorConfig::Raw(_) => {}
+                                   }
+                                   _=> unreachable!("Convert all linked anchor to Raw ResourceId type")
                                 }
                             }
                         }

@@ -41,7 +41,7 @@ import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
-
+import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 import {
   Note,
   ProvingManagerSetupInput,
@@ -65,7 +65,7 @@ import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
-describe('Cross chain transaction <<>> Mocked Backend', function () {
+describe.only('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -249,6 +249,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       ChainType.Substrate,
       substrateChainId
     );
+    let typedTargetChainId = localChain1.chainId;
     console.log('typedSourceChainId : ', typedSourceChainId);
     // now we set resource through proposal execution
     let setResourceIdProposalCall = await setResourceIdProposal(
@@ -260,15 +261,15 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     const txSigned = await setResourceIdProposalCall.signAsync(account);
     await aliceNode.executeTransaction(txSigned);
 
-    // Deposit Note
+    // dummy Deposit Note. Input note is directed toward source chain
     const depositNote = await generateVAnchorNote(
       0,
       typedSourceChainId,
-      localChain1.chainId,
+      typedSourceChainId,
       0
     );
-    // vanchor deposit
-    await vanchorDeposit(depositNote, treeId, api, aliceNode);
+    // substrate vanchor deposit
+    await vanchorDeposit(typedTargetChainId.toString(),depositNote, treeId, api, aliceNode);
 
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
@@ -391,6 +392,7 @@ async function setResourceIdProposal(
 }
 
 async function vanchorDeposit(
+  typedTargetChainId:string,
   depositNote: Note,
   treeId: number,
   api: ApiPromise,
@@ -398,7 +400,6 @@ async function vanchorDeposit(
 ) {
   const account = createAccount('//Dave');
   const typedSourceChainId = depositNote.note.sourceChainId;
-  const typedTargetChainId = depositNote.note.targetChainId;
   console.log('typedSourceChainId : ', typedSourceChainId);
   console.log('typedTargetChainId : ', typedTargetChainId);
   const secret = randomAsU8a();
@@ -421,6 +422,20 @@ async function vanchorDeposit(
   const pk_hex = fs.readFileSync(pkPath).toString('hex');
   const pk = hexToU8a(pk_hex);
 
+  const vkPath = path.join(
+    // tests path
+    gitRoot,
+    'tests',
+    'substrate-fixtures',
+    'vanchor',
+    'bn254',
+    'x5',
+    '2-2-2',
+    'verifying_key_uncompressed.bin'
+  );
+  const vk_hex = fs.readFileSync(vkPath).toString('hex');
+  const vk = hexToU8a(vk_hex);
+
   let note1 = depositNote;
   const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(10);
@@ -430,7 +445,7 @@ async function vanchorDeposit(
     curve: 'Bn254',
     backend: 'Arkworks',
     amount: publicAmount.toString(),
-    chainId: typedSourceChainId,
+    chainId: typedTargetChainId,
   });
   const output2 = await Utxo.generateUtxo({
     curve: 'Bn254',
@@ -461,7 +476,7 @@ async function vanchorDeposit(
   const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
 
   const setup: ProvingManagerSetupInput<'vanchor'> = {
-    chainId: typedTargetChainId.toString(),
+    chainId: typedSourceChainId.toString(),
     indices: [0, 0],
     inputNotes: notes,
     leavesMap: leavesMap,
@@ -500,7 +515,11 @@ async function vanchorDeposit(
     ),
     extDataHash: data.extDataHash,
   };
+
   console.log('Proof data : ', vanchorProofData);
+  console.log("verify proof ");
+  const isValidProof = verify_js_proof(data.proof, data.publicInputs, u8aToHex(vk).replace('0x', ''), 'Bn254');
+  console.log("Is proof valid : ", isValidProof);
   const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
     Number(treeId)
   );
@@ -541,7 +560,7 @@ async function generateVAnchorNote(
     targetChain: String(typedTargetChainId),
     targetIdentifyingData: '1',
     tokenSymbol: 'WEBB',
-    version: 'v2',
+    version: 'v1',
     width: String(5),
   });
 

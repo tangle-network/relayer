@@ -47,8 +47,8 @@ where
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> crate::Result<bool> {
-        let resorce_id = proposal.header().resource_id();
-        let known_bridge = self.signature_bridges.contains(&resorce_id);
+        let resource_id = proposal.header().resource_id();
+        let known_bridge = self.signature_bridges.contains(&resource_id);
         Ok(known_bridge)
     }
 
@@ -58,8 +58,8 @@ where
     ) -> crate::Result<()> {
         // Proposal will be signed by active governor/maintainer.
         // Proposal will be then enqueued for execution with BridgeKey as TypedChainId
-        let resorce_id = proposal.header().resource_id();
-        let dest_chain_id = resorce_id.typed_chain_id();
+        let resource_id = proposal.header().resource_id();
+        let dest_chain_id = resource_id.typed_chain_id();
         let signer = self.signer(dest_chain_id)?;
         let proposal_bytes = proposal.to_vec();
         let hash = keccak256(&proposal_bytes);
