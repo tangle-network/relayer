@@ -36,7 +36,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::path::PathBuf;
-use std::str::FromStr;
 use webb::substrate::subxt::sp_core::sr25519::Public;
 
 use crate::types::cw_chain_id::CWChainId;
@@ -865,20 +864,18 @@ fn postloading_process(
         let typed_chain_id =
             webb_proposals::TypedChainId::Evm(network_chain.chain_id);
         chain_list.insert(typed_chain_id);
-        network_chain.contracts.iter_mut().for_each(|c| match c {
-            Contract::VAnchor(cfg) => {
+        network_chain.contracts.iter_mut().for_each(|c| {
+            if let Contract::VAnchor(cfg) = c {
                 let linked_anchors = cfg.linked_anchors.clone();
-                if linked_anchors.is_some() {
+                if let Some(linked_anchors) = linked_anchors {
                     let linked_anchors: Vec<LinkedAnchorConfig> =
                         linked_anchors
-                            .unwrap()
                             .into_iter()
                             .map(|anchor| anchor.into_raw_resource_id())
                             .collect();
                     cfg.linked_anchors = Some(linked_anchors);
                 }
             }
-            _ => {}
         })
     }
     // Convert linked anchor to Raw ResourceId type for substrate chains
@@ -886,20 +883,18 @@ fn postloading_process(
         let typed_chain_id =
             webb_proposals::TypedChainId::Substrate(network_chain.chain_id);
         chain_list.insert(typed_chain_id);
-        network_chain.pallets.iter_mut().for_each(|c| match c {
-            Pallet::VAnchorBn254(cfg) => {
+        network_chain.pallets.iter_mut().for_each(|c| {
+            if let Pallet::VAnchorBn254(cfg) = c {
                 let linked_anchors = cfg.linked_anchors.clone();
-                if linked_anchors.is_some() {
+                if let Some(linked_anchors) = linked_anchors {
                     let linked_anchors: Vec<LinkedAnchorConfig> =
                         linked_anchors
-                            .unwrap()
                             .into_iter()
                             .map(|anchor| anchor.into_raw_resource_id())
                             .collect();
                     cfg.linked_anchors = Some(linked_anchors);
                 }
             }
-            _ => {}
         })
     }
 

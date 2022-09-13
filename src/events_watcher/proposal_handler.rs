@@ -56,15 +56,14 @@ pub fn evm_anchor_update_proposal(
         function_signature,
         nonce.into(),
     );
-    let proposal = webb_proposals::evm::AnchorUpdateProposal::new(
+    webb_proposals::evm::AnchorUpdateProposal::new(
         header,
         merkle_root,
         src_resource_id,
-    );
-    return proposal;
+    )
 }
 
-//
+// create anchor update proposal for substrate system
 pub fn substrate_anchor_update_propsoal(
     merkle_root: [u8; 32],
     leaf_index: u32,
@@ -80,10 +79,9 @@ pub fn substrate_anchor_update_propsoal(
         nonce,
     );
     // create anchor update proposal
-    let proposal = webb_proposals::substrate::AnchorUpdateProposal::builder()
+    webb_proposals::substrate::AnchorUpdateProposal::builder()
         .header(header)
         .merkle_root(merkle_root)
         .src_resource_id(src_resource_id)
-        .build();
-    return proposal;
+        .build()
 }
