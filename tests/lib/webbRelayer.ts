@@ -197,6 +197,8 @@ export class WebbRelayer {
             relayer: extData.relayer,
             extAmount: extData.extAmount.replace('0x', '') as any,
             fee: extData.fee.toString() as any,
+            refund: extData.refund.toString() as any,
+            token: extData.token,
             encryptedOutput1: extData.encryptedOutput1,
             encryptedOutput2: extData.encryptedOutput2,
           },

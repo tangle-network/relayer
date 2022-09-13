@@ -49,7 +49,7 @@ import {
   VAnchorProof,
 } from '@webb-tools/sdk-core';
 
-describe.skip('Substrate VAnchor Transaction Relayer Tests', function () {
+describe('Substrate VAnchor Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -298,7 +298,7 @@ async function generateVAnchorNote(
     targetChain: String(outputChainId),
     targetIdentifyingData: '1',
     tokenSymbol: 'WEBB',
-    version: 'v2',
+    version: 'v1',
     width: String(5),
   });
 

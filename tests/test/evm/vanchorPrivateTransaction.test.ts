@@ -106,6 +106,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
     govWallet1 = new ethers.Wallet(govPk, localChain1.provider());
     govWallet2 = new ethers.Wallet(govPk, localChain2.provider());
+
     relayerWallet1 = new ethers.Wallet(relayerPk, localChain1.provider());
     relayerWallet2 = new ethers.Wallet(relayerPk, localChain2.provider());
     // Deploy the token.
@@ -268,6 +269,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       output.publicInputs,
       output.extData
     );
+    console.log("After withdraw");
 
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',

@@ -291,7 +291,6 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     });
 
     // Make the deposit transaction
-
     await signatureBridge.transact([], [depositUtxo], 0, 0, '0', '0', wallet1);
 
     // wait until the signature bridge recives the execute call.

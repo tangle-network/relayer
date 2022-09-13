@@ -54,6 +54,13 @@ pub enum HistoryStoreKey {
         /// Merkle Tree id.
         tree_id: String,
     },
+    /// Cosmos-SDK Queue Key
+    Cosmos {
+        /// Chain id
+        chain_id: types::U256,
+        /// Contract address.
+        address: String,
+    },
 }
 
 /// A Bridge Key is a unique key used for Sending and Receiving Commands to the Signature Bridge
@@ -112,6 +119,7 @@ impl HistoryStoreKey {
         match self {
             HistoryStoreKey::Evm { chain_id, .. } => *chain_id,
             HistoryStoreKey::Substrate { chain_id, .. } => *chain_id,
+            HistoryStoreKey::Cosmos { chain_id, .. } => *chain_id,
         }
     }
     /// Returns the address of the chain this key is for.
@@ -123,6 +131,14 @@ impl HistoryStoreKey {
                 // so we just pretend it's the address of the node
                 let mut address_bytes = vec![];
                 address_bytes.extend_from_slice(tree_id.as_bytes());
+                address_bytes.resize(20, 0);
+                types::H160::from_slice(&address_bytes)
+            }
+            HistoryStoreKey::Cosmos { address, .. } => {
+                // a bit hacky, but we don't have a way to get the address from the Cosmos-SDK(bech32 format) address
+                // so we just pretend it's the address of the node
+                let mut address_bytes = vec![];
+                address_bytes.extend_from_slice(address.as_bytes());
                 address_bytes.resize(20, 0);
                 types::H160::from_slice(&address_bytes)
             }
@@ -141,6 +157,10 @@ impl HistoryStoreKey {
                 vec.extend_from_slice(&chain_id.as_u128().to_le_bytes());
                 vec.extend_from_slice(tree_id.as_bytes());
             }
+            Self::Cosmos { chain_id, address } => {
+                vec.extend_from_slice(&chain_id.as_u128().to_le_bytes());
+                vec.extend_from_slice(address.as_bytes());
+            }
         }
         vec
     }
@@ -154,6 +174,9 @@ impl Display for HistoryStoreKey {
             }
             Self::Substrate { chain_id, tree_id } => {
                 write!(f, "Substrate({}, {})", chain_id, tree_id)
+            }
+            Self::Cosmos { chain_id, address } => {
+                write!(f, "Cosmos({}, {})", chain_id, address)
             }
         }
     }
@@ -188,6 +211,18 @@ impl From<(String, types::U256)> for HistoryStoreKey {
         Self::Substrate { chain_id, tree_id }
     }
 }
+
+// impl From<(types::U256, String)> for HistoryStoreKey {
+//     fn from((chain_id, address): (types::U256, String)) -> Self {
+//         Self::Cosmos { chain_id, address }
+//     }
+// }
+
+// impl From<(String, types::U256)> for HistoryStoreKey {
+//     fn from((address, chain_id): (String, types::U256)) -> Self {
+//         Self::Cosmos { chain_id, address }
+//     }
+// }
 
 /// HistoryStore is a simple trait for storing and retrieving history
 /// of block numbers.

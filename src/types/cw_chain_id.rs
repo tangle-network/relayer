@@ -1,4 +1,4 @@
-use crate::utils::compute_chain_id;
+use crate::utils::compute_cosmwasm_chain_id;
 use serde::{Deserialize, Serialize};
 
 /// CWChainId represents a cosmwasm(cosmos-sdk) chain-id.
@@ -69,7 +69,7 @@ impl<'de> Deserialize<'de> for CWChainId {
                 } else {
                     value.to_string()
                 };
-                Ok(compute_chain_id(&str_value))
+                Ok(compute_cosmwasm_chain_id(&str_value))
             }
         }
 
