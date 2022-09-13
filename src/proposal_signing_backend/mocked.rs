@@ -56,10 +56,8 @@ where
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> crate::Result<()> {
-        // the way this one works is that we get the hash of the proposal bytes,
-        // the we use the hash to be signed by the signer.
-        // Read more here: https://bit.ly/3rqNYTU
-        // we will use chain_id as tree_id to ensure we have one brige key
+        // Proposal will be signed by active governor/maintainer.
+        // Proposal will be then enqueued for execution with BridgeKey as TypedChainId
         let resorce_id = proposal.header().resource_id();
         let dest_chain_id = resorce_id.typed_chain_id();
         let signer = self.signer(dest_chain_id)?;

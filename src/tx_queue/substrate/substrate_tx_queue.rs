@@ -140,7 +140,7 @@ where
                 )?;
                 if let Some(call_data) = maybe_call_data {
                     let call_data = subxt::Encoded(call_data);
-                    tracing::debug!(
+                    tracing::trace!(
                         "Transaction call in hex : {:?}",
                         hex::encode(&call_data.encode())
                     );
