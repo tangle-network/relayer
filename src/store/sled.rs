@@ -22,7 +22,7 @@ use webb::evm::ethers::{self, types};
 
 use super::HistoryStoreKey;
 use super::{
-    EventHashStore, HistoryStore, LeafCacheStore, ProposalStore, QueueStore,
+    EventHashStore, HistoryStore, LeafCacheStore, EncryptedOutputCacheStore, ProposalStore, QueueStore,
 };
 /// SledStore is a store that stores the history of events in  a [Sled](https://sled.rs)-based database.
 #[derive(Clone)]
@@ -124,6 +124,78 @@ impl LeafCacheStore for SledStore {
             key.address()
         ))?;
         for (k, v) in leaves {
+            tree.insert(k.to_le_bytes(), v.as_bytes())?;
+        }
+        Ok(())
+    }
+
+    fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<types::U64> {
+        let tree = self.db.open_tree("last_deposit_block_number")?;
+        let key: HistoryStoreKey = key.into();
+        let val = tree.get(key.to_bytes())?;
+        match val {
+            Some(v) => Ok(types::U64::from_little_endian(&v)),
+            None => Ok(types::U64::from(0)),
+        }
+    }
+
+    fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        block_number: types::U64,
+    ) -> crate::Result<types::U64> {
+        let tree = self.db.open_tree("last_deposit_block_number")?;
+        let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
+        block_number.to_little_endian(&mut bytes);
+        let key: HistoryStoreKey = key.into();
+        let old = tree.insert(key.to_bytes(), &bytes)?;
+        match old {
+            Some(v) => Ok(types::U64::from_little_endian(&v)),
+            None => Ok(block_number),
+        }
+    }
+}
+
+impl EncryptedOutputCacheStore for SledStore {
+    type Output = Vec<types::H256>;
+
+    #[tracing::instrument(skip(self))]
+    fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<Self::Output> {
+        let key: HistoryStoreKey = key.into();
+        let tree = self.db.open_tree(format!(
+            "encrypted_outputs/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
+        let encrypted_outputs = tree
+            .iter()
+            .values()
+            .flatten()
+            .map(|v| v)
+            .collect();
+        Ok(encrypted_outputs)
+    }
+
+    #[tracing::instrument(skip(self))]
+    fn insert_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        encrypted_output: &[(u32, Vec<u8>)],
+    ) -> crate::Result<()> {
+        let key: HistoryStoreKey = key.into();
+
+        let tree = self.db.open_tree(format!(
+            "encrypted_outputs/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
+        for (k, v) in encrypted_output {
             tree.insert(k.to_le_bytes(), v.as_bytes())?;
         }
         Ok(())
