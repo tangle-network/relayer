@@ -160,13 +160,13 @@ impl LeafCacheStore for SledStore {
 }
 
 impl EncryptedOutputCacheStore for SledStore {
-    //type Output = Vec<Vec<u8>>;
+    type Output = Vec<Vec<u8>>;
 
     #[tracing::instrument(skip(self))]
     fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> crate::Result<Vec<Vec<u8>>> {
+    ) -> crate::Result<Self::Output> {
         let key: HistoryStoreKey = key.into();
         let tree = self.db.open_tree(format!(
             "encrypted_outputs/{}/{}",
