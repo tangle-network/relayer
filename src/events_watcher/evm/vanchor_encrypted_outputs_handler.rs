@@ -15,7 +15,7 @@
 
 use super::{HttpProvider, VAnchorContractWrapper};
 use crate::store::sled::SledStore;
-use crate::store::{EventHashStore, EncryptedOutputCacheStore};
+use crate::store::{EncryptedOutputCacheStore, EventHashStore};
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;

@@ -22,7 +22,8 @@ use webb::evm::ethers::{self, types};
 
 use super::HistoryStoreKey;
 use super::{
-    EventHashStore, HistoryStore, LeafCacheStore, EncryptedOutputCacheStore, ProposalStore, QueueStore,
+    EncryptedOutputCacheStore, EventHashStore, HistoryStore, LeafCacheStore,
+    ProposalStore, QueueStore,
 };
 /// SledStore is a store that stores the history of events in  a [Sled](https://sled.rs)-based database.
 #[derive(Clone)]
@@ -173,12 +174,8 @@ impl EncryptedOutputCacheStore for SledStore {
             key.chain_id(),
             key.address()
         ))?;
-        let encrypted_outputs: Vec<_>  = tree
-            .iter()
-            .values()
-            .flatten()
-            .map(|v| v.to_vec())
-            .collect();
+        let encrypted_outputs: Vec<_> =
+            tree.iter().values().flatten().map(|v| v.to_vec()).collect();
         Ok(encrypted_outputs)
     }
 

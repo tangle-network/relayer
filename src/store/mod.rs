@@ -338,7 +338,6 @@ pub trait EncryptedOutputCacheStore: HistoryStore {
     fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-
     ) -> crate::Result<Self::Output>;
 
     /// Insert the encrypted output for the given key.

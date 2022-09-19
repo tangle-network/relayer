@@ -13,9 +13,9 @@
 // limitations under the License.
 //
 mod signature_bridge_watcher;
+mod vanchor_encrypted_output_watcher;
 mod vanchor_leaves_watcher;
 mod vanchor_watcher;
-mod vanchor_encrypted_output_watcher;
 
 use super::{BlockNumberOf, SubstrateEventWatcher};
 #[doc(hidden)]

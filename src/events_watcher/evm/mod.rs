@@ -27,8 +27,8 @@ use webb::evm::ethers::types;
 
 pub mod signature_bridge_watcher;
 pub mod vanchor_deposit_handler;
-pub mod vanchor_leaves_handler;
 pub mod vanchor_encrypted_outputs_handler;
+pub mod vanchor_leaves_handler;
 
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
