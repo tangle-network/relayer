@@ -332,13 +332,14 @@ pub trait LeafCacheStore: HistoryStore {
 /// getting the encrypted output and insert them with a simple API.
 pub trait EncryptedOutputCacheStore: HistoryStore {
     /// The Output type which is the encrypted output.
-    type Output: IntoIterator<Item = types::H256>;
+    //type Output: IntoIterator<Item = types::H256>;
 
     /// Get the encrypted output for the given key.
     fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> crate::Result<Self::Output>;
+
+    ) -> crate::Result<Vec<Vec<u8>>>;
 
     /// Insert the encrypted output for the given key.
     fn insert_encrypted_output<K: Into<HistoryStoreKey> + Debug>(

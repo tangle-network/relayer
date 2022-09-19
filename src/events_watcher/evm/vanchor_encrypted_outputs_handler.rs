@@ -44,13 +44,14 @@ impl super::EventHandler for EncryptedOutputHandler {
         use VAnchorContractEvents::*;
         match event {
             NewCommitmentFilter(deposit) => {
-                let encrypted_output = deposit.encrypted_output;
+                let encrypted_output_bytes = deposit.encrypted_output.clone();
+                let encrypted_output = deposit.encrypted_output.to_vec();
                 let encrypted_output_index = deposit.index.as_u32();
-                let value = (encrypted_output_index, encrypted_output.to_vec());
+                let value = (encrypted_output_index, encrypted_output.clone());
                 let chain_id = wrapper.contract.client().get_chainid().await?;
                 store.insert_encrypted_output(
                     (chain_id, wrapper.contract.address()),
-                    &[value],
+                    &[value.clone()],
                 )?;
                 store.insert_last_deposit_block_number(
                     (chain_id, wrapper.contract.address()),
@@ -67,7 +68,7 @@ impl super::EventHandler for EncryptedOutputHandler {
                     tracing::Level::DEBUG,
                     kind = %crate::probe::Kind::EncryptedOutputStore,
                     encrypted_output_index = %value.0,
-                    encrypted_output = %value.1,
+                    encrypted_output = %encrypted_output_bytes,
                     chain_id = %chain_id,
                     block_number = %log.block_number
                 );

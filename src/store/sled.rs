@@ -160,24 +160,24 @@ impl LeafCacheStore for SledStore {
 }
 
 impl EncryptedOutputCacheStore for SledStore {
-    type Output = Vec<types::H256>;
+    //type Output = Vec<Vec<u8>>;
 
     #[tracing::instrument(skip(self))]
     fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> crate::Result<Self::Output> {
+    ) -> crate::Result<Vec<Vec<u8>>> {
         let key: HistoryStoreKey = key.into();
         let tree = self.db.open_tree(format!(
             "encrypted_outputs/{}/{}",
             key.chain_id(),
             key.address()
         ))?;
-        let encrypted_outputs = tree
+        let encrypted_outputs: Vec<_>  = tree
             .iter()
             .values()
             .flatten()
-            .map(|v| v)
+            .map(|v| v.to_vec())
             .collect();
         Ok(encrypted_outputs)
     }
@@ -196,7 +196,7 @@ impl EncryptedOutputCacheStore for SledStore {
             key.address()
         ))?;
         for (k, v) in encrypted_output {
-            tree.insert(k.to_le_bytes(), v.as_bytes())?;
+            tree.insert(k.to_le_bytes(), &*v.clone())?;
         }
         Ok(())
     }
