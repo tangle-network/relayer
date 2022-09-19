@@ -66,7 +66,7 @@ import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
-describe('Cross chain transaction <<>> Mocked Backend', function () {
+describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
