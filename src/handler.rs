@@ -38,7 +38,7 @@ use webb::substrate::subxt::sp_core::Pair;
 use webb::substrate::subxt::sp_runtime::AccountId32;
 
 use crate::context::RelayerContext;
-use crate::store::LeafCacheStore;
+use crate::store::{EncryptedOutputCacheStore, LeafCacheStore};
 use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
@@ -547,6 +547,124 @@ pub async fn handle_leaves_cache_cosmwasm(
     Ok(warp::reply::with_status(
         warp::reply::json(&LeavesCacheResponse {
             leaves,
+            last_queried_block,
+        }),
+        warp::http::StatusCode::OK,
+    ))
+}
+
+/// Handles encrypted outputs data requests for evm
+///
+/// Returns a Result with the `EncryptedOutputDataResponse` on success
+///
+/// # Arguments
+///
+/// * `store` - [Sled](https://sled.rs)-based database store
+/// * `chain_id` - An U256 representing the chain id of the chain to query
+/// * `contract` - An address of the contract to query
+/// * `ctx` - RelayContext reference that holds the configuration
+pub async fn handle_encrypted_output_cache_evm(
+    store: Arc<crate::store::sled::SledStore>,
+    chain_id: U256,
+    contract: Address,
+    ctx: Arc<RelayerContext>,
+) -> Result<impl warp::Reply, Infallible> {
+    let config = ctx.config.clone();
+
+    #[derive(Debug, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct EncryptedOutputCacheResponse {
+        encrypted_output: Vec<Vec<u8>>,
+        last_queried_block: U64,
+    }
+    // Unsupported feature response
+    #[derive(Debug, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct UnsupportedFeature {
+        message: String,
+    }
+
+    // check if data query is enabled for relayer
+    if !config.features.data_query {
+        tracing::warn!("Data query is not enabled for relayer.");
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&UnsupportedFeature {
+                message: "Data query is not enabled for relayer.".to_string(),
+            }),
+            warp::http::StatusCode::FORBIDDEN,
+        ));
+    }
+
+    // check if chain is supported
+    let chain = match ctx.config.evm.get(&chain_id.to_string()) {
+        Some(v) => v,
+        None => {
+            tracing::warn!("Unsupported Chain: {}", chain_id);
+            return Ok(warp::reply::with_status(
+                warp::reply::json(&UnsupportedFeature {
+                    message: format!("Unsupported Chain: {}", chain_id),
+                }),
+                warp::http::StatusCode::BAD_REQUEST,
+            ));
+        }
+    };
+
+    let supported_contracts: HashMap<_, _> = chain
+        .contracts
+        .iter()
+        .cloned()
+        .filter_map(|c| match c {
+            crate::config::Contract::VAnchor(c) => {
+                Some((c.common.address, c.events_watcher))
+            }
+            _ => None,
+        })
+        .collect();
+
+    // check if contract is supported
+    let event_watcher_config = match supported_contracts.get(&contract) {
+        Some(config) => config,
+        None => {
+            tracing::warn!(
+                "Unsupported Contract: {:?} for chaind : {}",
+                contract,
+                chain_id
+            );
+            return Ok(warp::reply::with_status(
+                warp::reply::json(&UnsupportedFeature {
+                    message: format!(
+                        "Unsupported Contract: {} for chaind : {}",
+                        contract, chain_id
+                    ),
+                }),
+                warp::http::StatusCode::BAD_REQUEST,
+            ));
+        }
+    };
+    // check if data query is enabled for contract
+    if !event_watcher_config.enable_data_query {
+        tracing::warn!("Enbable data query for contract : ({})", contract);
+        return Ok(warp::reply::with_status(
+            warp::reply::json(&UnsupportedFeature {
+                message: format!(
+                    "Enbable data query for contract : ({})",
+                    contract
+                ),
+            }),
+            warp::http::StatusCode::FORBIDDEN,
+        ));
+    }
+    let encrypted_output =
+        store.get_encrypted_output((chain_id, contract)).unwrap();
+    let last_queried_block = store
+        .get_last_deposit_block_number_for_encrypted_output((
+            chain_id, contract,
+        ))
+        .unwrap();
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&EncryptedOutputCacheResponse {
+            encrypted_output,
             last_queried_block,
         }),
         warp::http::StatusCode::OK,

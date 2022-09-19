@@ -350,13 +350,17 @@ pub trait EncryptedOutputCacheStore: HistoryStore {
     /// The last deposit info is sent to the client on encrypted_output request
     /// So they can verify when the last transaction was sent to maintain
     /// their own state of mixers.
-    fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+    fn get_last_deposit_block_number_for_encrypted_output<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
         &self,
         key: K,
     ) -> crate::Result<types::U64>;
 
     /// Set the last deposit block number for the given key.
-    fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+    fn insert_last_deposit_block_number_for_encrypted_output<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
         &self,
         key: K,
         block_number: types::U64,

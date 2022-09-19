@@ -53,7 +53,7 @@ impl super::EventHandler for EncryptedOutputHandler {
                     (chain_id, wrapper.contract.address()),
                     &[value.clone()],
                 )?;
-                store.insert_last_deposit_block_number(
+                store.insert_last_deposit_block_number_for_encrypted_output(
                     (chain_id, wrapper.contract.address()),
                     log.block_number,
                 )?;

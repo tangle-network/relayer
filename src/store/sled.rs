@@ -198,7 +198,9 @@ impl EncryptedOutputCacheStore for SledStore {
         Ok(())
     }
 
-    fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+    fn get_last_deposit_block_number_for_encrypted_output<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
         &self,
         key: K,
     ) -> crate::Result<types::U64> {
@@ -211,7 +213,9 @@ impl EncryptedOutputCacheStore for SledStore {
         }
     }
 
-    fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+    fn insert_last_deposit_block_number_for_encrypted_output<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
         &self,
         key: K,
         block_number: types::U64,
