@@ -185,6 +185,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const decodedAddress = decodeAddress(address);
     const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
     const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
+    const assetId = new Uint8Array([254, 255, 255, 255]);
 
     const setup: ProvingManagerSetupInput<'vanchor'> = {
       chainId: outputChainId.toString(),
@@ -201,7 +202,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       extAmount: extAmount.toString(),
       fee: fee.toString(),
       refund: String(refund),
-      token: decodedAddress,
+      token: assetId,
     };
 
     const data = (await provingManager.prove('vanchor', setup)) as VAnchorProof;
@@ -210,7 +211,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       recipient: address,
       fee,
       refund: String(refund),
-      token: decodedAddress,
+      token: assetId,
       extAmount: extAmount,
       encryptedOutput1: u8aToHex(comEnc1),
       encryptedOutput2: u8aToHex(comEnc2),
