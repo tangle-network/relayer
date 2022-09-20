@@ -37,10 +37,10 @@ use webb::substrate::{
 use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::dkg::*;
+use crate::events_watcher::evm::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use crate::events_watcher::evm::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
-use crate::events_watcher::evm::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use crate::proposal_signing_backend::*;
 use crate::store::sled::SledStore;
 use crate::tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
@@ -734,12 +734,17 @@ async fn start_evm_vanchor_events_watcher(
             ProposalSigningBackendSelector::Dkg(backend) => {
                 let deposit_handler = VAnchorDepositHandler::new(backend);
                 let leaves_handler = VAnchorLeavesHandler::default();
-                let encrypted_output_handler = VAnchorEncryptedOutputHandler::default();
+                let encrypted_output_handler =
+                    VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
                     wrapper,
-                    vec![Box::new(deposit_handler), Box::new(leaves_handler), Box::new(encrypted_output_handler)],
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -759,12 +764,17 @@ async fn start_evm_vanchor_events_watcher(
             ProposalSigningBackendSelector::Mocked(backend) => {
                 let deposit_handler = VAnchorDepositHandler::new(backend);
                 let leaves_handler = VAnchorLeavesHandler::default();
-                let encrypted_output_handler = VAnchorEncryptedOutputHandler::default();
+                let encrypted_output_handler =
+                    VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
                     wrapper,
-                    vec![Box::new(deposit_handler), Box::new(leaves_handler), Box::new(encrypted_output_handler)],
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -783,12 +793,16 @@ async fn start_evm_vanchor_events_watcher(
             }
             ProposalSigningBackendSelector::None => {
                 let leaves_handler = VAnchorLeavesHandler::default();
-                let encrypted_output_handler = VAnchorEncryptedOutputHandler::default();
+                let encrypted_output_handler =
+                    VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
                     wrapper,
-                    vec![Box::new(leaves_handler), Box::new(encrypted_output_handler)],
+                    vec![
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
