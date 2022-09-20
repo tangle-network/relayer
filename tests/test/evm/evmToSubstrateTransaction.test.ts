@@ -64,7 +64,7 @@ import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
-describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
+describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -222,7 +222,7 @@ describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -314,37 +314,37 @@ describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
         finalized: true,
       },
     });
-    console.log('Withdraw on substrate');
-    // now we withdraw on substrate chain
+    // console.log('Withdraw on substrate');
+    // // now we withdraw on substrate chain
 
-    // dummy Deposit Note. Input note is directed toward source chain
-      const depositNote = await generateVAnchorNote(
-        0,
-        typedSourceChainId,
-        typedSourceChainId,
-        0
-      );
-      // substrate vanchor deposit
-      await vanchorWithdraw(typedTargetChainId.toString(),depositNote, treeId, api, aliceNode);
+    // // dummy Deposit Note. Input note is directed toward source chain
+    //   const depositNote = await generateVAnchorNote(
+    //     0,
+    //     typedSourceChainId,
+    //     typedSourceChainId,
+    //     0
+    //   );
+    //   // substrate vanchor deposit
+    //   await vanchorWithdraw(typedTargetChainId.toString(),depositNote, treeId, api, aliceNode);
 
-    // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
-    await webbRelayer.waitForEvent({
-      kind: 'signing_backend',
-      event: {
-        backend: 'Mocked',
-      },
-    });
+    // // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
+    // await webbRelayer.waitForEvent({
+    //   kind: 'signing_backend',
+    //   event: {
+    //     backend: 'Mocked',
+    //   },
+    // });
 
-    // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
+    // // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
 
-    await webbRelayer.waitForEvent({
-      kind: 'tx_queue',
-      event: {
-        ty: 'EVM',
-        chain_id: localChain1.underlyingChainId.toString(),
-        finalized: true,
-      },
-    });
+    // await webbRelayer.waitForEvent({
+    //   kind: 'tx_queue',
+    //   event: {
+    //     ty: 'EVM',
+    //     chain_id: localChain1.underlyingChainId.toString(),
+    //     finalized: true,
+    //   },
+    // });
   });
 
   after(async () => {
