@@ -17,7 +17,7 @@
 // This is Substrate VAnchor Transaction Relayer Tests.
 // In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
 
-import '@nepoche/protocol-substrate-types';
+import '@webb-tools/types';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -49,8 +49,6 @@ import {
   Utxo,
   calculateTypedChainId,
   ChainType,
-  toFixedHex,
-  ResourceId,
   ProposalHeader,
   CircomUtxo,
 } from '@webb-tools/sdk-core';
@@ -60,7 +58,7 @@ import {
   SubstrateResourceIdUpdateProposal,
 } from '../../lib/substrateWebbProposals.js';
 import pkg from 'secp256k1';
-import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
+import { createSubstrateResourceId } from '../../lib/webbProposals.js';
 import { LocalChain } from '../../lib/localTestnet.js';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
@@ -143,11 +141,15 @@ describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
       populatedAccounts: [
         {
           secretKey: PK1,
-          balance: ethers.utils.parseEther('100000000000000000000000').toHexString(),
+          balance: ethers.utils
+            .parseEther('100000000000000000000000')
+            .toHexString(),
         },
         {
           secretKey: GOV,
-          balance: ethers.utils.parseEther('100000000000000000000000').toHexString(),
+          balance: ethers.utils
+            .parseEther('100000000000000000000000')
+            .toHexString(),
         },
       ],
       enabledContracts: enabledContracts,
@@ -171,24 +173,29 @@ describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
     const vanchor = signatureVBridge.getVAnchor(localChain1.chainId)!;
     await vanchor.setSigner(wallet1);
 
-    let evmResourceId = (await vanchor.createResourceId()).slice(2);
-    console.log('evm resourceId : ', evmResourceId);
+    let evmResourceId = await vanchor.createResourceId();
 
-    let substrateResourceId = createSubstrateResourceId(substrateChainId);
-    console.log('substrate resourceId : ', substrateResourceId);
+    let substrateResourceId = createSubstrateResourceId(
+      substrateChainId,
+      6,
+      '0x2C'
+    );
+
     // save the substrate chain configs
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       chainId: substrateChainId,
       proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
-      linkedAnchors: [{ type: 'Raw', resourceId: `0x${evmResourceId}` }],
+      linkedAnchors: [{ type: 'Raw', resourceId: evmResourceId }],
     });
 
     // save the evm chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
-      linkedAnchors: [{ type: 'Raw', resourceId: substrateResourceId }],
+      linkedAnchors: [
+        { type: 'Raw', resourceId: substrateResourceId.toString() },
+      ],
     });
 
     // This are pre-requisites for creating substrate chain.
@@ -233,7 +240,10 @@ describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
     );
     let tx = await token.approveSpending(vanchor1.contract.address);
     await tx.wait();
-    await token.mintTokens(wallet1.address, ethers.utils.parseEther('100000000000000000000000'));
+    await token.mintTokens(
+      wallet1.address,
+      ethers.utils.parseEther('100000000000000000000000')
+    );
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
@@ -245,7 +255,6 @@ describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
-    console.log('treeId : ', treeId);
     // chainId
     let substrateChainId = await aliceNode.getChainId();
     let typedTargetChainId = calculateTypedChainId(
@@ -253,8 +262,6 @@ describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
       substrateChainId
     );
     let typedSourceChainId = localChain1.chainId;
-    console.log('typedSourceChainId : ', typedSourceChainId);
-    console.log('typedTargetChainId : ', typedTargetChainId);
     // now we set resource through proposal execution
     let setResourceIdProposalCall = await setResourceIdProposal(
       api,
@@ -266,12 +273,12 @@ describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
     await aliceNode.executeTransaction(txSigned);
 
     const depositUtxo = await CircomUtxo.generateUtxo({
-        curve: 'Bn254',
-        backend: 'Circom',
-        amount: (1e6).toString(),
-        originChainId: typedSourceChainId.toString(),
-        chainId: typedTargetChainId.toString(),
-      });
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: (1e6).toString(),
+      originChainId: typedSourceChainId.toString(),
+      chainId: typedTargetChainId.toString(),
+    });
 
     const leaves = vanchor1.tree
       .elements()
@@ -318,7 +325,7 @@ describe.skip('Cross chain transaction <<>> Mocked Backend', function () {
         0
       );
       // substrate vanchor deposit
-      await vanchorDeposit(typedTargetChainId.toString(),depositNote, treeId, api, aliceNode);
+      await vanchorWithdraw(typedTargetChainId.toString(),depositNote, treeId, api, aliceNode);
 
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
@@ -358,15 +365,10 @@ async function setResourceIdProposal(
 ): Promise<SubmittableExtrinsic<'promise'>> {
   let functionSignature = hexToU8a('0x00000002', 32);
   let nonce = 1;
-  let palletIndex = '0x2D';
+  let palletIndex = '0x2C';
   let callIndex = '0x02';
-  let substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
   // set resource ID
-  let resourceId = new ResourceId(
-    toFixedHex(substrateTargetSystem, 20),
-    ChainType.Substrate,
-    chainId
-  );
+  let resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
   const proposalHeader = new ProposalHeader(
     resourceId,
     functionSignature,
@@ -397,7 +399,7 @@ async function setResourceIdProposal(
   return setResourceCall;
 }
 
-async function vanchorDeposit(
+async function vanchorWithdraw(
   typedTargetChainId: string,
   depositNote: Note,
   treeId: number,
@@ -406,8 +408,6 @@ async function vanchorDeposit(
 ) {
   const account = createAccount('//Dave');
   const typedSourceChainId = depositNote.note.sourceChainId;
-  console.log('typedSourceChainId : ', typedSourceChainId);
-  console.log('typedTargetChainId : ', typedTargetChainId);
   const secret = randomAsU8a();
   const gitRoot = child
     .execSync('git rev-parse --show-toplevel')
@@ -461,7 +461,6 @@ async function vanchorDeposit(
   const neighborRoots: string[] = await (api.rpc as any).lt
     .getNeighborRoots(treeId)
     .then((roots: any) => roots.toHuman());
-  console.log('neighbor roots: ', neighborRoots);
   const rootsSet = [hexToU8a(root), hexToU8a(neighborRoots[0])];
   const decodedAddress = decodeAddress(address);
   const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
@@ -507,11 +506,6 @@ async function vanchorDeposit(
     ),
     extDataHash: data.extDataHash,
   };
-  console.log('Proof data : ', vanchorProofData);
-  const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
-    Number(treeId)
-  );
-  const indexBeforeInsetion = Math.max(leafsCount - 1, 0);
 
   // now we call the vanchor transact
   let transactCall = api.tx.vAnchorBn254!.transact!(
@@ -560,16 +554,4 @@ function createAccount(accountId: string): any {
   const account = keyring.addFromUri(accountId);
 
   return account;
-}
-
-function createSubstrateResourceId(chainId: number): `0x${string}` {
-  let palletIndex = '0x2D';
-  let substrateTargetSystem = makeSubstrateTargetSystem(6, palletIndex);
-  // set resource ID
-  let resourceId = new ResourceId(
-    toFixedHex(substrateTargetSystem, 20),
-    ChainType.Substrate,
-    chainId
-  );
-  return `0x${resourceId.toString().slice(2)}`;
 }

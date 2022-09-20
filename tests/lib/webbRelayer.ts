@@ -500,7 +500,7 @@ export interface EventsWatcher {
 
 export type RawResourceId = {
   type: 'Raw';
-  resourceId: `0x${string}`;
+  resourceId: string;
 };
 
 export type EvmLinkedAnchor = {

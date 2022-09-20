@@ -17,7 +17,7 @@
 // This is Substrate VAnchor Transaction Relayer Tests.
 // In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
 
-import '@nepoche/protocol-substrate-types';
+import '@webb-tools/types';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -208,7 +208,7 @@ async function setResourceIdProposal(
 ): Promise<SubmittableExtrinsic<'promise'>> {
   let functionSignature = hexToU8a('0x00000002', 32);
   let nonce = 1;
-  let palletIndex = '0x2D';
+  let palletIndex = '0x2C';
   let callIndex = '0x02';
   let substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
   // set resource ID
@@ -307,6 +307,7 @@ async function vanchorDeposit(
   const extAmount = currencyToUnitI128(10);
   const fee = 0;
   const refund = 0;
+  const assetId = new Uint8Array([254, 255, 255, 255]);
   // Empty leaves
   leavesMap[outputChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);
@@ -331,7 +332,7 @@ async function vanchorDeposit(
     extAmount: extAmount.toString(),
     fee: fee.toString(),
     refund: String(refund),
-    token: decodedAddress,
+    token: assetId,
   };
 
   const data = await provingManager.prove('vanchor', setup);
@@ -340,7 +341,7 @@ async function vanchorDeposit(
     recipient: address,
     fee,
     refund: String(refund),
-    token: decodedAddress,
+    token: assetId,
     extAmount: extAmount,
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),

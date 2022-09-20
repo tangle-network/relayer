@@ -17,7 +17,7 @@
 
 // Testing different kind of proposals between DKG <=> Relayer <=> Signature Bridge.
 
-import '@nepoche/protocol-substrate-types';
+import '@webb-tools/types';
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
