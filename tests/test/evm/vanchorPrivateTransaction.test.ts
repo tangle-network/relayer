@@ -269,7 +269,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       output.publicInputs,
       output.extData
     );
-    console.log("After withdraw");
+    console.log('After withdraw');
 
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
@@ -548,6 +548,19 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     // It should fail since data querying is not configured for relayer
     const chainId = localChain1.underlyingChainId.toString(16);
     const response = await webbRelayer.getLeavesEvm(
+      chainId,
+      vanchor1.contract.address
+    );
+    //forbidden access
+    expect(response.status).equal(403);
+  });
+
+  it('should fail to query encrypted outputs data api', async () => {
+    this.retries(0);
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    // It should fail since data querying is not configured for relayer
+    const chainId = localChain1.underlyingChainId.toString(16);
+    const response = await webbRelayer.getEncryptedOutputsEvm(
       chainId,
       vanchor1.contract.address
     );

@@ -194,7 +194,7 @@ pub fn build_web_services(
         })
         .boxed();
 
-    let evm_store = Arc::new(store.clone());
+    let evm_store = Arc::new(store);
     let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
     let ctx_arc = Arc::new(ctx.clone());
     let encrypted_output_cache_filter_evm = warp::path("encrypted_outputs")

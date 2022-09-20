@@ -107,7 +107,10 @@ export class WebbRelayer {
     const response = await fetch(endpoint);
     return response;
   }
-  public async getEncryptedOutputEvm(chainId: string, contractAddress: string) {
+  public async getEncryptedOutputsEvm(
+    chainId: string,
+    contractAddress: string
+  ) {
     const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/encrypted_outputs/evm/${chainId}/${contractAddress}`;
     const response = await fetch(endpoint);
     return response;
@@ -446,7 +449,7 @@ type EventKind =
   | 'leaves_store'
   | 'signing_backend'
   | 'signature_bridge'
-    | 'encrypted_outputs_store';
+  | 'encrypted_outputs_store';
 
 type EventTarget = 'webb_probe';
 
@@ -472,6 +475,11 @@ export interface WebbRelayerInfo {
 
 export interface LeavesCacheResponse {
   leaves: [string];
+  last_queried_block: string;
+}
+
+export interface EncryptedOutputsCacheResponse {
+  encrypted_outputs: [string];
   last_queried_block: string;
 }
 

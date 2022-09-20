@@ -136,7 +136,10 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    let webbTokens1:Map<number, GovernedTokenWrapper | undefined> = new Map<number, GovernedTokenWrapper | undefined>();
+    let webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
+      number,
+      GovernedTokenWrapper | undefined
+    >();
     webbTokens1.set(this.chainId, null!);
     webbTokens1.set(otherChain.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {

@@ -573,8 +573,8 @@ pub async fn handle_encrypted_outputs_cache_evm(
 
     #[derive(Debug, Serialize)]
     #[serde(rename_all = "camelCase")]
-    struct EncryptedOutputCacheResponse {
-        encrypted_output: Vec<Vec<u8>>,
+    struct EncryptedOutputsCacheResponse {
+        encrypted_outputs: Vec<Vec<u8>>,
         last_queried_block: U64,
     }
     // Unsupported feature response
@@ -663,8 +663,8 @@ pub async fn handle_encrypted_outputs_cache_evm(
         .unwrap();
 
     Ok(warp::reply::with_status(
-        warp::reply::json(&EncryptedOutputCacheResponse {
-            encrypted_output,
+        warp::reply::json(&EncryptedOutputsCacheResponse {
+            encrypted_outputs: encrypted_output,
             last_queried_block,
         }),
         warp::http::StatusCode::OK,
