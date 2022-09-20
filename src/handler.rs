@@ -563,7 +563,7 @@ pub async fn handle_leaves_cache_cosmwasm(
 /// * `chain_id` - An U256 representing the chain id of the chain to query
 /// * `contract` - An address of the contract to query
 /// * `ctx` - RelayContext reference that holds the configuration
-pub async fn handle_encrypted_output_cache_evm(
+pub async fn handle_encrypted_outputs_cache_evm(
     store: Arc<crate::store::sled::SledStore>,
     chain_id: U256,
     contract: Address,

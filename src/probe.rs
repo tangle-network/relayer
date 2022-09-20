@@ -41,6 +41,6 @@ pub enum Kind {
     #[display(fmt = "mt_insert")]
     MerkleTreeInsertion,
     /// Relayer Encrypted Output Store state on a specific chain/node.
-    #[display(fmt = "leaves_store")]
+    #[display(fmt = "encrypted_outputs_store")]
     EncryptedOutputStore,
 }

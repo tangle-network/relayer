@@ -24,10 +24,10 @@ use webb::evm::ethers::prelude::{LogMeta, Middleware};
 /// An Encrypted Output Handler that handles `NewCommitment` events and saves the encrypted_output to the store.
 /// It serves as a cache for encrypted_output that could be used by dApp for proof generation.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct EncryptedOutputHandler;
+pub struct VAnchorEncryptedOutputHandler;
 
 #[async_trait::async_trait]
-impl super::EventHandler for EncryptedOutputHandler {
+impl super::EventHandler for VAnchorEncryptedOutputHandler {
     type Contract = VAnchorContractWrapper<HttpProvider>;
 
     type Events = VAnchorContractEvents;
