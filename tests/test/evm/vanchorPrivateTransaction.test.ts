@@ -555,6 +555,19 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     expect(response.status).equal(403);
   });
 
+  it('should fail to query encrypted outputs data api', async () => {
+    this.retries(0);
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    // It should fail since data querying is not configured for relayer
+    const chainId = localChain1.underlyingChainId.toString(16);
+    const response = await webbRelayer.getEncryptedOutputsEvm(
+      chainId,
+      vanchor1.contract.address
+    );
+    //forbidden access
+    expect(response.status).equal(403);
+  });
+
   after(async () => {
     await localChain1?.stop();
     await localChain2?.stop();

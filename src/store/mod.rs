@@ -304,6 +304,45 @@ pub trait LeafCacheStore: HistoryStore {
     ) -> crate::Result<types::U64>;
 }
 
+/// An Encrypted Output Cache Store is a simple trait that would help in
+/// getting the encrypted output and insert them with a simple API.
+pub trait EncryptedOutputCacheStore: HistoryStore {
+    /// The Output type which is the encrypted output.
+    type Output: IntoIterator<Item = Vec<u8>>;
+
+    /// Get the encrypted output for the given key.
+    fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<Self::Output>;
+
+    /// Insert the encrypted output for the given key.
+    fn insert_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        encrypted_output: &[(u32, Vec<u8>)],
+    ) -> crate::Result<()>;
+
+    /// The last deposit info is sent to the client on encrypted_output request
+    /// So they can verify when the last transaction was sent to maintain
+    /// their own state of mixers.
+    fn get_last_deposit_block_number_for_encrypted_output<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
+        &self,
+        key: K,
+    ) -> crate::Result<types::U64>;
+
+    /// Set the last deposit block number for the given key.
+    fn insert_last_deposit_block_number_for_encrypted_output<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
+        &self,
+        key: K,
+        block_number: types::U64,
+    ) -> crate::Result<types::U64>;
+}
+
 /// A Command sent to the Bridge to execute different actions.
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
 pub enum BridgeCommand {

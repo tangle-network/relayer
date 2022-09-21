@@ -37,6 +37,7 @@ use webb::substrate::{
 use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::dkg::*;
+use crate::events_watcher::evm::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use crate::events_watcher::evm::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
@@ -174,7 +175,7 @@ pub fn build_web_services(
     // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
     // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
     // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let cosmwasm_store = Arc::new(store);
+    let cosmwasm_store = Arc::new(store.clone());
     let store_filter =
         warp::any().map(move || Arc::clone(&cosmwasm_store)).boxed();
     let ctx_arc = Arc::new(ctx.clone());
@@ -192,12 +193,32 @@ pub fn build_web_services(
             )
         })
         .boxed();
+
+    let evm_store = Arc::new(store);
+    let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
+    let ctx_arc = Arc::new(ctx.clone());
+    let encrypted_output_cache_filter_evm = warp::path("encrypted_outputs")
+        .and(warp::path("evm"))
+        .and(store_filter)
+        .and(warp::path::param())
+        .and(warp::path::param())
+        .and_then(move |store, chain_id, contract| {
+            crate::handler::handle_encrypted_outputs_cache_evm(
+                store,
+                chain_id,
+                contract,
+                Arc::clone(&ctx_arc),
+            )
+        })
+        .boxed();
+
     // Code that will map the request handlers above to a defined http endpoint.
     let routes = ip_filter
         .or(info_filter)
         .or(leaves_cache_filter_evm)
         .or(leaves_cache_filter_substrate)
         .or(leaves_cache_filter_cosmwasm)
+        .or(encrypted_output_cache_filter_evm)
         .boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();
@@ -712,11 +733,17 @@ async fn start_evm_vanchor_events_watcher(
             ProposalSigningBackendSelector::Dkg(backend) => {
                 let deposit_handler = VAnchorDepositHandler::new(backend);
                 let leaves_handler = VAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
                     wrapper,
-                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -736,11 +763,17 @@ async fn start_evm_vanchor_events_watcher(
             ProposalSigningBackendSelector::Mocked(backend) => {
                 let deposit_handler = VAnchorDepositHandler::new(backend);
                 let leaves_handler = VAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
                     wrapper,
-                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -759,11 +792,16 @@ async fn start_evm_vanchor_events_watcher(
             }
             ProposalSigningBackendSelector::None => {
                 let leaves_handler = VAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
                     wrapper,
-                    vec![Box::new(leaves_handler)],
+                    vec![
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {

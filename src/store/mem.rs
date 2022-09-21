@@ -19,13 +19,17 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use webb::evm::ethers::types;
 
-use super::{HistoryStore, HistoryStoreKey, LeafCacheStore};
+use super::{
+    EncryptedOutputCacheStore, HistoryStore, HistoryStoreKey, LeafCacheStore,
+};
 
 type MemStore = HashMap<HistoryStoreKey, Vec<(u32, types::H256)>>;
+type MemStoreForVec = HashMap<HistoryStoreKey, Vec<(u32, Vec<u8>)>>;
 /// InMemoryStore is a store that stores the history of events in memory.
 #[derive(Clone, Default)]
 pub struct InMemoryStore {
     store: Arc<RwLock<MemStore>>,
+    store_for_vec: Arc<RwLock<MemStoreForVec>>,
     last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, types::U64>>>,
 }
 
@@ -107,6 +111,61 @@ impl LeafCacheStore for InMemoryStore {
 
     #[tracing::instrument(skip(self))]
     fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        block_number: types::U64,
+    ) -> crate::Result<types::U64> {
+        Ok(types::U64::from(0))
+    }
+}
+
+impl EncryptedOutputCacheStore for InMemoryStore {
+    type Output = Vec<Vec<u8>>;
+
+    #[tracing::instrument(skip(self))]
+    fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<Self::Output> {
+        let guard = self.store_for_vec.read();
+        let val = guard
+            .get(&key.into())
+            .cloned()
+            .unwrap_or_default()
+            .into_iter()
+            .map(|v| v.1)
+            .collect();
+        Ok(val)
+    }
+
+    #[tracing::instrument(skip(self))]
+    fn insert_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        encrypted_outputs: &[(u32, Vec<u8>)],
+    ) -> crate::Result<()> {
+        let mut guard = self.store_for_vec.write();
+        guard
+            .entry(key.into())
+            .and_modify(|v| v.extend_from_slice(encrypted_outputs))
+            .or_insert_with(|| encrypted_outputs.to_vec());
+        Ok(())
+    }
+
+    #[tracing::instrument(skip(self))]
+    fn get_last_deposit_block_number_for_encrypted_output<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
+        &self,
+        key: K,
+    ) -> crate::Result<types::U64> {
+        Ok(types::U64::from(0))
+    }
+
+    #[tracing::instrument(skip(self))]
+    fn insert_last_deposit_block_number_for_encrypted_output<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
         &self,
         key: K,
         block_number: types::U64,
