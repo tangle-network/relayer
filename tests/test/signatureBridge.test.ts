@@ -428,16 +428,6 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       }
     );
 
-    // save the chain configs.
-    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
-      signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
-    });
-    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
-      signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
-    });
-
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
     await anchor.setSigner(wallet1);
@@ -467,6 +457,20 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     tx = await token2.approveSpending(anchor2.contract.address);
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
+
+    let resourceId1 = await anchor.createResourceId();
+    let resourceId2 = await anchor2.createResourceId();
+    // save the chain configs.
+    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
+      signatureVBridge: signatureBridge,
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      linkedAnchors: [{ type: 'Raw', resourceId: resourceId2 }],
+    });
+    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
+      signatureVBridge: signatureBridge,
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      linkedAnchors: [{ type: 'Raw', resourceId: resourceId1 }],
+    });
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });

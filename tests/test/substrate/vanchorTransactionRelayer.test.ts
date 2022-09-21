@@ -176,6 +176,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const address = account.address;
     const extAmount = currencyToUnitI128(10);
     const fee = 0;
+    const refund = 0;
     // Empty leaves
     leavesMap[outputChainId.toString()] = [];
     const tree = await api.query.merkleTreeBn254.trees(treeId);
@@ -200,7 +201,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       recipient: decodedAddress,
       extAmount: extAmount.toString(),
       fee: fee.toString(),
-      refund: '0',
+      refund: String(refund),
       token: assetId,
     };
 
@@ -209,7 +210,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       relayer: address,
       recipient: address,
       fee,
-      refund: '0',
+      refund: String(refund),
       token: assetId,
       extAmount: extAmount,
       encryptedOutput1: u8aToHex(comEnc1),
