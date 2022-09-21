@@ -324,11 +324,9 @@ impl QueueKey for SledQueueKey {
             Self::CosmosTx { chain_id, .. } => {
                 format!("cosmos_tx_{}", chain_id)
             }
-            Self::BridgeCmd { bridge_key, .. } => format!(
-                "bridge_cmd_{}_{}",
-                bridge_key.chain_id.chain_id(),
-                hex::encode(bridge_key.target_system.to_bytes())
-            ),
+            Self::BridgeCmd { bridge_key, .. } => {
+                format!("bridge_cmd_{}", bridge_key.chain_id.chain_id())
+            }
         }
     }
 

@@ -18,7 +18,6 @@ use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::{dkg_runtime, subxt};
 
-use crate::config::{self, Contract};
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 
@@ -26,16 +25,8 @@ use super::{BlockNumberOf, SubstrateEventWatcher};
 
 /// A ProposalHandler watcher for the DKG Substrate runtime.
 /// It watches for the `ProposalSigned` event and sends the proposal to the signature bridge.
-#[derive(Clone, Debug)]
-pub struct ProposalHandlerWatcher {
-    webb_config: config::WebbRelayerConfig,
-}
-
-impl ProposalHandlerWatcher {
-    pub fn new(webb_config: config::WebbRelayerConfig) -> Self {
-        Self { webb_config }
-    }
-}
+#[derive(Copy, Clone, Debug, Default)]
+pub struct ProposalHandlerWatcher;
 
 #[async_trait::async_trait]
 impl SubstrateEventWatcher for ProposalHandlerWatcher {
@@ -76,31 +67,21 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
                 );
                 None
             }
-            TypedChainId::Evm(id) => self
-                .webb_config
-                .evm
-                .values()
-                .find(|c| c.chain_id == id)
-                .and_then(|c| {
-                    c.contracts.iter().find(|contract| {
-                        matches!(contract, Contract::SignatureBridge(_))
-                    })
-                })
-                .and_then(|contract| match contract {
-                    Contract::SignatureBridge(bridge) => Some(bridge),
-                    _ => None,
-                })
-                .map(|config| {
-                    BridgeKey::new(
-                        config.common.address,
-                        webb_proposals::TypedChainId::Evm(id),
-                    )
-                }),
-            TypedChainId::Substrate(_) => {
-                tracing::warn!(
-                    "Unhandled `ProposalSigned` Event with substrate chain id"
+            TypedChainId::Evm(id) => {
+                tracing::trace!(
+                    "`ProposalSigned` Event with evm chain id : {}",
+                    id
                 );
-                None
+                Some(BridgeKey::new(webb_proposals::TypedChainId::Evm(id)))
+            }
+            TypedChainId::Substrate(id) => {
+                tracing::trace!(
+                    "`ProposalSigned` Event with substrate chain id : {}",
+                    id
+                );
+                Some(BridgeKey::new(webb_proposals::TypedChainId::Substrate(
+                    id,
+                )))
             }
             TypedChainId::PolkadotParachain(_) => {
                 tracing::warn!("Unhandled `ProposalSigned` Event with polkadot parachain chain id");

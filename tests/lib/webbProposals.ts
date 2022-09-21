@@ -15,7 +15,7 @@
  *
  */
 import { u8aToHex, hexToU8a } from '@polkadot/util';
-import { toFixedHex } from '@webb-tools/sdk-core';
+import { ChainType, ResourceId, toFixedHex } from '@webb-tools/sdk-core';
 
 /**
  * A TargetSystem is 26 bytes hex encoded string of the following format
@@ -33,4 +33,19 @@ export function makeSubstrateTargetSystem(
   rId.set(index, 15); // 15-16
   rId.set(treeBytes, 16); // 16-20
   return u8aToHex(rId);
+}
+
+export function createSubstrateResourceId(
+  chainId: number,
+  treeId: number,
+  palletIndex: string
+): ResourceId {
+  let substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
+  // set resource ID
+  let resourceId = new ResourceId(
+    toFixedHex(substrateTargetSystem, 20),
+    ChainType.Substrate,
+    chainId
+  );
+  return resourceId;
 }

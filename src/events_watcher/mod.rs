@@ -65,6 +65,10 @@ pub mod evm;
 #[doc(hidden)]
 mod retry;
 
+/// A module to handel proposals
+#[doc(hidden)]
+mod proposal_handler;
+
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
     /// The block number where this contract is deployed.
@@ -372,13 +376,12 @@ where
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
-            let my_address = contract.address();
             let my_chain_id = client
                 .get_chainid()
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
                 .await?;
-            let bridge_key = BridgeKey::new(my_address, my_chain_id);
+            let bridge_key = BridgeKey::new(my_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
                 let result = match store.dequeue_item(key)? {
@@ -671,15 +674,9 @@ where
         let task = || async {
             let client_api = client.clone();
             let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
-            // chain_id is used as tree_id, to ensure that we have one signature bridge
-            let target = webb_proposals::SubstrateTargetSystem::builder()
-                .pallet_index(0)
-                .tree_id(chain_id.as_u32())
-                .build();
-            let target_system = webb_proposals::TargetSystem::Substrate(target);
             let my_chain_id =
                 webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
-            let bridge_key = BridgeKey::new(target_system, my_chain_id);
+            let bridge_key = BridgeKey::new(my_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
                 let result = match store.dequeue_item(key)? {

@@ -13,17 +13,15 @@
 // limitations under the License.
 //
 use super::{HttpProvider, VAnchorContractWrapper};
+use crate::config::LinkedAnchorConfig;
+use crate::events_watcher::proposal_handler;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
 use ethereum_types::H256;
 use std::sync::Arc;
-use webb::evm::contract::protocol_solidity::{
-    v_anchor_contract, VAnchorContractEvents,
-};
-use webb::evm::ethers::prelude::{EthCall, LogMeta, Middleware};
-use webb_proposals::evm::AnchorUpdateProposal;
-use webb_proposals::FunctionSignature;
+use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
+use webb::evm::ethers::prelude::{LogMeta, Middleware};
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {
@@ -32,7 +30,7 @@ pub struct VAnchorDepositHandler<B> {
 
 impl<B> VAnchorDepositHandler<B>
 where
-    B: ProposalSigningBackend<AnchorUpdateProposal>,
+    B: ProposalSigningBackend,
 {
     pub fn new(proposal_signing_backend: B) -> Self {
         Self {
@@ -44,7 +42,7 @@ where
 #[async_trait::async_trait]
 impl<B> super::EventHandler for VAnchorDepositHandler<B>
 where
-    B: ProposalSigningBackend<AnchorUpdateProposal> + Send + Sync,
+    B: ProposalSigningBackend + Send + Sync,
 {
     type Contract = VAnchorContractWrapper<HttpProvider>;
 
@@ -101,12 +99,6 @@ where
         let chain_id = client.get_chainid().await?;
         let root = wrapper.contract.get_last_root().call().await?;
         let leaf_index = event_data.index.as_u32();
-        let function_signature_bytes =
-            v_anchor_contract::UpdateEdgeCall::selector().to_vec();
-        let mut buf = [0u8; 4];
-        buf.copy_from_slice(&function_signature_bytes);
-        let function_signature = FunctionSignature::from(buf);
-        let nonce = leaf_index;
         let src_chain_id = webb_proposals::TypedChainId::Evm(chain_id.as_u32());
         let src_target_system =
             webb_proposals::TargetSystem::new_contract_address(
@@ -125,63 +117,45 @@ where
                 return Ok(());
             }
         };
-        let linked_anchor_display = linked_anchors
-            .iter()
-            .map(|v| format!("Chain Id: {} at {}", v.chain_id, v.address))
-            .collect::<Vec<_>>();
-        tracing::debug!(
-            len = linked_anchors.len(),
-            anchors = ?linked_anchor_display,
-            "Updating Linked Anchors"
-        );
+
         for linked_anchor in linked_anchors {
-            let dest_chain = &linked_anchor.chain_id;
-            let maybe_chain = wrapper.webb_config.evm.get(dest_chain);
-            let dest_chain = match maybe_chain {
-                Some(chain) => chain,
-                None => {
-                    tracing::warn!(
-                        %dest_chain,
-                        chain_name = %linked_anchor.chain,
-                        "Chain Id: {dest_chain} not found in the config, skipping ...",
+            let target_resource_id = match linked_anchor {
+                LinkedAnchorConfig::Raw(target) => {
+                    let bytes: [u8; 32] = target.resource_id.into();
+                    webb_proposals::ResourceId::from(bytes)
+                }
+                _ => unreachable!("unsupported"),
+            };
+
+            let _ = match target_resource_id.target_system() {
+                webb_proposals::TargetSystem::ContractAddress(_) => {
+                    let proposal = proposal_handler::evm_anchor_update_proposal(
+                        root,
+                        leaf_index,
+                        target_resource_id,
+                        src_resource_id,
                     );
-                    continue;
+                    proposal_handler::handle_proposal(
+                        &proposal,
+                        &self.proposal_signing_backend,
+                    )
+                    .await
+                }
+                webb_proposals::TargetSystem::Substrate(_) => {
+                    let proposal =
+                        proposal_handler::substrate_anchor_update_propsoal(
+                            root,
+                            leaf_index,
+                            target_resource_id,
+                            src_resource_id,
+                        );
+                    proposal_handler::handle_proposal(
+                        &proposal,
+                        &self.proposal_signing_backend,
+                    )
+                    .await
                 }
             };
-            let anchor_target_system =
-                webb_proposals::TargetSystem::new_contract_address(
-                    linked_anchor.address.to_fixed_bytes(),
-                );
-            let anchor_chain_id =
-                webb_proposals::TypedChainId::Evm(dest_chain.chain_id as _);
-            let resource_id = webb_proposals::ResourceId::new(
-                anchor_target_system,
-                anchor_chain_id,
-            );
-            let header = webb_proposals::ProposalHeader::new(
-                resource_id,
-                function_signature,
-                nonce.into(),
-            );
-            let proposal = webb_proposals::evm::AnchorUpdateProposal::new(
-                header,
-                root,
-                src_resource_id,
-            );
-            let can_sign_proposal = self
-                .proposal_signing_backend
-                .can_handle_proposal(&proposal)
-                .await?;
-            if can_sign_proposal {
-                self.proposal_signing_backend
-                    .handle_proposal(&proposal)
-                    .await?;
-            } else {
-                tracing::warn!(
-                    ?proposal,
-                    "Anchor update proposal is not supported by the signing backend"
-                );
-            }
         }
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;

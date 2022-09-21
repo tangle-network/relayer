@@ -498,17 +498,27 @@ export interface EventsWatcher {
   printProgressInterval?: number;
 }
 
-export interface LinkedAnchor {
-  chain: string;
+export type RawResourceId = {
+  type: 'Raw';
+  resourceId: string;
+};
+
+export type EvmLinkedAnchor = {
+  type: 'Evm';
   chainId: string;
   address: string;
-}
+};
 
-export interface SubstrateLinkedAnchor {
-  chainId: string;
-  chain: number;
-  tree: number;
-}
+export type SubstrateLinkedAnchor = {
+  type: 'Substrate';
+  chainId: number;
+  pallet: number;
+  treeId: number;
+};
+export type LinkedAnchor =
+  | RawResourceId
+  | EvmLinkedAnchor
+  | SubstrateLinkedAnchor;
 
 export interface Substrate {
   [key: string]: NodeInfo;
@@ -524,7 +534,7 @@ export interface Pallet {
   pallet: PalletKind;
   eventsWatcher: EventsWatcher;
   proposalSigningBackend?: ProposalSigningBackend;
-  linkedAnchors?: SubstrateLinkedAnchor[];
+  linkedAnchors?: LinkedAnchor[];
 }
 
 export interface EnabledContracts {
