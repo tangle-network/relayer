@@ -1,10 +1,10 @@
 port = 9955
 
-[substrate.webbeggnet]
+[substrate.webbtangle]
 enabled=true
 chain-id=1080
 http-endpoint = "https://standalone.webb.tools"
 ws-endpoint = "wss://standalone.webb.tools"
 runtime = "WebbProtocol"
-suri = "//Alice"
+suri = "$TANGLE_MIXER_SURI"
 pallets = []

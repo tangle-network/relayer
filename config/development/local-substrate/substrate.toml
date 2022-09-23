@@ -6,7 +6,7 @@ enabled=true
 http-endpoint = "http://localhost:9933"
 ws-endpoint = "ws://localhost:9944"
 runtime = "WebbProtocol"
-suri = "//Alice//stash"
+suri = "${LOCAL_SUBSTRATE_SURI}"
 [[substrate.localnode.pallets]]
 pallet = "VAnchorBn254"
 events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
