@@ -1,0 +1,9 @@
+# Webb Relayer Network Port to run on
+# default: 9955
+port = 9955
+
+# Features to only allow for private transaction relaying in the relayer
+[features]
+private-tx-relay = true
+governance-relay = false
+data-query = false

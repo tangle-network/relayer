@@ -1,0 +1,9 @@
+# Webb Relayer Network Port to run on
+# default: 9955
+port = 9955
+
+# Features to only allow for governance(signature) relaying in the relayer
+[features]
+governance-relay = true
+data-query = false
+private-tx-relay = false
