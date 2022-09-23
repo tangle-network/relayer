@@ -3,6 +3,7 @@
 port = 9955
 
 # Features to only allow for data-querying in the relayer
+# By default, all are true, so hence need to disable the rest
 [features]
 data-query = true
 governance-relay = false

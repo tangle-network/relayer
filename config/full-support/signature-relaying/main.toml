@@ -3,6 +3,7 @@
 port = 9955
 
 # Features to only allow for governance(signature) relaying in the relayer
+# By default, all are true, so hence need to disable the rest
 [features]
 governance-relay = true
 data-query = false
