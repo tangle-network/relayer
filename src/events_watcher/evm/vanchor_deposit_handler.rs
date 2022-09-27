@@ -15,6 +15,7 @@
 use super::{HttpProvider, VAnchorContractWrapper};
 use crate::config::LinkedAnchorConfig;
 use crate::events_watcher::proposal_handler;
+use crate::metric;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
@@ -22,7 +23,6 @@ use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-use crate::metric;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {
@@ -140,7 +140,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
-                        metrics.clone()
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -155,7 +155,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
-                        metrics.clone()
+                        metrics.clone(),
                     )
                     .await
                 }

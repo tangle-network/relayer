@@ -14,9 +14,9 @@
 //
 use std::sync::Arc;
 
-use crate::{config, metric};
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
+use crate::{config, metric};
 use ethereum_types::U256;
 use webb::substrate::dkg_runtime::api::dkg;
 use webb::substrate::subxt::PolkadotExtrinsicParams;

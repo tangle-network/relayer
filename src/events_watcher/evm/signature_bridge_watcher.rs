@@ -26,10 +26,10 @@ use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
 
-use crate::{config, metric};
 use crate::events_watcher::{BridgeWatcher, EventHandler, EventWatcher};
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, QueueStore};
+use crate::{config, metric};
 
 type HttpProvider = providers::Provider<providers::Http>;
 

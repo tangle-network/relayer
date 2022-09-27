@@ -292,7 +292,6 @@ pub async fn ignite(
                         config,
                         client.clone(),
                         store.clone(),
-
                     )
                     .await?;
                 }
@@ -469,7 +468,7 @@ fn start_substrate_vanchor_event_watcher(
             chain_id,
             client.clone(),
             store.clone(),
-            metrics.clone()
+            metrics.clone(),
         );
         let proposal_signing_backend = make_substrate_proposal_signing_backend(
             &my_ctx,
@@ -493,7 +492,7 @@ fn start_substrate_vanchor_event_watcher(
                     chain_id,
                     client.clone(),
                     store.clone(),
-                    metrics.clone()
+                    metrics.clone(),
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
@@ -528,7 +527,7 @@ fn start_substrate_vanchor_event_watcher(
                     chain_id,
                     client.clone(),
                     store.clone(),
-                    metrics.clone()
+                    metrics.clone(),
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
@@ -612,7 +611,8 @@ fn start_dkg_proposal_handler(
     let metrics = ctx.metrics.clone();
     let task = async move {
         let proposal_handler = ProposalHandlerWatcher::default();
-        let watcher = proposal_handler.run(node_name, chain_id, client, store, metrics);
+        let watcher =
+            proposal_handler.run(node_name, chain_id, client, store, metrics);
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -668,7 +668,8 @@ fn start_dkg_pallet_watcher(
     let metrics = ctx.metrics.clone();
     let task = async move {
         let governor_watcher = DKGGovernorWatcher::new(webb_config);
-        let watcher = governor_watcher.run(node_name, chain_id, client, store, metrics);
+        let watcher =
+            governor_watcher.run(node_name, chain_id, client, store, metrics);
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -782,7 +783,7 @@ async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
-                    my_ctx.metrics.clone()
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -811,7 +812,7 @@ async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
-                    my_ctx.metrics.clone()
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -870,7 +871,7 @@ async fn start_signature_bridge_events_watcher(
             store.clone(),
             wrapper.clone(),
             vec![Box::new(governance_transfer_handler)],
-            metrics
+            metrics,
         );
         let cmd_handler_task = BridgeWatcher::run(
             &bridge_contract_watcher,
@@ -933,7 +934,7 @@ async fn start_substrate_signature_bridge_events_watcher(
             chain_id,
             client.clone(),
             store.clone(),
-            ctx.metrics.clone()
+            ctx.metrics.clone(),
         );
         let cmd_handler_task = SubstrateBridgeWatcher::run(
             &substrate_bridge_watcher,

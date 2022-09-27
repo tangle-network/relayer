@@ -6,11 +6,11 @@ mod dkg;
 #[doc(hidden)]
 mod mocked;
 
+use crate::metric;
 /// A module that Implements the DKG Proposal Signing Backend.
 pub use dkg::*;
 /// A module that Implements the Mocked Proposal Signing Backend.
 pub use mocked::*;
-use crate::metric;
 
 /// A Proposal Signing Backend is responsible for signing proposal `P` where `P` is anything really depending on the
 /// requirement of the user of this backend.

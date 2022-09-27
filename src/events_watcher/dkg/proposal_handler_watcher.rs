@@ -14,10 +14,10 @@
 //
 use std::sync::Arc;
 
+use crate::metric;
 use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::{dkg_runtime, subxt};
-use crate::metric;
 
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};

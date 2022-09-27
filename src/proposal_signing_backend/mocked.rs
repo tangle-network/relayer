@@ -1,3 +1,4 @@
+use crate::metric;
 use crate::store::sled::SledQueueKey;
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 use crate::types::private_key::PrivateKey;
@@ -9,7 +10,6 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::utils::keccak256;
 use webb_proposals::{ProposalTrait, ResourceId, TypedChainId};
-use crate::metric;
 
 /// A ProposalSigningBackend that uses the Governor's private key to sign proposals.
 #[derive(TypedBuilder)]

@@ -30,8 +30,8 @@ use webb::evm::ethers::prelude::*;
 use webb::substrate::subxt;
 use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 
-use crate::{config, metric};
 use crate::metric::Metrics;
+use crate::{config, metric};
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
@@ -59,7 +59,7 @@ impl RelayerContext {
         Self {
             config,
             notify_shutdown,
-            metrics
+            metrics,
         }
     }
     /// Returns a broadcast receiver handle for the shutdown signal.

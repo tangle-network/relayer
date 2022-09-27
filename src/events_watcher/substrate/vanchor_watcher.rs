@@ -15,6 +15,7 @@
 use super::BlockNumberOf;
 use crate::config::LinkedAnchorConfig;
 use crate::events_watcher::proposal_handler;
+use crate::metric;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
@@ -22,7 +23,6 @@ use std::sync::Arc;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
 use webb::substrate::{protocol_substrate_runtime, subxt};
-use crate::metric;
 
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
 pub struct SubstrateVAnchorWatcher<B> {
@@ -138,7 +138,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
-                        metrics.clone()
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -153,7 +153,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
-                        metrics.clone()
+                        metrics.clone(),
                     )
                     .await
                 }

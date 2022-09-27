@@ -30,6 +30,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::metric;
 use webb::{
     evm::ethers::{
         contract,
@@ -42,7 +43,6 @@ use webb::{
         subxt::{self, sp_runtime::traits::Header},
     },
 };
-use crate::metric;
 
 use crate::store::sled::SledQueueKey;
 use crate::store::{
@@ -185,7 +185,7 @@ pub trait EventWatcher {
                                 &contract,
                                 (event.clone(), log.clone()),
                                 backoff,
-                                metrics.clone()
+                                metrics.clone(),
                             )
                         });
                         let result = futures::future::join_all(tasks).await;
@@ -331,7 +331,7 @@ pub trait EventHandlerWithRetry: EventHandler {
                 store.clone(),
                 contract,
                 (event.clone(), log.clone()),
-                metrics.clone()
+                metrics.clone(),
             )
             .map_err(backoff::Error::transient)
         };
@@ -568,7 +568,7 @@ pub trait SubstrateEventWatcher {
                                 store.clone(),
                                 api.clone(),
                                 (event, block_number),
-                                metrics.clone()
+                                metrics.clone(),
                             )
                             .await;
                         match result {
@@ -732,10 +732,10 @@ where
 mod tests {
     use std::sync::Arc;
 
-    use webb::substrate::dkg_runtime;
-    use webb::substrate::dkg_runtime::api::system;
     use crate::config::WebbRelayerConfig;
     use crate::context::RelayerContext;
+    use webb::substrate::dkg_runtime;
+    use webb::substrate::dkg_runtime::api::system;
 
     use crate::store::sled::SledStore;
 
@@ -788,7 +788,9 @@ mod tests {
         let config = WebbRelayerConfig::default();
         let ctx = RelayerContext::new(config);
         let metrics = ctx.metrics.clone();
-        watcher.run(node_name, chain_id, client, store, metrics).await?;
+        watcher
+            .run(node_name, chain_id, client, store, metrics)
+            .await?;
         Ok(())
     }
 }
