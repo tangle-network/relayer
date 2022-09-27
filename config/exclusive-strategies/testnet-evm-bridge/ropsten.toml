@@ -65,3 +65,4 @@ linked-anchors = [
   { chain = "optimismtestnet", chain-id = "420", address = "0x12f2c4a1469b035e4459539e38ae68bc4dd5ba07" },
   { chain = "moonbase", chain-id = "1287", address = "0xc6b43568f0c39e3a68b597a3bb54a7b9e4308bf3"}
 ]
+type = "none"
