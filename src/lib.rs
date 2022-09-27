@@ -112,5 +112,7 @@ pub mod tx_relay;
 pub mod types;
 /// A module for common functionality.
 pub mod utils;
+/// Metrics functionality
+pub mod metric;
 
 pub use crate::error::{Error, Result};

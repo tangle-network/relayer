@@ -79,6 +79,8 @@ impl super::ProposalSigningBackend
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> crate::Result<()> {
+        // Register metric for when handle proposal is being called
+
         let tx_api = self.api.tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
