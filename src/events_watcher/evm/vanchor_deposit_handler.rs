@@ -22,6 +22,7 @@ use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use crate::metric;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {
@@ -56,6 +57,7 @@ where
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         use VAnchorContractEvents::*;
         let event_data = match event {
@@ -138,6 +140,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone()
                     )
                     .await
                 }
@@ -152,6 +155,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone()
                     )
                     .await
                 }

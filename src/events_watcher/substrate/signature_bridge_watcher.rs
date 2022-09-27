@@ -30,6 +30,7 @@ use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
 use webb::substrate::scale;
 use webb::substrate::scale::Encode;
+use crate::metric;
 use crate::tx_queue::substrate::call_data;
 
 /// A SignatureBridge contract events & commands watcher.
@@ -58,6 +59,7 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
         _store: Arc<Self::Store>,
         _api: Arc<Self::Api>,
         (event, _block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         // todo
         // if the ownership is transferred to the new owner, we need to

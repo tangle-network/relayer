@@ -20,6 +20,7 @@ use std::sync::Arc;
 use webb::evm::ethers::types;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::{protocol_substrate_runtime, subxt};
+use crate::metric;
 
 // An Substrate VAnchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
@@ -48,6 +49,7 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         // fetch leaf_index from merkle tree at given block_number
         let at_hash = api

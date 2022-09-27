@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use futures::StreamExt;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
@@ -5,6 +6,7 @@ use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::{dkg_runtime, subxt};
 use webb_proposals::{ProposalTrait};
 use webb::substrate::scale::{Encode, Decode};
+use crate::metric;
 
 type DkgConfig = subxt::DefaultConfig;
 type DkgRuntimeApi = dkg_runtime::api::RuntimeApi<
@@ -78,9 +80,10 @@ impl super::ProposalSigningBackend
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         // Register metric for when handle proposal is being called
-
+        metrics.handle_proposal_execution_metric.inc();
         let tx_api = self.api.tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();

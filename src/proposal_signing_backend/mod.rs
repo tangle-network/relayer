@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use webb_proposals::ProposalTrait;
 
 #[doc(hidden)]
@@ -9,6 +10,7 @@ mod mocked;
 pub use dkg::*;
 /// A module that Implements the Mocked Proposal Signing Backend.
 pub use mocked::*;
+use crate::metric;
 
 /// A Proposal Signing Backend is responsible for signing proposal `P` where `P` is anything really depending on the
 /// requirement of the user of this backend.
@@ -31,5 +33,6 @@ pub trait ProposalSigningBackend {
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()>;
 }

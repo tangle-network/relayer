@@ -17,6 +17,7 @@ use std::sync::Arc;
 use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::{dkg_runtime, subxt};
+use crate::metric;
 
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
@@ -49,6 +50,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         store: Arc<Self::Store>,
         _api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         tracing::event!(
             target: crate::probe::TARGET,

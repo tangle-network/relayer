@@ -26,7 +26,7 @@ use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
 
-use crate::config;
+use crate::{config, metric};
 use crate::events_watcher::{BridgeWatcher, EventHandler, EventWatcher};
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, QueueStore};
@@ -119,6 +119,7 @@ impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         e: (Self::Events, LogMeta),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         let event = e.0;
         match event {

@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-use prometheus::{Opts, Registry, Counter, TextEncoder, Encoder};
+use prometheus::{Opts, Registry, Counter};
 
 /// A struct definition for collecting metrics in the relayer
 #[derive(Debug, Clone)]
@@ -39,6 +39,8 @@ pub struct Metrics {
 }
 
 impl Metrics {
+    /// Instantiates the various metrics and their counters, also creates a registry for the counters and
+    /// registers the counters
     pub fn new() -> Self {
         // creates the counter for the metrics
         let  bridge_watcher_back_off_counter_opts = Opts::new("bridge_watcher_back_off_metric", "specifies how many times the bridge watcher backed off");

@@ -22,6 +22,7 @@ use std::sync::Arc;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
 use webb::substrate::{protocol_substrate_runtime, subxt};
+use crate::metric;
 
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
 pub struct SubstrateVAnchorWatcher<B> {
@@ -70,6 +71,7 @@ where
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         tracing::debug!(
             event = ?event,
@@ -136,6 +138,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone()
                     )
                     .await
                 }
@@ -150,6 +153,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone()
                     )
                     .await
                 }

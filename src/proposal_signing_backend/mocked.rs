@@ -9,6 +9,7 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::utils::keccak256;
 use webb_proposals::{ProposalTrait, ResourceId, TypedChainId};
+use crate::metric;
 
 /// A ProposalSigningBackend that uses the Governor's private key to sign proposals.
 #[derive(TypedBuilder)]
@@ -55,6 +56,7 @@ where
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         // Proposal will be signed by active governor/maintainer.
         // Proposal will be then enqueued for execution with BridgeKey as TypedChainId

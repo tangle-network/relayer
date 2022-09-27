@@ -14,7 +14,7 @@
 //
 use std::sync::Arc;
 
-use crate::config;
+use crate::{config, metric};
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 use ethereum_types::U256;
@@ -59,6 +59,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         // we got that the signature of the DKG public key changed.
         // that means the DKG Public Key itself changed.
