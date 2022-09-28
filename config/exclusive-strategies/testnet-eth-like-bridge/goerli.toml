@@ -65,4 +65,3 @@ linked-anchors = [
   { chain = "rinkeby", chain-id = "4", address = "0x7ae23a95881bf8ab86174e89bd79199f398d19bf"},
   { chain = "moonbase", chain-id = "1287", address = "0xc6b43568f0c39e3a68b597a3bb54a7b9e4308bf3"}
 ]
-type = "none"
