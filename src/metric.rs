@@ -168,3 +168,9 @@ impl Metrics {
         }
     }
 }
+
+impl Default for Metrics {
+    fn default() -> Self {
+        Self::new()
+    }
+}
