@@ -131,6 +131,7 @@ where
             starting = true,
         );
 
+        let metrics = self.ctx.metrics.clone();
         let task = || async {
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
@@ -342,6 +343,8 @@ where
                                     status = "Finalized",
                                     finalized = true,
                                 );
+                                // metrics for total transaction made
+                                metrics.total_transaction_made_metric.inc();
                                 // TODO wait for transaction success
                             }
 

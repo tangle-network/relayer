@@ -247,6 +247,8 @@ where
                                     tx_hash_string,
                                 );
                             }
+                            // metrics for total transaction made
+                            metrics.total_transaction_made_metric.inc();
                             tracing::event!(
                                 target: crate::probe::TARGET,
                                 tracing::Level::DEBUG,

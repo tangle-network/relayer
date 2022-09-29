@@ -696,6 +696,8 @@ pub async fn handle_metric_info() -> Result<impl warp::Reply, Infallible> {
         warp::http::StatusCode::OK,
     ))
 }
+
+/// Type of Command to use
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Command {
