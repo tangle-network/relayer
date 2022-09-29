@@ -13,7 +13,7 @@
 // limitations under the License.
 //
 
-use prometheus::{Counter, Opts, Registry};
+use prometheus::{Counter, Encoder, Opts, Registry, TextEncoder};
 
 /// A struct definition for collecting metrics in the relayer
 #[derive(Debug, Clone)]
@@ -28,6 +28,8 @@ pub struct Metrics {
     pub proposal_queue_attempt_metric: Counter,
     /// Total active Relayer metric
     pub total_active_relayer_metric: Counter,
+    /// Total transaction made Relayer metric
+    pub total_transaction_made_metric: Counter,
     /// Total fees earned metric
     pub total_fee_earned_metric: Counter,
     /// Gas spent metric
@@ -82,6 +84,14 @@ impl Metrics {
             Counter::with_opts(total_active_relayer_metric_counter_opts)
                 .unwrap();
 
+        let total_transaction_made_metric_counter_opts = Opts::new(
+            "total_transaction_made_metric",
+            "The total number of transaction made",
+        );
+        let total_transaction_made_metric_counter =
+            Counter::with_opts(total_transaction_made_metric_counter_opts)
+                .unwrap();
+
         let total_fee_earned_metric_counter_opts = Opts::new(
             "total_fee_earned_metric",
             "The total number of fees earned",
@@ -134,6 +144,9 @@ impl Metrics {
             .register(Box::new(total_active_relayer_metric_counter.clone()))
             .unwrap();
         registry
+            .register(Box::new(total_transaction_made_metric_counter.clone()))
+            .unwrap();
+        registry
             .register(Box::new(total_fee_earned_metric_counter.clone()))
             .unwrap();
         registry
@@ -159,6 +172,8 @@ impl Metrics {
             proposal_queue_attempt_metric:
                 proposal_queue_attempt_metric_counter,
             total_active_relayer_metric: total_active_relayer_metric_counter,
+            total_transaction_made_metric:
+                total_transaction_made_metric_counter,
             total_fee_earned_metric: total_fee_earned_metric_counter,
             gas_spent_metric: gas_spent_metric_counter,
             total_number_of_proposals_metric:
@@ -166,6 +181,18 @@ impl Metrics {
             total_number_of_data_stored_metric:
                 total_number_of_data_stored_metric_counter,
         }
+    }
+
+    /// Gathers the whole relayer metrics
+    pub fn gather_metrics() -> String {
+        let mut buffer = Vec::new();
+        let encoder = TextEncoder::new();
+        // Gather the metrics.
+        let metric_families = prometheus::gather();
+        // Encode them to send.
+        encoder.encode(&metric_families, &mut buffer).unwrap();
+
+        String::from_utf8(buffer.clone()).unwrap()
     }
 }
 

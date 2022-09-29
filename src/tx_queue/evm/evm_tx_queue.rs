@@ -116,6 +116,8 @@ where
             starting = true,
         );
 
+        let metrics = self.ctx.metrics.clone();
+
         let task = || async {
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
@@ -293,6 +295,9 @@ where
                                     reason,
                                 );
                             }
+
+                            // transaction queue backoff metric
+                            metrics.transaction_queue_back_off_metric.inc();
 
                             tracing::event!(
                                 target: crate::probe::TARGET,

@@ -38,6 +38,7 @@ use webb::substrate::subxt::sp_core::Pair;
 use webb::substrate::subxt::sp_runtime::AccountId32;
 
 use crate::context::RelayerContext;
+use crate::metric::Metrics;
 use crate::store::{EncryptedOutputCacheStore, LeafCacheStore};
 use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
@@ -670,7 +671,31 @@ pub async fn handle_encrypted_outputs_cache_evm(
         warp::http::StatusCode::OK,
     ))
 }
+
+/// Handles relayer metric requests
+///
+/// Returns a Result with the `MetricResponse` on success
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
 /// Enumerates the supported commands for chain specific relayers
+pub async fn handle_metric_info() -> Result<impl warp::Reply, Infallible> {
+    #[derive(Debug, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct RelayerMetricResponse {
+        #[serde(flatten)]
+        metrics: String,
+    }
+
+    let metric_gathered = Metrics::gather_metrics();
+    Ok(warp::reply::with_status(
+        warp::reply::json(&RelayerMetricResponse {
+            metrics: metric_gathered,
+        }),
+        warp::http::StatusCode::OK,
+    ))
+}
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Command {

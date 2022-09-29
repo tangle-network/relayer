@@ -50,7 +50,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         store: Arc<Self::Store>,
         _api: Arc<Self::Api>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        _metrics: Arc<metric::Metrics>,
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         tracing::event!(
             target: crate::probe::TARGET,
@@ -149,6 +149,8 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
                 signature: event.signature,
             },
         )?;
+        // metric for proposal queuing
+        metrics.proposal_queue_attempt_metric.inc();
         Ok(())
     }
 }

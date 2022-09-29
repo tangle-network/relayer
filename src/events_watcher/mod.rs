@@ -379,6 +379,7 @@ where
         client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
@@ -413,6 +414,8 @@ where
                         tracing::error!("Error while handle_cmd {}", e);
                         // this a transient error, so we will retry again.
                         tracing::warn!("Restarting bridge event watcher ...");
+                        // metric for when the bridge watcher enters back off
+                        metrics.bridge_watcher_back_off_metric.inc();
                         return Err(backoff::Error::transient(e));
                     }
                 }

@@ -212,6 +212,11 @@ pub fn build_web_services(
         })
         .boxed();
 
+    let relayer_metrics_info = warp::path("metrics")
+        .and(warp::get())
+        .and_then(crate::handler::handle_metric_info)
+        .boxed();
+
     // Code that will map the request handlers above to a defined http endpoint.
     let routes = ip_filter
         .or(info_filter)
@@ -219,6 +224,7 @@ pub fn build_web_services(
         .or(leaves_cache_filter_substrate)
         .or(leaves_cache_filter_cosmwasm)
         .or(encrypted_output_cache_filter_evm)
+        .or(relayer_metrics_info)
         .boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();
@@ -871,13 +877,14 @@ async fn start_signature_bridge_events_watcher(
             store.clone(),
             wrapper.clone(),
             vec![Box::new(governance_transfer_handler)],
-            metrics,
+            metrics.clone(),
         );
         let cmd_handler_task = BridgeWatcher::run(
             &bridge_contract_watcher,
             client,
             store,
             wrapper,
+            metrics.clone(),
         );
         tokio::select! {
             _ = events_watcher_task => {
