@@ -117,6 +117,12 @@ where
         );
 
         let metrics = self.ctx.metrics.clone();
+        let gas_price = client
+            .get_gas_price()
+            .map_err(|_| crate::Error::Generic("Failed to get gas price"))
+            .await?;
+        // gas spent metric
+        metrics.gas_spent_metric.inc_by(gas_price.as_u64() as f64);
 
         let task = || async {
             loop {
