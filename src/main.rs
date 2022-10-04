@@ -25,7 +25,7 @@ use anyhow::Context;
 use directories_next::ProjectDirs;
 use structopt::StructOpt;
 use tokio::signal::unix;
-use tokio::{task, time};
+//use tokio::{task, time};
 
 use webb_relayer::context::RelayerContext;
 use webb_relayer::{config, store};
