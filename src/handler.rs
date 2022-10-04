@@ -34,8 +34,12 @@ use webb::evm::ethers::{
     signers::{LocalWallet, Signer},
     types::Bytes,
 };
-use webb::substrate::subxt::sp_core::Pair;
-use webb::substrate::subxt::sp_runtime::AccountId32;
+use webb::substrate::subxt::{
+    ext::{
+        sp_core::Pair,
+        sp_runtime::AccountId32,
+    }
+};
 
 use crate::context::RelayerContext;
 use crate::store::{EncryptedOutputCacheStore, LeafCacheStore};

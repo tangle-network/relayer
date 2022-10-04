@@ -21,14 +21,12 @@ use rand::Rng;
 use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::Duration;
-use subxt::rpc::SubstrateTransactionStatus as TransactionStatus;
+use subxt::rpc::SubstrateTxStatus as TransactionStatus;
 
 use webb::substrate::scale::{Compact, Encode};
-use webb::substrate::subxt::extrinsic::ExtrinsicParams;
-use webb::substrate::subxt::extrinsic::Signer;
-use webb::substrate::subxt::sp_core::blake2_256;
-use webb::substrate::subxt::sp_core::sr25519::Pair;
-use webb::substrate::subxt::{self, PairSigner};
+use webb::substrate::subxt::ext::sp_core::blake2_256;
+use webb::substrate::subxt::ext::sp_core::sr25519::Pair;
+use webb::substrate::subxt::{self, tx::PairSigner, tx::Signer, tx::ExtrinsicParams};
 
 /// The SubstrateTxQueue stores transaction call params in bytes so the relayer can process them later.
 /// This prevents issues such as creating transactions with the same nonce.
@@ -92,10 +90,12 @@ where
     /// };
     /// ```
     #[tracing::instrument(skip_all, fields(node = %self.chain_id))]
-    pub async fn run<X>(self) -> crate::Result<()>
+    pub async fn run<X>(self,
+        other_params: <<X>::ExtrinsicParams as ExtrinsicParams<<X>::Index, <X>::Hash>>::OtherParams
+    ) -> crate::Result<()>
     where
-        X: subxt::extrinsic::ExtrinsicParams<subxt::DefaultConfig>,
-        <X as ExtrinsicParams<subxt::DefaultConfig>>::OtherParams: Default,
+        X: subxt::Config,
+        
     {
         let chain_config = self
             .ctx
@@ -114,13 +114,12 @@ where
         //  protocol-substrate client
         let client = self
             .ctx
-            .substrate_provider::<subxt::DefaultConfig>(&chain_id.to_string())
+            .substrate_provider::<X>(&chain_id.to_string())
             .await?;
 
         // get pair
         let pair = self.ctx.substrate_wallet(&chain_id.to_string()).await?;
-        let signer: PairSigner<subxt::DefaultConfig, Pair> =
-            PairSigner::new(pair);
+        let signer =  PairSigner::new(pair);
 
         tracing::event!(
             target: crate::probe::TARGET,
@@ -139,11 +138,12 @@ where
                     SledQueueKey::from_substrate_chain_id(chain_id),
                 )?;
                 if let Some(call_data) = maybe_call_data {
-                    let call_data = subxt::Encoded(call_data);
+                    let call_data = subxt::utils::Encoded(call_data);
                     tracing::trace!(
                         "Transaction call in hex : {:?}",
                         hex::encode(&call_data.encode())
                     );
+                    
                     // This are the steps to create encoded extrinsic which can be executed by rpc client
                     let account_nonce = if let Some(nonce) = signer.nonce() {
                         nonce
@@ -151,26 +151,23 @@ where
                         client
                             .rpc()
                             .system_account_next_index(signer.account_id())
-                            .map_err(Into::into)
-                            .map_err(backoff::Error::transient)
                             .await?
                     };
-
+                    
                     // 1.Construct our custom additional/extra params.
                     let additional_and_extra_params = {
+                        
                         // Obtain spec version and transaction version from the runtime version of the client.
                         let runtime = client
                             .rpc()
                             .runtime_version(None)
-                            .map_err(Into::into)
-                            .map_err(backoff::Error::transient)
                             .await?;
-                        X::new(
+                        X::ExtrinsicParams::new(
                             runtime.spec_version,
                             runtime.transaction_version,
                             account_nonce,
-                            *client.genesis(),
-                            Default::default(),
+                            client.genesis_hash(),
+                            other_params
                         )
                     };
 
@@ -198,7 +195,7 @@ where
                         // "is signed" + transaction protocol version (4)
                         (0b10000000 + 4u8).encode_to(&mut encoded_inner);
                         // from address for signature
-                        signer.address().encode_to(&mut encoded_inner);
+                        // signer::address().encode_to(&mut encoded_inner);
                         // the signature bytes
                         signature.encode_to(&mut encoded_inner);
                         // attach custom extra params
@@ -217,7 +214,7 @@ where
                         encoded
                     };
                     // encoded extinsic
-                    let encoded_extrinsic = subxt::Encoded(extrinsic);
+                    let encoded_extrinsic = subxt::utils::Encoded(extrinsic);
                     // dry run test
                     let dry_run_outcome =
                         client.rpc().dry_run(&encoded_extrinsic.0, None).await;

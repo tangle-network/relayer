@@ -14,7 +14,8 @@
 //
 
 use std::sync::Arc;
-use webb::substrate::subxt::sp_core::hashing::keccak_256;
+use webb::substrate::subxt::ext::sp_core::hashing::keccak_256;
+use webb::substrate::subxt::{self, OnlineClient, dynamic::Value};
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standalone_runtime::Call;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
 use super::{BlockNumberOf, SubstrateEventWatcher};
@@ -24,13 +25,14 @@ use crate::store::{BridgeCommand, QueueStore};
 use ethereum_types::U256;
 use webb::substrate::{
     protocol_substrate_runtime,
-    subxt,
 };
+use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
 use webb::substrate::scale;
 use webb::substrate::scale::Encode;
 use crate::tx_queue::substrate::call_data;
+use webb::substrate::subxt::tx::TxPayload;
 
 /// A SignatureBridge contract events & commands watcher.
 #[derive(Copy, Clone, Debug, Default)]
@@ -40,13 +42,10 @@ pub struct SubstrateBridgeEventWatcher;
 impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
     const TAG: &'static str = "Substrate bridge pallet Watcher";
 
-    type RuntimeConfig = subxt::DefaultConfig;
+    type RuntimeConfig = subxt::SubstrateConfig;
 
-    type Api = protocol_substrate_runtime::api::RuntimeApi<
-        Self::RuntimeConfig,
-        subxt::SubstrateExtrinsicParams<Self::RuntimeConfig>,
-    >;
-
+    type Client = OnlineClient<Self::RuntimeConfig>;
+    
     type Event = protocol_substrate_runtime::api::Event;
 
     type FilteredEvent = signature_bridge::events::MaintainerSet;
@@ -56,7 +55,7 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
     async fn handle_event(
         &self,
         _store: Arc<Self::Store>,
-        _api: Arc<Self::Api>,
+        _api: Arc<Self::Client>,
         (event, _block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> crate::Result<()> {
         // todo
@@ -88,7 +87,7 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
         &self,
         chain_id: U256,
         store: Arc<Self::Store>,
-        api: Arc<Self::Api>,
+        api: Arc<Self::Client>,
         cmd: BridgeCommand,
     ) -> crate::Result<()> {
         use BridgeCommand::*;
@@ -130,7 +129,7 @@ where
         &self,
         chain_id: U256,
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher>::Api>,
+        api: Arc<<Self as SubstrateEventWatcher>::Client>,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> crate::Result<()> {
         let proposal_data_hex = hex::encode(&proposal_data);
@@ -147,8 +146,10 @@ where
         let signature_hex = hex::encode(&signature);
 
         // get current maintainer
+        let current_maintainer_addrs = RuntimeApi::storage().signature_bridge().maintainer();
+
         let current_maintainer =
-            api.storage().signature_bridge().maintainer(None).await?;
+            api.storage().fetch(&current_maintainer_addrs, None).await?.unwrap();
 
         // Verify proposal signature
         let is_signature_valid = validate_ecdsa_signature(
@@ -190,21 +191,29 @@ where
         let execute_proposal_call = ExecuteProposal {
             src_id: typed_chain_id.chain_id(),
             call: Box::new(proposal_encoded_call),
-            proposal_data,
-            signature,
+            proposal_data: proposal_data.clone(),
+            signature: signature.clone(),
         };
-        // construct call data (pallet u8, call u8, call params).
-        let locked_metadata = api.client.metadata();
-        let call_data = call_data::encode_call_data(
-            locked_metadata,
-            execute_proposal_call.clone(),
-        )?;
+        // dynamic query
+        let execute_proposal_tx = subxt::dynamic::tx(
+            "SignatureBridge",
+            "execute_proposal",
+            vec![
+                Value::u128(typed_chain_id.chain_id() as u128),
+                Value::from_bytes(parsed_proposal_bytes),
+                Value::from_bytes(proposal_data),
+                Value::from_bytes(signature)
+            ]
+        );
+        
         let data_hash = utils::keccak256(&execute_proposal_call.encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),
         );
-        QueueStore::<Vec<u8>>::enqueue_item(&store, tx_key, call_data)?;
+        let mut encoded_call_data = Vec::new();
+        execute_proposal_tx.encode_call_data(&api.metadata(),&mut encoded_call_data);
+        QueueStore::<Vec<u8>>::enqueue_item(&store, tx_key, encoded_call_data)?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
             "Enqueued execute-proposal call for execution through protocol-substrate tx queue",
@@ -217,14 +226,15 @@ where
         &self,
         chain_id: U256,
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher>::Api>,
+        api: Arc<<Self as SubstrateEventWatcher>::Client>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> crate::Result<()> {
         let new_maintainer = public_key.clone();
         // get current maintainer
-        let current_maintainer =
-            api.storage().signature_bridge().maintainer(None).await?;
+        let current_maintainer_addrs = RuntimeApi::storage().signature_bridge().maintainer();
 
+        let current_maintainer =
+            api.storage().fetch(&current_maintainer_addrs, None).await?.unwrap();
         // we need to do some checks here:
         // 1. convert the public key to address and check it is not the same as the current maintainer.
         // 2. check if the nonce is greater than the current nonce.
@@ -240,11 +250,11 @@ where
             );
             return Ok(());
         }
-        let current_nonce = api
-            .storage()
-            .signature_bridge()
-            .maintainer_nonce(None)
-            .await?;
+        let current_nonce = RuntimeApi::storage().signature_bridge().maintainer_nonce();
+
+        let current_nonce =
+            api.storage().fetch(&current_nonce, None).await?.unwrap();
+        
         if nonce <= current_nonce {
             tracing::warn!(
                 %current_nonce,
@@ -268,22 +278,28 @@ where
         );
         // Enqueue transaction call data in protocol-substrate transaction queue
         let set_maintainer_call = SetMaintainer {
-            message: new_maintainer,
-            signature,
+            message: new_maintainer.clone(),
+            signature: signature.clone(),
         };
-        // construct call data (pallet u8, call u8, call params).
-        let locked_metadata = api.client.metadata();
-        let call_data = call_data::encode_call_data(
-            locked_metadata,
-            set_maintainer_call.clone(),
-        )?;
+       
+        // dynamic query
+        let set_maintainer_tx = subxt::dynamic::tx(
+            "SignatureBridge",
+            "set_maintainer",
+            vec![
+                Value::from_bytes(new_maintainer),
+                Value::from_bytes(signature)
+            ]
+        );
 
         let data_hash = utils::keccak256(&set_maintainer_call.encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),
         );
-        QueueStore::<Vec<u8>>::enqueue_item(&store, tx_key, call_data)?;
+        let mut encoded_call_data = Vec::new();
+        set_maintainer_tx.encode_call_data(&api.metadata(),&mut encoded_call_data);
+        QueueStore::<Vec<u8>>::enqueue_item(&store, tx_key, encoded_call_data)?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
             "Enqueued set-maintainer call for execution through protocol-substrate tx queue",

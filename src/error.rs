@@ -1,6 +1,6 @@
 use webb::{
     evm::ethers,
-    substrate::{dkg_runtime, protocol_substrate_runtime, subxt},
+    substrate::subxt,
 };
 
 /// An enum of all possible errors that could be encountered during the execution of the Webb
@@ -36,26 +36,10 @@ pub enum Error {
     Secp256k1(#[from] libsecp256k1::Error),
     /// Basic error for the substrate runtime.
     #[error(transparent)]
-    SubxtBasicError(#[from] subxt::BasicError),
-    /// DKG Runtime error.
-    #[error(transparent)]
-    DKGError(
-        #[from]
-        subxt::GenericError<
-            subxt::RuntimeError<dkg_runtime::api::DispatchError>,
-        >,
-    ),
-    /// Protocol Substrate Runtime error.
-    #[error(transparent)]
-    ProtocolSubstrateError(
-        #[from]
-        subxt::GenericError<
-            subxt::RuntimeError<protocol_substrate_runtime::api::DispatchError>,
-        >,
-    ),
+    SubxtError(#[from] subxt::error::Error),
     /// Runtime metadata error.
     #[error(transparent)]
-    Metadata(#[from] subxt::MetadataError),
+    Metadata(#[from] subxt::error::MetadataError),
     /// Error in Http Provider (ethers client).
     #[error(transparent)]
     EthersProvider(#[from] ethers::providers::ProviderError),

@@ -39,7 +39,8 @@ use webb::{
     },
     substrate::{
         scale,
-        subxt::{self, sp_runtime::traits::Header},
+        subxt::{self, ext::sp_runtime::traits::Header, OnlineClient, client::OnlineClientT,
+        },
     },
 };
 
@@ -426,15 +427,15 @@ pub type BlockNumberOf<T> =
 pub trait SubstrateEventWatcher {
     /// A helper unique tag to help identify the event watcher in the tracing logs.
     const TAG: &'static str;
-    /// The Config of this Runtime, mostly it will be [`subxt::DefaultConfig`]
+    /// The Config of this Runtime [`subxt::PolkadotConfig`, `subxt::SubstrateConfig`]
     type RuntimeConfig: subxt::Config + Send + Sync + 'static;
-    /// The Runtime API.
-    type Api: From<subxt::Client<Self::RuntimeConfig>> + Send + Sync;
+    /// The Runtime Client that can be used to perform API calls.
+    type Client: OnlineClientT<Self::RuntimeConfig> + Send + Sync;
     /// All types of events that are supported by this Runtime.
     /// Usually it will be [`my_runtime::api::Event`] which is an enum of all events.
     type Event: scale::Decode + Send + Sync + 'static;
     /// The kind of event that this watcher is watching.
-    type FilteredEvent: subxt::Event + Send + Sync + 'static;
+    type FilteredEvent: subxt::events::StaticEvent + Send + Sync + 'static;
     /// The Storage backend, used by the event watcher to store its state.
     type Store: HistoryStore;
 
@@ -445,7 +446,7 @@ pub trait SubstrateEventWatcher {
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
-        api: Arc<Self::Api>,
+        client: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> crate::Result<()>;
 
@@ -463,7 +464,7 @@ pub trait SubstrateEventWatcher {
         &self,
         node_name: String,
         chain_id: U256,
-        client: subxt::Client<Self::RuntimeConfig>,
+        client: Arc<Self::Client>,
         store: Arc<Self::Store>,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
@@ -471,9 +472,10 @@ pub trait SubstrateEventWatcher {
         let task = || async {
             let mut instant = std::time::Instant::now();
             let step = U64::from(1u64);
-            let client_api = client.clone();
-            let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
+            // let client = *client;
+            let api = *client.clone();
             let rpc = client.rpc();
+            let event_client = subxt::events::EventsClient::new(*client);
             loop {
                 // now we start polling for new events.
                 // get the latest seen block number.
@@ -528,10 +530,11 @@ pub trait SubstrateEventWatcher {
                     let from = maybe_from.unwrap_or(latest_head);
                     tracing::trace!(?from, "Querying events");
                     let events =
-                        subxt::events::at::<_, Self::Event>(&client, from)
+                        event_client.at(Some(from))
                             .map_err(Into::into)
                             .map_err(backoff::Error::transient)
                             .await?;
+                    
                     let found_events = events
                         .find::<Self::FilteredEvent>()
                         .flatten()
@@ -558,7 +561,7 @@ pub trait SubstrateEventWatcher {
                         let result = self
                             .handle_event(
                                 store.clone(),
-                                api.clone(),
+                                client.clone(),
                                 (event, block_number),
                             )
                             .await;
@@ -650,7 +653,7 @@ where
         &self,
         chain_id: U256,
         store: Arc<Self::Store>,
-        client: Arc<Self::Api>,
+        client: Arc<Self::Client>,
         cmd: BridgeCommand,
     ) -> crate::Result<()>;
 
@@ -666,14 +669,14 @@ where
     async fn run(
         &self,
         chain_id: U256,
-        client: subxt::Client<Self::RuntimeConfig>,
+        client: Arc<Self::Client>,
         store: Arc<Self::Store>,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
             let client_api = client.clone();
-            let api: Arc<Self::Api> = Arc::new(client_api.to_runtime_api());
+            let api = client.clone();
             let my_chain_id =
                 webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
             let bridge_key = BridgeKey::new(my_chain_id);
@@ -684,7 +687,7 @@ where
                         self.handle_cmd(
                             chain_id,
                             store.clone(),
-                            api.clone(),
+                            client.clone(),
                             cmd,
                         )
                         .await
@@ -725,7 +728,7 @@ mod tests {
 
     use webb::substrate::dkg_runtime;
     use webb::substrate::dkg_runtime::api::system;
-
+    use webb::substrate::subxt::PolkadotConfig;
     use crate::store::sled::SledStore;
 
     use super::*;
@@ -737,12 +740,9 @@ mod tests {
     impl SubstrateEventWatcher for RemarkedEventWatcher {
         const TAG: &'static str = "Remarked Event Watcher";
 
-        type RuntimeConfig = subxt::DefaultConfig;
+        type RuntimeConfig = subxt::PolkadotConfig;
 
-        type Api = dkg_runtime::api::RuntimeApi<
-            Self::RuntimeConfig,
-            subxt::PolkadotExtrinsicParams<Self::RuntimeConfig>,
-        >;
+        type Client = OnlineClient<Self::RuntimeConfig>;
 
         type Event = dkg_runtime::api::Event;
         type FilteredEvent = system::events::Remarked;
@@ -752,7 +752,7 @@ mod tests {
         async fn handle_event(
             &self,
             _store: Arc<Self::Store>,
-            _api: Arc<Self::Api>,
+            _client: Arc<Self::Client>,
             (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
         ) -> crate::Result<()> {
             tracing::debug!(
@@ -771,9 +771,9 @@ mod tests {
         let node_name = String::from("test-node");
         let chain_id = U256::from(5u32);
         let store = Arc::new(SledStore::temporary()?);
-        let client = subxt::ClientBuilder::new().build().await?;
+        let client = OnlineClient::<PolkadotConfig>::new().await?;
         let watcher = RemarkedEventWatcher::default();
-        watcher.run(node_name, chain_id, client, store).await?;
+        watcher.run(node_name, chain_id, client.into(), store).await?;
         Ok(())
     }
 }
