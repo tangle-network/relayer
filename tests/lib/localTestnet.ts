@@ -567,7 +567,7 @@ export async function setupVanchorEvmTx(
     chainId: depositUtxo.chainId,
     originChainId: depositUtxo.originChainId,
     blinding: hexToU8a(depositUtxo.blinding),
-    privateKey: hexToU8a(depositUtxo.secret_key),
+    //privateKey: hexToU8a(depositUtxo.secret_key),
     keypair: randomKeypair,
     index: depositUtxoIndex.toString(),
   });

@@ -25,6 +25,7 @@ use anyhow::Context;
 use directories_next::ProjectDirs;
 use structopt::StructOpt;
 use tokio::signal::unix;
+use tokio::{time, task};
 
 use webb_relayer::context::RelayerContext;
 use webb_relayer::{config, store};
@@ -85,19 +86,21 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // persistent storage for the relayer
     let store = create_store(&args).await?;
 
+    let cloned_store = store.clone();
+    let cloned_ctx = ctx.clone();
     // metric for data stored which is determined every 1 hour
-    let data_metric_task = tokio::task::spawn(async {
+    let data_metric_task = tokio::task::spawn(async move {
         let mut sled_data_metric_interval =
             time::interval(Duration::from_secs(3600));
 
         loop {
             sled_data_metric_interval.tick().await;
             // reset counter first
-            ctx.metrics.total_number_of_data_stored_metric.reset();
+            cloned_ctx.metrics.total_number_of_data_stored_metric.reset();
             // then get the data stored
-            ctx.metrics
+            cloned_ctx.metrics
                 .total_number_of_data_stored_metric
-                .inc_by(store.get_data_stored() as f64)
+                .inc_by(cloned_store.get_data_stored() as f64)
         }
     });
 
