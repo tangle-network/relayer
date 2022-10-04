@@ -28,7 +28,7 @@ import child from 'child_process';
 import {
   WebbRelayer,
   Pallet,
-  LeavesCacheResponse,
+  LeavesCacheResponse, RelayerMetricResponse,
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {
@@ -262,6 +262,14 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     let leavesStore = response.json() as Promise<LeavesCacheResponse>;
     leavesStore.then((resp) => {
       expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
+    });
+
+    // check metrics gathered
+    const responseMetricsGathered = await webbRelayer.getMetricsGathered();
+    expect(response.status).equal(200);
+    let metricsGathered = responseMetricsGathered.json() as Promise<RelayerMetricResponse>;
+    metricsGathered.then((resp) => {
+      expect(resp.metrics).to.not.be.null
     });
   });
 
