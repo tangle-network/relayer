@@ -86,7 +86,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // persistent storage for the relayer
     let store = create_store(&args).await?;
 
-    let cloned_store = store.clone();
+    /*let cloned_store = store.clone();
     let cloned_ctx = ctx.clone();
     // metric for data stored which is determined every 1 hour
     let data_metric_task = tokio::task::spawn(async move {
@@ -108,7 +108,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
         }
     });
 
-    data_metric_task.await;
+    data_metric_task.await;*/
 
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
