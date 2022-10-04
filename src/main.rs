@@ -25,7 +25,7 @@ use anyhow::Context;
 use directories_next::ProjectDirs;
 use structopt::StructOpt;
 use tokio::signal::unix;
-use tokio::{time, task};
+use tokio::{task, time};
 
 use webb_relayer::context::RelayerContext;
 use webb_relayer::{config, store};
@@ -96,9 +96,13 @@ async fn main(args: Opts) -> anyhow::Result<()> {
         loop {
             sled_data_metric_interval.tick().await;
             // reset counter first
-            cloned_ctx.metrics.total_number_of_data_stored_metric.reset();
+            cloned_ctx
+                .metrics
+                .total_number_of_data_stored_metric
+                .reset();
             // then get the data stored
-            cloned_ctx.metrics
+            cloned_ctx
+                .metrics
                 .total_number_of_data_stored_metric
                 .inc_by(cloned_store.get_data_stored() as f64)
         }
