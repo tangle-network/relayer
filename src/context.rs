@@ -141,7 +141,10 @@ impl RelayerContext {
                     chain_id: chain_id.to_string(),
                 }
             })?;
-        let client = subxt::OnlineClient::<C>::from_url(node_config.ws_endpoint.as_str()).await?;
+        let client = subxt::OnlineClient::<C>::from_url(
+            node_config.ws_endpoint.as_str(),
+        )
+        .await?;
         Ok(client)
     }
     /// Sets up and returns a Substrate wallet for the relayer.

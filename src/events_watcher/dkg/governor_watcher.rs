@@ -18,9 +18,9 @@ use crate::config;
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 use ethereum_types::U256;
+use webb::substrate::dkg_runtime::api as RuntimeApi;
 use webb::substrate::dkg_runtime::{self, api::dkg};
 use webb::substrate::subxt::{self, OnlineClient};
-use webb::substrate::dkg_runtime::api as RuntimeApi ;
 
 use super::{BlockNumberOf, SubstrateEventWatcher};
 
@@ -44,7 +44,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
     type RuntimeConfig = subxt::PolkadotConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;
-    
+
     type Event = dkg_runtime::api::Event;
 
     // when the DKG public key signature changes, we know the DKG is changed.
@@ -63,18 +63,24 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
         // so we need to query the public key from the storage:
 
         // Note: here we need to get the public key from the storage at the moment of that event.
-        let at_hash_addrs = RuntimeApi::storage().system()
-            .block_hash(&block_number);
+        let at_hash_addrs =
+            RuntimeApi::storage().system().block_hash(&block_number);
 
-        let at_hash = api.storage().fetch(&at_hash_addrs, None ).await?.unwrap();
+        let at_hash = api.storage().fetch(&at_hash_addrs, None).await?.unwrap();
         let dkg_public_key_addrs = RuntimeApi::storage().dkg().dkg_public_key();
 
-        let (_authority_id, public_key_compressed) =
-            api.storage().fetch(&dkg_public_key_addrs, Some(at_hash)).await?.unwrap();
+        let (_authority_id, public_key_compressed) = api
+            .storage()
+            .fetch(&dkg_public_key_addrs, Some(at_hash))
+            .await?
+            .unwrap();
 
         let refresh_nonce_addrs = RuntimeApi::storage().dkg().refresh_nonce();
-        let refresh_nonce =
-            api.storage().fetch(&refresh_nonce_addrs,Some(at_hash)).await?.unwrap();
+        let refresh_nonce = api
+            .storage()
+            .fetch(&refresh_nonce_addrs, Some(at_hash))
+            .await?
+            .unwrap();
         // next is that we need to uncompress the public key.
         let public_key_uncompressed =
             decompress_public_key(public_key_compressed)?;

@@ -1,7 +1,8 @@
 use ethereum_types::H256;
 use futures::StreamExt;
 use webb::substrate::subxt::{
-    SubstrateConfig, tx::TxProgress, tx::TxStatus as TransactionStatus, OnlineClient,
+    tx::TxProgress, tx::TxStatus as TransactionStatus, OnlineClient,
+    SubstrateConfig,
 };
 
 use crate::handler::{CommandResponse, CommandStream, WithdrawStatus};
@@ -17,7 +18,10 @@ pub mod vanchor;
 /// is intended to be used in a variety of places for all kinds of submitted Substrate
 /// transactions.
 pub async fn handle_substrate_tx(
-    mut event_stream: TxProgress<SubstrateConfig, OnlineClient<SubstrateConfig>>,
+    mut event_stream: TxProgress<
+        SubstrateConfig,
+        OnlineClient<SubstrateConfig>,
+    >,
     stream: CommandStream,
 ) {
     use CommandResponse::*;

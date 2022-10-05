@@ -30,6 +30,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 
+use webb::substrate::subxt::client::OfflineClientT;
 use webb::{
     evm::ethers::{
         contract,
@@ -39,8 +40,7 @@ use webb::{
     },
     substrate::{
         scale,
-        subxt::{self, ext::sp_runtime::traits::Header, OnlineClient, client::OnlineClientT,
-        },
+        subxt::{self, client::OnlineClientT, ext::sp_runtime::traits::Header},
     },
 };
 
@@ -472,10 +472,7 @@ pub trait SubstrateEventWatcher {
         let task = || async {
             let mut instant = std::time::Instant::now();
             let step = U64::from(1u64);
-            // let client = *client;
-            let api = *client.clone();
             let rpc = client.rpc();
-            let event_client = subxt::events::EventsClient::new(*client);
             loop {
                 // now we start polling for new events.
                 // get the latest seen block number.
@@ -529,12 +526,13 @@ pub trait SubstrateEventWatcher {
                         .await?;
                     let from = maybe_from.unwrap_or(latest_head);
                     tracing::trace!(?from, "Querying events");
-                    let events =
-                        event_client.at(Some(from))
-                            .map_err(Into::into)
-                            .map_err(backoff::Error::transient)
-                            .await?;
-                    
+                    let events = client
+                        .events()
+                        .at(Some(from))
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
+                        .await?;
+
                     let found_events = events
                         .find::<Self::FilteredEvent>()
                         .flatten()
@@ -675,8 +673,6 @@ where
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
-            let client_api = client.clone();
-            let api = client.clone();
             let my_chain_id =
                 webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
             let bridge_key = BridgeKey::new(my_chain_id);
@@ -726,10 +722,10 @@ where
 mod tests {
     use std::sync::Arc;
 
+    use crate::store::sled::SledStore;
     use webb::substrate::dkg_runtime;
     use webb::substrate::dkg_runtime::api::system;
-    use webb::substrate::subxt::PolkadotConfig;
-    use crate::store::sled::SledStore;
+    use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 
     use super::*;
 
@@ -773,7 +769,9 @@ mod tests {
         let store = Arc::new(SledStore::temporary()?);
         let client = OnlineClient::<PolkadotConfig>::new().await?;
         let watcher = RemarkedEventWatcher::default();
-        watcher.run(node_name, chain_id, client.into(), store).await?;
+        watcher
+            .run(node_name, chain_id, client.into(), store)
+            .await?;
         Ok(())
     }
 }

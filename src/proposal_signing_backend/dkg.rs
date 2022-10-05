@@ -10,15 +10,13 @@ use webb::substrate::dkg_runtime::api as RuntimeApi;
 type DkgConfig = PolkadotConfig;
 type DkgClient = OnlineClient<DkgConfig>;
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
-pub struct DkgProposalSigningBackend
-{
+pub struct DkgProposalSigningBackend {
     client: DkgClient,
     pair: PairSigner<PolkadotConfig, Sr25519Pair>,
     typed_chain_id: webb_proposals::TypedChainId,
 }
 
-impl DkgProposalSigningBackend 
-{
+impl DkgProposalSigningBackend {
     pub fn new(
         client: OnlineClient<PolkadotConfig>,
         pair: PairSigner<PolkadotConfig, Sr25519Pair>,
@@ -34,30 +32,37 @@ impl DkgProposalSigningBackend
 
 //AnchorUpdateProposal for evm
 #[async_trait::async_trait]
-impl super::ProposalSigningBackend
-    for DkgProposalSigningBackend
-{
+impl super::ProposalSigningBackend for DkgProposalSigningBackend {
     async fn can_handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> crate::Result<bool> {
         let header = proposal.header();
         let resource_id = header.resource_id();
-       
+
         let src_chain_id =
             webb_proposals_typed_chain_converter(self.typed_chain_id);
-         let chain_nonce_addrs = RuntimeApi::storage().dkg_proposals()
+        let chain_nonce_addrs = RuntimeApi::storage()
+            .dkg_proposals()
             .chain_nonces(&src_chain_id);
-         let maybe_whitelisted = self.client.storage().fetch(&chain_nonce_addrs, None ).await?;
-        
+        let maybe_whitelisted = self
+            .client
+            .storage()
+            .fetch(&chain_nonce_addrs, None)
+            .await?;
+
         if maybe_whitelisted.is_none() {
             tracing::warn!(?src_chain_id, "chain is not whitelisted");
             return Ok(false);
         }
-        let resource_id_addrs = RuntimeApi::storage().dkg_proposals()
-        .resources(&ResourceId(resource_id.into_bytes()));
-        let maybe_resource_id = self.client.storage()
-            .fetch(&resource_id_addrs, None).await?;
+        let resource_id_addrs = RuntimeApi::storage()
+            .dkg_proposals()
+            .resources(&ResourceId(resource_id.into_bytes()));
+        let maybe_resource_id = self
+            .client
+            .storage()
+            .fetch(&resource_id_addrs, None)
+            .await?;
         if maybe_resource_id.is_none() {
             tracing::warn!(
                 resource_id = %hex::encode(&resource_id.into_bytes()),
@@ -92,13 +97,17 @@ impl super::ProposalSigningBackend
             ResourceId(resource_id.into_bytes()),
             proposal.to_vec(),
         );
-       
+
         // TODO: here we should have a substrate based tx queue in the background
         // where just send the raw xt bytes and let it handle the work for us.
         // but this here for now.
         let signer = &self.pair;
-        let progress = self.client.tx().sign_and_submit_then_watch_default(&xt, signer).await?;
-        
+        let mut progress = self
+            .client
+            .tx()
+            .sign_and_submit_then_watch_default(&xt, signer)
+            .await?;
+
         while let Some(event) = progress.next().await {
             let e = match event {
                 Ok(e) => e,

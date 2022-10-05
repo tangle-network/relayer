@@ -1,7 +1,4 @@
-use webb::{
-    evm::ethers,
-    substrate::subxt,
-};
+use webb::{evm::ethers, substrate::subxt};
 
 /// An enum of all possible errors that could be encountered during the execution of the Webb
 /// Relayer.

@@ -1,20 +1,17 @@
 use webb::substrate::subxt::ext::sp_runtime::AccountId32;
 
-use webb::substrate::{
-    protocol_substrate_runtime::api::{
-        runtime_types::{
-            webb_primitives::runtime::Element, webb_primitives::types::vanchor,
-        },
-
-    },
-    subxt::{SubstrateConfig, tx::PairSigner},
-};
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi ;
 use crate::handler::SubstrateCommand;
 use crate::tx_relay::substrate::handle_substrate_tx;
 use crate::{
     context::RelayerContext,
     handler::{CommandResponse, CommandStream},
+};
+use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::{
+    protocol_substrate_runtime::api::runtime_types::{
+        webb_primitives::runtime::Element, webb_primitives::types::vanchor,
+    },
+    subxt::{tx::PairSigner, SubstrateConfig},
 };
 
 /// Handler for Substrate Anchor commands
@@ -53,7 +50,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             .collect(),
         ext_data_hash: Element(cmd.proof_data.ext_data_hash),
     };
-    let ext_data_elements: vanchor::ExtData<AccountId32, i128, u128, _ > =
+    let ext_data_elements: vanchor::ExtData<AccountId32, i128, u128, _> =
         vanchor::ExtData {
             recipient: cmd.ext_data.recipient,
             relayer: cmd.ext_data.relayer,
@@ -77,7 +74,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             return;
         }
     };
-    
+
     let pair = match ctx.substrate_wallet(&cmd.chain_id.to_string()).await {
         Ok(v) => v,
         Err(e) => {
@@ -99,8 +96,11 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         proof_elements,
         ext_data_elements,
     );
-    let transact_tx_hash = client.tx().sign_and_submit_then_watch_default(&transact_tx, &signer).await;
-    
+    let transact_tx_hash = client
+        .tx()
+        .sign_and_submit_then_watch_default(&transact_tx, &signer)
+        .await;
+
     let event_stream = match transact_tx_hash {
         Ok(s) => s,
         Err(e) => {

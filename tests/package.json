@@ -19,7 +19,7 @@
   "resolutions": {
     "@webb-tools/api": "0.1.4-101",
     "@webb-tools/api-derive": "0.1.4-101",
-    "@webb-tools/sdk-core": "0.1.4-101",
+    "@webb-tools/sdk-core": "0.1.4-109",
     "@webb-tools/types": "0.1.4-101",
     "@webb-tools/test-utils": "0.1.4-101"
   },
@@ -37,7 +37,7 @@
     "@webb-tools/api": "0.1.4-101",
     "@webb-tools/api-derive": "0.1.4-101",
     "@webb-tools/protocol-solidity": "0.2.6",
-    "@webb-tools/sdk-core": "0.1.4-101",
+    "@webb-tools/sdk-core": "0.1.4-109",
     "@webb-tools/types": "0.1.4-101",
     "@webb-tools/test-utils": "0.1.4-101",
     "@webb-tools/utils": "0.2.6",

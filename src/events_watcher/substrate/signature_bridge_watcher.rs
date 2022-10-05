@@ -31,8 +31,8 @@ use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
 use webb::substrate::scale;
 use webb::substrate::scale::Encode;
-use crate::tx_queue::substrate::call_data;
-use webb::substrate::subxt::tx::TxPayload;
+use crate::types::dynamic_payload::WebbDynamicTxPayload;
+use std::borrow::Cow;
 
 /// A SignatureBridge contract events & commands watcher.
 #[derive(Copy, Clone, Debug, Default)]
@@ -45,7 +45,7 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
     type RuntimeConfig = subxt::SubstrateConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;
-    
+
     type Event = protocol_substrate_runtime::api::Event;
 
     type FilteredEvent = signature_bridge::events::MaintainerSet;
@@ -146,10 +146,14 @@ where
         let signature_hex = hex::encode(&signature);
 
         // get current maintainer
-        let current_maintainer_addrs = RuntimeApi::storage().signature_bridge().maintainer();
+        let current_maintainer_addrs =
+            RuntimeApi::storage().signature_bridge().maintainer();
 
-        let current_maintainer =
-            api.storage().fetch(&current_maintainer_addrs, None).await?.unwrap();
+        let current_maintainer = api
+            .storage()
+            .fetch(&current_maintainer_addrs, None)
+            .await?
+            .unwrap();
 
         // Verify proposal signature
         let is_signature_valid = validate_ecdsa_signature(
@@ -194,26 +198,29 @@ where
             proposal_data: proposal_data.clone(),
             signature: signature.clone(),
         };
-        // dynamic query
-        let execute_proposal_tx = subxt::dynamic::tx(
-            "SignatureBridge",
-            "execute_proposal",
-            vec![
+        // webb dynamic payload
+        let execute_proposal_tx = WebbDynamicTxPayload {
+            pallet_name: Cow::Borrowed("SignatureBridge"),
+            call_name: Cow::Borrowed("execute_proposal"),
+            fields: vec![
                 Value::u128(typed_chain_id.chain_id() as u128),
                 Value::from_bytes(parsed_proposal_bytes),
                 Value::from_bytes(proposal_data),
-                Value::from_bytes(signature)
-            ]
-        );
-        
+                Value::from_bytes(signature),
+            ],
+        };
+
         let data_hash = utils::keccak256(&execute_proposal_call.encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),
         );
-        let mut encoded_call_data = Vec::new();
-        execute_proposal_tx.encode_call_data(&api.metadata(),&mut encoded_call_data);
-        QueueStore::<Vec<u8>>::enqueue_item(&store, tx_key, encoded_call_data)?;
+
+        QueueStore::<WebbDynamicTxPayload>::enqueue_item(
+            &store,
+            tx_key,
+            execute_proposal_tx,
+        )?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
             "Enqueued execute-proposal call for execution through protocol-substrate tx queue",
@@ -231,10 +238,14 @@ where
     ) -> crate::Result<()> {
         let new_maintainer = public_key.clone();
         // get current maintainer
-        let current_maintainer_addrs = RuntimeApi::storage().signature_bridge().maintainer();
+        let current_maintainer_addrs =
+            RuntimeApi::storage().signature_bridge().maintainer();
 
-        let current_maintainer =
-            api.storage().fetch(&current_maintainer_addrs, None).await?.unwrap();
+        let current_maintainer = api
+            .storage()
+            .fetch(&current_maintainer_addrs, None)
+            .await?
+            .unwrap();
         // we need to do some checks here:
         // 1. convert the public key to address and check it is not the same as the current maintainer.
         // 2. check if the nonce is greater than the current nonce.
@@ -250,11 +261,12 @@ where
             );
             return Ok(());
         }
-        let current_nonce = RuntimeApi::storage().signature_bridge().maintainer_nonce();
+        let current_nonce =
+            RuntimeApi::storage().signature_bridge().maintainer_nonce();
 
         let current_nonce =
             api.storage().fetch(&current_nonce, None).await?.unwrap();
-        
+
         if nonce <= current_nonce {
             tracing::warn!(
                 %current_nonce,
@@ -281,25 +293,28 @@ where
             message: new_maintainer.clone(),
             signature: signature.clone(),
         };
-       
-        // dynamic query
-        let set_maintainer_tx = subxt::dynamic::tx(
-            "SignatureBridge",
-            "set_maintainer",
-            vec![
+
+        // webb dynamic payload
+        let set_maintainer_tx = WebbDynamicTxPayload {
+            pallet_name: Cow::Borrowed("SignatureBridge"),
+            call_name: Cow::Borrowed("set_maintainer"),
+            fields: vec![
                 Value::from_bytes(new_maintainer),
-                Value::from_bytes(signature)
-            ]
-        );
+                Value::from_bytes(signature),
+            ],
+        };
 
         let data_hash = utils::keccak256(&set_maintainer_call.encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),
         );
-        let mut encoded_call_data = Vec::new();
-        set_maintainer_tx.encode_call_data(&api.metadata(),&mut encoded_call_data);
-        QueueStore::<Vec<u8>>::enqueue_item(&store, tx_key, encoded_call_data)?;
+
+        QueueStore::<WebbDynamicTxPayload>::enqueue_item(
+            &store,
+            tx_key,
+            set_maintainer_tx,
+        )?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
             "Enqueued set-maintainer call for execution through protocol-substrate tx queue",

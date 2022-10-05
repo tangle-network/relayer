@@ -14,12 +14,12 @@
 //
 use std::sync::Arc;
 
-use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
-use webb::substrate::{dkg_runtime};
-use webb::substrate::subxt::{self, OnlineClient};
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
+use webb::substrate::dkg_runtime;
+use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
+use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
+use webb::substrate::subxt::{self, OnlineClient};
 
 use super::{BlockNumberOf, SubstrateEventWatcher};
 
@@ -35,7 +35,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
     type RuntimeConfig = subxt::PolkadotConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;
-    
+
     type Event = dkg_runtime::api::Event;
 
     type FilteredEvent = dkg_proposal_handler::events::ProposalSigned;

@@ -19,11 +19,11 @@ use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
 use std::sync::Arc;
+use webb::substrate::protocol_substrate_runtime;
+use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
-use webb::substrate::{protocol_substrate_runtime};
 use webb::substrate::subxt::{self, OnlineClient};
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
 pub struct SubstrateVAnchorWatcher<B> {
     proposal_signing_backend: B,
@@ -74,16 +74,19 @@ where
             "V-Anchor new leaf event",
         );
         // fetch chain_id
-        let chain_id_addrs = RuntimeApi::constants().linkable_tree_bn254()
-        .chain_identifier();
+        let chain_id_addrs = RuntimeApi::constants()
+            .linkable_tree_bn254()
+            .chain_identifier();
         let chain_id = api.constants().at(&chain_id_addrs)?;
-        let at_hash_addrs = RuntimeApi::storage().system()
+        let at_hash_addrs = RuntimeApi::storage()
+            .system()
             .block_hash(&(block_number as u64));
-        let at_hash = api.storage().fetch(&at_hash_addrs, None ).await?.unwrap();
+        let at_hash = api.storage().fetch(&at_hash_addrs, None).await?.unwrap();
         // fetch tree
-        let tree_addrs = RuntimeApi::storage().merkle_tree_bn254()
-        .trees(&event.tree_id);
-        let tree = api.storage().fetch(&tree_addrs, Some(at_hash) ).await?;
+        let tree_addrs = RuntimeApi::storage()
+            .merkle_tree_bn254()
+            .trees(&event.tree_id);
+        let tree = api.storage().fetch(&tree_addrs, Some(at_hash)).await?;
 
         let tree = match tree {
             Some(t) => t,

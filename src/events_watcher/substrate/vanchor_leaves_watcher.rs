@@ -18,10 +18,10 @@ use crate::store::LeafCacheStore;
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::ethers::types;
-use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
-use webb::substrate::{protocol_substrate_runtime};
-use webb::substrate::subxt::{self, OnlineClient};
+use webb::substrate::protocol_substrate_runtime;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
+use webb::substrate::subxt::{self, OnlineClient};
 // An Substrate VAnchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
 #[derive(Clone, Debug, Default)]
@@ -47,21 +47,27 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
         api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
     ) -> crate::Result<()> {
-        let at_hash_addrs = RuntimeApi::storage().system()
-        .block_hash(&(block_number as u64));
-        let at_hash = api.storage().fetch(&at_hash_addrs, None ).await?.unwrap();
-        
-        // fetch leaf_index from merkle tree at given block_number
-        let next_leaf_index_addrs = RuntimeApi::storage().merkle_tree_bn254()
-        .next_leaf_index(&event.tree_id);
-        let next_leaf_index = api.storage().fetch(&next_leaf_index_addrs, None ).await?.unwrap();
-        
-        // fetch chain_id
-        let chain_id_addrs = RuntimeApi::constants().linkable_tree_bn254()
-        .chain_identifier();
-        let chain_id = api.constants().at(&chain_id_addrs)?;
-        let chain_id = types::U256::from(chain_id);
+        let at_hash_addr = RuntimeApi::storage()
+            .system()
+            .block_hash(&(block_number as u64));
+        let at_hash = api.storage().fetch(&at_hash_addr, None).await?.unwrap();
 
+        // fetch leaf_index from merkle tree at given block_number
+        let next_leaf_index_addr = RuntimeApi::storage()
+            .merkle_tree_bn254()
+            .next_leaf_index(&event.tree_id);
+        let next_leaf_index = api
+            .storage()
+            .fetch(&next_leaf_index_addr, Some(at_hash))
+            .await?
+            .unwrap();
+
+        // fetch chain_id
+        let chain_id_addr = RuntimeApi::constants()
+            .linkable_tree_bn254()
+            .chain_identifier();
+        let chain_id = api.constants().at(&chain_id_addr)?;
+        let chain_id = types::U256::from(chain_id);
 
         let tree_id = event.tree_id.to_string();
         let leaf_count = event.leafs.len();

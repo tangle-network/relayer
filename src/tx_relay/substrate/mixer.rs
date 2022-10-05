@@ -1,10 +1,12 @@
-use webb::substrate::{subxt::{SubstrateConfig, tx::PairSigner}, 
-protocol_substrate_runtime::api::runtime_types::webb_primitives::runtime::Element};
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi ;
 use crate::{
     context::RelayerContext,
     handler::{CommandResponse, CommandStream, SubstrateCommand},
     tx_relay::substrate::handle_substrate_tx,
+};
+use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::{
+    protocol_substrate_runtime::api::runtime_types::webb_primitives::runtime::Element,
+    subxt::{tx::PairSigner, SubstrateConfig},
 };
 
 /// Handler for Substrate Mixer commands
@@ -41,7 +43,7 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
             return;
         }
     };
-    
+
     let pair = match ctx.substrate_wallet(&cmd.chain_id.to_string()).await {
         Ok(v) => v,
         Err(e) => {
@@ -69,8 +71,11 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
         cmd.refund,
     );
 
-    let withdraw_tx_hash = client.tx().sign_and_submit_then_watch_default(&withdraw_tx, &signer).await;
-    
+    let withdraw_tx_hash = client
+        .tx()
+        .sign_and_submit_then_watch_default(&withdraw_tx, &signer)
+        .await;
+
     let event_stream = match withdraw_tx_hash {
         Ok(s) => s,
         Err(e) => {
