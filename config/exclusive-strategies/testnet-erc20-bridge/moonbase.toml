@@ -63,5 +63,5 @@ linked-anchors = [
   { type="Evm", chain-id = 5, address = "0x4e22da303c403daaf4653d3d9d63ef009bae89a6" },
   { type="Evm", chain-id = 80001, address = "0xe6b075ecc4ccbc6e66569b1a2984cc47e88ee246" },
   { type="Evm", chain-id = 3, address = "0x35295fbb71273b84f66e70b8e341d408150dcaf9" },
-  {type="Evm", chain-id = 420, address = "0x12f2c4a1469b035e4459539e38ae68bc4dd5ba07"}
+  { type="Evm", chain-id = 420, address = "0x12f2c4a1469b035e4459539e38ae68bc4dd5ba07"}
 ]
