@@ -3,6 +3,6 @@
 port = 9955
 
 [features]
-governance-relay = true
+governance-relay = false
 data-query = true
 private-tx-relay = true
