@@ -25,10 +25,12 @@ use anyhow::Context;
 use directories_next::ProjectDirs;
 use structopt::StructOpt;
 use tokio::signal::unix;
-//use tokio::{task, time};
+use tokio::{task, time};
 
 use webb_relayer::context::RelayerContext;
+use webb_relayer::store::SledStore;
 use webb_relayer::{config, store};
+
 /// Package identifier, where the default configuration & database are defined.
 /// If the user does not start the relayer with the `--config-dir`
 /// it will default to read from the default location depending on the OS.
@@ -85,30 +87,18 @@ async fn main(args: Opts) -> anyhow::Result<()> {
 
     // persistent storage for the relayer
     let store = create_store(&args).await?;
-
-    /*let cloned_store = store.clone();
+    let cloned_store = store.clone();
     let cloned_ctx = ctx.clone();
     // metric for data stored which is determined every 1 hour
     let data_metric_task = tokio::task::spawn(async move {
         let mut sled_data_metric_interval =
             time::interval(Duration::from_secs(3600));
 
-        loop {
-            sled_data_metric_interval.tick().await;
-            // reset counter first
-            cloned_ctx
-                .metrics
-                .total_number_of_data_stored_metric
-                .reset();
-            // then get the data stored
-            cloned_ctx
-                .metrics
-                .total_number_of_data_stored_metric
-                .inc_by(cloned_store.get_data_stored() as f64)
-        }
+        sled_data_metric_interval.tick().await;
+        initiate_metric(cloned_ctx, cloned_store).await;
     });
 
-    data_metric_task.await;*/
+    data_metric_task.await;
 
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
@@ -160,6 +150,15 @@ async fn main(args: Opts) -> anyhow::Result<()> {
         },
     }
     Ok(())
+}
+
+async fn initiate_metric(ctx: RelayerContext, store: SledStore) {
+    // first reset the metric
+    ctx.metrics.total_number_of_data_stored_metric.reset();
+    // then get the data stored
+    ctx.metrics
+        .total_number_of_data_stored_metric
+        .inc_by(store.get_data_stored() as f64)
 }
 /// Sets up the logger for the relayer, based on the verbosity level passed in.
 ///
