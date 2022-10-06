@@ -334,6 +334,15 @@ const bobManualPorts = { ws: 9945, http: 9934, p2p: 30334 };
 3. Make the `ports` property value be the `aliceManualPorts` and `bobManualPorts` respectively in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start()` method.
 4. Specifying and setting `isManual` flag to `true` in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start()` method.
 
+
+### Tips for Testing the config networks
+You can run the config by using the following command, 
+For example, to run the `evm localnet` config , you can do this:
+`./target/release/webb-relayer -c ./config/development/evm-localnet -vvv`
+
+To watch for transaction relaying, you can run the evm networks in the evm [`evm-localnet`](https://github.com/webb-tools/evm-localnet)) 
+and simulate a transaction by starting the networks and following the command line e.g  `variable deposit on chain a`
+
 ## Contributing
 
 Interested in contributing to the Webb Relayer Network? Thank you so much for your interest! We are always appreciative for contributions from the open-source community!
