@@ -684,7 +684,6 @@ pub async fn handle_metric_info() -> Result<impl warp::Reply, Infallible> {
     #[derive(Debug, Serialize)]
     #[serde(rename_all = "camelCase")]
     struct RelayerMetricResponse {
-        #[serde(flatten)]
         metrics: String,
     }
 

@@ -194,6 +194,18 @@ docker run --rm -v "<ABSOLUTE_PATH_TO_CONFIGS_DIRECTORY>:/config" --env-file .en
 
 This will mount a configuration files at the `/config` directory inside the container so it would allow it to read the configuration you added.
 
+#### Metrics Information
+ The Metric information is being handled by prometheus and the Relayer supports the following metrics:
+ 1. The number of times the `BridgeWatcher` enter backoff
+ 2. The number of times the `handle_proposal` executes
+ 3. The number of times the Transaction Queue enters backoff
+ 4. The number of times a Proposal attempted to be queued
+ 5. Total `Fees` Earned by the relayer
+ 6. Total `transaction` made
+ 7. Total `gas` spent
+ 8. Number of `proposals` proposed
+ 9. Amount of `data` stored
+
 <h2 id="api"> API  📡</h2>
 
 The relayer has 3 endpoints available to query from. They are outlined below for your convenience.
@@ -280,6 +292,23 @@ The relayer has 3 endpoints available to query from. They are outlined below for
     "leaves": ["0x2e5c62af48845c095bfa9b90b8ec9f6b7bd98fb3ac2dd3039050a64b919951dd", "0x0f89f0ef52120b8db99f5bdbbdd4019b5ea4bcfef14b0c19d261268da8afdc24", "0x3007c62f678a503e568534487bc5b0bc651f37bbe1f34668b4c8a360f15ba3c3"],
     "lastQueriedBlock": "0x9f30a8"
 }
+  ```
+</details>
+
+
+**Retrieve Metrics information**
+
+```
+/api/v1/metrics
+```
+
+<details>
+  <summary>Expected Response</summary>
+
+  ```json
+  {
+  "metrics": "# HELP bridge_watcher_back_off_metric specifies how many times the bridge watcher backed off\n# TYPE bridge_watcher_back_off_metric counter\nbridge_watcher_back_off_metric 0\n# HELP gas_spent_metric The total number of gas spent\n# TYPE gas_spent_metric counter\ngas_spent_metric 0\n# HELP handle_proposal_execution_metric How many times did the function handle_proposal get executed\n# TYPE handle_proposal_execution_metric counter\nhandle_proposal_execution_metric 0\n# HELP proposal_queue_attempt_metric How many times a proposal is attempted to be queued\n# TYPE proposal_queue_attempt_metric counter\nproposal_queue_attempt_metric 0\n# HELP total_active_relayer_metric The total number of active relayers\n# TYPE total_active_relayer_metric counter\ntotal_active_relayer_metric 0\n# HELP total_fee_earned_metric The total number of fees earned\n# TYPE total_fee_earned_metric counter\ntotal_fee_earned_metric 0\n# HELP total_number_of_data_stored_metric The Total number of data stored\n# TYPE total_number_of_data_stored_metric counter\ntotal_number_of_data_stored_metric 1572864\n# HELP total_number_of_proposals_metric The total number of proposals proposed\n# TYPE total_number_of_proposals_metric counter\ntotal_number_of_proposals_metric 0\n# HELP total_transaction_made_metric The total number of transaction made\n# TYPE total_transaction_made_metric counter\ntotal_transaction_made_metric 0\n# HELP transaction_queue_back_off_metric How many times the transaction queue backed off\n# TYPE transaction_queue_back_off_metric counter\ntransaction_queue_back_off_metric 0\n"
+  }
   ```
 </details>
 
