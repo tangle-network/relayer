@@ -186,7 +186,7 @@ where
         // parse proposal call
         let parsed_proposal_bytes =
             parse_call_from_proposal_data(&proposal_data);
-        let proposal_encoded_call: Call =
+        let _proposal_encoded_call: Call =
             scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())?;
         let typed_chain_id =
             webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
@@ -194,7 +194,6 @@ where
         // Enqueue transaction call data in protocol-substrate transaction queue
         let execute_proposal_call = ExecuteProposal {
             src_id: typed_chain_id.chain_id(),
-            call: Box::new(proposal_encoded_call),
             proposal_data: proposal_data.clone(),
             signature: signature.clone(),
         };
@@ -204,7 +203,6 @@ where
             call_name: Cow::Borrowed("execute_proposal"),
             fields: vec![
                 Value::u128(typed_chain_id.chain_id() as u128),
-                Value::from_bytes(parsed_proposal_bytes),
                 Value::from_bytes(proposal_data),
                 Value::from_bytes(signature),
             ],
@@ -215,7 +213,7 @@ where
             chain_id,
             make_execute_proposal_key(data_hash),
         );
-
+        // Enqueue WebbDynamicTxPayload in protocol-substrate transaction queue
         QueueStore::<WebbDynamicTxPayload>::enqueue_item(
             &store,
             tx_key,
@@ -288,7 +286,7 @@ where
             %nonce,
             signature = %hex::encode(&signature),
         );
-        // Enqueue transaction call data in protocol-substrate transaction queue
+
         let set_maintainer_call = SetMaintainer {
             message: new_maintainer.clone(),
             signature: signature.clone(),
@@ -309,7 +307,7 @@ where
             chain_id,
             make_execute_proposal_key(data_hash),
         );
-
+        // Enqueue WebbDynamicTxPayload in protocol-substrate transaction queue
         QueueStore::<WebbDynamicTxPayload>::enqueue_item(
             &store,
             tx_key,

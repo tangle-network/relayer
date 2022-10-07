@@ -140,7 +140,7 @@ where
                 }
                 webb_proposals::TargetSystem::Substrate(_) => {
                     let proposal =
-                        proposal_handler::substrate_anchor_update_propsoal(
+                        proposal_handler::substrate_anchor_update_proposal(
                             merkle_root,
                             latest_leaf_index,
                             target_resource_id,

@@ -5245,7 +5245,9 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.5.6"
+version = "0.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8325dbd9a62106bd5c13609431a254ba2dc554b33b57d673def2ea8c7a2ef81d"
 dependencies = [
  "async-trait",
  "ethers",
@@ -5262,7 +5264,9 @@ dependencies = [
 
 [[package]]
 name = "webb-proposals"
-version = "0.5.5"
+version = "0.5.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ea2ab97c42b53720c745a0a87eb734c3cb90a979ef0ddaae52c83bddb4bd858a"
 dependencies = [
  "num-traits",
  "parity-scale-codec",
