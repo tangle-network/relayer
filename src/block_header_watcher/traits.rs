@@ -21,7 +21,7 @@ use crate::utils::retry;
 #[async_trait::async_trait]
 pub trait BlockEventHandler {
     /// The storage backend that this handler will use.
-    type Store: HistoryStore + EventHashStore;
+    type Store: HistoryStore;
     /// a method to be called with the event information,
     /// it is up to the handler to decide what to do with the event.
     ///
@@ -33,7 +33,7 @@ pub trait BlockEventHandler {
     async fn handle_block(
         &self,
         store: Arc<Self::Store>,
-        block: &Block<TxHash>,
+        block: Block<TxHash>,
     ) -> crate::Result<()>;
 }
 
@@ -55,11 +55,11 @@ pub trait BlockEventHandlerWithRetry: BlockEventHandler {
     async fn handle_block_with_retry(
         &self,
         store: Arc<Self::Store>,
-        block: &Block<TxHash>,
+        block: Block<TxHash>,
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
     ) -> crate::Result<()> {
         let wrapped_task = || {
-            self.handle_block(store.clone(), block)
+            self.handle_block(store.clone(), block.clone())
                 .map_err(backoff::Error::transient)
         };
         backoff::future::retry(backoff, wrapped_task).await?;
@@ -147,7 +147,7 @@ pub trait BlockWatcher {
                                     );
                                 handler.handle_block_with_retry(
                                     store.clone(),
-                                    &block.clone(),
+                                    block.clone(),
                                     backoff,
                                 )
                             });

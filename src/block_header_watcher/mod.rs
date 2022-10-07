@@ -29,7 +29,7 @@ impl BlockEventHandler for BlockFinalityFetcher {
     async fn handle_block(
         &self,
         store: Arc<Self::Store>,
-        block: &Block<TxHash>,
+        block: Block<TxHash>,
     ) -> crate::Result<()> {
         // let url = config.light_client_rpc_url.join(block.number).unwrap();
         // let beacon_rpc_client = BeaconRpcClient::new(url);
