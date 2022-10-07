@@ -86,6 +86,8 @@
 //! * `substrate-runtime`: Enables the substrate runtime. By default, this is enabled.
 //! * `integration-tests`: Enables integration tests. By default, this is disabled.
 
+/// A module for block header listening and relaying.
+pub mod block_header_watcher;
 /// A module for configuring the relayer.
 pub mod config;
 /// A module for managing the context of the relayer.

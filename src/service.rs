@@ -34,6 +34,7 @@ use webb::substrate::{
     subxt::{self, PairSigner},
 };
 
+use crate::block_header_watcher::start_block_relay_service;
 use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::dkg::*;
@@ -46,23 +47,23 @@ use crate::store::sled::SledStore;
 use crate::tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
 
 /// Type alias for providers
-type Client = providers::Provider<providers::Http>;
+pub type Client = providers::Provider<providers::Http>;
 /// Type alias for the DKG DefaultConfig
-type DkgClient = subxt::Client<subxt::DefaultConfig>;
+pub type DkgClient = subxt::Client<subxt::DefaultConfig>;
 /// Type alias for the DKG RuntimeApi
-type DkgRuntime = DkgRuntimeApi<
+pub type DkgRuntime = DkgRuntimeApi<
     subxt::DefaultConfig,
     subxt::PolkadotExtrinsicParams<subxt::DefaultConfig>,
 >;
 /// Type alias for the WebbProtocol DefaultConfig
-type WebbProtocolClient = subxt::Client<subxt::DefaultConfig>;
+pub type WebbProtocolClient = subxt::Client<subxt::DefaultConfig>;
 /// Type alias for the WebbProtocol RuntimeApi
-type WebbProtocolRuntime = WebbProtocolRuntimeApi<
+pub type WebbProtocolRuntime = WebbProtocolRuntimeApi<
     subxt::DefaultConfig,
     subxt::SubstrateExtrinsicParams<subxt::DefaultConfig>,
 >;
 /// Type alias for [Sled](https://sled.rs)-based database store
-type Store = crate::store::sled::SledStore;
+pub type Store = crate::store::sled::SledStore;
 
 /// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
 /// instantiates the database store. Allows clients to interact with the relayer.
@@ -273,6 +274,16 @@ pub async fn ignite(
             "Starting Background Services for ({}) chain.",
             chain_name
         );
+
+        if chain_config.block_header_relay {
+            start_block_relay_service(
+                ctx,
+                chain_id,
+                client.clone(),
+                store.clone(),
+            )
+            .await?;
+        }
 
         for contract in &chain_config.contracts {
             match contract {

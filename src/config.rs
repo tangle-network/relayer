@@ -151,6 +151,9 @@ pub struct EvmChainConfig {
     /// TxQueue configuration
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
+    /// Block header listening and relaying
+    #[serde(skip_serializing, default)]
+    pub block_header_relay: bool,
 }
 /// SubstrateConfig is the configuration for the Substrate based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]

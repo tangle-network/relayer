@@ -61,13 +61,11 @@ pub mod substrate;
 #[doc(hidden)]
 pub mod evm;
 
-/// A module that contains helpers for retry logic.
-#[doc(hidden)]
-mod retry;
-
 /// A module to handel proposals
 #[doc(hidden)]
 mod proposal_handler;
+
+use crate::utils::retry;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {

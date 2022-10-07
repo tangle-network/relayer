@@ -15,6 +15,8 @@
 use std::fmt;
 use tiny_keccak::{Hasher, Keccak};
 
+pub mod retry;
+
 /// Represents a clickable link containing text and url
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ClickableLink<'a> {
