@@ -133,7 +133,7 @@ where
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> crate::Result<()> {
         let proposal_data_hex = hex::encode(&proposal_data);
-        // 1. Verify proposal length. Proposal lenght should be greater than 40 bytes (proposal header(40B) + proposal body).
+        // 1. Verify proposal length. Proposal length should be greater than 40 bytes (proposal header(40B) + proposal body).
         if proposal_data.len() < 40 {
             tracing::warn!(
                 proposal_data = ?proposal_data_hex,
@@ -251,7 +251,7 @@ where
 
         if new_maintainer == current_maintainer {
             tracing::warn!(
-                current_mainatiner =  %hex::encode(&current_maintainer),
+                current_maintainer =  %hex::encode(&current_maintainer),
                 new_maintainer = %hex::encode(&new_maintainer),
                 %nonce,
                 signature = %hex::encode(&signature),

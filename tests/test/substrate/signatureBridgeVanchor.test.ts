@@ -238,7 +238,7 @@ async function setResourceIdProposal(
   // execute proposal call to handler
   let executeSetProposalCall =
     api.tx.vAnchorHandlerBn254.executeSetResourceProposal(resourceId.toU8a());
-  //@ts-ignore  
+  //@ts-ignore
   let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
     calculateTypedChainId(ChainType.Substrate, chainId),
     u8aToHex(proposalBytes),
