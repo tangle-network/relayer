@@ -1,0 +1,38 @@
+[package]
+name = "beacon-chain-relay"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+types =  { git = "https://github.com/webb-tools/lighthouse.git", branch = "develop", default-features = false }
+tree_hash = { git = "https://github.com/webb-tools/lighthouse.git", branch = "develop", default-features = false }
+merkle_proof = { git = "https://github.com/webb-tools/lighthouse.git", branch = "develop", default-features = false }
+eth2_hashing = { git = "https://github.com/webb-tools/lighthouse.git", branch = "develop", default-features = false }
+eth2_ssz = { git = "https://github.com/webb-tools/lighthouse.git", branch = "develop", default-features = false }
+
+eth-types = { git = "https://github.com/webb-tools/pallet-eth2-light-client.git", features = ["eip1559"] }
+
+log = { version = "0.4", features = ["std", "serde"] }
+serde_json = "1.0.74"
+serde = { version = "1.0", features = ["derive"] }
+ethereum-types = "0.9.2"
+reqwest = { version = "0.11", features = ["blocking"] }
+clap = { version = "3.1.6", features = ["derive"] }
+tokio = { version = "1.1", features = ["macros", "rt", "time"] }
+env_logger = "0.9.0"
+borsh = "0.9.3"
+near-sdk = "4.0.0"
+futures = { version = "0.3.21", default-features = false }
+async-std = "1.12.0"
+hex = "*"
+toml = "0.5.9"
+atomic_refcell = "0.1.8"
+bitvec = "*"
+
+[patch.crates-io]
+eth2_hashing = { git = "https://github.com/sigp/lighthouse", rev = "df51a73272489fe154bd10995c96199062b6c3f7"}
+eth2_serde_utils = { git = "https://github.com/sigp/lighthouse", rev = "df51a73272489fe154bd10995c96199062b6c3f7"}
+eth2_ssz = { git = "https://github.com/sigp/lighthouse", rev = "df51a73272489fe154bd10995c96199062b6c3f7"}
+tree_hash = { git = "https://github.com/sigp/lighthouse", rev = "df51a73272489fe154bd10995c96199062b6c3f7"}
