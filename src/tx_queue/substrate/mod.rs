@@ -13,8 +13,6 @@
 // limitations under the License.
 //
 
-/// Encode and Decode Call data.
-pub mod call_data;
 mod substrate_tx_queue;
 #[doc(hidden)]
 pub use substrate_tx_queue::*;

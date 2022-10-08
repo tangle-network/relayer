@@ -1,6 +1,8 @@
-use crate::beacon_block_body_merkle_tree::{BeaconBlockBodyMerkleTree, ExecutionPayloadMerkleTree};
-use eth2_hashing;
+use crate::beacon_block_body_merkle_tree::{
+    BeaconBlockBodyMerkleTree, ExecutionPayloadMerkleTree,
+};
 use crate::relay_errors::MissExecutionPayload;
+use eth2_hashing;
 use ethereum_types::H256;
 use std::error::Error;
 use std::fmt;
@@ -26,11 +28,15 @@ impl ExecutionBlockProof {
 
     pub const L1_BEACON_BLOCK_BODY_PROOF_SIZE: usize =
         BeaconBlockBodyMerkleTree::BEACON_BLOCK_BODY_TREE_DEPTH;
-    pub const L2_EXECUTION_PAYLOAD_PROOF_SIZE: usize = ExecutionPayloadMerkleTree::TREE_DEPTH;
-    pub const PROOF_SIZE: usize =
-        Self::L1_BEACON_BLOCK_BODY_PROOF_SIZE + Self::L2_EXECUTION_PAYLOAD_PROOF_SIZE;
+    pub const L2_EXECUTION_PAYLOAD_PROOF_SIZE: usize =
+        ExecutionPayloadMerkleTree::TREE_DEPTH;
+    pub const PROOF_SIZE: usize = Self::L1_BEACON_BLOCK_BODY_PROOF_SIZE
+        + Self::L2_EXECUTION_PAYLOAD_PROOF_SIZE;
 
-    pub fn construct_from_raw_data(block_hash: &H256, proof: &[H256; Self::PROOF_SIZE]) -> Self {
+    pub fn construct_from_raw_data(
+        block_hash: &H256,
+        proof: &[H256; Self::PROOF_SIZE],
+    ) -> Self {
         Self {
             block_hash: *block_hash,
             proof: *proof,
@@ -40,7 +46,8 @@ impl ExecutionBlockProof {
     pub fn construct_from_beacon_block_body(
         beacon_block_body: &BeaconBlockBody<MainnetEthSpec>,
     ) -> Result<Self, Box<dyn Error>> {
-        let beacon_block_merkle_tree = &BeaconBlockBodyMerkleTree::new(beacon_block_body);
+        let beacon_block_merkle_tree =
+            &BeaconBlockBodyMerkleTree::new(beacon_block_body);
 
         let execution_payload_merkle_tree = &ExecutionPayloadMerkleTree::new(
             &beacon_block_body
@@ -88,9 +95,10 @@ impl ExecutionBlockProof {
         &self,
         beacon_block_body_hash: &H256,
     ) -> Result<bool, IncorrectBranchLength> {
-        let l2_proof: &[H256] = &self.proof[0..Self::L2_EXECUTION_PAYLOAD_PROOF_SIZE];
-        let l1_proof: &[H256] =
-            &self.proof[Self::L2_EXECUTION_PAYLOAD_PROOF_SIZE..Self::PROOF_SIZE];
+        let l2_proof: &[H256] =
+            &self.proof[0..Self::L2_EXECUTION_PAYLOAD_PROOF_SIZE];
+        let l1_proof: &[H256] = &self.proof
+            [Self::L2_EXECUTION_PAYLOAD_PROOF_SIZE..Self::PROOF_SIZE];
         let execution_payload_hash = Self::merkle_root_from_branch(
             self.block_hash,
             l2_proof,
@@ -122,7 +130,10 @@ impl ExecutionBlockProof {
         for (i, leaf) in branch.iter().enumerate().take(depth) {
             let ith_bit = (index >> i) & 0x01;
             if ith_bit == 1 {
-                merkle_root = eth2_hashing::hash32_concat(leaf.as_bytes(), &merkle_root)[..].to_vec();
+                merkle_root =
+                    eth2_hashing::hash32_concat(leaf.as_bytes(), &merkle_root)
+                        [..]
+                        .to_vec();
             } else {
                 let mut input = merkle_root;
                 input.extend_from_slice(leaf.as_bytes());
@@ -159,13 +170,16 @@ mod tests {
     const TIMEOUT_STATE_SECONDS: u64 = 1000;
 
     fn get_test_config() -> ConfigForTests {
-        ConfigForTests::load_from_toml("config_for_tests.toml".try_into().unwrap())
+        ConfigForTests::load_from_toml(
+            "config_for_tests.toml".try_into().unwrap(),
+        )
     }
 
     #[test]
     fn test_beacon_block_body_root_verification() {
-        let beacon_block_body_json_str =
-            read_json_file_from_data_dir("beacon_block_body_kiln_slot_741888.json");
+        let beacon_block_body_json_str = read_json_file_from_data_dir(
+            "beacon_block_body_kiln_slot_741888.json",
+        );
 
         let beacon_block_body: BeaconBlockBody<MainnetEthSpec> =
             serde_json::from_str(&beacon_block_body_json_str).unwrap();
@@ -192,7 +206,9 @@ mod tests {
                 .unwrap()
                 .execution_payload
                 .block_hash,
-            types::ExecutionBlockHash::from_root(execution_block_proof.get_execution_block_hash())
+            types::ExecutionBlockHash::from_root(
+                execution_block_proof.get_execution_block_hash()
+            )
         );
 
         assert!(execution_block_proof
@@ -220,10 +236,16 @@ mod tests {
         );
 
         let beacon_block_body = beacon_rpc_client
-            .get_beacon_block_body_for_block_id(&format!("{}", config.first_slot))
+            .get_beacon_block_body_for_block_id(&format!(
+                "{}",
+                config.first_slot
+            ))
             .unwrap();
         let beacon_block_header = beacon_rpc_client
-            .get_beacon_block_header_for_block_id(&format!("{}", config.first_slot))
+            .get_beacon_block_header_for_block_id(&format!(
+                "{}",
+                config.first_slot
+            ))
             .unwrap();
 
         let beacon_block_body_merkle_tree =

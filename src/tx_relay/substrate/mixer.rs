@@ -1,14 +1,12 @@
-use webb::substrate::{
-    protocol_substrate_runtime::api::{
-        runtime_types::webb_primitives::runtime::Element, RuntimeApi,
-    },
-    subxt::{self, DefaultConfig, PairSigner},
-};
-
 use crate::{
     context::RelayerContext,
     handler::{CommandResponse, CommandStream, SubstrateCommand},
     tx_relay::substrate::handle_substrate_tx,
+};
+use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::{
+    protocol_substrate_runtime::api::runtime_types::webb_primitives::runtime::Element,
+    subxt::{tx::PairSigner, SubstrateConfig},
 };
 
 /// Handler for Substrate Mixer commands
@@ -35,7 +33,7 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
 
     let requested_chain = cmd.chain_id;
     let maybe_client = ctx
-        .substrate_provider::<DefaultConfig>(&requested_chain.to_string())
+        .substrate_provider::<SubstrateConfig>(&requested_chain.to_string())
         .await;
     let client = match maybe_client {
         Ok(c) => c,
@@ -45,10 +43,6 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
             return;
         }
     };
-    let api = client.to_runtime_api::<RuntimeApi<
-        DefaultConfig,
-        subxt::SubstrateExtrinsicParams<DefaultConfig>,
-    >>();
 
     let pair = match ctx.substrate_wallet(&cmd.chain_id.to_string()).await {
         Ok(v) => v,
@@ -66,7 +60,7 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
 
     let signer = PairSigner::new(pair);
 
-    let withdraw_tx = api.tx().mixer_bn254().withdraw(
+    let withdraw_tx = RuntimeApi::tx().mixer_bn254().withdraw(
         cmd.id,
         cmd.proof,
         root_element,
@@ -76,24 +70,13 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
         cmd.fee,
         cmd.refund,
     );
-    let withdraw_tx = match withdraw_tx {
-        Ok(tx) => tx.sign_and_submit_then_watch_default(&signer).await,
-        Err(e) => {
-            tracing::error!(
-                "Error while signing and submitting mixer withdraw tx: {}",
-                e
-            );
-            let _ = stream
-                .send(Error(format!(
-                    "Error while signing and submitting mixer withdraw tx: {}",
-                    e
-                )))
-                .await;
-            return;
-        }
-    };
 
-    let event_stream = match withdraw_tx {
+    let withdraw_tx_hash = client
+        .tx()
+        .sign_and_submit_then_watch_default(&withdraw_tx, &signer)
+        .await;
+
+    let event_stream = match withdraw_tx_hash {
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Error while sending Tx: {}", e);

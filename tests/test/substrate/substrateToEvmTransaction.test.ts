@@ -221,7 +221,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -421,9 +421,9 @@ async function setResourceIdProposal(
   // execute proposal call to handler
   let executeSetProposalCall =
     api.tx.vAnchorHandlerBn254.executeSetResourceProposal(resourceId.toU8a());
+  //@ts-ignore
   let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
     calculateTypedChainId(ChainType.Substrate, chainId),
-    executeSetProposalCall,
     u8aToHex(proposalBytes),
     u8aToHex(signature)
   );

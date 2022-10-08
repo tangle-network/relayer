@@ -28,7 +28,8 @@ impl BeaconBlockBodyMerkleTree {
             } else {
                 H256::zero()
             },
-            if let Ok(execution_payload) = beacon_block_body.execution_payload() {
+            if let Ok(execution_payload) = beacon_block_body.execution_payload()
+            {
                 execution_payload.tree_hash_root()
             } else {
                 H256::zero()
@@ -99,12 +100,16 @@ impl BeaconStateMerkleTree {
             beacon_state.balances().tree_hash_root(),
             beacon_state.randao_mixes().tree_hash_root(),
             beacon_state.slashings().tree_hash_root(),
-            if let Ok(previous_epoch_participation) = beacon_state.previous_epoch_participation() {
+            if let Ok(previous_epoch_participation) =
+                beacon_state.previous_epoch_participation()
+            {
                 previous_epoch_participation.tree_hash_root()
             } else {
                 H256::zero()
             },
-            if let Ok(current_epoch_participation) = beacon_state.current_epoch_participation() {
+            if let Ok(current_epoch_participation) =
+                beacon_state.current_epoch_participation()
+            {
                 current_epoch_participation.tree_hash_root()
             } else {
                 H256::zero()
@@ -120,12 +125,15 @@ impl BeaconStateMerkleTree {
             } else {
                 H256::zero()
             },
-            if let Ok(current_sync_committee) = beacon_state.current_sync_committee() {
+            if let Ok(current_sync_committee) =
+                beacon_state.current_sync_committee()
+            {
                 current_sync_committee.tree_hash_root()
             } else {
                 H256::zero()
             },
-            if let Ok(next_sync_committee) = beacon_state.next_sync_committee() {
+            if let Ok(next_sync_committee) = beacon_state.next_sync_committee()
+            {
                 next_sync_committee.tree_hash_root()
             } else {
                 H256::zero()
@@ -155,7 +163,9 @@ mod tests {
 
     #[test]
     fn test_body_root() {
-        let json_str = read_json_file_from_data_dir("beacon_block_body_kiln_slot_741888.json");
+        let json_str = read_json_file_from_data_dir(
+            "beacon_block_body_kiln_slot_741888.json",
+        );
         let beacon_block_body: BeaconBlockBody<MainnetEthSpec> =
             serde_json::from_str(&json_str).unwrap();
 
@@ -170,10 +180,13 @@ mod tests {
     fn test_execution_payload_merkle_tree() {
         const EXECUTION_PAYLOAD_INDEX: usize = 9;
 
-        let json_str = read_json_file_from_data_dir("beacon_block_body_kiln_slot_741888.json");
+        let json_str = read_json_file_from_data_dir(
+            "beacon_block_body_kiln_slot_741888.json",
+        );
         let beacon_block_body: BeaconBlockBody<MainnetEthSpec> =
             serde_json::from_str(&json_str).unwrap();
-        let beacon_block_body_merkle_tree = BeaconBlockBodyMerkleTree::new(&beacon_block_body);
+        let beacon_block_body_merkle_tree =
+            BeaconBlockBodyMerkleTree::new(&beacon_block_body);
         let execution_payload_merkle_tree = ExecutionPayloadMerkleTree::new(
             &beacon_block_body
                 .execution_payload()
@@ -189,10 +202,11 @@ mod tests {
             execution_payload_merkle_tree.0.hash()
         );
 
-        let execution_payload_proof = beacon_block_body_merkle_tree.0.generate_proof(
-            EXECUTION_PAYLOAD_INDEX,
-            BeaconBlockBodyMerkleTree::BEACON_BLOCK_BODY_TREE_DEPTH,
-        );
+        let execution_payload_proof =
+            beacon_block_body_merkle_tree.0.generate_proof(
+                EXECUTION_PAYLOAD_INDEX,
+                BeaconBlockBodyMerkleTree::BEACON_BLOCK_BODY_TREE_DEPTH,
+            );
         assert_eq!(
             execution_payload_proof.0,
             execution_payload_merkle_tree.0.hash()

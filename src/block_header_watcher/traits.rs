@@ -117,18 +117,22 @@ pub trait BlockWatcher {
                     // likely 0 for everything but ETH mainnet
                     U64::from(15697112),
                 )?;
-                let current_block_number_result: Result<_, backoff::Error<crate::Error>> = client
+                let current_block_number_result: Result<
+                    _,
+                    backoff::Error<crate::Error>,
+                > = client
                     .get_block_number()
                     .map_err(Into::into)
                     .map_err(backoff::Error::transient)
                     .await;
 
-               let current_block_number =  match current_block_number_result {
-                    Ok(block_number) => {
-                      block_number
-                    },
+                let current_block_number = match current_block_number_result {
+                    Ok(block_number) => block_number,
                     Err(e) => {
-                        tracing::error!("Error {:?} while getting block number", e);
+                        tracing::error!(
+                            "Error {:?} while getting block number",
+                            e
+                        );
                         U64::zero()
                     }
                 };

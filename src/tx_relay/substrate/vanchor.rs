@@ -1,19 +1,17 @@
-use webb::substrate::subxt::sp_runtime::AccountId32;
-use webb::substrate::{
-    protocol_substrate_runtime::api::{
-        runtime_types::{
-            webb_primitives::runtime::Element, webb_primitives::types::vanchor,
-        },
-        RuntimeApi,
-    },
-    subxt::{self, DefaultConfig, PairSigner},
-};
+use webb::substrate::subxt::ext::sp_runtime::AccountId32;
 
 use crate::handler::SubstrateCommand;
 use crate::tx_relay::substrate::handle_substrate_tx;
 use crate::{
     context::RelayerContext,
     handler::{CommandResponse, CommandStream},
+};
+use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::{
+    protocol_substrate_runtime::api::runtime_types::{
+        webb_primitives::runtime::Element, webb_primitives::types::vanchor,
+    },
+    subxt::{tx::PairSigner, SubstrateConfig},
 };
 
 /// Handler for Substrate Anchor commands
@@ -52,7 +50,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             .collect(),
         ext_data_hash: Element(cmd.proof_data.ext_data_hash),
     };
-    let ext_data_elements: vanchor::ExtData<AccountId32, i128, u128> =
+    let ext_data_elements: vanchor::ExtData<AccountId32, i128, u128, _> =
         vanchor::ExtData {
             recipient: cmd.ext_data.recipient,
             relayer: cmd.ext_data.relayer,
@@ -60,11 +58,13 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             ext_amount: cmd.ext_data.ext_amount,
             encrypted_output1: cmd.ext_data.encrypted_output1.to_vec(),
             encrypted_output2: cmd.ext_data.encrypted_output2.to_vec(),
+            refund: cmd.ext_data.refund,
+            token: cmd.ext_data.token,
         };
 
     let requested_chain = cmd.chain_id;
     let maybe_client = ctx
-        .substrate_provider::<DefaultConfig>(&requested_chain.to_string())
+        .substrate_provider::<SubstrateConfig>(&requested_chain.to_string())
         .await;
     let client = match maybe_client {
         Ok(c) => c,
@@ -74,10 +74,6 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             return;
         }
     };
-    let api = client.to_runtime_api::<RuntimeApi<
-        DefaultConfig,
-        subxt::SubstrateExtrinsicParams<DefaultConfig>,
-    >>();
 
     let pair = match ctx.substrate_wallet(&cmd.chain_id.to_string()).await {
         Ok(v) => v,
@@ -95,21 +91,17 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
 
     let signer = PairSigner::new(pair);
 
-    let transact_tx = api.tx().v_anchor_bn254().transact(
+    let transact_tx = RuntimeApi::tx().v_anchor_bn254().transact(
         cmd.id,
         proof_elements,
         ext_data_elements,
     );
-    let transact_tx = match transact_tx {
-        Ok(tx) => tx.sign_and_submit_then_watch_default(&signer).await,
-        Err(e) => {
-            tracing::error!("Error while creating transaction: {}", e);
-            let _ = stream.send(Error(format!("{}", e))).await;
-            return;
-        }
-    };
+    let transact_tx_hash = client
+        .tx()
+        .sign_and_submit_then_watch_default(&transact_tx, &signer)
+        .await;
 
-    let event_stream = match transact_tx {
+    let event_stream = match transact_tx_hash {
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Error while sending Tx: {}", e);

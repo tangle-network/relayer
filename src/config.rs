@@ -36,7 +36,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::path::PathBuf;
-use webb::substrate::subxt::sp_core::sr25519::Public;
+use webb::substrate::subxt::ext::sp_core::sr25519::Public;
 
 use crate::types::cw_chain_id::CWChainId;
 use crate::types::{
@@ -154,6 +154,9 @@ pub struct EvmChainConfig {
     /// Block header listening and relaying
     #[serde(skip_serializing, default)]
     pub block_header_relay: bool,
+    /// Light client RPC url
+    #[serde(skip_serializing)]
+    pub light_client_rpc_url: RpcUrl,
 }
 /// SubstrateConfig is the configuration for the Substrate based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]

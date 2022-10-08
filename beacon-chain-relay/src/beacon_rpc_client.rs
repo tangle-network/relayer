@@ -1,8 +1,8 @@
 use crate::execution_block_proof::ExecutionBlockProof;
 use crate::light_client_snapshot_with_proof::LightClientSnapshotWithProof;
 use crate::relay_errors::{
-    ErrorOnJsonParse, ExecutionPayloadError, FailOnGettingJson, MissSyncAggregationError,
-    NoBlockForSlotError, SignatureSlotNotFoundError,
+    ErrorOnJsonParse, ExecutionPayloadError, FailOnGettingJson,
+    MissSyncAggregationError, NoBlockForSlotError, SignatureSlotNotFoundError,
 };
 use crate::utils;
 use eth_types::eth2::BeaconBlockHeader;
@@ -35,17 +35,23 @@ pub struct BeaconRPCClient {
 impl BeaconRPCClient {
     const URL_HEADER_PATH: &'static str = "eth/v1/beacon/headers";
     const URL_BODY_PATH: &'static str = "eth/v2/beacon/blocks";
-    const URL_GET_LIGHT_CLIENT_UPDATE_API: &'static str = "eth/v1/beacon/light_client/updates";
+    const URL_GET_LIGHT_CLIENT_UPDATE_API: &'static str =
+        "eth/v1/beacon/light_client/updates";
     const URL_FINALITY_LIGHT_CLIENT_UPDATE_PATH: &'static str =
         "eth/v1/beacon/light_client/finality_update/";
-    const URL_GET_BOOTSTRAP: &'static str = "eth/v1/beacon/light_client/bootstrap";
+    const URL_GET_BOOTSTRAP: &'static str =
+        "eth/v1/beacon/light_client/bootstrap";
     const URL_STATE_PATH: &'static str = "eth/v2/debug/beacon/states";
 
     const SLOTS_PER_EPOCH: u64 = 32;
     const EPOCHS_PER_PERIOD: u64 = 256;
 
     /// Creates `BeaconRPCClient` for the given BeaconAPI `endpoint_url`
-    pub fn new(endpoint_url: &str, timeout_seconds: u64, timeout_state_seconds: u64) -> Self {
+    pub fn new(
+        endpoint_url: &str,
+        timeout_seconds: u64,
+        timeout_state_seconds: u64,
+    ) -> Self {
         Self {
             endpoint_url: endpoint_url.to_string(),
             client: reqwest::blocking::Client::builder()
@@ -70,7 +76,12 @@ impl BeaconRPCClient {
         &self,
         block_id: &str,
     ) -> Result<BeaconBlockBody<MainnetEthSpec>, Box<dyn Error>> {
-        let url = format!("{}/{}/{}", self.endpoint_url, Self::URL_BODY_PATH, block_id);
+        let url = format!(
+            "{}/{}/{}",
+            self.endpoint_url,
+            Self::URL_BODY_PATH,
+            block_id
+        );
 
         let json_str = &self.get_json_from_raw_request(&url)?;
 
@@ -120,7 +131,8 @@ impl BeaconRPCClient {
             Self::URL_GET_LIGHT_CLIENT_UPDATE_API,
             period
         );
-        let light_client_update_json_str = self.get_json_from_raw_request(&url)?;
+        let light_client_update_json_str =
+            self.get_json_from_raw_request(&url)?;
 
         Ok(LightClientUpdate {
             attested_beacon_header: Self::get_attested_header_from_light_client_update_json_str(
@@ -155,14 +167,18 @@ impl BeaconRPCClient {
             block_root
         );
 
-        let light_client_snapshot_json_str = self.get_json_from_raw_request(&url)?;
-        let parsed_json: Value = serde_json::from_str(&light_client_snapshot_json_str)?;
+        let light_client_snapshot_json_str =
+            self.get_json_from_raw_request(&url)?;
+        let parsed_json: Value =
+            serde_json::from_str(&light_client_snapshot_json_str)?;
         let beacon_header: BeaconBlockHeader =
             serde_json::from_value(parsed_json["data"]["header"].clone())?;
-        let current_sync_committee: SyncCommittee =
-            serde_json::from_value(parsed_json["data"]["current_sync_committee"].clone())?;
-        let current_sync_committee_branch: Vec<H256> =
-            serde_json::from_value(parsed_json["data"]["current_sync_committee_branch"].clone())?;
+        let current_sync_committee: SyncCommittee = serde_json::from_value(
+            parsed_json["data"]["current_sync_committee"].clone(),
+        )?;
+        let current_sync_committee_branch: Vec<H256> = serde_json::from_value(
+            parsed_json["data"]["current_sync_committee_branch"].clone(),
+        )?;
 
         Ok(LightClientSnapshotWithProof {
             beacon_header,
@@ -185,7 +201,9 @@ impl BeaconRPCClient {
     }
 
     /// Return the last finalized slot in the Beacon chain
-    pub fn get_last_finalized_slot_number(&self) -> Result<types::Slot, Box<dyn Error>> {
+    pub fn get_last_finalized_slot_number(
+        &self,
+    ) -> Result<types::Slot, Box<dyn Error>> {
         Ok(self.get_beacon_block_header_for_block_id("finalized")?.slot)
     }
 
@@ -198,7 +216,8 @@ impl BeaconRPCClient {
         &self,
         beacon_block_hash: H256,
     ) -> Result<u64, Box<dyn Error>> {
-        let beacon_block_hash_str: String = utils::trim_quotes(serde_json::to_string(&beacon_block_hash)?);
+        let beacon_block_hash_str: String =
+            utils::trim_quotes(serde_json::to_string(&beacon_block_hash)?);
 
         let url = format!(
             "{}/{}/{}",
@@ -208,13 +227,18 @@ impl BeaconRPCClient {
         );
         let block_json_str = &self.get_json_from_raw_request(&url)?;
         let v: Value = serde_json::from_str(block_json_str)?;
-        let slot = utils::trim_quotes(v["data"]["message"]["slot"].to_string()).parse::<u64>()?;
+        let slot = utils::trim_quotes(v["data"]["message"]["slot"].to_string())
+            .parse::<u64>()?;
 
         Ok(slot)
     }
 
-    pub fn get_block_number_for_slot(&self, slot: types::Slot) -> Result<u64, Box<dyn Error>> {
-        let beacon_block_body = self.get_beacon_block_body_for_block_id(&slot.to_string())?;
+    pub fn get_block_number_for_slot(
+        &self,
+        slot: types::Slot,
+    ) -> Result<u64, Box<dyn Error>> {
+        let beacon_block_body =
+            self.get_beacon_block_body_for_block_id(&slot.to_string())?;
         Ok(beacon_block_body
             .execution_payload()
             .map_err(|_| ExecutionPayloadError)?
@@ -222,28 +246,36 @@ impl BeaconRPCClient {
             .block_number)
     }
 
-    pub fn get_finality_light_client_update(&self) -> Result<LightClientUpdate, Box<dyn Error>> {
+    pub fn get_finality_light_client_update(
+        &self,
+    ) -> Result<LightClientUpdate, Box<dyn Error>> {
         let url = format!(
             "{}/{}",
             self.endpoint_url,
             Self::URL_FINALITY_LIGHT_CLIENT_UPDATE_PATH
         );
 
-        let light_client_update_json_str = self.get_json_from_raw_request(&url)?;
+        let light_client_update_json_str =
+            self.get_json_from_raw_request(&url)?;
         let v: Value = serde_json::from_str(&light_client_update_json_str)?;
-        let light_client_update_json_str = serde_json::to_string(&json!({"data": [v["data"]]}))?;
+        let light_client_update_json_str =
+            serde_json::to_string(&json!({"data": [v["data"]]}))?;
 
         Ok(LightClientUpdate {
-            attested_beacon_header: Self::get_attested_header_from_light_client_update_json_str(
-                &light_client_update_json_str,
-            )?,
-            sync_aggregate: Self::get_sync_aggregate_from_light_client_update_json_str(
-                &light_client_update_json_str,
-            )?,
-            signature_slot: self.get_signature_slot(&light_client_update_json_str)?,
-            finality_update: self.get_finality_update_from_light_client_update_json_str(
-                &light_client_update_json_str,
-            )?,
+            attested_beacon_header:
+                Self::get_attested_header_from_light_client_update_json_str(
+                    &light_client_update_json_str,
+                )?,
+            sync_aggregate:
+                Self::get_sync_aggregate_from_light_client_update_json_str(
+                    &light_client_update_json_str,
+                )?,
+            signature_slot: self
+                .get_signature_slot(&light_client_update_json_str)?,
+            finality_update: self
+                .get_finality_update_from_light_client_update_json_str(
+                    &light_client_update_json_str,
+                )?,
             sync_committee_update: None::<SyncCommitteeUpdate>,
         })
     }
@@ -256,7 +288,8 @@ impl BeaconRPCClient {
             self.endpoint_url,
             Self::URL_FINALITY_LIGHT_CLIENT_UPDATE_PATH
         );
-        let last_period = Self::get_period_for_slot(self.get_last_slot_number()?.as_u64());
+        let last_period =
+            Self::get_period_for_slot(self.get_last_slot_number()?.as_u64());
         let url_update = format!(
             "{}/{}?start_period={}&count=1",
             self.endpoint_url,
@@ -265,9 +298,11 @@ impl BeaconRPCClient {
         );
         let finality_light_client_update_json_str =
             self.get_json_from_raw_request(&url_finality)?;
-        let light_client_update_json_str = self.get_json_from_raw_request(&url_update)?;
+        let light_client_update_json_str =
+            self.get_json_from_raw_request(&url_update)?;
 
-        let v: Value = serde_json::from_str(&finality_light_client_update_json_str)?;
+        let v: Value =
+            serde_json::from_str(&finality_light_client_update_json_str)?;
         let finality_light_client_update_json_str =
             serde_json::to_string(&json!({"data": [v["data"]]}))?;
 
@@ -300,7 +335,10 @@ impl BeaconRPCClient {
             Self::URL_STATE_PATH,
             state_id
         );
-        let json_str = Self::get_json_from_client(&self.client_state_request, &url_request)?;
+        let json_str = Self::get_json_from_client(
+            &self.client_state_request,
+            &url_request,
+        )?;
 
         let v: Value = serde_json::from_str(&json_str)?;
         let state_json_str = serde_json::to_string(&v["data"])?;
@@ -319,7 +357,10 @@ impl BeaconRPCClient {
             .ok_or(Box::new(ErrorOnJsonParse))
     }
 
-    fn get_json_from_client(client: &Client, url: &str) -> Result<String, Box<dyn Error>> {
+    fn get_json_from_client(
+        client: &Client,
+        url: &str,
+    ) -> Result<String, Box<dyn Error>> {
         trace!(target: "relay", "Beacon chain request: {}", url);
         let json_str = client.get(url).send()?.text()?;
         if let Err(_) = serde_json::from_str::<Value>(&json_str) {
@@ -329,7 +370,10 @@ impl BeaconRPCClient {
         Ok(json_str)
     }
 
-    fn get_json_from_raw_request(&self, url: &str) -> Result<String, Box<dyn Error>> {
+    pub fn get_json_from_raw_request(
+        &self,
+        url: &str,
+    ) -> Result<String, Box<dyn Error>> {
         Self::get_json_from_client(&self.client, url)
     }
 
@@ -337,7 +381,8 @@ impl BeaconRPCClient {
         block_json_str: &str,
     ) -> Result<std::string::String, Box<dyn Error>> {
         let v: Value = serde_json::from_str(block_json_str)?;
-        let body_json_str = serde_json::to_string(&v["data"]["message"]["body"])?;
+        let body_json_str =
+            serde_json::to_string(&v["data"]["message"]["body"])?;
         Ok(body_json_str)
     }
 
@@ -353,8 +398,10 @@ impl BeaconRPCClient {
         light_client_update_json_str: &str,
     ) -> Result<BeaconBlockHeader, Box<dyn Error>> {
         let v: Value = serde_json::from_str(light_client_update_json_str)?;
-        let attested_header_json_str = serde_json::to_string(&v["data"][0]["attested_header"])?;
-        let attested_header: BeaconBlockHeader = serde_json::from_str(&attested_header_json_str)?;
+        let attested_header_json_str =
+            serde_json::to_string(&v["data"][0]["attested_header"])?;
+        let attested_header: BeaconBlockHeader =
+            serde_json::from_str(&attested_header_json_str)?;
 
         Ok(attested_header)
     }
@@ -363,8 +410,10 @@ impl BeaconRPCClient {
         light_client_update_json_str: &str,
     ) -> Result<SyncAggregate, Box<dyn Error>> {
         let v: Value = serde_json::from_str(light_client_update_json_str)?;
-        let sync_aggregate_json_str = serde_json::to_string(&v["data"][0]["sync_aggregate"])?;
-        let sync_aggregate: SyncAggregate = serde_json::from_str(&sync_aggregate_json_str)?;
+        let sync_aggregate_json_str =
+            serde_json::to_string(&v["data"][0]["sync_aggregate"])?;
+        let sync_aggregate: SyncAggregate =
+            serde_json::from_str(&sync_aggregate_json_str)?;
 
         Ok(sync_aggregate)
     }
@@ -380,18 +429,24 @@ impl BeaconRPCClient {
 
         let v: Value = serde_json::from_str(light_client_update_json_str)?;
 
-        let attested_header_json_str = serde_json::to_string(&v["data"][0]["attested_header"])?;
-        let attested_header: BeaconBlockHeader = serde_json::from_str(&attested_header_json_str)?;
+        let attested_header_json_str =
+            serde_json::to_string(&v["data"][0]["attested_header"])?;
+        let attested_header: BeaconBlockHeader =
+            serde_json::from_str(&attested_header_json_str)?;
 
         let mut signature_slot = attested_header.slot + 1;
 
-        let sync_aggregate = Self::get_sync_aggregate_from_light_client_update_json_str(
-            light_client_update_json_str,
-        )?;
+        let sync_aggregate =
+            Self::get_sync_aggregate_from_light_client_update_json_str(
+                light_client_update_json_str,
+            )?;
 
         loop {
-            if let Ok(beacon_block_body) =
-                self.get_beacon_block_body_for_block_id(&format!("{}", signature_slot))
+            if let Ok(beacon_block_body) = self
+                .get_beacon_block_body_for_block_id(&format!(
+                    "{}",
+                    signature_slot
+                ))
             {
                 if format!(
                     "\"{:?}\"",
@@ -399,14 +454,16 @@ impl BeaconRPCClient {
                         .sync_aggregate()
                         .map_err(|_| { MissSyncAggregationError })?
                         .sync_committee_signature
-                ) == serde_json::to_string(&sync_aggregate.sync_committee_signature)?
-                {
+                ) == serde_json::to_string(
+                    &sync_aggregate.sync_committee_signature,
+                )? {
                     break;
                 }
             }
 
             signature_slot += 1;
-            if signature_slot - attested_header.slot > CHECK_SLOTS_FORWARD_LIMIT {
+            if signature_slot - attested_header.slot > CHECK_SLOTS_FORWARD_LIMIT
+            {
                 return Err(Box::new(SignatureSlotNotFoundError));
             }
         }
@@ -420,19 +477,25 @@ impl BeaconRPCClient {
     ) -> Result<FinalizedHeaderUpdate, Box<dyn Error>> {
         let v: Value = serde_json::from_str(light_client_update_json_str)?;
 
-        let finalized_header_json_str = serde_json::to_string(&v["data"][0]["finalized_header"])?;
-        let finalized_header: BeaconBlockHeader = serde_json::from_str(&finalized_header_json_str)?;
+        let finalized_header_json_str =
+            serde_json::to_string(&v["data"][0]["finalized_header"])?;
+        let finalized_header: BeaconBlockHeader =
+            serde_json::from_str(&finalized_header_json_str)?;
 
-        let finalized_branch_json_str = serde_json::to_string(&v["data"][0]["finality_branch"])?;
+        let finalized_branch_json_str =
+            serde_json::to_string(&v["data"][0]["finality_branch"])?;
         let finalized_branch: Vec<eth_types::H256> =
             serde_json::from_str(&finalized_branch_json_str)?;
 
         let finalized_block_slot = finalized_header.slot;
 
-        let finalized_block_body =
-            self.get_beacon_block_body_for_block_id(&format!("{}", finalized_block_slot))?;
+        let finalized_block_body = self.get_beacon_block_body_for_block_id(
+            &format!("{}", finalized_block_slot),
+        )?;
         let finalized_block_eth1data_proof =
-            ExecutionBlockProof::construct_from_beacon_block_body(&finalized_block_body)?;
+            ExecutionBlockProof::construct_from_beacon_block_body(
+                &finalized_block_body,
+            )?;
 
         Ok(FinalizedHeaderUpdate {
             header_update: HeaderUpdate {
@@ -501,7 +564,10 @@ impl BeaconRPCClient {
         ))?
     }
 
-    fn check_block_found_for_slot(&self, json_str: &str) -> Result<(), Box<dyn Error>> {
+    fn check_block_found_for_slot(
+        &self,
+        json_str: &str,
+    ) -> Result<(), Box<dyn Error>> {
         let parse_json: Value = serde_json::from_str(json_str)?;
         if parse_json.is_object() {
             if let Some(msg_str) = parse_json["message"].as_str() {
@@ -529,7 +595,9 @@ mod tests {
     const TIMEOUT_STATE_SECONDS: u64 = 1000;
 
     fn get_test_config() -> ConfigForTests {
-        ConfigForTests::load_from_toml("config_for_tests.toml".try_into().unwrap())
+        ConfigForTests::load_from_toml(
+            "config_for_tests.toml".try_into().unwrap(),
+        )
     }
 
     #[test]
@@ -565,8 +633,9 @@ mod tests {
 
     #[test]
     fn test_get_beacon_body_from_json() {
-        let beacon_block_body_json_str =
-            read_json_file_from_data_dir("beacon_block_body_kiln_slot_741888.json");
+        let beacon_block_body_json_str = read_json_file_from_data_dir(
+            "beacon_block_body_kiln_slot_741888.json",
+        );
         let beacon_block_body: BeaconBlockBody<MainnetEthSpec> =
             serde_json::from_str(&beacon_block_body_json_str).unwrap();
 
@@ -579,14 +648,15 @@ mod tests {
     #[test]
     fn test_get_json_from_raw_request() {
         let config = get_test_config();
-        let file_json_str =
-            std::fs::read_to_string(&config.path_to_block).expect("Unable to read file");
+        let file_json_str = std::fs::read_to_string(&config.path_to_block)
+            .expect("Unable to read file");
 
         let url = format!(
             "{}/eth/v2/beacon/blocks/{}",
             config.beacon_endpoint, config.first_slot
         );
-        let beacon_rpc_client = BeaconRPCClient::new(&url, TIMEOUT_SECONDS, TIMEOUT_STATE_SECONDS);
+        let beacon_rpc_client =
+            BeaconRPCClient::new(&url, TIMEOUT_SECONDS, TIMEOUT_STATE_SECONDS);
         let rpc_json_str = beacon_rpc_client.get_json_from_raw_request(&url);
         assert_eq!(rpc_json_str.unwrap(), file_json_str.trim());
     }
@@ -622,8 +692,8 @@ mod tests {
         .get_beacon_block_header_for_block_id(&format!("{}", config.first_slot))
         .unwrap();
 
-        let header_json_str =
-            std::fs::read_to_string(config.path_to_header).expect("Unable to read file");
+        let header_json_str = std::fs::read_to_string(config.path_to_header)
+            .expect("Unable to read file");
         let v: Value = serde_json::from_str(&header_json_str).unwrap();
 
         assert_eq!(
@@ -634,21 +704,29 @@ mod tests {
         );
         assert_eq!(
             beacon_block_header.proposer_index,
-            trim_quotes(v["data"]["header"]["message"]["proposer_index"].to_string())
-                .parse::<u64>()
-                .unwrap()
+            trim_quotes(
+                v["data"]["header"]["message"]["proposer_index"].to_string()
+            )
+            .parse::<u64>()
+            .unwrap()
         );
         assert_eq!(
             format!("{:?}", beacon_block_header.body_root),
-            trim_quotes(v["data"]["header"]["message"]["body_root"].to_string())
+            trim_quotes(
+                v["data"]["header"]["message"]["body_root"].to_string()
+            )
         );
         assert_eq!(
             format!("{:?}", beacon_block_header.parent_root),
-            trim_quotes(v["data"]["header"]["message"]["parent_root"].to_string())
+            trim_quotes(
+                v["data"]["header"]["message"]["parent_root"].to_string()
+            )
         );
         assert_eq!(
             format!("{:?}", beacon_block_header.state_root),
-            trim_quotes(v["data"]["header"]["message"]["state_root"].to_string())
+            trim_quotes(
+                v["data"]["header"]["message"]["state_root"].to_string()
+            )
         );
     }
 
@@ -664,8 +742,8 @@ mod tests {
         .get_beacon_block_body_for_block_id(&config.first_slot.to_string())
         .unwrap();
 
-        let block_json_str =
-            std::fs::read_to_string(config.path_to_block).expect("Unable to read file");
+        let block_json_str = std::fs::read_to_string(config.path_to_block)
+            .expect("Unable to read file");
         let v: Value = serde_json::from_str(&block_json_str).unwrap();
         assert_eq!(
             beacon_block_body.attestations().len(),
@@ -693,16 +771,20 @@ mod tests {
 
     #[test]
     fn test_get_header_json_from_rpc_result() {
-        let beacon_block_header_response_json =
-            read_json_file_from_data_dir("beacon_block_header_response_kiln_slot_741888.json");
-        let beacon_block_header_struct_json =
-            read_json_file_from_data_dir("beacon_block_header_struct_kiln_slot_741888.json");
+        let beacon_block_header_response_json = read_json_file_from_data_dir(
+            "beacon_block_header_response_kiln_slot_741888.json",
+        );
+        let beacon_block_header_struct_json = read_json_file_from_data_dir(
+            "beacon_block_header_struct_kiln_slot_741888.json",
+        );
 
         let beacon_header_file: BeaconBlockHeader =
             serde_json::from_str(&beacon_block_header_struct_json).unwrap();
         let beacon_header_rpc: BeaconBlockHeader = serde_json::from_str(
-            &BeaconRPCClient::get_header_json_from_rpc_result(&beacon_block_header_response_json)
-                .unwrap(),
+            &BeaconRPCClient::get_header_json_from_rpc_result(
+                &beacon_block_header_response_json,
+            )
+            .unwrap(),
         )
         .unwrap();
 
@@ -711,15 +793,21 @@ mod tests {
 
     #[test]
     fn test_beacon_block_body_json_from_rpc_result() {
-        let beacon_block_json = read_json_file_from_data_dir("beacon_block_kiln_slot_741888.json");
-        let beacon_block_body_json =
-            read_json_file_from_data_dir("beacon_block_body_kiln_slot_741888.json");
+        let beacon_block_json =
+            read_json_file_from_data_dir("beacon_block_kiln_slot_741888.json");
+        let beacon_block_body_json = read_json_file_from_data_dir(
+            "beacon_block_body_kiln_slot_741888.json",
+        );
         let beacon_body_file: BeaconBlockBody<MainnetEthSpec> =
             serde_json::from_str(&beacon_block_body_json).unwrap();
-        let beacon_body_rpc: BeaconBlockBody<MainnetEthSpec> = serde_json::from_str(
-            &BeaconRPCClient::get_body_json_from_rpc_result(&beacon_block_json).unwrap(),
-        )
-        .unwrap();
+        let beacon_body_rpc: BeaconBlockBody<MainnetEthSpec> =
+            serde_json::from_str(
+                &BeaconRPCClient::get_body_json_from_rpc_result(
+                    &beacon_block_json,
+                )
+                .unwrap(),
+            )
+            .unwrap();
 
         assert_eq!(beacon_body_file, beacon_body_rpc);
     }
@@ -733,8 +821,9 @@ mod tests {
             TIMEOUT_SECONDS,
             TIMEOUT_STATE_SECONDS,
         );
-        let file_json_str = std::fs::read_to_string(&config.path_to_light_client_update)
-            .expect("Unable to read file");
+        let file_json_str =
+            std::fs::read_to_string(&config.path_to_light_client_update)
+                .expect("Unable to read file");
         let v: Value = serde_json::from_str(&file_json_str).unwrap();
 
         let period: u64 = BeaconRPCClient::get_period_for_slot(
@@ -744,7 +833,8 @@ mod tests {
                 .parse::<u64>()
                 .unwrap(),
         );
-        let light_client_update = beacon_rpc_client.get_light_client_update(period).unwrap();
+        let light_client_update =
+            beacon_rpc_client.get_light_client_update(period).unwrap();
 
         // check attested_header
         assert_eq!(
@@ -764,7 +854,10 @@ mod tests {
                 .unwrap()
         );
         assert_eq!(
-            serde_json::to_string(&light_client_update.attested_beacon_header.parent_root).unwrap(),
+            serde_json::to_string(
+                &light_client_update.attested_beacon_header.parent_root
+            )
+            .unwrap(),
             format!(
                 "\"{}\"",
                 v["data"][0]["attested_header"]["parent_root"]
@@ -773,7 +866,10 @@ mod tests {
             )
         );
         assert_eq!(
-            serde_json::to_string(&light_client_update.attested_beacon_header.state_root).unwrap(),
+            serde_json::to_string(
+                &light_client_update.attested_beacon_header.state_root
+            )
+            .unwrap(),
             format!(
                 "\"{}\"",
                 v["data"][0]["attested_header"]["state_root"]
@@ -782,7 +878,10 @@ mod tests {
             )
         );
         assert_eq!(
-            serde_json::to_string(&light_client_update.attested_beacon_header.body_root).unwrap(),
+            serde_json::to_string(
+                &light_client_update.attested_beacon_header.body_root
+            )
+            .unwrap(),
             format!(
                 "\"{}\"",
                 v["data"][0]["attested_header"]["body_root"]
@@ -793,8 +892,10 @@ mod tests {
 
         // check sync_aggregate
         assert_eq!(
-            serde_json::to_string(&light_client_update.sync_aggregate.sync_committee_signature)
-                .unwrap(),
+            serde_json::to_string(
+                &light_client_update.sync_aggregate.sync_committee_signature
+            )
+            .unwrap(),
             format!(
                 "{}",
                 v["data"][0]["sync_aggregate"]["sync_committee_signature"]
@@ -803,7 +904,10 @@ mod tests {
 
         // check signature_slot
         let beacon_block_body = beacon_rpc_client
-            .get_beacon_block_body_for_block_id(&format!("{}", light_client_update.signature_slot))
+            .get_beacon_block_body_for_block_id(&format!(
+                "{}",
+                light_client_update.signature_slot
+            ))
             .unwrap();
         assert_eq!(
             serde_json::to_string(
@@ -830,7 +934,10 @@ mod tests {
                 .unwrap()
         );
         assert_eq!(
-            serde_json::to_string(&finality_update.header_update.beacon_header.body_root).unwrap(),
+            serde_json::to_string(
+                &finality_update.header_update.beacon_header.body_root
+            )
+            .unwrap(),
             format!("{}", v["data"][0]["finalized_header"]["body_root"])
         );
         assert_eq!(
@@ -839,17 +946,23 @@ mod tests {
         );
 
         // check sync_committe_update
-        let sync_committe_update = light_client_update.sync_committee_update.unwrap();
+        let sync_committe_update =
+            light_client_update.sync_committee_update.unwrap();
         assert_eq!(
-            serde_json::to_string(&sync_committe_update.next_sync_committee.aggregate_pubkey)
-                .unwrap(),
+            serde_json::to_string(
+                &sync_committe_update.next_sync_committee.aggregate_pubkey
+            )
+            .unwrap(),
             format!(
                 "{}",
                 v["data"][0]["next_sync_committee"]["aggregate_pubkey"]
             )
         );
         assert_eq!(
-            serde_json::to_string(&sync_committe_update.next_sync_committee_branch[1]).unwrap(),
+            serde_json::to_string(
+                &sync_committe_update.next_sync_committee_branch[1]
+            )
+            .unwrap(),
             format!("{}", v["data"][0]["next_sync_committee_branch"][1])
         );
     }

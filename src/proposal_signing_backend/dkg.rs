@@ -1,39 +1,29 @@
 use futures::StreamExt;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
-use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
-use webb::substrate::{dkg_runtime, subxt};
+use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
+use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
 use webb_proposals::{ProposalTrait};
 use webb::substrate::scale::{Encode, Decode};
-
-type DkgConfig = subxt::DefaultConfig;
-type DkgRuntimeApi = dkg_runtime::api::RuntimeApi<
-    DkgConfig,
-    subxt::PolkadotExtrinsicParams<DkgConfig>,
->;
+use webb::substrate::subxt::tx::{PairSigner, TxStatus as TransactionStatus};
+use webb::substrate::dkg_runtime::api as RuntimeApi;
+type DkgConfig = PolkadotConfig;
+type DkgClient = OnlineClient<DkgConfig>;
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
-pub struct DkgProposalSigningBackend<R, C>
-where
-    R: From<subxt::Client<C>>,
-    C: subxt::Config,
-{
-    api: R,
-    pair: subxt::PairSigner<C, Sr25519Pair>,
+pub struct DkgProposalSigningBackend {
+    client: DkgClient,
+    pair: PairSigner<PolkadotConfig, Sr25519Pair>,
     typed_chain_id: webb_proposals::TypedChainId,
 }
 
-impl<R, C> DkgProposalSigningBackend<R, C>
-where
-    R: From<subxt::Client<C>>,
-    C: subxt::Config,
-{
+impl DkgProposalSigningBackend {
     pub fn new(
-        client: subxt::Client<C>,
-        pair: subxt::PairSigner<C, Sr25519Pair>,
+        client: OnlineClient<PolkadotConfig>,
+        pair: PairSigner<PolkadotConfig, Sr25519Pair>,
         typed_chain_id: webb_proposals::TypedChainId,
     ) -> Self {
         Self {
-            api: client.to_runtime_api(),
+            client,
             pair,
             typed_chain_id,
         }
@@ -42,27 +32,36 @@ where
 
 //AnchorUpdateProposal for evm
 #[async_trait::async_trait]
-impl super::ProposalSigningBackend
-    for DkgProposalSigningBackend<DkgRuntimeApi, DkgConfig>
-{
+impl super::ProposalSigningBackend for DkgProposalSigningBackend {
     async fn can_handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> crate::Result<bool> {
         let header = proposal.header();
         let resource_id = header.resource_id();
-        let storage_api = self.api.storage().dkg_proposals();
+
         let src_chain_id =
             webb_proposals_typed_chain_converter(self.typed_chain_id);
-        let maybe_whitelisted =
-            storage_api.chain_nonces(&src_chain_id, None).await?;
+        let chain_nonce_addrs = RuntimeApi::storage()
+            .dkg_proposals()
+            .chain_nonces(&src_chain_id);
+        let maybe_whitelisted = self
+            .client
+            .storage()
+            .fetch(&chain_nonce_addrs, None)
+            .await?;
+
         if maybe_whitelisted.is_none() {
             tracing::warn!(?src_chain_id, "chain is not whitelisted");
             return Ok(false);
         }
-
-        let maybe_resource_id = storage_api
-            .resources(&ResourceId(resource_id.into_bytes()), None)
+        let resource_id_addrs = RuntimeApi::storage()
+            .dkg_proposals()
+            .resources(&ResourceId(resource_id.into_bytes()));
+        let maybe_resource_id = self
+            .client
+            .storage()
+            .fetch(&resource_id_addrs, None)
             .await?;
         if maybe_resource_id.is_none() {
             tracing::warn!(
@@ -79,7 +78,7 @@ impl super::ProposalSigningBackend
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> crate::Result<()> {
-        let tx_api = self.api.tx().dkg_proposals();
+        let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
         let src_chain_id =
@@ -97,13 +96,18 @@ impl super::ProposalSigningBackend
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
             proposal.to_vec(),
-        )?;
+        );
+
         // TODO: here we should have a substrate based tx queue in the background
         // where just send the raw xt bytes and let it handle the work for us.
         // but this here for now.
         let signer = &self.pair;
-        let mut progress =
-            xt.sign_and_submit_then_watch_default(signer).await?;
+        let mut progress = self
+            .client
+            .tx()
+            .sign_and_submit_then_watch_default(&xt, signer)
+            .await?;
+
         while let Some(event) = progress.next().await {
             let e = match event {
                 Ok(e) => e,
@@ -114,21 +118,21 @@ impl super::ProposalSigningBackend
             };
 
             match e {
-                subxt::TransactionStatus::Future => {}
-                subxt::TransactionStatus::Ready => {
+                TransactionStatus::Future => {}
+                TransactionStatus::Ready => {
                     tracing::trace!("tx ready");
                 }
-                subxt::TransactionStatus::Broadcast(_) => {}
-                subxt::TransactionStatus::InBlock(_) => {
+                TransactionStatus::Broadcast(_) => {}
+                TransactionStatus::InBlock(_) => {
                     tracing::trace!("tx in block");
                 }
-                subxt::TransactionStatus::Retracted(_) => {
+                TransactionStatus::Retracted(_) => {
                     tracing::warn!("tx retracted");
                 }
-                subxt::TransactionStatus::FinalityTimeout(_) => {
+                TransactionStatus::FinalityTimeout(_) => {
                     tracing::warn!("tx timeout");
                 }
-                subxt::TransactionStatus::Finalized(v) => {
+                TransactionStatus::Finalized(v) => {
                     let maybe_success = v.wait_for_success().await;
                     match maybe_success {
                         Ok(_events) => {
@@ -140,11 +144,11 @@ impl super::ProposalSigningBackend
                         }
                     }
                 }
-                subxt::TransactionStatus::Usurped(_) => {}
-                subxt::TransactionStatus::Dropped => {
+                TransactionStatus::Usurped(_) => {}
+                TransactionStatus::Dropped => {
                     tracing::warn!("tx dropped");
                 }
-                subxt::TransactionStatus::Invalid => {
+                TransactionStatus::Invalid => {
                     tracing::warn!("tx invalid");
                 }
             }
