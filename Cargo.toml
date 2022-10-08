@@ -1,3 +1,9 @@
+[workspace]
+members = [
+    ".",
+    "beacon-chain-relay",
+]
+
 [package]
 name = "webb-relayer"
 version = "0.4.1"
@@ -40,7 +46,7 @@ backoff = { version = "0.4.0", features = ["tokio"] }
 serde = { version = "^1", default-features = false, features = ["derive"] }
 tokio = { version = "^1", features = ["full"] }
 tokio-stream = { version = "^0.1" }
-warp = { version = "0.3.1", default-features = false, features = ["websocket", "tls"] }
+warp = { version = "0.3.3", default-features = false, features = ["websocket", "tls"] }
 warp-real-ip = "0.2"
 config = { version = "0.11", default-features = false, features = ["toml", "json"] }
 serde_json = { version = "^1", default-features = false }
@@ -54,7 +60,7 @@ hex = { version = "0.4", default-features = false }
 native-tls = { version = "^0.2", features = ["vendored"] }
 # Used by ethers (but we need it to be vendored with the lib).
 openssl = { version = "0.10", features = ["vendored"], optional = true }
-webb = { version = "0.5.5", default-features = false }
+webb = { version = "0.5.7", default-features = false }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.13"
 glob = "^0.3"
@@ -67,8 +73,8 @@ typed-builder = "0.10.0"
 libsecp256k1 = "0.7.0"
 tiny-bip39 = "1.0.0"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }
-cosmrs = { version = "0.9.0", features = ["bip32", "rpc", "cosmwasm", "dev"], optional = true }
 
+beacon-chain-relay = { path = "./beacon-chain-relay" }
 
 [dev-dependencies]
 tempfile = "^3.2"
@@ -80,4 +86,3 @@ cli = ["evm-runtime", "substrate-runtime", "anyhow", "tracing-subscriber", "stru
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
 substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]
 integration-tests = ["tracing-subscriber/json"]
-cosmwasm = ["cosmrs"]

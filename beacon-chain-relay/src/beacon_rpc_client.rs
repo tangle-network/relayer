@@ -4,6 +4,7 @@ use crate::relay_errors::{
     ErrorOnJsonParse, ExecutionPayloadError, FailOnGettingJson, MissSyncAggregationError,
     NoBlockForSlotError, SignatureSlotNotFoundError,
 };
+use crate::utils;
 use eth_types::eth2::BeaconBlockHeader;
 use eth_types::eth2::FinalizedHeaderUpdate;
 use eth_types::eth2::HeaderUpdate;
@@ -518,7 +519,7 @@ mod tests {
     use crate::beacon_rpc_client::BeaconRPCClient;
     use crate::config_for_tests::ConfigForTests;
     use crate::test_utils::read_json_file_from_data_dir;
-    use contract_wrapper::utils::trim_quotes;
+    use crate::utils::trim_quotes;
     use serde_json::Value;
     use types::BeaconBlockBody;
     use types::BeaconBlockHeader;

@@ -6,7 +6,7 @@ use crate::service::{Client, Store};
 use crate::store::SledStore;
 use ethereum_types::U256;
 use webb::evm::ethers::types::{Block, TxHash};
-
+use beacon_chain_relay::BeaconRpcClient;
 use self::traits::{BlockEventHandler, BlockWatcher};
 
 mod traits;

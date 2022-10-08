@@ -173,27 +173,6 @@ pub fn build_web_services(
             )
         })
         .boxed();
-    // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
-    // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let cosmwasm_store = Arc::new(store.clone());
-    let store_filter =
-        warp::any().map(move || Arc::clone(&cosmwasm_store)).boxed();
-    let ctx_arc = Arc::new(ctx.clone());
-    let leaves_cache_filter_cosmwasm = warp::path("leaves")
-        .and(warp::path("cosmwasm"))
-        .and(store_filter)
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and_then(move |store, chain_id, contract| {
-            crate::handler::handle_leaves_cache_cosmwasm(
-                store,
-                chain_id,
-                contract,
-                Arc::clone(&ctx_arc),
-            )
-        })
-        .boxed();
 
     let evm_store = Arc::new(store);
     let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
