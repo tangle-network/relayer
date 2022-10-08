@@ -31,9 +31,11 @@ impl BlockEventHandler for BlockFinalityFetcher {
         store: Arc<Self::Store>,
         block: Block<TxHash>,
     ) -> crate::Result<()> {
-        // let url = config.light_client_rpc_url.join(block.number).unwrap();
-        // let beacon_rpc_client = BeaconRpcClient::new(url);
-        // let rpc_json_str = beacon_rpc_client.get_json_from_raw_request(url);
+        tracing::debug!(?block);
+        let url = config.light_client_rpc_url.join(block.number).unwrap();
+        let beacon_rpc_client = BeaconRpcClient::new(url);
+        let rpc_json_str = beacon_rpc_client.get_json_from_raw_request(url);
+        tracing::debug!("{:?}", rpc_json_str);
 
         // TODO: Do something with the RPC JSON string
         // TODO: Connect to parachain and submit data in an extrinsics
@@ -64,8 +66,10 @@ pub async fn start_block_relay_service(
         );
         tokio::select! {
             _ = block_watcher_task => {
+                tracing::warn!("Block watcher stopped unexpectedly for chain {}", chain_id);
             },
             _ = shutdown_signal.recv() => {
+                tracing::debug!("Shutting down the network for {}", chain_id);
             },
         }
     };

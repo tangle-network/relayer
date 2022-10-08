@@ -1,4 +1,5 @@
-[eth2.mainnet]
+[evm.mainnet]
+enabled=true
 # The name that the chain is indexed on, for linkable anchors
 name = "ethereum-mainnet"
 # Http(s) Endpoint for quick Req/Res
@@ -6,7 +7,7 @@ http-endpoint = "$ETHEREUM_MAINNET_HTTP_URL"
 # Websocket Endpoint for long living connections
 ws-endpoint = "$ETHEREUM_MAINNET_WS_URL"
 # chain specific id from evm opcode
-chain-id = 5002
+chain-id = 1
 # The Private Key of this account on this network
 # the format is more dynamic here:
 # 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
@@ -24,6 +25,8 @@ chain-id = 5002
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "$ETHEREUM_MAINNET_PRIVATE_KEY"
+# private-key = "$ETHEREUM_MAINNET_PRIVATE_KEY"
 # block header relay flag
 block-header-relay = true
+# # light-client rpc url
+light-client-rpc-url = "$MAINNET_LIGHT_CLIENT_RPC_URL"
