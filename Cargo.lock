@@ -349,6 +349,7 @@ dependencies = [
  "bitvec 1.0.1",
  "borsh",
  "clap 3.2.22",
+ "dotenv",
  "env_logger",
  "eth-types",
  "eth2_hashing",

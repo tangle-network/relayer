@@ -1,3 +1,4 @@
+use dotenv::dotenv;
 use serde::Deserialize;
 use std::env;
 use std::io::Read;
@@ -16,7 +17,6 @@ pub struct ConfigForTests {
     pub network_name: String,
     pub first_slot: u64,
     pub slot_without_block: u64,
-    pub wasm_filepath: String,
     pub right_bound_in_slot_search: u64,
     pub left_empty_slot: u64,
     pub right_empty_slot: u64,
@@ -32,6 +32,8 @@ pub struct ConfigForTests {
 
 impl ConfigForTests {
     pub fn load_from_toml(path: PathBuf) -> Self {
+        dotenv().ok();
+
         let mut config = std::fs::File::open(path).unwrap();
         let mut content = String::new();
         config.read_to_string(&mut content).unwrap();
