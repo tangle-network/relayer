@@ -1367,6 +1367,7 @@ dependencies = [
 [[package]]
 name = "eth-types"
 version = "0.1.0"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#5ee938daa4881a088d7f7c9a95ed86a665ad2fa5"
 dependencies = [
  "derive_more",
  "eth2_serde_utils",
