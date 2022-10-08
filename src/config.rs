@@ -36,7 +36,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::path::PathBuf;
-use webb::substrate::subxt::sp_core::sr25519::Public;
+use webb::substrate::subxt::ext::sp_core::sr25519::Public;
 
 use crate::types::cw_chain_id::CWChainId;
 use crate::types::{

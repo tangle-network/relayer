@@ -34,8 +34,7 @@ use webb::evm::ethers::{
     signers::{LocalWallet, Signer},
     types::Bytes,
 };
-use webb::substrate::subxt::sp_core::Pair;
-use webb::substrate::subxt::sp_runtime::AccountId32;
+use webb::substrate::subxt::ext::{sp_core::Pair, sp_runtime::AccountId32};
 
 use crate::context::RelayerContext;
 use crate::store::{EncryptedOutputCacheStore, LeafCacheStore};
@@ -73,6 +72,7 @@ pub type EvmCommand = CommandType<
     Address,  // Account identifier
     U256,     // Balance type
     WebbI256, // Signed amount type
+    Address,  // Token Address
 >;
 /// The command type for Substrate pallet txes
 pub type SubstrateCommand = CommandType<
@@ -83,6 +83,7 @@ pub type SubstrateCommand = CommandType<
     AccountId32,   // Account identifier
     u128,          // Balance type
     i128,          // Signed amount type
+    u32,           // AssetId
 >;
 
 /// Sets up a websocket connection.
@@ -685,11 +686,11 @@ pub enum Command {
 /// Enumerates the supported protocols for relaying transactions
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum CommandType<Id, P, R, E, I, B, A> {
+pub enum CommandType<Id, P, R, E, I, B, A, T> {
     /// Webb Mixer.
     Mixer(MixerRelayTransaction<Id, P, E, I, B>),
     /// Webb Variable Anchors.
-    VAnchor(VAnchorRelayTransaction<Id, P, R, E, I, B, A>),
+    VAnchor(VAnchorRelayTransaction<Id, P, R, E, I, B, A, T>),
 }
 
 /// Enumerates the command responses

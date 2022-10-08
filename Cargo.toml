@@ -54,7 +54,7 @@ hex = { version = "0.4", default-features = false }
 native-tls = { version = "^0.2", features = ["vendored"] }
 # Used by ethers (but we need it to be vendored with the lib).
 openssl = { version = "0.10", features = ["vendored"], optional = true }
-webb = { version = "0.5.5", default-features = false }
+webb = { version = "0.5.7", default-features = false }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.13"
 glob = "^0.3"

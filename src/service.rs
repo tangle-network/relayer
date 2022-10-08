@@ -26,13 +26,9 @@ use std::sync::Arc;
 
 use ethereum_types::U256;
 use webb::evm::ethers::providers;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
-use webb::substrate::dkg_runtime::api::RuntimeApi as DkgRuntimeApi;
-use webb::substrate::subxt::DefaultConfig;
-use webb::substrate::{
-    protocol_substrate_runtime::api::RuntimeApi as WebbProtocolRuntimeApi,
-    subxt::{self, PairSigner},
-};
+
+use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
+use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
 
 use crate::config::*;
 use crate::context::RelayerContext;
@@ -48,19 +44,9 @@ use crate::tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
 /// Type alias for providers
 type Client = providers::Provider<providers::Http>;
 /// Type alias for the DKG DefaultConfig
-type DkgClient = subxt::Client<subxt::DefaultConfig>;
-/// Type alias for the DKG RuntimeApi
-type DkgRuntime = DkgRuntimeApi<
-    subxt::DefaultConfig,
-    subxt::PolkadotExtrinsicParams<subxt::DefaultConfig>,
->;
+type DkgClient = OnlineClient<PolkadotConfig>;
 /// Type alias for the WebbProtocol DefaultConfig
-type WebbProtocolClient = subxt::Client<subxt::DefaultConfig>;
-/// Type alias for the WebbProtocol RuntimeApi
-type WebbProtocolRuntime = WebbProtocolRuntimeApi<
-    subxt::DefaultConfig,
-    subxt::SubstrateExtrinsicParams<subxt::DefaultConfig>,
->;
+type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 /// Type alias for [Sled](https://sled.rs)-based database store
 type Store = crate::store::sled::SledStore;
 
@@ -309,25 +295,12 @@ pub async fn ignite(
         if !node_config.enabled {
             continue;
         }
+        let chain_id = node_config.chain_id;
         match node_config.runtime {
             SubstrateRuntime::Dkg => {
-                let client = ctx
-                    .substrate_provider::<subxt::DefaultConfig>(node_name)
-                    .await?;
-                let api = client.clone().to_runtime_api::<DkgRuntime>();
-                let chain_id =
-                    api.constants().dkg_proposals().chain_identifier()?;
-                let chain_id = match chain_id {
-                    TypedChainId::None => 0,
-                    TypedChainId::Evm(id)
-                    | TypedChainId::Substrate(id)
-                    | TypedChainId::PolkadotParachain(id)
-                    | TypedChainId::KusamaParachain(id)
-                    | TypedChainId::RococoParachain(id)
-                    | TypedChainId::Cosmos(id)
-                    | TypedChainId::Solana(id) => id,
-                    TypedChainId::Ink(id) => id,
-                };
+                let client =
+                    ctx.substrate_provider::<PolkadotConfig>(node_name).await?;
+
                 let chain_id = U256::from(chain_id);
                 for pallet in &node_config.pallets {
                     match pallet {
@@ -371,12 +344,8 @@ pub async fn ignite(
             }
             SubstrateRuntime::WebbProtocol => {
                 let client = ctx
-                    .substrate_provider::<subxt::DefaultConfig>(node_name)
+                    .substrate_provider::<SubstrateConfig>(node_name)
                     .await?;
-                let api =
-                    client.clone().to_runtime_api::<WebbProtocolRuntime>();
-                let chain_id =
-                    api.constants().linkable_tree_bn254().chain_identifier()?;
                 let chain_id = U256::from(chain_id);
                 for pallet in &node_config.pallets {
                     match pallet {
@@ -465,7 +434,7 @@ fn start_substrate_vanchor_event_watcher(
         let substrate_leaves_watcher_task = watcher.run(
             node_name.clone(),
             chain_id,
-            client.clone(),
+            client.clone().into(),
             store.clone(),
         );
         let proposal_signing_backend = make_substrate_proposal_signing_backend(
@@ -488,7 +457,7 @@ fn start_substrate_vanchor_event_watcher(
                 let substrate_vanchor_watcher_task = watcher.run(
                     node_name.clone(),
                     chain_id,
-                    client.clone(),
+                    client.clone().into(),
                     store.clone(),
                 );
                 tokio::select! {
@@ -522,7 +491,7 @@ fn start_substrate_vanchor_event_watcher(
                 let substrate_vanchor_watcher_task = watcher.run(
                     node_name.clone(),
                     chain_id,
-                    client.clone(),
+                    client.into(),
                     store.clone(),
                 );
                 tokio::select! {
@@ -606,7 +575,8 @@ fn start_dkg_proposal_handler(
     let mut shutdown_signal = ctx.shutdown_signal();
     let task = async move {
         let proposal_handler = ProposalHandlerWatcher::default();
-        let watcher = proposal_handler.run(node_name, chain_id, client, store);
+        let watcher =
+            proposal_handler.run(node_name, chain_id, client.into(), store);
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -661,7 +631,8 @@ fn start_dkg_pallet_watcher(
     let webb_config = ctx.config.clone();
     let task = async move {
         let governor_watcher = DKGGovernorWatcher::new(webb_config);
-        let watcher = governor_watcher.run(node_name, chain_id, client, store);
+        let watcher =
+            governor_watcher.run(node_name, chain_id, client.into(), store);
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -919,13 +890,13 @@ async fn start_substrate_signature_bridge_events_watcher(
             &substrate_bridge_watcher,
             node_name.clone(),
             chain_id,
-            client.clone(),
+            client.clone().into(),
             store.clone(),
         );
         let cmd_handler_task = SubstrateBridgeWatcher::run(
             &substrate_bridge_watcher,
             chain_id,
-            client.clone(),
+            client.into(),
             store.clone(),
         );
         tokio::select! {
@@ -1017,7 +988,7 @@ fn start_protocol_substrate_tx_queue(
     );
     let task = async move {
         tokio::select! {
-            _ = tx_queue.run::<subxt::SubstrateExtrinsicParams<subxt::DefaultConfig>>() => {
+            _ = tx_queue.run::<SubstrateConfig>() => {
                 tracing::warn!(
                     "Transaction Queue task stopped for Protocol-Substrate node({})",
                     chain_id
@@ -1060,7 +1031,7 @@ fn start_dkg_substrate_tx_queue(
     );
     let task = async move {
         tokio::select! {
-            _ = tx_queue.run::<subxt::PolkadotExtrinsicParams<subxt::DefaultConfig>>() => {
+            _ = tx_queue.run::<PolkadotConfig>() => {
                 tracing::warn!(
                     "Transaction Queue task stopped for Dkg-Substrate node({})",
                     chain_id
@@ -1083,7 +1054,7 @@ fn start_dkg_substrate_tx_queue(
 enum ProposalSigningBackendSelector {
     None,
     Mocked(MockedProposalSigningBackend<SledStore>),
-    Dkg(DkgProposalSigningBackend<DkgRuntime, DefaultConfig>),
+    Dkg(DkgProposalSigningBackend),
 }
 
 async fn make_proposal_signing_backend(
@@ -1122,9 +1093,8 @@ async fn make_proposal_signing_backend(
             // and then use the DkgProposalSigningBackend to sign the proposal.
             let typed_chain_id =
                 webb_proposals::TypedChainId::Evm(chain_id.as_u32());
-            let dkg_client = ctx
-                .substrate_provider::<subxt::DefaultConfig>(&c.node)
-                .await?;
+            let dkg_client =
+                ctx.substrate_provider::<PolkadotConfig>(&c.node).await?;
             let pair = ctx.substrate_wallet(&c.node).await?;
             let backend = DkgProposalSigningBackend::new(
                 dkg_client,
@@ -1198,9 +1168,8 @@ async fn make_substrate_proposal_signing_backend(
             // and then use the DkgProposalSigningBackend to sign the proposal.
             let typed_chain_id =
                 webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
-            let dkg_client = ctx
-                .substrate_provider::<subxt::DefaultConfig>(&c.node)
-                .await?;
+            let dkg_client =
+                ctx.substrate_provider::<PolkadotConfig>(&c.node).await?;
             let pair = ctx.substrate_wallet(&c.node).await?;
             let backend = DkgProposalSigningBackend::new(
                 dkg_client,
