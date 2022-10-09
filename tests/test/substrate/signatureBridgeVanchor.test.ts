@@ -17,7 +17,7 @@
 // This is Substrate VAnchor Transaction Relayer Tests.
 // In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
 
-import '@webb-tools/types';
+import '@webb-tools/protocol-substrate-types';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';

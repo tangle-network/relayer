@@ -17,7 +17,7 @@
 /// A Helper Class to Start and Manage a Local DKG Node.
 /// This Could be through a Docker Container or a Local Compiled node.
 
-import '@webb-tools/types';
+import '@webb-tools/dkg-substrate-types';
 import { spawn } from 'child_process';
 import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import isCI from 'is-ci';

@@ -17,7 +17,7 @@
 // This is Substrate VAnchor Transaction Relayer Tests.
 // In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
 
-import '@webb-tools/types';
+import '@webb-tools/protocol-substrate-types';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -222,7 +222,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -465,10 +465,10 @@ async function vanchorWithdraw(
   const decodedAddress = decodeAddress(address);
   const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
   const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
-
+  
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: typedTargetChainId.toString(),
-    indices: [0, 0],
+    leafIds: [0, 0],
     inputNotes: notes,
     leavesMap: leavesMap,
     output: [output1, output2],
