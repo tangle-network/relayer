@@ -18,7 +18,6 @@
 import { BigNumber, BigNumberish } from 'ethers';
 import { expect } from 'chai';
 import { getChainIdType } from '@webb-tools/utils';
-import { OpenVAnchor } from '@webb-tools/anchors';
 import { MintableToken } from '@webb-tools/tokens';
 import { ethers } from 'ethers';
 import temp from 'temp';
