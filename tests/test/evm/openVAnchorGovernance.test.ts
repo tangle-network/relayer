@@ -18,7 +18,7 @@
 import { BigNumber, BigNumberish } from 'ethers';
 import { expect } from 'chai';
 import { getChainIdType } from '@webb-tools/utils';
-import { MintableToken } from '@webb-tools/tokens';
+import { GovernedTokenWrapper, MintableToken } from '@webb-tools/tokens';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnetOpenVBridge.js';
@@ -129,25 +129,14 @@ describe.only('Open VAnchor Governance Relayer', function () {
     const openVAnchor = signatureVBridge.getVAnchor(localChain1.chainId)!;
     await openVAnchor.setSigner(wallet1);
     // approve token spending
-    const tokenAddress = signatureVBridge.getWebbTokenAddress(
-      localChain1.chainId
-    )!;
-    const token = await MintableToken.tokenFromAddress(tokenAddress, wallet1);
-    let tx = await token.approveSpending(openVAnchor.contract.address);
-    await tx.wait();
-    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
+    const token = await MintableToken.tokenFromAddress(localToken1.contract.address, wallet1);
+    await token.mintTokens(wallet1.address, '1000000');
 
     // do the same but on localchain2
     const openVAnchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
     await openVAnchor2.setSigner(wallet2);
-    const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
-      localChain2.chainId
-    )!;
-    const token2 = await MintableToken.tokenFromAddress(tokenAddress2, wallet2);
-
-    tx = await token2.approveSpending(openVAnchor2.contract.address);
-    await tx.wait();
-    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
+    const token2 = await MintableToken.tokenFromAddress(localToken2.contract.address, wallet2);
+    await token2.mintTokens(wallet2.address, '1000000');
     let resourceId1 = await openVAnchor.createResourceId();
     let resourceId2 = await openVAnchor2.createResourceId();
      // save the chain configs.
@@ -168,7 +157,7 @@ describe.only('Open VAnchor Governance Relayer', function () {
       tmp: true,
       configDir: tmpDirPath,
       showLogs: true,
-      verbosity: 3,
+      verbosity: 4,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -177,30 +166,44 @@ describe.only('Open VAnchor Governance Relayer', function () {
     // we will use chain1 as an example here.
     const openVAnchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     const openVAnchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
-    await openVAnchor1.setSigner(wallet1);
     await openVAnchor2.setSigner(wallet2);
-    const wrappedTokenAddress = signatureVBridge.getWebbTokenAddress(
+    const wrappedTokenAddress = await signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
+    console.log(wrappedTokenAddress, await openVAnchor1.contract.token());
     const token = await MintableToken.tokenFromAddress(localToken1.contract.address, wallet1);
-    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     // Approve the wrapped token to spend the wrapping token.
-    await token.approveSpending(wrappedTokenAddress);
-    
+    let tx = await token.contract.approve(wrappedTokenAddress, 1000000, {
+      from: wallet1.address,
+    });
+    await tx.wait();
+
     const depositAmount = 100;
     const destChainId = localChain2.chainId;
     const recipient = await wallet1.getAddress();
     const delegatedCalldata = '0x00';
-    const blinding = BigNumber.from(1010101010);
 
-    await openVAnchor1.wrapAndDeposit(
+    await openVAnchor1.setSigner(wallet1);
+    tx = await openVAnchor1.contract.wrapAndDeposit(
       destChainId,
       depositAmount,
       recipient,
       delegatedCalldata,
-      blinding,
+      BigNumber.from(1010101010),
       token.contract.address,
     );
+    await tx.wait();
+
+    tx = await openVAnchor1.contract.wrapAndDeposit(
+      destChainId,
+      depositAmount,
+      recipient,
+      delegatedCalldata,
+      BigNumber.from(1010101011),
+      token.contract.address,
+    );
+    await tx.wait();
+
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
