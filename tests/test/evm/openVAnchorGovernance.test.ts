@@ -115,6 +115,7 @@ describe.only('Open VAnchor Governance Relayer', function () {
         [localChain2.chainId]: govWallet.address,
       }
     );
+    console.log('here');
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,

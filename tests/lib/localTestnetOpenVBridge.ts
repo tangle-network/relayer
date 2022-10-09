@@ -82,7 +82,7 @@ export class LocalChain {
     localEvmChain: LocalEvmChain
   ) {
     this.localEvmChain = localEvmChain;
-    this.endpoint = `http://127.0.0.1:${opts.port}`;
+    this.endpoint = `http://127.0.0.1:${opts.chainId}`;
   }
 
   public static async init(opts: LocalChainOpts) {
