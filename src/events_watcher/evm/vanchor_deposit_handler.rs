@@ -13,15 +13,20 @@
 // limitations under the License.
 //
 use super::{HttpProvider, VAnchorContractWrapper};
-use crate::config::LinkedAnchorConfig;
+use crate::config::{LinkedAnchorConfig, VAnchorContractConfig};
+use crate::context::RelayerContext;
+use crate::events_watcher::evm::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
+use crate::events_watcher::evm::{VAnchorContractWatcher, VAnchorLeavesHandler};
 use crate::events_watcher::proposal_handler;
 use crate::proposal_signing_backend::ProposalSigningBackend;
+use crate::service::{Client, Store, make_proposal_signing_backend, ProposalSigningBackendSelector};
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
-use ethereum_types::H256;
+use ethereum_types::{H256, U256};
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use crate::events_watcher::EventWatcher;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {
@@ -162,4 +167,149 @@ where
         store.store_event(&events_bytes)?;
         Ok(())
     }
+}
+
+/// Starts the event watcher for EVM VAnchor events.
+///
+/// Returns Ok(()) if successful, or an error if not.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `config` - VAnchor contract configuration
+/// * `client` - EVM Chain api client
+/// * `store` -[Sled](https://sled.rs)-based database store
+async fn start_evm_vanchor_events_watcher(
+    ctx: &RelayerContext,
+    config: &VAnchorContractConfig,
+    chain_id: U256,
+    client: Arc<Client>,
+    store: Arc<Store>,
+) -> crate::Result<()> {
+    if !config.events_watcher.enabled {
+        tracing::warn!(
+            "VAnchor events watcher is disabled for ({}).",
+            config.common.address,
+        );
+        return Ok(());
+    }
+    let wrapper = VAnchorContractWrapper::new(
+        config.clone(),
+        ctx.config.clone(), // the original config to access all networks.
+        client.clone(),
+    );
+    let mut shutdown_signal = ctx.shutdown_signal();
+    let contract_address = config.common.address;
+    let my_ctx = ctx.clone();
+    let my_config = config.clone();
+    let task = async move {
+        tracing::debug!(
+            "VAnchor events watcher for ({}) Started.",
+            contract_address,
+        );
+        let contract_watcher = VAnchorContractWatcher::default();
+        let proposal_signing_backend = make_proposal_signing_backend(
+            &my_ctx,
+            store.clone(),
+            chain_id,
+            my_config.linked_anchors,
+            my_config.proposal_signing_backend,
+        )
+        .await?;
+        match proposal_signing_backend {
+            ProposalSigningBackendSelector::Dkg(backend) => {
+                let deposit_handler = VAnchorDepositHandler::new(backend);
+                let leaves_handler = VAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    VAnchorEncryptedOutputHandler::default();
+                let vanchor_watcher_task = contract_watcher.run(
+                    client,
+                    store,
+                    wrapper,
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
+                );
+                tokio::select! {
+                    _ = vanchor_watcher_task => {
+                        tracing::warn!(
+                            "VAnchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping VAnchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
+            }
+            ProposalSigningBackendSelector::Mocked(backend) => {
+                let deposit_handler = VAnchorDepositHandler::new(backend);
+                let leaves_handler = VAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    VAnchorEncryptedOutputHandler::default();
+                let vanchor_watcher_task = contract_watcher.run(
+                    client,
+                    store,
+                    wrapper,
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
+                );
+                tokio::select! {
+                    _ = vanchor_watcher_task => {
+                        tracing::warn!(
+                            "VAnchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping VAnchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
+            }
+            ProposalSigningBackendSelector::None => {
+                let leaves_handler = VAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    VAnchorEncryptedOutputHandler::default();
+                let vanchor_watcher_task = contract_watcher.run(
+                    client,
+                    store,
+                    wrapper,
+                    vec![
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
+                );
+                tokio::select! {
+                    _ = vanchor_watcher_task => {
+                        tracing::warn!(
+                            "VAnchor watcher task stopped for ({})",
+                            contract_address,
+                        );
+                    },
+                    _ = shutdown_signal.recv() => {
+                        tracing::trace!(
+                            "Stopping VAnchor watcher for ({})",
+                            contract_address,
+                        );
+                    },
+                }
+            }
+        };
+
+        crate::Result::Ok(())
+    };
+    // kick off the watcher.
+    tokio::task::spawn(task);
+    Ok(())
 }

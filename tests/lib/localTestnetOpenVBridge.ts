@@ -251,7 +251,7 @@ export class LocalChain {
     let contracts: Contract[] = [
       // first the local Anchor
       {
-        contract: 'VAnchor',
+        contract: 'OpenVAnchor',
         address: localAnchor.getAddress(),
         deployedAt: 1,
         size: 1, // Ethers

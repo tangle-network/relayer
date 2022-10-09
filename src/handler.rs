@@ -323,7 +323,7 @@ pub async fn handle_leaves_cache_evm(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            crate::config::Contract::VAnchor(c) => {
+            crate::config::Contract::VAnchor(c) | crate::config::Contract::OpenVAnchor(c) => {
                 Some((c.common.address, c.events_watcher))
             }
             _ => None,
@@ -615,7 +615,7 @@ pub async fn handle_encrypted_outputs_cache_evm(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            crate::config::Contract::VAnchor(c) => {
+            crate::config::Contract::VAnchor(c) | crate::config::Contract::OpenVAnchor(c) => {
                 Some((c.common.address, c.events_watcher))
             }
             _ => None,

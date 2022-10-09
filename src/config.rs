@@ -466,6 +466,8 @@ pub struct CosmwasmLinkedVAnchorConfig {
 pub enum Contract {
     /// The VAnchor contract configuration.
     VAnchor(VAnchorContractConfig),
+    /// The Open VAnchor contract configuration.
+    OpenVAnchor(VAnchorContractConfig),
     /// The Signature Bridge contract configuration.
     SignatureBridge(SignatureBridgeContractConfig),
 }
@@ -865,7 +867,7 @@ fn postloading_process(
             webb_proposals::TypedChainId::Evm(network_chain.chain_id);
         chain_list.insert(typed_chain_id);
         network_chain.contracts.iter_mut().for_each(|c| {
-            if let Contract::VAnchor(cfg) = c {
+            if let Contract::VAnchor(cfg) | Contract::OpenVAnchor(cfg) = c {
                 let linked_anchors = cfg.linked_anchors.clone();
                 if let Some(linked_anchors) = linked_anchors {
                     let linked_anchors: Vec<LinkedAnchorConfig> =
@@ -901,7 +903,7 @@ fn postloading_process(
     // check that all required chains are already present in the config.
     for (chain_id, chain_config) in &config.evm {
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
-            Contract::VAnchor(cfg) => Some(cfg),
+            Contract::VAnchor(cfg) | Contract::OpenVAnchor(cfg) => Some(cfg),
             _ => None,
         });
         // validation checks for vanchor

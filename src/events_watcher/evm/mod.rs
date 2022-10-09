@@ -19,7 +19,7 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 use webb::evm::contract::protocol_solidity::{
-    VAnchorContract, VAnchorContractEvents,
+    VAnchorContract, VAnchorContractEvents, OpenVAnchorContractEvents, OpenVAnchorContract,
 };
 use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::prelude::Middleware;
@@ -29,6 +29,7 @@ pub mod signature_bridge_watcher;
 pub mod vanchor_deposit_handler;
 pub mod vanchor_encrypted_outputs_handler;
 pub mod vanchor_leaves_handler;
+pub mod open_vanchor_deposit_handler;
 
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
@@ -122,3 +123,83 @@ impl super::EventWatcher for VAnchorContractWatcher {
 
     type Store = SledStore;
 }
+
+// OpenVAnchorContractWrapper contains VAnchorContract contract along with configurations for Anchor contract, and Relayer.
+#[derive(Clone, Debug)]
+pub struct OpenVAnchorContractWrapper<M>
+where
+    M: Middleware,
+{
+    pub config: config::VAnchorContractConfig,
+    pub webb_config: config::WebbRelayerConfig,
+    pub contract: OpenVAnchorContract<M>,
+}
+
+impl<M> OpenVAnchorContractWrapper<M>
+where
+    M: Middleware,
+{
+    /// Creates a new OpenVAnchorContractOverDKGWrapper.
+    pub fn new(
+        config: config::VAnchorContractConfig,
+        webb_config: config::WebbRelayerConfig,
+        client: Arc<M>,
+    ) -> Self {
+        Self {
+            contract: OpenVAnchorContract::new(config.common.address, client),
+            config,
+            webb_config,
+        }
+    }
+}
+
+impl<M> ops::Deref for OpenVAnchorContractWrapper<M>
+where
+    M: Middleware,
+{
+    type Target = Contract<M>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.contract
+    }
+}
+
+impl<M> super::WatchableContract for OpenVAnchorContractWrapper<M>
+where
+    M: Middleware,
+{
+    fn deployed_at(&self) -> types::U64 {
+        self.config.common.deployed_at.into()
+    }
+
+    fn polling_interval(&self) -> Duration {
+        Duration::from_millis(self.config.events_watcher.polling_interval)
+    }
+
+    fn max_blocks_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_blocks_per_step.into()
+    }
+
+    fn print_progress_interval(&self) -> Duration {
+        Duration::from_millis(
+            self.config.events_watcher.print_progress_interval,
+        )
+    }
+}
+
+/// An Open VAnchor Contract Watcher that watches for the Anchor contract events and calls the event
+/// handlers.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct OpenVAnchorContractWatcher;
+
+#[async_trait::async_trait]
+impl super::EventWatcher for OpenVAnchorContractWatcher {
+    const TAG: &'static str = "Open VAnchor Contract Watcher";
+
+    type Contract = OpenVAnchorContractWrapper<HttpProvider>;
+
+    type Events = OpenVAnchorContractEvents;
+
+    type Store = SledStore;
+}
+
