@@ -34,6 +34,8 @@ describe.only('Open VAnchor Governance Relayer', function () {
   let signatureVBridge: OpenVBridge;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
+  let localToken1: MintableToken;
+  let localToken2: MintableToken;
 
   let webbRelayer: WebbRelayer;
 
@@ -92,12 +94,12 @@ describe.only('Open VAnchor Governance Relayer', function () {
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
     // Deploy the token.
-    const localToken1 = await localChain1.deployToken(
+    localToken1 = await localChain1.deployToken(
       'Webb Token',
       'WEBB',
       wallet1
     );
-    const localToken2 = await localChain2.deployToken(
+    localToken2 = await localChain2.deployToken(
       'Webb Token',
       'WEBB',
       wallet2
@@ -115,7 +117,6 @@ describe.only('Open VAnchor Governance Relayer', function () {
         [localChain2.chainId]: govWallet.address,
       }
     );
-    console.log('here');
    
     const governorAddress = govWallet.address;
     const sides = signatureVBridge.vBridgeSides.values();
@@ -178,17 +179,16 @@ describe.only('Open VAnchor Governance Relayer', function () {
     const openVAnchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await openVAnchor1.setSigner(wallet1);
     await openVAnchor2.setSigner(wallet2);
-    const tokenAddress = signatureVBridge.getWebbTokenAddress(
+    const wrappedTokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token = await MintableToken.tokenFromAddress(tokenAddress, wallet1);
+    const token = await MintableToken.tokenFromAddress(localToken1.contract.address, wallet1);
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
-    const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
-      .be.true;
-
+    // Approve the wrapped token to spend the wrapping token.
+    await token.approveSpending(wrappedTokenAddress);
+    
     const depositAmount = 100;
-    const destChainId = getChainIdType(localChain2.chainId);
+    const destChainId = localChain2.chainId;
     const recipient = await wallet1.getAddress();
     const delegatedCalldata = '0x00';
     const blinding = BigNumber.from(1010101010);
@@ -199,7 +199,7 @@ describe.only('Open VAnchor Governance Relayer', function () {
       recipient,
       delegatedCalldata,
       blinding,
-      tokenAddress
+      token.contract.address,
     );
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
