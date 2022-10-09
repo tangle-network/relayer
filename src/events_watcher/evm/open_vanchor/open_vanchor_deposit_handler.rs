@@ -12,28 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use super::{HttpProvider, VAnchorContractWrapper};
+use super::{HttpProvider, OpenVAnchorContractWrapper};
 use crate::config::{LinkedAnchorConfig, VAnchorContractConfig};
 use crate::context::RelayerContext;
-use crate::events_watcher::evm::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
-use crate::events_watcher::evm::{VAnchorContractWatcher, VAnchorLeavesHandler};
+use crate::events_watcher::evm::open_vanchor::open_vanchor_leaves_handler::OpenVAnchorLeavesHandler;
+use crate::events_watcher::evm::OpenVAnchorContractWatcher;
 use crate::events_watcher::proposal_handler;
+use crate::events_watcher::EventWatcher;
 use crate::proposal_signing_backend::ProposalSigningBackend;
-use crate::service::{Client, Store, make_proposal_signing_backend, ProposalSigningBackendSelector};
+use crate::service::{
+    make_proposal_signing_backend, Client, ProposalSigningBackendSelector,
+    Store,
+};
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
 use ethereum_types::{H256, U256};
 use std::sync::Arc;
-use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
+use webb::evm::contract::protocol_solidity::OpenVAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-use crate::events_watcher::EventWatcher;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
-pub struct VAnchorDepositHandler<B> {
+pub struct OpenVAnchorDepositHandler<B> {
     proposal_signing_backend: B,
 }
 
-impl<B> VAnchorDepositHandler<B>
+impl<B> OpenVAnchorDepositHandler<B>
 where
     B: ProposalSigningBackend,
 {
@@ -45,13 +48,13 @@ where
 }
 
 #[async_trait::async_trait]
-impl<B> super::EventHandler for VAnchorDepositHandler<B>
+impl<B> super::EventHandler for OpenVAnchorDepositHandler<B>
 where
     B: ProposalSigningBackend + Send + Sync,
 {
-    type Contract = VAnchorContractWrapper<HttpProvider>;
+    type Contract = OpenVAnchorContractWrapper<HttpProvider>;
 
-    type Events = VAnchorContractEvents;
+    type Events = OpenVAnchorContractEvents;
 
     type Store = SledStore;
 
@@ -62,7 +65,7 @@ where
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
     ) -> crate::Result<()> {
-        use VAnchorContractEvents::*;
+        use OpenVAnchorContractEvents::*;
         let event_data = match event {
             NewCommitmentFilter(data) => {
                 let chain_id = wrapper.contract.client().get_chainid().await?;
@@ -88,14 +91,14 @@ where
         // the first `Insertion` event sounds redundant in this case.
         tracing::debug!(
             event = ?event_data,
-            "VAnchor new leaf event",
+            "OpenVAnchor new leaf event",
         );
 
         if event_data.index.as_u32() % 2 == 0 {
             tracing::debug!(
                 leaf_index = %event_data.index,
                 is_even_index = %event_data.index.as_u32() % 2 == 0,
-                "VAnchor new leaf index does not satisfy the condition, skipping proposal.",
+                "Open VAnchor new leaf index does not satisfy the condition, skipping proposal.",
             );
             return Ok(());
         }
@@ -179,7 +182,7 @@ where
 /// * `config` - VAnchor contract configuration
 /// * `client` - EVM Chain api client
 /// * `store` -[Sled](https://sled.rs)-based database store
-async fn start_evm_vanchor_events_watcher(
+pub async fn start_evm_open_vanchor_events_watcher(
     ctx: &RelayerContext,
     config: &VAnchorContractConfig,
     chain_id: U256,
@@ -193,7 +196,7 @@ async fn start_evm_vanchor_events_watcher(
         );
         return Ok(());
     }
-    let wrapper = VAnchorContractWrapper::new(
+    let wrapper = OpenVAnchorContractWrapper::new(
         config.clone(),
         ctx.config.clone(), // the original config to access all networks.
         client.clone(),
@@ -207,7 +210,7 @@ async fn start_evm_vanchor_events_watcher(
             "VAnchor events watcher for ({}) Started.",
             contract_address,
         );
-        let contract_watcher = VAnchorContractWatcher::default();
+        let contract_watcher = OpenVAnchorContractWatcher::default();
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
@@ -218,19 +221,14 @@ async fn start_evm_vanchor_events_watcher(
         .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
-                let deposit_handler = VAnchorDepositHandler::new(backend);
-                let leaves_handler = VAnchorLeavesHandler::default();
-                let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
+                let deposit_handler = OpenVAnchorDepositHandler::new(backend);
+                let leaves_handler = OpenVAnchorLeavesHandler::default();
+
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
                     wrapper,
-                    vec![
-                        Box::new(deposit_handler),
-                        Box::new(leaves_handler),
-                        Box::new(encrypted_output_handler),
-                    ],
+                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -248,19 +246,13 @@ async fn start_evm_vanchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
-                let deposit_handler = VAnchorDepositHandler::new(backend);
-                let leaves_handler = VAnchorLeavesHandler::default();
-                let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
+                let deposit_handler = OpenVAnchorDepositHandler::new(backend);
+                let leaves_handler = OpenVAnchorLeavesHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
                     wrapper,
-                    vec![
-                        Box::new(deposit_handler),
-                        Box::new(leaves_handler),
-                        Box::new(encrypted_output_handler),
-                    ],
+                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -278,17 +270,12 @@ async fn start_evm_vanchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::None => {
-                let leaves_handler = VAnchorLeavesHandler::default();
-                let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
+                let leaves_handler = OpenVAnchorLeavesHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
                     wrapper,
-                    vec![
-                        Box::new(leaves_handler),
-                        Box::new(encrypted_output_handler),
-                    ],
+                    vec![Box::new(leaves_handler)],
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {

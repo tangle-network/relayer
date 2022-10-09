@@ -566,7 +566,7 @@ impl ProposalStore for SledStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use webb::evm::contract::protocol_solidity::NewNullifierFilter;
+    use webb::evm::contract::protocol_solidity::variable_anchor::NewNullifierFilter;
     use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
     use webb::evm::ethers::types::transaction::request::TransactionRequest;
 

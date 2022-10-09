@@ -19,24 +19,24 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 use webb::evm::contract::protocol_solidity::{
-    VAnchorContract, VAnchorContractEvents, OpenVAnchorContractEvents, OpenVAnchorContract,
+    OpenVAnchorContract, OpenVAnchorContractEvents, VAnchorContract,
+    VAnchorContractEvents,
 };
 use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::prelude::Middleware;
 use webb::evm::ethers::types;
 
 pub mod signature_bridge_watcher;
-pub mod vanchor_deposit_handler;
-pub mod vanchor_encrypted_outputs_handler;
-pub mod vanchor_leaves_handler;
-pub mod open_vanchor_deposit_handler;
+
+/// A module for listening on open vanchor events.
+#[doc(hidden)]
+pub mod open_vanchor;
+/// A module for listening on vanchor events.
+#[doc(hidden)]
+pub mod vanchor;
 
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
-#[doc(hidden)]
-pub use vanchor_deposit_handler::*;
-#[doc(hidden)]
-pub use vanchor_leaves_handler::*;
 
 // VAnchorContractWrapper contains VAnchorContract contract along with configurations for Anchor contract, and Relayer.
 #[derive(Clone, Debug)]
@@ -202,4 +202,3 @@ impl super::EventWatcher for OpenVAnchorContractWatcher {
 
     type Store = SledStore;
 }
-

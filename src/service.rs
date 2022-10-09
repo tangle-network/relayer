@@ -33,7 +33,9 @@ use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
 use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::dkg::*;
-use crate::events_watcher::evm::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
+
+use crate::events_watcher::evm::open_vanchor::*;
+use crate::events_watcher::evm::vanchor::*;
 use crate::events_watcher::evm::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
@@ -915,13 +917,17 @@ pub fn start_dkg_substrate_tx_queue(
     Ok(())
 }
 
+/// Proposal signing backend config
 #[allow(clippy::large_enum_variant)]
 pub enum ProposalSigningBackendSelector {
+    /// None
     None,
+    /// Mocked
     Mocked(MockedProposalSigningBackend<SledStore>),
+    /// Dkg
     Dkg(DkgProposalSigningBackend),
 }
-
+/// utility to configure proposal signing backend
 pub async fn make_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
@@ -999,6 +1005,7 @@ pub async fn make_proposal_signing_backend(
     }
 }
 
+/// utility to configure proposal signing backend for substrate chain
 pub async fn make_substrate_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
