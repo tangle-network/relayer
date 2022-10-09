@@ -1,5 +1,5 @@
 [evm.mainnet]
-enabled=true
+enabled=false
 # The name that the chain is indexed on, for linkable anchors
 name = "ethereum-mainnet"
 # Http(s) Endpoint for quick Req/Res
@@ -8,25 +8,15 @@ http-endpoint = "$ETHEREUM_MAINNET_HTTP_URL"
 ws-endpoint = "$ETHEREUM_MAINNET_WS_URL"
 # chain specific id from evm opcode
 chain-id = 1
-# The Private Key of this account on this network
-# the format is more dynamic here:
-# 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
-#    private key.
-#    Example: 0x8917174396171783496173419137618235192359106130478137647163400318
-#
-# 2. if it starts with '$' then it would be considered as an Enviroment variable
-#    of a hex-encoded private key.
-#    Example: $RINKEBY_PRIVATE_KEY
-#
-# 3. if it starts with '> ' then it would be considered as a command that
-#    the relayer would execute and the output of this command would be the
-#    hex encoded private key.
-#    Example: > ./getKey.sh rinkeby-privatekey
-#
-# 4. if it doesn't contains special characters and has 12 or 24 words in it
-#    then we should process it as a mnemonic string: 'word two three four ...'
-# private-key = "$ETHEREUM_MAINNET_PRIVATE_KEY"
-# block header relay flag
-block-header-relay = true
-# # light-client rpc url
-light-client-rpc-url = "$MAINNET_LIGHT_CLIENT_RPC_URL"
+
+[evm.mainnet.block-listener]
+# The starting block to listen at.
+start-block = 15697112
+# Polling interval in milliseconds
+polling-interval = 7000
+# The maximum blocks per step.
+max-blocks-per-step = 1
+# The print progress interval.
+print-progress-interval = 60_000
+# Light client RPC url
+light-client-rpc-url = "$ETHEREUM_MAINNET_LIGHT_CLIENT_RPC_URL"

@@ -30,9 +30,9 @@ use webb::evm::ethers::providers;
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
 
-use crate::block_header_watcher::start_block_relay_service;
 use crate::config::*;
 use crate::context::RelayerContext;
+use crate::eth2_polling::start_block_relay_service;
 use crate::events_watcher::dkg::*;
 use crate::events_watcher::evm::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use crate::events_watcher::evm::*;
@@ -239,15 +239,14 @@ pub async fn ignite(
             chain_name
         );
 
-        if chain_config.block_header_relay {
+        if let Some(config) = &chain_config.block_listener {
             start_block_relay_service(
                 ctx,
                 chain_id,
                 client.clone(),
                 store.clone(),
-                chain_config.light_client_rpc_url.clone(),
-            )
-            .await?;
+                config.clone(),
+            )?;
         }
 
         for contract in &chain_config.contracts {

@@ -151,13 +151,36 @@ pub struct EvmChainConfig {
     /// TxQueue configuration
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
-    /// Block header listening and relaying
-    #[serde(skip_serializing, default)]
-    pub block_header_relay: bool,
+    /// Block listening configuration
+    #[serde(skip_serializing)]
+    pub block_listener: Option<BlockListenerConfig>,
+}
+
+/// Block listener configuration
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct BlockListenerConfig {
+    /// The starting block to listen at.
+    #[serde(default)]
+    pub start_block: Option<u64>,
+    /// Polling interval in milliseconds
+    #[serde(rename(serialize = "pollingInterval"))]
+    pub polling_interval: u64,
+    /// The maximum blocks per step.
+    ///
+    /// default to 100
+    #[serde(default = "max_blocks_per_step_default")]
+    pub max_blocks_per_step: u64,
+    /// The print progress interval.
+    ///
+    /// default to 7_000
+    #[serde(default = "print_progress_interval_default")]
+    pub print_progress_interval: u64,
     /// Light client RPC url
     #[serde(skip_serializing)]
-    pub light_client_rpc_url: RpcUrl,
+    pub light_client_rpc_url: Option<RpcUrl>,
 }
+
 /// SubstrateConfig is the configuration for the Substrate based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "kebab-case")]
@@ -761,7 +784,8 @@ pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
                 continue;
             }
         };
-        let file = config::File::from(config_file.as_path()).format(format);
+        let file: config::File<_> =
+            config::File::from(config_file.as_path()).format(format);
         if let Err(e) = cfg.merge(file) {
             tracing::warn!("Error while loading config file: {} skipping!", e);
             continue;
@@ -770,13 +794,13 @@ pub fn parse_from_files(files: &[PathBuf]) -> crate::Result<WebbRelayerConfig> {
 
     // also merge in the environment (with a prefix of WEBB).
     cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
-
+    println!("cfg: {:#?}", cfg);
     // and finally deserialize the config and post-process it
     let config: Result<
         WebbRelayerConfig,
         serde_path_to_error::Error<config::ConfigError>,
     > = serde_path_to_error::deserialize(cfg);
-
+    tracing::trace!("Config: {:#?}", config);
     match config {
         Ok(mut c) => {
             // merge in all of the contracts into the config

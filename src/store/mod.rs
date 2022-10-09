@@ -40,6 +40,8 @@ pub use mem::InMemoryStore;
 /// HistoryStoreKey contains the keys used to store the history of events.
 #[derive(Eq, PartialEq, Hash)]
 pub enum HistoryStoreKey {
+    /// Block Queue Key
+    Block { chain_id: types::U256 },
     /// EVM Queue Key
     Evm {
         /// Chain id
@@ -117,6 +119,7 @@ impl HistoryStoreKey {
     /// Returns the chain id of the chain this key is for.
     pub fn chain_id(&self) -> types::U256 {
         match self {
+            HistoryStoreKey::Block { chain_id } => *chain_id,
             HistoryStoreKey::Evm { chain_id, .. } => *chain_id,
             HistoryStoreKey::Substrate { chain_id, .. } => *chain_id,
             HistoryStoreKey::Cosmos { chain_id, .. } => *chain_id,
@@ -125,6 +128,7 @@ impl HistoryStoreKey {
     /// Returns the address of the chain this key is for.
     pub fn address(&self) -> types::H160 {
         match self {
+            HistoryStoreKey::Block { .. } => types::H160::zero(),
             HistoryStoreKey::Evm { address, .. } => *address,
             HistoryStoreKey::Substrate { tree_id, .. } => {
                 // a bit hacky, but we don't have a way to get the address from the tree id
@@ -149,16 +153,19 @@ impl HistoryStoreKey {
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut vec = vec![];
         match self {
+            Self::Block { chain_id } => {
+                vec.extend_from_slice(&chain_id.as_u128().to_be_bytes());
+            }
             Self::Evm { chain_id, address } => {
-                vec.extend_from_slice(&chain_id.as_u128().to_le_bytes());
+                vec.extend_from_slice(&chain_id.as_u128().to_be_bytes());
                 vec.extend_from_slice(address.as_bytes());
             }
             Self::Substrate { chain_id, tree_id } => {
-                vec.extend_from_slice(&chain_id.as_u128().to_le_bytes());
+                vec.extend_from_slice(&chain_id.as_u128().to_be_bytes());
                 vec.extend_from_slice(tree_id.as_bytes());
             }
             Self::Cosmos { chain_id, address } => {
-                vec.extend_from_slice(&chain_id.as_u128().to_le_bytes());
+                vec.extend_from_slice(&chain_id.as_u128().to_be_bytes());
                 vec.extend_from_slice(address.as_bytes());
             }
         }
@@ -169,6 +176,7 @@ impl HistoryStoreKey {
 impl Display for HistoryStoreKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            Self::Block { chain_id } => write!(f, "Block({})", chain_id),
             Self::Evm { chain_id, address } => {
                 write!(f, "Evm({}, {})", chain_id, address)
             }
@@ -185,6 +193,12 @@ impl Display for HistoryStoreKey {
 impl Display for BridgeKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "Bridge({:?})", self.chain_id)
+    }
+}
+
+impl From<types::U256> for HistoryStoreKey {
+    fn from(chain_id: types::U256) -> Self {
+        Self::Block { chain_id }
     }
 }
 

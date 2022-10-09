@@ -1,17 +1,17 @@
-[evm.sepolia]
+[evm.goerli]
 enabled=true
 # The name that the chain is indexed on, for linkable anchors
-name = "sepolia-testnet"
+name = "goerli-testnet"
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "$SEPOLIA_HTTP_URL"
+http-endpoint = "$GOERLI_HTTP_URL"
 # Websocket Endpoint for long living connections
-ws-endpoint = "$SEPOLIA_WS_URL"
+ws-endpoint = "$GOERLI_WS_URL"
 # chain specific id from evm opcode
-chain-id = 11155111
+chain-id = 5002
 
-[evm.sepolia.block-listener]
+[evm.goerli.block-listener]
 # The starting block to listen at.
-start-block = 1450409
+start-block = 7382817
 # Polling interval in milliseconds
 polling-interval = 7000
 # The maximum blocks per step.

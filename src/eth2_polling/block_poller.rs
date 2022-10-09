@@ -1,17 +1,17 @@
 use ethereum_types::{H160, U64};
 use futures::prelude::*;
+use std::cmp;
 use std::sync::Arc;
 use std::time::Duration;
-use std::{cmp, ops::Deref};
+use webb::evm::ethers::types;
 
 use webb::evm::ethers::{
-    contract,
     providers::{self, Middleware},
     types::{Block, TxHash},
 };
 
-use crate::store::SledStore;
-use crate::store::{EventHashStore, HistoryStore};
+use crate::config::BlockListenerConfig;
+use crate::store::HistoryStore;
 use crate::utils::retry;
 
 /// A trait that defines a handler for a specific set of event types.
@@ -19,14 +19,14 @@ use crate::utils::retry;
 /// The handlers are implemented separately from the watchers, so that we can have
 /// one event watcher and many event handlers that will run in parallel.
 #[async_trait::async_trait]
-pub trait BlockEventHandler {
+pub trait BlockPollingHandler {
     /// The storage backend that this handler will use.
     type Store: HistoryStore;
     /// a method to be called with the event information,
     /// it is up to the handler to decide what to do with the event.
     ///
     /// If this method returned an error, the handler will be considered as failed and will
-    /// be discarded. to have a retry mechanism, use the [`BlockEventHandlerWithRetry::handle_event_with_retry`] method
+    /// be discarded. to have a retry mechanism, use the [`BlockPollingHandlerWithRetry::handle_event_with_retry`] method
     /// which does exactly what it says.
     ///
     /// If this method returns Ok(true), the event will be marked as handled.
@@ -41,7 +41,7 @@ pub trait BlockEventHandler {
 ///
 /// this trait is automatically implemented for all the event handlers.
 #[async_trait::async_trait]
-pub trait BlockEventHandlerWithRetry: BlockEventHandler {
+pub trait BlockPollingHandlerWithRetry: BlockPollingHandler {
     /// A method to be called with the event information,
     /// it is up to the handler to decide what to do with the block.
     ///
@@ -67,16 +67,16 @@ pub trait BlockEventHandlerWithRetry: BlockEventHandler {
     }
 }
 
-impl<T> BlockEventHandlerWithRetry for T where T: BlockEventHandler + ?Sized {}
+impl<T> BlockPollingHandlerWithRetry for T where T: BlockPollingHandler + ?Sized {}
 
-pub type BlockEventHandlerFor<W> = Box<
-    dyn BlockEventHandler<Store = <W as BlockWatcher>::Store> + Send + Sync,
+pub type BlockPollingHandlerFor<W> = Box<
+    dyn BlockPollingHandler<Store = <W as BlockPoller>::Store> + Send + Sync,
 >;
 
 /// A trait for watching block headers using a provider.
-/// BlockWatcher trait exists for EVM based
+/// BlockPoller trait exists for EVM based
 #[async_trait::async_trait]
-pub trait BlockWatcher {
+pub trait BlockPoller {
     /// A Helper tag used to identify the event watcher during the logs.
     const TAG: &'static str;
     /// The Storage backend that will be used to store the required state for this event watcher
@@ -94,29 +94,30 @@ pub trait BlockWatcher {
         &self,
         client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
-        handlers: Vec<BlockEventHandlerFor<Self>>,
+        listener_config: BlockListenerConfig,
+        handlers: Vec<BlockPollingHandlerFor<Self>>,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             // Move one block at a time
-            let step = 1;
+            let step = listener_config.max_blocks_per_step;
             // saves the last time we printed sync progress.
-            let mut instant = std::time::Instant::now();
             let chain_id = client
                 .get_chainid()
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
                 .await?;
+            tracing::info!("chain id: {}", chain_id);
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
-                    // 0 contract address is indicative of no contract until we have a better way to
-                    // handle this.
-                    (chain_id, H160::zero()),
-                    // TODO: ETH2 transition block number for each network
-                    // likely 0 for everything but ETH mainnet
-                    U64::from(15697112),
+                    chain_id,
+                    U64::from(listener_config.start_block.unwrap_or_default()),
                 )?;
+                tracing::trace!(
+                    "last block number: {}",
+                    listener_config.start_block.unwrap_or_default()
+                );
                 let current_block_number_result: Result<
                     _,
                     backoff::Error<crate::Error>,
@@ -142,7 +143,6 @@ pub trait BlockWatcher {
                     current_block_number
                 );
                 let dest_block = cmp::min(block + step, current_block_number);
-                // check if we are now on the latest block.
                 let should_cooldown = dest_block == current_block_number;
                 tracing::trace!("Reading from #{} to #{}", block, dest_block);
                 // Only handle events from found blocks if they are new
@@ -181,8 +181,7 @@ pub trait BlockWatcher {
                             });
                             if mark_as_handled {
                                 store.set_last_block_number(
-                                    (chain_id, H160::zero()),
-                                    dest_block,
+                                    chain_id, dest_block,
                                 )?;
                                 tracing::trace!(
                                     "event handled successfully. at #{}",
@@ -197,10 +196,8 @@ pub trait BlockWatcher {
                                 ));
                             }
                             // move forward.
-                            store.set_last_block_number(
-                                (chain_id, H160::zero()),
-                                dest_block,
-                            )?;
+                            store
+                                .set_last_block_number(chain_id, dest_block)?;
                             tracing::trace!(
                                 "Last saved block number: #{}",
                                 dest_block
@@ -217,7 +214,21 @@ pub trait BlockWatcher {
                         }
                     };
                 }
-                tracing::trace!("Polled from #{} to #{}", block, dest_block);
+                tracing::trace!(
+                    "Polled from #{} to #{}, should cooldown? ({})",
+                    block,
+                    dest_block,
+                    should_cooldown
+                );
+                if should_cooldown {
+                    let duration =
+                        Duration::from_millis(listener_config.polling_interval);
+                    tracing::trace!(
+                        "Cooldown a bit for {}ms",
+                        duration.as_millis()
+                    );
+                    tokio::time::sleep(duration).await;
+                }
             }
         };
         backoff::future::retry(backoff, task).await?;

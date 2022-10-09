@@ -98,6 +98,7 @@ async fn main() -> anyhow::Result<()> {
                         },
                     }),
                 ],
+                block_listener: None,
                 tx_queue: Default::default(),
             },
         )]),
