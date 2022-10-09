@@ -302,7 +302,7 @@ export class LocalChain {
       contracts: [],
     };
     for (const contract of this.opts.enabledContracts) {
-      if (contract.contract == 'VAnchor') {
+      if (contract.contract == 'OpenVAnchor') {
         return this.getVAnchorChainConfig(opts);
       }
     }
@@ -411,6 +411,9 @@ export class LocalChain {
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);
+    console.log("Config");
+    console.log(configString);
+    console.log(path);
     fs.writeFileSync(path, configString);
   }
 }
