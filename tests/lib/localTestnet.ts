@@ -34,7 +34,6 @@ import {
   Contract,
   EnabledContracts,
   EventsWatcher,
-  FeaturesConfig,
   LinkedAnchor,
   ProposalSigningBackend,
   WithdrawConfig,
@@ -51,7 +50,6 @@ export type GanacheAccounts = {
 export type ExportedConfigOptions = {
   signatureVBridge?: VBridge.VBridge;
   proposalSigningBackend?: ProposalSigningBackend;
-  features?: FeaturesConfig;
   withdrawConfig?: WithdrawConfig;
   relayerWallet?: Wallet;
   linkedAnchors?: LinkedAnchor[];
@@ -134,7 +132,7 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    let webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
+    const webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
     webbTokens1.set(this.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
@@ -215,7 +213,7 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    let webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
+    const webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
       number,
       GovernedTokenWrapper | undefined
     >();
@@ -300,9 +298,10 @@ export class LocalChain {
         console.log('entry: ', entry);
         console.log(await chainBridgeSide.contract.signer.getAddress());
         const nonce = await chainBridgeSide.contract.proposalNonce();
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           try {
-            let tx = await chainBridgeSide.transferOwnership(
+            const tx = await chainBridgeSide.transferOwnership(
               entry[1],
               nonce.toNumber()
             );
@@ -328,11 +327,8 @@ export class LocalChain {
     const localAnchor = bridge.getVAnchor(this.chainId);
     const side = bridge.getVBridgeSide(this.chainId);
     const wallet = opts.relayerWallet ?? side.governor;
-    const otherChainIds = Array.from(bridge.vBridgeSides.keys()).filter(
-      (chainId) => chainId !== this.chainId
-    );
 
-    let contracts: Contract[] = [
+    const contracts: Contract[] = [
       // first the local Anchor
       {
         contract: 'VAnchor',
@@ -423,7 +419,6 @@ export class LocalChain {
         // chainId as the chain identifier
         [key: number]: ConvertedConfig;
       };
-      features?: ConvertToKebabCase<FeaturesConfig>;
     };
 
     const convertedConfig: ConvertedConfig = {
@@ -487,12 +482,7 @@ export class LocalChain {
     const fullConfigFile: FullConfigFile = {
       evm: {
         [this.underlyingChainId]: convertedConfig,
-      },
-      features: {
-        'data-query': opts.features?.dataQuery ?? true,
-        'governance-relay': opts.features?.governanceRelay ?? true,
-        'private-tx-relay': opts.features?.privateTxRelay ?? true,
-      },
+      }
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);
     fs.writeFileSync(path, configString);
@@ -517,7 +507,7 @@ export async function setupVanchorEvmTx(
   extData: IVariableAnchorExtData;
   publicInputs: IVariableAnchorPublicInputs;
 }> {
-  let extAmount = ethers.BigNumber.from(0).sub(depositUtxo.amount);
+  const extAmount = ethers.BigNumber.from(0).sub(depositUtxo.amount);
 
   const dummyOutput1 = await CircomUtxo.generateUtxo({
     curve: 'Bn254',

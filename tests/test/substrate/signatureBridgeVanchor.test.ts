@@ -28,10 +28,7 @@ import { ethers } from 'ethers';
 import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import {
-  UsageMode,
-  defaultEventsWatcherValue,
-} from '../../lib/substrateNodeBase.js';
+
 import { BigNumber } from 'ethers';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
@@ -39,7 +36,6 @@ import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 
 import {
-  Note,
   ProvingManagerSetupInput,
   ArkworksProvingManager,
   Utxo,
@@ -48,6 +44,7 @@ import {
   toFixedHex,
   ResourceId,
   ProposalHeader,
+  LeafIdentifier,
 } from '@webb-tools/sdk-core';
 
 import {
@@ -56,6 +53,8 @@ import {
 } from '../../lib/substrateWebbProposals.js';
 import pkg from 'secp256k1';
 import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
+import { defaultEventsWatcherValue, generateArkworksUtxoTest } from '../../lib/utils.js';
+import { UsageMode } from '@webb-tools/test-utils';
 const { ecdsaSign } = pkg;
 
 describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
@@ -66,13 +65,13 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
 
   // Governer key
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
-  let governorWallet = new ethers.Wallet(PK1);
+  const governorWallet = new ethers.Wallet(PK1);
   // slice 0x04 from public key
-  let uncompressedKey = governorWallet
+  const uncompressedKey = governorWallet
     ._signingKey()
     .publicKey.toString()
     .slice(4);
-  let typedSourceChainId = calculateTypedChainId(ChainType.Substrate, 1080);
+  const typedSourceChainId = calculateTypedChainId(ChainType.Substrate, 1080);
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -99,7 +98,6 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       authority: 'alice',
       usageMode,
       ports: 'auto',
-      enabledPallets,
       enableLogging: false,
     });
 
@@ -115,29 +113,32 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     const api = await aliceNode.api();
     await api.isReady;
 
-    let chainId = await aliceNode.getChainId();
+    const chainId = await aliceNode.getChainId();
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       linkedAnchors: [{ type: 'Substrate', treeId: 6, chainId, pallet: 44 }],
+      enabledPallets
     });
 
     // force set maintainer
-    let setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(
+    const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
       `0x${uncompressedKey}`
     );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
 
     //whitelist chain
-    let whitelistChainCall =
+    const whitelistChainCall =
       api.tx.signatureBridge.whitelistChain(typedSourceChainId);
     await aliceNode.sudoExecuteTransaction(whitelistChainCall);
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        port: relayerPort
+      },
       tmp: true,
       configDir: tmpDirPath,
       showLogs: false,
@@ -149,17 +150,17 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     //create vanchor
-    let createVAnchorCall = api.tx.vAnchorBn254!.create!(1, 30, 0);
+    const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
 
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
 
     // chainId
-    let chainId = await aliceNode.getChainId();
+    const chainId = await aliceNode.getChainId();
     console.log('step1');
     // now we set resource through proposal execution
-    let setResourceIdProposalCall = await setResourceIdProposal(
+    const setResourceIdProposalCall = await setResourceIdProposal(
       api,
       PK1,
       treeId,
@@ -206,13 +207,13 @@ async function setResourceIdProposal(
   treeId: number,
   chainId: number
 ): Promise<SubmittableExtrinsic<'promise'>> {
-  let functionSignature = hexToU8a('0x00000002', 32);
-  let nonce = 1;
-  let palletIndex = '0x2C';
-  let callIndex = '0x02';
-  let substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
+  const functionSignature = hexToU8a('0x00000002', 32);
+  const nonce = 1;
+  const palletIndex = '0x2C';
+  const callIndex = '0x02';
+  const substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
   // set resource ID
-  let resourceId = new ResourceId(
+  const resourceId = new ResourceId(
     toFixedHex(substrateTargetSystem, 20),
     ChainType.Substrate,
     chainId
@@ -229,17 +230,14 @@ async function setResourceIdProposal(
     callIndex,
   };
 
-  let proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
-  let hash = ethers.utils.keccak256(proposalBytes);
-  let msg = ethers.utils.arrayify(hash);
+  const proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
+  const hash = ethers.utils.keccak256(proposalBytes);
+  const msg = ethers.utils.arrayify(hash);
   // sign the message
   const sigObj = ecdsaSign(msg, hexToU8a(PK1));
-  let signature = new Uint8Array([...sigObj.signature, sigObj.recid]);
-  // execute proposal call to handler
-  let executeSetProposalCall =
-    api.tx.vAnchorHandlerBn254.executeSetResourceProposal(resourceId.toU8a());
-  //@ts-ignore
-  let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
+  const signature = new Uint8Array([...sigObj.signature, sigObj.recid]);
+
+  const setResourceCall = api.tx.signatureBridge.setResourceWithSignature(
     calculateTypedChainId(ChainType.Substrate, chainId),
     u8aToHex(proposalBytes),
     u8aToHex(signature)
@@ -276,15 +274,19 @@ async function vanchorDeposit(
   const pk = hexToU8a(pk_hex);
 
   // Creating two empty vanchor notes
-  const note1 = await generateVAnchorNote(
+  const input1 = await generateArkworksUtxoTest(
     0,
     Number(outputChainId.toString()),
     Number(outputChainId.toString()),
     0
   );
-  const note2 = await note1.getDefaultUtxoNote();
+  const input2 = await generateArkworksUtxoTest(
+    0,
+    Number(outputChainId.toString()),
+    Number(outputChainId.toString()),
+    0
+  );
   const publicAmount = currencyToUnitI128(10);
-  const notes = [note1, note2];
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({
     curve: 'Bn254',
@@ -301,7 +303,7 @@ async function vanchorDeposit(
 
   // Configure a new proving manager with direct call
   const provingManager = new ArkworksProvingManager(null);
-  const leavesMap: any = {};
+  const leavesMap = {};
 
   const address = account.address;
   const extAmount = currencyToUnitI128(10);
@@ -316,11 +318,15 @@ async function vanchorDeposit(
   const decodedAddress = decodeAddress(address);
   const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
   const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
+  const leafId: LeafIdentifier = {
+    index: 0,
+    typedChainId: Number(outputChainId.toString()),
+  }
 
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: outputChainId.toString(),
-    indices: [0, 0],
-    inputNotes: notes,
+    leafIds: [leafId, leafId],
+    inputUtxos: [input1, input2],
     leavesMap: leavesMap,
     output: [output1, output2],
     encryptedCommitments: [comEnc1, comEnc2],
@@ -347,7 +353,7 @@ async function vanchorDeposit(
     encryptedOutput2: u8aToHex(comEnc2),
   };
 
-  let vanchorProofData = {
+  const vanchorProofData = {
     proof: `0x${data.proof}`,
     publicAmount: data.publicAmount,
     roots: rootsSet,
@@ -357,13 +363,9 @@ async function vanchorDeposit(
     ),
     extDataHash: data.extDataHash,
   };
-  const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
-    Number(treeId)
-  );
-  const indexBeforeInsetion = Math.max(leafsCount - 1, 0);
 
   // now we call the vanchor transact
-  let transactCall = api.tx.vAnchorBn254!.transact!(
+  const transactCall = api.tx.vAnchorBn254.transact(
     treeId,
     vanchorProofData,
     extData
@@ -373,38 +375,11 @@ async function vanchorDeposit(
 }
 
 function currencyToUnitI128(currencyAmount: number) {
-  let bn = BigNumber.from(currencyAmount);
+  const bn = BigNumber.from(currencyAmount);
   return bn.mul(1_000_000_000_000);
 }
 
-async function generateVAnchorNote(
-  amount: number,
-  chainId: number,
-  outputChainId: number,
-  index?: number
-) {
-  const note = await Note.generateNote({
-    amount: String(amount),
-    backend: 'Arkworks',
-    curve: 'Bn254',
-    denomination: String(18),
-    exponentiation: String(5),
-    hashFunction: 'Poseidon',
-    index,
-    protocol: 'vanchor',
-    sourceChain: String(chainId),
-    sourceIdentifyingData: '1',
-    targetChain: String(outputChainId),
-    targetIdentifyingData: '1',
-    tokenSymbol: 'WEBB',
-    version: 'v1',
-    width: String(5),
-  });
-
-  return note;
-}
-
-function createAccount(accountId: string): any {
+function createAccount(accountId: string) {
   const keyring = new Keyring({ type: 'sr25519' });
   const account = keyring.addFromUri(accountId);
 

@@ -130,7 +130,7 @@ describe.skip('VAnchor Governance Relayer', function () {
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
-    const vanchor = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
@@ -145,7 +145,7 @@ describe.skip('VAnchor Governance Relayer', function () {
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(wallet2);
     const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -162,7 +162,9 @@ describe.skip('VAnchor Governance Relayer', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        port: relayerPort
+      },
       tmp: true,
       configDir: tmpDirPath,
       showLogs: false,

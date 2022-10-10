@@ -1,5 +1,5 @@
 import { u8aToHex, hexToU8a } from '@polkadot/util';
-import { ProposalHeader } from '@webb-tools/sdk-core/proposals';
+import { ProposalHeader } from '@webb-tools/sdk-core';
 
 export interface SubstrateResourceIdUpdateProposal {
   /**

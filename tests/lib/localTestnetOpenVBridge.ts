@@ -134,7 +134,7 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    let webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
+    const webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
     webbTokens1.set(this.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
@@ -173,7 +173,7 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    let webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
+    const webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
       number,
       GovernedTokenWrapper | undefined
     >();
@@ -216,9 +216,10 @@ export class LocalChain {
         console.log('entry: ', entry);
         console.log(await chainBridgeSide.contract.signer.getAddress());
         const nonce = await chainBridgeSide.contract.proposalNonce();
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           try {
-            let tx = await chainBridgeSide.transferOwnership(
+            const tx = await chainBridgeSide.transferOwnership(
               entry[1],
               nonce.toNumber()
             );
@@ -244,11 +245,7 @@ export class LocalChain {
     const localAnchor = bridge.getVAnchor(this.chainId);
     const side = bridge.getVBridgeSide(this.chainId);
     const wallet = opts.relayerWallet ?? side.governor;
-    const otherChainIds = Array.from(bridge.vBridgeSides.keys()).filter(
-      (chainId) => chainId !== this.chainId
-    );
-
-    let contracts: Contract[] = [
+    const contracts: Contract[] = [
       // first the local Anchor
       {
         contract: 'OpenVAnchor',

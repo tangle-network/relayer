@@ -14,6 +14,8 @@
  * limitations under the License.
  *
  */
+import fs from 'fs';
+import path from 'path';
 import WebSocket from 'ws';
 import fetch from 'node-fetch';
 import {
@@ -24,11 +26,27 @@ import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
+import { ConvertToKebabCase } from './tsHacks';
 
-export type WebbRelayerOptions = {
+export type CommonConfig = {
+  features?: FeaturesConfig;
   port: number;
+};
+
+/**
+ * A required configuration object for relayer startup.
+ * @param tmp - A flag to allow users to automatically cleanup synced blockchain state
+ * @param configDir - The directory path for the relayer configuration
+ * @param commonConfig - An object which represents the directory-wide options of a relayer config
+ *                       to be written before startup. (e.g. 'features')
+ * @param buildDir - optional switching between debug and release builds
+ * @param showLogs - Enable logging
+ * @param verbosity - Determine the level of logging
+ */
+export type WebbRelayerOptions = {
   tmp: boolean;
   configDir: string;
+  commonConfig: CommonConfig;
   buildDir?: 'debug' | 'release';
   showLogs?: boolean;
   verbosity?: number;
@@ -39,6 +57,38 @@ export class WebbRelayer {
   readonly #logs: RawEvent[] = [];
   readonly #eventEmitter = new EventEmitter();
   constructor(private readonly opts: WebbRelayerOptions) {
+
+    // read the files and contents
+    fs.readdir(opts.configDir, (err, files) => {
+      if (err) {
+        console.log('error while reading directory');
+      }
+
+      files.map((fileName) => {
+        const fileContents = fs.readFileSync(path.resolve(opts.configDir, fileName), { encoding: "ascii" });
+        console.log(`file: ${fileName} \n contents: \n ${fileContents} \n\n`);
+      })
+    });
+    
+    // Write the folder-wide configuration for this relayer instance
+    type WrittenCommonConfig = {
+      features?: ConvertToKebabCase<FeaturesConfig>;
+      port: number;
+    };
+    const commonConfigFile: WrittenCommonConfig = {
+      features: {
+        'data-query': opts.commonConfig.features?.dataQuery ?? true,
+        'governance-relay': opts.commonConfig.features?.governanceRelay ?? true,
+        'private-tx-relay': opts.commonConfig.features?.privateTxRelay ?? true,
+      },
+      port: opts.commonConfig.port
+    }
+    const configString = JSON.stringify(commonConfigFile, null, 2);
+    fs.writeFileSync(path.join(opts.configDir, 'main.json'), configString);
+
+    console.log('config string: ', configString);
+
+    // Startup the relayer
     const gitRoot = execSync('git rev-parse --show-toplevel').toString().trim();
     const buildDir = opts.buildDir ?? 'debug';
     const verbosity = opts.verbosity ?? 3;
@@ -56,14 +106,14 @@ export class WebbRelayer {
       {
         env: {
           ...process.env,
-          WEBB_PORT: `${this.opts.port}`,
+          WEBB_PORT: `${opts.commonConfig.port}`,
           RUST_LOG: `webb_probe=${logLevel}`,
         },
       }
     );
     if (this.opts.showLogs) {
       // log that we started
-      process.stdout.write(`Webb relayer started on port ${this.opts.port}\n`);
+      process.stdout.write(`Webb relayer started on port ${opts.commonConfig.port}\n`);
     }
     this.#process.stdout
       ?.pipe(JSONStream.parse())
@@ -84,26 +134,26 @@ export class WebbRelayer {
     this.#process.on('close', (code) => {
       if (this.opts.showLogs) {
         process.stdout.write(
-          `Relayer ${this.opts.port} exited with code: ${code}\n`
+          `Relayer ${opts.commonConfig.port} exited with code: ${code}\n`
         );
       }
     });
   }
 
   public async info(): Promise<WebbRelayerInfo> {
-    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/info`;
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/info`;
     const response = await fetch(endpoint);
     return response.json() as Promise<WebbRelayerInfo>;
   }
   // data querying api for evm
   public async getLeavesEvm(chainId: string, contractAddress: string) {
-    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/evm/${chainId}/${contractAddress}`;
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/leaves/evm/${chainId}/${contractAddress}`;
     const response = await fetch(endpoint);
     return response;
   }
   // data querying api for substrate
   public async getLeavesSubstrate(chainId: string, treeId: string) {
-    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/substrate/${chainId}/${treeId}`;
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/leaves/substrate/${chainId}/${treeId}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -111,7 +161,7 @@ export class WebbRelayer {
     chainId: string,
     contractAddress: string
   ) {
-    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/encrypted_outputs/evm/${chainId}/${contractAddress}`;
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/encrypted_outputs/evm/${chainId}/${contractAddress}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -133,7 +183,8 @@ export class WebbRelayer {
   }
 
   public async waitForEvent(selector: EventSelector): Promise<RawEvent> {
-    return new Promise((resolve, _) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    return new Promise((resolve, _reject) => {
       const listener = (rawEvent: RawEvent) => {
         const exactSameEvent = Object.keys(selector.event).every((key) => {
           const a = selector.event?.[key];
@@ -166,10 +217,10 @@ export class WebbRelayer {
   }
 
   public async ping(): Promise<void> {
-    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
+    const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       ws.on('error', reject);
       ws.on('message', (data) => {
         const o = JSON.parse(data.toString());
@@ -190,7 +241,7 @@ export class WebbRelayer {
     publicInputs: IVariableAnchorPublicInputs,
     extData: IVariableAnchorExtData
   ): Promise<`0x${string}`> {
-    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
+    const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
@@ -235,7 +286,7 @@ export class WebbRelayer {
     fee: number;
     refund: number;
   }): Promise<`0x${string}`> {
-    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
+    const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
@@ -270,7 +321,7 @@ export class WebbRelayer {
     refreshCommitment: number[];
     extDataHash: number[];
   }): Promise<`0x${string}`> {
-    const wsEndpoint = `ws://127.0.0.1:${this.opts.port}/ws`;
+    const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
@@ -294,8 +345,6 @@ export class WebbRelayer {
     };
     return substrateTxHashOrReject(ws, cmd);
   }
-
-  public async substrateVanchorWithdraw(): Promise<void> {}
 }
 
 export function calculateRelayerFees(

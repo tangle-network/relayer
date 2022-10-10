@@ -26,7 +26,7 @@ import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { OpenVBridge } from '@webb-tools/vbridge';
 
-describe.only('Open VAnchor Governance Relayer', function () {
+describe('Open VAnchor Governance Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -117,7 +117,7 @@ describe.only('Open VAnchor Governance Relayer', function () {
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
-    const openVAnchor = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const openVAnchor = signatureVBridge.getVAnchor(localChain1.chainId);
     await openVAnchor.setSigner(wallet1);
     // approve token spending
     const token = await MintableToken.tokenFromAddress(
@@ -127,15 +127,15 @@ describe.only('Open VAnchor Governance Relayer', function () {
     await token.mintTokens(wallet1.address, '1000000');
 
     // do the same but on localchain2
-    const openVAnchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const openVAnchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await openVAnchor2.setSigner(wallet2);
     const token2 = await MintableToken.tokenFromAddress(
       localToken2.contract.address,
       wallet2
     );
     await token2.mintTokens(wallet2.address, '1000000');
-    let resourceId1 = await openVAnchor.createResourceId();
-    let resourceId2 = await openVAnchor2.createResourceId();
+    const resourceId1 = await openVAnchor.createResourceId();
+    const resourceId2 = await openVAnchor2.createResourceId();
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
@@ -150,8 +150,10 @@ describe.only('Open VAnchor Governance Relayer', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
       tmp: true,
+      commonConfig: {
+        port: relayerPort
+      },
       configDir: tmpDirPath,
       showLogs: true,
       verbosity: 4,
