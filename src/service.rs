@@ -586,9 +586,13 @@ fn start_dkg_proposal_handler(
     let metrics = ctx.metrics.clone();
     let task = async move {
         let proposal_handler = ProposalHandlerWatcher::default();
-        let watcher =
-           
-            proposal_handler.run(node_name, chain_id, client.into(), store, metrics);
+        let watcher = proposal_handler.run(
+            node_name,
+            chain_id,
+            client.into(),
+            store,
+            metrics,
+        );
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -644,9 +648,13 @@ fn start_dkg_pallet_watcher(
     let metrics = ctx.metrics.clone();
     let task = async move {
         let governor_watcher = DKGGovernorWatcher::new(webb_config);
-        let watcher =
-           
-            governor_watcher.run(node_name, chain_id, client.into(), store, metrics);
+        let watcher = governor_watcher.run(
+            node_name,
+            chain_id,
+            client.into(),
+            store,
+            metrics,
+        );
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(

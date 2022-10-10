@@ -30,8 +30,8 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 
-use webb::substrate::subxt::client::OfflineClientT;
 use crate::metric;
+use webb::substrate::subxt::client::OfflineClientT;
 use webb::{
     evm::ethers::{
         contract,
@@ -734,9 +734,9 @@ where
 mod tests {
     use std::sync::Arc;
 
-    use crate::store::sled::SledStore;
     use crate::config::WebbRelayerConfig;
     use crate::context::RelayerContext;
+    use crate::store::sled::SledStore;
     use webb::substrate::dkg_runtime;
     use webb::substrate::dkg_runtime::api::system;
     use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
@@ -788,9 +788,7 @@ mod tests {
         let ctx = RelayerContext::new(config);
         let metrics = ctx.metrics.clone();
         watcher
-            
             .run(node_name, chain_id, client.into(), store, metrics)
-            
             .await?;
         Ok(())
     }
