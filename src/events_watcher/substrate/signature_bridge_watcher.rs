@@ -20,8 +20,8 @@ use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standa
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
 use super::{BlockNumberOf, SubstrateEventWatcher};
 use crate::events_watcher::SubstrateBridgeWatcher;
-use crate::store::sled::{SledQueueKey,SledStore};
-use crate::store::{BridgeCommand, QueueStore};
+use webb_relayer_store::sled::{SledQueueKey,SledStore};
+use webb_relayer_store::{BridgeCommand, QueueStore};
 use ethereum_types::U256;
 use webb::substrate::{
     protocol_substrate_runtime,
@@ -31,7 +31,7 @@ use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
 use webb::substrate::scale;
 use webb::substrate::scale::Encode;
-use crate::types::dynamic_payload::WebbDynamicTxPayload;
+use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use std::borrow::Cow;
 
 /// A SignatureBridge contract events & commands watcher.

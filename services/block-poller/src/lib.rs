@@ -1,14 +1,13 @@
 use std::sync::Arc;
 
-use self::block_poller::{BlockEventHandler, BlockPoller};
-use crate::config::*;
-use crate::context::RelayerContext;
-use crate::service::{Client, Store};
-use crate::store::SledStore;
-use crate::types::rpc_url::RpcUrl;
-use beacon_chain_relay::beacon_rpc_client::BeaconRPCClient;
+use crate::block_poller::{BlockPoller, BlockPollingHandler};
 use ethereum_types::U256;
 use webb::evm::ethers::types::{Block, TxHash};
+use webb_relayer::context::RelayerContext;
+use webb_relayer::service::{Client, Store};
+use webb_relayer_config::block_poller::BlockPollerConfig;
+use webb_relayer_store::SledStore;
+use webb_relayer_utils::{Error, Result};
 
 mod block_poller;
 
@@ -24,43 +23,18 @@ impl BlockPoller for BlockWatcher {
 }
 
 #[derive(Clone, Debug)]
-struct BlockFinalityHandler {
-    light_client_rpc_url: Option<RpcUrl>,
-}
+struct BlockListener;
 
 #[async_trait::async_trait]
-impl BlockEventHandler for BlockFinalityHandler {
+impl BlockPollingHandler for BlockListener {
     type Store = SledStore;
 
     async fn handle_block(
         &self,
-        store: Arc<Self::Store>,
+        _store: Arc<Self::Store>,
         block: Block<TxHash>,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         tracing::debug!("{}", serde_json::to_string_pretty(&block)?);
-        const TIMEOUT_SECONDS: u64 = 30;
-        const TIMEOUT_STATE_SECONDS: u64 = 1000;
-
-        if let Some(light_client_rpc_url) = &self.light_client_rpc_url {
-            if let Some(n) = block.number {
-                let url = format!(
-                    "{}/eth/v2/beacon/blocks/{}",
-                    light_client_rpc_url, config.first_slot
-                );
-                tracing::trace!("url: {}", url);
-                let beacon_rpc_client = BeaconRPCClient::new(
-                    &url.to_string(),
-                    TIMEOUT_SECONDS,
-                    TIMEOUT_STATE_SECONDS,
-                );
-                let rpc_json_str = beacon_rpc_client
-                    .get_json_from_raw_request(&url.to_string());
-                tracing::debug!("{:?}", rpc_json_str);
-            }
-        }
-
-        // TODO: Do something with the RPC JSON string
-        // TODO: Connect to parachain and submit data in an extrinsics
         Ok(())
     }
 }
@@ -71,8 +45,8 @@ pub fn start_block_relay_service(
     chain_id: U256,
     client: Arc<Client>,
     store: Arc<Store>,
-    listener_config: BlockListenerConfig,
-) -> crate::Result<()> {
+    listener_config: BlockPollerConfig,
+) -> Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
     let _my_ctx = ctx.clone();
     tracing::info!("Starting block relay service");
@@ -83,9 +57,7 @@ pub fn start_block_relay_service(
         );
 
         let block_watcher = BlockWatcher::default();
-        let block_finality_handler = BlockFinalityHandler {
-            light_client_rpc_url: listener_config.light_client_rpc_url.clone(),
-        };
+        let block_finality_handler = BlockListener;
         let block_watcher_task = block_watcher.run(
             client,
             store,

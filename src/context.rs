@@ -25,12 +25,11 @@ use webb::evm::ethers::prelude::*;
 use webb::substrate::subxt;
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
 
-use crate::config;
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
 pub struct RelayerContext {
     /// The configuration of the relayer.
-    pub config: config::WebbRelayerConfig,
+    pub config: webb_relayer_config::WebbRelayerConfig,
     /// Broadcasts a shutdown signal to all active connections.
     ///
     /// The initial `shutdown` trigger is provided by the `run` caller. The
@@ -44,7 +43,7 @@ pub struct RelayerContext {
 
 impl RelayerContext {
     /// Creates a new RelayerContext.
-    pub fn new(config: config::WebbRelayerConfig) -> Self {
+    pub fn new(config: webb_relayer_config::WebbRelayerConfig) -> Self {
         let (notify_shutdown, _) = broadcast::channel(2);
         Self {
             config,
@@ -125,7 +124,7 @@ impl RelayerContext {
     ///
     /// ```
     /// let chain_id = "4".to_string();
-    /// let client = ctx.substrate_provider::<subxt::Config::PolkadotConfig>(chain_id).await?;
+    /// let client = ctx.substrate_provider::<subxt::webb_relayer_Config::PolkadotConfig>(chain_id).await?;
     /// ```
     pub async fn substrate_provider<C: subxt::Config>(
         &self,

@@ -14,12 +14,12 @@
 //
 use std::sync::Arc;
 
-use crate::store::sled::{SledQueueKey, SledStore};
-use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 use webb::substrate::dkg_runtime;
 use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::subxt::{self, OnlineClient};
+use webb_relayer_store::sled::{SledQueueKey, SledStore};
+use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};
 
 use super::{BlockNumberOf, SubstrateEventWatcher};
 

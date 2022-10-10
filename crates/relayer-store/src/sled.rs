@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use crate::store::{BridgeKey, QueueKey};
+use crate::{BridgeKey, QueueKey};
 use core::fmt;
 use serde::de::DeserializeOwned;
 use serde::Serialize;

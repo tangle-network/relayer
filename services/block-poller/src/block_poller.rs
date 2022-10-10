@@ -1,18 +1,17 @@
-use ethereum_types::{H160, U64};
+use ethereum_types::U64;
 use futures::prelude::*;
 use std::cmp;
 use std::sync::Arc;
 use std::time::Duration;
-use webb::evm::ethers::types;
+use webb_relayer_config::block_poller::BlockPollerConfig;
 
 use webb::evm::ethers::{
     providers::{self, Middleware},
     types::{Block, TxHash},
 };
 
-use crate::config::BlockListenerConfig;
-use crate::store::HistoryStore;
-use crate::utils::retry;
+use webb_relayer_store::HistoryStore;
+use webb_relayer_utils::retry;
 
 /// A trait that defines a handler for a specific set of event types.
 ///
@@ -94,7 +93,7 @@ pub trait BlockPoller {
         &self,
         client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
-        listener_config: BlockListenerConfig,
+        listener_config: BlockPollerConfig,
         handlers: Vec<BlockPollingHandlerFor<Self>>,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));

@@ -27,6 +27,8 @@ use std::sync::Arc;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use webb::evm::ethers::types;
+use webb_relayer_utils::Result;
+
 /// A module for managing in-memory storage of the relayer.
 pub mod mem;
 /// A module for setting up and managing a [Sled](https://sled.rs)-based database.

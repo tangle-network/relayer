@@ -13,8 +13,6 @@
 // limitations under the License.
 //
 use super::{BlockNumberOf, SubstrateEventWatcher};
-use crate::store::sled::SledStore;
-use crate::store::LeafCacheStore;
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::ethers::types;
@@ -22,6 +20,8 @@ use webb::substrate::protocol_substrate_runtime;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::subxt::{self, OnlineClient};
+use webb_relayer_store::sled::SledStore;
+use webb_relayer_store::LeafCacheStore;
 // An Substrate VAnchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
 #[derive(Clone, Debug, Default)]

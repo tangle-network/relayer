@@ -13,17 +13,16 @@
 // limitations under the License.
 //
 use crate::context::RelayerContext;
-use crate::store::sled::SledQueueKey;
-use crate::store::QueueStore;
 use ethereum_types::U256;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
+use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_store::QueueStore;
 
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::types::dynamic_payload::WebbDynamicTxPayload;
 use std::marker::PhantomData;
 use webb::substrate::subxt;
 use webb::substrate::subxt::ext::sp_core::sr25519;
@@ -33,6 +32,7 @@ use webb::substrate::subxt::ext::sp_runtime::traits::{
 use webb::substrate::subxt::tx::{
     ExtrinsicParams, PairSigner, TxStatus as TransactionStatus,
 };
+use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 
 /// The SubstrateTxQueue stores transaction call params in bytes so the relayer can process them later.
 /// This prevents issues such as creating transactions with the same nonce.

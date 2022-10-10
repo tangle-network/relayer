@@ -29,18 +29,25 @@ use webb::evm::ethers::providers;
 
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
+use webb_relayer_config::anchor::LinkedAnchorConfig;
+use webb_relayer_config::evm::{
+    Contract, SignatureBridgeContractConfig, VAnchorContractConfig,
+};
+use webb_relayer_config::signing_backend::ProposalSigningBackendConfig;
+use webb_relayer_config::substrate::{
+    DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet,
+    SignatureBridgePalletConfig, SubstrateRuntime, VAnchorBn254PalletConfig,
+};
 
-use crate::config::*;
 use crate::context::RelayerContext;
-use crate::eth2_polling::start_block_relay_service;
 use crate::events_watcher::dkg::*;
 use crate::events_watcher::evm::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use crate::events_watcher::evm::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
 use crate::proposal_signing_backend::*;
-use crate::store::sled::SledStore;
 use crate::tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
+use webb_relayer_store::SledStore;
 
 /// Type alias for providers
 pub type Client = providers::Provider<providers::Http>;
@@ -49,7 +56,7 @@ type DkgClient = OnlineClient<PolkadotConfig>;
 /// Type alias for the WebbProtocol DefaultConfig
 type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 /// Type alias for [Sled](https://sled.rs)-based database store
-pub type Store = crate::store::sled::SledStore;
+pub type Store = webb_relayer_store::sled::SledStore;
 
 /// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
 /// instantiates the database store. Allows clients to interact with the relayer.
@@ -70,7 +77,7 @@ pub type Store = crate::store::sled::SledStore;
 /// ```
 pub fn build_web_services(
     ctx: RelayerContext,
-    store: crate::store::sled::SledStore,
+    store: webb_relayer_store::sled::SledStore,
 ) -> crate::Result<(
     std::net::SocketAddr,
     impl core::future::Future<Output = ()> + 'static,
@@ -239,16 +246,6 @@ pub async fn ignite(
             chain_name
         );
 
-        if let Some(config) = &chain_config.block_listener {
-            start_block_relay_service(
-                ctx,
-                chain_id,
-                client.clone(),
-                store.clone(),
-                config.clone(),
-            )?;
-        }
-
         for contract in &chain_config.contracts {
             match contract {
                 Contract::VAnchor(config) => {
@@ -298,7 +295,7 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -308,7 +305,7 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -343,7 +340,7 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -353,7 +350,7 @@ pub async fn ignite(
                                 ctx.clone(),
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )
@@ -421,7 +418,7 @@ fn start_substrate_vanchor_event_watcher(
     let task = async move {
         let watcher = SubstrateVAnchorLeavesWatcher::default();
         let substrate_leaves_watcher_task = watcher.run(
-            node_name.clone(),
+            node_name.to_owned(),
             chain_id,
             client.clone().into(),
             store.clone(),
@@ -444,7 +441,7 @@ fn start_substrate_vanchor_event_watcher(
                     my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.clone(),
+                    node_name.to_owned(),
                     chain_id,
                     client.clone().into(),
                     store.clone(),
@@ -478,7 +475,7 @@ fn start_substrate_vanchor_event_watcher(
                     my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.clone(),
+                    node_name.to_owned(),
                     chain_id,
                     client.into(),
                     store.clone(),
@@ -877,7 +874,7 @@ async fn start_substrate_signature_bridge_events_watcher(
         let substrate_bridge_watcher = SubstrateBridgeEventWatcher::default();
         let events_watcher_task = SubstrateEventWatcher::run(
             &substrate_bridge_watcher,
-            node_name.clone(),
+            node_name.to_owned(),
             chain_id,
             client.clone().into(),
             store.clone(),

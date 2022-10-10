@@ -26,23 +26,22 @@ use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
 
-use crate::config;
 use crate::events_watcher::{BridgeWatcher, EventHandler, EventWatcher};
-use crate::store::sled::{SledQueueKey, SledStore};
-use crate::store::{BridgeCommand, QueueStore};
+use webb_relayer_store::sled::{SledQueueKey, SledStore};
+use webb_relayer_store::{BridgeCommand, QueueStore};
 
 type HttpProvider = providers::Provider<providers::Http>;
 
 /// A Wrapper around the `SignatureBridgeContract` contract.
 #[derive(Clone, Debug)]
 pub struct SignatureBridgeContractWrapper<M: Middleware> {
-    config: config::SignatureBridgeContractConfig,
+    config: webb_relayer_config::evm::SignatureBridgeContractConfig,
     contract: SignatureBridgeContract<M>,
 }
 
 impl<M: Middleware> SignatureBridgeContractWrapper<M> {
     pub fn new(
-        config: config::SignatureBridgeContractConfig,
+        config: webb_relayer_config::evm::SignatureBridgeContractConfig,
         client: Arc<M>,
     ) -> Self {
         Self {

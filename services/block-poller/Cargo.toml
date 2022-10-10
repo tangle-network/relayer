@@ -1,40 +1,25 @@
-[workspace]
-members = [
-    ".",
-    "crates/*",
-    "services/*",
-]
-
 [package]
-name = "webb-relayer"
-version = "0.4.1"
-authors = ["Shady Khalifa <shekohex@gmail.com>"]
+name = "webb-block-poller"
+version = "0.1.0"
 edition = "2021"
-description = "The Webb Relayer toolkit"
-license = "Apache-2.0"
-documentation = "https://docs.rs/webb-relayer"
-homepage = "https://webb.tools"
-repository = "https://github.com/webb-tools/relayer"
-exclude = ["tests", "config", ".github", "ci", "assets", "docker"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
 doctest = false
 
 [[bin]]
-name = "webb-relayer"
+name = "webb-block-poller"
 path = "src/main.rs"
 required-features = ["cli"]
 
-[[example]]
-name = "in-depth"
-path = "examples/in_depth.rs"
-required-features = ["cli"]
-
 [dependencies]
-webb-relayer-types = { path = "./crates/relayer-types" }
-webb-relayer-store = { path = "./crates/relayer-store" }
-webb-relayer-config = { path = "./crates/relayer-config" }
-webb-relayer-utils = { path = "./crates/relayer-utils" }
+webb-relayer-types = { path = "../../crates/relayer-types" }
+webb-relayer-store = { path = "../../crates/relayer-store" }
+webb-relayer-config = { path = "../../crates/relayer-config" }
+webb-relayer-utils = { path = "../../crates/relayer-utils" }
+webb-relayer = { path = "../../" }
+
 anyhow = { version = "^1", optional = true }
 parking_lot = "^0.12"
 once_cell = "^1.8"

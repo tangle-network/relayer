@@ -13,17 +13,17 @@
 // limitations under the License.
 //
 use super::BlockNumberOf;
-use crate::config::LinkedAnchorConfig;
 use crate::events_watcher::proposal_handler;
 use crate::proposal_signing_backend::ProposalSigningBackend;
-use crate::store::sled::SledStore;
-use crate::store::EventHashStore;
 use std::sync::Arc;
 use webb::substrate::protocol_substrate_runtime;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
 use webb::substrate::subxt::{self, OnlineClient};
+use webb_relayer_config::anchor::LinkedAnchorConfig;
+use webb_relayer_store::EventHashStore;
+use webb_relayer_store::SledStore;
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
 pub struct SubstrateVAnchorWatcher<B> {
     proposal_signing_backend: B,

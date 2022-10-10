@@ -23,9 +23,9 @@ use webb::evm::ethers::middleware::SignerMiddleware;
 use webb::evm::ethers::providers::Middleware;
 
 use crate::context::RelayerContext;
-use crate::store::sled::SledQueueKey;
-use crate::store::QueueStore;
-use crate::utils::ClickableLink;
+use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_store::QueueStore;
+use webb_relayer_utils::clickable_link::ClickableLink;
 
 /// The TxQueue stores transaction requests so the relayer can process them later.
 /// This prevents issues such as creating transactions with the same nonce.
