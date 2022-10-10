@@ -28,7 +28,7 @@ use tokio::sync::broadcast;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::substrate::subxt;
-use webb::substrate::subxt::sp_core::sr25519::Pair as Sr25519Pair;
+use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
 
 use crate::metric::Metrics;
 use crate::{config, metric};
@@ -136,22 +136,22 @@ impl RelayerContext {
     ///
     /// ```
     /// let chain_id = "4".to_string();
-    /// let client = ctx.substrate_provider::<subxt::DefaultConfig>(chain_id).await?;
+    /// let client = ctx.substrate_provider::<subxt::Config::PolkadotConfig>(chain_id).await?;
     /// ```
     pub async fn substrate_provider<C: subxt::Config>(
         &self,
         chain_id: &str,
-    ) -> crate::Result<subxt::Client<C>> {
+    ) -> crate::Result<subxt::OnlineClient<C>> {
         let node_config =
             self.config.substrate.get(chain_id).ok_or_else(|| {
                 crate::Error::NodeNotFound {
                     chain_id: chain_id.to_string(),
                 }
             })?;
-        let client = subxt::ClientBuilder::new()
-            .set_url(node_config.ws_endpoint.as_str())
-            .build()
-            .await?;
+        let client = subxt::OnlineClient::<C>::from_url(
+            node_config.ws_endpoint.as_str(),
+        )
+        .await?;
         Ok(client)
     }
     /// Sets up and returns a Substrate wallet for the relayer.

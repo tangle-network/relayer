@@ -69,7 +69,7 @@ pub fn evm_anchor_update_proposal(
 }
 
 // create anchor update proposal for substrate system
-pub fn substrate_anchor_update_propsoal(
+pub fn substrate_anchor_update_proposal(
     merkle_root: [u8; 32],
     leaf_index: u32,
     target_resource_id: webb_proposals::ResourceId,
@@ -77,7 +77,7 @@ pub fn substrate_anchor_update_propsoal(
 ) -> webb_proposals::substrate::AnchorUpdateProposal {
     let nonce = webb_proposals::Nonce::new(leaf_index);
     let function_signature =
-        webb_proposals::FunctionSignature::new([0, 0, 0, 2]);
+        webb_proposals::FunctionSignature::new([0, 0, 0, 1]);
     let header = webb_proposals::ProposalHeader::new(
         target_resource_id,
         function_signature,

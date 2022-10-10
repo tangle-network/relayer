@@ -20,10 +20,11 @@ use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::store::sled::SledStore;
 use crate::store::EventHashStore;
 use std::sync::Arc;
+use webb::substrate::protocol_substrate_runtime;
+use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
-use webb::substrate::{protocol_substrate_runtime, subxt};
-
+use webb::substrate::subxt::{self, OnlineClient};
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
 pub struct SubstrateVAnchorWatcher<B> {
     proposal_signing_backend: B,
@@ -52,12 +53,9 @@ where
 {
     const TAG: &'static str = "Substrate V-Anchor Watcher";
 
-    type RuntimeConfig = subxt::DefaultConfig;
+    type RuntimeConfig = subxt::SubstrateConfig;
 
-    type Api = protocol_substrate_runtime::api::RuntimeApi<
-        Self::RuntimeConfig,
-        subxt::SubstrateExtrinsicParams<Self::RuntimeConfig>,
-    >;
+    type Client = OnlineClient<Self::RuntimeConfig>;
 
     type Event = protocol_substrate_runtime::api::Event;
 
@@ -69,7 +67,7 @@ where
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
-        api: Arc<Self::Api>,
+        api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
         metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
@@ -77,27 +75,28 @@ where
             event = ?event,
             "V-Anchor new leaf event",
         );
-        let chain_id =
-            api.constants().linkable_tree_bn254().chain_identifier()?;
-        let at_hash = api
-            .storage()
+        // fetch chain_id
+        let chain_id_addrs = RuntimeApi::constants()
+            .linkable_tree_bn254()
+            .chain_identifier();
+        let chain_id = api.constants().at(&chain_id_addrs)?;
+        let at_hash_addrs = RuntimeApi::storage()
             .system()
-            .block_hash(&u64::from(block_number), None)
-            .await?;
+            .block_hash(&(block_number as u64));
+        let at_hash = api.storage().fetch(&at_hash_addrs, None).await?.unwrap();
         // fetch tree
-        let tree = api
-            .storage()
+        let tree_addrs = RuntimeApi::storage()
             .merkle_tree_bn254()
-            .trees(&event.tree_id, Some(at_hash))
-            .await?;
+            .trees(&event.tree_id);
+        let tree = api.storage().fetch(&tree_addrs, Some(at_hash)).await?;
+
         let tree = match tree {
             Some(t) => t,
             None => return Err(crate::Error::Generic("No tree found")),
         };
         // pallet index
         let pallet_index = {
-            let locked_metadata = api.client.metadata();
-            let metadata = locked_metadata.read();
+            let metadata = api.metadata();
             let pallet = metadata.pallet("VAnchorHandlerBn254")?;
             pallet.index()
         };
@@ -144,7 +143,7 @@ where
                 }
                 webb_proposals::TargetSystem::Substrate(_) => {
                     let proposal =
-                        proposal_handler::substrate_anchor_update_propsoal(
+                        proposal_handler::substrate_anchor_update_proposal(
                             merkle_root,
                             latest_leaf_index,
                             target_resource_id,

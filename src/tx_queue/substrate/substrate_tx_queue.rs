@@ -16,36 +16,41 @@ use crate::context::RelayerContext;
 use crate::store::sled::SledQueueKey;
 use crate::store::QueueStore;
 use ethereum_types::U256;
+use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
-use std::convert::TryFrom;
+
 use std::sync::Arc;
 use std::time::Duration;
-use subxt::rpc::SubstrateTransactionStatus as TransactionStatus;
 
-use webb::substrate::scale::{Compact, Encode};
-use webb::substrate::subxt::extrinsic::ExtrinsicParams;
-use webb::substrate::subxt::extrinsic::Signer;
-use webb::substrate::subxt::sp_core::blake2_256;
-use webb::substrate::subxt::sp_core::sr25519::Pair;
-use webb::substrate::subxt::{self, PairSigner};
+use crate::types::dynamic_payload::WebbDynamicTxPayload;
+use std::marker::PhantomData;
+use webb::substrate::subxt;
+use webb::substrate::subxt::ext::sp_core::sr25519;
+use webb::substrate::subxt::ext::sp_runtime::traits::{
+    IdentifyAccount, Verify,
+};
+use webb::substrate::subxt::tx::{
+    ExtrinsicParams, PairSigner, TxStatus as TransactionStatus,
+};
 
 /// The SubstrateTxQueue stores transaction call params in bytes so the relayer can process them later.
 /// This prevents issues such as creating transactions with the same nonce.
 /// Randomized sleep intervals are used to prevent relayers from submitting
 /// the same transaction.
 #[derive(Clone)]
-pub struct SubstrateTxQueue<S>
+pub struct SubstrateTxQueue<'a, S>
 where
-    S: QueueStore<Vec<u8>, Key = SledQueueKey>,
+    S: QueueStore<WebbDynamicTxPayload<'a>, Key = SledQueueKey>,
 {
     ctx: RelayerContext,
     chain_id: U256,
     store: Arc<S>,
+    _marker: PhantomData<&'a ()>,
 }
-impl<S> SubstrateTxQueue<S>
+impl<'a, S> SubstrateTxQueue<'a, S>
 where
-    S: QueueStore<Vec<u8>, Key = SledQueueKey>,
+    S: QueueStore<WebbDynamicTxPayload<'a>, Key = SledQueueKey>,
 {
     /// Creates a new SubstrateTxQueue instance.
     ///
@@ -69,6 +74,7 @@ where
             ctx,
             chain_id,
             store,
+            _marker: PhantomData {},
         }
     }
     /// Starts the SubstrateTxQueue service.
@@ -94,8 +100,12 @@ where
     #[tracing::instrument(skip_all, fields(node = %self.chain_id))]
     pub async fn run<X>(self) -> crate::Result<()>
     where
-        X: subxt::extrinsic::ExtrinsicParams<subxt::DefaultConfig>,
-        <X as ExtrinsicParams<subxt::DefaultConfig>>::OtherParams: Default,
+        X: subxt::Config,
+        <<X>::ExtrinsicParams as ExtrinsicParams<<X>::Index, <X>::Hash>>::OtherParams:Default,
+        <X>::Signature: From<sr25519::Signature>,
+        <X>::Address: From<<X>::AccountId>,
+        <<X>::Signature as Verify>::Signer: From<sr25519::Public> + IdentifyAccount<AccountId = <X>::AccountId>,
+
     {
         let chain_config = self
             .ctx
@@ -114,13 +124,12 @@ where
         //  protocol-substrate client
         let client = self
             .ctx
-            .substrate_provider::<subxt::DefaultConfig>(&chain_id.to_string())
+            .substrate_provider::<X>(&chain_id.to_string())
             .await?;
 
         // get pair
         let pair = self.ctx.substrate_wallet(&chain_id.to_string()).await?;
-        let signer: PairSigner<subxt::DefaultConfig, Pair> =
-            PairSigner::new(pair);
+        let signer = PairSigner::new(pair);
 
         tracing::event!(
             target: crate::probe::TARGET,
@@ -139,89 +148,24 @@ where
                 let maybe_call_data = store.dequeue_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),
                 )?;
-                if let Some(call_data) = maybe_call_data {
-                    let call_data = subxt::Encoded(call_data);
-                    tracing::trace!(
-                        "Transaction call in hex : {:?}",
-                        hex::encode(&call_data.encode())
+                if let Some(payload) = maybe_call_data {
+                    let dynamic_tx_payload = subxt::dynamic::tx(
+                        payload.pallet_name,
+                        payload.call_name,
+                        payload.fields,
                     );
-                    // This are the steps to create encoded extrinsic which can be executed by rpc client
-                    let account_nonce = if let Some(nonce) = signer.nonce() {
-                        nonce
-                    } else {
-                        client
-                            .rpc()
-                            .system_account_next_index(signer.account_id())
-                            .map_err(Into::into)
-                            .map_err(backoff::Error::transient)
-                            .await?
-                    };
-
-                    // 1.Construct our custom additional/extra params.
-                    let additional_and_extra_params = {
-                        // Obtain spec version and transaction version from the runtime version of the client.
-                        let runtime = client
-                            .rpc()
-                            .runtime_version(None)
-                            .map_err(Into::into)
-                            .map_err(backoff::Error::transient)
-                            .await?;
-                        X::new(
-                            runtime.spec_version,
-                            runtime.transaction_version,
-                            account_nonce,
-                            *client.genesis(),
+                    let signed_extrinsic = client
+                        .tx()
+                        .create_signed(
+                            &dynamic_tx_payload,
+                            &signer,
                             Default::default(),
                         )
-                    };
-
-                    // 2. Construct signature. This is compatible with the Encode impl
-                    //    for SignedPayload (which is this payload of bytes that we'd like)
-                    //    to sign. See:
-                    //    https://github.com/paritytech/substrate/blob/9a6d706d8db00abb6ba183839ec98ecd9924b1f8/primitives/runtime/src/generic/unchecked_extrinsic.rs#L215)
-                    let signature = {
-                        let mut bytes = Vec::new();
-                        call_data.encode_to(&mut bytes);
-                        additional_and_extra_params.encode_extra_to(&mut bytes);
-                        additional_and_extra_params
-                            .encode_additional_to(&mut bytes);
-                        if bytes.len() > 256 {
-                            signer.sign(&blake2_256(&bytes))
-                        } else {
-                            signer.sign(&bytes)
-                        }
-                    };
-
-                    // 3. Encode extrinsic, now that we have the parts we need. This is compatible
-                    //    with the Encode impl for UncheckedExtrinsic (protocol version 4).
-                    let extrinsic = {
-                        let mut encoded_inner = Vec::new();
-                        // "is signed" + transaction protocol version (4)
-                        (0b10000000 + 4u8).encode_to(&mut encoded_inner);
-                        // from address for signature
-                        signer.address().encode_to(&mut encoded_inner);
-                        // the signature bytes
-                        signature.encode_to(&mut encoded_inner);
-                        // attach custom extra params
-                        additional_and_extra_params
-                            .encode_extra_to(&mut encoded_inner);
-                        // and now, call data
-                        call_data.encode_to(&mut encoded_inner);
-                        // now, prefix byte length:
-                        let len = Compact(
-                            u32::try_from(encoded_inner.len())
-                                .expect("extrinsic size expected to be <4GB"),
-                        );
-                        let mut encoded = Vec::new();
-                        len.encode_to(&mut encoded);
-                        encoded.extend(encoded_inner);
-                        encoded
-                    };
-                    // encoded extinsic
-                    let encoded_extrinsic = subxt::Encoded(extrinsic);
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
+                        .await?;
                     // dry run test
-                    let dry_run_outcome =
-                        client.rpc().dry_run(&encoded_extrinsic.0, None).await;
+                    let dry_run_outcome = signed_extrinsic.dry_run(None).await;
                     match dry_run_outcome {
                         Ok(_) => {
                             tracing::event!(
@@ -249,8 +193,11 @@ where
                     }
                     // watch_extrinsic submits and returns transaction subscription
                     let mut progress = client
-                        .rpc()
-                        .watch_extrinsic(&encoded_extrinsic)
+                        .tx()
+                        .sign_and_submit_then_watch_default(
+                            &dynamic_tx_payload,
+                            &signer,
+                        )
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;

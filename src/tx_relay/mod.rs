@@ -78,7 +78,7 @@ pub struct ProofData<P, R, E> {
 /// External data for the VAnchor on any chain.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ExtData<E, I, B, A> {
+pub struct ExtData<E, I, B, A, T> {
     /// Recipient identifier of the withdrawn funds
     pub recipient: I,
     /// Relayer identifier of the transaction
@@ -90,7 +90,7 @@ pub struct ExtData<E, I, B, A> {
     /// Refund fee
     pub refund: B,
     /// Token address
-    pub token: I,
+    pub token: T,
     /// First encrypted output commitment
     pub encrypted_output1: E,
     /// Second encrypted output commitment
@@ -100,7 +100,7 @@ pub struct ExtData<E, I, B, A> {
 /// Contains data that is relayed to the VAnchors
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VAnchorRelayTransaction<Id, P, R, E, I, B, A> {
+pub struct VAnchorRelayTransaction<Id, P, R, E, I, B, A, T> {
     /// one of the supported chains of this relayer
     pub chain_id: u64,
     /// The tree id of the mixer's underlying tree
@@ -108,5 +108,5 @@ pub struct VAnchorRelayTransaction<Id, P, R, E, I, B, A> {
     /// The zero-knowledge proof data structure for VAnchor transactions
     pub proof_data: ProofData<P, R, E>,
     /// The external data structure for arbitrary inputs
-    pub ext_data: ExtData<P, I, B, A>,
+    pub ext_data: ExtData<P, I, B, A, T>,
 }

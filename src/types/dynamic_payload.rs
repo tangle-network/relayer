@@ -12,21 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use parking_lot::RwLock;
-use std::sync::Arc;
-use webb::substrate::subxt::{Call, Metadata};
-/// A helper function to encode the Call data into bytes.
-///
-/// The call data bytes (pallet u8, call u8, call params).
-pub fn encode_call_data<C: Call>(
-    metadata: Arc<RwLock<Metadata>>,
-    call: C,
-) -> crate::Result<Vec<u8>> {
-    let mut bytes = Vec::new();
-    let metadata = metadata.read();
-    let pallet = metadata.pallet(C::PALLET)?;
-    bytes.push(pallet.index());
-    bytes.push(pallet.call_index::<C>()?);
-    call.encode_to(&mut bytes);
-    Ok(bytes)
+use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
+use webb::substrate::subxt::dynamic::Value;
+
+/// This represents a intermediary type to store `DynamicTxPayload`.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct WebbDynamicTxPayload<'a> {
+    /// Pallet name
+    pub pallet_name: Cow<'a, str>,
+    /// Extrinsic name
+    pub call_name: Cow<'a, str>,
+    /// Extrinsic params
+    pub fields: Vec<Value<()>>,
 }

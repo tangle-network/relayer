@@ -146,7 +146,7 @@ where
                 }
                 webb_proposals::TargetSystem::Substrate(_) => {
                     let proposal =
-                        proposal_handler::substrate_anchor_update_propsoal(
+                        proposal_handler::substrate_anchor_update_proposal(
                             root,
                             leaf_index,
                             target_resource_id,

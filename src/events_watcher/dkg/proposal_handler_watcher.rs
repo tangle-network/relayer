@@ -15,12 +15,12 @@
 use std::sync::Arc;
 
 use crate::metric;
-use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
-use webb::substrate::{dkg_runtime, subxt};
-
 use crate::store::sled::{SledQueueKey, SledStore};
 use crate::store::{BridgeCommand, BridgeKey, QueueStore};
+use webb::substrate::dkg_runtime;
+use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
+use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
+use webb::substrate::subxt::{self, OnlineClient};
 
 use super::{BlockNumberOf, SubstrateEventWatcher};
 
@@ -33,14 +33,12 @@ pub struct ProposalHandlerWatcher;
 impl SubstrateEventWatcher for ProposalHandlerWatcher {
     const TAG: &'static str = "DKG Signed Proposal Watcher";
 
-    type RuntimeConfig = subxt::DefaultConfig;
+    type RuntimeConfig = subxt::PolkadotConfig;
 
-    type Api = dkg_runtime::api::RuntimeApi<
-        Self::RuntimeConfig,
-        subxt::PolkadotExtrinsicParams<Self::RuntimeConfig>,
-    >;
+    type Client = OnlineClient<Self::RuntimeConfig>;
 
     type Event = dkg_runtime::api::Event;
+
     type FilteredEvent = dkg_proposal_handler::events::ProposalSigned;
 
     type Store = SledStore;
@@ -48,7 +46,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
-        _api: Arc<Self::Api>,
+        _api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
         metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
