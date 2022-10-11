@@ -116,10 +116,6 @@ pub async fn ignite(
         );
 
         if let Some(poller_config) = &chain_config.block_poller {
-            tracing::debug!(
-                ""
-                chain_name
-            );
             start_block_relay_service(
                 ctx,
                 chain_id,
