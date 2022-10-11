@@ -39,8 +39,8 @@ impl BlockPollingHandler for BlockListener {
     }
 }
 
-/// Start the block relay service which watches ETH2 chains for blocks
-pub fn start_block_relay_service(
+/// Start the block poller service which polls ETH blocks
+pub fn start_block_poller_service(
     ctx: &RelayerContext,
     chain_id: U256,
     client: Arc<Client>,
@@ -116,7 +116,11 @@ pub async fn ignite(
         );
 
         if let Some(poller_config) = &chain_config.block_poller {
-            start_block_relay_service(
+            tracing::debug!(
+                "Starting block relay ({})",
+                poller_config,
+            );
+            start_block_poller_service(
                 ctx,
                 chain_id,
                 client,
