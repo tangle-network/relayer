@@ -9,7 +9,7 @@ ws-endpoint = "$GOERLI_WS_URL"
 # chain specific id from evm opcode
 chain-id = 5002
 
-[evm.goerli.block-listener]
+[evm.goerli.block-poller]
 # The starting block to listen at.
 start-block = 7382817
 # Polling interval in milliseconds

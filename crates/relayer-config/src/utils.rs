@@ -68,13 +68,11 @@ pub fn parse_from_files(
 
     // also merge in the environment (with a prefix of WEBB).
     cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
-
     // and finally deserialize the config and post-process it
     let config: Result<
         WebbRelayerConfig,
         serde_path_to_error::Error<config::ConfigError>,
     > = serde_path_to_error::deserialize(cfg);
-
     match config {
         Ok(mut c) => {
             // merge in all of the contracts into the config

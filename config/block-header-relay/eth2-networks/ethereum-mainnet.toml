@@ -9,7 +9,7 @@ ws-endpoint = "$ETHEREUM_MAINNET_WS_URL"
 # chain specific id from evm opcode
 chain-id = 1
 
-[evm.mainnet.block-listener]
+[evm.mainnet.block-poller]
 # The starting block to listen at.
 start-block = 15697112
 # Polling interval in milliseconds

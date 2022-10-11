@@ -9,7 +9,7 @@ ws-endpoint = "$SEPOLIA_WS_URL"
 # chain specific id from evm opcode
 chain-id = 11155111
 
-[evm.sepolia.block-listener]
+[evm.sepolia.block-poller]
 # The starting block to listen at.
 start-block = 1450409
 # Polling interval in milliseconds

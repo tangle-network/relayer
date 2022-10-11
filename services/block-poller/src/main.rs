@@ -88,10 +88,9 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // throughout the lifetime of the relayer. Items such as wallets and providers, as well
     // as a convenient place to access the configuration.
     let ctx = RelayerContext::new(config);
-
     // persistent storage for the relayer
     let store = create_store(&args).await?;
-
+    tracing::trace!("created persistent storage..");
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
     let (addr, server) =
