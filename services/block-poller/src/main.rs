@@ -3,10 +3,65 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
+use ethereum_types::U256;
 use std::sync::Arc;
 use tokio::signal::unix;
-use webb_relayer::context::RelayerContext;
+use webb_block_poller::start_block_poller_service;
+use webb_relayer::{context::RelayerContext, service::Store};
 use webb_relayer_config::cli::{create_store, load_config, setup_logger, Opts};
+use webb_relayer_utils::Result;
+
+/// Starts all background services for all chains configured in the config file.
+///
+/// Returns a future that resolves when all services are started successfully.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `store` -[Sled](https://sled.rs)-based database store
+///
+/// # Examples
+///
+/// ```
+/// let _ = service::ignite(&ctx, Arc::new(store)).await?;
+/// ```
+pub async fn ignite(
+    ctx: &RelayerContext,
+    store: Arc<Store>,
+) -> crate::Result<()> {
+    tracing::debug!(
+        "Relayer configuration: {}",
+        serde_json::to_string_pretty(&ctx.config)?
+    );
+
+    // now we go through each chain, in our configuration
+    for chain_config in ctx.config.evm.values() {
+        if !chain_config.enabled {
+            continue;
+        }
+        let chain_name = &chain_config.name;
+        let chain_id = U256::from(chain_config.chain_id);
+        let provider = ctx.evm_provider(&chain_id.to_string()).await?;
+        let client = Arc::new(provider);
+        tracing::debug!(
+            "Starting Background Services for ({}) chain. ({:?})",
+            chain_name,
+            chain_config.block_poller
+        );
+
+        if let Some(poller_config) = &chain_config.block_poller {
+            tracing::debug!("Starting block relay ({:#?})", poller_config,);
+            start_block_poller_service(
+                ctx,
+                chain_id,
+                client,
+                store.clone(),
+                poller_config.clone(),
+            )?;
+        }
+    }
+    Ok(())
+}
 
 /// The main entry point for the relayer.
 ///
@@ -46,7 +101,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let server_handle = tokio::spawn(server);
     // start all background services.
     // this does not block, will fire the services on background tasks.
-    webb_relayer::service::ignite(&ctx, Arc::new(store)).await?;
+    ignite(&ctx, Arc::new(store)).await?;
     tracing::event!(
         target: webb_relayer::probe::TARGET,
         tracing::Level::DEBUG,
