@@ -108,7 +108,7 @@ pub async fn ignite(
         }
         let chain_name = &chain_config.name;
         let chain_id = U256::from(chain_config.chain_id);
-        let provgider = ctx.evm_provider(&chain_id.to_string()).await?;
+        let provider = ctx.evm_provider(&chain_id.to_string()).await?;
         let client = Arc::new(provider);
         tracing::debug!(
             "Starting Background Services for ({}) chain.",
