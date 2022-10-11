@@ -25,7 +25,11 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { ethers } from 'ethers';
-import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
+import {
+  WebbRelayer,
+  Pallet,
+  RelayerMetricResponse,
+} from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import {
@@ -56,6 +60,7 @@ import {
 } from '../../lib/substrateWebbProposals.js';
 import pkg from 'secp256k1';
 import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
+import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
 describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
@@ -188,6 +193,16 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
         chain_id: chainId.toString(),
         finalized: true,
       },
+    });
+
+    // check metrics gathered
+    const responseMetricsGathered = await webbRelayer.getMetricsGathered();
+    expect(responseMetricsGathered.status).equal(200);
+    let metricsGathered =
+      responseMetricsGathered.json() as Promise<RelayerMetricResponse>;
+    metricsGathered.then((resp) => {
+      console.log(resp.metrics);
+      expect(resp.metrics).to.not.be.null;
     });
   });
 
@@ -357,6 +372,7 @@ async function vanchorDeposit(
     ),
     extDataHash: data.extDataHash,
   };
+  //@ts-ignore
   const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
     Number(treeId)
   );

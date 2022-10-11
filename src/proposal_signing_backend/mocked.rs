@@ -56,7 +56,7 @@ where
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
-        _metrics: Arc<metric::Metrics>,
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         // Proposal will be signed by active governor/maintainer.
         // Proposal will be then enqueued for execution with BridgeKey as TypedChainId
@@ -82,6 +82,8 @@ where
             data = ?hex::encode(&proposal_bytes),
             signature = ?hex::encode(&signature_bytes),
         );
+        // Proposal signed metric
+        metrics.proposals_signed_metric.inc();
         // now all we have to do is to send the data and the signature to the signature bridge.
         self.store.enqueue_item(
             SledQueueKey::from_bridge_key(bridge_key),
@@ -90,6 +92,7 @@ where
                 signature: signature_bytes,
             },
         )?;
+
         Ok(())
     }
 }

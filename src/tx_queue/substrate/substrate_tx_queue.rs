@@ -290,9 +290,11 @@ where
                                     status = "Finalized",
                                     finalized = true,
                                 );
-                                // metrics for total transaction made
-                                metrics.total_transaction_made_metric.inc();
-                                // TODO wait for transaction success
+                                // metrics for proposal processed by substrate tx queue
+                                metrics
+                                    .proposals_processed_tx_queue_metric
+                                    .inc();
+                                metrics.proposals_processed_substrate_tx_queue_metric.inc();
                             }
 
                             TransactionStatus::Usurped(_) => {
@@ -337,6 +339,9 @@ where
                 tokio::time::sleep(Duration::from_millis(s)).await;
             }
         };
+        // transaction queue backoff metric
+        metrics.transaction_queue_back_off_metric.inc();
+        metrics.substrate_transaction_queue_back_off_metric.inc();
         backoff::future::retry::<(), _, _, _, _>(backoff, task).await?;
         Ok(())
     }

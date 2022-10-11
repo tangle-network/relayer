@@ -81,8 +81,6 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
         metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
-        // Register metric for when handle proposal is being called
-        metrics.handle_proposal_execution_metric.inc();
         let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
@@ -142,6 +140,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
                     match maybe_success {
                         Ok(_events) => {
                             tracing::debug!("tx finalized");
+                            metrics.proposals_signed_metric.inc();
                         }
                         Err(err) => {
                             tracing::error!(error = %err, "tx failed");

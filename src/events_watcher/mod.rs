@@ -422,6 +422,8 @@ where
                 }
             }
         };
+        // Bridge watcher backoff metric
+        metrics.bridge_watcher_back_off_metric.inc();
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }
@@ -643,6 +645,8 @@ pub trait SubstrateEventWatcher {
                 }
             }
         };
+        // Bridge watcher backoff metric
+        metrics.bridge_watcher_back_off_metric.inc();
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }

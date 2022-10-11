@@ -128,7 +128,8 @@ where
                 }
                 _ => unreachable!("unsupported"),
             };
-
+            // Anchor update proposal proposed metric
+            metrics.anchor_update_proposals_metric.inc();
             let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
@@ -164,6 +165,7 @@ where
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;
         store.store_event(&events_bytes)?;
+        metrics.total_transaction_made_metric.inc();
         Ok(())
     }
 }

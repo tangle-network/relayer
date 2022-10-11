@@ -140,6 +140,8 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
             data = ?hex::encode(&event.data),
             signature = ?hex::encode(&event.signature),
         );
+        // Proposal signed metric
+        metrics.proposals_signed_metric.inc();
         store.enqueue_item(
             SledQueueKey::from_bridge_key(bridge_key),
             BridgeCommand::ExecuteProposalWithSignature {
@@ -147,8 +149,6 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
                 signature: event.signature,
             },
         )?;
-        // metric for proposal queuing
-        metrics.proposal_queue_attempt_metric.inc();
         Ok(())
     }
 }

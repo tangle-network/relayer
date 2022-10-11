@@ -253,8 +253,11 @@ where
                                     tx_hash_string,
                                 );
                             }
-                            // metrics for total transaction made
-                            metrics.total_transaction_made_metric.inc();
+                            // metrics for  transaction processed by evm tx queue
+                            metrics.proposals_processed_tx_queue_metric.inc();
+                            metrics
+                                .proposals_processed_evm_tx_queue_metric
+                                .inc();
                             tracing::event!(
                                 target: crate::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -304,9 +307,6 @@ where
                                 );
                             }
 
-                            // transaction queue backoff metric
-                            metrics.transaction_queue_back_off_metric.inc();
-
                             tracing::event!(
                                 target: crate::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -329,6 +329,9 @@ where
                 tokio::time::sleep(Duration::from_millis(s)).await;
             }
         };
+        // transaction queue backoff metric
+        metrics.transaction_queue_back_off_metric.inc();
+        metrics.evm_transaction_queue_back_off_metric.inc();
         backoff::future::retry::<(), _, _, _, _>(backoff, task).await?;
         Ok(())
     }

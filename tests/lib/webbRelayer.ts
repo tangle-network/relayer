@@ -490,7 +490,7 @@ export interface EncryptedOutputsCacheResponse {
 }
 
 export interface RelayerMetricResponse {
-    metrics: string;
+  metrics: string;
 }
 
 export interface Evm {
