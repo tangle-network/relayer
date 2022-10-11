@@ -45,7 +45,7 @@ pub fn start_block_relay_service(
     chain_id: U256,
     client: Arc<Client>,
     store: Arc<Store>,
-    listener_config: BlockPollerConfig,
+    poller_config: BlockPollerConfig,
 ) -> Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
     let _my_ctx = ctx.clone();
@@ -61,7 +61,7 @@ pub fn start_block_relay_service(
         let block_watcher_task = block_watcher.run(
             client,
             store,
-            listener_config,
+            poller_config,
             vec![Box::new(block_finality_handler)],
         );
         tokio::select! {
@@ -75,5 +75,59 @@ pub fn start_block_relay_service(
     };
     // kick off the watcher.
     tokio::task::spawn(task);
+    Ok(())
+}
+
+/// Starts all background services for all chains configured in the config file.
+///
+/// Returns a future that resolves when all services are started successfully.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `store` -[Sled](https://sled.rs)-based database store
+///
+/// # Examples
+///
+/// ```
+/// let _ = service::ignite(&ctx, Arc::new(store)).await?;
+/// ```
+pub async fn ignite(
+    ctx: &RelayerContext,
+    store: Arc<Store>,
+) -> crate::Result<()> {
+    tracing::debug!(
+        "Relayer configuration: {}",
+        serde_json::to_string_pretty(&ctx.config)?
+    );
+
+    // now we go through each chain, in our configuration
+    for chain_config in ctx.config.evm.values() {
+        if !chain_config.enabled {
+            continue;
+        }
+        let chain_name = &chain_config.name;
+        let chain_id = U256::from(chain_config.chain_id);
+        let provgider = ctx.evm_provider(&chain_id.to_string()).await?;
+        let client = Arc::new(provider);
+        tracing::debug!(
+            "Starting Background Services for ({}) chain.",
+            chain_name
+        );
+
+        if let Some(poller_config) = &chain_config.block_poller {
+            tracing::debug!(
+                ""
+                chain_name
+            );
+            start_block_relay_service(
+                ctx,
+                chain_id,
+                client,
+                store.clone(),
+                poller_config.clone(),
+            )?;
+        }
+    }
     Ok(())
 }

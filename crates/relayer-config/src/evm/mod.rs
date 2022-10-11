@@ -61,9 +61,9 @@ pub struct EvmChainConfig {
     /// TxQueue configuration
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
-    /// Block listening configuration
+    /// Block poller/listening configuration
     #[serde(skip_serializing)]
-    pub block_listener: Option<BlockPollerConfig>,
+    pub block_poller: Option<BlockPollerConfig>,
 }
 
 /// Linked anchor config for Evm based target system
