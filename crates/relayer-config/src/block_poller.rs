@@ -22,6 +22,6 @@ pub struct BlockPollerConfig {
     #[serde(default = "print_progress_interval_default")]
     pub print_progress_interval: u64,
     /// Light client RPC url
-    #[serde(skip_serializing)]
+    #[serde(default)]
     pub light_client_rpc_url: Option<RpcUrl>,
 }

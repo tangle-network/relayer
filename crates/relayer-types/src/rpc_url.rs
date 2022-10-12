@@ -1,8 +1,8 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 /// An RPC URL Wrapper around [`url::Url`] to support the `serde` deserialization
 /// from environment variables.
-#[derive(derive_more::Display, Clone)]
+#[derive(derive_more::Display, Clone, Serialize)]
 pub struct RpcUrl(url::Url);
 
 impl std::fmt::Debug for RpcUrl {

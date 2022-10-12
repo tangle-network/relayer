@@ -91,7 +91,6 @@ pub fn parse_from_files(
                 }
             }
 
-            tracing::trace!("Config {:#?}", c);
             postloading_process(c)
         }
         Err(e) => {
@@ -153,7 +152,9 @@ pub fn postloading_process(
     for (_, v) in old_substrate {
         config.substrate.insert(v.chain_id.to_string(), v);
     }
+
     // do the same for cosmwasm
+    #[cfg(feature = "cosmwasm")]
     let old_cosmwasm = config
         .cosmwasm
         .drain()
@@ -202,7 +203,6 @@ pub fn postloading_process(
             }
         })
     }
-
     // check that all required chains are already present in the config.
     for (chain_id, chain_config) in &config.evm {
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
@@ -303,6 +303,7 @@ pub fn postloading_process(
             }
         }
     }
+    #[cfg(feature = "cosmwasm")]
     for (chain_name, chain_config) in &config.cosmwasm {
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
             CosmwasmContract::VAnchor(cfg) => Some(cfg),
@@ -396,5 +397,6 @@ pub fn postloading_process(
             }
         }
     }
+
     Ok(config)
 }

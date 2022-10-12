@@ -51,7 +51,7 @@ pub struct Opts {
 /// ```
 pub fn load_config<P>(
     config_dir: Option<P>,
-) -> anyhow::Result<WebbRelayerConfig>
+) -> Result<WebbRelayerConfig, anyhow::Error>
 where
     P: AsRef<Path>,
 {
@@ -67,7 +67,9 @@ where
         return Err(anyhow::anyhow!("{} is not a directory", path.display()));
     }
     tracing::trace!("Loading Config from {} ..", path.display());
-    crate::utils::load(path).map_err(Into::into)
+    let v = crate::utils::load(path)?;
+    tracing::trace!("Config loaded.. {:#?}", v);
+    Ok(v)
 }
 
 /// Sets up the logger for the relayer, based on the verbosity level passed in.
