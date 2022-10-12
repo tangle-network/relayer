@@ -359,7 +359,7 @@ fn secp256k1_ecdsa_recover(
         sig[64] - 27
     } else {
         sig[64]
-    } as u8)
+    })
     .map_err(|_| libsecp256k1::Error::InvalidSignature)?;
     let pubkey =
         libsecp256k1::recover(&libsecp256k1::Message::parse(msg), &rs, &v)
