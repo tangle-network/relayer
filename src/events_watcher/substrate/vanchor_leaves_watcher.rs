@@ -49,13 +49,13 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
     ) -> crate::Result<()> {
         let at_hash_addr = RuntimeApi::storage()
             .system()
-            .block_hash(&(block_number as u64));
+            .block_hash(block_number as u64);
         let at_hash = api.storage().fetch(&at_hash_addr, None).await?.unwrap();
 
         // fetch leaf_index from merkle tree at given block_number
         let next_leaf_index_addr = RuntimeApi::storage()
             .merkle_tree_bn254()
-            .next_leaf_index(&event.tree_id);
+            .next_leaf_index(event.tree_id);
         let next_leaf_index = api
             .storage()
             .fetch(&next_leaf_index_addr, Some(at_hash))

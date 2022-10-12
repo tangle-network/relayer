@@ -62,7 +62,6 @@ pub struct EvmChainConfig {
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
     /// Block poller/listening configuration
-    #[serde(skip_serializing)]
     pub block_poller: Option<BlockPollerConfig>,
 }
 

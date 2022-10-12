@@ -65,7 +65,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             .await?;
         if maybe_resource_id.is_none() {
             tracing::warn!(
-                resource_id = %hex::encode(&resource_id.into_bytes()),
+                resource_id = %hex::encode(resource_id.into_bytes()),
                 "resource id doesn't exist!",
             );
             return Ok(false);
@@ -86,7 +86,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
         tracing::debug!(
             nonce = %hex::encode(&nonce.encode()),
-            resource_id = %hex::encode(&resource_id.into_bytes()),
+            resource_id = %hex::encode(resource_id.into_bytes()),
             src_chain_id = ?src_chain_id,
             proposal = %hex::encode(&proposal.to_vec()),
             "sending proposal to DKG runtime"

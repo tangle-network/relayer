@@ -63,7 +63,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
 
         // Note: here we need to get the public key from the storage at the moment of that event.
         let at_hash_addrs =
-            RuntimeApi::storage().system().block_hash(&block_number);
+            RuntimeApi::storage().system().block_hash(block_number);
 
         let at_hash = api.storage().fetch(&at_hash_addrs, None).await?.unwrap();
         let dkg_public_key_addrs = RuntimeApi::storage().dkg().dkg_public_key();

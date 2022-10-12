@@ -91,6 +91,7 @@ pub fn parse_from_files(
                 }
             }
 
+            tracing::trace!("Config {:#?}", c);
             postloading_process(c)
         }
         Err(e) => {

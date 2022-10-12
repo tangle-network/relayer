@@ -80,12 +80,12 @@ where
         let chain_id = api.constants().at(&chain_id_addrs)?;
         let at_hash_addrs = RuntimeApi::storage()
             .system()
-            .block_hash(&(block_number as u64));
+            .block_hash(block_number as u64);
         let at_hash = api.storage().fetch(&at_hash_addrs, None).await?.unwrap();
         // fetch tree
         let tree_addrs = RuntimeApi::storage()
             .merkle_tree_bn254()
-            .trees(&event.tree_id);
+            .trees(event.tree_id);
         let tree = api.storage().fetch(&tree_addrs, Some(at_hash)).await?;
 
         let tree = match tree {
