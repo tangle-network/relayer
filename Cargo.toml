@@ -32,8 +32,8 @@ required-features = ["cli"]
 
 [dependencies]
 webb-relayer-types = { path = "./crates/relayer-types" }
-webb-relayer-store = { path = "./crates/relayer-store", features = ["cli","integration-tests"] }
-webb-relayer-config = { path = "./crates/relayer-config",  features = ["cli" , "integration-tests"] }
+webb-relayer-store = { path = "./crates/relayer-store" }
+webb-relayer-config = { path = "./crates/relayer-config", features = ["cli" , "integration-tests"] }
 webb-relayer-utils = { path = "./crates/relayer-utils"}
 anyhow = { version = "^1", optional = true }
 parking_lot = "^0.12"
