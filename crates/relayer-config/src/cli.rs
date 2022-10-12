@@ -68,7 +68,7 @@ where
     }
     tracing::trace!("Loading Config from {} ..", path.display());
     let v = crate::utils::load(path)?;
-    tracing::trace!("Config loaded.. {:#?}", v);
+    tracing::trace!("Config loaded..");
     Ok(v)
 }
 
