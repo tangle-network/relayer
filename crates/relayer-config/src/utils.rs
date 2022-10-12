@@ -128,10 +128,7 @@ pub fn postloading_process(
     mut config: WebbRelayerConfig,
 ) -> webb_relayer_utils::Result<WebbRelayerConfig> {
     tracing::trace!("Checking configration sanity ...");
-    tracing::trace!(
-        "postloaded config: {}",
-        serde_json::to_string_pretty(&config)?
-    );
+
     // make all chain names lower case
     // 1. drain everything, and take enabled chains.
     let old_evm = config
@@ -397,6 +394,10 @@ pub fn postloading_process(
             }
         }
     }
+    tracing::trace!(
+        "postloaded config: {}",
+        serde_json::to_string_pretty(&config)?
+    );
 
     Ok(config)
 }

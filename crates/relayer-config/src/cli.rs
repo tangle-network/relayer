@@ -79,14 +79,18 @@ where
 /// # Arguments
 ///
 /// * `verbosity` - An i32 integer representing the verbosity level.
+/// * `filter` -  An &str representing filtering directive for EnvFilter
 ///
 /// # Examples
 ///
 /// ```
+/// //If the package name in your Cargo.toml is `MY-FANCY-LIB`,
+/// //then he corresponding Rust identifier would be `MY_FANCY_LIB`.
+/// let filter = "webb_block_poller"
 /// let arg = 3;
-/// setup_logger(arg)?;
+/// setup_logger(arg, filter)?;
 /// ```
-pub fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
+pub fn setup_logger(verbosity: i32, filter: &str) -> anyhow::Result<()> {
     use tracing::Level;
     let log_level = match verbosity {
         0 => Level::ERROR,
@@ -95,7 +99,7 @@ pub fn setup_logger(verbosity: i32) -> anyhow::Result<()> {
         3 => Level::DEBUG,
         _ => Level::TRACE,
     };
-    let directive_1 = format!("webb_relayer={}", log_level)
+    let directive_1 = format!("{}={}", filter, log_level)
         .parse()
         .expect("valid log level");
     let env_filter = tracing_subscriber::EnvFilter::from_default_env()

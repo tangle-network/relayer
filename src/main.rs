@@ -30,7 +30,7 @@ use webb_relayer_config::cli::{create_store, load_config, setup_logger, Opts};
 #[paw::main]
 #[tokio::main]
 async fn main(args: Opts) -> anyhow::Result<()> {
-    setup_logger(args.verbose)?;
+    setup_logger(args.verbose, "webb_relayer")?;
     match dotenv::dotenv() {
         Ok(_) => {
             tracing::trace!("Loaded .env file");
