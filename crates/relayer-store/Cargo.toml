@@ -50,3 +50,7 @@ typed-builder = "0.10.0"
 libsecp256k1 = "0.7.0"
 tiny-bip39 = "1.0.0"
 tiny-keccak = { version = "2.0.2", features = ["sha3"] }
+
+[features]
+cli = []
+integration-tests = ["tracing-subscriber/json"]

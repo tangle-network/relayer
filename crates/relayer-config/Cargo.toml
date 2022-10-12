@@ -60,3 +60,4 @@ cli = ["evm-runtime", "substrate-runtime", "anyhow", "tracing-subscriber", "stru
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
 substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]
 cosmwasm = ["cosmwasm-std"]
+integration-tests = ["tracing-subscriber/json"]

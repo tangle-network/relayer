@@ -227,6 +227,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       ),
       extDataHash: data.extDataHash,
     };
+    //@ts-ignore
     const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
       Number(treeId)
     );

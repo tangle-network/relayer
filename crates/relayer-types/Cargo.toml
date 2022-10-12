@@ -52,5 +52,7 @@ tiny-keccak = { version = "2.0.2", features = ["sha3"] }
 
 [features]
 default = ["evm-runtime", "substrate-runtime"]
+cli = ["evm-runtime", "substrate-runtime"]
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
 substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]
+integration-tests = ["tracing-subscriber/json"]
