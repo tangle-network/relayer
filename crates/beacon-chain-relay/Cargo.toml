@@ -11,27 +11,11 @@ types =  { git = "https://github.com/webb-tools/lighthouse.git", branch = "devel
 tree_hash = { git = "https://github.com/webb-tools/lighthouse.git", branch = "develop" }
 merkle_proof = { git = "https://github.com/webb-tools/lighthouse.git", branch = "develop" }
 eth2_hashing = { git = "https://github.com/webb-tools/lighthouse.git", branch = "develop" }
-eth2_ssz = { git = "https://github.com/webb-tools/lighthouse.git", branch = "develop" }
-# types =  { path = "../../lighthouse/consensus/types" }
-# tree_hash = { path = "../../lighthouse/consensus/tree_hash" }
-# merkle_proof = { path = "../../lighthouse/consensus/merkle_proof" }
-# eth2_hashing = { path = "../../lighthouse/crypto/eth2_hashing" }
-# eth2_ssz = { path = "../../lighthouse/consensus/ssz" }
-
 eth-types = { git = "https://github.com/webb-tools/pallet-eth2-light-client", features = ["eip1559"] }
-
 log = { version = "0.4", features = ["std", "serde"] }
 serde_json = "1.0.74"
 serde = { version = "1.0", features = ["derive"] }
 ethereum-types = "0.13.1"
 reqwest = { version = "0.11", features = ["blocking"] }
-clap = { version = "3.1.6", features = ["derive"] }
-tokio = { version = "1.1", features = ["macros", "rt", "time"] }
-env_logger = "0.9.0"
-borsh = "0.9.3"
-futures = { version = "0.3.21" }
-async-std = "1.12.0"
-hex = "*"
 toml = "0.5.9"
-atomic_refcell = "0.1.8"
-bitvec = "*"
+
