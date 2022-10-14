@@ -357,6 +357,7 @@ async function vanchorDeposit(
     ),
     extDataHash: data.extDataHash,
   };
+  //@ts-ignore
   const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
     Number(treeId)
   );

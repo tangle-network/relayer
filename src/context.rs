@@ -16,10 +16,6 @@
 //! # Relayer Context Module 🕸️
 //!
 //! A module for managing the context of the relayer.
-#[cfg(feature = "cosmwasm")]
-use cosmrs::rpc::HttpClient;
-#[cfg(feature = "cosmwasm")]
-use cosmrs::AccountId;
 use std::convert::TryFrom;
 use std::time::Duration;
 
@@ -29,12 +25,11 @@ use webb::evm::ethers::prelude::*;
 use webb::substrate::subxt;
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
 
-use crate::config;
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
 pub struct RelayerContext {
     /// The configuration of the relayer.
-    pub config: config::WebbRelayerConfig,
+    pub config: webb_relayer_config::WebbRelayerConfig,
     /// Broadcasts a shutdown signal to all active connections.
     ///
     /// The initial `shutdown` trigger is provided by the `run` caller. The
@@ -48,7 +43,7 @@ pub struct RelayerContext {
 
 impl RelayerContext {
     /// Creates a new RelayerContext.
-    pub fn new(config: config::WebbRelayerConfig) -> Self {
+    pub fn new(config: webb_relayer_config::WebbRelayerConfig) -> Self {
         let (notify_shutdown, _) = broadcast::channel(2);
         Self {
             config,
@@ -129,7 +124,7 @@ impl RelayerContext {
     ///
     /// ```
     /// let chain_id = "4".to_string();
-    /// let client = ctx.substrate_provider::<subxt::Config::PolkadotConfig>(chain_id).await?;
+    /// let client = ctx.substrate_provider::<subxt::webb_relayer_Config::PolkadotConfig>(chain_id).await?;
     /// ```
     pub async fn substrate_provider<C: subxt::Config>(
         &self,
@@ -173,63 +168,6 @@ impl RelayerContext {
             })?;
         let suri_key = node_config.suri.ok_or(crate::Error::MissingSecrets)?;
         Ok(suri_key.into())
-    }
-    /// Returns a new `CosmosProvider` for the relayer.
-    ///
-    /// # Arguments
-    ///
-    /// * `chain_id` - A string representing the chain id.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let chain_name = "localterra".to_string();
-    /// let provider = ctx.cosmos_provider(chain_name).await?;
-    /// ```
-    #[cfg(feature = "cosmwasm")]
-    pub async fn cosmos_provider(
-        &self,
-        chain_id: &str,
-    ) -> crate::Result<HttpClient> {
-        let chain_config =
-            self.config.cosmwasm.get(chain_id).ok_or_else(|| {
-                crate::Error::ChainNotFound {
-                    chain_id: chain_id.to_string(),
-                }
-            })?;
-        let provider = HttpClient::new(chain_config.http_endpoint.as_str())
-            .map_err(|_| {
-                crate::Error::Generic("Cannot create cosmos provider")
-            })?;
-        Ok(provider)
-    }
-    /// Sets up and returns an Cosmos-SDK wallet for the relayer.
-    ///
-    /// # Arguments
-    ///
-    /// * `chain_id` - A string representing the chain id.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let chain_name = "localterra".to_string();
-    /// let wallet = self.ctx.cosmos_wallet(&self.chain_name).await?;
-    /// ```
-    #[cfg(feature = "cosmwasm")]
-    pub async fn cosmos_wallet(
-        &self,
-        chain_name: &str,
-    ) -> crate::Result<AccountId> {
-        let chain_config =
-            self.config.cosmwasm.get(chain_name).ok_or_else(|| {
-                crate::Error::ChainNotFound {
-                    chain_id: chain_name.to_string(),
-                }
-            })?;
-        let _mnemonic = &chain_config.mnemonic;
-        let account_id = AccountId::new("juno", &[])
-            .map_err(|_| crate::Error::Generic("Cannot setup wallet"))?;
-        Ok(account_id)
     }
 }
 

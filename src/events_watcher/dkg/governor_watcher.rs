@@ -14,13 +14,12 @@
 //
 use std::sync::Arc;
 
-use crate::config;
-use crate::store::sled::{SledQueueKey, SledStore};
-use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 use ethereum_types::U256;
 use webb::substrate::dkg_runtime::api as RuntimeApi;
 use webb::substrate::dkg_runtime::{self, api::dkg};
 use webb::substrate::subxt::{self, OnlineClient};
+use webb_relayer_store::sled::{SledQueueKey, SledStore};
+use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};
 
 use super::{BlockNumberOf, SubstrateEventWatcher};
 
@@ -28,11 +27,11 @@ use super::{BlockNumberOf, SubstrateEventWatcher};
 /// It watches for the DKG Public Key changes and try to update the signature bridge governor.
 #[derive(Clone, Debug)]
 pub struct DKGGovernorWatcher {
-    webb_config: config::WebbRelayerConfig,
+    webb_config: webb_relayer_config::WebbRelayerConfig,
 }
 
 impl DKGGovernorWatcher {
-    pub fn new(webb_config: config::WebbRelayerConfig) -> Self {
+    pub fn new(webb_config: webb_relayer_config::WebbRelayerConfig) -> Self {
         Self { webb_config }
     }
 }
@@ -64,7 +63,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
 
         // Note: here we need to get the public key from the storage at the moment of that event.
         let at_hash_addrs =
-            RuntimeApi::storage().system().block_hash(&block_number);
+            RuntimeApi::storage().system().block_hash(block_number);
 
         let at_hash = api.storage().fetch(&at_hash_addrs, None).await?.unwrap();
         let dkg_public_key_addrs = RuntimeApi::storage().dkg().dkg_public_key();

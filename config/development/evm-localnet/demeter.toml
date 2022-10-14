@@ -33,7 +33,6 @@ enabled = true
 # Block which represents the configuration for a supported contract on the network
 [[evm.demeter.contracts]]
 # The contract can be one of these values
-# - Anchor (Fixed Anchor)
 # - VAnchor (Variable Anchor)
 # - SignatureBridge
 contract = "VAnchor"

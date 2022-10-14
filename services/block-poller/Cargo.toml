@@ -1,0 +1,44 @@
+[package]
+name = "webb-block-poller"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+doctest = false
+
+[[bin]]
+name = "webb-block-poller"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[dependencies]
+webb-relayer-store = { path = "../../crates/relayer-store" }
+webb-relayer-config = { path = "../../crates/relayer-config"}
+webb-relayer-utils = { path = "../../crates/relayer-utils" }
+webb-relayer = { path = "../../" }
+anyhow = { version = "^1", optional = true }
+async-trait = "^0.1"
+tracing = { version = "^0.1", features = ["log"] }
+futures = { version = "^0.3", default-features = false }
+backoff = { version = "0.4.0", features = ["tokio"] }
+tokio = { version = "^1", features = ["full"] }
+serde_json = { version = "^1", default-features = false }
+paw = { version = "^1.0", optional = true }
+webb = { version = "0.5.7", default-features = false }
+ethereum-types = "0.13.1"
+dotenv = "0.15.0"
+
+[dev-dependencies]
+tempfile = "^3.2"
+colored = "2"
+
+[features]
+default = ["cli"]
+cli = [
+    "anyhow",
+    "paw",
+    "webb-relayer-config/cli"
+]
+integration-tests = ["webb-relayer-config/integration-tests"]

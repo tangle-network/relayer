@@ -13,15 +13,15 @@
 // limitations under the License.
 //
 use super::{HttpProvider, VAnchorContractWrapper};
-use crate::config::LinkedAnchorConfig;
 use crate::events_watcher::proposal_handler;
 use crate::proposal_signing_backend::ProposalSigningBackend;
-use crate::store::sled::SledStore;
-use crate::store::EventHashStore;
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb_relayer_config::anchor::LinkedAnchorConfig;
+use webb_relayer_store::EventHashStore;
+use webb_relayer_store::SledStore;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {

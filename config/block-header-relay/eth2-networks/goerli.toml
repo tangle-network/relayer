@@ -1,0 +1,22 @@
+[evm.goerli]
+enabled=true
+# The name that the chain is indexed on, for linkable anchors
+name = "goerli-testnet"
+# Http(s) Endpoint for quick Req/Res
+http-endpoint = "$GOERLI_HTTP_URL"
+# Websocket Endpoint for long living connections
+ws-endpoint = "$GOERLI_WS_URL"
+# chain specific id from evm opcode
+chain-id = 5002
+
+[evm.goerli.block-poller]
+# The starting block to listen at.
+start-block = 7382817
+# Polling interval in milliseconds
+polling-interval = 7000
+# The maximum blocks per step.
+max-blocks-per-step = 1
+# The print progress interval.
+print-progress-interval = 60_000
+# Light client RPC url
+light-client-rpc-url = "$GOERLI_LIGHT_CLIENT_RPC_URL"

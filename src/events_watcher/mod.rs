@@ -44,8 +44,8 @@ use webb::{
     },
 };
 
-use crate::store::sled::SledQueueKey;
-use crate::store::{
+use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_store::{
     BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
     QueueStore,
 };
@@ -62,13 +62,11 @@ pub mod substrate;
 #[doc(hidden)]
 pub mod evm;
 
-/// A module that contains helpers for retry logic.
-#[doc(hidden)]
-mod retry;
-
 /// A module to handel proposals
 #[doc(hidden)]
 mod proposal_handler;
+
+use webb_relayer_utils::retry;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
@@ -722,10 +720,10 @@ where
 mod tests {
     use std::sync::Arc;
 
-    use crate::store::sled::SledStore;
     use webb::substrate::dkg_runtime;
     use webb::substrate::dkg_runtime::api::system;
     use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
+    use webb_relayer_store::sled::SledStore;
 
     use super::*;
 
