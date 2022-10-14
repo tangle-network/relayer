@@ -1,0 +1,16 @@
+[package]
+name = "webb-relayer-types"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tracing = { version = "^0.1", features = ["log"] }
+url = { version = "^2.2", features = ["serde"] }
+serde = { version = "^1", default-features = false, features = ["derive"] }
+webb = { version = "0.5.7", default-features = false }
+ethereum-types = "0.13.1"
+derive_more = { version = "0.99", default-features = false, features = ["display"] }
+tiny-keccak = { version = "2.0.2", features = ["sha3"] }
+tiny-bip39 = "1.0.0"

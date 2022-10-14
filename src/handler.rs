@@ -38,11 +38,11 @@ use webb::substrate::subxt::ext::{sp_core::Pair, sp_runtime::AccountId32};
 
 use crate::context::RelayerContext;
 use crate::metric::Metrics;
-use crate::store::{EncryptedOutputCacheStore, LeafCacheStore};
 use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
 use crate::tx_relay::{MixerRelayTransaction, VAnchorRelayTransaction};
+use webb_relayer_store::{EncryptedOutputCacheStore, LeafCacheStore};
 
 /// A wrapper type around [`I256`] that implements a correct way for [`Serialize`] and [`Deserialize`].
 ///
@@ -235,7 +235,7 @@ pub async fn handle_relayer_info(
     #[serde(rename_all = "camelCase")]
     struct RelayerInformationResponse {
         #[serde(flatten)]
-        config: crate::config::WebbRelayerConfig,
+        config: webb_relayer_config::WebbRelayerConfig,
     }
     // clone the original config, to update it with accounts.
     let mut config = ctx.config.clone();
@@ -274,7 +274,7 @@ pub async fn handle_relayer_info(
 /// * `contract` - An address of the contract to query
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_evm(
-    store: Arc<crate::store::sled::SledStore>,
+    store: Arc<webb_relayer_store::sled::SledStore>,
     chain_id: U256,
     contract: Address,
     ctx: Arc<RelayerContext>,
@@ -324,7 +324,7 @@ pub async fn handle_leaves_cache_evm(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            crate::config::Contract::VAnchor(c) => {
+            webb_relayer_config::evm::Contract::VAnchor(c) => {
                 Some((c.common.address, c.events_watcher))
             }
             _ => None,
@@ -388,7 +388,7 @@ pub async fn handle_leaves_cache_evm(
 /// * `contract` - An address of the contract to query
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_substrate(
-    store: Arc<crate::store::sled::SledStore>,
+    store: Arc<webb_relayer_store::sled::SledStore>,
     chain_id: U256,
     tree_id: u32,
     ctx: Arc<RelayerContext>,
@@ -448,7 +448,7 @@ pub async fn handle_leaves_cache_substrate(
 /// * `contract` - An address of the contract to query
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_cosmwasm(
-    store: Arc<crate::store::sled::SledStore>,
+    store: Arc<webb_relayer_store::sled::SledStore>,
     chain_id: U256,
     contract: String,
     ctx: Arc<RelayerContext>,
@@ -498,7 +498,7 @@ pub async fn handle_leaves_cache_cosmwasm(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            crate::config::CosmwasmContract::VAnchor(c) => {
+            webb_relayer_config::cosmwasm::CosmwasmContract::VAnchor(c) => {
                 Some((c.common.address, c.events_watcher))
             }
             _ => None,
@@ -566,7 +566,7 @@ pub async fn handle_leaves_cache_cosmwasm(
 /// * `contract` - An address of the contract to query
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_encrypted_outputs_cache_evm(
-    store: Arc<crate::store::sled::SledStore>,
+    store: Arc<webb_relayer_store::sled::SledStore>,
     chain_id: U256,
     contract: Address,
     ctx: Arc<RelayerContext>,
@@ -616,7 +616,7 @@ pub async fn handle_encrypted_outputs_cache_evm(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            crate::config::Contract::VAnchor(c) => {
+            webb_relayer_config::evm::Contract::VAnchor(c) => {
                 Some((c.common.address, c.events_watcher))
             }
             _ => None,
@@ -676,11 +676,6 @@ pub async fn handle_encrypted_outputs_cache_evm(
 /// Handles relayer metric requests
 ///
 /// Returns a Result with the `MetricResponse` on success
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// Enumerates the supported commands for chain specific relayers
 pub async fn handle_metric_info() -> Result<impl warp::Reply, Infallible> {
     #[derive(Debug, Serialize)]
     #[serde(rename_all = "camelCase")]

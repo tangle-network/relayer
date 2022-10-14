@@ -45,8 +45,8 @@ use webb::{
     },
 };
 
-use crate::store::sled::SledQueueKey;
-use crate::store::{
+use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_store::{
     BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
     QueueStore,
 };
@@ -63,13 +63,11 @@ pub mod substrate;
 #[doc(hidden)]
 pub mod evm;
 
-/// A module that contains helpers for retry logic.
-#[doc(hidden)]
-mod retry;
-
 /// A module to handel proposals
 #[doc(hidden)]
 mod proposal_handler;
+
+use webb_relayer_utils::retry;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
@@ -416,14 +414,14 @@ where
                         // this a transient error, so we will retry again.
                         tracing::warn!("Restarting bridge event watcher ...");
                         // metric for when the bridge watcher enters back off
-                        metrics.bridge_watcher_back_off_metric.inc();
+                        metrics.bridge_watcher_back_off.inc();
                         return Err(backoff::Error::transient(e));
                     }
                 }
             }
         };
         // Bridge watcher backoff metric
-        metrics.bridge_watcher_back_off_metric.inc();
+        metrics.bridge_watcher_back_off.inc();
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }
@@ -646,7 +644,7 @@ pub trait SubstrateEventWatcher {
             }
         };
         // Bridge watcher backoff metric
-        metrics.bridge_watcher_back_off_metric.inc();
+        metrics.bridge_watcher_back_off.inc();
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }
@@ -744,6 +742,7 @@ mod tests {
     use webb::substrate::dkg_runtime;
     use webb::substrate::dkg_runtime::api::system;
     use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
+    use webb_relayer_store::sled::SledStore;
 
     use super::*;
 

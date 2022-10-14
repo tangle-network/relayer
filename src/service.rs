@@ -29,8 +29,16 @@ use webb::evm::ethers::providers;
 
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
+use webb_relayer_config::anchor::LinkedAnchorConfig;
+use webb_relayer_config::evm::{
+    Contract, SignatureBridgeContractConfig, VAnchorContractConfig,
+};
+use webb_relayer_config::signing_backend::ProposalSigningBackendConfig;
+use webb_relayer_config::substrate::{
+    DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet,
+    SignatureBridgePalletConfig, SubstrateRuntime, VAnchorBn254PalletConfig,
+};
 
-use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::dkg::*;
 use crate::events_watcher::evm::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
@@ -38,17 +46,17 @@ use crate::events_watcher::evm::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
 use crate::proposal_signing_backend::*;
-use crate::store::sled::SledStore;
 use crate::tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
+use webb_relayer_store::SledStore;
 
 /// Type alias for providers
-type Client = providers::Provider<providers::Http>;
+pub type Client = providers::Provider<providers::Http>;
 /// Type alias for the DKG DefaultConfig
 type DkgClient = OnlineClient<PolkadotConfig>;
 /// Type alias for the WebbProtocol DefaultConfig
 type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 /// Type alias for [Sled](https://sled.rs)-based database store
-type Store = crate::store::sled::SledStore;
+pub type Store = webb_relayer_store::sled::SledStore;
 
 /// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
 /// instantiates the database store. Allows clients to interact with the relayer.
@@ -69,7 +77,7 @@ type Store = crate::store::sled::SledStore;
 /// ```
 pub fn build_web_services(
     ctx: RelayerContext,
-    store: crate::store::sled::SledStore,
+    store: webb_relayer_store::sled::SledStore,
 ) -> crate::Result<(
     std::net::SocketAddr,
     impl core::future::Future<Output = ()> + 'static,
@@ -158,27 +166,6 @@ pub fn build_web_services(
             )
         })
         .boxed();
-    // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
-    // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let cosmwasm_store = Arc::new(store.clone());
-    let store_filter =
-        warp::any().map(move || Arc::clone(&cosmwasm_store)).boxed();
-    let ctx_arc = Arc::new(ctx.clone());
-    let leaves_cache_filter_cosmwasm = warp::path("leaves")
-        .and(warp::path("cosmwasm"))
-        .and(store_filter)
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and_then(move |store, chain_id, contract| {
-            crate::handler::handle_leaves_cache_cosmwasm(
-                store,
-                chain_id,
-                contract,
-                Arc::clone(&ctx_arc),
-            )
-        })
-        .boxed();
 
     let evm_store = Arc::new(store);
     let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
@@ -208,7 +195,6 @@ pub fn build_web_services(
         .or(info_filter)
         .or(leaves_cache_filter_evm)
         .or(leaves_cache_filter_substrate)
-        .or(leaves_cache_filter_cosmwasm)
         .or(encrypted_output_cache_filter_evm)
         .or(relayer_metrics_info)
         .boxed(); // will add more routes here.
@@ -315,7 +301,7 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -325,7 +311,7 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -360,7 +346,7 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -370,7 +356,7 @@ pub async fn ignite(
                                 ctx.clone(),
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )
@@ -439,7 +425,7 @@ fn start_substrate_vanchor_event_watcher(
     let task = async move {
         let watcher = SubstrateVAnchorLeavesWatcher::default();
         let substrate_leaves_watcher_task = watcher.run(
-            node_name.clone(),
+            node_name.to_owned(),
             chain_id,
             client.clone().into(),
             store.clone(),
@@ -463,7 +449,7 @@ fn start_substrate_vanchor_event_watcher(
                     my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.clone(),
+                    node_name.to_owned(),
                     chain_id,
                     client.clone().into(),
                     store.clone(),
@@ -498,7 +484,7 @@ fn start_substrate_vanchor_event_watcher(
                     my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.clone(),
+                    node_name.to_owned(),
                     chain_id,
                     client.into(),
                     store.clone(),
@@ -916,7 +902,7 @@ async fn start_substrate_signature_bridge_events_watcher(
         let substrate_bridge_watcher = SubstrateBridgeEventWatcher::default();
         let events_watcher_task = SubstrateEventWatcher::run(
             &substrate_bridge_watcher,
-            node_name.clone(),
+            node_name.to_owned(),
             chain_id,
             client.clone().into(),
             store.clone(),

@@ -86,12 +86,8 @@
 //! * `substrate-runtime`: Enables the substrate runtime. By default, this is enabled.
 //! * `integration-tests`: Enables integration tests. By default, this is disabled.
 
-/// A module for configuring the relayer.
-pub mod config;
 /// A module for managing the context of the relayer.
 pub mod context;
-/// A module containing all possible error types.
-pub mod error;
 /// A module that listens for events on a given chain.
 pub mod events_watcher;
 /// A module containing a collection of executable routines.
@@ -104,15 +100,9 @@ pub mod probe;
 pub mod proposal_signing_backend;
 /// A module for starting long-running tasks for event watching.
 pub mod service;
-/// A module for managing the storage of the relayer.
-pub mod store;
 /// A module for managing the transaction queue for the relayer.
 pub mod tx_queue;
 /// Transaction relaying handlers
 pub mod tx_relay;
-/// Types and basic trait implementations for commonly used structs/types
-pub mod types;
-/// A module for common functionality.
-pub mod utils;
 
-pub use crate::error::{Error, Result};
+pub use webb_relayer_utils::{Error, Result};

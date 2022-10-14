@@ -15,12 +15,12 @@
 use std::sync::Arc;
 
 use crate::metric;
-use crate::store::sled::{SledQueueKey, SledStore};
-use crate::store::{BridgeCommand, BridgeKey, QueueStore};
 use webb::substrate::dkg_runtime;
 use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::subxt::{self, OnlineClient};
+use webb_relayer_store::sled::{SledQueueKey, SledStore};
+use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};
 
 use super::{BlockNumberOf, SubstrateEventWatcher};
 
@@ -141,7 +141,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
             signature = ?hex::encode(&event.signature),
         );
         // Proposal signed metric
-        metrics.proposals_signed_metric.inc();
+        metrics.proposals_signed.inc();
         store.enqueue_item(
             SledQueueKey::from_bridge_key(bridge_key),
             BridgeCommand::ExecuteProposalWithSignature {

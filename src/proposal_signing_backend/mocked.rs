@@ -1,7 +1,4 @@
 use crate::metric;
-use crate::store::sled::SledQueueKey;
-use crate::store::{BridgeCommand, BridgeKey, QueueStore};
-use crate::types::private_key::PrivateKey;
 use ethereum_types::H256;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -10,6 +7,9 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::utils::keccak256;
 use webb_proposals::{ProposalTrait, ResourceId, TypedChainId};
+use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};
+use webb_relayer_types::private_key::PrivateKey;
 
 /// A ProposalSigningBackend that uses the Governor's private key to sign proposals.
 #[derive(TypedBuilder)]
@@ -83,7 +83,7 @@ where
             signature = ?hex::encode(&signature_bytes),
         );
         // Proposal signed metric
-        metrics.proposals_signed_metric.inc();
+        metrics.proposals_signed.inc();
         // now all we have to do is to send the data and the signature to the signature bridge.
         self.store.enqueue_item(
             SledQueueKey::from_bridge_key(bridge_key),

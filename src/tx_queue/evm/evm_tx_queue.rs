@@ -23,9 +23,9 @@ use webb::evm::ethers::middleware::SignerMiddleware;
 use webb::evm::ethers::providers::Middleware;
 
 use crate::context::RelayerContext;
-use crate::store::sled::SledQueueKey;
-use crate::store::QueueStore;
-use crate::utils::ClickableLink;
+use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_store::QueueStore;
+use webb_relayer_utils::clickable_link::ClickableLink;
 
 /// The TxQueue stores transaction requests so the relayer can process them later.
 /// This prevents issues such as creating transactions with the same nonce.
@@ -122,7 +122,7 @@ where
             .map_err(|_| crate::Error::Generic("Failed to get gas price"))
             .await?;
         // gas spent metric
-        metrics.gas_spent_metric.inc_by(gas_price.as_u64() as f64);
+        metrics.gas_spent.inc_by(gas_price.as_u64() as f64);
 
         let task = || async {
             loop {
@@ -254,10 +254,8 @@ where
                                 );
                             }
                             // metrics for  transaction processed by evm tx queue
-                            metrics.proposals_processed_tx_queue_metric.inc();
-                            metrics
-                                .proposals_processed_evm_tx_queue_metric
-                                .inc();
+                            metrics.proposals_processed_tx_queue.inc();
+                            metrics.proposals_processed_evm_tx_queue.inc();
                             tracing::event!(
                                 target: crate::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -330,8 +328,8 @@ where
             }
         };
         // transaction queue backoff metric
-        metrics.transaction_queue_back_off_metric.inc();
-        metrics.evm_transaction_queue_back_off_metric.inc();
+        metrics.transaction_queue_back_off.inc();
+        metrics.evm_transaction_queue_back_off.inc();
         backoff::future::retry::<(), _, _, _, _>(backoff, task).await?;
         Ok(())
     }
