@@ -734,11 +734,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
-    use crate::config::WebbRelayerConfig;
     use crate::context::RelayerContext;
-    use crate::store::sled::SledStore;
+    use std::sync::Arc;
     use webb::substrate::dkg_runtime;
     use webb::substrate::dkg_runtime::api::system;
     use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
@@ -787,7 +784,7 @@ mod tests {
         let store = Arc::new(SledStore::temporary()?);
         let client = OnlineClient::<PolkadotConfig>::new().await?;
         let watcher = RemarkedEventWatcher::default();
-        let config = WebbRelayerConfig::default();
+        let config = webb_relayer_config::WebbRelayerConfig::default();
         let ctx = RelayerContext::new(config);
         let metrics = ctx.metrics.clone();
         watcher
