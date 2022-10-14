@@ -60,6 +60,7 @@ dotenv = "0.15.0"
 derive_more = { version = "0.99", default-features = false, features = ["display"] }
 typed-builder = "0.10.0"
 libsecp256k1 = "0.7.0"
+prometheus = "0.13.2"
 
 [dev-dependencies]
 tempfile = "^3.2"

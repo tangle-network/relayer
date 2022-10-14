@@ -17,6 +17,7 @@
 //!
 //! A module for managing the context of the relayer.
 use std::convert::TryFrom;
+use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::sync::broadcast;
@@ -24,6 +25,9 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::substrate::subxt;
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
+
+use crate::metric;
+use crate::metric::Metrics;
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
@@ -39,15 +43,19 @@ pub struct RelayerContext {
     /// the broadcast::Sender. Each active connection receives it, reaches a
     /// safe terminal state, and completes the task.
     notify_shutdown: broadcast::Sender<()>,
+    /// Represents the metrics for the relayer
+    pub metrics: Arc<metric::Metrics>,
 }
 
 impl RelayerContext {
     /// Creates a new RelayerContext.
     pub fn new(config: webb_relayer_config::WebbRelayerConfig) -> Self {
         let (notify_shutdown, _) = broadcast::channel(2);
+        let metrics = Arc::new(Metrics::new());
         Self {
             config,
             notify_shutdown,
+            metrics,
         }
     }
     /// Returns a broadcast receiver handle for the shutdown signal.

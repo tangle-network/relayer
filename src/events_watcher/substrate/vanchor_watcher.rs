@@ -14,6 +14,7 @@
 //
 use super::BlockNumberOf;
 use crate::events_watcher::proposal_handler;
+use crate::metric;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use std::sync::Arc;
 use webb::substrate::protocol_substrate_runtime;
@@ -68,6 +69,7 @@ where
         store: Arc<Self::Store>,
         api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         tracing::debug!(
             event = ?event,
@@ -123,7 +125,8 @@ where
                 }
                 _ => unreachable!("unsupported"),
             };
-
+            // Proposal proposed metric
+            metrics.anchor_update_proposals.inc();
             let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
@@ -135,6 +138,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -149,6 +153,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -157,6 +162,7 @@ where
         // mark this event as processed.
         let events_bytes = &event.encode();
         store.store_event(events_bytes)?;
+        metrics.total_transaction_made.inc();
         Ok(())
     }
 }

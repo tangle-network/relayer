@@ -185,12 +185,18 @@ pub fn build_web_services(
         })
         .boxed();
 
+    let relayer_metrics_info = warp::path("metrics")
+        .and(warp::get())
+        .and_then(crate::handler::handle_metric_info)
+        .boxed();
+
     // Code that will map the request handlers above to a defined http endpoint.
     let routes = ip_filter
         .or(info_filter)
         .or(leaves_cache_filter_evm)
         .or(leaves_cache_filter_substrate)
         .or(encrypted_output_cache_filter_evm)
+        .or(relayer_metrics_info)
         .boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();
@@ -415,6 +421,7 @@ fn start_substrate_vanchor_event_watcher(
     let my_ctx = ctx.clone();
     let my_config = config.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
+    let metrics = ctx.metrics.clone();
     let task = async move {
         let watcher = SubstrateVAnchorLeavesWatcher::default();
         let substrate_leaves_watcher_task = watcher.run(
@@ -422,6 +429,7 @@ fn start_substrate_vanchor_event_watcher(
             chain_id,
             client.clone().into(),
             store.clone(),
+            metrics.clone(),
         );
         let proposal_signing_backend = make_substrate_proposal_signing_backend(
             &my_ctx,
@@ -445,6 +453,7 @@ fn start_substrate_vanchor_event_watcher(
                     chain_id,
                     client.clone().into(),
                     store.clone(),
+                    metrics.clone(),
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
@@ -479,6 +488,7 @@ fn start_substrate_vanchor_event_watcher(
                     chain_id,
                     client.into(),
                     store.clone(),
+                    metrics.clone(),
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
@@ -559,10 +569,16 @@ fn start_dkg_proposal_handler(
     );
     let node_name2 = node_name.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
+    let metrics = ctx.metrics.clone();
     let task = async move {
         let proposal_handler = ProposalHandlerWatcher::default();
-        let watcher =
-            proposal_handler.run(node_name, chain_id, client.into(), store);
+        let watcher = proposal_handler.run(
+            node_name,
+            chain_id,
+            client.into(),
+            store,
+            metrics,
+        );
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -615,10 +631,16 @@ fn start_dkg_pallet_watcher(
     let node_name2 = node_name.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
     let webb_config = ctx.config.clone();
+    let metrics = ctx.metrics.clone();
     let task = async move {
         let governor_watcher = DKGGovernorWatcher::new(webb_config);
-        let watcher =
-            governor_watcher.run(node_name, chain_id, client.into(), store);
+        let watcher = governor_watcher.run(
+            node_name,
+            chain_id,
+            client.into(),
+            store,
+            metrics,
+        );
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -701,6 +723,7 @@ async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -731,6 +754,7 @@ async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -759,6 +783,7 @@ async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -802,6 +827,7 @@ async fn start_signature_bridge_events_watcher(
     let contract_address = config.common.address;
     let wrapper =
         SignatureBridgeContractWrapper::new(config.clone(), client.clone());
+    let metrics = ctx.metrics.clone();
     let task = async move {
         tracing::debug!(
             "Signature Bridge watcher for ({}) Started.",
@@ -816,12 +842,14 @@ async fn start_signature_bridge_events_watcher(
             store.clone(),
             wrapper.clone(),
             vec![Box::new(governance_transfer_handler)],
+            metrics.clone(),
         );
         let cmd_handler_task = BridgeWatcher::run(
             &bridge_contract_watcher,
             client,
             store,
             wrapper,
+            metrics.clone(),
         );
         tokio::select! {
             _ = events_watcher_task => {
@@ -878,6 +906,7 @@ async fn start_substrate_signature_bridge_events_watcher(
             chain_id,
             client.clone().into(),
             store.clone(),
+            ctx.metrics.clone(),
         );
         let cmd_handler_task = SubstrateBridgeWatcher::run(
             &substrate_bridge_watcher,

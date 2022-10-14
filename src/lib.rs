@@ -92,6 +92,8 @@ pub mod context;
 pub mod events_watcher;
 /// A module containing a collection of executable routines.
 pub mod handler;
+/// Metrics functionality
+pub mod metric;
 /// A module used for debugging relayer lifecycle, sync state, or other relayer state.
 pub mod probe;
 /// A module containing proposal signing backend (dkg and mocked).

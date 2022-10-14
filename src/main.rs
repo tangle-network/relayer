@@ -18,7 +18,10 @@
 #![warn(missing_docs)]
 
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::signal::unix;
+use tokio::time;
+
 use webb_relayer::context::RelayerContext;
 use webb_relayer_config::cli::{create_store, load_config, setup_logger, Opts};
 
@@ -50,6 +53,21 @@ async fn main(args: Opts) -> anyhow::Result<()> {
 
     // persistent storage for the relayer
     let store = create_store(&args).await?;
+    let cloned_store = store.clone();
+    let cloned_ctx = ctx.clone();
+    // metric for data stored which is determined every 1 hour
+    let sled_metric_task_handle = tokio::task::spawn(async move {
+        let mut sled_data_metric_interval =
+            time::interval(Duration::from_secs(3600));
+        loop {
+            sled_data_metric_interval.tick().await;
+            // set data stored
+            cloned_ctx
+                .metrics
+                .total_amount_of_data_stored
+                .set(cloned_store.get_data_stored_size() as f64)
+        }
+    });
 
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
@@ -79,10 +97,13 @@ async fn main(args: Opts) -> anyhow::Result<()> {
             shutdown = true
         );
         tracing::warn!("Shutting down...");
+        // shut down storage fetching
         // send shutdown signal to all of the application.
         ctx.shutdown();
         // also abort the server task
         server_handle.abort();
+        // abort get sled storage data task
+        sled_metric_task_handle.abort();
         std::thread::sleep(std::time::Duration::from_millis(300));
         tracing::info!("Clean Exit ..");
     };

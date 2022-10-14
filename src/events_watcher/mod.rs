@@ -30,6 +30,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::metric;
 use webb::substrate::subxt::client::OfflineClientT;
 use webb::{
     evm::ethers::{
@@ -122,6 +123,7 @@ pub trait EventWatcher {
         store: Arc<Self::Store>,
         contract: Self::Contract,
         handlers: Vec<EventHandlerFor<Self>>,
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
@@ -182,6 +184,7 @@ pub trait EventWatcher {
                                 &contract,
                                 (event.clone(), log.clone()),
                                 backoff,
+                                metrics.clone(),
                             )
                         });
                         let result = futures::future::join_all(tasks).await;
@@ -295,6 +298,7 @@ pub trait EventHandler {
         store: Arc<Self::Store>,
         contract: &Self::Contract,
         (event, log): (Self::Events, contract::LogMeta),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()>;
 }
 
@@ -319,12 +323,14 @@ pub trait EventHandlerWithRetry: EventHandler {
         contract: &Self::Contract,
         (event, log): (Self::Events, contract::LogMeta),
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         let wrapped_task = || {
             self.handle_event(
                 store.clone(),
                 contract,
                 (event.clone(), log.clone()),
+                metrics.clone(),
             )
             .map_err(backoff::Error::transient)
         };
@@ -372,6 +378,7 @@ where
         client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
@@ -406,11 +413,15 @@ where
                         tracing::error!("Error while handle_cmd {}", e);
                         // this a transient error, so we will retry again.
                         tracing::warn!("Restarting bridge event watcher ...");
+                        // metric for when the bridge watcher enters back off
+                        metrics.bridge_watcher_back_off.inc();
                         return Err(backoff::Error::transient(e));
                     }
                 }
             }
         };
+        // Bridge watcher backoff metric
+        metrics.bridge_watcher_back_off.inc();
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }
@@ -446,6 +457,7 @@ pub trait SubstrateEventWatcher {
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()>;
 
     /// Returns a task that should be running in the background
@@ -464,6 +476,7 @@ pub trait SubstrateEventWatcher {
         chain_id: U256,
         client: Arc<Self::Client>,
         store: Arc<Self::Store>,
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
@@ -559,6 +572,7 @@ pub trait SubstrateEventWatcher {
                                 store.clone(),
                                 client.clone(),
                                 (event, block_number),
+                                metrics.clone(),
                             )
                             .await;
                         match result {
@@ -629,6 +643,8 @@ pub trait SubstrateEventWatcher {
                 }
             }
         };
+        // Bridge watcher backoff metric
+        metrics.bridge_watcher_back_off.inc();
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }
@@ -718,8 +734,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::context::RelayerContext;
     use std::sync::Arc;
-
     use webb::substrate::dkg_runtime;
     use webb::substrate::dkg_runtime::api::system;
     use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
@@ -748,6 +764,7 @@ mod tests {
             _store: Arc<Self::Store>,
             _client: Arc<Self::Client>,
             (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+            _metrics: Arc<metric::Metrics>,
         ) -> crate::Result<()> {
             tracing::debug!(
                 "Received `Remarked` Event: {:?} at block number: #{}",
@@ -767,8 +784,11 @@ mod tests {
         let store = Arc::new(SledStore::temporary()?);
         let client = OnlineClient::<PolkadotConfig>::new().await?;
         let watcher = RemarkedEventWatcher::default();
+        let config = webb_relayer_config::WebbRelayerConfig::default();
+        let ctx = RelayerContext::new(config);
+        let metrics = ctx.metrics.clone();
         watcher
-            .run(node_name, chain_id, client.into(), store)
+            .run(node_name, chain_id, client.into(), store, metrics)
             .await?;
         Ok(())
     }

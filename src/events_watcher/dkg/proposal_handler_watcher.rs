@@ -14,6 +14,7 @@
 //
 use std::sync::Arc;
 
+use crate::metric;
 use webb::substrate::dkg_runtime;
 use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
@@ -47,6 +48,7 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         store: Arc<Self::Store>,
         _api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         tracing::event!(
             target: crate::probe::TARGET,
@@ -138,6 +140,8 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
             data = ?hex::encode(&event.data),
             signature = ?hex::encode(&event.signature),
         );
+        // Proposal signed metric
+        metrics.proposals_signed.inc();
         store.enqueue_item(
             SledQueueKey::from_bridge_key(bridge_key),
             BridgeCommand::ExecuteProposalWithSignature {

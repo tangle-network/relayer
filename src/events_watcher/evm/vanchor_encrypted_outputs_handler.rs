@@ -14,6 +14,7 @@
 //
 
 use super::{HttpProvider, VAnchorContractWrapper};
+use crate::metric;
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
@@ -40,6 +41,7 @@ impl super::EventHandler for VAnchorEncryptedOutputHandler {
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         use VAnchorContractEvents::*;
         match event {

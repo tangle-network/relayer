@@ -31,6 +31,7 @@ use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
 use webb::substrate::scale;
 use webb::substrate::scale::Encode;
+use crate::metric;
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use std::borrow::Cow;
 
@@ -57,6 +58,7 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
         _store: Arc<Self::Store>,
         _api: Arc<Self::Client>,
         (event, _block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         // todo
         // if the ownership is transferred to the new owner, we need to

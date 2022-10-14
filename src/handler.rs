@@ -37,6 +37,7 @@ use webb::evm::ethers::{
 use webb::substrate::subxt::ext::{sp_core::Pair, sp_runtime::AccountId32};
 
 use crate::context::RelayerContext;
+use crate::metric::Metrics;
 use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
@@ -671,7 +672,27 @@ pub async fn handle_encrypted_outputs_cache_evm(
         warp::http::StatusCode::OK,
     ))
 }
-/// Enumerates the supported commands for chain specific relayers
+
+/// Handles relayer metric requests
+///
+/// Returns a Result with the `MetricResponse` on success
+pub async fn handle_metric_info() -> Result<impl warp::Reply, Infallible> {
+    #[derive(Debug, Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct RelayerMetricResponse {
+        metrics: String,
+    }
+
+    let metric_gathered = Metrics::gather_metrics();
+    Ok(warp::reply::with_status(
+        warp::reply::json(&RelayerMetricResponse {
+            metrics: metric_gathered,
+        }),
+        warp::http::StatusCode::OK,
+    ))
+}
+
+/// Type of Command to use
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum Command {

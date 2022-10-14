@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use futures::StreamExt;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
@@ -5,6 +6,7 @@ use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
 use webb_proposals::{ProposalTrait};
 use webb::substrate::scale::{Encode, Decode};
+use crate::metric;
 use webb::substrate::subxt::tx::{PairSigner, TxStatus as TransactionStatus};
 use webb::substrate::dkg_runtime::api as RuntimeApi;
 type DkgConfig = PolkadotConfig;
@@ -77,6 +79,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
@@ -137,6 +140,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
                     match maybe_success {
                         Ok(_events) => {
                             tracing::debug!("tx finalized");
+                            metrics.proposals_signed.inc();
                         }
                         Err(err) => {
                             tracing::error!(error = %err, "tx failed");

@@ -189,5 +189,10 @@ pub async fn handle_vanchor_relay_tx<'a>(
     tracing::trace!(?proof, ?ext_data, "Client Proof");
     let call = contract.transact(proof, ext_data);
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
+
+    // metric for total fee
+    ctx.metrics
+        .total_fee_earned
+        .inc_by(cmd.ext_data.fee.as_u64() as f64);
     handle_evm_tx(call, stream).await;
 }

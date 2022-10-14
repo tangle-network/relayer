@@ -52,6 +52,11 @@ impl SledStore {
         let dir = tempfile::tempdir()?;
         Self::open(dir.path())
     }
+
+    /// Gets the total amount of data stored on disk
+    pub fn get_data_stored_size(&self) -> u64 {
+        self.db.size_on_disk().unwrap_or_default()
+    }
 }
 
 impl HistoryStore for SledStore {

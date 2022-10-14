@@ -29,6 +29,7 @@ import {
   WebbRelayer,
   Pallet,
   LeavesCacheResponse,
+  RelayerMetricResponse,
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import {

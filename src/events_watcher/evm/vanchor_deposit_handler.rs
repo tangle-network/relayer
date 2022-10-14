@@ -14,6 +14,7 @@
 //
 use super::{HttpProvider, VAnchorContractWrapper};
 use crate::events_watcher::proposal_handler;
+use crate::metric;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use ethereum_types::H256;
 use std::sync::Arc;
@@ -56,6 +57,7 @@ where
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         use VAnchorContractEvents::*;
         let event_data = match event {
@@ -126,7 +128,8 @@ where
                 }
                 _ => unreachable!("unsupported"),
             };
-
+            // Anchor update proposal proposed metric
+            metrics.anchor_update_proposals.inc();
             let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
@@ -138,6 +141,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -152,6 +156,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -160,6 +165,7 @@ where
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;
         store.store_event(&events_bytes)?;
+        metrics.total_transaction_made.inc();
         Ok(())
     }
 }

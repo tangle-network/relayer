@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 use super::{BlockNumberOf, SubstrateEventWatcher};
+use crate::metric;
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::ethers::types;
@@ -46,6 +47,7 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         let at_hash_addr = RuntimeApi::storage()
             .system()

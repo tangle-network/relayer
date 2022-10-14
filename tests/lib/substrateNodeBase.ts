@@ -297,6 +297,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);
     fs.writeFileSync(path, configString);
+    console.log(configString);
   }
 
   protected static checkIfDkgImageExists(image: string): boolean {
