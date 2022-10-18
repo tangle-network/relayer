@@ -1,29 +1,18 @@
-<h1 align="center">Webb Relayer 🕸️ </h1>
 <div align="center">
 <a href="https://www.webb.tools/">
-    <img alt="Webb Logo" src="./assets/webb-icon.svg" width="15%" height="30%" />
+
+  ![Webb Logo](./assets/webb_banner_light.png#gh-light-mode-only)
+
+  ![Webb Logo](./assets/webb_banner_dark.png#gh-dark-mode-only)
   </a>
   </div>
-<p align="center">
-    <strong>🚀  The Webb Relayer  🧑‍✈️</strong>
-    <br />
-    <sub> ⚠️ Beta Software ⚠️ </sub>
-</p>
 
-<div align="center" >
+# Webb Relayer [![GitHub release (latest by date)](https://img.shields.io/github/v/release/webb-tools/relayer?style=flat-square)](https://github.com/webb-tools/relayer/releases/latest) [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/webb-tools/relayer/CI?style=flat-square)](https://github.com/webb-tools/relayer/actions) [![License Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0) [![Twitter](https://img.shields.io/twitter/follow/webbprotocol.svg?style=flat-square&label=Twitter&color=1DA1F2)](https://twitter.com/webbprotocol) [![Telegram](https://img.shields.io/badge/Telegram-gray?logo=telegram)](https://t.me/webbprotocol) [![Discord](https://img.shields.io/discord/833784453251596298.svg?style=flat-square&label=Discord&logo=discord)](https://discord.gg/cv8EfJu3Tn)
 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/webb-tools/relayer?style=flat-square)](https://github.com/webb-tools/relayer/releases/latest)
-[![GitHub Workflow Status](https://img.shields.io/github/workflow/status/webb-tools/relayer/CI?style=flat-square)](https://github.com/webb-tools/relayer/actions)
-[![Codecov](https://img.shields.io/codecov/c/gh/webb-tools/relayer?style=flat-square&token=AFS375VWRS)](https://codecov.io/gh/webb-tools/relayer)
-[![License Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0)
-[![Twitter](https://img.shields.io/twitter/follow/webbprotocol.svg?style=flat-square&label=Twitter&color=1DA1F2)](https://twitter.com/webbprotocol)
-[![Telegram](https://img.shields.io/badge/Telegram-gray?logo=telegram)](https://t.me/webbprotocol)
-[![Discord](https://img.shields.io/discord/833784453251596298.svg?style=flat-square&label=Discord&logo=discord)](https://discord.gg/cv8EfJu3Tn)
-
-</div>
+<!-- [![Codecov](https://img.shields.io/codecov/c/gh/webb-tools/relayer?style=flat-square&token=AFS375VWRS)](https://codecov.io/gh/webb-tools/relayer) -->
 
 <!-- TABLE OF CONTENTS -->
-<h2 id="table-of-contents"> 📖 Table of Contents</h2>
+<h2 id="table-of-contents" style=border:0!important> 📖 Table of Contents</h2>
 
 <details open="open">
   <summary>Table of Contents</summary>
@@ -171,14 +160,14 @@ webb-relayer -vv -c ./config
 
 #### Contract Configuration
 
-| Field                      | Description                                                                                            | Optionality                        |
-| -------------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------- |
-| `contract`                 | Chain contract. Must be either: </br> - VAnchor </br> - SignatureBridge </br>                          | Required                           |
-| `address`                  | The address of this contract on this chain.                                                            | Required                           |
-| `deployed-at`              | The block number where this contract got deployed at.                                                  | Required                           |
-| `events-watcher`           | Control the events watcher for this contract.                                                          | Optional                           |
-| `withdraw-config`          | Config the fees and gas limits of your private transaction relayer.                                    | Optional                           |
-| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`)             | Optional                           |
+| Field                      | Description                                                                                | Optionality |
+| -------------------------- | ------------------------------------------------------------------------------------------ | ----------- |
+| `contract`                 | Chain contract. Must be either: </br> - VAnchor </br> - SignatureBridge </br>              | Required    |
+| `address`                  | The address of this contract on this chain.                                                | Required    |
+| `deployed-at`              | The block number where this contract got deployed at.                                      | Required    |
+| `events-watcher`           | Control the events watcher for this contract.                                              | Optional    |
+| `withdraw-config`          | Config the fees and gas limits of your private transaction relayer.                        | Optional    |
+| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`) | Optional    |
 
 ### Docker 🐳
 
