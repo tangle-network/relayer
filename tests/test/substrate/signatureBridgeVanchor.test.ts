@@ -29,6 +29,7 @@ import {
   WebbRelayer,
   Pallet,
   RelayerMetricResponse,
+  EncryptedOutputsCacheResponse,
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -63,7 +64,7 @@ import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
 import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
-describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
+describe.only('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -145,12 +146,12 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
 
-  it('Relayer should create and relay anchor update proposal to signature bridge for execution', async () => {
+  it.only('Relayer should create and relay anchor update proposal to signature bridge for execution', async () => {
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     //create vanchor
@@ -193,6 +194,24 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
         chain_id: chainId.toString(),
         finalized: true,
       },
+    });
+
+    // fetch encrypted data
+    // chainId
+    let chainIdentifier = await aliceNode.getChainId();
+    const chainIdHex = chainIdentifier.toString(16);
+
+    const response = await webbRelayer.getEncryptedOutputsEvm(
+      chainIdHex,
+      treeId.toString()
+    );
+    expect(response.status).equal(200);
+
+    let store = response.json() as Promise<EncryptedOutputsCacheResponse>;
+    store.then((resp) => {
+      console.log("encrypted output resp");
+      console.log(resp);
+      expect(resp.encrypted_outputs.length).to.equal(2);
     });
 
     // check metrics gathered

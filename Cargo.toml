@@ -53,7 +53,7 @@ serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0", optional = true }
 rand = { version = "0.8", default-features = false, features = ["getrandom"] }
 hex = { version = "0.4", default-features = false }
-webb = { version = "0.5.7", default-features = false }
+webb = {path = "/Users/salman01zz/Webb-Tools/webb-rs/", version = "0.5.10", default-features = false }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.13.1"
 dotenv = "0.15.0"

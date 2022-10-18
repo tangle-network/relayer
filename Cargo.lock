@@ -5884,6 +5884,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb"
+version = "0.5.10"
+dependencies = [
+ "async-trait",
+ "ethers",
+ "hex",
+ "parity-scale-codec",
+ "rand 0.8.5",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "subxt",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "webb-block-poller"
 version = "0.1.0"
 dependencies = [
@@ -5899,7 +5916,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
- "webb",
+ "webb 0.5.7",
  "webb-relayer",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -5950,7 +5967,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb",
+ "webb 0.5.10",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -5975,7 +5992,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "url",
- "webb",
+ "webb 0.5.7",
  "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types",
@@ -5993,7 +6010,7 @@ dependencies = [
  "sled",
  "tempfile",
  "tracing",
- "webb",
+ "webb 0.5.7",
  "webb-proposals",
  "webb-relayer-utils",
 ]
@@ -6009,7 +6026,7 @@ dependencies = [
  "tiny-keccak",
  "tracing",
  "url",
- "webb",
+ "webb 0.5.7",
 ]
 
 [[package]]
@@ -6026,7 +6043,7 @@ dependencies = [
  "thiserror",
  "url",
  "warp",
- "webb",
+ "webb 0.5.7",
  "webb-proposals",
 ]
 
