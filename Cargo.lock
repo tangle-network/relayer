@@ -5866,26 +5866,9 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.5.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8325dbd9a62106bd5c13609431a254ba2dc554b33b57d673def2ea8c7a2ef81d"
-dependencies = [
- "async-trait",
- "ethers",
- "hex",
- "parity-scale-codec",
- "rand 0.8.5",
- "scale-info",
- "serde",
- "serde_json",
- "subxt",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "webb"
 version = "0.5.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04df3acc4b053a011a0077fc75354499fe355a1e083b1ab1b0fb5328435c463c"
 dependencies = [
  "async-trait",
  "ethers",
@@ -5916,7 +5899,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
- "webb 0.5.7",
+ "webb",
  "webb-relayer",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -5967,7 +5950,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.10",
+ "webb",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -5992,7 +5975,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "url",
- "webb 0.5.7",
+ "webb",
  "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types",
@@ -6010,7 +5993,7 @@ dependencies = [
  "sled",
  "tempfile",
  "tracing",
- "webb 0.5.7",
+ "webb",
  "webb-proposals",
  "webb-relayer-utils",
 ]
@@ -6026,7 +6009,7 @@ dependencies = [
  "tiny-keccak",
  "tracing",
  "url",
- "webb 0.5.7",
+ "webb",
 ]
 
 [[package]]
@@ -6043,7 +6026,7 @@ dependencies = [
  "thiserror",
  "url",
  "warp",
- "webb 0.5.7",
+ "webb",
  "webb-proposals",
 ]
 

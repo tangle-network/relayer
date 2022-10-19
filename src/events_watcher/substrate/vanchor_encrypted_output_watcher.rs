@@ -29,7 +29,7 @@ pub struct SubstrateVAnchorEncryptedOutputHandler;
 
 #[async_trait::async_trait]
 impl SubstrateEventWatcher for SubstrateVAnchorEncryptedOutputHandler {
-    const TAG: &'static str = "Substrate V-Anchor leaves watcher";
+    const TAG: &'static str = "Substrate V-Anchor encrypted output handler";
 
     type RuntimeConfig = subxt::SubstrateConfig;
 
@@ -72,12 +72,17 @@ impl SubstrateEventWatcher for SubstrateVAnchorEncryptedOutputHandler {
 
         let tree_id = event.tree_id.to_string();
         let leaf_count = event.leafs.len();
-       
+
         let mut index = next_leaf_index.saturating_sub(leaf_count as u32);
         let mut output_store = Vec::with_capacity(leaf_count);
-        for encrypted_output in [event.encrypted_output1, event.encrypted_output2]{
+        for encrypted_output in
+            [event.encrypted_output1, event.encrypted_output2]
+        {
             let value = (index, encrypted_output.clone());
-            store.insert_encrypted_output((chain_id, tree_id.clone()), &[value])?;
+            store.insert_encrypted_output(
+                (chain_id, tree_id.clone()),
+                &[value],
+            )?;
             store.insert_last_deposit_block_number_for_encrypted_output(
                 (chain_id, tree_id.clone()),
                 types::U64::from(block_number),
