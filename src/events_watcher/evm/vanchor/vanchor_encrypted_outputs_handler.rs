@@ -14,12 +14,13 @@
 //
 
 use super::{HttpProvider, VAnchorContractWrapper};
-use crate::store::sled::SledStore;
-use crate::store::{EncryptedOutputCacheStore, EventHashStore};
+use crate::metric;
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb_relayer_store::SledStore;
+use webb_relayer_store::{EncryptedOutputCacheStore, EventHashStore};
 
 /// An Encrypted Output Handler that handles `NewCommitment` events and saves the encrypted_output to the store.
 /// It serves as a cache for encrypted_output that could be used by dApp for proof generation.
@@ -40,6 +41,7 @@ impl super::EventHandler for VAnchorEncryptedOutputHandler {
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         use VAnchorContractEvents::*;
         match event {

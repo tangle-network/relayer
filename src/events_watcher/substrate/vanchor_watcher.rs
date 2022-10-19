@@ -13,17 +13,18 @@
 // limitations under the License.
 //
 use super::BlockNumberOf;
-use crate::config::LinkedAnchorConfig;
 use crate::events_watcher::proposal_handler;
+use crate::metric;
 use crate::proposal_signing_backend::ProposalSigningBackend;
-use crate::store::sled::SledStore;
-use crate::store::EventHashStore;
 use std::sync::Arc;
 use webb::substrate::protocol_substrate_runtime;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
 use webb::substrate::subxt::{self, OnlineClient};
+use webb_relayer_config::anchor::LinkedAnchorConfig;
+use webb_relayer_store::EventHashStore;
+use webb_relayer_store::SledStore;
 /// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
 pub struct SubstrateVAnchorWatcher<B> {
     proposal_signing_backend: B,
@@ -68,6 +69,7 @@ where
         store: Arc<Self::Store>,
         api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         tracing::debug!(
             event = ?event,
@@ -80,12 +82,12 @@ where
         let chain_id = api.constants().at(&chain_id_addrs)?;
         let at_hash_addrs = RuntimeApi::storage()
             .system()
-            .block_hash(&(block_number as u64));
+            .block_hash(block_number as u64);
         let at_hash = api.storage().fetch(&at_hash_addrs, None).await?.unwrap();
         // fetch tree
         let tree_addrs = RuntimeApi::storage()
             .merkle_tree_bn254()
-            .trees(&event.tree_id);
+            .trees(event.tree_id);
         let tree = api.storage().fetch(&tree_addrs, Some(at_hash)).await?;
 
         let tree = match tree {
@@ -123,7 +125,8 @@ where
                 }
                 _ => unreachable!("unsupported"),
             };
-
+            // Proposal proposed metric
+            metrics.anchor_update_proposals.inc();
             let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
@@ -135,6 +138,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -149,6 +153,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -157,6 +162,7 @@ where
         // mark this event as processed.
         let events_bytes = &event.encode();
         store.store_event(events_bytes)?;
+        metrics.total_transaction_made.inc();
         Ok(())
     }
 }

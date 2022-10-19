@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 use super::{HttpProvider, VAnchorContractWrapper};
-use crate::config::{LinkedAnchorConfig, VAnchorContractConfig};
 use crate::context::RelayerContext;
 use crate::events_watcher::evm::vanchor::{
     VAnchorEncryptedOutputHandler, VAnchorLeavesHandler,
@@ -21,17 +20,20 @@ use crate::events_watcher::evm::vanchor::{
 use crate::events_watcher::evm::VAnchorContractWatcher;
 use crate::events_watcher::proposal_handler;
 use crate::events_watcher::EventWatcher;
+use crate::metric;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::service::{
     make_proposal_signing_backend, Client, ProposalSigningBackendSelector,
     Store,
 };
-use crate::store::sled::SledStore;
-use crate::store::EventHashStore;
 use ethereum_types::{H256, U256};
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb_relayer_config::anchor::LinkedAnchorConfig;
+use webb_relayer_config::evm::VAnchorContractConfig;
+use webb_relayer_store::EventHashStore;
+use webb_relayer_store::SledStore;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {
@@ -66,6 +68,7 @@ where
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         use VAnchorContractEvents::*;
         let event_data = match event {
@@ -136,7 +139,8 @@ where
                 }
                 _ => unreachable!("unsupported"),
             };
-
+            // Anchor update proposal proposed metric
+            metrics.anchor_update_proposals.inc();
             let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
@@ -148,6 +152,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -162,6 +167,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -170,6 +176,7 @@ where
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;
         store.store_event(&events_bytes)?;
+        metrics.total_transaction_made.inc();
         Ok(())
     }
 }
@@ -236,6 +243,7 @@ pub async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -266,6 +274,7 @@ pub async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -294,6 +303,7 @@ pub async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {

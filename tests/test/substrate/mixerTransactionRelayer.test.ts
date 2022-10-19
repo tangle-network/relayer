@@ -429,8 +429,10 @@ async function createMixerWithdrawProof(
     );
     const treeId = 0;
     const leafCount: number =
+      //@ts-ignore
       await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
     const treeLeaves: Uint8Array[] =
+      //@ts-ignore
       await api.derive.merkleTreeBn254.getLeavesForTree(
         treeId,
         0,

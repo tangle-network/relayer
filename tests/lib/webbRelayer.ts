@@ -116,6 +116,12 @@ export class WebbRelayer {
     return response;
   }
 
+  public async getMetricsGathered() {
+    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/metrics`;
+    const response = await fetch(endpoint);
+    return response;
+  }
+
   public async stop(): Promise<void> {
     this.#process.kill('SIGINT');
   }
@@ -481,6 +487,10 @@ export interface LeavesCacheResponse {
 export interface EncryptedOutputsCacheResponse {
   encrypted_outputs: [string];
   last_queried_block: string;
+}
+
+export interface RelayerMetricResponse {
+  metrics: string;
 }
 
 export interface Evm {

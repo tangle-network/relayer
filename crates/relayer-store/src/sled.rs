@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-use crate::store::{BridgeKey, QueueKey};
+use crate::{BridgeKey, QueueKey};
 use core::fmt;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -51,6 +51,11 @@ impl SledStore {
     pub fn temporary() -> crate::Result<Self> {
         let dir = tempfile::tempdir()?;
         Self::open(dir.path())
+    }
+
+    /// Gets the total amount of data stored on disk
+    pub fn get_data_stored_size(&self) -> u64 {
+        self.db.size_on_disk().unwrap_or_default()
     }
 }
 
@@ -517,7 +522,7 @@ where
         match tree.get(&inner_key[..])? {
             Some(k) => {
                 let exists = tree.remove(&k)?;
-                tree.remove(&inner_key)?;
+                tree.remove(inner_key)?;
                 let item = exists.and_then(|v| serde_json::from_slice(&v).ok());
                 tracing::trace!("removed item from the queue..");
                 self.db.flush()?;
@@ -538,7 +543,7 @@ impl ProposalStore for SledStore {
     #[tracing::instrument(skip_all)]
     fn insert_proposal(&self, proposal: Self::Proposal) -> crate::Result<()> {
         let tree = self.db.open_tree("proposal_store")?;
-        tree.insert(&"TODO", serde_json::to_vec(&proposal)?.as_slice())?;
+        tree.insert("TODO", serde_json::to_vec(&proposal)?.as_slice())?;
         Ok(())
     }
 
@@ -551,7 +556,7 @@ impl ProposalStore for SledStore {
         data_hash: &[u8],
     ) -> crate::Result<Option<Self::Proposal>> {
         let tree = self.db.open_tree("proposal_store")?;
-        match tree.get(&data_hash)? {
+        match tree.get(data_hash)? {
             Some(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
             None => {
                 tracing::warn!(

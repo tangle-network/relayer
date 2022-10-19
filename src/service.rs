@@ -29,8 +29,14 @@ use webb::evm::ethers::providers;
 
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
+use webb_relayer_config::anchor::LinkedAnchorConfig;
+use webb_relayer_config::evm::{Contract, SignatureBridgeContractConfig};
+use webb_relayer_config::signing_backend::ProposalSigningBackendConfig;
+use webb_relayer_config::substrate::{
+    DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet,
+    SignatureBridgePalletConfig, SubstrateRuntime, VAnchorBn254PalletConfig,
+};
 
-use crate::config::*;
 use crate::context::RelayerContext;
 use crate::events_watcher::dkg::*;
 
@@ -40,8 +46,8 @@ use crate::events_watcher::evm::*;
 use crate::events_watcher::substrate::*;
 use crate::events_watcher::*;
 use crate::proposal_signing_backend::*;
-use crate::store::sled::SledStore;
 use crate::tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
+use webb_relayer_store::SledStore;
 
 /// Type alias for providers
 pub type Client = providers::Provider<providers::Http>;
@@ -50,7 +56,7 @@ pub type DkgClient = OnlineClient<PolkadotConfig>;
 /// Type alias for the WebbProtocol DefaultConfig
 pub type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 /// Type alias for [Sled](https://sled.rs)-based database store
-pub type Store = crate::store::sled::SledStore;
+pub type Store = webb_relayer_store::sled::SledStore;
 
 /// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
 /// instantiates the database store. Allows clients to interact with the relayer.
@@ -71,7 +77,7 @@ pub type Store = crate::store::sled::SledStore;
 /// ```
 pub fn build_web_services(
     ctx: RelayerContext,
-    store: crate::store::sled::SledStore,
+    store: webb_relayer_store::sled::SledStore,
 ) -> crate::Result<(
     std::net::SocketAddr,
     impl core::future::Future<Output = ()> + 'static,
@@ -160,27 +166,6 @@ pub fn build_web_services(
             )
         })
         .boxed();
-    // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
-    // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let cosmwasm_store = Arc::new(store.clone());
-    let store_filter =
-        warp::any().map(move || Arc::clone(&cosmwasm_store)).boxed();
-    let ctx_arc = Arc::new(ctx.clone());
-    let leaves_cache_filter_cosmwasm = warp::path("leaves")
-        .and(warp::path("cosmwasm"))
-        .and(store_filter)
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and_then(move |store, chain_id, contract| {
-            crate::handler::handle_leaves_cache_cosmwasm(
-                store,
-                chain_id,
-                contract,
-                Arc::clone(&ctx_arc),
-            )
-        })
-        .boxed();
 
     let evm_store = Arc::new(store);
     let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
@@ -200,13 +185,18 @@ pub fn build_web_services(
         })
         .boxed();
 
+    let relayer_metrics_info = warp::path("metrics")
+        .and(warp::get())
+        .and_then(crate::handler::handle_metric_info)
+        .boxed();
+
     // Code that will map the request handlers above to a defined http endpoint.
     let routes = ip_filter
         .or(info_filter)
         .or(leaves_cache_filter_evm)
         .or(leaves_cache_filter_substrate)
-        .or(leaves_cache_filter_cosmwasm)
         .or(encrypted_output_cache_filter_evm)
+        .or(relayer_metrics_info)
         .boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();
@@ -321,7 +311,7 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -331,7 +321,7 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -366,7 +356,7 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -376,7 +366,7 @@ pub async fn ignite(
                                 ctx.clone(),
                                 config,
                                 client.clone(),
-                                node_name.clone(),
+                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )
@@ -441,13 +431,15 @@ pub fn start_substrate_vanchor_event_watcher(
     let my_ctx = ctx.clone();
     let my_config = config.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
+    let metrics = ctx.metrics.clone();
     let task = async move {
         let watcher = SubstrateVAnchorLeavesWatcher::default();
         let substrate_leaves_watcher_task = watcher.run(
-            node_name.clone(),
+            node_name.to_owned(),
             chain_id,
             client.clone().into(),
             store.clone(),
+            metrics.clone(),
         );
         let proposal_signing_backend = make_substrate_proposal_signing_backend(
             &my_ctx,
@@ -467,10 +459,11 @@ pub fn start_substrate_vanchor_event_watcher(
                     my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.clone(),
+                    node_name.to_owned(),
                     chain_id,
                     client.clone().into(),
                     store.clone(),
+                    metrics.clone(),
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
@@ -501,10 +494,11 @@ pub fn start_substrate_vanchor_event_watcher(
                     my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.clone(),
+                    node_name.to_owned(),
                     chain_id,
                     client.into(),
                     store.clone(),
+                    metrics.clone(),
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
@@ -585,10 +579,16 @@ pub fn start_dkg_proposal_handler(
     );
     let node_name2 = node_name.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
+    let metrics = ctx.metrics.clone();
     let task = async move {
         let proposal_handler = ProposalHandlerWatcher::default();
-        let watcher =
-            proposal_handler.run(node_name, chain_id, client.into(), store);
+        let watcher = proposal_handler.run(
+            node_name,
+            chain_id,
+            client.into(),
+            store,
+            metrics,
+        );
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -641,10 +641,16 @@ pub fn start_dkg_pallet_watcher(
     let node_name2 = node_name.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
     let webb_config = ctx.config.clone();
+    let metrics = ctx.metrics.clone();
     let task = async move {
         let governor_watcher = DKGGovernorWatcher::new(webb_config);
-        let watcher =
-            governor_watcher.run(node_name, chain_id, client.into(), store);
+        let watcher = governor_watcher.run(
+            node_name,
+            chain_id,
+            client.into(),
+            store,
+            metrics,
+        );
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
@@ -683,6 +689,7 @@ pub async fn start_signature_bridge_events_watcher(
     let contract_address = config.common.address;
     let wrapper =
         SignatureBridgeContractWrapper::new(config.clone(), client.clone());
+    let metrics = ctx.metrics.clone();
     let task = async move {
         tracing::debug!(
             "Signature Bridge watcher for ({}) Started.",
@@ -697,12 +704,14 @@ pub async fn start_signature_bridge_events_watcher(
             store.clone(),
             wrapper.clone(),
             vec![Box::new(governance_transfer_handler)],
+            metrics.clone(),
         );
         let cmd_handler_task = BridgeWatcher::run(
             &bridge_contract_watcher,
             client,
             store,
             wrapper,
+            metrics.clone(),
         );
         tokio::select! {
             _ = events_watcher_task => {
@@ -755,10 +764,11 @@ pub async fn start_substrate_signature_bridge_events_watcher(
         let substrate_bridge_watcher = SubstrateBridgeEventWatcher::default();
         let events_watcher_task = SubstrateEventWatcher::run(
             &substrate_bridge_watcher,
-            node_name.clone(),
+            node_name.to_owned(),
             chain_id,
             client.clone().into(),
             store.clone(),
+            ctx.metrics.clone(),
         );
         let cmd_handler_task = SubstrateBridgeWatcher::run(
             &substrate_bridge_watcher,

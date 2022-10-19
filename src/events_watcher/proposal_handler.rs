@@ -1,3 +1,4 @@
+use std::sync::Arc;
 // Copyright 2022 Webb Technologies Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+use crate::metric;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use webb::evm::contract::protocol_solidity::v_anchor_contract;
 use webb::evm::ethers::prelude::EthCall;
@@ -20,6 +22,7 @@ use webb_proposals::ProposalTrait;
 pub async fn handle_proposal<P>(
     proposal: &(impl ProposalTrait + Sync + Send + 'static),
     proposal_signing_backend: &P,
+    metrics: Arc<metric::Metrics>,
 ) -> crate::Result<()>
 where
     P: ProposalSigningBackend,
@@ -28,7 +31,9 @@ where
         .can_handle_proposal(proposal)
         .await?;
     if can_sign_proposal {
-        proposal_signing_backend.handle_proposal(proposal).await?;
+        proposal_signing_backend
+            .handle_proposal(proposal, metrics)
+            .await?;
     } else {
         tracing::warn!(
             proposal = ?hex::encode(proposal.to_vec()),

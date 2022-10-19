@@ -1,3 +1,5 @@
+//! Retry logic for async calls
+
 use std::time::Duration;
 
 use backoff::backoff::Backoff;

@@ -1,5 +1,8 @@
 use webb::{evm::ethers, substrate::subxt};
 
+pub mod clickable_link;
+pub mod retry;
+
 /// An enum of all possible errors that could be encountered during the execution of the Webb
 /// Relayer.
 #[derive(Debug, thiserror::Error)]
@@ -94,7 +97,7 @@ pub enum Error {
     ForceRestart,
     /// a backgorund task failed and stopped Apnormally.
     #[error("Task Stopped Apnormally")]
-    TaskStoppedApnormally,
+    TaskStoppedAbnormally,
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.

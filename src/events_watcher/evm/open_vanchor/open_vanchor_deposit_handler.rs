@@ -13,24 +13,25 @@
 // limitations under the License.
 //
 use super::{HttpProvider, OpenVAnchorContractWrapper};
-use crate::config::{LinkedAnchorConfig, VAnchorContractConfig};
 use crate::context::RelayerContext;
 use crate::events_watcher::evm::open_vanchor::open_vanchor_leaves_handler::OpenVAnchorLeavesHandler;
 use crate::events_watcher::evm::OpenVAnchorContractWatcher;
 use crate::events_watcher::proposal_handler;
 use crate::events_watcher::EventWatcher;
+use crate::metric;
 use crate::proposal_signing_backend::ProposalSigningBackend;
 use crate::service::{
     make_proposal_signing_backend, Client, ProposalSigningBackendSelector,
     Store,
 };
-use crate::store::sled::SledStore;
-use crate::store::EventHashStore;
 use ethereum_types::{H256, U256};
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::OpenVAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-
+use webb_relayer_config::anchor::LinkedAnchorConfig;
+use webb_relayer_config::evm::VAnchorContractConfig;
+use webb_relayer_store::EventHashStore;
+use webb_relayer_store::SledStore;
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct OpenVAnchorDepositHandler<B> {
     proposal_signing_backend: B,
@@ -64,6 +65,7 @@ where
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
+        metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         use OpenVAnchorContractEvents::*;
         let event_data = match event {
@@ -146,6 +148,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -160,6 +163,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
+                        metrics.clone(),
                     )
                     .await
                 }
@@ -229,6 +233,7 @@ pub async fn start_evm_open_vanchor_events_watcher(
                     store,
                     wrapper,
                     vec![Box::new(deposit_handler), Box::new(leaves_handler)],
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -253,6 +258,7 @@ pub async fn start_evm_open_vanchor_events_watcher(
                     store,
                     wrapper,
                     vec![Box::new(deposit_handler), Box::new(leaves_handler)],
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -276,6 +282,7 @@ pub async fn start_evm_open_vanchor_events_watcher(
                     store,
                     wrapper,
                     vec![Box::new(leaves_handler)],
+                    my_ctx.metrics.clone(),
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {

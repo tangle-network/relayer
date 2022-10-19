@@ -13,8 +13,7 @@
 // limitations under the License.
 //
 use super::*;
-use crate::config;
-use crate::store::sled::SledStore;
+
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
@@ -37,6 +36,7 @@ pub mod vanchor;
 
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
+use webb_relayer_store::SledStore;
 
 // VAnchorContractWrapper contains VAnchorContract contract along with configurations for Anchor contract, and Relayer.
 #[derive(Clone, Debug)]
@@ -44,8 +44,8 @@ pub struct VAnchorContractWrapper<M>
 where
     M: Middleware,
 {
-    pub config: config::VAnchorContractConfig,
-    pub webb_config: config::WebbRelayerConfig,
+    pub config: webb_relayer_config::evm::VAnchorContractConfig,
+    pub webb_config: webb_relayer_config::WebbRelayerConfig,
     pub contract: VAnchorContract<M>,
 }
 
@@ -55,8 +55,8 @@ where
 {
     /// Creates a new VAnchorContractOverDKGWrapper.
     pub fn new(
-        config: config::VAnchorContractConfig,
-        webb_config: config::WebbRelayerConfig,
+        config: webb_relayer_config::evm::VAnchorContractConfig,
+        webb_config: webb_relayer_config::WebbRelayerConfig,
         client: Arc<M>,
     ) -> Self {
         Self {
@@ -130,8 +130,8 @@ pub struct OpenVAnchorContractWrapper<M>
 where
     M: Middleware,
 {
-    pub config: config::VAnchorContractConfig,
-    pub webb_config: config::WebbRelayerConfig,
+    pub config: webb_relayer_config::evm::VAnchorContractConfig,
+    pub webb_config: webb_relayer_config::WebbRelayerConfig,
     pub contract: OpenVAnchorContract<M>,
 }
 
@@ -141,8 +141,8 @@ where
 {
     /// Creates a new OpenVAnchorContractOverDKGWrapper.
     pub fn new(
-        config: config::VAnchorContractConfig,
-        webb_config: config::WebbRelayerConfig,
+        config: webb_relayer_config::evm::VAnchorContractConfig,
+        webb_config: webb_relayer_config::WebbRelayerConfig,
         client: Arc<M>,
     ) -> Self {
         Self {

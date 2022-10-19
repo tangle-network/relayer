@@ -20,8 +20,8 @@ use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standa
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
 use super::{BlockNumberOf, SubstrateEventWatcher};
 use crate::events_watcher::SubstrateBridgeWatcher;
-use crate::store::sled::{SledQueueKey,SledStore};
-use crate::store::{BridgeCommand, QueueStore};
+use webb_relayer_store::sled::{SledQueueKey,SledStore};
+use webb_relayer_store::{BridgeCommand, QueueStore};
 use ethereum_types::U256;
 use webb::substrate::{
     protocol_substrate_runtime,
@@ -31,7 +31,8 @@ use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
 use webb::substrate::scale;
 use webb::substrate::scale::Encode;
-use crate::types::dynamic_payload::WebbDynamicTxPayload;
+use crate::metric;
+use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use std::borrow::Cow;
 
 /// A SignatureBridge contract events & commands watcher.
@@ -57,6 +58,7 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
         _store: Arc<Self::Store>,
         _api: Arc<Self::Client>,
         (event, _block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        _metrics: Arc<metric::Metrics>,
     ) -> crate::Result<()> {
         // todo
         // if the ownership is transferred to the new owner, we need to
@@ -359,7 +361,7 @@ fn secp256k1_ecdsa_recover(
         sig[64] - 27
     } else {
         sig[64]
-    } as u8)
+    })
     .map_err(|_| libsecp256k1::Error::InvalidSignature)?;
     let pubkey =
         libsecp256k1::recover(&libsecp256k1::Message::parse(msg), &rs, &v)

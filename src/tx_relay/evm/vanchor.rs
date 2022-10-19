@@ -8,7 +8,6 @@ use webb::evm::{
     ethers::prelude::{Signer, SignerMiddleware},
 };
 
-use crate::config::VAnchorWithdrawConfig;
 use crate::{
     context::RelayerContext,
     handler::{
@@ -17,6 +16,7 @@ use crate::{
     },
     tx_relay::evm::handle_evm_tx,
 };
+use webb_relayer_config::anchor::VAnchorWithdrawConfig;
 /// Handler for VAnchor commands
 ///
 /// # Arguments
@@ -49,7 +49,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            crate::config::Contract::VAnchor(c) => Some(c),
+            webb_relayer_config::evm::Contract::VAnchor(c) => Some(c),
             _ => None,
         })
         .map(|c| (c.common.address, c))
@@ -189,5 +189,10 @@ pub async fn handle_vanchor_relay_tx<'a>(
     tracing::trace!(?proof, ?ext_data, "Client Proof");
     let call = contract.transact(proof, ext_data);
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
+
+    // metric for total fee
+    ctx.metrics
+        .total_fee_earned
+        .inc_by(cmd.ext_data.fee.as_u64() as f64);
     handle_evm_tx(call, stream).await;
 }
