@@ -30,6 +30,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;
 
+use crate::context::RelayerContext;
 use crate::metric;
 use webb::substrate::subxt::client::OfflineClientT;
 use webb::{
@@ -44,7 +45,6 @@ use webb::{
         subxt::{self, client::OnlineClientT, ext::sp_runtime::traits::Header},
     },
 };
-
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::{
     BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
@@ -123,18 +123,28 @@ pub trait EventWatcher {
         store: Arc<Self::Store>,
         contract: Self::Contract,
         handlers: Vec<EventHandlerFor<Self>>,
-        metrics: Arc<metric::Metrics>,
+        ctx: &RelayerContext,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
             let step = contract.max_blocks_per_step();
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
+            let metrics = &ctx.metrics;
             let chain_id = client
                 .get_chainid()
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
                 .await?;
+            let chain_config =
+                ctx.config.evm.get(&chain_id.to_string()).ok_or_else(|| {
+                    crate::Error::ChainNotFound {
+                        chain_id: chain_id.clone().to_string(),
+                    }
+                })?;
+            // no of blocks confirmation required before processing it
+            let block_confirmations: U64 =
+                chain_config.block_confirmations.into();
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
@@ -150,9 +160,12 @@ pub trait EventWatcher {
                     "Latest block number: #{}",
                     current_block_number
                 );
-                let dest_block = cmp::min(block + step, current_block_number);
+                // latest finalized block after n block_confirmations
+                let latest_finalized_block =
+                    current_block_number.saturating_sub(block_confirmations);
+                let dest_block = cmp::min(block + step, latest_finalized_block);
                 // check if we are now on the latest block.
-                let should_cooldown = dest_block == current_block_number;
+                let should_cooldown = dest_block == latest_finalized_block;
                 tracing::trace!("Reading from #{} to #{}", block, dest_block);
                 // Only handle events from found blocks if they are new
                 if dest_block != block {

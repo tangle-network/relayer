@@ -723,7 +723,7 @@ async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
-                    my_ctx.metrics.clone(),
+                    &my_ctx,
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -754,7 +754,7 @@ async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
-                    my_ctx.metrics.clone(),
+                    &my_ctx,
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -783,7 +783,7 @@ async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
-                    my_ctx.metrics.clone(),
+                    &my_ctx,
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -828,6 +828,7 @@ async fn start_signature_bridge_events_watcher(
     let wrapper =
         SignatureBridgeContractWrapper::new(config.clone(), client.clone());
     let metrics = ctx.metrics.clone();
+    let my_ctx = ctx.clone();
     let task = async move {
         tracing::debug!(
             "Signature Bridge watcher for ({}) Started.",
@@ -842,7 +843,7 @@ async fn start_signature_bridge_events_watcher(
             store.clone(),
             wrapper.clone(),
             vec![Box::new(governance_transfer_handler)],
-            metrics.clone(),
+            &my_ctx,
         );
         let cmd_handler_task = BridgeWatcher::run(
             &bridge_contract_watcher,
