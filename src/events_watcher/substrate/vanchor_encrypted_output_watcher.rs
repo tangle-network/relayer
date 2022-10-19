@@ -22,8 +22,8 @@ use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::subxt::{self, OnlineClient};
 use webb_relayer_store::sled::SledStore;
 use webb_relayer_store::EncryptedOutputCacheStore;
-// An Substrate VAnchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
-/// It serves as a cache for leaves that could be used by dApp for proof generation.
+// An Substrate VAnchor encrypted output Watcher that watches for Deposit events and save the encrypted output to the store.
+/// It serves as a cache for encrypted outputs that could be used by dApp.
 #[derive(Clone, Debug, Default)]
 pub struct SubstrateVAnchorEncryptedOutputHandler;
 
