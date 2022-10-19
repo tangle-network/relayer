@@ -196,6 +196,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       linkedAnchors: [
         { type: 'Raw', resourceId: substrateResourceId.toString() },
       ],
+      blockConfirmations: 15
     });
 
     // This are pre-requisites for creating substrate chain.

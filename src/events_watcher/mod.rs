@@ -161,11 +161,11 @@ pub trait EventWatcher {
                     current_block_number
                 );
                 // latest finalized block after n block_confirmations
-                let finalized_block =
+                let latest_finalized_block =
                     current_block_number.saturating_sub(block_confirmations);
-                let dest_block = cmp::min(block + step, finalized_block);
+                let dest_block = cmp::min(block + step, latest_finalized_block);
                 // check if we are now on the latest block.
-                let should_cooldown = dest_block == current_block_number;
+                let should_cooldown = dest_block == latest_finalized_block;
                 tracing::trace!("Reading from #{} to #{}", block, dest_block);
                 // Only handle events from found blocks if they are new
                 if dest_block != block {
