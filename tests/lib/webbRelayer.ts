@@ -503,6 +503,7 @@ export interface ChainInfo {
   chainId: number;
   beneficiary?: string;
   contracts: Contract[];
+  blockConfirmations: number;
 }
 
 export interface Contract {
