@@ -130,6 +130,9 @@ pub fn setup_logger(verbosity: i32, filter: &str) -> anyhow::Result<()> {
 /// # Examples
 ///
 /// ```
+/// use std::env::Args;
+/// use webb_relayer_config::cli::create_store;
+/// 
 /// let args = Args::default();
 /// let store = create_store(&args).await?;
 /// ```
