@@ -27,8 +27,8 @@ use std::sync::Arc;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use webb::evm::ethers::types;
+use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_utils::Result;
-
 /// A module for managing in-memory storage of the relayer.
 pub mod mem;
 /// A module for setting up and managing a [Sled](https://sled.rs)-based database.
@@ -43,27 +43,10 @@ pub use mem::InMemoryStore;
 #[derive(Eq, PartialEq, Hash)]
 pub enum HistoryStoreKey {
     /// Block Queue Key
-    Block { chain_id: types::U256 },
-    /// EVM Queue Key
-    Evm {
-        /// Chain id
-        chain_id: types::U256,
-        /// Contract address.
-        address: types::H160,
-    },
-    /// Substrate Queue Key
-    Substrate {
-        /// Chain id
-        chain_id: types::U256,
-        /// Merkle Tree id.
-        tree_id: String,
-    },
-    /// Cosmos-SDK Queue Key
-    Cosmos {
-        /// Chain id
-        chain_id: types::U256,
-        /// Contract address.
-        address: String,
+    Block { chain_id: u32 },
+    /// ResourceId Key
+    ResourceId {
+        resource_id: webb_proposals::ResourceId,
     },
 }
 
@@ -119,34 +102,24 @@ impl BridgeKey {
 
 impl HistoryStoreKey {
     /// Returns the chain id of the chain this key is for.
-    pub fn chain_id(&self) -> types::U256 {
+
+    pub fn chain_id(&self) -> u32 {
         match self {
             HistoryStoreKey::Block { chain_id } => *chain_id,
-            HistoryStoreKey::Evm { chain_id, .. } => *chain_id,
-            HistoryStoreKey::Substrate { chain_id, .. } => *chain_id,
-            HistoryStoreKey::Cosmos { chain_id, .. } => *chain_id,
+            HistoryStoreKey::ResourceId { resource_id } => {
+                resource_id.typed_chain_id().underlying_chain_id()
+            }
         }
     }
     /// Returns the address of the chain this key is for.
     pub fn address(&self) -> types::H160 {
         match self {
             HistoryStoreKey::Block { .. } => types::H160::zero(),
-            HistoryStoreKey::Evm { address, .. } => *address,
-            HistoryStoreKey::Substrate { tree_id, .. } => {
-                // a bit hacky, but we don't have a way to get the address from the tree id
-                // so we just pretend it's the address of the node
-                let mut address_bytes = vec![];
-                address_bytes.extend_from_slice(tree_id.as_bytes());
-                address_bytes.resize(20, 0);
-                types::H160::from_slice(&address_bytes)
-            }
-            HistoryStoreKey::Cosmos { address, .. } => {
-                // a bit hacky, but we don't have a way to get the address from the Cosmos-SDK(bech32 format) address
-                // so we just pretend it's the address of the node
-                let mut address_bytes = vec![];
-                address_bytes.extend_from_slice(address.as_bytes());
-                address_bytes.resize(20, 0);
-                types::H160::from_slice(&address_bytes)
+            HistoryStoreKey::ResourceId { resource_id } => {
+                // take 20 bytes of target system bytes
+                types::H160::from_slice(
+                    &resource_id.target_system().to_bytes()[6..],
+                )
             }
         }
     }
@@ -156,19 +129,11 @@ impl HistoryStoreKey {
         let mut vec = vec![];
         match self {
             Self::Block { chain_id } => {
-                vec.extend_from_slice(&chain_id.as_u128().to_be_bytes());
+                vec.extend_from_slice(&chain_id.to_be_bytes());
             }
-            Self::Evm { chain_id, address } => {
-                vec.extend_from_slice(&chain_id.as_u128().to_be_bytes());
-                vec.extend_from_slice(address.as_bytes());
-            }
-            Self::Substrate { chain_id, tree_id } => {
-                vec.extend_from_slice(&chain_id.as_u128().to_be_bytes());
-                vec.extend_from_slice(tree_id.as_bytes());
-            }
-            Self::Cosmos { chain_id, address } => {
-                vec.extend_from_slice(&chain_id.as_u128().to_be_bytes());
-                vec.extend_from_slice(address.as_bytes());
+            Self::ResourceId { resource_id } => {
+                let bytes = resource_id.to_bytes();
+                vec.extend_from_slice(&bytes)
             }
         }
         vec
@@ -179,14 +144,12 @@ impl Display for HistoryStoreKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Block { chain_id } => write!(f, "Block({})", chain_id),
-            Self::Evm { chain_id, address } => {
-                write!(f, "Evm({}, {})", chain_id, address)
-            }
-            Self::Substrate { chain_id, tree_id } => {
-                write!(f, "Substrate({}, {})", chain_id, tree_id)
-            }
-            Self::Cosmos { chain_id, address } => {
-                write!(f, "Cosmos({}, {})", chain_id, address)
+            Self::ResourceId { resource_id } => {
+                write!(
+                    f,
+                    "ResourceId( ChainId {})",
+                    resource_id.typed_chain_id().underlying_chain_id()
+                )
             }
         }
     }
@@ -198,47 +161,35 @@ impl Display for BridgeKey {
     }
 }
 
-impl From<types::U256> for HistoryStoreKey {
-    fn from(chain_id: types::U256) -> Self {
+impl From<u32> for HistoryStoreKey {
+    fn from(chain_id: u32) -> Self {
         Self::Block { chain_id }
     }
 }
 
-impl From<(types::U256, types::Address)> for HistoryStoreKey {
-    fn from((chain_id, address): (types::U256, types::Address)) -> Self {
-        Self::Evm { chain_id, address }
+impl From<ResourceId> for HistoryStoreKey {
+    fn from(resource_id: ResourceId) -> Self {
+        Self::ResourceId { resource_id }
     }
 }
 
-impl From<(types::Address, types::U256)> for HistoryStoreKey {
-    fn from((address, chain_id): (types::Address, types::U256)) -> Self {
-        Self::Evm { chain_id, address }
+impl From<(TargetSystem, TypedChainId)> for HistoryStoreKey {
+    fn from(
+        (target_system, typed_chain_id): (TargetSystem, TypedChainId),
+    ) -> Self {
+        let resource_id = ResourceId::new(target_system, typed_chain_id);
+        Self::ResourceId { resource_id }
     }
 }
 
-impl From<(types::U256, String)> for HistoryStoreKey {
-    fn from((chain_id, tree_id): (types::U256, String)) -> Self {
-        Self::Substrate { chain_id, tree_id }
+impl From<(TypedChainId, TargetSystem)> for HistoryStoreKey {
+    fn from(
+        (typed_chain_id, target_system): (TypedChainId, TargetSystem),
+    ) -> Self {
+        let resource_id = ResourceId::new(target_system, typed_chain_id);
+        Self::ResourceId { resource_id }
     }
 }
-
-impl From<(String, types::U256)> for HistoryStoreKey {
-    fn from((tree_id, chain_id): (String, types::U256)) -> Self {
-        Self::Substrate { chain_id, tree_id }
-    }
-}
-
-// impl From<(types::U256, String)> for HistoryStoreKey {
-//     fn from((chain_id, address): (types::U256, String)) -> Self {
-//         Self::Cosmos { chain_id, address }
-//     }
-// }
-
-// impl From<(String, types::U256)> for HistoryStoreKey {
-//     fn from((address, chain_id): (String, types::U256)) -> Self {
-//         Self::Cosmos { chain_id, address }
-//     }
-// }
 
 /// HistoryStore is a simple trait for storing and retrieving history
 /// of block numbers.
@@ -247,23 +198,23 @@ pub trait HistoryStore: Clone + Send + Sync {
     fn set_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        block_number: types::U64,
-    ) -> crate::Result<types::U64>;
+        block_number: u64,
+    ) -> crate::Result<u64>;
     /// Get the last block number for that contract.
     /// if not found, returns the `default_block_number`.
     fn get_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        default_block_number: types::U64,
-    ) -> crate::Result<types::U64>;
+        default_block_number: u64,
+    ) -> crate::Result<u64>;
 
     /// an easy way to call the `get_last_block_number`
     /// where the default block number is `1`.
     fn get_last_block_number_or_default<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> crate::Result<types::U64> {
-        self.get_last_block_number(key, types::U64::one())
+    ) -> crate::Result<u64> {
+        self.get_last_block_number(key, 1u64)
     }
 }
 
@@ -289,7 +240,7 @@ pub trait EventHashStore: Send + Sync + Clone {
 /// getting the leaves and insert them with a simple API.
 pub trait LeafCacheStore: HistoryStore {
     /// The Output type which is the leaf.
-    type Output: IntoIterator<Item = types::H256>;
+    type Output: IntoIterator<Item = Vec<u8>>;
 
     /// Get the leaves for the given key.
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
@@ -301,7 +252,7 @@ pub trait LeafCacheStore: HistoryStore {
     fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        leaves: &[(u32, types::H256)],
+        leaves: &[(u32, Vec<u8>)],
     ) -> crate::Result<()>;
 
     /// The last deposit info is sent to the client on leaf request
@@ -310,14 +261,14 @@ pub trait LeafCacheStore: HistoryStore {
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> crate::Result<types::U64>;
+    ) -> crate::Result<u64>;
 
     /// Set the last deposit block number for the given key.
     fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        block_number: types::U64,
-    ) -> crate::Result<types::U64>;
+        block_number: u64,
+    ) -> crate::Result<u64>;
 }
 
 /// An Encrypted Output Cache Store is a simple trait that would help in
@@ -347,7 +298,7 @@ pub trait EncryptedOutputCacheStore: HistoryStore {
     >(
         &self,
         key: K,
-    ) -> crate::Result<types::U64>;
+    ) -> crate::Result<u64>;
 
     /// Set the last deposit block number for the given key.
     fn insert_last_deposit_block_number_for_encrypted_output<
@@ -355,8 +306,8 @@ pub trait EncryptedOutputCacheStore: HistoryStore {
     >(
         &self,
         key: K,
-        block_number: types::U64,
-    ) -> crate::Result<types::U64>;
+        block_number: u64,
+    ) -> crate::Result<u64>;
 }
 
 /// A Command sent to the Bridge to execute different actions.

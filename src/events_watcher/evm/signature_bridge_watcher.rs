@@ -129,7 +129,7 @@ impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
                 // do this transfer.
                 let chain_id = wrapper.contract.get_chain_id().call().await?;
                 let tx_key = SledQueueKey::from_evm_with_custom_key(
-                    chain_id,
+                    chain_id.as_u32(),
                     make_transfer_ownership_key(v.new_owner.to_fixed_bytes())
                 );
                 let exist_tx = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
@@ -209,7 +209,7 @@ where
         let chain_id = contract.get_chain_id().call().await?;
         let proposal_data_hash = utils::keccak256(&proposal_data);
         let tx_key = SledQueueKey::from_evm_with_custom_key(
-            chain_id,
+            chain_id.as_u32(),
             make_execute_proposal_key(proposal_data_hash),
         );
 
@@ -289,7 +289,7 @@ where
         let new_governor_address =
             eth_address_from_uncompressed_public_key(&public_key);
         let tx_key = SledQueueKey::from_evm_with_custom_key(
-            chain_id,
+            chain_id.as_u32(),
             make_transfer_ownership_key(new_governor_address.to_fixed_bytes()),
         );
 

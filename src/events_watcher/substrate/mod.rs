@@ -21,6 +21,8 @@ use super::{BlockNumberOf, SubstrateEventWatcher};
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
 #[doc(hidden)]
+pub use vanchor_encrypted_output_watcher::*;
+#[doc(hidden)]
 pub use vanchor_leaves_watcher::*;
 #[doc(hidden)]
 pub use vanchor_watcher::*;

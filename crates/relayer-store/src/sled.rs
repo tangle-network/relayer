@@ -18,7 +18,7 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::fmt::Debug;
 use std::path::Path;
-use webb::evm::ethers::{self, types};
+use webb::evm::ethers;
 
 use super::HistoryStoreKey;
 use super::{
@@ -64,15 +64,18 @@ impl HistoryStore for SledStore {
     fn set_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        block_number: types::U64,
-    ) -> crate::Result<types::U64> {
+        block_number: u64,
+    ) -> crate::Result<u64> {
         let tree = self.db.open_tree("last_block_numbers")?;
-        let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
-        block_number.to_little_endian(&mut bytes);
+        let bytes = block_number.to_le_bytes();
         let key: HistoryStoreKey = key.into();
         let old = tree.insert(key.to_bytes(), &bytes)?;
         match old {
-            Some(v) => Ok(types::U64::from_little_endian(&v)),
+            Some(v) => {
+                let mut output = [0u8; 8];
+                output.copy_from_slice(&v);
+                Ok(u64::from_be_bytes(output))
+            }
             None => Ok(block_number),
         }
     }
@@ -81,20 +84,24 @@ impl HistoryStore for SledStore {
     fn get_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        default_block_number: types::U64,
-    ) -> crate::Result<types::U64> {
+        default_block_number: u64,
+    ) -> crate::Result<u64> {
         let tree = self.db.open_tree("last_block_numbers")?;
         let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
         match val {
-            Some(v) => Ok(types::U64::from_little_endian(&v)),
+            Some(v) => {
+                let mut output = [0u8; 8];
+                output.copy_from_slice(&v);
+                Ok(u64::from_le_bytes(output))
+            }
             None => Ok(default_block_number),
         }
     }
 }
 
 impl LeafCacheStore for SledStore {
-    type Output = Vec<types::H256>;
+    type Output = Vec<Vec<u8>>;
 
     #[tracing::instrument(skip(self))]
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
@@ -107,12 +114,8 @@ impl LeafCacheStore for SledStore {
             key.chain_id(),
             key.address()
         ))?;
-        let leaves = tree
-            .iter()
-            .values()
-            .flatten()
-            .map(|v| types::H256::from_slice(&v))
-            .collect();
+        let leaves =
+            tree.iter().values().flatten().map(|v| v.to_vec()).collect();
         Ok(leaves)
     }
 
@@ -120,17 +123,16 @@ impl LeafCacheStore for SledStore {
     fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        leaves: &[(u32, types::H256)],
+        leaves: &[(u32, Vec<u8>)],
     ) -> crate::Result<()> {
         let key: HistoryStoreKey = key.into();
-
         let tree = self.db.open_tree(format!(
             "leaves/{}/{}",
             key.chain_id(),
             key.address()
         ))?;
         for (k, v) in leaves {
-            tree.insert(k.to_le_bytes(), v.as_bytes())?;
+            tree.insert(k.to_le_bytes(), v.as_slice())?;
         }
         Ok(())
     }
@@ -138,28 +140,35 @@ impl LeafCacheStore for SledStore {
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> crate::Result<types::U64> {
+    ) -> crate::Result<u64> {
         let tree = self.db.open_tree("last_deposit_block_number")?;
         let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
         match val {
-            Some(v) => Ok(types::U64::from_little_endian(&v)),
-            None => Ok(types::U64::from(0)),
+            Some(v) => {
+                let mut output = [0u8; 8];
+                output.copy_from_slice(&v);
+                Ok(u64::from_le_bytes(output))
+            }
+            None => Ok(0u64),
         }
     }
 
     fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        block_number: types::U64,
-    ) -> crate::Result<types::U64> {
+        block_number: u64,
+    ) -> crate::Result<u64> {
         let tree = self.db.open_tree("last_deposit_block_number")?;
-        let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
-        block_number.to_little_endian(&mut bytes);
+        let bytes = block_number.to_le_bytes();
         let key: HistoryStoreKey = key.into();
         let old = tree.insert(key.to_bytes(), &bytes)?;
         match old {
-            Some(v) => Ok(types::U64::from_little_endian(&v)),
+            Some(v) => {
+                let mut output = [0u8; 8];
+                output.copy_from_slice(&v);
+                Ok(u64::from_le_bytes(output))
+            }
             None => Ok(block_number),
         }
     }
@@ -208,13 +217,17 @@ impl EncryptedOutputCacheStore for SledStore {
     >(
         &self,
         key: K,
-    ) -> crate::Result<types::U64> {
+    ) -> crate::Result<u64> {
         let tree = self.db.open_tree("last_deposit_block_number")?;
         let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
         match val {
-            Some(v) => Ok(types::U64::from_little_endian(&v)),
-            None => Ok(types::U64::from(0)),
+            Some(v) => {
+                let mut output = [0u8; 8];
+                output.copy_from_slice(&v);
+                Ok(u64::from_le_bytes(output))
+            }
+            None => Ok(0u64),
         }
     }
 
@@ -223,15 +236,18 @@ impl EncryptedOutputCacheStore for SledStore {
     >(
         &self,
         key: K,
-        block_number: types::U64,
-    ) -> crate::Result<types::U64> {
+        block_number: u64,
+    ) -> crate::Result<u64> {
         let tree = self.db.open_tree("last_deposit_block_number")?;
-        let mut bytes = [0u8; std::mem::size_of::<types::U64>()];
-        block_number.to_little_endian(&mut bytes);
+        let bytes = block_number.to_le_bytes();
         let key: HistoryStoreKey = key.into();
         let old = tree.insert(key.to_bytes(), &bytes)?;
         match old {
-            Some(v) => Ok(types::U64::from_little_endian(&v)),
+            Some(v) => {
+                let mut output = [0u8; 8];
+                output.copy_from_slice(&v);
+                Ok(u64::from_be_bytes(output))
+            }
             None => Ok(block_number),
         }
     }
@@ -266,21 +282,21 @@ pub enum SledQueueKey {
     /// Queue Key for EVM based Transaction Queue.
     EvmTx {
         /// EVM Chain Id.
-        chain_id: types::U256,
+        chain_id: u32,
         /// an optional key for this transaction.
         optional_key: Option<[u8; 64]>,
     },
     /// Queue Key for Substrate based Transaction Queue.
     SubstrateTx {
         /// Substrate Chain Id.
-        chain_id: types::U256,
+        chain_id: u32,
         /// an optional key for this transaction.
         optional_key: Option<[u8; 64]>,
     },
     /// Queue Key for cosmos based Transaction Queue.
     CosmosTx {
         /// cosmos-SDK Chain Id.
-        chain_id: types::U256,
+        chain_id: u32,
         /// an optional key for this transaction.
         optional_key: Option<[u8; 64]>,
     },
@@ -293,7 +309,7 @@ pub enum SledQueueKey {
 
 impl SledQueueKey {
     /// Create a new SledQueueKey from an evm chain id.
-    pub fn from_evm_chain_id(chain_id: types::U256) -> Self {
+    pub fn from_evm_chain_id(chain_id: u32) -> Self {
         Self::EvmTx {
             chain_id,
             optional_key: None,
@@ -301,10 +317,7 @@ impl SledQueueKey {
     }
 
     /// from_evm_with_custom_key returns an EVM specific SledQueueKey.
-    pub fn from_evm_with_custom_key(
-        chain_id: types::U256,
-        key: [u8; 64],
-    ) -> Self {
+    pub fn from_evm_with_custom_key(chain_id: u32, key: [u8; 64]) -> Self {
         Self::EvmTx {
             chain_id,
             optional_key: Some(key),
@@ -312,7 +325,7 @@ impl SledQueueKey {
     }
 
     /// Create a new SledQueueKey from an substrate chain id.
-    pub fn from_substrate_chain_id(chain_id: types::U256) -> Self {
+    pub fn from_substrate_chain_id(chain_id: u32) -> Self {
         Self::SubstrateTx {
             chain_id,
             optional_key: None,
@@ -321,7 +334,7 @@ impl SledQueueKey {
 
     /// from_substrate_with_custom_key returns an Substrate specific SledQueueKey.
     pub fn from_substrate_with_custom_key(
-        chain_id: types::U256,
+        chain_id: u32,
         key: [u8; 64],
     ) -> Self {
         Self::SubstrateTx {
@@ -331,7 +344,7 @@ impl SledQueueKey {
     }
 
     /// Create a new SledQueueKey from an cosmos-sdk chain id.
-    pub fn from_cosmos_chain_id(chain_id: types::U256) -> Self {
+    pub fn from_cosmos_chain_id(chain_id: u32) -> Self {
         Self::CosmosTx {
             chain_id,
             optional_key: None,
@@ -339,10 +352,7 @@ impl SledQueueKey {
     }
 
     /// from_cosmos_with_custom_key returns an Cosmos-SDK chain specific SledQueueKey.
-    pub fn from_cosmos_with_custom_key(
-        chain_id: types::U256,
-        key: [u8; 64],
-    ) -> Self {
+    pub fn from_cosmos_with_custom_key(chain_id: u32, key: [u8; 64]) -> Self {
         Self::CosmosTx {
             chain_id,
             optional_key: Some(key),
@@ -434,19 +444,22 @@ where
         tree.transaction::<_, _, std::io::Error>(|db| {
             // get the last id of the queue.
             let last_item_idx = match db.get("last_item_idx")? {
-                Some(v) => types::U64::from_big_endian(&v),
-                None => types::U64::zero(),
+                Some(v) => {
+                    let mut output = [0u8; 8];
+                    output.copy_from_slice(&v);
+                    u64::from_be_bytes(output)
+                }
+                None => 0u64,
             };
             // increment it.
-            let next_idx = last_item_idx + types::U64::one();
-            let mut idx_bytes = [0u8; std::mem::size_of::<types::U64>()];
-            next_idx.to_big_endian(&mut idx_bytes);
+            let next_idx = last_item_idx + 1u64;
+            let idx_bytes = next_idx.to_be_bytes();
             // then save it.
             db.insert("last_item_idx", &idx_bytes)?;
             db.insert("key_prefix", "item")?;
             // we create a item key like so
             // tx_key = 4 bytes prefix ("item") + 8 bytes of the index.
-            let mut item_key = [0u8; 4 + std::mem::size_of::<types::U64>()];
+            let mut item_key = [0u8; 4 + std::mem::size_of::<u64>()];
             let prefix =
                 db.get("key_prefix")?.unwrap_or_else(|| b"item".into());
             item_key[0..4].copy_from_slice(&prefix);
@@ -571,19 +584,21 @@ impl ProposalStore for SledStore {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use webb::evm::contract::protocol_solidity::NewNullifierFilter;
     use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
+    use webb::evm::ethers::types;
     use webb::evm::ethers::types::transaction::request::TransactionRequest;
+    use webb::evm::{
+        contract::protocol_solidity::v_anchor_contract::NewNullifierFilter,
+        ethers::types::U64,
+    };
+    use webb_proposals::{TargetSystem, TypedChainId};
 
     impl SledQueueKey {
-        pub fn from_evm_tx(
-            chain_id: types::U256,
-            tx: &TypedTransaction,
-        ) -> Self {
+        pub fn from_evm_tx(chain_id: u32, tx: &TypedTransaction) -> Self {
             let key = {
                 let mut bytes = [0u8; 64];
                 let tx_hash =
-                    tx.clone().set_chain_id(chain_id.as_u64()).sighash();
+                    tx.clone().set_chain_id(U64::from(chain_id)).sighash();
                 bytes[..32].copy_from_slice(tx_hash.as_fixed_bytes());
                 bytes
             };
@@ -595,23 +610,26 @@ mod tests {
     fn get_leaves_should_work() {
         let tmp = tempfile::tempdir().unwrap();
         let store = SledStore::open(tmp.path()).unwrap();
-        let chain_id = types::U256::one();
+        let chain_id = 1u32;
         let contract =
             types::H160::from_slice("11111111111111111111".as_bytes());
-        let block_number = types::U64::from(20);
-        let default_block_number = types::U64::from(1);
-
+        let block_number = 20u64;
+        let default_block_number = 1u64;
+        let history_store_key = (
+            TypedChainId::Evm(chain_id),
+            TargetSystem::new_contract_address(contract.to_fixed_bytes()),
+        );
         store
-            .set_last_block_number((chain_id, contract), block_number)
+            .set_last_block_number(history_store_key, block_number)
             .unwrap();
 
         let block = store
-            .get_last_block_number((contract, chain_id), default_block_number);
+            .get_last_block_number(history_store_key, default_block_number);
 
         match block {
             Ok(b) => {
                 println!("retrieved block {:?}", block);
-                assert_eq!(b, types::U64::from(20));
+                assert_eq!(b, 20u64);
             }
             Err(e) => {
                 println!("Error encountered {:?}", e);
@@ -623,7 +641,7 @@ mod tests {
     fn tx_queue_should_work() {
         let tmp = tempfile::tempdir().unwrap();
         let store = SledStore::open(tmp.path()).unwrap();
-        let chain_id = types::U256::one();
+        let chain_id = 1u32;
         // it is now empty
         assert_eq!(
             store

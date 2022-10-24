@@ -14,13 +14,14 @@
 //
 use super::{BlockNumberOf, SubstrateEventWatcher};
 use crate::metric;
-use ethereum_types::H256;
 use std::sync::Arc;
-use webb::evm::ethers::types;
 use webb::substrate::protocol_substrate_runtime;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::subxt::{self, OnlineClient};
+use webb_proposals::{
+    ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
+};
 use webb_relayer_store::sled::SledStore;
 use webb_relayer_store::LeafCacheStore;
 // An Substrate VAnchor Leaves Watcher that watches for Deposit events and save the leaves to the store.
@@ -53,7 +54,6 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
             .system()
             .block_hash(block_number as u64);
         let at_hash = api.storage().fetch(&at_hash_addr, None).await?.unwrap();
-
         // fetch leaf_index from merkle tree at given block_number
         let next_leaf_index_addr = RuntimeApi::storage()
             .merkle_tree_bn254()
@@ -63,28 +63,39 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
             .fetch(&next_leaf_index_addr, Some(at_hash))
             .await?
             .unwrap();
-
         // fetch chain_id
         let chain_id_addr = RuntimeApi::constants()
             .linkable_tree_bn254()
             .chain_identifier();
         let chain_id = api.constants().at(&chain_id_addr)?;
-        let chain_id = types::U256::from(chain_id);
-
         let tree_id = event.tree_id.to_string();
         let leaf_count = event.leafs.len();
+
+        // pallet index
+        let pallet_index = {
+            let metadata = api.metadata();
+            let pallet = metadata.pallet("VAnchorHandlerBn254")?;
+            pallet.index()
+        };
+        let src_chain_id = TypedChainId::Substrate(chain_id as u32);
+        let target = SubstrateTargetSystem::builder()
+            .pallet_index(pallet_index)
+            .tree_id(event.tree_id)
+            .build();
+        let src_target_system = TargetSystem::Substrate(target);
+        let history_store_key =
+            ResourceId::new(src_target_system, src_chain_id);
         let mut leaf_index = next_leaf_index.saturating_sub(leaf_count as u32);
         let mut leaf_store = Vec::with_capacity(leaf_count);
         for leaf in event.leafs {
-            let leaf_value = H256::from_slice(&leaf.0);
-            let value = (leaf_index, leaf_value);
-            store.insert_leaves((chain_id, tree_id.clone()), &[value])?;
+            let value = (leaf_index, leaf.0.to_vec());
+            store.insert_leaves(history_store_key, &[value])?;
             store.insert_last_deposit_block_number(
-                (chain_id, tree_id.clone()),
-                types::U64::from(block_number),
+                history_store_key,
+                block_number.into(),
             )?;
             leaf_index += 1;
-            leaf_store.push(leaf_value);
+            leaf_store.push(leaf.0);
         }
         tracing::event!(
             target: crate::probe::TARGET,

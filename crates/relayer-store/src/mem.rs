@@ -28,9 +28,9 @@ type MemStoreForVec = HashMap<HistoryStoreKey, Vec<(u32, Vec<u8>)>>;
 /// InMemoryStore is a store that stores the history of events in memory.
 #[derive(Clone, Default)]
 pub struct InMemoryStore {
-    store: Arc<RwLock<MemStore>>,
+    _store: Arc<RwLock<MemStore>>,
     store_for_vec: Arc<RwLock<MemStoreForVec>>,
-    last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, types::U64>>>,
+    last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
 }
 
 impl std::fmt::Debug for InMemoryStore {
@@ -44,8 +44,8 @@ impl HistoryStore for InMemoryStore {
     fn get_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        default_block_number: types::U64,
-    ) -> crate::Result<types::U64> {
+        default_block_number: u64,
+    ) -> crate::Result<u64> {
         let guard = self.last_block_numbers.read();
         let val = guard
             .get(&key.into())
@@ -58,8 +58,8 @@ impl HistoryStore for InMemoryStore {
     fn set_last_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        block_number: types::U64,
-    ) -> crate::Result<types::U64> {
+        block_number: u64,
+    ) -> crate::Result<u64> {
         let mut guard = self.last_block_numbers.write();
         let val = guard.entry(key.into()).or_insert(block_number);
         let old = *val;
@@ -69,14 +69,14 @@ impl HistoryStore for InMemoryStore {
 }
 
 impl LeafCacheStore for InMemoryStore {
-    type Output = Vec<types::H256>;
+    type Output = Vec<Vec<u8>>;
 
     #[tracing::instrument(skip(self))]
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
     ) -> crate::Result<Self::Output> {
-        let guard = self.store.read();
+        let guard = self.store_for_vec.read();
         let val = guard
             .get(&key.into())
             .cloned()
@@ -91,9 +91,9 @@ impl LeafCacheStore for InMemoryStore {
     fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        leaves: &[(u32, types::H256)],
+        leaves: &[(u32, Vec<u8>)],
     ) -> crate::Result<()> {
-        let mut guard = self.store.write();
+        let mut guard = self.store_for_vec.write();
         guard
             .entry(key.into())
             .and_modify(|v| v.extend_from_slice(leaves))
@@ -105,17 +105,17 @@ impl LeafCacheStore for InMemoryStore {
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-    ) -> crate::Result<types::U64> {
-        Ok(types::U64::from(0))
+    ) -> crate::Result<u64> {
+        Ok(0u64)
     }
 
     #[tracing::instrument(skip(self))]
     fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
-        block_number: types::U64,
-    ) -> crate::Result<types::U64> {
-        Ok(types::U64::from(0))
+        block_number: u64,
+    ) -> crate::Result<u64> {
+        Ok(0u64)
     }
 }
 
@@ -158,8 +158,8 @@ impl EncryptedOutputCacheStore for InMemoryStore {
     >(
         &self,
         key: K,
-    ) -> crate::Result<types::U64> {
-        Ok(types::U64::from(0))
+    ) -> crate::Result<u64> {
+        Ok(0u64)
     }
 
     #[tracing::instrument(skip(self))]
@@ -168,8 +168,8 @@ impl EncryptedOutputCacheStore for InMemoryStore {
     >(
         &self,
         key: K,
-        block_number: types::U64,
-    ) -> crate::Result<types::U64> {
-        Ok(types::U64::from(0))
+        block_number: u64,
+    ) -> crate::Result<u64> {
+        Ok(0u64)
     }
 }

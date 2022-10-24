@@ -100,6 +100,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       suri: '//Charlie',
       chainId: chainId,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+      features: { governanceRelay: false, privateTxRelay: false },
     });
 
     // now start the relayer
@@ -253,12 +254,12 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
 
     // chainId
     let chainIdentifier = await aliceNode.getChainId();
-    const chainIdHex = chainIdentifier.toString(16);
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
     const response = await webbRelayer.getLeavesSubstrate(
-      chainIdHex,
-      treeId.toString()
+      chainIdentifier.toString(),
+      treeId.toString(),
+      '44' // pallet Id
     );
     expect(response.status).equal(200);
     let leavesStore = response.json() as Promise<LeavesCacheResponse>;

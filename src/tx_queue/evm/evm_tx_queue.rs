@@ -15,7 +15,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use ethereum_types::H256;
+use ethereum_types::{H256, U64};
 use futures::TryFutureExt;
 use rand::Rng;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
@@ -101,7 +101,9 @@ where
             .map_err(|_| {
                 crate::Error::Generic("Failed to fetch chain id from client")
             })
-            .await?;
+            .await?
+            .as_u32();
+
         let store = self.store;
         let backoff = backoff::ExponentialBackoff {
             max_elapsed_time: None,
@@ -112,7 +114,7 @@ where
             tracing::Level::DEBUG,
             kind = %crate::probe::Kind::TxQueue,
             ty = "EVM",
-            chain_id = %chain_id.as_u64(),
+            chain_id = %chain_id,
             starting = true,
         );
 
@@ -132,7 +134,8 @@ where
                 let maybe_explorer = &chain_config.explorer;
                 let mut tx_hash: H256;
                 if let Some(mut raw_tx) = maybe_tx {
-                    let raw_tx = raw_tx.set_chain_id(chain_id.as_u64()).clone();
+                    let raw_tx =
+                        raw_tx.set_chain_id(U64::from(chain_id)).clone();
                     let my_tx_hash = raw_tx.sighash();
                     tx_hash = my_tx_hash;
                     // dry run test
@@ -145,7 +148,7 @@ where
                                 tracing::Level::DEBUG,
                                 kind = %crate::probe::Kind::TxQueue,
                                 ty = "EVM",
-                                chain_id = %chain_id.as_u64(),
+                                chain_id = %chain_id,
                                 dry_run = "passed",
                                 %tx_hash,
                             );
@@ -156,7 +159,7 @@ where
                                 tracing::Level::DEBUG,
                                 kind = %crate::probe::Kind::TxQueue,
                                 ty = "EVM",
-                                chain_id = %chain_id.as_u64(),
+                                chain_id = %chain_id,
                                 errored = true,
                                 error = %err,
                                 dry_run = "failed",
@@ -175,7 +178,7 @@ where
                                 tracing::Level::DEBUG,
                                 kind = %crate::probe::Kind::TxQueue,
                                 ty = "EVM",
-                                chain_id = %chain_id.as_u64(),
+                                chain_id = %chain_id,
                                 pending = true,
                                 %tx_hash,
                             );
@@ -224,7 +227,7 @@ where
                                 tracing::Level::DEBUG,
                                 kind = %crate::probe::Kind::TxQueue,
                                 ty = "EVM",
-                                chain_id = %chain_id.as_u64(),
+                                chain_id = %chain_id,
                                 errored = true,
                                 %tx_hash,
                                 error = %e,
@@ -261,7 +264,7 @@ where
                                 tracing::Level::DEBUG,
                                 kind = %crate::probe::Kind::TxQueue,
                                 ty = "EVM",
-                                chain_id = %chain_id.as_u64(),
+                                chain_id = %chain_id,
                                 finalized = true,
                                 %tx_hash,
                             );
@@ -310,7 +313,7 @@ where
                                 tracing::Level::DEBUG,
                                 kind = %crate::probe::Kind::TxQueue,
                                 ty = "EVM",
-                                chain_id = %chain_id.as_u64(),
+                                chain_id = %chain_id,
                                 errored = true,
                                 %tx_hash,
                                 error = %e,
