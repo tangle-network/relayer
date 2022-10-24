@@ -546,7 +546,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     this.retries(0);
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
     // It should fail since data querying is not configured for relayer
-    const chainId = localChain1.underlyingChainId.toString(16);
+    const chainId = localChain1.underlyingChainId.toString();
     const response = await webbRelayer.getLeavesEvm(
       chainId,
       vanchor1.contract.address
@@ -559,7 +559,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     this.retries(0);
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
     // It should fail since data querying is not configured for relayer
-    const chainId = localChain1.underlyingChainId.toString(16);
+    const chainId = localChain1.underlyingChainId.toString();
     const response = await webbRelayer.getEncryptedOutputsEvm(
       chainId,
       vanchor1.contract.address

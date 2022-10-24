@@ -254,11 +254,10 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
 
     // chainId
     let chainIdentifier = await aliceNode.getChainId();
-    const chainIdHex = chainIdentifier.toString(16);
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
     const response = await webbRelayer.getLeavesSubstrate(
-      chainIdHex,
+      chainIdentifier.toString(),
       treeId.toString(),
       '44' // pallet Id
     );
