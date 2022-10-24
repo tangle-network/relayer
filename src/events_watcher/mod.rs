@@ -23,7 +23,6 @@
 //! The event watcher calls into a storage for handling of important state. The run implementation
 //! of an event watcher polls for blocks. Implementations of the event watcher trait define an
 //! action to take when the specified event is found in a block at the `handle_event` api.
-use ethereum_types::{U256, U64};
 use futures::prelude::*;
 use std::cmp;
 use std::ops::Deref;
@@ -45,12 +44,14 @@ use webb::{
         subxt::{self, client::OnlineClientT, ext::sp_runtime::traits::Header},
     },
 };
+use webb_proposals::{
+    ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
+};
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::{
     BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
     QueueStore,
 };
-
 /// A module for listening on dkg events.
 #[doc(hidden)]
 pub mod dkg;
@@ -127,15 +128,16 @@ pub trait EventWatcher {
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
-            let step = contract.max_blocks_per_step();
+            let step = contract.max_blocks_per_step().as_u64();
             // saves the last time we printed sync progress.
             let mut instant = std::time::Instant::now();
             let metrics = &ctx.metrics;
-            let chain_id = client
+            let chain_id: u32 = client
                 .get_chainid()
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
-                .await?;
+                .await?
+                .as_u32();
             let chain_config =
                 ctx.config.evm.get(&chain_id.to_string()).ok_or_else(|| {
                     crate::Error::ChainNotFound {
@@ -143,19 +145,27 @@ pub trait EventWatcher {
                     }
                 })?;
             // no of blocks confirmation required before processing it
-            let block_confirmations: U64 =
+            let block_confirmations: u64 =
                 chain_config.block_confirmations.into();
             // now we start polling for new events.
             loop {
+                // create history store key
+                let src_target_system = TargetSystem::new_contract_address(
+                    contract.address().to_fixed_bytes(),
+                );
+                let src_typed_chain_id = TypedChainId::Evm(chain_id);
+                let history_store_key =
+                    ResourceId::new(src_target_system, src_typed_chain_id);
                 let block = store.get_last_block_number(
-                    (chain_id, contract.address()),
-                    contract.deployed_at(),
+                    history_store_key,
+                    contract.deployed_at().as_u64(),
                 )?;
                 let current_block_number = client
                     .get_block_number()
                     .map_err(Into::into)
                     .map_err(backoff::Error::transient)
                     .await?;
+                let current_block_number = current_block_number.as_u64();
                 tracing::trace!(
                     "Latest block number: #{}",
                     current_block_number
@@ -214,8 +224,8 @@ pub trait EventWatcher {
                         });
                         if mark_as_handled {
                             store.set_last_block_number(
-                                (chain_id, contract.address()),
-                                log.block_number,
+                                history_store_key,
+                                log.block_number.as_u64(),
                             )?;
                             tracing::trace!(
                                 "event handled successfully. at #{}",
@@ -231,10 +241,8 @@ pub trait EventWatcher {
                         }
                     }
                     // move forward.
-                    store.set_last_block_number(
-                        (chain_id, contract.address()),
-                        dest_block,
-                    )?;
+                    store
+                        .set_last_block_number(history_store_key, dest_block)?;
                     tracing::trace!("Last saved block number: #{}", dest_block);
                 }
                 tracing::trace!("Polled from #{} to #{}", block, dest_block);
@@ -253,8 +261,8 @@ pub trait EventWatcher {
                     && instant.elapsed() > contract.print_progress_interval()
                 {
                     // calculate sync progress.
-                    let total = current_block_number.as_u64() as f64;
-                    let current_value = dest_block.as_u64() as f64;
+                    let total = current_block_number as f64;
+                    let current_value = dest_block as f64;
                     let diff = total - current_value;
                     let percentage = (diff / current_value) * 100.0;
                     // should be always less that 100.
@@ -478,15 +486,14 @@ pub trait SubstrateEventWatcher {
     #[tracing::instrument(
         skip_all,
         fields(
-            node = %node_name,
             chain_id = %chain_id,
             tag = %Self::TAG
         )
     )]
     async fn run(
         &self,
-        node_name: String,
-        chain_id: U256,
+        _node_name: String,
+        chain_id: u32,
         client: Arc<Self::Client>,
         store: Arc<Self::Store>,
         metrics: Arc<metric::Metrics>,
@@ -495,16 +502,24 @@ pub trait SubstrateEventWatcher {
 
         let task = || async {
             let mut instant = std::time::Instant::now();
-            let step = U64::from(1u64);
+            let step = 1u64;
             let rpc = client.rpc();
             loop {
                 // now we start polling for new events.
                 // get the latest seen block number.
+
+                // create history store key
+                let src_typed_chain_id = TypedChainId::Substrate(chain_id);
+                let target = SubstrateTargetSystem::builder()
+                    .pallet_index(chain_id as u8)
+                    .tree_id(chain_id)
+                    .build();
+                let src_target_system = TargetSystem::Substrate(target);
+                let history_store_key =
+                    ResourceId::new(src_target_system, src_typed_chain_id);
+
                 let block = store
-                    .get_last_block_number(
-                        (node_name.clone(), chain_id),
-                        1u64.into(),
-                    )
+                    .get_last_block_number(history_store_key, 1u64)
                     .map_err(Into::into)
                     .map_err(backoff::Error::transient)?;
                 let latest_head = rpc
@@ -512,6 +527,7 @@ pub trait SubstrateEventWatcher {
                     .map_err(Into::into)
                     .map_err(backoff::Error::transient)
                     .await?;
+
                 let maybe_latest_header = rpc
                     .header(Some(latest_head))
                     .map_err(Into::into)
@@ -523,13 +539,10 @@ pub trait SubstrateEventWatcher {
                     tracing::warn!("No latest header found");
                     continue;
                 };
-                let current_block_number_bytes =
-                    scale::Encode::encode(&latest_header.number());
-                let current_block_number: u32 =
-                    scale::Decode::decode(&mut &current_block_number_bytes[..])
-                        .map_err(Into::into)
-                        .map_err(backoff::Error::transient)?;
-                let current_block_number = U64::from(current_block_number);
+                // current finalized block number
+                let current_block_number: u64 =
+                    (*latest_header.number()).into();
+
                 tracing::trace!(
                     "Latest block number: #{}",
                     current_block_number
@@ -544,7 +557,7 @@ pub trait SubstrateEventWatcher {
                     // range [block, dest_block].
                     // so first we get the hash of the block we want to start from.
                     let maybe_from = rpc
-                        .block_hash(Some(block.as_u32().into()))
+                        .block_hash(Some(block.into()))
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;
@@ -590,18 +603,11 @@ pub trait SubstrateEventWatcher {
                             .await;
                         match result {
                             Ok(_) => {
-                                let current_block_number_bytes =
-                                    scale::Encode::encode(&block_number);
-                                let current_block_number: u32 =
-                                    scale::Decode::decode(
-                                        &mut &current_block_number_bytes[..],
-                                    )
-                                    .map_err(Into::into)
-                                    .map_err(backoff::Error::transient)?;
-                                let current_block_number =
-                                    U64::from(current_block_number);
+                                let current_block_number: u64 =
+                                    block_number.into();
+
                                 store.set_last_block_number(
-                                    (node_name.clone(), chain_id),
+                                    history_store_key,
                                     current_block_number,
                                 )?;
                                 tracing::trace!(
@@ -621,10 +627,8 @@ pub trait SubstrateEventWatcher {
                         }
                     }
                     // move forward.
-                    store.set_last_block_number(
-                        (node_name.clone(), chain_id),
-                        dest_block,
-                    )?;
+                    store
+                        .set_last_block_number(history_store_key, dest_block)?;
                     tracing::trace!("Last saved block number: #{}", dest_block);
                 }
                 tracing::trace!("Polled from #{} to #{}", block, dest_block);
@@ -639,8 +643,8 @@ pub trait SubstrateEventWatcher {
                 // only print the progress if 7 seconds (by default) is passed.
                 if instant.elapsed() > Duration::from_secs(7) {
                     // calculate sync progress.
-                    let total = current_block_number.as_u64() as f64;
-                    let current_value = dest_block.as_u64() as f64;
+                    let total = current_block_number as f64;
+                    let current_value = dest_block as f64;
                     let diff = total - current_value;
                     let percentage = (diff / current_value) * 100.0;
                     // should be always less that 100.
@@ -676,7 +680,7 @@ where
     /// handled and executed.
     async fn handle_cmd(
         &self,
-        chain_id: U256,
+        chain_id: u32,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
         cmd: BridgeCommand,
@@ -693,15 +697,14 @@ where
     )]
     async fn run(
         &self,
-        chain_id: U256,
+        chain_id: u32,
         client: Arc<Self::Client>,
         store: Arc<Self::Store>,
     ) -> crate::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
-            let my_chain_id =
-                webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
+            let my_chain_id = webb_proposals::TypedChainId::Substrate(chain_id);
             let bridge_key = BridgeKey::new(my_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
@@ -793,7 +796,7 @@ mod tests {
     #[ignore = "need to be run manually"]
     async fn substrate_event_watcher_should_work() -> crate::Result<()> {
         let node_name = String::from("test-node");
-        let chain_id = U256::from(5u32);
+        let chain_id = 5u32;
         let store = Arc::new(SledStore::temporary()?);
         let client = OnlineClient::<PolkadotConfig>::new().await?;
         let watcher = RemarkedEventWatcher::default();

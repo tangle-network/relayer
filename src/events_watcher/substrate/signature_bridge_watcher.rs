@@ -22,7 +22,6 @@ use super::{BlockNumberOf, SubstrateEventWatcher};
 use crate::events_watcher::SubstrateBridgeWatcher;
 use webb_relayer_store::sled::{SledQueueKey,SledStore};
 use webb_relayer_store::{BridgeCommand, QueueStore};
-use ethereum_types::U256;
 use webb::substrate::{
     protocol_substrate_runtime,
 };
@@ -87,7 +86,7 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
     #[tracing::instrument(skip_all)]
     async fn handle_cmd(
         &self,
-        chain_id: U256,
+        chain_id: u32,
         store: Arc<Self::Store>,
         api: Arc<Self::Client>,
         cmd: BridgeCommand,
@@ -129,7 +128,7 @@ where
     #[tracing::instrument(skip_all)]
     async fn execute_proposal_with_signature(
         &self,
-        chain_id: U256,
+        chain_id: u32,
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
         api: Arc<<Self as SubstrateEventWatcher>::Client>,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
@@ -190,8 +189,7 @@ where
             parse_call_from_proposal_data(&proposal_data);
         let _proposal_encoded_call: Call =
             scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())?;
-        let typed_chain_id =
-            webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
+        let typed_chain_id = webb_proposals::TypedChainId::Substrate(chain_id);
 
         // Enqueue transaction call data in protocol-substrate transaction queue
         let execute_proposal_call = ExecuteProposal {
@@ -231,7 +229,7 @@ where
     #[tracing::instrument(skip_all)]
     async fn transfer_ownership_with_signature(
         &self,
-        chain_id: U256,
+        chain_id: u32,
         store: Arc<<Self as SubstrateEventWatcher>::Store>,
         api: Arc<<Self as SubstrateEventWatcher>::Client>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
@@ -283,7 +281,7 @@ where
             tracing::Level::DEBUG,
             kind = %crate::probe::Kind::SignatureBridge,
             call = "transfer_ownership_with_signature_pub_key",
-            chain_id = %chain_id.as_u64(),
+            chain_id = %chain_id,
             new_maintainer = %hex::encode(&new_maintainer),
             %nonce,
             signature = %hex::encode(&signature),

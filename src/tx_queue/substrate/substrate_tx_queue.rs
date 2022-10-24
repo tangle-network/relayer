@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 use crate::context::RelayerContext;
-use ethereum_types::U256;
 use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
@@ -44,7 +43,7 @@ where
     S: QueueStore<WebbDynamicTxPayload<'a>, Key = SledQueueKey>,
 {
     ctx: RelayerContext,
-    chain_id: U256,
+    chain_id: u32,
     store: Arc<S>,
     _marker: PhantomData<&'a ()>,
 }
@@ -69,7 +68,7 @@ where
     /// let tx_queue = SubstrateTxQueue::new(ctx, chain_name.clone(), store);
     /// ```
 
-    pub fn new(ctx: RelayerContext, chain_id: U256, store: Arc<S>) -> Self {
+    pub fn new(ctx: RelayerContext, chain_id: u32, store: Arc<S>) -> Self {
         Self {
             ctx,
             chain_id,
@@ -136,7 +135,7 @@ where
             tracing::Level::DEBUG,
             kind = %crate::probe::Kind::TxQueue,
             ty = "SUBSTRATE",
-            chain_id = %chain_id.as_u64(),
+            chain_id = %chain_id,
             starting = true,
         );
 
@@ -173,7 +172,7 @@ where
                                 tracing::Level::DEBUG,
                                 kind = %crate::probe::Kind::TxQueue,
                                 ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
+                                chain_id = %chain_id,
                                 dry_run = "passed"
                             );
                         }
@@ -183,7 +182,7 @@ where
                                 tracing::Level::DEBUG,
                                 kind = %crate::probe::Kind::TxQueue,
                                 ty = "SUBSTRATE",
-                                chain_id = %chain_id.as_u64(),
+                                chain_id = %chain_id,
                                 errored = true,
                                 error = %err,
                                 dry_run = "failed"
@@ -211,7 +210,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     errored = true,
                                     error = %err,
                                 );
@@ -226,7 +225,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "Future",
                                 );
                             }
@@ -236,7 +235,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "Ready",
                                 );
                             }
@@ -246,7 +245,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "Broadcast",
                                 );
                             }
@@ -256,7 +255,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "InBlock",
                                 );
                             }
@@ -266,7 +265,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "Retracted",
                                 );
                             }
@@ -276,7 +275,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "FinalityTimeout",
                                 );
                             }
@@ -286,7 +285,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "Finalized",
                                     finalized = true,
                                 );
@@ -303,7 +302,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "Usurped",
                                 );
                             }
@@ -313,7 +312,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "Dropped",
                                 );
                             }
@@ -323,7 +322,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %crate::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
-                                    chain_id = %chain_id.as_u64(),
+                                    chain_id = %chain_id,
                                     status = "Invalid",
                                 );
                             }

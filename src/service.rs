@@ -23,8 +23,6 @@
 
 use std::collections::HashSet;
 use std::sync::Arc;
-
-use ethereum_types::U256;
 use webb::evm::ethers::providers;
 
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
@@ -157,11 +155,13 @@ pub fn build_web_services(
         .and(store_filter)
         .and(warp::path::param())
         .and(warp::path::param())
-        .and_then(move |store, chain_id, contract| {
+        .and(warp::path::param())
+        .and_then(move |store, chain_id, tree_id, pallet_id| {
             crate::handler::handle_leaves_cache_substrate(
                 store,
                 chain_id,
-                contract,
+                tree_id,
+                pallet_id,
                 Arc::clone(&ctx_arc),
             )
         })
@@ -244,7 +244,7 @@ pub async fn ignite(
             continue;
         }
         let chain_name = &chain_config.name;
-        let chain_id = U256::from(chain_config.chain_id);
+        let chain_id = chain_config.chain_id;
         let provider = ctx.evm_provider(&chain_id.to_string()).await?;
         let client = Arc::new(provider);
         tracing::debug!(
@@ -293,7 +293,7 @@ pub async fn ignite(
                 let client =
                     ctx.substrate_provider::<PolkadotConfig>(node_name).await?;
 
-                let chain_id = U256::from(chain_id);
+                let chain_id = chain_id;
                 for pallet in &node_config.pallets {
                     match pallet {
                         Pallet::DKGProposalHandler(config) => {
@@ -338,7 +338,7 @@ pub async fn ignite(
                 let client = ctx
                     .substrate_provider::<SubstrateConfig>(node_name)
                     .await?;
-                let chain_id = U256::from(chain_id);
+                let chain_id = chain_id;
                 for pallet in &node_config.pallets {
                     match pallet {
                         Pallet::VAnchorBn254(config) => {
@@ -396,14 +396,14 @@ pub async fn ignite(
 /// * `config` - VAnchorBn254 configuration
 /// * `client` - WebbProtocol client
 /// * `node_name` - Name of the node
-/// * `chain_id` - An U256 representing the chain id of the chain
+/// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 fn start_substrate_vanchor_event_watcher(
     ctx: &RelayerContext,
     config: &VAnchorBn254PalletConfig,
     client: WebbProtocolClient,
     node_name: String,
-    chain_id: U256,
+    chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     if !config.events_watcher.enabled {
@@ -545,14 +545,14 @@ fn start_substrate_vanchor_event_watcher(
 /// * `config` - DKG proposal handler configuration
 /// * `client` - DKG client
 /// * `node_name` - Name of the node
-/// * `chain_id` - An U256 representing the chain id of the chain
+/// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 fn start_dkg_proposal_handler(
     ctx: &RelayerContext,
     config: &DKGProposalHandlerPalletConfig,
     client: DkgClient,
     node_name: String,
-    chain_id: U256,
+    chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     // check first if we should start the events watcher for this contract.
@@ -609,14 +609,14 @@ fn start_dkg_proposal_handler(
 /// * `config` - DKG pallet configuration
 /// * `client` - DKG client
 /// * `node_name` - Name of the node
-/// * `chain_id` - An U256 representing the chain id of the chain
+/// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 fn start_dkg_pallet_watcher(
     ctx: &RelayerContext,
     config: &DKGPalletConfig,
     client: DkgClient,
     node_name: String,
-    chain_id: U256,
+    chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     // check first if we should start the events watcher for this pallet.
@@ -674,7 +674,7 @@ fn start_dkg_pallet_watcher(
 async fn start_evm_vanchor_events_watcher(
     ctx: &RelayerContext,
     config: &VAnchorContractConfig,
-    chain_id: U256,
+    chain_id: u32,
     client: Arc<Client>,
     store: Arc<Store>,
 ) -> crate::Result<()> {
@@ -884,7 +884,7 @@ async fn start_substrate_signature_bridge_events_watcher(
     config: &SignatureBridgePalletConfig,
     client: WebbProtocolClient,
     node_name: String,
-    chain_id: U256,
+    chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     if !config.events_watcher.enabled {
@@ -991,7 +991,7 @@ fn start_tx_queue(
 /// * `store` -[Sled](https://sled.rs)-based database store
 fn start_protocol_substrate_tx_queue(
     ctx: RelayerContext,
-    chain_id: U256,
+    chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
@@ -1034,7 +1034,7 @@ fn start_protocol_substrate_tx_queue(
 /// * `store` -[Sled](https://sled.rs)-based database store
 fn start_dkg_substrate_tx_queue(
     ctx: RelayerContext,
-    chain_id: U256,
+    chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
@@ -1076,7 +1076,7 @@ enum ProposalSigningBackendSelector {
 async fn make_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
-    chain_id: U256,
+    chain_id: u32,
     linked_anchors: Option<Vec<LinkedAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> crate::Result<ProposalSigningBackendSelector> {
@@ -1107,8 +1107,7 @@ async fn make_proposal_signing_backend(
         Some(ProposalSigningBackendConfig::DkgNode(c)) => {
             // if it is the dkg backend, we will need to connect to that node first,
             // and then use the DkgProposalSigningBackend to sign the proposal.
-            let typed_chain_id =
-                webb_proposals::TypedChainId::Evm(chain_id.as_u32());
+            let typed_chain_id = webb_proposals::TypedChainId::Evm(chain_id);
             let dkg_client =
                 ctx.substrate_provider::<PolkadotConfig>(&c.node).await?;
             let pair = ctx.substrate_wallet(&c.node).await?;
@@ -1153,7 +1152,7 @@ async fn make_proposal_signing_backend(
 async fn make_substrate_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
-    chain_id: U256,
+    chain_id: u32,
     linked_anchors: Option<Vec<LinkedAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> crate::Result<ProposalSigningBackendSelector> {
@@ -1183,7 +1182,7 @@ async fn make_substrate_proposal_signing_backend(
             // if it is the dkg backend, we will need to connect to that node first,
             // and then use the DkgProposalSigningBackend to sign the proposal.
             let typed_chain_id =
-                webb_proposals::TypedChainId::Substrate(chain_id.as_u32());
+                webb_proposals::TypedChainId::Substrate(chain_id);
             let dkg_client =
                 ctx.substrate_provider::<PolkadotConfig>(&c.node).await?;
             let pair = ctx.substrate_wallet(&c.node).await?;

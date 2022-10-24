@@ -15,11 +15,13 @@
 use super::{BlockNumberOf, SubstrateEventWatcher};
 use crate::metric;
 use std::sync::Arc;
-use webb::evm::ethers::types;
 use webb::substrate::protocol_substrate_runtime;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::subxt::{self, OnlineClient};
+use webb_proposals::{
+    ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
+};
 use webb_relayer_store::sled::SledStore;
 use webb_relayer_store::EncryptedOutputCacheStore;
 // An Substrate VAnchor encrypted output Watcher that watches for Deposit events and save the encrypted output to the store.
@@ -68,10 +70,25 @@ impl SubstrateEventWatcher for SubstrateVAnchorEncryptedOutputHandler {
             .linkable_tree_bn254()
             .chain_identifier();
         let chain_id = api.constants().at(&chain_id_addr)?;
-        let chain_id = types::U256::from(chain_id);
 
-        let tree_id = event.tree_id.to_string();
+        let tree_id = event.tree_id;
         let leaf_count = event.leafs.len();
+
+        // pallet index
+        let pallet_index = {
+            let metadata = api.metadata();
+            let pallet = metadata.pallet("VAnchorHandlerBn254")?;
+            pallet.index()
+        };
+
+        let src_chain_id = TypedChainId::Substrate(chain_id as u32);
+        let target = SubstrateTargetSystem::builder()
+            .pallet_index(pallet_index)
+            .tree_id(event.tree_id)
+            .build();
+        let src_target_system = TargetSystem::Substrate(target);
+        let history_store_key =
+            ResourceId::new(src_target_system, src_chain_id);
 
         let mut index = next_leaf_index.saturating_sub(leaf_count as u32);
         let mut output_store = Vec::with_capacity(leaf_count);
@@ -79,13 +96,10 @@ impl SubstrateEventWatcher for SubstrateVAnchorEncryptedOutputHandler {
             [event.encrypted_output1, event.encrypted_output2]
         {
             let value = (index, encrypted_output.clone());
-            store.insert_encrypted_output(
-                (chain_id, tree_id.clone()),
-                &[value],
-            )?;
+            store.insert_encrypted_output(history_store_key, &[value])?;
             store.insert_last_deposit_block_number_for_encrypted_output(
-                (chain_id, tree_id.clone()),
-                types::U64::from(block_number),
+                history_store_key,
+                block_number.into(),
             )?;
             index += 1;
             output_store.push(encrypted_output);

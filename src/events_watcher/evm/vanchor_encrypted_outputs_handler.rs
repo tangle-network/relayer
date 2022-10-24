@@ -19,9 +19,9 @@ use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EncryptedOutputCacheStore, EventHashStore};
-
 /// An Encrypted Output Handler that handles `NewCommitment` events and saves the encrypted_output to the store.
 /// It serves as a cache for encrypted_output that could be used by dApp for proof generation.
 #[derive(Copy, Clone, Debug, Default)]
@@ -51,13 +51,19 @@ impl super::EventHandler for VAnchorEncryptedOutputHandler {
                 let encrypted_output_index = deposit.index.as_u32();
                 let value = (encrypted_output_index, encrypted_output.clone());
                 let chain_id = wrapper.contract.client().get_chainid().await?;
+                let target_system = TargetSystem::new_contract_address(
+                    wrapper.contract.address().to_fixed_bytes(),
+                );
+                let typed_chain_id = TypedChainId::Evm(chain_id.as_u32());
+                let history_store_key =
+                    ResourceId::new(target_system, typed_chain_id);
                 store.insert_encrypted_output(
-                    (chain_id, wrapper.contract.address()),
+                    history_store_key,
                     &[value.clone()],
                 )?;
                 store.insert_last_deposit_block_number_for_encrypted_output(
-                    (chain_id, wrapper.contract.address()),
-                    log.block_number,
+                    history_store_key,
+                    log.block_number.as_u64(),
                 )?;
                 let events_bytes = serde_json::to_vec(&deposit)?;
                 store.store_event(&events_bytes)?;
