@@ -352,6 +352,7 @@ impl BeaconRPCClient {
 
         let v: Value = serde_json::from_str(&json_str)?;
 
+        #[allow(clippy::or_fun_call)]
         v["data"]["is_syncing"]
             .as_bool()
             .ok_or(Box::new(ErrorOnJsonParse))
@@ -363,7 +364,7 @@ impl BeaconRPCClient {
     ) -> Result<String, Box<dyn Error>> {
         trace!(target: "relay", "Beacon chain request: {}", url);
         let json_str = client.get(url).send()?.text()?;
-        if let Err(_) = serde_json::from_str::<Value>(&json_str) {
+        if serde_json::from_str::<Value>(&json_str).is_err() {
             return Err(Box::new(FailOnGettingJson { response: json_str }));
         }
 

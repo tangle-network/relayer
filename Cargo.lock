@@ -5900,9 +5900,193 @@ dependencies = [
  "tokio",
  "tracing",
  "webb",
+ "webb-proposal-signing-backends",
  "webb-relayer",
  "webb-relayer-config",
+ "webb-relayer-context",
+ "webb-relayer-handler-utils",
+ "webb-relayer-handlers",
  "webb-relayer-store",
+ "webb-relayer-tx-queue",
+ "webb-relayer-tx-relay",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-event-watcher-traits"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "backoff",
+ "config",
+ "derive_more",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "hex",
+ "libsecp256k1",
+ "prometheus",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sled",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-test",
+ "typed-builder",
+ "url",
+ "warp",
+ "warp-real-ip",
+ "webb",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-context",
+ "webb-relayer-store",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-ew-dkg"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "backoff",
+ "config",
+ "derive_more",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "hex",
+ "libsecp256k1",
+ "prometheus",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sled",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-test",
+ "typed-builder",
+ "url",
+ "warp",
+ "warp-real-ip",
+ "webb",
+ "webb-event-watcher-traits",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-store",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-ew-evm"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "backoff",
+ "config",
+ "derive_more",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "hex",
+ "libsecp256k1",
+ "prometheus",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sled",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-test",
+ "typed-builder",
+ "url",
+ "warp",
+ "warp-real-ip",
+ "webb",
+ "webb-event-watcher-traits",
+ "webb-proposal-signing-backends",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-store",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-ew-substrate"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "backoff",
+ "config",
+ "derive_more",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "hex",
+ "libsecp256k1",
+ "prometheus",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sled",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-test",
+ "typed-builder",
+ "url",
+ "warp",
+ "warp-real-ip",
+ "webb",
+ "webb-event-watcher-traits",
+ "webb-proposal-signing-backends",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-store",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-proposal-signing-backends"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "backoff",
+ "config",
+ "derive_more",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "hex",
+ "libsecp256k1",
+ "prometheus",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sled",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-test",
+ "typed-builder",
+ "url",
+ "warp",
+ "warp-real-ip",
+ "webb",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-context",
+ "webb-relayer-store",
+ "webb-relayer-types",
  "webb-relayer-utils",
 ]
 
@@ -5951,9 +6135,19 @@ dependencies = [
  "warp",
  "warp-real-ip",
  "webb",
+ "webb-event-watcher-traits",
+ "webb-ew-dkg",
+ "webb-ew-evm",
+ "webb-ew-substrate",
+ "webb-proposal-signing-backends",
  "webb-proposals",
  "webb-relayer-config",
+ "webb-relayer-context",
+ "webb-relayer-handler-utils",
+ "webb-relayer-handlers",
  "webb-relayer-store",
+ "webb-relayer-tx-queue",
+ "webb-relayer-tx-relay",
  "webb-relayer-types",
  "webb-relayer-utils",
 ]
@@ -5983,6 +6177,88 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb-relayer-context"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "backoff",
+ "config",
+ "derive_more",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "hex",
+ "libsecp256k1",
+ "prometheus",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sled",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-test",
+ "typed-builder",
+ "url",
+ "warp",
+ "warp-real-ip",
+ "webb",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-store",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-relayer-handler-utils"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "tokio",
+ "webb",
+ "webb-relayer-tx-relay-utils",
+]
+
+[[package]]
+name = "webb-relayer-handlers"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "backoff",
+ "config",
+ "derive_more",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "hex",
+ "libsecp256k1",
+ "prometheus",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sled",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-test",
+ "typed-builder",
+ "url",
+ "warp",
+ "warp-real-ip",
+ "webb",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-context",
+ "webb-relayer-handler-utils",
+ "webb-relayer-store",
+ "webb-relayer-tx-relay",
+ "webb-relayer-tx-relay-utils",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
 name = "webb-relayer-store"
 version = "0.1.0"
 dependencies = [
@@ -5996,6 +6272,86 @@ dependencies = [
  "webb",
  "webb-proposals",
  "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-relayer-tx-queue"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "backoff",
+ "config",
+ "derive_more",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "hex",
+ "libsecp256k1",
+ "prometheus",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sled",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-test",
+ "typed-builder",
+ "url",
+ "warp",
+ "warp-real-ip",
+ "webb",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-context",
+ "webb-relayer-store",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-relayer-tx-relay"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "backoff",
+ "config",
+ "derive_more",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "hex",
+ "libsecp256k1",
+ "prometheus",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "sled",
+ "tokio",
+ "tokio-stream",
+ "tracing",
+ "tracing-test",
+ "typed-builder",
+ "url",
+ "warp",
+ "warp-real-ip",
+ "webb",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-context",
+ "webb-relayer-handler-utils",
+ "webb-relayer-store",
+ "webb-relayer-tx-relay-utils",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-relayer-tx-relay-utils"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "webb",
 ]
 
 [[package]]
@@ -6018,8 +6374,10 @@ version = "0.1.0"
 dependencies = [
  "backoff",
  "config",
+ "derive_more",
  "glob",
  "libsecp256k1",
+ "prometheus",
  "serde_json",
  "serde_path_to_error",
  "sled",

@@ -7,8 +7,9 @@ use ethereum_types::U256;
 use std::sync::Arc;
 use tokio::signal::unix;
 use webb_block_poller::start_block_poller_service;
-use webb_relayer::{context::RelayerContext, service::Store};
+use webb_relayer::service::Store;
 use webb_relayer_config::cli::{create_store, load_config, setup_logger, Opts};
+use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
 
 /// Starts all background services for all chains configured in the config file.
@@ -102,9 +103,9 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // this does not block, will fire the services on background tasks.
     ignite(&ctx, Arc::new(store)).await?;
     tracing::event!(
-        target: webb_relayer::probe::TARGET,
+        target: webb_relayer_utils::probe::TARGET,
         tracing::Level::DEBUG,
-        kind = %webb_relayer::probe::Kind::Lifecycle,
+        kind = %webb_relayer_utils::probe::Kind::Lifecycle,
         started = true
     );
     // watch for signals
@@ -113,9 +114,9 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let mut quit_signal = unix::signal(unix::SignalKind::quit())?;
     let shutdown = || {
         tracing::event!(
-            target: webb_relayer::probe::TARGET,
+            target: webb_relayer_utils::probe::TARGET,
             tracing::Level::DEBUG,
-            kind = %webb_relayer::probe::Kind::Lifecycle,
+            kind = %webb_relayer_utils::probe::Kind::Lifecycle,
             shutdown = true
         );
         tracing::warn!("Shutting down...");
