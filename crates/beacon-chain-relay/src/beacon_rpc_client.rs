@@ -491,7 +491,7 @@ impl BeaconRPCClient {
         let finalized_block_slot = finalized_header.slot;
 
         let finalized_block_body = self.get_beacon_block_body_for_block_id(
-            &format!("{}", finalized_block_slot),
+            &format!("{finalized_block_slot}"),
         )?;
         let finalized_block_eth1data_proof =
             ExecutionBlockProof::construct_from_beacon_block_body(
@@ -551,7 +551,7 @@ impl BeaconRPCClient {
         let mut slot = start_slot;
         for _ in 0..CHECK_SLOTS_FORWARD_LIMIT {
             if let Ok(beacon_block_body) =
-                self.get_beacon_block_header_for_block_id(&format!("{}", slot))
+                self.get_beacon_block_header_for_block_id(&format!("{slot}"))
             {
                 return Ok(beacon_block_body);
             }

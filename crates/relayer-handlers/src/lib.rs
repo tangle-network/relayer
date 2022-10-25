@@ -271,7 +271,7 @@ pub async fn handle_leaves_cache_evm(
             tracing::warn!("Unsupported Chain: {}", chain_id);
             return Ok(warp::reply::with_status(
                 warp::reply::json(&UnsupportedFeature {
-                    message: format!("Unsupported Chain: {}", chain_id),
+                    message: format!("Unsupported Chain: {chain_id}"),
                 }),
                 warp::http::StatusCode::BAD_REQUEST,
             ));
@@ -457,7 +457,7 @@ pub async fn handle_leaves_cache_cosmwasm(
             tracing::warn!("Unsupported Chain: {}", chain_id);
             return Ok(warp::reply::with_status(
                 warp::reply::json(&UnsupportedFeature {
-                    message: format!("Unsupported Chain: {}", chain_id),
+                    message: format!("Unsupported Chain: {chain_id}"),
                 }),
                 warp::http::StatusCode::BAD_REQUEST,
             ));
@@ -574,7 +574,7 @@ pub async fn handle_encrypted_outputs_cache_evm(
             tracing::warn!("Unsupported Chain: {}", chain_id);
             return Ok(warp::reply::with_status(
                 warp::reply::json(&UnsupportedFeature {
-                    message: format!("Unsupported Chain: {}", chain_id),
+                    message: format!("Unsupported Chain: {chain_id}"),
                 }),
                 warp::http::StatusCode::BAD_REQUEST,
             ));

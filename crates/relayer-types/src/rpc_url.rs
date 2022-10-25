@@ -67,7 +67,7 @@ impl<'de> Deserialize<'de> for RpcUrl {
                     match maybe_rpc_url {
                         Ok(url) => Ok(url),
                         Err(e) => {
-                            Err(serde::de::Error::custom(format!("{:?}", e)))
+                            Err(serde::de::Error::custom(format!("{e:?}")))
                         }
                     }
                 } else {
@@ -75,7 +75,7 @@ impl<'de> Deserialize<'de> for RpcUrl {
                     match maybe_rpc_url {
                         Ok(url) => Ok(url),
                         Err(e) => {
-                            Err(serde::de::Error::custom(format!("{:?}", e)))
+                            Err(serde::de::Error::custom(format!("{e:?}")))
                         }
                     }
                 }

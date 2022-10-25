@@ -207,7 +207,7 @@ where
             ],
         };
 
-        let data_hash = utils::keccak256(&execute_proposal_call.encode());
+        let data_hash = utils::keccak256(execute_proposal_call.encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),
@@ -301,7 +301,7 @@ where
             ],
         };
 
-        let data_hash = utils::keccak256(&set_maintainer_call.encode());
+        let data_hash = utils::keccak256(set_maintainer_call.encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),

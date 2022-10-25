@@ -148,8 +148,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
     if unacceptable_fee {
         tracing::error!("Received a fee lower than configuration");
         let msg = format!(
-            "User sent a fee that is too low {} but expected {}",
-            cmd.ext_data.fee, expected_fee,
+            "User sent a fee that is too low {} but expected {expected_fee}",
+            cmd.ext_data.fee,
         );
         let _ = stream.send(Error(msg)).await;
         return;

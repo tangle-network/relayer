@@ -187,9 +187,9 @@ where
                                 %tx_hash,
                             );
 
-                            let tx_hash_string = format!("0x{:x}", tx_hash);
+                            let tx_hash_string = format!("0x{tx_hash:x}");
                             if let Some(mut url) = maybe_explorer.clone() {
-                                url.set_path(&format!("tx/{}", tx_hash_string));
+                                url.set_path(&format!("tx/{tx_hash_string}"));
                                 let clickable_link = ClickableLink::new(
                                     &tx_hash_string,
                                     url.as_str(),
@@ -207,9 +207,9 @@ where
                             pending.interval(Duration::from_millis(1000)).await
                         }
                         Err(e) => {
-                            let tx_hash_string = format!("0x{:x}", tx_hash);
+                            let tx_hash_string = format!("0x{tx_hash:x}");
                             if let Some(mut url) = maybe_explorer.clone() {
-                                url.set_path(&format!("tx/{}", tx_hash_string));
+                                url.set_path(&format!("tx/{tx_hash_string}"));
                                 let clickable_link = ClickableLink::new(
                                     &tx_hash_string,
                                     url.as_str(),
@@ -245,7 +245,7 @@ where
                             let tx_hash_string =
                                 format!("0x{:x}", receipt.transaction_hash);
                             if let Some(mut url) = maybe_explorer.clone() {
-                                url.set_path(&format!("tx/{}", tx_hash_string));
+                                url.set_path(&format!("tx/{tx_hash_string}"));
                                 let clickable_link = ClickableLink::new(
                                     &tx_hash_string,
                                     url.as_str(),
@@ -279,7 +279,7 @@ where
                             // about timeing, so we already wait a bit
                             // and increased the time interval for checking for
                             // transaction status.
-                            let tx_hash_string = format!("0x{:x}", tx_hash);
+                            let tx_hash_string = format!("0x{tx_hash:x}");
                             tracing::warn!(
                                 "Tx {} Dropped from Mempool!!",
                                 tx_hash_string
@@ -292,9 +292,9 @@ where
                         }
                         Err(e) => {
                             let reason = e.to_string();
-                            let tx_hash_string = format!("0x{:x}", tx_hash);
+                            let tx_hash_string = format!("0x{tx_hash:x}");
                             if let Some(mut url) = maybe_explorer.clone() {
-                                url.set_path(&format!("tx/{}", tx_hash_string));
+                                url.set_path(&format!("tx/{tx_hash_string}"));
                                 let clickable_link = ClickableLink::new(
                                     &tx_hash_string,
                                     url.as_str(),

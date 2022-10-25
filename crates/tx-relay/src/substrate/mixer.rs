@@ -38,7 +38,7 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
         Ok(c) => c,
         Err(e) => {
             tracing::error!("Error while getting Substrate client: {}", e);
-            let _ = stream.send(Error(format!("{}", e))).await;
+            let _ = stream.send(Error(format!("{e}"))).await;
             return;
         }
     };
@@ -79,7 +79,7 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
         Ok(s) => s,
         Err(e) => {
             tracing::error!("Error while sending Tx: {}", e);
-            let _ = stream.send(Error(format!("{}", e))).await;
+            let _ = stream.send(Error(format!("{e}"))).await;
             return;
         }
     };

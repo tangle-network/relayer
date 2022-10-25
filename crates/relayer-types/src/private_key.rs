@@ -54,8 +54,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     let maybe_hex = Secret::from_str(value);
                     match maybe_hex {
                         Ok(val) => Ok(val),
-                        Err(e) => Err(serde::de::Error::custom(format!("{}\n got {} but expected a 66 string (including the 0x prefix)", e, value.len()))),
-                    }
+                        Err(e) => Err(serde::de::Error::custom(format!("{e}\n got {} but expected a 66 string (including the 0x prefix)", value.len()))),                    }
                 } else if value.starts_with('$') {
                     // env
                     let var = value.strip_prefix('$').unwrap_or(value);
@@ -69,8 +68,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     let maybe_hex = Secret::from_str(&val);
                     match maybe_hex {
                         Ok(val) => Ok(val),
-                        Err(e) => Err(serde::de::Error::custom(format!("{}\n expected a 66 chars string (including the 0x prefix) but found {} char", e,  val.len()))),
-                    }
+                        Err(e) => Err(serde::de::Error::custom(format!("{e}\n expected a 66 chars string (including the 0x prefix) but found {} char",  val.len()))),                    }
                 } else if value.starts_with('>') {
                     todo!("Implement command execution to extract the private key")
                 } else {

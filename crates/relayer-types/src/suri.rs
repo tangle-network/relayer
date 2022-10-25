@@ -63,7 +63,7 @@ impl<'de> Deserialize<'de> for Suri {
                     match maybe_pair {
                         Ok((pair, _)) => Ok(pair),
                         Err(e) => {
-                            Err(serde::de::Error::custom(format!("{:?}", e)))
+                            Err(serde::de::Error::custom(format!("{e:?}")))
                         }
                     }
                 } else if value.starts_with('>') {
@@ -74,7 +74,7 @@ impl<'de> Deserialize<'de> for Suri {
                     match maybe_pair {
                         Ok((pair, _)) => Ok(pair),
                         Err(e) => {
-                            Err(serde::de::Error::custom(format!("{:?}", e)))
+                            Err(serde::de::Error::custom(format!("{e:?}")))
                         }
                     }
                 }

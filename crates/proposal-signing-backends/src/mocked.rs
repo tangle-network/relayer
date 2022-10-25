@@ -72,7 +72,7 @@ where
         let bridge_key = BridgeKey::new(dest_chain_id);
         tracing::debug!(
             %bridge_key,
-            proposal = ?hex::encode(&proposal.to_vec()),
+            proposal = ?hex::encode(proposal.to_vec()),
             "Signaling Signature Bridge to execute proposal",
         );
         let signature_bytes = signature.to_vec();

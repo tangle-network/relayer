@@ -99,7 +99,7 @@ pub fn setup_logger(verbosity: i32, filter: &str) -> anyhow::Result<()> {
         3 => Level::DEBUG,
         _ => Level::TRACE,
     };
-    let directive_1 = format!("{}={}", filter, log_level)
+    let directive_1 = format!("{filter}={log_level}")
         .parse()
         .expect("valid log level");
     let env_filter = tracing_subscriber::EnvFilter::from_default_env()

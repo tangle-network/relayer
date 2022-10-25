@@ -111,7 +111,7 @@ impl SubstrateEventWatcher for SubstrateVAnchorEncryptedOutputHandler {
             kind = %webb_relayer_utils::probe::Kind::EncryptedOutputStore,
             chain_id = %chain_id,
             index = index,
-            encrypted_outputs = %format!("{:?}",output_store),
+            encrypted_outputs = %format!("{output_store:?}"),
             tree_id = %tree_id,
             block_number = %block_number
         );

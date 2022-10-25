@@ -177,7 +177,7 @@ pub fn into_withdraw_error<M: Middleware>(
 ) -> WithdrawStatus {
     // a poor man error parser
     // WARNING: **don't try this at home**.
-    let msg = format!("{}", e);
+    let msg = format!("{e}");
     // split the error into words, lazily.
     let mut words = msg.split_whitespace();
     let mut reason = "unknown".to_string();

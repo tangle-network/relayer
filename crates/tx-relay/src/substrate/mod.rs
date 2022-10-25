@@ -33,7 +33,7 @@ pub async fn handle_substrate_tx(
             Some(Ok(v)) => v,
             Some(Err(e)) => {
                 tracing::error!("Error while watching Tx: {}", e);
-                let _ = stream.send(Error(format!("{}", e))).await;
+                let _ = stream.send(Error(format!("{e}"))).await;
                 return;
             }
             None => break,
@@ -69,7 +69,7 @@ pub async fn handle_substrate_tx(
                     }
                     Err(e) => {
                         tracing::error!("Error while watching Tx: {}", e);
-                        let _ = stream.send(Error(format!("{}", e))).await;
+                        let _ = stream.send(Error(format!("{e}"))).await;
                         false
                     }
                 };

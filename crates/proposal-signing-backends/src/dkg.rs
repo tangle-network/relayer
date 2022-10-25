@@ -88,10 +88,10 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             webb_proposals_typed_chain_converter(self.typed_chain_id);
         let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
         tracing::debug!(
-            nonce = %hex::encode(&nonce.encode()),
+            nonce = %hex::encode(nonce.encode()),
             resource_id = %hex::encode(resource_id.into_bytes()),
             src_chain_id = ?src_chain_id,
-            proposal = %hex::encode(&proposal.to_vec()),
+            proposal = %hex::encode(proposal.to_vec()),
             "sending proposal to DKG runtime"
         );
         let xt = tx_api.acknowledge_proposal(

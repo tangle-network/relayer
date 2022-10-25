@@ -104,7 +104,7 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
             kind = %webb_relayer_utils::probe::Kind::LeavesStore,
             chain_id = %chain_id,
             leaf_index = leaf_index,
-            leafs = %format!("{:?}",leaf_store),
+            leafs = %format!("{leaf_store:?}"),
             tree_id = %tree_id,
             block_number = %block_number
         );
