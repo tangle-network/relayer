@@ -34,8 +34,6 @@ use webb_relayer_store::{
     BridgeCommand, BridgeKey, HistoryStore, ProposalStore, QueueStore,
 };
 
-use self::event_watcher::SubstrateEventWatcher;
-
 /// Event watching traits
 mod event_watcher;
 pub use event_watcher::*;

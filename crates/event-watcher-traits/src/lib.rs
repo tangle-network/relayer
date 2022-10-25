@@ -26,8 +26,13 @@
 
 #[cfg(feature = "evm")]
 pub mod evm;
+#[cfg(feature = "evm")]
+pub use evm::*;
+
 #[cfg(feature = "substrate")]
 pub mod substrate;
+#[cfg(feature = "substrate")]
+pub use substrate::*;
 
 #[cfg(test)]
 mod tests;

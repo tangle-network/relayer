@@ -19,8 +19,8 @@ use webb::substrate::{dkg_runtime, subxt};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledStore;
 
-use crate::substrate::event_watcher::SubstrateEventWatcher;
 use crate::substrate::BlockNumberOf;
+use crate::SubstrateEventWatcher;
 
 #[derive(Debug, Clone, Default)]
 struct RemarkedEventWatcher;

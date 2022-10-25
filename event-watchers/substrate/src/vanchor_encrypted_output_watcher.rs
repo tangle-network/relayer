@@ -17,8 +17,8 @@ use webb::substrate::protocol_substrate_runtime;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::subxt::{self, OnlineClient};
-use webb_event_watcher_traits::substrate::event_watcher::SubstrateEventWatcher;
 use webb_event_watcher_traits::substrate::BlockNumberOf;
+use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };

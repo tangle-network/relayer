@@ -17,7 +17,7 @@ use std::sync::Arc;
 use webb::substrate::dkg_runtime::api as RuntimeApi;
 use webb::substrate::dkg_runtime::{self, api::dkg};
 use webb::substrate::subxt::{self, OnlineClient};
-use webb_event_watcher_traits::substrate::event_watcher::SubstrateEventWatcher;
+use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};
 use webb_relayer_utils::metric;

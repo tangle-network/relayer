@@ -28,8 +28,8 @@ use webb::evm::ethers::providers;
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
 use webb_event_watcher_traits::evm::{BridgeWatcher, EventWatcher};
-use webb_event_watcher_traits::substrate::event_watcher::SubstrateEventWatcher;
 use webb_event_watcher_traits::substrate::SubstrateBridgeWatcher;
+use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_ew_dkg::{DKGGovernorWatcher, ProposalHandlerWatcher};
 use webb_ew_evm::{
     SignatureBridgeContractWatcher, SignatureBridgeContractWrapper,

@@ -18,7 +18,7 @@ use webb::substrate::subxt::{self, OnlineClient, dynamic::Value};
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standalone_runtime::Call;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
 use webb_event_watcher_traits::substrate::{BlockNumberOf, SubstrateBridgeWatcher};
-use webb_event_watcher_traits::substrate::event_watcher::SubstrateEventWatcher;
+use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_relayer_store::sled::{SledQueueKey,SledStore};
 use webb_relayer_store::{BridgeCommand, QueueStore};
 use webb::substrate::{
