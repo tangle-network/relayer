@@ -478,7 +478,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       port: relayerPort,
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();

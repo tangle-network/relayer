@@ -1,4 +1,3 @@
-use ethereum_types::U64;
 use futures::prelude::*;
 use std::cmp;
 use std::sync::Arc;
@@ -105,13 +104,14 @@ pub trait BlockPoller {
                 .get_chainid()
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
-                .await?;
+                .await?
+                .as_u32();
             tracing::info!("chain id: {}", chain_id);
             // now we start polling for new events.
             loop {
                 let block = store.get_last_block_number(
                     chain_id,
-                    U64::from(listener_config.start_block.unwrap_or_default()),
+                    listener_config.start_block.unwrap_or_default(),
                 )?;
                 tracing::trace!(
                     "last block number: {}",
@@ -127,13 +127,13 @@ pub trait BlockPoller {
                     .await;
 
                 let current_block_number = match current_block_number_result {
-                    Ok(block_number) => block_number,
+                    Ok(block_number) => block_number.as_u64(),
                     Err(e) => {
                         tracing::error!(
                             "Error {:?} while getting block number",
                             e
                         );
-                        U64::zero()
+                        0u64
                     }
                 };
 

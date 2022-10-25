@@ -20,7 +20,13 @@ use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 
-use ethereum_types::{Address, H160, H256, U256, U64};
+use crate::context::RelayerContext;
+use crate::metric::Metrics;
+use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
+use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
+use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
+use crate::tx_relay::{MixerRelayTransaction, VAnchorRelayTransaction};
+use ethereum_types::{Address, H256, U256};
 use futures::prelude::*;
 use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::mpsc;
@@ -35,13 +41,9 @@ use webb::evm::ethers::{
     types::Bytes,
 };
 use webb::substrate::subxt::ext::{sp_core::Pair, sp_runtime::AccountId32};
-
-use crate::context::RelayerContext;
-use crate::metric::Metrics;
-use crate::tx_relay::evm::vanchor::handle_vanchor_relay_tx;
-use crate::tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
-use crate::tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
-use crate::tx_relay::{MixerRelayTransaction, VAnchorRelayTransaction};
+use webb_proposals::{
+    ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
+};
 use webb_relayer_store::{EncryptedOutputCacheStore, LeafCacheStore};
 
 /// A wrapper type around [`I256`] that implements a correct way for [`Serialize`] and [`Deserialize`].
@@ -270,12 +272,12 @@ pub async fn handle_relayer_info(
 /// # Arguments
 ///
 /// * `store` - [Sled](https://sled.rs)-based database store
-/// * `chain_id` - An U256 representing the chain id of the chain to query
+/// * `chain_id` - An u32 representing the chain id of the chain to query
 /// * `contract` - An address of the contract to query
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_evm(
     store: Arc<webb_relayer_store::sled::SledStore>,
-    chain_id: U256,
+    chain_id: u32,
     contract: Address,
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
@@ -284,8 +286,8 @@ pub async fn handle_leaves_cache_evm(
     #[derive(Debug, Serialize)]
     #[serde(rename_all = "camelCase")]
     struct LeavesCacheResponse {
-        leaves: Vec<H256>,
-        last_queried_block: U64,
+        leaves: Vec<Vec<u8>>,
+        last_queried_block: u64,
     }
     // Unsupported feature response
     #[derive(Debug, Serialize)]
@@ -365,9 +367,15 @@ pub async fn handle_leaves_cache_evm(
             warp::http::StatusCode::FORBIDDEN,
         ));
     }
-    let leaves = store.get_leaves((chain_id, contract)).unwrap();
+    // create history store key
+    let src_target_system =
+        TargetSystem::new_contract_address(contract.to_fixed_bytes());
+    let src_typed_chain_id = TypedChainId::Evm(chain_id);
+    let history_store_key =
+        ResourceId::new(src_target_system, src_typed_chain_id);
+    let leaves = store.get_leaves(history_store_key).unwrap();
     let last_queried_block = store
-        .get_last_deposit_block_number((chain_id, contract))
+        .get_last_deposit_block_number(history_store_key)
         .unwrap();
 
     Ok(warp::reply::with_status(
@@ -385,13 +393,15 @@ pub async fn handle_leaves_cache_evm(
 /// # Arguments
 ///
 /// * `store` - [Sled](https://sled.rs)-based database store
-/// * `chain_id` - An U256 representing the chain id of the chain to query
-/// * `contract` - An address of the contract to query
+/// * `chain_id` - An u32 representing the chain id of the chain to query
+/// * `tree_id` - Tree id of the the source system to query
+/// * `pallet_id` - Pallet id of the the source system to query
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_substrate(
     store: Arc<webb_relayer_store::sled::SledStore>,
-    chain_id: U256,
+    chain_id: u32,
     tree_id: u32,
+    pallet_id: u8,
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
     let config = ctx.config.clone();
@@ -399,8 +409,8 @@ pub async fn handle_leaves_cache_substrate(
     #[derive(Debug, Serialize)]
     #[serde(rename_all = "camelCase")]
     struct LeavesCacheResponse {
-        leaves: Vec<H256>,
-        last_queried_block: U64,
+        leaves: Vec<Vec<u8>>,
+        last_queried_block: u64,
     }
     // Unsupported feature response
     #[derive(Debug, Serialize)]
@@ -419,15 +429,19 @@ pub async fn handle_leaves_cache_substrate(
         ));
     }
 
-    // storage key for substrate is of type (chain_id, address),where address is 20 bytes H160.
-    //since substrate pallet does not have contract address we use treeId instead.
-    let mut address_bytes = vec![];
-    address_bytes.extend_from_slice(tree_id.to_string().as_bytes());
-    address_bytes.resize(20, 0);
-    let address = H160::from_slice(&address_bytes);
-    let leaves = store.get_leaves((chain_id, address)).unwrap();
+    // create history store key
+    let src_typed_chain_id = TypedChainId::Substrate(chain_id);
+    let target = SubstrateTargetSystem::builder()
+        .pallet_index(pallet_id)
+        .tree_id(tree_id)
+        .build();
+    let src_target_system = TargetSystem::Substrate(target);
+    let history_store_key =
+        ResourceId::new(src_target_system, src_typed_chain_id);
+
+    let leaves = store.get_leaves(history_store_key).unwrap();
     let last_queried_block = store
-        .get_last_deposit_block_number((chain_id, address))
+        .get_last_deposit_block_number(history_store_key)
         .unwrap();
 
     Ok(warp::reply::with_status(
@@ -450,7 +464,7 @@ pub async fn handle_leaves_cache_substrate(
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_cosmwasm(
     store: Arc<webb_relayer_store::sled::SledStore>,
-    chain_id: U256,
+    chain_id: u32,
     contract: String,
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
@@ -459,8 +473,8 @@ pub async fn handle_leaves_cache_cosmwasm(
     #[derive(Debug, Serialize)]
     #[serde(rename_all = "camelCase")]
     struct LeavesCacheResponse {
-        leaves: Vec<H256>,
-        last_queried_block: U64,
+        leaves: Vec<Vec<u8>>,
+        last_queried_block: u64,
     }
     // Unsupported feature response
     #[derive(Debug, Serialize)]
@@ -542,10 +556,9 @@ pub async fn handle_leaves_cache_cosmwasm(
             warp::http::StatusCode::FORBIDDEN,
         ));
     }
-    let leaves = store.get_leaves((chain_id, contract.to_string())).unwrap();
-    let last_queried_block = store
-        .get_last_deposit_block_number((chain_id, contract))
-        .unwrap();
+    let leaves = store.get_leaves(chain_id).unwrap();
+    let last_queried_block =
+        store.get_last_deposit_block_number(chain_id).unwrap();
 
     Ok(warp::reply::with_status(
         warp::reply::json(&LeavesCacheResponse {
@@ -568,7 +581,7 @@ pub async fn handle_leaves_cache_cosmwasm(
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_encrypted_outputs_cache_evm(
     store: Arc<webb_relayer_store::sled::SledStore>,
-    chain_id: U256,
+    chain_id: u32,
     contract: Address,
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
@@ -578,7 +591,7 @@ pub async fn handle_encrypted_outputs_cache_evm(
     #[serde(rename_all = "camelCase")]
     struct EncryptedOutputsCacheResponse {
         encrypted_outputs: Vec<Vec<u8>>,
-        last_queried_block: U64,
+        last_queried_block: u64,
     }
     // Unsupported feature response
     #[derive(Debug, Serialize)]
@@ -658,12 +671,16 @@ pub async fn handle_encrypted_outputs_cache_evm(
             warp::http::StatusCode::FORBIDDEN,
         ));
     }
+    // create history store key
+    let src_target_system =
+        TargetSystem::new_contract_address(contract.to_fixed_bytes());
+    let src_typed_chain_id = TypedChainId::Evm(chain_id);
+    let history_store_key =
+        ResourceId::new(src_target_system, src_typed_chain_id);
     let encrypted_output =
-        store.get_encrypted_output((chain_id, contract)).unwrap();
+        store.get_encrypted_output(history_store_key).unwrap();
     let last_queried_block = store
-        .get_last_deposit_block_number_for_encrypted_output((
-            chain_id, contract,
-        ))
+        .get_last_deposit_block_number_for_encrypted_output(history_store_key)
         .unwrap();
 
     Ok(warp::reply::with_status(

@@ -102,8 +102,12 @@ export class WebbRelayer {
     return response;
   }
   // data querying api for substrate
-  public async getLeavesSubstrate(chainId: string, treeId: string) {
-    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/substrate/${chainId}/${treeId}`;
+  public async getLeavesSubstrate(
+    chainId: string,
+    treeId: string,
+    palletId: string
+  ) {
+    const endpoint = `http://127.0.0.1:${this.opts.port}/api/v1/leaves/substrate/${chainId}/${treeId}/${palletId}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -503,6 +507,7 @@ export interface ChainInfo {
   chainId: number;
   beneficiary?: string;
   contracts: Contract[];
+  blockConfirmations: number;
 }
 
 export interface Contract {
