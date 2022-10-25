@@ -28,7 +28,9 @@ use webb::evm::ethers::providers;
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
 use webb_relayer_config::anchor::LinkedAnchorConfig;
-use webb_relayer_config::evm::{Contract, SignatureBridgeContractConfig};
+use webb_relayer_config::evm::{
+    Contract, SignatureBridgeContractConfig, VAnchorContractConfig,
+};
 use webb_relayer_config::signing_backend::ProposalSigningBackendConfig;
 use webb_relayer_config::substrate::{
     DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet,

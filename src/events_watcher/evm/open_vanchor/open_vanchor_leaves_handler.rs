@@ -19,6 +19,7 @@ use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::OpenVAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, LeafCacheStore};
 /// An VAnchor Leaves Handler that handles `NewCommitment` events and saves the leaves to the store.
@@ -47,15 +48,18 @@ impl super::EventHandler for OpenVAnchorLeavesHandler {
             NewCommitmentFilter(deposit) => {
                 let commitment = deposit.commitment;
                 let leaf_index = deposit.index.as_u32();
-                let value = (leaf_index, H256::from_slice(&commitment));
+                let value = (leaf_index, commitment.to_vec());
                 let chain_id = wrapper.contract.client().get_chainid().await?;
-                store.insert_leaves(
-                    (chain_id, wrapper.contract.address()),
-                    &[value],
-                )?;
+                let target_system = TargetSystem::new_contract_address(
+                    wrapper.contract.address().to_fixed_bytes(),
+                );
+                let typed_chain_id = TypedChainId::Evm(chain_id.as_u32());
+                let history_store_key =
+                    ResourceId::new(target_system, typed_chain_id);
+                store.insert_leaves(history_store_key, &[value.clone()])?;
                 store.insert_last_deposit_block_number(
-                    (chain_id, wrapper.contract.address()),
-                    log.block_number,
+                    history_store_key,
+                    log.block_number.as_u64(),
                 )?;
                 let events_bytes = serde_json::to_vec(&deposit)?;
                 store.store_event(&events_bytes)?;
@@ -68,7 +72,7 @@ impl super::EventHandler for OpenVAnchorLeavesHandler {
                     tracing::Level::DEBUG,
                     kind = %crate::probe::Kind::LeavesStore,
                     leaf_index = %value.0,
-                    leaf = %value.1,
+                    leaf = %format!("{:?}", value.1),
                     chain_id = %chain_id,
                     block_number = %log.block_number
                 );

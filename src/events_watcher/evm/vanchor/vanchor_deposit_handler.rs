@@ -26,7 +26,7 @@ use crate::service::{
     make_proposal_signing_backend, Client, ProposalSigningBackendSelector,
     Store,
 };
-use ethereum_types::{H256, U256};
+use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
@@ -194,7 +194,7 @@ where
 pub async fn start_evm_vanchor_events_watcher(
     ctx: &RelayerContext,
     config: &VAnchorContractConfig,
-    chain_id: U256,
+    chain_id: u32,
     client: Arc<Client>,
     store: Arc<Store>,
 ) -> crate::Result<()> {
@@ -243,7 +243,7 @@ pub async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
-                    my_ctx.metrics.clone(),
+                    &my_ctx,
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -274,7 +274,7 @@ pub async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
-                    my_ctx.metrics.clone(),
+                    &my_ctx,
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
@@ -303,7 +303,7 @@ pub async fn start_evm_vanchor_events_watcher(
                         Box::new(leaves_handler),
                         Box::new(encrypted_output_handler),
                     ],
-                    my_ctx.metrics.clone(),
+                    &my_ctx,
                 );
                 tokio::select! {
                     _ = vanchor_watcher_task => {
