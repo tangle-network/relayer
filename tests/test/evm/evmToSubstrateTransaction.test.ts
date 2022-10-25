@@ -227,7 +227,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it.only('Evm to Substrate cross chain transaction', async () => {
+  it('Evm to Substrate cross chain transaction', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(wallet1);
 

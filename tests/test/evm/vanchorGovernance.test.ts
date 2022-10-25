@@ -25,7 +25,7 @@ import { EnabledContracts, WebbRelayer } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 
-describe.skip('VAnchor Governance Relayer', function () {
+describe('VAnchor Governance Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -51,7 +51,7 @@ describe.skip('VAnchor Governance Relayer', function () {
 
     localChain1 = await LocalChain.init({
       port: localChain1Port,
-      chainId: 5001,
+      chainId: localChain1Port,
       name: 'Hermes',
       populatedAccounts: [
         {
@@ -72,7 +72,7 @@ describe.skip('VAnchor Governance Relayer', function () {
 
     localChain2 = await LocalChain.init({
       port: localChain2Port,
-      chainId: 5002,
+      chainId: localChain2Port,
       name: 'Athena',
       populatedAccounts: [
         {
@@ -173,7 +173,7 @@ describe.skip('VAnchor Governance Relayer', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should handle AnchorUpdateProposal when a deposit happens', async () => {
+  it.only('should handle AnchorUpdateProposal when a deposit happens', async () => {
     // we will use chain1 as an example here.
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
