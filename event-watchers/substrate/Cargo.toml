@@ -30,7 +30,7 @@ rand = { version = "0.8", default-features = false, features = ["getrandom"] }
 hex = { version = "0.4", default-features = false }
 webb = { version = "0.5.10", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "0.10", features = ["vendored"], optional = true }
+native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.13.1"
 dotenv = "0.15.0"
