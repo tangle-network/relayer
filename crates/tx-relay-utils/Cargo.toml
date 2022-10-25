@@ -9,4 +9,4 @@ edition = "2021"
 serde = { version = "^1", default-features = false, features = ["derive"] }
 webb = { version = "0.5.10", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
-openssl = { version = "0.10", features = ["vendored"], optional = true }
+native-tls = { version = "0.10", features = ["vendored"], optional = true }
