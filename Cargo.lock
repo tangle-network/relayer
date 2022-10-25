@@ -2853,6 +2853,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ff011a302c396a5197692431fc1948019154afc178baf7d8e37367442a4601cf"
 
 [[package]]
+name = "openssl-src"
+version = "111.22.0+1.1.1q"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f31f0d509d1c1ae9cada2f9539ff8f37933831fd5098879e482aa687d659853"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "openssl-sys"
 version = "0.9.76"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2861,6 +2870,7 @@ dependencies = [
  "autocfg",
  "cc",
  "libc",
+ "openssl-src",
  "pkg-config",
  "vcpkg",
 ]
@@ -5894,6 +5904,7 @@ dependencies = [
  "dotenv",
  "ethereum-types",
  "futures",
+ "native-tls",
  "paw",
  "serde_json",
  "tempfile",
@@ -5926,6 +5937,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "rand 0.8.5",
  "serde",
@@ -5961,6 +5973,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "rand 0.8.5",
  "serde",
@@ -5996,6 +6009,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "rand 0.8.5",
  "serde",
@@ -6032,6 +6046,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "rand 0.8.5",
  "serde",
@@ -6068,6 +6083,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "rand 0.8.5",
  "serde",
@@ -6119,6 +6135,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "paw",
  "prometheus",
  "rand 0.8.5",
@@ -6162,6 +6179,7 @@ dependencies = [
  "directories-next",
  "ethereum-types",
  "glob",
+ "native-tls",
  "serde",
  "serde_json",
  "serde_path_to_error",
@@ -6189,6 +6207,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "rand 0.8.5",
  "serde",
@@ -6214,6 +6233,7 @@ dependencies = [
 name = "webb-relayer-handler-utils"
 version = "0.1.0"
 dependencies = [
+ "native-tls",
  "serde",
  "tokio",
  "webb",
@@ -6233,6 +6253,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "rand 0.8.5",
  "serde",
@@ -6263,6 +6284,7 @@ name = "webb-relayer-store"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "native-tls",
  "parking_lot 0.12.1",
  "serde",
  "serde_json",
@@ -6287,6 +6309,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "rand 0.8.5",
  "serde",
@@ -6322,6 +6345,7 @@ dependencies = [
  "futures",
  "hex",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "rand 0.8.5",
  "serde",
@@ -6350,6 +6374,7 @@ dependencies = [
 name = "webb-relayer-tx-relay-utils"
 version = "0.1.0"
 dependencies = [
+ "native-tls",
  "serde",
  "webb",
 ]
@@ -6360,6 +6385,7 @@ version = "0.1.0"
 dependencies = [
  "derive_more",
  "ethereum-types",
+ "native-tls",
  "serde",
  "tiny-bip39 1.0.0",
  "tiny-keccak",
@@ -6377,6 +6403,7 @@ dependencies = [
  "derive_more",
  "glob",
  "libsecp256k1",
+ "native-tls",
  "prometheus",
  "serde_json",
  "serde_path_to_error",

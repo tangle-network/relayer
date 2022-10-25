@@ -9,6 +9,7 @@ on:
       - main
 env:
   DEV_PACKAGES: build-essential musl musl-dev musl-tools libssl-dev pkg-config
+  ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
 jobs:
   # This job downloads and stores `cross` as an artifact, so that it can be
   # redownloaded across all of the jobs. Currently this copied pasted between
@@ -80,6 +81,8 @@ jobs:
     steps:
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
+      - name: set environment variable for pkg-config
+        run: export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
