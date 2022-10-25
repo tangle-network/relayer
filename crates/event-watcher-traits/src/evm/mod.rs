@@ -37,7 +37,7 @@ use webb_relayer_store::{
 use webb_relayer_utils::metric;
 
 /// Event watching traits
-pub mod event_watcher;
+mod event_watcher;
 pub use event_watcher::*;
 
 /// Bridge watching traits
