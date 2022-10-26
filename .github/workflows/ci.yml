@@ -71,6 +71,14 @@ jobs:
           use-cross: true
           args: --release --target=${{ matrix.target }} --locked
           command: test
+          
+    strategy:
+      fail-fast: true
+      matrix:
+        channel: [nightly-2022-05-15]
+        target:
+          - x86_64-apple-darwin
+        
 
   linux-build:
     runs-on: ubuntu-latest
