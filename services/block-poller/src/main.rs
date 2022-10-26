@@ -20,12 +20,6 @@ use webb_relayer_utils::Result;
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `store` -[Sled](https://sled.rs)-based database store
-///
-/// # Examples
-///
-/// ```
-/// let _ = service::ignite(&ctx, Arc::new(store)).await?;
-/// ```
 pub async fn ignite(
     ctx: &RelayerContext,
     store: Arc<Store>,

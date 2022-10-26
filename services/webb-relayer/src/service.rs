@@ -75,14 +75,6 @@ pub type Store = webb_relayer_store::sled::SledStore;
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `store` - [Sled](https://sled.rs)-based database store
-///
-/// # Examples
-///
-/// ```
-/// let ctx = RelayerContext::new(config);
-/// let store = create_store(&args).await?;
-/// let (addr, server) = build_web_services(ctx.clone(), store.clone())?;
-/// ```
 pub fn build_web_services(
     ctx: RelayerContext,
     store: webb_relayer_store::sled::SledStore,
@@ -236,12 +228,6 @@ pub fn build_web_services(
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `store` -[Sled](https://sled.rs)-based database store
-///
-/// # Examples
-///
-/// ```
-/// let _ = service::ignite(&ctx, Arc::new(store)).await?;
-/// ```
 pub async fn ignite(
     ctx: &RelayerContext,
     store: Arc<Store>,

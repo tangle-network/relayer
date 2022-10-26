@@ -55,12 +55,6 @@ use webb_relayer_utils::metric::Metrics;
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `stream` - Websocket stream
-///
-/// # Examples
-///
-/// ```
-/// let _ = handler::accept_connection(ctx.as_ref(), socket).await;
-/// ```
 pub async fn accept_connection(
     ctx: &RelayerContext,
     stream: warp::ws::WebSocket,
@@ -89,12 +83,6 @@ pub async fn accept_connection(
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `v` - The text (usually in a JSON form) message to be handled.
 /// * `tx` - A mutable Trait implementation of the `warp::ws::Sender` trait
-///
-/// # Examples
-///
-/// ```
-/// let _ = handle_text(ctx, text, &mut tx).await?;;
-/// ```
 pub async fn handle_text<TX>(
     ctx: &RelayerContext,
     v: &str,
@@ -142,12 +130,6 @@ where
 /// # Arguments
 ///
 /// * `ip` - Option containing the IP address
-///
-/// # Examples
-///
-/// ```
-/// let _ = handler::handle_ip_info
-/// ```
 pub async fn handle_ip_info(
     ip: Option<IpAddr>,
 ) -> Result<impl warp::Reply, Infallible> {
@@ -162,12 +144,6 @@ pub async fn handle_ip_info(
 /// # Arguments
 ///
 /// * `ip` - Option containing the socket address
-///
-/// # Examples
-///
-/// ```
-/// let _ = handler::handle_ip_info
-/// ```
 pub async fn handle_socket_info(
     ip: Option<SocketAddr>,
 ) -> Result<impl warp::Reply, Infallible> {

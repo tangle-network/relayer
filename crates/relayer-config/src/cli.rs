@@ -46,8 +46,11 @@ pub struct Opts {
 /// # Example
 ///
 /// ```
-/// let arg = Some(PathBuf::from("/tmp/config"));
-/// let config = load_config(arg)?;
+/// use std::path::PathBuf;
+/// use webb_relayer_config::cli::load_config;
+///
+/// let arg = Some(PathBuf::from("./"));
+/// let config_result = load_config(arg);
 /// ```
 pub fn load_config<P>(
     config_dir: Option<P>,
@@ -80,16 +83,6 @@ where
 ///
 /// * `verbosity` - An i32 integer representing the verbosity level.
 /// * `filter` -  An &str representing filtering directive for EnvFilter
-///
-/// # Examples
-///
-/// ```
-/// //If the package name in your Cargo.toml is `MY-FANCY-LIB`,
-/// //then he corresponding Rust identifier would be `MY_FANCY_LIB`.
-/// let filter = "webb_block_poller"
-/// let arg = 3;
-/// setup_logger(arg, filter)?;
-/// ```
 pub fn setup_logger(verbosity: i32, filter: &str) -> anyhow::Result<()> {
     use tracing::Level;
     let log_level = match verbosity {
@@ -126,16 +119,6 @@ pub fn setup_logger(verbosity: i32, filter: &str) -> anyhow::Result<()> {
 /// # Arguments
 ///
 /// * `opts` - The configuration options for the database store.
-///
-/// # Examples
-///
-/// ```
-/// use std::env::Args;
-/// use webb_relayer_config::cli::create_store;
-///
-/// let args = Args::default();
-/// let store = create_store(&args).await?;
-/// ```
 pub async fn create_store(
     opts: &Opts,
 ) -> anyhow::Result<webb_relayer_store::SledStore> {

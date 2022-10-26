@@ -77,13 +77,6 @@ impl RelayerContext {
     /// # Arguments
     ///
     /// * `chain_id` - A string representing the chain id.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let chain_name = "mainnet".to_string();
-    /// let provider = ctx.evm_provider(chain_name).await?;
-    /// ```
     #[cfg(feature = "evm")]
     pub async fn evm_provider(
         &self,
@@ -103,13 +96,6 @@ impl RelayerContext {
     /// # Arguments
     ///
     /// * `chain_id` - A string representing the chain id.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let chain_name = "mainnet".to_string();
-    /// let wallet = self.ctx.evm_wallet(&self.chain_name).await?;
-    /// ```
     #[cfg(feature = "evm")]
     pub async fn evm_wallet(
         &self,
@@ -135,13 +121,6 @@ impl RelayerContext {
     /// # Arguments
     ///
     /// * `chain_id` - A string representing the chain ID.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let chain_id = "4".to_string();
-    /// let client = ctx.substrate_provider::<subxt::webb_relayer_Config::PolkadotConfig>(chain_id).await?;
-    /// ```
     #[cfg(feature = "substrate")]
     pub async fn substrate_provider<C: subxt::Config>(
         &self,
@@ -164,13 +143,6 @@ impl RelayerContext {
     /// # Arguments
     ///
     /// * `chain_id` - A string representing the chain ID.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// let chain_id = "4".to_string();
-    /// let pair = ctx.substrate_wallet(chain_id).await?;
-    /// ```
     #[cfg(feature = "substrate")]
     pub async fn substrate_wallet(
         &self,

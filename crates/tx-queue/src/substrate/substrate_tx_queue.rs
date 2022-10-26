@@ -60,14 +60,6 @@ where
     /// * `ctx` - RelayContext reference that holds the configuration
     /// * `chain_name` - The name of the chain that this queue is for
     /// * `store` - [Sled](https://sled.rs)-based database store
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use crate::tx_queue::SubstrateTxQueue;
-    /// let tx_queue = SubstrateTxQueue::new(ctx, chain_name.clone(), store);
-    /// ```
-
     pub fn new(ctx: RelayerContext, chain_id: u32, store: Arc<S>) -> Self {
         Self {
             ctx,
@@ -79,23 +71,6 @@ where
     /// Starts the SubstrateTxQueue service.
     ///
     /// Returns a future that resolves `Ok(())` on success, otherwise returns an error.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use crate::tx_queue::SubstrateTxQueue;
-    /// let tx_queue = TxQueue::new(ctx, chain_name.clone(), store);
-    ///  let task = async move {
-    ///     tokio::select! {
-    ///         _ = tx_queue.run() => {
-    ///             // do something
-    ///         },
-    ///         _ = shutdown_signal.recv() => {
-    ///             // do something
-    ///         },
-    ///     }
-    /// };
-    /// ```
     #[tracing::instrument(skip_all, fields(node = %self.chain_id))]
     pub async fn run<X>(self) -> webb_relayer_utils::Result<()>
     where
