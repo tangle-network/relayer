@@ -22,6 +22,7 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, LeafCacheStore};
 use webb_relayer_utils::metric;
+
 /// An VAnchor Leaves Handler that handles `NewCommitment` events and saves the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
 #[derive(Copy, Clone, Debug, Default)]

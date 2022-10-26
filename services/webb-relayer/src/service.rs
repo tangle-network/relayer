@@ -56,6 +56,7 @@ use webb_relayer_config::substrate::{
     SignatureBridgePalletConfig, SubstrateRuntime, VAnchorBn254PalletConfig,
 };
 
+use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::SledStore;
