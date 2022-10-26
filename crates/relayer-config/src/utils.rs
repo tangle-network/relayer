@@ -111,8 +111,10 @@ pub fn parse_from_files(
 /// # Example
 ///
 /// ```
+/// use webb_relayer_config::utils::load;
+///
 /// let path = "/path/to/config.toml";
-/// config::load(path);
+/// load(path);
 /// ```
 ///
 /// it is the same as using the [`search_config_files`] and [`parse_from_files`] functions combined.

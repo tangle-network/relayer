@@ -1,6 +1,26 @@
+// Copyright 2022 Webb Technologies Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use webb::{evm::ethers, substrate::subxt};
 
 pub mod clickable_link;
+
+/// Metrics functionality
+pub mod metric;
+/// A module used for debugging relayer lifecycle, sync state, or other relayer state.
+pub mod probe;
+/// Retry functionality
 pub mod retry;
 
 /// An enum of all possible errors that could be encountered during the execution of the Webb

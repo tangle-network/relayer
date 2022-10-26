@@ -3,9 +3,9 @@ use std::sync::Arc;
 use crate::block_poller::{BlockPoller, BlockPollingHandler};
 use ethereum_types::U256;
 use webb::evm::ethers::types::{Block, TxHash};
-use webb_relayer::context::RelayerContext;
 use webb_relayer::service::{Client, Store};
 use webb_relayer_config::block_poller::BlockPollerConfig;
+use webb_relayer_context::RelayerContext;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::{Error, Result};
 

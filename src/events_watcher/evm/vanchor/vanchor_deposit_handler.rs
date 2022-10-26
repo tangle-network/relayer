@@ -11,8 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+
 use super::{HttpProvider, VAnchorContractWrapper};
+<<<<<<<< HEAD:src/events_watcher/evm/vanchor/vanchor_deposit_handler.rs
 use crate::context::RelayerContext;
 use crate::events_watcher::evm::vanchor::{
     VAnchorEncryptedOutputHandler, VAnchorLeavesHandler,
@@ -26,14 +27,21 @@ use crate::service::{
     make_proposal_signing_backend, Client, ProposalSigningBackendSelector,
     Store,
 };
+========
+>>>>>>>> origin/drew/more-reorg:event-watchers/evm/src/vanchor_deposit_handler.rs
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb_event_watcher_traits::evm::EventHandler;
+use webb_proposal_signing_backends::{
+    proposal_handler, ProposalSigningBackend,
+};
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_config::evm::VAnchorContractConfig;
 use webb_relayer_store::EventHashStore;
 use webb_relayer_store::SledStore;
+use webb_relayer_utils::metric;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {
@@ -52,7 +60,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<B> super::EventHandler for VAnchorDepositHandler<B>
+impl<B> EventHandler for VAnchorDepositHandler<B>
 where
     B: ProposalSigningBackend + Send + Sync,
 {
@@ -69,7 +77,7 @@ where
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
         metrics: Arc<metric::Metrics>,
-    ) -> crate::Result<()> {
+    ) -> webb_relayer_utils::Result<()> {
         use VAnchorContractEvents::*;
         let event_data = match event {
             NewCommitmentFilter(data) => {
@@ -77,9 +85,9 @@ where
                 let info =
                     (data.index.as_u32(), H256::from_slice(&data.commitment));
                 tracing::event!(
-                    target: crate::probe::TARGET,
+                    target: webb_relayer_utils::probe::TARGET,
                     tracing::Level::DEBUG,
-                    kind = %crate::probe::Kind::MerkleTreeInsertion,
+                    kind = %webb_relayer_utils::probe::Kind::MerkleTreeInsertion,
                     leaf_index = %info.0,
                     leaf = %info.1,
                     chain_id = %chain_id,

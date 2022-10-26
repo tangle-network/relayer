@@ -352,6 +352,7 @@ impl BeaconRPCClient {
 
         let v: Value = serde_json::from_str(&json_str)?;
 
+        #[allow(clippy::or_fun_call)]
         v["data"]["is_syncing"]
             .as_bool()
             .ok_or(Box::new(ErrorOnJsonParse))
@@ -363,7 +364,7 @@ impl BeaconRPCClient {
     ) -> Result<String, Box<dyn Error>> {
         trace!(target: "relay", "Beacon chain request: {}", url);
         let json_str = client.get(url).send()?.text()?;
-        if let Err(_) = serde_json::from_str::<Value>(&json_str) {
+        if serde_json::from_str::<Value>(&json_str).is_err() {
             return Err(Box::new(FailOnGettingJson { response: json_str }));
         }
 
@@ -490,7 +491,7 @@ impl BeaconRPCClient {
         let finalized_block_slot = finalized_header.slot;
 
         let finalized_block_body = self.get_beacon_block_body_for_block_id(
-            &format!("{}", finalized_block_slot),
+            &format!("{finalized_block_slot}"),
         )?;
         let finalized_block_eth1data_proof =
             ExecutionBlockProof::construct_from_beacon_block_body(
@@ -550,7 +551,7 @@ impl BeaconRPCClient {
         let mut slot = start_slot;
         for _ in 0..CHECK_SLOTS_FORWARD_LIMIT {
             if let Ok(beacon_block_body) =
-                self.get_beacon_block_header_for_block_id(&format!("{}", slot))
+                self.get_beacon_block_header_for_block_id(&format!("{slot}"))
             {
                 return Ok(beacon_block_body);
             }
