@@ -8,6 +8,9 @@ on:
 
   workflow_dispatch:
 
+env:
+  ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
+
 jobs:
   # code coverage job
   coverage:
