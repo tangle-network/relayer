@@ -1,72 +1,48 @@
-name: CI
+name: check
 
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   pull_request:
-    branches:
-      - main
-env:
-  DEV_PACKAGES: build-essential musl musl-dev musl-tools libssl-dev pkg-config
-  ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
-jobs:
-  # This job downloads and stores `cross` as an artifact, so that it can be
-  # redownloaded across all of the jobs. Currently this copied pasted between
-  # `ci.yml` and `deploy.yml`. Make sure to update both places when making
-  # changes.
-  install-cross:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 50
-      - uses: XAMPPRocky/get-github-release@v1
-        id: cross
-        with:
-          owner: rust-embedded
-          repo: cross
-          matches: ${{ matrix.platform }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/upload-artifact@v1
-        with:
-          name: cross-${{ matrix.platform }}
-          path: ${{ steps.cross.outputs.install_path }}
-    strategy:
-      matrix:
-        platform: [linux-musl, apple-darwin]
+    branches: [ main ] 
 
+  workflow_dispatch:
+env:
+  DEV_PACKAGES: build-essential musl musl-dev musl-tools pkg-config libssl-dev librust-openssl-sys-dev
+  ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
+
+jobs:
   macos:
     runs-on: macos-latest
-    needs: install-cross
     steps:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
+          
+      - name: Setup | Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          target: ${{ matrix.target }}
+
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
-      - name: Cache Cargo
-        uses: actions/cache@v3
+        
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - uses: actions-rs/cargo@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
-            target/x86_64-apple-darwin/debug
-            target/x86_64-apple-darwin/release
-            target/debug
-            target/release
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
-      - uses: actions/download-artifact@v1
+          use-cross: true
+          args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
+          command: build
+
+      - uses: actions-rs/cargo@v1
         with:
-          name: cross-apple-darwin
-          path: /usr/local/bin/
-      - run: chmod +x /usr/local/bin/cross
-      - run: ci/set_rust_version.bash ${{ matrix.channel }} ${{ matrix.target }}
-      - run: ci/build.bash cross ${{ matrix.target }}
-        # Only test on macOS platforms since we can't simulate the others.
-      - run: ci/test.bash cross ${{ matrix.target }}
+          use-cross: true
+          args: --release --target=${{ matrix.target }} --locked
+          command: test
 
     strategy:
       fail-fast: true
@@ -77,40 +53,26 @@ jobs:
 
   linux:
     runs-on: ubuntu-latest
-    needs: install-cross
     steps:
       - name: install system build dependencies
-        run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
-      - name: set environment variable for pkg-config
-        run: export PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
+        run: sudo apt-get update && sudo apt-get upgrade && sudo apt-get install ${DEV_PACKAGES}
+
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
+
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
-      - name: Cache Cargo
-        uses: actions/cache@v3
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - uses: actions-rs/cargo@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
-            target/x86_64-unknown-linux-musl/debug
-            target/x86_64-unknown-linux-musl/release
-            target/aarch64-unknown-linux-musl/debug
-            target/aarch64-unknown-linux-musl/release
-            target/debug
-            target/release
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
-      - name: Download Cross
-        uses: actions/download-artifact@v1
-        with:
-          name: cross-linux-musl
-          path: /tmp/
-      - run: chmod +x /tmp/cross
-      - run: ci/set_rust_version.bash ${{ matrix.channel }} ${{ matrix.target }}
-      - run: ci/build.bash /tmp/cross ${{ matrix.target }}
+          use-cross: true
+          args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
+          command: build
+
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
@@ -118,19 +80,29 @@ jobs:
           cache: "yarn"
           cache-dependency-path: "./tests/yarn.lock"
           registry-url: "https://npm.pkg.github.com"
+
       - run: yarn global add @webb-tools/dkg-standalone-binary@latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - run: ci/test.bash /tmp/cross ${{ matrix.target }}
+          
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          args: --release --target=${{ matrix.target }} --locked
+          command: test
+
         if: matrix.target == 'x86_64-unknown-linux-musl'
       - run: cargo build --features integration-tests,cli
         if: matrix.target == 'x86_64-unknown-linux-musl'
         shell: bash
+
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && dvc pull && yarn
+
       - name: Pull Docker Images used for testing.
         run: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:stable
+        
       - name: Webb Relayer Integration tests.
         if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && yarn test
