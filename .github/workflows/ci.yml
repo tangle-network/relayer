@@ -12,7 +12,8 @@ env:
   ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
 
 jobs:
-  macos:
+
+  macos-build:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
@@ -38,12 +39,6 @@ jobs:
           args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
           command: build
 
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          args: --release --target=${{ matrix.target }} --locked
-          command: test
-
     strategy:
       fail-fast: true
       matrix:
@@ -51,7 +46,33 @@ jobs:
         target:
           - x86_64-apple-darwin
 
-  linux:
+  macos-unit-tests:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 50
+          
+      - name: Setup | Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          profile: minimal
+          target: ${{ matrix.target }}
+
+      - name: Setup DVC
+        uses: iterative/setup-dvc@v1
+        
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          args: --release --target=${{ matrix.target }} --locked
+          command: test
+
+  linux-build:
     runs-on: ubuntu-latest
     steps:
       - name: install system build dependencies
@@ -73,6 +94,30 @@ jobs:
           args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
           command: build
 
+    strategy:
+      fail-fast: true
+      matrix:
+        channel: [nightly-2022-05-15]
+        target:
+          - aarch64-unknown-linux-musl
+          - x86_64-unknown-linux-musl
+
+  linux-unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install system build dependencies
+        run: sudo apt-get update && sudo apt-get upgrade && sudo apt-get install ${DEV_PACKAGES}
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 50
+
+      - name: Setup DVC
+        uses: iterative/setup-dvc@v1
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
@@ -90,6 +135,39 @@ jobs:
           use-cross: true
           args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
           command: test
+
+    strategy:
+      fail-fast: true
+      matrix:
+        channel: [nightly-2022-05-15]
+        target:
+          - aarch64-unknown-linux-musl
+          - x86_64-unknown-linux-musl
+
+
+  linux-integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: install system build dependencies
+        run: sudo apt-get update && sudo apt-get upgrade && sudo apt-get install ${DEV_PACKAGES}
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 50
+
+      - name: Setup DVC
+        uses: iterative/setup-dvc@v1
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: "./tests/.nvmrc"
+          cache: "yarn"
+          cache-dependency-path: "./tests/yarn.lock"
+          registry-url: "https://npm.pkg.github.com"
 
         if: matrix.target == 'x86_64-unknown-linux-musl'
       - run: cargo build --features integration-tests,cli,native-tls/vendored
