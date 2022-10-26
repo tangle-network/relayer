@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+
 use crate::{BridgeKey, QueueKey};
 use core::fmt;
 use serde::de::DeserializeOwned;
@@ -396,7 +396,7 @@ impl fmt::Display for SledQueueKey {
                 optional_key.map(hex::encode)
             ),
             Self::BridgeCmd { bridge_key } => {
-                write!(f, "BridgeCmd({})", bridge_key)
+                write!(f, "BridgeCmd({bridge_key})")
             }
         }
     }
@@ -405,12 +405,12 @@ impl fmt::Display for SledQueueKey {
 impl QueueKey for SledQueueKey {
     fn queue_name(&self) -> String {
         match self {
-            Self::EvmTx { chain_id, .. } => format!("evm_tx_{}", chain_id),
+            Self::EvmTx { chain_id, .. } => format!("evm_tx_{chain_id}"),
             Self::SubstrateTx { chain_id, .. } => {
-                format!("substrate_tx_{}", chain_id)
+                format!("substrate_tx_{chain_id}")
             }
             Self::CosmosTx { chain_id, .. } => {
-                format!("cosmos_tx_{}", chain_id)
+                format!("cosmos_tx_{chain_id}")
             }
             Self::BridgeCmd { bridge_key, .. } => {
                 format!("bridge_cmd_{}", bridge_key.chain_id.chain_id())

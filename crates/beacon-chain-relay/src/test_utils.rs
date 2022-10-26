@@ -1,9 +1,9 @@
-pub fn read_json_file_from_data_dir(file_name: &str) -> std::string::String {
-    let mut json_file_path = std::env::current_exe().unwrap();
+use std::path::Path;
 
-    json_file_path.pop();
-    json_file_path.push("../../../beacon-chain-relay/data");
-    json_file_path.push(file_name);
-    println!("json_file_path: {:?}", json_file_path);
+pub fn read_json_file_from_data_dir(file_name: &str) -> std::string::String {
+    // Get git root directory
+    let git_root_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let json_file_path = Path::new(&git_root_dir).join("data").join(file_name);
+    println!("Reading file: {:?}", json_file_path);
     std::fs::read_to_string(json_file_path).expect("Unable to read file")
 }

@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+
 //! # Relayer Store Module 🕸️
 //!
 //! A module for managing the storage of the relayer.
@@ -143,7 +143,7 @@ impl HistoryStoreKey {
 impl Display for HistoryStoreKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Block { chain_id } => write!(f, "Block({})", chain_id),
+            Self::Block { chain_id } => write!(f, "Block({chain_id})"),
             Self::ResourceId { resource_id } => {
                 write!(
                     f,

@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 //! In this example we will show how to use the webb relayer in depth.
 
@@ -20,7 +19,6 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use webb_relayer::context::RelayerContext;
 use webb_relayer::service;
 use webb_relayer_config::{
     anchor::VAnchorWithdrawConfig,
@@ -34,6 +32,7 @@ use webb_relayer_config::{
     },
     FeaturesConfig, WebbRelayerConfig,
 };
+use webb_relayer_context::RelayerContext;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -109,6 +108,7 @@ async fn main() -> anyhow::Result<()> {
                     }),
                 ],
                 block_poller: None,
+                block_confirmations: 0,
                 tx_queue: Default::default(),
             },
         )]),
