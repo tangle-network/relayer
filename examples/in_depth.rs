@@ -11,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
 
 //! In this example we will show how to use the webb relayer in depth.
 
@@ -20,10 +19,20 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-
-use webb_relayer::config::{self, *};
-use webb_relayer::context::RelayerContext;
 use webb_relayer::service;
+use webb_relayer_config::{
+    anchor::VAnchorWithdrawConfig,
+    event_watcher::EventsWatcherConfig,
+    evm::{
+        CommonContractConfig, Contract, EvmChainConfig,
+        SignatureBridgeContractConfig, VAnchorContractConfig,
+    },
+    signing_backend::{
+        MockedProposalSigningBackendConfig, ProposalSigningBackendConfig,
+    },
+    FeaturesConfig, WebbRelayerConfig,
+};
+use webb_relayer_context::RelayerContext;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -98,6 +107,8 @@ async fn main() -> anyhow::Result<()> {
                         },
                     }),
                 ],
+                block_poller: None,
+                block_confirmations: 0,
                 tx_queue: Default::default(),
             },
         )]),
@@ -105,18 +116,20 @@ async fn main() -> anyhow::Result<()> {
     };
     // Option 2:
     // Using this:
-    let config = config::load("path/to/config/directory")?;
+    let config = webb_relayer_config::utils::load("path/to/config/directory")?;
     // or this:
-    let config_files = config::search_config_files("path/to/config/directory")?;
-    let config = config::parse_from_files(&config_files)?;
+    let config_files = webb_relayer_config::utils::search_config_files(
+        "path/to/config/directory",
+    )?;
+    let config = webb_relayer_config::utils::parse_from_files(&config_files)?;
 
     // finally, after loading the config files, we can build the relayer context.
     let ctx = RelayerContext::new(config);
 
     // next is to build the store, or the storage backend:
-    let store = webb_relayer::store::SledStore::open("path/to/store")?;
+    let store = webb_relayer_store::sled::SledStore::open("path/to/store")?;
     // or temporary store:
-    let store = webb_relayer::store::SledStore::temporary()?;
+    let store = webb_relayer_store::sled::SledStore::temporary()?;
 
     // it is now up to you to start the web interface/server for the relayer and the background
     // services.

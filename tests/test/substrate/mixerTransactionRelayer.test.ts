@@ -69,7 +69,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
       commonConfig: {
-        port: relayerPort
+        port: relayerPort,
       },
       tmp: true,
       configDir: tmpDirPath,
@@ -432,7 +432,8 @@ async function createMixerWithdrawProof(
     const treeId = 0;
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
-    const leafCount: number = await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
+    const leafCount: number =
+      await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
     const treeLeaves: Uint8Array[] =
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       // @ts-ignore

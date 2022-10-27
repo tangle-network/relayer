@@ -53,6 +53,7 @@ export type ExportedConfigOptions = {
   withdrawConfig?: WithdrawConfig;
   relayerWallet?: Wallet;
   linkedAnchors?: LinkedAnchor[];
+  blockConfirmations?: number;
 };
 
 // Default Events watcher for the contracts.
@@ -360,6 +361,7 @@ export class LocalChain {
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
+      blockConfirmations: opts.blockConfirmations ?? 1,
       chainId: this.underlyingChainId,
       beneficiary: (wallet as ethers.Wallet).address,
       privateKey: (wallet as ethers.Wallet).privateKey,
@@ -376,6 +378,7 @@ export class LocalChain {
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
+      blockConfirmations: opts.blockConfirmations ?? 1,
       chainId: this.underlyingChainId,
       beneficiary: '',
       privateKey: '',
@@ -427,6 +430,7 @@ export class LocalChain {
       'http-endpoint': config.httpEndpoint,
       'ws-endpoint': config.wsEndpoint,
       'chain-id': config.chainId,
+      'block-confirmations': config.blockConfirmations,
       beneficiary: config.beneficiary,
       'private-key': config.privateKey,
       contracts: config.contracts.map((contract) => ({
@@ -482,7 +486,7 @@ export class LocalChain {
     const fullConfigFile: FullConfigFile = {
       evm: {
         [this.underlyingChainId]: convertedConfig,
-      }
+      },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);
     fs.writeFileSync(path, configString);
@@ -557,7 +561,6 @@ export async function setupVanchorEvmTx(
     chainId: depositUtxo.chainId,
     originChainId: depositUtxo.originChainId,
     blinding: hexToU8a(depositUtxo.blinding),
-    // privateKey: hexToU8a(depositUtxo.secret_key),
     keypair: randomKeypair,
     index: depositUtxoIndex.toString(),
   });

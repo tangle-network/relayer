@@ -48,7 +48,10 @@ import {
   Keypair,
 } from '@webb-tools/sdk-core';
 
-import { defaultEventsWatcherValue, generateArkworksUtxoTest } from '../../lib/utils.js';
+import {
+  defaultEventsWatcherValue,
+  generateArkworksUtxoTest,
+} from '../../lib/utils.js';
 import {
   encodeResourceIdUpdateProposal,
   SubstrateResourceIdUpdateProposal,
@@ -182,7 +185,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       chainId: substrateChainId,
       proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
       linkedAnchors: [{ type: 'Raw', resourceId: evmResourceId }],
-      enabledPallets
+      enabledPallets,
     });
 
     // save the evm chain configs.
@@ -411,7 +414,9 @@ async function setResourceIdProposal(
     callIndex,
   };
 
-  const proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
+  const proposalBytes = encodeResourceIdUpdateProposal(
+    resourceIdUpdateProposal
+  );
   console.log('proosal bytes : ', proposalBytes);
   const hash = ethers.utils.keccak256(proposalBytes);
   const msg = ethers.utils.arrayify(hash);
@@ -483,7 +488,7 @@ async function vanchorDeposit(
     backend: 'Arkworks',
     amount: '0',
     chainId: typedTargetChainId,
-  })
+  });
   const publicAmount = currencyToUnitI128(10);
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({

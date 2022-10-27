@@ -25,7 +25,13 @@ import isCI from 'is-ci';
 import * as TinySecp256k1 from 'tiny-secp256k1';
 
 import { LocalNodeOpts, SubstrateNodeBase } from '@webb-tools/test-utils';
-import { EventsWatcher, LinkedAnchor, NodeInfo, Pallet, ProposalSigningBackend } from './webbRelayer.js';
+import {
+  EventsWatcher,
+  LinkedAnchor,
+  NodeInfo,
+  Pallet,
+  ProposalSigningBackend,
+} from './webbRelayer.js';
 import { ConvertToKebabCase } from './tsHacks.js';
 
 type ExportedConfigOptions = {
@@ -159,10 +165,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
     return nodeInfo;
   }
 
-  public async writeConfig(
-    path: string,
-    opts: ExportedConfigOptions
-  ) {
+  public async writeConfig(path: string, opts: ExportedConfigOptions) {
     const config = await this.exportConfig(opts);
     type ConvertedPallet = Omit<
       ConvertToKebabCase<Pallet>,
@@ -192,9 +195,9 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
             enabled: c.eventsWatcher.enabled,
             'polling-interval': c.eventsWatcher.pollingInterval,
           },
-        }
+        };
         return convertedPallet;
-      })
+      }),
     };
 
     type FullConfigFile = {

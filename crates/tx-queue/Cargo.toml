@@ -1,0 +1,49 @@
+[package]
+name = "webb-relayer-tx-queue"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+webb-relayer-types = { path = "../relayer-types" }
+webb-relayer-store = { path = "../relayer-store" }
+webb-relayer-config = { path = "../relayer-config"}
+webb-relayer-context = { path = "../relayer-context"}
+webb-relayer-utils = { path = "../relayer-utils"}
+async-trait = "^0.1"
+tracing = { version = "^0.1", features = ["log"] }
+tracing-test = "0.2"
+url = { version = "^2.2", features = ["serde"] }
+sled = { version = "^0.34" }
+futures = { version = "^0.3", default-features = false }
+backoff = { version = "0.4.0", features = ["tokio"] }
+serde = { version = "^1", default-features = false, features = ["derive"] }
+tokio = { version = "^1", features = ["full"] }
+tokio-stream = { version = "^0.1" }
+warp = { version = "0.3.3", default-features = false, features = ["websocket", "tls"] }
+warp-real-ip = "0.2"
+config = { version = "0.11", default-features = false, features = ["toml", "json"] }
+serde_json = { version = "^1", default-features = false }
+rand = { version = "0.8", default-features = false, features = ["getrandom"] }
+hex = { version = "0.4", default-features = false }
+webb = { version = "0.5.10", default-features = false }
+# Used by ethers (but we need it to be vendored with the lib).
+native-tls = { version = "^0.2", features = ["vendored"], optional = true }
+webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
+ethereum-types = "0.13.1"
+dotenv = "0.15.0"
+derive_more = { version = "0.99", default-features = false, features = ["display"] }
+typed-builder = "0.10.0"
+libsecp256k1 = "0.7.0"
+prometheus = "0.13.2"
+
+[features]
+default = ["std", "evm", "substrate"]
+std = []
+evm = [
+    "webb-relayer-context/evm",
+]
+substrate = [
+    "webb-relayer-context/substrate",
+]

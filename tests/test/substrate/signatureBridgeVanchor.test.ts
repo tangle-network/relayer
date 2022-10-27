@@ -25,7 +25,11 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { ethers } from 'ethers';
-import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
+import {
+  WebbRelayer,
+  Pallet,
+  RelayerMetricResponse,
+} from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 
@@ -53,8 +57,12 @@ import {
 } from '../../lib/substrateWebbProposals.js';
 import pkg from 'secp256k1';
 import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
-import { defaultEventsWatcherValue, generateArkworksUtxoTest } from '../../lib/utils.js';
+import {
+  defaultEventsWatcherValue,
+  generateArkworksUtxoTest,
+} from '../../lib/utils.js';
 import { UsageMode } from '@webb-tools/test-utils';
+import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
 describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
@@ -119,7 +127,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       chainId: chainId,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       linkedAnchors: [{ type: 'Substrate', treeId: 6, chainId, pallet: 44 }],
-      enabledPallets
+      enabledPallets,
     });
 
     // force set maintainer
@@ -137,7 +145,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
       commonConfig: {
-        port: relayerPort
+        port: relayerPort,
       },
       tmp: true,
       configDir: tmpDirPath,
@@ -190,6 +198,16 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
         finalized: true,
       },
     });
+
+    // check metrics gathered
+    const responseMetricsGathered = await webbRelayer.getMetricsGathered();
+    expect(responseMetricsGathered.status).equal(200);
+    let metricsGathered =
+      responseMetricsGathered.json() as Promise<RelayerMetricResponse>;
+    metricsGathered.then((resp) => {
+      console.log(resp.metrics);
+      expect(resp.metrics).to.not.be.null;
+    });
   });
 
   after(async () => {
@@ -230,7 +248,9 @@ async function setResourceIdProposal(
     callIndex,
   };
 
-  const proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
+  const proposalBytes = encodeResourceIdUpdateProposal(
+    resourceIdUpdateProposal
+  );
   const hash = ethers.utils.keccak256(proposalBytes);
   const msg = ethers.utils.arrayify(hash);
   // sign the message
@@ -321,7 +341,7 @@ async function vanchorDeposit(
   const leafId: LeafIdentifier = {
     index: 0,
     typedChainId: Number(outputChainId.toString()),
-  }
+  };
 
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: outputChainId.toString(),

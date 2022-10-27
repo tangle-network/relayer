@@ -163,7 +163,7 @@ describe('VAnchor Governance Relayer', function () {
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
       commonConfig: {
-        port: relayerPort
+        port: relayerPort,
       },
       tmp: true,
       configDir: tmpDirPath,

@@ -3,8 +3,14 @@
 import fs from 'fs';
 
 import { spawn } from 'child_process';
-import { EventsWatcher, LinkedAnchor, NodeInfo, Pallet, ProposalSigningBackend } from './webbRelayer.js';
-import { 
+import {
+  EventsWatcher,
+  LinkedAnchor,
+  NodeInfo,
+  Pallet,
+  ProposalSigningBackend,
+} from './webbRelayer.js';
+import {
   LocalProtocolSubstrate as BaseLocalSubstrate,
   LocalNodeOpts,
 } from '@webb-tools/test-utils';
@@ -213,7 +219,7 @@ export class LocalProtocolSubstrate extends BaseLocalSubstrate {
     const fullConfigFile: FullConfigFile = {
       substrate: {
         [this.opts.name]: convertedConfig,
-      }
+      },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);
     fs.writeFileSync(path, configString);

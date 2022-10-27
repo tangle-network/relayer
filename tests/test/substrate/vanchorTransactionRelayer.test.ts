@@ -29,6 +29,7 @@ import {
   WebbRelayer,
   Pallet,
   LeavesCacheResponse,
+  RelayerMetricResponse,
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 
@@ -47,7 +48,10 @@ import {
   LeafIdentifier,
 } from '@webb-tools/sdk-core';
 import { UsageMode } from '@webb-tools/test-utils';
-import { defaultEventsWatcherValue, generateArkworksUtxoTest } from '../../lib/utils.js';
+import {
+  defaultEventsWatcherValue,
+  generateArkworksUtxoTest,
+} from '../../lib/utils.js';
 
 describe('Substrate VAnchor Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -194,7 +198,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const assetId = new Uint8Array([254, 255, 255, 255]);
     const dummyLeafId: LeafIdentifier = {
       index: 0,
-      typedChainId: Number(outputChainId.toString())
+      typedChainId: Number(outputChainId.toString()),
     };
 
     const setup: ProvingManagerSetupInput<'vanchor'> = {
@@ -232,9 +236,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       publicAmount: data.publicAmount,
       roots: rootsSet,
       inputNullifiers: data.inputUtxos.map((input) => `0x${input.nullifier}`),
-      outputCommitments: data.outputUtxos.map((utxo) =>
-        `0x${utxo.commitment}`
-      ),
+      outputCommitments: data.outputUtxos.map((utxo) => `0x${utxo.commitment}`),
       extDataHash: data.extDataHash,
     };
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -267,8 +269,9 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
     const response = await webbRelayer.getLeavesSubstrate(
-      chainIdHex,
-      treeId.toString()
+      chainIdentifier.toString(),
+      treeId.toString(),
+      '44' // pallet Id
     );
     expect(response.status).equal(200);
     const leavesStore = response.json() as Promise<LeavesCacheResponse>;
@@ -276,7 +279,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const result = leavesStore.then((resp) => {
       expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
       return true;
-    })
+    });
 
     expect(result).eq(true);
   });

@@ -111,7 +111,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
-      enabledPallets
+      enabledPallets,
     });
 
     // we need to wait until the public key is on chain.
@@ -268,7 +268,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     webbRelayer = new WebbRelayer({
       tmp: true,
       commonConfig: {
-        port: relayerPort
+        port: relayerPort,
       },
       configDir: tmpDirPath,
       showLogs: false,

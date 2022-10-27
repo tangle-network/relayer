@@ -12,9 +12,8 @@ export async function generateArkworksUtxoTest(
   chainId: number,
   outputChainId: number,
   index?: number,
-  keypair?: Keypair,
+  keypair?: Keypair
 ) {
-
   const utxo = await Utxo.generateUtxo({
     amount: String(amount),
     backend: 'Arkworks',
@@ -23,7 +22,7 @@ export async function generateArkworksUtxoTest(
     curve: 'Bn254',
     index: index ? String(index) : undefined,
     keypair: keypair ?? new Keypair(),
-  })
+  });
 
   return utxo;
 }

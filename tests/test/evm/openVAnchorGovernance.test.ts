@@ -152,7 +152,7 @@ describe('Open VAnchor Governance Relayer', function () {
     webbRelayer = new WebbRelayer({
       tmp: true,
       commonConfig: {
-        port: relayerPort
+        port: relayerPort,
       },
       configDir: tmpDirPath,
       showLogs: true,

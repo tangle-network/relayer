@@ -8,6 +8,9 @@ on:
 
   workflow_dispatch:
 
+env:
+  ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
+
 jobs:
   # code coverage job
   coverage:
@@ -20,21 +23,21 @@ jobs:
           access_token: ${{ github.token }}
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install Toolchain
         uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly-2022-05-15
 
       - name: Rust Cache
-        uses: Swatinem/rust-cache@v1.3.0
+        uses: Swatinem/rust-cache@v2
 
       - name: Run Tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
-          args: '--avoid-cfg-tarpaulin --out Xml --locked --jobs 16 --timeout 3600 --skip-clean -- --test-threads 16 '
+          args: '--avoid-cfg-tarpaulin --out Xml --locked --jobs 1 --timeout 3600 --skip-clean -- --test-threads 16 '
 
       - name: Upload CodeCov
-        uses: codecov/codecov-action@v2
+        uses: codecov/codecov-action@v3

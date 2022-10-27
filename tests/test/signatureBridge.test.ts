@@ -98,7 +98,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
-      enabledPallets
+      enabledPallets,
     });
 
     // we need to wait until the public key is on chain.
@@ -249,7 +249,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
       commonConfig: {
-        port: relayerPort
+        port: relayerPort,
       },
       tmp: true,
       configDir: tmpDirPath,
@@ -478,7 +478,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();

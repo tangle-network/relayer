@@ -57,7 +57,6 @@ export class WebbRelayer {
   readonly #logs: RawEvent[] = [];
   readonly #eventEmitter = new EventEmitter();
   constructor(private readonly opts: WebbRelayerOptions) {
-
     // read the files and contents
     fs.readdir(opts.configDir, (err, files) => {
       if (err) {
@@ -65,11 +64,14 @@ export class WebbRelayer {
       }
 
       files.map((fileName) => {
-        const fileContents = fs.readFileSync(path.resolve(opts.configDir, fileName), { encoding: "ascii" });
+        const fileContents = fs.readFileSync(
+          path.resolve(opts.configDir, fileName),
+          { encoding: 'ascii' }
+        );
         console.log(`file: ${fileName} \n contents: \n ${fileContents} \n\n`);
-      })
+      });
     });
-    
+
     // Write the folder-wide configuration for this relayer instance
     type WrittenCommonConfig = {
       features?: ConvertToKebabCase<FeaturesConfig>;
@@ -81,8 +83,8 @@ export class WebbRelayer {
         'governance-relay': opts.commonConfig.features?.governanceRelay ?? true,
         'private-tx-relay': opts.commonConfig.features?.privateTxRelay ?? true,
       },
-      port: opts.commonConfig.port
-    }
+      port: opts.commonConfig.port,
+    };
     const configString = JSON.stringify(commonConfigFile, null, 2);
     fs.writeFileSync(path.join(opts.configDir, 'main.json'), configString);
 
@@ -113,7 +115,9 @@ export class WebbRelayer {
     );
     if (this.opts.showLogs) {
       // log that we started
-      process.stdout.write(`Webb relayer started on port ${opts.commonConfig.port}\n`);
+      process.stdout.write(
+        `Webb relayer started on port ${opts.commonConfig.port}\n`
+      );
     }
     this.#process.stdout
       ?.pipe(JSONStream.parse())
@@ -152,8 +156,12 @@ export class WebbRelayer {
     return response;
   }
   // data querying api for substrate
-  public async getLeavesSubstrate(chainId: string, treeId: string) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/leaves/substrate/${chainId}/${treeId}`;
+  public async getLeavesSubstrate(
+    chainId: string,
+    treeId: string,
+    palletId: string
+  ) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/leaves/substrate/${chainId}/${treeId}/${palletId}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -162,6 +170,12 @@ export class WebbRelayer {
     contractAddress: string
   ) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/encrypted_outputs/evm/${chainId}/${contractAddress}`;
+    const response = await fetch(endpoint);
+    return response;
+  }
+
+  public async getMetricsGathered() {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/metrics`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -532,6 +546,10 @@ export interface EncryptedOutputsCacheResponse {
   last_queried_block: string;
 }
 
+export interface RelayerMetricResponse {
+  metrics: string;
+}
+
 export interface Evm {
   [key: string]: ChainInfo;
 }
@@ -542,6 +560,7 @@ export interface ChainInfo {
   chainId: number;
   beneficiary?: string;
   contracts: Contract[];
+  blockConfirmations: number;
 }
 
 export interface Contract {

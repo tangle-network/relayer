@@ -58,7 +58,10 @@ import { createSubstrateResourceId } from '../../lib/webbProposals.js';
 import { LocalChain } from '../../lib/localTestnet.js';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
-import { defaultEventsWatcherValue, generateArkworksUtxoTest } from '../../lib/utils.js';
+import {
+  defaultEventsWatcherValue,
+  generateArkworksUtxoTest,
+} from '../../lib/utils.js';
 import { UsageMode } from '@webb-tools/test-utils';
 const { ecdsaSign } = pkg;
 
@@ -194,6 +197,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       linkedAnchors: [
         { type: 'Raw', resourceId: substrateResourceId.toString() },
       ],
+      blockConfirmations: 15,
     });
 
     // This are pre-requisites for creating substrate chain.
@@ -382,7 +386,9 @@ async function setResourceIdProposal(
     callIndex,
   };
 
-  const proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
+  const proposalBytes = encodeResourceIdUpdateProposal(
+    resourceIdUpdateProposal
+  );
   const hash = ethers.utils.keccak256(proposalBytes);
   const msg = ethers.utils.arrayify(hash);
   // sign the message
@@ -468,9 +474,13 @@ async function vanchorWithdraw(
   const leafId: LeafIdentifier = {
     index: 0,
     typedChainId: Number(typedSourceChainId.toString()),
-  }
-  const defaultInput = await generateArkworksUtxoTest(0, Number(typedTargetChainId), Number(typedTargetChainId));
-  
+  };
+  const defaultInput = await generateArkworksUtxoTest(
+    0,
+    Number(typedTargetChainId),
+    Number(typedTargetChainId)
+  );
+
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: typedTargetChainId.toString(),
     leafIds: [leafId, leafId],
