@@ -430,18 +430,12 @@ async function createMixerWithdrawProof(
       ''
     );
     const treeId = 0;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    const leafCount: number =
-      await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
-    const treeLeaves: Uint8Array[] =
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      await api.derive.merkleTreeBn254.getLeavesForTree(
-        treeId,
-        0,
-        leafCount - 1
-      );
+    const leafCount: number = await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
+    const treeLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(
+      treeId,
+      0,
+      leafCount - 1
+    );
     const provingManager = new ArkworksProvingManager(null);
     const leafHex = u8aToHex(note.getLeaf());
     const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);

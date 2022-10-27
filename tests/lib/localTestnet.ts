@@ -497,6 +497,7 @@ export type FullChainInfo = ChainInfo & {
   httpEndpoint: string;
   wsEndpoint: string;
   privateKey: string;
+  blockConfirmations: number,
 };
 
 export async function setupVanchorEvmTx(
