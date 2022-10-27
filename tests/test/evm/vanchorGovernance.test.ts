@@ -167,13 +167,13 @@ describe('VAnchor Governance Relayer', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
   });
 
-  it.only('should handle AnchorUpdateProposal when a deposit happens', async () => {
+  it('should handle AnchorUpdateProposal when a deposit happens', async () => {
     // we will use chain1 as an example here.
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);

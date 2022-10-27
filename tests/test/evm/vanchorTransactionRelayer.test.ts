@@ -171,7 +171,7 @@ describe('Vanchor Transaction relayer', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -252,7 +252,6 @@ describe('Vanchor Transaction relayer', function () {
       expect(resp.leaves.length).to.equal(10);
       return true;
     });
-    expect(result).to.eq(true);
   });
 
   it('number of deposits made should be equal to number of encrypted outputs in cache', async () => {
@@ -332,7 +331,6 @@ describe('Vanchor Transaction relayer', function () {
       expect(resp.encrypted_outputs.length).to.equal(10);
       return true;
     });
-    expect(result).to.eq(true);
   });
 
   after(async () => {
