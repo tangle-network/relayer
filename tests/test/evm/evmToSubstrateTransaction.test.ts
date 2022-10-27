@@ -51,6 +51,7 @@ import {
   ChainType,
   ProposalHeader,
   CircomUtxo,
+  LeafIdentifier,
 } from '@webb-tools/sdk-core';
 
 import {
@@ -76,9 +77,9 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   // Governer key
   const GOV = u8aToHex(ethers.utils.randomBytes(32));
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
-  let governorWallet = new ethers.Wallet(GOV);
+  const governorWallet = new ethers.Wallet(GOV);
   // slice 0x04 from public key
-  let uncompressedKey = governorWallet
+  const uncompressedKey = governorWallet
     ._signingKey()
     .publicKey.toString()
     .slice(4);
@@ -123,7 +124,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
-    let substrateChainId = await aliceNode.getChainId();
+    const substrateChainId = await aliceNode.getChainId();
 
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
@@ -173,9 +174,9 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     const vanchor = signatureVBridge.getVAnchor(localChain1.chainId)!;
     await vanchor.setSigner(wallet1);
 
-    let evmResourceId = await vanchor.createResourceId();
+    const evmResourceId = await vanchor.createResourceId();
 
-    let substrateResourceId = createSubstrateResourceId(
+    const substrateResourceId = createSubstrateResourceId(
       substrateChainId,
       6,
       '0x2C'
@@ -204,16 +205,16 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     // 2. We need to whitelist chain Id
 
     // force set maintainer
-    let setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(
+    const setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(
       `0x${uncompressedKey}`
     );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
-    let typedSourceChainId = calculateTypedChainId(
+    const typedSourceChainId = calculateTypedChainId(
       ChainType.Substrate,
       substrateChainId
     );
     //whitelist chain
-    let whitelistChainCall =
+    const whitelistChainCall =
       api.tx.signatureBridge.whitelistChain(typedSourceChainId);
     await aliceNode.sudoExecuteTransaction(whitelistChainCall);
 
@@ -246,25 +247,24 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       ethers.utils.parseEther('100000000000000000000000')
     );
     const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
-      .be.true;
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to.be.true;
 
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     //create vanchor
-    let createVAnchorCall = api.tx.vAnchorBn254!.create!(1, 30, 0);
+    const createVAnchorCall = api.tx.vAnchorBn254!.create!(1, 30, 0);
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
     // chainId
-    let substrateChainId = await aliceNode.getChainId();
-    let typedTargetChainId = calculateTypedChainId(
+    const substrateChainId = await aliceNode.getChainId();
+    const typedTargetChainId = calculateTypedChainId(
       ChainType.Substrate,
       substrateChainId
     );
-    let typedSourceChainId = localChain1.chainId;
+    const typedSourceChainId = localChain1.chainId;
     // now we set resource through proposal execution
-    let setResourceIdProposalCall = await setResourceIdProposal(
+    const setResourceIdProposalCall = await setResourceIdProposal(
       api,
       GOV,
       treeId,
@@ -364,12 +364,12 @@ async function setResourceIdProposal(
   treeId: number,
   chainId: number
 ): Promise<SubmittableExtrinsic<'promise'>> {
-  let functionSignature = hexToU8a('0x00000002', 32);
-  let nonce = 1;
-  let palletIndex = '0x2C';
-  let callIndex = '0x02';
+  const functionSignature = hexToU8a('0x00000002', 32);
+  const nonce = 1;
+  const palletIndex = '0x2C';
+  const callIndex = '0x02';
   // set resource ID
-  let resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
+  const resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
   const proposalHeader = new ProposalHeader(
     resourceId,
     functionSignature,
@@ -382,18 +382,18 @@ async function setResourceIdProposal(
     callIndex,
   };
 
-  let proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
-  let hash = ethers.utils.keccak256(proposalBytes);
-  let msg = ethers.utils.arrayify(hash);
+  const proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
+  const hash = ethers.utils.keccak256(proposalBytes);
+  const msg = ethers.utils.arrayify(hash);
   // sign the message
   const sigObj = ecdsaSign(msg, hexToU8a(PK1));
-  let signature = new Uint8Array([...sigObj.signature, sigObj.recid]);
+  const signature = new Uint8Array([...sigObj.signature, sigObj.recid]);
   // execute proposal call to handler
-  let executeSetProposalCall =
+  const executeSetProposalCall =
     api.tx.vAnchorHandlerBn254.executeSetResourceProposal(resourceId.toU8a());
-  //@ts-ignore
-  let setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
+  const setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
     calculateTypedChainId(ChainType.Substrate, chainId),
+    executeSetProposalCall.toU8a(),
     u8aToHex(proposalBytes),
     u8aToHex(signature)
   );
@@ -429,7 +429,7 @@ async function vanchorWithdraw(
   const pk_hex = fs.readFileSync(pkPath).toString('hex');
   const pk = hexToU8a(pk_hex);
 
-  let note1 = depositNote;
+  const note1 = depositNote;
   const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(10);
   const notes = [note1, note2];
@@ -469,8 +469,11 @@ async function vanchorWithdraw(
   
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: typedTargetChainId.toString(),
-    leafIds: [0, 0],
-    inputNotes: notes,
+    leafIds: [
+      { index: 0, typedChainId: Number(typedTargetChainId) },
+      { index: 0, typedChainId: Number(typedTargetChainId) },
+    ],
+    inputUtxos: notes.map((n) => new Utxo(n.note.getUtxo())),
     leavesMap: leavesMap,
     output: [output1, output2],
     encryptedCommitments: [comEnc1, comEnc2],
@@ -497,7 +500,7 @@ async function vanchorWithdraw(
     encryptedOutput2: u8aToHex(comEnc2),
   };
 
-  let vanchorProofData = {
+  const vanchorProofData = {
     proof: `0x${data.proof}`,
     publicAmount: data.publicAmount,
     roots: rootsSet,
@@ -509,7 +512,7 @@ async function vanchorWithdraw(
   };
 
   // now we call the vanchor transact
-  let transactCall = api.tx.vAnchorBn254!.transact!(
+  const transactCall = api.tx.vAnchorBn254!.transact!(
     treeId,
     vanchorProofData,
     extData
@@ -519,7 +522,7 @@ async function vanchorWithdraw(
 }
 
 function currencyToUnitI128(currencyAmount: number) {
-  let bn = BigNumber.from(currencyAmount);
+  const bn = BigNumber.from(currencyAmount);
   return bn.mul(1_000_000_000_000);
 }
 
