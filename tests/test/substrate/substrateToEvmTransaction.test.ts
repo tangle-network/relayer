@@ -64,7 +64,7 @@ import { expect } from 'chai';
 import { UsageMode } from '@webb-tools/test-utils';
 const { ecdsaSign } = pkg;
 
-describe('Cross chain transaction <<>> Mocked Backend', function () {
+describe.only('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -223,7 +223,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -487,8 +487,11 @@ async function vanchorDeposit(
     curve: 'Bn254',
     backend: 'Arkworks',
     amount: '0',
-    chainId: typedTargetChainId,
+    chainId: typedSourceChainId,
+    originChainId: typedSourceChainId,
+    index: '0'
   });
+
   const publicAmount = currencyToUnitI128(10);
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({
@@ -514,7 +517,7 @@ async function vanchorDeposit(
   const fee = 0;
   const refund = 0;
   // Empty leaves
-  leavesMap[typedTargetChainId.toString()] = [];
+  leavesMap[typedTargetChainId.toString()] = [];  
   const tree = await api.query.merkleTreeBn254.trees(treeId);
   const root = tree.unwrap().root.toHex();
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -528,15 +531,16 @@ async function vanchorDeposit(
   const assetId = new Uint8Array([254, 255, 255, 255]);
   const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
   const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
-  const dummyLeafId = {
+  const LeafId = {
     index: 0,
-    typedChainId: Number(typedTargetChainId),
+    typedChainId: Number(typedSourceChainId),
   };
-
+  console.log(depositUtxo);
+  console.log(dummyUtxo)
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: typedSourceChainId.toString(),
     inputUtxos: [depositUtxo, dummyUtxo],
-    leafIds: [dummyLeafId, dummyLeafId],
+    leafIds: [LeafId, LeafId],
     leavesMap: leavesMap,
     output: [output1, output2],
     encryptedCommitments: [comEnc1, comEnc2],
