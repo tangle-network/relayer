@@ -93,9 +93,6 @@ jobs:
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-
       - uses: actions-rs/cargo@v1
         with:
           use-cross: true
@@ -122,9 +119,6 @@ jobs:
 
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
 
       - name: Use Node.js
         uses: actions/setup-node@v3
