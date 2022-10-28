@@ -137,6 +137,11 @@ jobs:
       - run: yarn global add @webb-tools/dkg-standalone-binary@latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Env file
+        run: |
+            touch .env
+            echo ETH1_INFURA_API_KEY = ${{ secrets.ETH1_INFURA_API_KEY }} >> .env
           
       - uses: actions-rs/cargo@v1
         with:
