@@ -59,7 +59,7 @@ import pkg from 'secp256k1';
 import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
 import {
   defaultEventsWatcherValue,
-  generateArkworksUtxoTest,
+  generateVAnchorNote,
 } from '../../lib/utils.js';
 import { UsageMode } from '@webb-tools/test-utils';
 import { expect } from 'chai';
@@ -294,18 +294,14 @@ async function vanchorDeposit(
   const pk = hexToU8a(pk_hex);
 
   // Creating two empty vanchor notes
-  const input1 = await generateArkworksUtxoTest(
+  const note1 = await generateVAnchorNote(
     0,
     Number(outputChainId.toString()),
     Number(outputChainId.toString()),
     0
   );
-  const input2 = await generateArkworksUtxoTest(
-    0,
-    Number(outputChainId.toString()),
-    Number(outputChainId.toString()),
-    0
-  );
+  const note2 = await note1.getDefaultUtxoNote();
+  const notes = [note1, note2];
   const publicAmount = currencyToUnitI128(10);
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({
@@ -346,7 +342,7 @@ async function vanchorDeposit(
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: outputChainId.toString(),
     leafIds: [leafId, leafId],
-    inputUtxos: [input1, input2],
+    inputUtxos: notes.map((n) => new Utxo(n.note.getUtxo())),
     leavesMap: leavesMap,
     output: [output1, output2],
     encryptedCommitments: [comEnc1, comEnc2],
@@ -378,9 +374,7 @@ async function vanchorDeposit(
     publicAmount: data.publicAmount,
     roots: rootsSet,
     inputNullifiers: data.inputUtxos.map((input) => `0x${input.nullifier}`),
-    outputCommitments: data.outputNotes.map((note) =>
-      u8aToHex(note.note.getLeafCommitment())
-    ),
+    outputCommitments: data.outputUtxos.map((utxo) => utxo.commitment),
     extDataHash: data.extDataHash,
   };
 

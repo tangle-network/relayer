@@ -46,11 +46,12 @@ import {
   ChainType,
   ProposalHeader,
   Keypair,
+  Note,
 } from '@webb-tools/sdk-core';
 
 import {
   defaultEventsWatcherValue,
-  generateArkworksUtxoTest,
+  generateVAnchorNote,
 } from '../../lib/utils.js';
 import {
   encodeResourceIdUpdateProposal,
@@ -64,7 +65,7 @@ import { expect } from 'chai';
 import { UsageMode } from '@webb-tools/test-utils';
 const { ecdsaSign } = pkg;
 
-describe.only('Cross chain transaction <<>> Mocked Backend', function () {
+describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -276,7 +277,7 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
     await aliceNode.executeTransaction(txSigned);
 
     // dummy Deposit Note. Input note is directed toward source chain
-    const depositUtxo = await generateArkworksUtxoTest(
+    const depositNote = await generateVAnchorNote(
       0,
       typedSourceChainId,
       typedSourceChainId,
@@ -286,7 +287,7 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
     // substrate vanchor deposit
     await vanchorDeposit(
       typedTargetChainId.toString(),
-      depositUtxo,
+      depositNote,
       treeId,
       api,
       aliceNode
@@ -401,7 +402,7 @@ async function setResourceIdProposal(
   const palletIndex = '0x2C';
   const callIndex = '0x02';
   // set resource ID
-  const resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
+  let resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
   const proposalHeader = new ProposalHeader(
     resourceId,
     functionSignature,
@@ -435,16 +436,13 @@ async function setResourceIdProposal(
 
 async function vanchorDeposit(
   typedTargetChainId: string,
-  depositUtxo: Utxo,
+  depositNote: Note,
   treeId: number,
   api: ApiPromise,
   aliceNode: LocalProtocolSubstrate
 ): Promise<{ outputUtxo: Utxo; keyPair: Keypair }> {
-  if (!depositUtxo.originChainId) {
-    throw new Error('vanchorDeposit requires an originChainId');
-  }
   const account = createAccount('//Dave');
-  const typedSourceChainId = depositUtxo.originChainId;
+  const typedSourceChainId = depositNote.note.sourceChainId;
   console.log('typedSourceChainId : ', typedSourceChainId);
   console.log('typedTargetChainId : ', typedTargetChainId);
   const secret = randomAsU8a();
@@ -483,16 +481,10 @@ async function vanchorDeposit(
   const vk_hex = fs.readFileSync(vkPath).toString('hex');
   const vk = hexToU8a(vk_hex);
 
-  const dummyUtxo = await Utxo.generateUtxo({
-    curve: 'Bn254',
-    backend: 'Arkworks',
-    amount: '0',
-    chainId: typedSourceChainId,
-    originChainId: typedSourceChainId,
-    index: '0'
-  });
-
+  let note1 = depositNote;
+  const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(10);
+  const notes = [note1, note2];
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({
     curve: 'Bn254',
@@ -517,7 +509,7 @@ async function vanchorDeposit(
   const fee = 0;
   const refund = 0;
   // Empty leaves
-  leavesMap[typedTargetChainId.toString()] = [];  
+  leavesMap[typedTargetChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);
   const root = tree.unwrap().root.toHex();
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -535,11 +527,9 @@ async function vanchorDeposit(
     index: 0,
     typedChainId: Number(typedSourceChainId),
   };
-  console.log(depositUtxo);
-  console.log(dummyUtxo)
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: typedSourceChainId.toString(),
-    inputUtxos: [depositUtxo, dummyUtxo],
+    inputUtxos: notes.map((n) => new Utxo(n.note.getUtxo())),
     leafIds: [LeafId, LeafId],
     leavesMap: leavesMap,
     output: [output1, output2],
@@ -572,9 +562,7 @@ async function vanchorDeposit(
     publicAmount: data.publicAmount,
     roots: rootsSet,
     inputNullifiers: data.inputUtxos.map((input) => `0x${input.nullifier}`),
-    outputCommitments: data.outputNotes.map((note) =>
-      u8aToHex(note.note.getLeafCommitment())
-    ),
+    outputCommitments: data.outputUtxos.map((utxo) => utxo.commitment),
     extDataHash: data.extDataHash,
   };
 

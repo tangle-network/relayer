@@ -29,7 +29,6 @@ import {
   WebbRelayer,
   Pallet,
   LeavesCacheResponse,
-  RelayerMetricResponse,
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 
@@ -40,7 +39,6 @@ import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 
 import {
-  Note,
   ProvingManagerSetupInput,
   ArkworksProvingManager,
   Utxo,
@@ -50,7 +48,7 @@ import {
 import { UsageMode } from '@webb-tools/test-utils';
 import {
   defaultEventsWatcherValue,
-  generateArkworksUtxoTest,
+  generateVAnchorNote,
 } from '../../lib/utils.js';
 
 describe('Substrate VAnchor Transaction Relayer Tests', function () {
@@ -113,7 +111,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -152,19 +150,15 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const pk = hexToU8a(pk_hex);
 
     // Creating two empty vanchor notes
-    const utxo1 = await generateArkworksUtxoTest(
+    const note1 = await generateVAnchorNote(
       0,
       Number(outputChainId.toString()),
       Number(outputChainId.toString()),
       0
     );
-    const utxo2 = await generateArkworksUtxoTest(
-      0,
-      Number(outputChainId.toString()),
-      Number(outputChainId.toString()),
-      0
-    );
+    const note2 = await note1.getDefaultUtxoNote();
     const publicAmount = currencyToUnitI128(10);
+    const notes = [note1, note2];
     // Output UTXOs configs
     const output1 = await Utxo.generateUtxo({
       curve: 'Bn254',
@@ -203,7 +197,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
 
     const setup: ProvingManagerSetupInput<'vanchor'> = {
       chainId: outputChainId.toString(),
-      inputUtxos: [utxo1, utxo2],
+      inputUtxos: notes.map((n) => new Utxo(n.note.getUtxo())),
       leafIds: [dummyLeafId, dummyLeafId],
       leavesMap: leavesMap,
       output: [output1, output2],
@@ -236,7 +230,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       publicAmount: data.publicAmount,
       roots: rootsSet,
       inputNullifiers: data.inputUtxos.map((input) => `0x${input.nullifier}`),
-      outputCommitments: data.outputUtxos.map((utxo) => `0x${utxo.commitment}`),
+      outputCommitments: data.outputUtxos.map((utxo) => utxo.commitment),
       extDataHash: data.extDataHash,
     };
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -265,7 +259,6 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
 
     // chainId
     const chainIdentifier = await aliceNode.getChainId();
-    const chainIdHex = chainIdentifier.toString(16);
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made.
     const response = await webbRelayer.getLeavesSubstrate(
@@ -276,12 +269,9 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     expect(response.status).equal(200);
     const leavesStore = response.json() as Promise<LeavesCacheResponse>;
 
-    const result = leavesStore.then((resp) => {
+    leavesStore.then((resp) => {
       expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
-      return true;
     });
-
-    expect(result).eq(true);
   });
 
   after(async () => {
@@ -296,33 +286,6 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
 function currencyToUnitI128(currencyAmount: number) {
   const bn = BigNumber.from(currencyAmount);
   return bn.mul(1_000_000_000_000);
-}
-
-async function generateVAnchorNote(
-  amount: number,
-  chainId: number,
-  outputChainId: number,
-  index?: number
-) {
-  const note = await Note.generateNote({
-    amount: String(amount),
-    backend: 'Arkworks',
-    curve: 'Bn254',
-    denomination: String(18),
-    exponentiation: String(5),
-    hashFunction: 'Poseidon',
-    index,
-    protocol: 'vanchor',
-    sourceChain: String(chainId),
-    sourceIdentifyingData: '1',
-    targetChain: String(outputChainId),
-    targetIdentifyingData: '1',
-    tokenSymbol: 'WEBB',
-    version: 'v1',
-    width: String(5),
-  });
-
-  return note;
 }
 
 function createAccount(accountId: string): any {

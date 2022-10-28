@@ -248,9 +248,8 @@ describe('Vanchor Transaction relayer', function () {
     );
     expect(response.status).equal(200);
     const leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    const result = leavesStore.then((resp) => {
+    leavesStore.then((resp) => {
       expect(resp.leaves.length).to.equal(10);
-      return true;
     });
   });
 

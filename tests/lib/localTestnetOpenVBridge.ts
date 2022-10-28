@@ -17,10 +17,7 @@
 import fs from 'fs';
 import { ethers, Wallet } from 'ethers';
 import { Utility, VBridge } from '@webb-tools/protocol-solidity';
-import {
-  DeployerConfig,
-  GovernorConfig,
-} from '@webb-tools/interfaces';
+import { DeployerConfig, GovernorConfig } from '@webb-tools/interfaces';
 import { MintableToken } from '@webb-tools/tokens';
 import { GovernedTokenWrapper } from '@webb-tools/tokens';
 import { LocalEvmChain } from '@webb-tools/test-utils';
