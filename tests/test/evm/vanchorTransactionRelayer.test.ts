@@ -128,7 +128,7 @@ describe('Vanchor Transaction relayer', function () {
     });
 
     // get the vanhor on localchain1
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
@@ -146,7 +146,7 @@ describe('Vanchor Transaction relayer', function () {
     );
 
     // do the same but on localchain2
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(wallet2);
     const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -166,17 +166,19 @@ describe('Vanchor Transaction relayer', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        port: relayerPort,
+      },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
 
   it('number of deposits made should be equal to number of leaves in cache', async () => {
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
 
     // set signers
     await vanchor1.setSigner(wallet1);
@@ -245,15 +247,15 @@ describe('Vanchor Transaction relayer', function () {
       vanchor1.contract.address
     );
     expect(response.status).equal(200);
-    let leavesStore = response.json() as Promise<LeavesCacheResponse>;
+    const leavesStore = response.json() as Promise<LeavesCacheResponse>;
     leavesStore.then((resp) => {
       expect(resp.leaves.length).to.equal(10);
     });
   });
 
   it('number of deposits made should be equal to number of encrypted outputs in cache', async () => {
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
 
     // set signers
     await vanchor1.setSigner(wallet1);
@@ -323,9 +325,10 @@ describe('Vanchor Transaction relayer', function () {
     );
     expect(response.status).equal(200);
 
-    let store = response.json() as Promise<EncryptedOutputsCacheResponse>;
-    store.then((resp) => {
+    const store = response.json() as Promise<EncryptedOutputsCacheResponse>;
+    const result = store.then((resp) => {
       expect(resp.encrypted_outputs.length).to.equal(10);
+      return true;
     });
   });
 

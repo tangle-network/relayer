@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{HttpProvider, VAnchorContractWrapper};
+use super::{HttpProvider, OpenVAnchorContractWrapper};
 use ethereum_types::H256;
 use std::sync::Arc;
-use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
+use webb::evm::contract::protocol_solidity::OpenVAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-use webb_event_watcher_traits::evm::EventHandler;
+use webb_event_watcher_traits::EventHandler;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, LeafCacheStore};
@@ -25,13 +25,13 @@ use webb_relayer_utils::metric;
 /// An VAnchor Leaves Handler that handles `NewCommitment` events and saves the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct VAnchorLeavesHandler;
+pub struct OpenVAnchorLeavesHandler;
 
 #[async_trait::async_trait]
-impl EventHandler for VAnchorLeavesHandler {
-    type Contract = VAnchorContractWrapper<HttpProvider>;
+impl EventHandler for OpenVAnchorLeavesHandler {
+    type Contract = OpenVAnchorContractWrapper<HttpProvider>;
 
-    type Events = VAnchorContractEvents;
+    type Events = OpenVAnchorContractEvents;
 
     type Store = SledStore;
 
@@ -43,7 +43,7 @@ impl EventHandler for VAnchorLeavesHandler {
         (event, log): (Self::Events, LogMeta),
         _metrics: Arc<metric::Metrics>,
     ) -> webb_relayer_utils::Result<()> {
-        use VAnchorContractEvents::*;
+        use OpenVAnchorContractEvents::*;
         match event {
             NewCommitmentFilter(deposit) => {
                 let commitment = deposit.commitment;

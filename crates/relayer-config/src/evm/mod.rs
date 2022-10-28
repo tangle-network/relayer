@@ -84,6 +84,8 @@ pub struct EvmLinkedAnchorConfig {
 pub enum Contract {
     /// The VAnchor contract configuration.
     VAnchor(VAnchorContractConfig),
+    /// The Open VAnchor contract configuration.
+    OpenVAnchor(VAnchorContractConfig),
     /// The Signature Bridge contract configuration.
     SignatureBridge(SignatureBridgeContractConfig),
 }

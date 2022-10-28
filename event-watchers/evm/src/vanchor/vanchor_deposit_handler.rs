@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{HttpProvider, VAnchorContractWrapper};
 use ethereum_types::H256;
 use std::sync::Arc;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
@@ -25,6 +24,8 @@ use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_store::EventHashStore;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric;
+
+use crate::{HttpProvider, VAnchorContractWrapper};
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B> {

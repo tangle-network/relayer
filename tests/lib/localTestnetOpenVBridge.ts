@@ -16,31 +16,23 @@
  */
 import fs from 'fs';
 import { ethers, Wallet } from 'ethers';
-import { Anchors, Utility, VBridge } from '@webb-tools/protocol-solidity';
-import {
-  DeployerConfig,
-  GovernorConfig,
-  IVariableAnchorExtData,
-  IVariableAnchorPublicInputs,
-} from '@webb-tools/interfaces';
+import { Utility, VBridge } from '@webb-tools/protocol-solidity';
+import { DeployerConfig, GovernorConfig } from '@webb-tools/interfaces';
 import { MintableToken } from '@webb-tools/tokens';
 import { GovernedTokenWrapper } from '@webb-tools/tokens';
-import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import { LocalEvmChain } from '@webb-tools/test-utils';
-import path from 'path';
 import child from 'child_process';
 import {
   ChainInfo,
   Contract,
   EnabledContracts,
   EventsWatcher,
+  FeaturesConfig,
   LinkedAnchor,
   ProposalSigningBackend,
   WithdrawConfig,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
-import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
-import { hexToU8a, u8aToHex } from '@polkadot/util';
 
 export type GanacheAccounts = {
   balance: string;
@@ -48,8 +40,9 @@ export type GanacheAccounts = {
 };
 
 export type ExportedConfigOptions = {
-  signatureVBridge?: VBridge.VBridge;
+  signatureVBridge?: VBridge.OpenVBridge;
   proposalSigningBackend?: ProposalSigningBackend;
+  features?: FeaturesConfig;
   withdrawConfig?: WithdrawConfig;
   relayerWallet?: Wallet;
   linkedAnchors?: LinkedAnchor[];
@@ -75,13 +68,13 @@ type LocalChainOpts = {
 export class LocalChain {
   private localEvmChain: LocalEvmChain;
   public readonly endpoint: string;
-  private signatureVBridge: VBridge.VBridge | null = null;
+  private signatureVBridge: VBridge.OpenVBridge | null = null;
   private constructor(
     private readonly opts: LocalChainOpts,
     localEvmChain: LocalEvmChain
   ) {
     this.localEvmChain = localEvmChain;
-    this.endpoint = `http://127.0.0.1:${opts.port}`;
+    this.endpoint = `http://127.0.0.1:${opts.chainId}`;
   }
 
   public static async init(opts: LocalChainOpts) {
@@ -128,11 +121,7 @@ export class LocalChain {
     localToken: MintableToken,
     localWallet: ethers.Wallet,
     initialGovernor: ethers.Wallet
-  ): Promise<VBridge.VBridge> {
-    const gitRoot = child
-      .execSync('git rev-parse --show-toplevel')
-      .toString()
-      .trim();
+  ): Promise<VBridge.OpenVBridge> {
     const webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
     webbTokens1.set(this.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {
@@ -151,52 +140,10 @@ export class LocalChain {
       [this.chainId]: initialGovernor.address,
     };
 
-    const witnessCalculatorCjsPath_2 = path.join(
-      gitRoot,
-      'tests',
-      'solidity-fixtures/vanchor_2/2/witness_calculator.cjs'
-    );
-
-    const witnessCalculatorCjsPath_16 = path.join(
-      gitRoot,
-      'tests',
-      'solidity-fixtures/vanchor_16/2/witness_calculator.cjs'
-    );
-
-    const zkComponents_2 = await fetchComponentsFromFilePaths(
-      path.join(
-        gitRoot,
-        'tests',
-        'solidity-fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm'
-      ),
-      witnessCalculatorCjsPath_2,
-      path.join(
-        gitRoot,
-        'tests',
-        'solidity-fixtures/vanchor_2/2/circuit_final.zkey'
-      )
-    );
-
-    const zkComponents_16 = await fetchComponentsFromFilePaths(
-      path.join(
-        gitRoot,
-        'tests',
-        'solidity-fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm'
-      ),
-      witnessCalculatorCjsPath_16,
-      path.join(
-        gitRoot,
-        'tests',
-        'solidity-fixtures/vanchor_16/2/circuit_final.zkey'
-      )
-    );
-
-    const vBridge = await VBridge.VBridge.deployVariableAnchorBridge(
+    const vBridge = await VBridge.OpenVBridge.deployVariableAnchorBridge(
       vBridgeInput,
       deployerConfig,
-      deployerGovernors,
-      zkComponents_2,
-      zkComponents_16
+      deployerGovernors
     );
 
     return vBridge;
@@ -209,11 +156,7 @@ export class LocalChain {
     localWallet: ethers.Wallet,
     otherWallet: ethers.Wallet,
     initialGovernors?: GovernorConfig
-  ): Promise<VBridge.VBridge> {
-    const gitRoot = child
-      .execSync('git rev-parse --show-toplevel')
-      .toString()
-      .trim();
+  ): Promise<VBridge.OpenVBridge> {
     const webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
       number,
       GovernedTokenWrapper | undefined
@@ -239,52 +182,10 @@ export class LocalChain {
       [otherChain.chainId]: otherWallet.address,
     };
 
-    const witnessCalculatorCjsPath_2 = path.join(
-      gitRoot,
-      'tests',
-      'solidity-fixtures/vanchor_2/2/witness_calculator.cjs'
-    );
-
-    const witnessCalculatorCjsPath_16 = path.join(
-      gitRoot,
-      'tests',
-      'solidity-fixtures/vanchor_16/2/witness_calculator.cjs'
-    );
-
-    const zkComponents_2 = await fetchComponentsFromFilePaths(
-      path.join(
-        gitRoot,
-        'tests',
-        'solidity-fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm'
-      ),
-      witnessCalculatorCjsPath_2,
-      path.join(
-        gitRoot,
-        'tests',
-        'solidity-fixtures/vanchor_2/2/circuit_final.zkey'
-      )
-    );
-
-    const zkComponents_16 = await fetchComponentsFromFilePaths(
-      path.join(
-        gitRoot,
-        'tests',
-        'solidity-fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm'
-      ),
-      witnessCalculatorCjsPath_16,
-      path.join(
-        gitRoot,
-        'tests',
-        'solidity-fixtures/vanchor_16/2/circuit_final.zkey'
-      )
-    );
-
-    const vBridge = await VBridge.VBridge.deployVariableAnchorBridge(
+    const vBridge = await VBridge.OpenVBridge.deployVariableAnchorBridge(
       vBridgeInput,
       deployerConfig,
-      deployerGovernors,
-      zkComponents_2,
-      zkComponents_16
+      deployerGovernors
     );
 
     this.signatureVBridge = vBridge;
@@ -328,11 +229,10 @@ export class LocalChain {
     const localAnchor = bridge.getVAnchor(this.chainId);
     const side = bridge.getVBridgeSide(this.chainId);
     const wallet = opts.relayerWallet ?? side.governor;
-
     const contracts: Contract[] = [
       // first the local Anchor
       {
-        contract: 'VAnchor',
+        contract: 'OpenVAnchor',
         address: localAnchor.getAddress(),
         deployedAt: 1,
         size: 1, // Ethers
@@ -361,11 +261,11 @@ export class LocalChain {
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
-      blockConfirmations: opts.blockConfirmations ?? 1,
       chainId: this.underlyingChainId,
       beneficiary: (wallet as ethers.Wallet).address,
       privateKey: (wallet as ethers.Wallet).privateKey,
       contracts: contracts,
+      blockConfirmations: 1,
     };
     return chainInfo;
   }
@@ -378,14 +278,14 @@ export class LocalChain {
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
-      blockConfirmations: opts.blockConfirmations ?? 1,
       chainId: this.underlyingChainId,
       beneficiary: '',
       privateKey: '',
       contracts: [],
+      blockConfirmations: 1,
     };
     for (const contract of this.opts.enabledContracts) {
-      if (contract.contract == 'VAnchor') {
+      if (contract.contract == 'OpenVAnchor') {
         return this.getVAnchorChainConfig(opts);
       }
     }
@@ -422,15 +322,16 @@ export class LocalChain {
         // chainId as the chain identifier
         [key: number]: ConvertedConfig;
       };
+      features?: ConvertToKebabCase<FeaturesConfig>;
     };
 
     const convertedConfig: ConvertedConfig = {
       name: config.name,
       enabled: config.enabled,
+      'block-confirmations': config.blockConfirmations,
       'http-endpoint': config.httpEndpoint,
       'ws-endpoint': config.wsEndpoint,
       'chain-id': config.chainId,
-      'block-confirmations': config.blockConfirmations,
       beneficiary: config.beneficiary,
       'private-key': config.privateKey,
       contracts: config.contracts.map((contract) => ({
@@ -487,6 +388,11 @@ export class LocalChain {
       evm: {
         [this.underlyingChainId]: convertedConfig,
       },
+      features: {
+        'data-query': opts.features?.dataQuery ?? true,
+        'governance-relay': opts.features?.governanceRelay ?? true,
+        'private-tx-relay': opts.features?.privateTxRelay ?? true,
+      },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);
     fs.writeFileSync(path, configString);
@@ -497,91 +403,4 @@ export type FullChainInfo = ChainInfo & {
   httpEndpoint: string;
   wsEndpoint: string;
   privateKey: string;
-  blockConfirmations: number;
 };
-
-export async function setupVanchorEvmTx(
-  depositUtxo: Utxo,
-  srcChain: LocalChain,
-  destChain: LocalChain,
-  randomKeypair: Keypair,
-  srcVanchor: Anchors.VAnchor,
-  destVanchor: Anchors.VAnchor,
-  relayerWallet2: Wallet
-): Promise<{
-  extData: IVariableAnchorExtData;
-  publicInputs: IVariableAnchorPublicInputs;
-}> {
-  const extAmount = ethers.BigNumber.from(0).sub(depositUtxo.amount);
-
-  const dummyOutput1 = await CircomUtxo.generateUtxo({
-    curve: 'Bn254',
-    backend: 'Circom',
-    amount: '0',
-    chainId: destChain.chainId.toString(),
-    keypair: randomKeypair,
-  });
-
-  const dummyOutput2 = await CircomUtxo.generateUtxo({
-    curve: 'Bn254',
-    backend: 'Circom',
-    amount: '0',
-    chainId: destChain.chainId.toString(),
-    keypair: randomKeypair,
-  });
-
-  const dummyInput = await CircomUtxo.generateUtxo({
-    curve: 'Bn254',
-    backend: 'Circom',
-    amount: '0',
-    chainId: destChain.chainId.toString(),
-    originChainId: destChain.chainId.toString(),
-    keypair: randomKeypair,
-  });
-
-  const recipient = '0x0000000001000000000100000000010000000001';
-
-  // Populate the leavesMap for generating the zkp against the source chain
-  //
-  const leaves1 = srcVanchor.tree
-    .elements()
-    .map((el) => hexToU8a(el.toHexString()));
-
-  const leaves2 = destVanchor.tree
-    .elements()
-    .map((el) => hexToU8a(el.toHexString()));
-
-  const depositUtxoIndex = srcVanchor.tree.getIndexByElement(
-    u8aToHex(depositUtxo.commitment)
-  );
-
-  const regeneratedUtxo = await CircomUtxo.generateUtxo({
-    curve: 'Bn254',
-    backend: 'Circom',
-    amount: depositUtxo.amount,
-    chainId: depositUtxo.chainId,
-    originChainId: depositUtxo.originChainId,
-    blinding: hexToU8a(depositUtxo.blinding),
-    keypair: randomKeypair,
-    index: depositUtxoIndex.toString(),
-  });
-
-  const leavesMap = {
-    [srcChain.chainId]: leaves1,
-    [destChain.chainId]: leaves2,
-  };
-
-  const { extData, publicInputs } = await destVanchor.setupTransaction(
-    [regeneratedUtxo, dummyInput],
-    [dummyOutput1, dummyOutput2],
-    extAmount,
-    0,
-    0,
-    relayerWallet2.address,
-    recipient,
-    relayerWallet2.address,
-    leavesMap
-  );
-
-  return { extData, publicInputs };
-}

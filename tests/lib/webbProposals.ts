@@ -28,8 +28,8 @@ export function makeSubstrateTargetSystem(
   palletIndex: string
 ): string {
   const rId = new Uint8Array(20);
-  let index = hexToU8a(palletIndex).slice(0, 1);
-  let treeBytes = hexToU8a(toFixedHex(treeId, 4));
+  const index = hexToU8a(palletIndex).slice(0, 1);
+  const treeBytes = hexToU8a(toFixedHex(treeId, 4));
   rId.set(index, 15); // 15-16
   rId.set(treeBytes, 16); // 16-20
   return u8aToHex(rId);
@@ -40,9 +40,9 @@ export function createSubstrateResourceId(
   treeId: number,
   palletIndex: string
 ): ResourceId {
-  let substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
+  const substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
   // set resource ID
-  let resourceId = new ResourceId(
+  const resourceId = new ResourceId(
     toFixedHex(substrateTargetSystem, 20),
     ChainType.Substrate,
     chainId

@@ -124,9 +124,9 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
 
   public async waitForEvent(typedEvent: TypedEvent): Promise<void> {
     const api = await this.api();
-    return new Promise(async (resolve, _) => {
+    return new Promise((resolve, _reject) => {
       // Subscribe to system events via storage
-      const unsub: any = await api.query.system!.events!((events: any[]) => {
+      api.query.system!.events((events: any[]) => {
         // Loop through the Vec<EventRecord>
         events.forEach((record: any) => {
           const { event } = record;
@@ -134,8 +134,6 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
             event.section === typedEvent.section &&
             event.method === typedEvent.method
           ) {
-            // Unsubscribe from the storage
-            unsub();
             // Resolve the promise
             resolve();
           }
@@ -176,7 +174,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     const api = await this.api();
     const keyring = new Keyring({ type: 'sr25519' });
     const sudoKey = keyring.addFromUri(`//Alice`);
-    const sudoCall = api.tx.sudo!.sudo!(tx);
+    const sudoCall = api.tx.sudo!.sudo!(tx.toU8a());
     return new Promise((resolve, reject) => {
       sudoCall.signAndSend(
         sudoKey,

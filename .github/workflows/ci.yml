@@ -8,7 +8,7 @@ on:
 
   workflow_dispatch:
 env:
-  DEV_PACKAGES: build-essential musl musl-dev musl-tools pkg-config libssl-dev librust-openssl-sys-dev
+  DEV_PACKAGES: build-essential musl musl-dev musl-tools pkg-config libssl-dev librust-openssl-sys-dev libc6
   ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
 
 jobs:
@@ -42,7 +42,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        channel: [nightly-2022-05-15]
+        channel: [stable]
         target:
           - x86_64-apple-darwin
 
@@ -75,7 +75,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        channel: [nightly-2022-05-15]
+        channel: [stable]
         target:
           - x86_64-apple-darwin
         
@@ -93,9 +93,6 @@ jobs:
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-
       - uses: actions-rs/cargo@v1
         with:
           use-cross: true
@@ -105,7 +102,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        channel: [nightly-2022-05-15]
+        channel: [stable]
         target:
           - aarch64-unknown-linux-musl
           - x86_64-unknown-linux-musl
@@ -123,9 +120,6 @@ jobs:
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
@@ -137,6 +131,11 @@ jobs:
       - run: yarn global add @webb-tools/dkg-standalone-binary@latest
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Create Env file
+        run: |
+            touch .env
+            echo ETH1_INFURA_API_KEY = ${{ secrets.ETH1_INFURA_API_KEY }} >> .env
           
       - uses: actions-rs/cargo@v1
         with:
@@ -147,7 +146,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        channel: [nightly-2022-05-15]
+        channel: [stable]
         target:
           - aarch64-unknown-linux-musl
           - x86_64-unknown-linux-musl
@@ -196,7 +195,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        channel: [nightly-2022-05-15]
+        channel: [stable]
         target:
           - aarch64-unknown-linux-musl
           - x86_64-unknown-linux-musl

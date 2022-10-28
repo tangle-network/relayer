@@ -17,17 +17,38 @@
 /// A Helper Class to Start and Manage a Local DKG Node.
 /// This Could be through a Docker Container or a Local Compiled node.
 
-import '@webb-tools/types';
+import '@webb-tools/dkg-substrate-types';
+import fs from 'fs';
 import { spawn } from 'child_process';
 import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import isCI from 'is-ci';
 import * as TinySecp256k1 from 'tiny-secp256k1';
+
+import { LocalNodeOpts, SubstrateNodeBase } from '@webb-tools/test-utils';
 import {
-  FullNodeInfo,
-  LocalNodeOpts,
-  SubstrateNodeBase,
-  ExportedConfigOptions,
-} from './substrateNodeBase.js';
+  EventsWatcher,
+  LinkedAnchor,
+  NodeInfo,
+  Pallet,
+  ProposalSigningBackend,
+} from './webbRelayer.js';
+import { ConvertToKebabCase } from './tsHacks.js';
+
+type ExportedConfigOptions = {
+  suri: string;
+  proposalSigningBackend?: ProposalSigningBackend;
+  linkedAnchors?: LinkedAnchor[];
+  chainId: number;
+  enabledPallets?: Pallet[];
+};
+
+type FullNodeInfo = NodeInfo & {
+  name: string;
+  httpEndpoint: string;
+  wsEndpoint: string;
+  suri: string;
+  chainId: number;
+};
 
 const DKG_STANDALONE_DOCKER_IMAGE_URL =
   'ghcr.io/webb-tools/dkg-standalone-node:edge';
@@ -42,8 +63,8 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       '-ldkg_proposal_handler=debug',
     ];
     if (opts.usageMode.mode === 'docker') {
-      super.pullDkgImage({
-        frocePull: opts.usageMode.forcePullImage,
+      super.pullImage({
+        forcePull: opts.usageMode.forcePullImage,
         image: DKG_STANDALONE_DOCKER_IMAGE_URL,
       });
       const dockerArgs = [
@@ -104,7 +125,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
 
   public async fetchDkgPublicKey(): Promise<`0x${string}` | null> {
     const api = await super.api();
-    const res = await api.query.dkg!.dkgPublicKey!();
+    const res = await api.query.dkg.dkgPublicKey();
     const json = res.toJSON() as [number, string];
     const tinysecp: TinySecp256k1Interface = TinySecp256k1;
     const ECPair: ECPairAPI = ECPairFactory(tinysecp);
@@ -122,7 +143,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
   // get chainId
   public async getChainId(): Promise<number> {
     const api = await super.api();
-    let chainId = (await api.consts.dkgProposals.chainIdentifier).toNumber();
+    const chainId = (await api.consts.dkgProposals.chainIdentifier).toNumber();
     return chainId;
   }
 
@@ -137,11 +158,60 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       httpEndpoint: `http://${host}:${ports.http}`,
       wsEndpoint: `ws://${host}:${ports.ws}`,
       runtime: 'DKG',
-      pallets: this.opts.enabledPallets ?? [],
+      pallets: opts.enabledPallets ?? [],
       suri: opts.suri,
       chainId: opts.chainId,
     };
     return nodeInfo;
+  }
+
+  public async writeConfig(path: string, opts: ExportedConfigOptions) {
+    const config = await this.exportConfig(opts);
+    type ConvertedPallet = Omit<
+      ConvertToKebabCase<Pallet>,
+      'events-watcher'
+    > & {
+      'events-watcher': ConvertToKebabCase<EventsWatcher>;
+    };
+    type ConvertedConfig = Omit<
+      ConvertToKebabCase<typeof config>,
+      'pallets'
+    > & {
+      pallets: ConvertedPallet[];
+    };
+
+    const convertedConfig: ConvertedConfig = {
+      name: config.name,
+      enabled: config.enabled,
+      'http-endpoint': config.httpEndpoint,
+      'ws-endpoint': config.wsEndpoint,
+      'chain-id': config.chainId,
+      runtime: config.runtime,
+      suri: config.suri,
+      pallets: config.pallets.map((c: Pallet) => {
+        const convertedPallet: ConvertedPallet = {
+          pallet: c.pallet,
+          'events-watcher': {
+            enabled: c.eventsWatcher.enabled,
+            'polling-interval': c.eventsWatcher.pollingInterval,
+          },
+        };
+        return convertedPallet;
+      }),
+    };
+
+    type FullConfigFile = {
+      substrate: {
+        [key: string]: ConvertedConfig;
+      };
+    };
+    const fullConfigFile: FullConfigFile = {
+      substrate: {
+        [this.opts.name]: convertedConfig,
+      },
+    };
+    const configString = JSON.stringify(fullConfigFile, null, 2);
+    fs.writeFileSync(path, configString);
   }
 }
 
