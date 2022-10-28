@@ -30,11 +30,9 @@ import { LocalDkg } from '../lib/localDkg.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
-import {
-  defaultEventsWatcherValue,
-  UsageMode,
-} from '../lib/substrateNodeBase.js';
 import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
+import { UsageMode } from '@webb-tools/test-utils';
+import { defaultEventsWatcherValue } from '../lib/utils.js';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -79,7 +77,6 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       authority: 'alice',
       usageMode,
       ports: 'auto',
-      enabledPallets,
     });
 
     bobNode = await LocalDkg.start({
@@ -87,7 +84,6 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       authority: 'bob',
       usageMode,
       ports: 'auto',
-      enabledPallets,
     });
 
     charlieNode = await LocalDkg.start({
@@ -96,13 +92,13 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       usageMode,
       ports: 'auto',
       enableLogging: false,
-      enabledPallets,
     });
     // get chainId
-    let chainId = await charlieNode.getChainId();
+    const chainId = await charlieNode.getChainId();
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
+      enabledPallets,
     });
 
     // we need to wait until the public key is on chain.
@@ -210,7 +206,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
-    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     await anchor.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureBridge.getWebbTokenAddress(
@@ -225,7 +221,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId)!;
+    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId);
     await anchor2.setSigner(wallet2);
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -252,7 +248,9 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        port: relayerPort,
+      },
       tmp: true,
       configDir: tmpDirPath,
       showLogs: false,
@@ -429,7 +427,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     );
 
     // get the anhor on localchain1
-    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     await anchor.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureBridge.getWebbTokenAddress(
@@ -444,7 +442,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId)!;
+    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId);
     await anchor2.setSigner(wallet2);
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -458,8 +456,8 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
-    let resourceId1 = await anchor.createResourceId();
-    let resourceId2 = await anchor2.createResourceId();
+    const resourceId1 = await anchor.createResourceId();
+    const resourceId2 = await anchor2.createResourceId();
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge: signatureBridge,
@@ -475,7 +473,9 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        port: relayerPort,
+      },
       tmp: true,
       configDir: tmpDirPath,
       showLogs: false,

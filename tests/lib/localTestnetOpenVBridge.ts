@@ -16,18 +16,11 @@
  */
 import fs from 'fs';
 import { ethers, Wallet } from 'ethers';
-import { Anchors, Utility, VBridge } from '@webb-tools/protocol-solidity';
-import {
-  DeployerConfig,
-  GovernorConfig,
-  IVariableAnchorExtData,
-  IVariableAnchorPublicInputs,
-} from '@webb-tools/interfaces';
+import { Utility, VBridge } from '@webb-tools/protocol-solidity';
+import { DeployerConfig, GovernorConfig } from '@webb-tools/interfaces';
 import { MintableToken } from '@webb-tools/tokens';
 import { GovernedTokenWrapper } from '@webb-tools/tokens';
-import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import { LocalEvmChain } from '@webb-tools/test-utils';
-import path from 'path';
 import child from 'child_process';
 import {
   ChainInfo,
@@ -40,8 +33,6 @@ import {
   WithdrawConfig,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
-import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
-import { hexToU8a, u8aToHex } from '@polkadot/util';
 
 export type GanacheAccounts = {
   balance: string;
@@ -55,6 +46,7 @@ export type ExportedConfigOptions = {
   withdrawConfig?: WithdrawConfig;
   relayerWallet?: Wallet;
   linkedAnchors?: LinkedAnchor[];
+  blockConfirmations?: number;
 };
 
 // Default Events watcher for the contracts.
@@ -130,11 +122,7 @@ export class LocalChain {
     localWallet: ethers.Wallet,
     initialGovernor: ethers.Wallet
   ): Promise<VBridge.OpenVBridge> {
-    const gitRoot = child
-      .execSync('git rev-parse --show-toplevel')
-      .toString()
-      .trim();
-    let webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
+    const webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
     webbTokens1.set(this.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
@@ -169,11 +157,7 @@ export class LocalChain {
     otherWallet: ethers.Wallet,
     initialGovernors?: GovernorConfig
   ): Promise<VBridge.OpenVBridge> {
-    const gitRoot = child
-      .execSync('git rev-parse --show-toplevel')
-      .toString()
-      .trim();
-    let webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
+    const webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
       number,
       GovernedTokenWrapper | undefined
     >();
@@ -216,9 +200,10 @@ export class LocalChain {
         console.log('entry: ', entry);
         console.log(await chainBridgeSide.contract.signer.getAddress());
         const nonce = await chainBridgeSide.contract.proposalNonce();
+        // eslint-disable-next-line no-constant-condition
         while (true) {
           try {
-            let tx = await chainBridgeSide.transferOwnership(
+            const tx = await chainBridgeSide.transferOwnership(
               entry[1],
               nonce.toNumber()
             );
@@ -244,11 +229,7 @@ export class LocalChain {
     const localAnchor = bridge.getVAnchor(this.chainId);
     const side = bridge.getVBridgeSide(this.chainId);
     const wallet = opts.relayerWallet ?? side.governor;
-    const otherChainIds = Array.from(bridge.vBridgeSides.keys()).filter(
-      (chainId) => chainId !== this.chainId
-    );
-
-    let contracts: Contract[] = [
+    const contracts: Contract[] = [
       // first the local Anchor
       {
         contract: 'OpenVAnchor',
@@ -284,6 +265,7 @@ export class LocalChain {
       beneficiary: (wallet as ethers.Wallet).address,
       privateKey: (wallet as ethers.Wallet).privateKey,
       contracts: contracts,
+      blockConfirmations: 1,
     };
     return chainInfo;
   }
@@ -300,6 +282,7 @@ export class LocalChain {
       beneficiary: '',
       privateKey: '',
       contracts: [],
+      blockConfirmations: 1,
     };
     for (const contract of this.opts.enabledContracts) {
       if (contract.contract == 'OpenVAnchor') {
@@ -345,6 +328,7 @@ export class LocalChain {
     const convertedConfig: ConvertedConfig = {
       name: config.name,
       enabled: config.enabled,
+      'block-confirmations': config.blockConfirmations,
       'http-endpoint': config.httpEndpoint,
       'ws-endpoint': config.wsEndpoint,
       'chain-id': config.chainId,

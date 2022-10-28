@@ -32,10 +32,6 @@ import { LocalDkg } from '../lib/localDkg.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
-import {
-  defaultEventsWatcherValue,
-  UsageMode,
-} from '../lib/substrateNodeBase.js';
 import { sleep } from '../lib/sleep.js';
 import {
   ProposalHeader,
@@ -43,9 +39,11 @@ import {
   TokenAddProposal,
   TokenRemoveProposal,
   WrappingFeeUpdateProposal,
-} from '@webb-tools/sdk-core/proposals';
+} from '@webb-tools/sdk-core';
 import { hexToU8a } from '@polkadot/util';
 import { ChainType } from '@webb-tools/sdk-core';
+import { UsageMode } from '@webb-tools/test-utils';
+import { defaultEventsWatcherValue } from '../lib/utils.js';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -91,7 +89,6 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       authority: 'alice',
       usageMode,
       ports: 'auto',
-      enabledPallets,
     });
 
     bobNode = await LocalDkg.start({
@@ -99,7 +96,6 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       authority: 'bob',
       usageMode,
       ports: 'auto',
-      enabledPallets,
     });
 
     charlieNode = await LocalDkg.start({
@@ -108,14 +104,14 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       usageMode,
       ports: 'auto',
       enableLogging: false,
-      enabledPallets,
     });
 
     // get chainId
-    let chainId = await charlieNode.getChainId();
+    const chainId = await charlieNode.getChainId();
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
+      enabledPallets,
     });
 
     // we need to wait until the public key is on chain.
@@ -222,7 +218,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
-    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     await anchor.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureBridge.getWebbTokenAddress(
@@ -237,7 +233,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId)!;
+    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId);
     await anchor2.setSigner(wallet2);
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -261,7 +257,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     );
     const resourceId3 = await governedToken.createResourceId();
     const setResourceCall = (resourceId: string) =>
-      api.tx.dkgProposals!.setResource!(resourceId, '0x00');
+      api.tx.dkgProposals.setResource(resourceId, '0x00');
     // register the resource on DKG node.
     const rids = [resourceId1, resourceId2, resourceId3];
     for (const rid of rids) {
@@ -270,8 +266,10 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
       tmp: true,
+      commonConfig: {
+        port: relayerPort,
+      },
       configDir: tmpDirPath,
       showLogs: false,
       verbosity: 3,
@@ -281,7 +279,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
 
   it('should handle TokenAddProposal', async () => {
     // get the anhor on localchain1
-    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     //Create an ERC20 Token
     const testToken = await Tokens.MintableToken.createToken(
       'testToken',
@@ -338,13 +336,13 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     });
     await sleep(1000);
     // now we check that the token was added.
-    let tokens = await governedToken.contract.getTokens();
+    const tokens = await governedToken.contract.getTokens();
     expect(tokens.includes(testToken.contract.address)).to.eq(true);
   });
 
   it('should handle TokenRemoveProposal', async () => {
     // get the anhor on localchain1
-    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
     const governedToken = Tokens.GovernedTokenWrapper.connect(
       governedTokenAddress,
@@ -406,7 +404,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
 
   it('should handle WrappingFeeUpdateProposal', async () => {
     // get the anhor on localchain1
-    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
     const governedToken = Tokens.GovernedTokenWrapper.connect(
       governedTokenAddress,
@@ -481,8 +479,8 @@ async function forceSubmitUnsignedProposal(
     data: `0x${string}`;
   }
 ) {
-  let api = await node.api();
-  let kind = api.createType(
+  const api = await node.api();
+  const kind = api.createType(
     'DkgRuntimePrimitivesProposalProposalKind',
     opts.kind
   );
@@ -494,7 +492,7 @@ async function forceSubmitUnsignedProposal(
       },
     })
     .toU8a();
-  let call = api.tx.dkgProposalHandler.forceSubmitUnsignedProposal(proposal);
-  let txHash = await node.sudoExecuteTransaction(call);
+  const call = api.tx.dkgProposalHandler.forceSubmitUnsignedProposal(proposal);
+  const txHash = await node.sudoExecuteTransaction(call);
   return txHash;
 }

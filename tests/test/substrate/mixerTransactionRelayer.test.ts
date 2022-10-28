@@ -11,7 +11,6 @@ import isCi from 'is-ci';
 import child from 'child_process';
 import { WebbRelayer } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
-import { UsageMode } from '../../lib/substrateNodeBase.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -22,6 +21,7 @@ import {
   ProvingManagerSetupInput,
   ArkworksProvingManager,
 } from '@webb-tools/sdk-core';
+import { UsageMode } from '@webb-tools/test-utils';
 
 describe('Substrate Mixer Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -58,7 +58,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const api = await aliceNode.api();
     await api.isReady;
 
-    let chainId = await aliceNode.getChainId();
+    const chainId = await aliceNode.getChainId();
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
@@ -68,7 +68,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        port: relayerPort,
+      },
       tmp: true,
       configDir: tmpDirPath,
       showLogs: false,
@@ -88,12 +90,12 @@ describe('Substrate Mixer Transaction Relayer', function () {
     );
 
     // get the initial balance
-    let { nonce, data: balance } = await api.query.system.account(
+    const { nonce, data: balance } = await api.query.system.account(
       withdrawalProof.recipient
     );
     // get chainId
-    let chainId = await aliceNode.getChainId();
-    let initialBalance = balance.free.toBigInt();
+    const chainId = await aliceNode.getChainId();
+    const initialBalance = balance.free.toBigInt();
     // now we need to submit the withdrawal transaction.
     const txHash = await webbRelayer.substrateMixerWithdraw({
       chainId: chainId,
@@ -111,7 +113,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     // get the balance after withdrawal is done and see if it increases
     const { nonce: nonceAfter, data: balanceAfter } =
       await api.query.system.account(withdrawalProof.recipient);
-    let balanceAfterWithdraw = balanceAfter.free.toBigInt();
+    const balanceAfterWithdraw = balanceAfter.free.toBigInt();
     expect(balanceAfterWithdraw > initialBalance);
   });
 
@@ -128,7 +130,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
 
     const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
     // get chainId
-    let chainId = await aliceNode.getChainId();
+    const chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
@@ -173,7 +175,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const invalidProofBytes = u8aToHex(proofBytes);
     expect(withdrawalProof.proofBytes).to.not.eq(invalidProofBytes);
     // get chainId
-    let chainId = await aliceNode.getChainId();
+    const chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
@@ -214,7 +216,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
 
     const invalidFee = 100;
     // get chainId
-    let chainId = await aliceNode.getChainId();
+    const chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
@@ -257,7 +259,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const invalidRootBytes = u8aToHex(rootBytes);
     expect(withdrawalProof.proofBytes).to.not.eq(invalidRootBytes);
     // get chainId
-    let chainId = await aliceNode.getChainId();
+    const chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
@@ -293,7 +295,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
 
     const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
     // get chainId
-    let chainId = await aliceNode.getChainId();
+    const chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
@@ -336,7 +338,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const invalidNullifierHash = u8aToHex(nullifierHash);
     expect(withdrawalProof.nullifierHash).to.not.eq(invalidNullifierHash);
     // get chainId
-    let chainId = await aliceNode.getChainId();
+    const chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
     try {
       // try to withdraw with invalid address
@@ -391,7 +393,7 @@ async function createMixerDepositTx(api: ApiPromise): Promise<{
   const note = await Note.generateNote(noteInput);
   const treeId = 0;
   const leaf = note.getLeaf();
-  const tx = api.tx.mixerBn254!.deposit!(treeId, leaf);
+  const tx = api.tx.mixerBn254.deposit(treeId, leaf);
   return { tx, note };
 }
 
@@ -428,11 +430,12 @@ async function createMixerWithdrawProof(
       ''
     );
     const treeId = 0;
-    const leafCount: number =
-      //@ts-ignore
-      await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const leafCount: number = await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
     const treeLeaves: Uint8Array[] =
-      //@ts-ignore
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       await api.derive.merkleTreeBn254.getLeavesForTree(
         treeId,
         0,
@@ -478,16 +481,14 @@ async function createMixerWithdrawProof(
       fee: opts.fee === undefined ? 0 : opts.fee,
       refund: opts.refund === undefined ? 0 : opts.refund,
     };
-  } catch (error) {
-    //@ts-ignore
+  } catch (error: any) {
     console.error(error.error_message);
-    //@ts-ignore
     console.error(error.code);
     throw error;
   }
 }
 
-function createAccount(accountId: string): any {
+function createAccount(accountId: string) {
   const keyring = new Keyring({ type: 'sr25519' });
   const account = keyring.addFromUri(accountId);
 

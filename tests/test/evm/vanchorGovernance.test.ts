@@ -25,7 +25,7 @@ import { EnabledContracts, WebbRelayer } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 
-describe.skip('VAnchor Governance Relayer', function () {
+describe('VAnchor Governance Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -51,7 +51,7 @@ describe.skip('VAnchor Governance Relayer', function () {
 
     localChain1 = await LocalChain.init({
       port: localChain1Port,
-      chainId: 5001,
+      chainId: localChain1Port,
       name: 'Hermes',
       populatedAccounts: [
         {
@@ -72,7 +72,7 @@ describe.skip('VAnchor Governance Relayer', function () {
 
     localChain2 = await LocalChain.init({
       port: localChain2Port,
-      chainId: 5002,
+      chainId: localChain2Port,
       name: 'Athena',
       populatedAccounts: [
         {
@@ -113,15 +113,7 @@ describe.skip('VAnchor Governance Relayer', function () {
         [localChain2.chainId]: govWallet.address,
       }
     );
-    // save the chain configs.
-    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
-      signatureVBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
-    });
-    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
-      signatureVBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
-    });
+
     const governorAddress = govWallet.address;
     const sides = signatureVBridge.vBridgeSides.values();
     for (const signatureSide of sides) {
@@ -130,7 +122,7 @@ describe.skip('VAnchor Governance Relayer', function () {
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
-    const vanchor = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
@@ -145,7 +137,7 @@ describe.skip('VAnchor Governance Relayer', function () {
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(wallet2);
     const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -159,13 +151,29 @@ describe.skip('VAnchor Governance Relayer', function () {
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
+    const evmResourceId1 = await vanchor.createResourceId();
+    const evmResourceId2 = await vanchor2.createResourceId();
+    // save the chain configs.
+    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
+      signatureVBridge,
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      linkedAnchors: [{ type: 'Raw', resourceId: evmResourceId2 }],
+    });
+    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
+      signatureVBridge,
+      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      linkedAnchors: [{ type: 'Raw', resourceId: evmResourceId1 }],
+    });
+
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        port: relayerPort,
+      },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();

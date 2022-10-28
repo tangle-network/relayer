@@ -36,11 +36,9 @@ import { LocalDkg } from '../../lib/localDkg.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
-import {
-  defaultEventsWatcherValue,
-  UsageMode,
-} from '../../lib/substrateNodeBase.js';
 import { u8aToHex } from '@polkadot/util';
+import { UsageMode } from '@webb-tools/test-utils';
+import { defaultEventsWatcherValue } from '../../lib/utils.js';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -87,7 +85,6 @@ describe.skip('SignatureBridge Governor Updates', function () {
       authority: 'alice',
       usageMode,
       ports: 'auto',
-      enabledPallets,
     });
 
     bobNode = await LocalDkg.start({
@@ -95,7 +92,6 @@ describe.skip('SignatureBridge Governor Updates', function () {
       authority: 'bob',
       usageMode,
       ports: 'auto',
-      enabledPallets,
     });
 
     charlieNode = await LocalDkg.start({
@@ -104,13 +100,13 @@ describe.skip('SignatureBridge Governor Updates', function () {
       usageMode,
       ports: 'auto',
       enableLogging: false,
-      enabledPallets,
     });
 
-    let chainId = await charlieNode.getChainId();
+    const chainId = await charlieNode.getChainId();
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
+      enabledPallets,
     });
 
     // we need to wait until the public key is on chain.
@@ -258,7 +254,9 @@ describe.skip('SignatureBridge Governor Updates', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        port: relayerPort,
+      },
       tmp: true,
       configDir: tmpDirPath,
       showLogs: false,
@@ -270,8 +268,8 @@ describe.skip('SignatureBridge Governor Updates', function () {
   it('ownership should be transfered when the DKG rotates', async () => {
     // now we just need to force the DKG to rotate/refresh.
     const api = await charlieNode.api();
-    const forceIncrementNonce = api.tx.dkg!.manualIncrementNonce!();
-    const forceRefresh = api.tx.dkg!.manualRefresh!();
+    const forceIncrementNonce = api.tx.dkg.manualIncrementNonce();
+    const forceRefresh = api.tx.dkg.manualRefresh();
     await timeout(
       charlieNode.sudoExecuteTransaction(forceIncrementNonce),
       30_000

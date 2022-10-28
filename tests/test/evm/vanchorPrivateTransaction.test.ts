@@ -132,19 +132,17 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
-      features: { dataQuery: false, governanceRelay: false },
       withdrawConfig: defaultWithdrawConfigValue,
       relayerWallet: relayerWallet1,
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge,
-      features: { dataQuery: false, governanceRelay: false },
       withdrawConfig: defaultWithdrawConfigValue,
       relayerWallet: relayerWallet2,
     });
 
     // get the vanhor on localchain1
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
     // approve token spending
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
@@ -162,7 +160,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     );
 
     // do the same but on localchain2
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(govWallet2);
     const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -190,7 +188,10 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
 
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        features: { dataQuery: false, governanceRelay: false },
+        port: relayerPort,
+      },
       tmp: true,
       configDir: tmpDirPath,
       showLogs: false,
@@ -199,10 +200,10 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
   });
 
   it('should relay private transaction', async () => {
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
 
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(govWallet2);
 
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
@@ -253,7 +254,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
-    let output = await setupVanchorEvmTx(
+    const output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
       localChain2,
@@ -280,10 +281,10 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
   });
 
   it('Should fail to withdraw with invalid root', async () => {
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
 
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(govWallet2);
 
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
@@ -335,7 +336,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
-    let output = await setupVanchorEvmTx(
+    const output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
       localChain2,
@@ -366,10 +367,10 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
   });
 
   it('Should fail to withdraw with invalid proof', async () => {
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
 
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(govWallet2);
 
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
@@ -421,7 +422,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
-    let output = await setupVanchorEvmTx(
+    const output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
       localChain2,
@@ -453,10 +454,10 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
   });
 
   it('Should fail to withdraw with invalid nullifier hash', async () => {
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
 
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId)!;
+    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(govWallet2);
 
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
@@ -508,7 +509,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
-    let output = await setupVanchorEvmTx(
+    const output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
       localChain2,
@@ -544,7 +545,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
   it('should fail to query leaves data api', async () => {
     this.retries(0);
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     // It should fail since data querying is not configured for relayer
     const chainId = localChain1.underlyingChainId.toString();
     const response = await webbRelayer.getLeavesEvm(
@@ -557,7 +558,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
   it('should fail to query encrypted outputs data api', async () => {
     this.retries(0);
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     // It should fail since data querying is not configured for relayer
     const chainId = localChain1.underlyingChainId.toString();
     const response = await webbRelayer.getEncryptedOutputsEvm(

@@ -32,10 +32,6 @@ import {
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import {
-  UsageMode,
-  defaultEventsWatcherValue,
-} from '../../lib/substrateNodeBase.js';
 import { BigNumber } from 'ethers';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
@@ -43,7 +39,6 @@ import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 
 import {
-  Note,
   ProvingManagerSetupInput,
   ArkworksProvingManager,
   Utxo,
@@ -63,6 +58,11 @@ import { createSubstrateResourceId } from '../../lib/webbProposals.js';
 import { LocalChain } from '../../lib/localTestnet.js';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
+import {
+  defaultEventsWatcherValue,
+  generateArkworksUtxoTest,
+} from '../../lib/utils.js';
+import { UsageMode } from '@webb-tools/test-utils';
 const { ecdsaSign } = pkg;
 
 describe('Cross chain transaction <<>> Mocked Backend', function () {
@@ -109,7 +109,6 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       authority: 'alice',
       usageMode,
       ports: 'auto',
-      enabledPallets,
       enableLogging: false,
     });
 
@@ -171,7 +170,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     );
 
     // get the anhor on localchain1
-    const vanchor = signatureVBridge.getVAnchor(localChain1.chainId)!;
+    const vanchor = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor.setSigner(wallet1);
 
     const evmResourceId = await vanchor.createResourceId();
@@ -188,6 +187,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       chainId: substrateChainId,
       proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
       linkedAnchors: [{ type: 'Raw', resourceId: evmResourceId }],
+      enabledPallets,
     });
 
     // save the evm chain configs.
@@ -205,7 +205,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     // 2. We need to whitelist chain Id
 
     // force set maintainer
-    const setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer!(
+    const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
       `0x${uncompressedKey}`
     );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
@@ -221,7 +221,9 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
-      port: relayerPort,
+      commonConfig: {
+        port: relayerPort,
+      },
       tmp: true,
       configDir: tmpDirPath,
       showLogs: true,
@@ -233,6 +235,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(wallet1);
 
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
@@ -240,19 +243,20 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(vanchor1.contract.address);
+    const tx = await token.approveSpending(vanchor1.contract.address);
     await tx.wait();
     await token.mintTokens(
       wallet1.address,
       ethers.utils.parseEther('100000000000000000000000')
     );
     const webbBalance = await token.getBalance(wallet1.address);
-    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to.be.true;
+    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
+      .be.true;
 
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
     //create vanchor
-    const createVAnchorCall = api.tx.vAnchorBn254!.create!(1, 30, 0);
+    const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
@@ -382,18 +386,17 @@ async function setResourceIdProposal(
     callIndex,
   };
 
-  const proposalBytes = encodeResourceIdUpdateProposal(resourceIdUpdateProposal);
+  const proposalBytes = encodeResourceIdUpdateProposal(
+    resourceIdUpdateProposal
+  );
   const hash = ethers.utils.keccak256(proposalBytes);
   const msg = ethers.utils.arrayify(hash);
   // sign the message
   const sigObj = ecdsaSign(msg, hexToU8a(PK1));
   const signature = new Uint8Array([...sigObj.signature, sigObj.recid]);
-  // execute proposal call to handler
-  const executeSetProposalCall =
-    api.tx.vAnchorHandlerBn254.executeSetResourceProposal(resourceId.toU8a());
-  const setResourceCall = api.tx.signatureBridge!.setResourceWithSignature!(
+
+  const setResourceCall = api.tx.signatureBridge.setResourceWithSignature(
     calculateTypedChainId(ChainType.Substrate, chainId),
-    executeSetProposalCall.toU8a(),
     u8aToHex(proposalBytes),
     u8aToHex(signature)
   );
@@ -402,13 +405,16 @@ async function setResourceIdProposal(
 
 async function vanchorWithdraw(
   typedTargetChainId: string,
-  depositNote: Note,
+  inputUtxo: Utxo,
   treeId: number,
   api: ApiPromise,
   aliceNode: LocalProtocolSubstrate
 ) {
   const account = createAccount('//Dave');
-  const typedSourceChainId = depositNote.note.sourceChainId;
+  if (!inputUtxo.originChainId) {
+    throw new Error('tried to withdraw without an origin chainId');
+  }
+  const typedSourceChainId = inputUtxo.originChainId;
   const secret = randomAsU8a();
   const gitRoot = child
     .execSync('git rev-parse --show-toplevel')
@@ -429,10 +435,7 @@ async function vanchorWithdraw(
   const pk_hex = fs.readFileSync(pkPath).toString('hex');
   const pk = hexToU8a(pk_hex);
 
-  const note1 = depositNote;
-  const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(10);
-  const notes = [note1, note2];
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({
     curve: 'Bn254',
@@ -449,7 +452,7 @@ async function vanchorWithdraw(
 
   // Configure a new proving manager with direct call
   const provingManager = new ArkworksProvingManager(null);
-  const leavesMap: any = {};
+  const leavesMap = {};
 
   const address = account.address;
   const extAmount = currencyToUnitI128(10);
@@ -459,21 +462,29 @@ async function vanchorWithdraw(
   leavesMap[typedTargetChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);
   const root = tree.unwrap().root.toHex();
-  const neighborRoots: string[] = await (api.rpc as any).lt
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore TODO: Fix the issue with rpc type augmentation
+  const neighborRoots: string[] = await api.rpc.lt
     .getNeighborRoots(treeId)
-    .then((roots: any) => roots.toHuman());
+    .then((roots) => roots.toHuman());
   const rootsSet = [hexToU8a(root), hexToU8a(neighborRoots[0])];
   const decodedAddress = decodeAddress(address);
   const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
   const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
-  
+  const leafId: LeafIdentifier = {
+    index: 0,
+    typedChainId: Number(typedSourceChainId.toString()),
+  };
+  const defaultInput = await generateArkworksUtxoTest(
+    0,
+    Number(typedTargetChainId),
+    Number(typedTargetChainId)
+  );
+
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: typedTargetChainId.toString(),
-    leafIds: [
-      { index: 0, typedChainId: Number(typedTargetChainId) },
-      { index: 0, typedChainId: Number(typedTargetChainId) },
-    ],
-    inputUtxos: notes.map((n) => new Utxo(n.note.getUtxo())),
+    leafIds: [leafId, leafId],
+    inputUtxos: [inputUtxo, defaultInput],
     leavesMap: leavesMap,
     output: [output1, output2],
     encryptedCommitments: [comEnc1, comEnc2],
@@ -512,7 +523,7 @@ async function vanchorWithdraw(
   };
 
   // now we call the vanchor transact
-  const transactCall = api.tx.vAnchorBn254!.transact!(
+  const transactCall = api.tx.vAnchorBn254.transact(
     treeId,
     vanchorProofData,
     extData
@@ -524,33 +535,6 @@ async function vanchorWithdraw(
 function currencyToUnitI128(currencyAmount: number) {
   const bn = BigNumber.from(currencyAmount);
   return bn.mul(1_000_000_000_000);
-}
-
-async function generateVAnchorNote(
-  amount: number,
-  typedSourceChainId: number,
-  typedTargetChainId: number,
-  index?: number
-) {
-  const note = await Note.generateNote({
-    amount: String(amount),
-    backend: 'Arkworks',
-    curve: 'Bn254',
-    denomination: String(18),
-    exponentiation: String(5),
-    hashFunction: 'Poseidon',
-    index,
-    protocol: 'vanchor',
-    sourceChain: String(typedSourceChainId),
-    sourceIdentifyingData: '1',
-    targetChain: String(typedTargetChainId),
-    targetIdentifyingData: '1',
-    tokenSymbol: 'WEBB',
-    version: 'v2',
-    width: String(5),
-  });
-
-  return note;
 }
 
 function createAccount(accountId: string): any {
