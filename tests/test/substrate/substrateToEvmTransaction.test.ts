@@ -328,11 +328,6 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       1
     );
     assert(substrateLeaves.length === 2, "Invalid substrate leaves length");
-    const evmChainRoot = await vanchor1.contract.getLastRoot();
-    const neigborRoots = await vanchor1.contract.getLatestNeighborRoots();
-    const edges = await vanchor1.contract.getLatestNeighborEdges();
-
-    console.log('roots from EVM anchor: ', [evmChainRoot, ...neigborRoots]);
     const index = substrateLeaves.findIndex(
       (leaf) => data.outputUtxo.commitment.toString() === leaf.toString()
     );
