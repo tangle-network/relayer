@@ -24,7 +24,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { ethers } from 'ethers';
+import { BigNumberish, Contract, ethers } from 'ethers';
 import {
   WebbRelayer,
   Pallet,
@@ -34,7 +34,7 @@ import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { BigNumber } from 'ethers';
 import { ApiPromise, Keyring } from '@polkadot/api';
-import { u8aToHex, hexToU8a } from '@polkadot/util';
+import { u8aToHex, hexToU8a, assert } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
@@ -48,6 +48,11 @@ import {
   Keypair,
   Note,
   CircomUtxo,
+  randomBN,
+  toFixedHex,
+  CircomProvingManager,
+  FIELD_SIZE,
+  LeafIdentifier,
 } from '@webb-tools/sdk-core';
 
 import {
@@ -231,10 +236,6 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
   });
 
   it('Substrate to Evm cross chain transaction', async () => {
-    const amount1 = (1e13).toString();
-    const amount2 = currencyToUnitI128(10).toString();
-    console.log('amount1: ', amount1);
-    console.log('amount2: ', amount2);
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(wallet1);
 
@@ -246,6 +247,7 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
       tokenAddress,
       wallet1
     );
+    // Mint 1000 * 10^18 tokens to wallet1
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
@@ -253,13 +255,13 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
 
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
-    //create vanchor
+    // Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
     console.log('treeId : ', treeId);
-    // chainId
+    // ChainId of the substrate chain
     const substrateChainId = await aliceNode.getChainId();
     const typedSourceChainId = calculateTypedChainId(
       ChainType.Substrate,
@@ -285,14 +287,19 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
       0
     );
 
+    let treeMetadataFromSubstrate = await api.query.merkleTreeBn254.trees(treeId);
+    console.log('BEFORE', treeMetadataFromSubstrate.toHuman());
     // substrate vanchor deposit
     const data = await vanchorDeposit(
       typedTargetChainId.toString(),
       depositNote,
+      // public amount
+      10,
       treeId,
       api,
       aliceNode
     );
+    console.log('UNSPENT OUTPUT', toFixedHex(data.outputUtxo.commitment));
 
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
@@ -319,26 +326,27 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
       .map((el) => hexToU8a(el.toHexString()));
     const publicAmount = (1e13).toString();
 
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
     // get leaves for substrate chain
-    //@ts-ignore
     const substrateLeaves = await api.derive.merkleTreeBn254.getLeavesForTree(
-      6,
+      treeId,
       0,
       1
     );
-    console.log('susbtrate leaves : ', substrateLeaves);
+    console.log('substrate leaves : ', substrateLeaves.map((el) => toFixedHex(el)));
+    assert(substrateLeaves.length === 2, "Invalid substrate leaves length");
     const evmChainRoot = await vanchor1.contract.getLastRoot();
     const neigborRoots = await vanchor1.contract.getLatestNeighborRoots();
     const edges = await vanchor1.contract.getLatestNeighborEdges();
 
-    console.log('evmChainRoot : ', evmChainRoot);
-    console.log('neigborRoots: ', neigborRoots);
-    console.log('edges: ', edges);
-    let index = substrateLeaves.findIndex(
+    treeMetadataFromSubstrate = await api.query.merkleTreeBn254.trees(treeId);
+    console.log('AFTER', treeMetadataFromSubstrate.toHuman());
+    console.log('roots from EVM anchor: ', [evmChainRoot, ...neigborRoots]);
+    const index = substrateLeaves.findIndex(
       (leaf) => data.outputUtxo.commitment.toString() === leaf.toString()
     );
     console.log('index : ', index);
-    console.log('outputnote: ', data.outputUtxo.serialize());
     const withdrawUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
@@ -346,11 +354,21 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
       originChainId: typedSourceChainId.toString(),
       chainId: typedTargetChainId.toString(),
       keypair: data.keyPair,
+      blinding: hexToU8a(data.outputUtxo.blinding),
       index: index.toString(),
     });
-    console.log('withdrawal UTXO : ', withdrawUtxo.serialize());
-    let res = await vanchor1.transact(
-      [withdrawUtxo],
+    assert(data.outputUtxo.amount === withdrawUtxo.amount, 'Invalid amount');
+    assert(data.outputUtxo.blinding === withdrawUtxo.blinding, 'Invalid blinding factor');
+    assert(data.outputUtxo.chainId === withdrawUtxo.chainId, 'Invalid chainId');
+    assert(data.outputUtxo.secret_key === withdrawUtxo.secret_key, 'Invalid secret key');
+    assert(toFixedHex(data.outputUtxo.commitment) === toFixedHex(withdrawUtxo.commitment), 'Invalid commitment');
+    // 1. When we call this function we get a set membership if enabled error on line 29
+    //    - This means that we have some root R and some set S and we want to prove that R is in S.
+    //    - The circuit is throwing an error telling us this is not true. We need to figure out why this is the case.
+    // 1a. It must be that R is NOT in S. -- the circuit is telling us that this is true (R is NOT in S)
+    // 1b. It must be that we are computing R and/or S incorrectly.
+    const res = await vanchor1.transact(
+      [],
       [],
       {
         [localChain1.chainId]: leaves,
@@ -371,11 +389,10 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
     });
 
     // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
-
     await webbRelayer.waitForEvent({
       kind: 'tx_queue',
       event: {
-        ty: 'Substrate',
+        ty: 'SUBSTRATE',
         chain_id: substrateChainId.toString(),
         finalized: true,
       },
@@ -403,7 +420,7 @@ async function setResourceIdProposal(
   const palletIndex = '0x2C';
   const callIndex = '0x02';
   // set resource ID
-  let resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
+  const resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
   const proposalHeader = new ProposalHeader(
     resourceId,
     functionSignature,
@@ -438,6 +455,7 @@ async function setResourceIdProposal(
 async function vanchorDeposit(
   typedTargetChainId: string,
   depositNote: Note,
+  publicAmountUint: number,
   treeId: number,
   api: ApiPromise,
   aliceNode: LocalProtocolSubstrate
@@ -482,9 +500,9 @@ async function vanchorDeposit(
   const vk_hex = fs.readFileSync(vkPath).toString('hex');
   const vk = hexToU8a(vk_hex);
 
-  let note1 = depositNote;
+  const note1 = depositNote;
   const note2 = await note1.getDefaultUtxoNote();
-  const publicAmount = currencyToUnitI128(10);
+  const publicAmount = currencyToUnitI128(publicAmountUint);
   const notes = [note1, note2];
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({
@@ -518,7 +536,7 @@ async function vanchorDeposit(
   const neighborRoots: string[] = await api.rpc.lt
     .getNeighborRoots(treeId)
     .then((roots) => roots.toHuman());
-  console.log('neighbor roots: ', neighborRoots);
+
   const rootsSet = [hexToU8a(root), hexToU8a(neighborRoots[0])];
   const decodedAddress = decodeAddress(address);
   const assetId = new Uint8Array([254, 255, 255, 255]);
@@ -567,8 +585,6 @@ async function vanchorDeposit(
     extDataHash: data.extDataHash,
   };
 
-  console.log('Proof data : ', vanchorProofData);
-  console.log('verify proof ');
   const isValidProof = verify_js_proof(
     data.proof,
     data.publicInputs,
