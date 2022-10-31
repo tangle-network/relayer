@@ -71,7 +71,7 @@ import { expect } from 'chai';
 import { UsageMode } from '@webb-tools/test-utils';
 const { ecdsaSign } = pkg;
 
-describe.only('Cross chain transaction <<>> Mocked Backend', function () {
+describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -178,14 +178,11 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
     await vanchor.setSigner(wallet1);
 
     const evmResourceId = await vanchor.createResourceId();
-    console.log('evm resourceId : ', evmResourceId);
-
     const substrateResourceId = createSubstrateResourceId(
       substrateChainId,
       6,
       '0x2C'
     );
-    console.log('substrate resourceId : ', substrateResourceId);
     // save the substrate chain configs
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
@@ -268,7 +265,6 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
       substrateChainId
     );
     const typedTargetChainId = localChain1.chainId;
-    console.log('typedSourceChainId : ', typedSourceChainId);
     // now we set resource through proposal execution
     const setResourceIdProposalCall = await setResourceIdProposal(
       api,
@@ -287,8 +283,6 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
       0
     );
 
-    let treeMetadataFromSubstrate = await api.query.merkleTreeBn254.trees(treeId);
-    console.log('BEFORE', treeMetadataFromSubstrate.toHuman());
     // substrate vanchor deposit
     const data = await vanchorDeposit(
       typedTargetChainId.toString(),
@@ -299,7 +293,6 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
       api,
       aliceNode
     );
-    console.log('UNSPENT OUTPUT', toFixedHex(data.outputUtxo.commitment));
 
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
@@ -334,19 +327,15 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
       0,
       1
     );
-    console.log('substrate leaves : ', substrateLeaves.map((el) => toFixedHex(el)));
     assert(substrateLeaves.length === 2, "Invalid substrate leaves length");
     const evmChainRoot = await vanchor1.contract.getLastRoot();
     const neigborRoots = await vanchor1.contract.getLatestNeighborRoots();
     const edges = await vanchor1.contract.getLatestNeighborEdges();
 
-    treeMetadataFromSubstrate = await api.query.merkleTreeBn254.trees(treeId);
-    console.log('AFTER', treeMetadataFromSubstrate.toHuman());
     console.log('roots from EVM anchor: ', [evmChainRoot, ...neigborRoots]);
     const index = substrateLeaves.findIndex(
       (leaf) => data.outputUtxo.commitment.toString() === leaf.toString()
     );
-    console.log('index : ', index);
     const withdrawUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
