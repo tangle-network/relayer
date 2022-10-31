@@ -47,6 +47,7 @@ import {
   ProposalHeader,
   CircomUtxo,
   LeafIdentifier,
+  Note,
 } from '@webb-tools/sdk-core';
 
 import {
@@ -61,6 +62,7 @@ import { expect } from 'chai';
 import {
   defaultEventsWatcherValue,
   generateArkworksUtxoTest,
+  generateVAnchorNote,
 } from '../../lib/utils.js';
 import { UsageMode } from '@webb-tools/test-utils';
 const { ecdsaSign } = pkg;
@@ -319,37 +321,37 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
         finalized: true,
       },
     });
-    // console.log('Withdraw on substrate');
-    // // now we withdraw on substrate chain
+    console.log('Withdraw on substrate');
+    // now we withdraw on substrate chain
 
-    // // dummy Deposit Note. Input note is directed toward source chain
-    //   const depositNote = await generateVAnchorNote(
-    //     0,
-    //     typedSourceChainId,
-    //     typedSourceChainId,
-    //     0
-    //   );
-    //   // substrate vanchor deposit
-    //   await vanchorWithdraw(typedTargetChainId.toString(),depositNote, treeId, api, aliceNode);
+    // dummy Deposit Note. Input note is directed toward source chain
+      const depositNote = await generateVAnchorNote(
+        0,
+        typedSourceChainId,
+        typedSourceChainId,
+        0
+      );
+      // substrate vanchor deposit
+      await vanchorWithdraw(typedTargetChainId.toString(),depositNote, treeId, api, aliceNode);
 
-    // // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
-    // await webbRelayer.waitForEvent({
-    //   kind: 'signing_backend',
-    //   event: {
-    //     backend: 'Mocked',
-    //   },
-    // });
+    // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
+    await webbRelayer.waitForEvent({
+      kind: 'signing_backend',
+      event: {
+        backend: 'Mocked',
+      },
+    });
 
-    // // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
+    // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
 
-    // await webbRelayer.waitForEvent({
-    //   kind: 'tx_queue',
-    //   event: {
-    //     ty: 'EVM',
-    //     chain_id: localChain1.underlyingChainId.toString(),
-    //     finalized: true,
-    //   },
-    // });
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain1.underlyingChainId.toString(),
+        finalized: true,
+      },
+    });
   });
 
   after(async () => {
@@ -405,16 +407,13 @@ async function setResourceIdProposal(
 
 async function vanchorWithdraw(
   typedTargetChainId: string,
-  inputUtxo: Utxo,
+  depositNote: Note,
   treeId: number,
   api: ApiPromise,
   aliceNode: LocalProtocolSubstrate
 ) {
   const account = createAccount('//Dave');
-  if (!inputUtxo.originChainId) {
-    throw new Error('tried to withdraw without an origin chainId');
-  }
-  const typedSourceChainId = inputUtxo.originChainId;
+  const typedSourceChainId = depositNote.note.sourceChainId;
   const secret = randomAsU8a();
   const gitRoot = child
     .execSync('git rev-parse --show-toplevel')
@@ -435,7 +434,10 @@ async function vanchorWithdraw(
   const pk_hex = fs.readFileSync(pkPath).toString('hex');
   const pk = hexToU8a(pk_hex);
 
+  let note1 = depositNote;
+  const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(10);
+  const notes = [note1, note2];
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({
     curve: 'Bn254',
@@ -484,7 +486,7 @@ async function vanchorWithdraw(
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: typedTargetChainId.toString(),
     leafIds: [leafId, leafId],
-    inputUtxos: [inputUtxo, defaultInput],
+    inputUtxos: notes.map((n) => new Utxo(n.note.getUtxo())),
     leavesMap: leavesMap,
     output: [output1, output2],
     encryptedCommitments: [comEnc1, comEnc2],
@@ -511,7 +513,7 @@ async function vanchorWithdraw(
     encryptedOutput2: u8aToHex(comEnc2),
   };
 
-  const vanchorProofData = {
+  let vanchorProofData = {
     proof: `0x${data.proof}`,
     publicAmount: data.publicAmount,
     roots: rootsSet,
@@ -523,7 +525,7 @@ async function vanchorWithdraw(
   };
 
   // now we call the vanchor transact
-  const transactCall = api.tx.vAnchorBn254.transact(
+  let transactCall = api.tx.vAnchorBn254!.transact!(
     treeId,
     vanchorProofData,
     extData
@@ -531,6 +533,7 @@ async function vanchorWithdraw(
   const txSigned = await transactCall.signAsync(account);
   await aliceNode.executeTransaction(txSigned);
 }
+
 
 function currencyToUnitI128(currencyAmount: number) {
   const bn = BigNumber.from(currencyAmount);

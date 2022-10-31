@@ -47,6 +47,7 @@ import {
   ProposalHeader,
   Keypair,
   Note,
+  CircomUtxo,
 } from '@webb-tools/sdk-core';
 
 import {
@@ -65,7 +66,7 @@ import { expect } from 'chai';
 import { UsageMode } from '@webb-tools/test-utils';
 const { ecdsaSign } = pkg;
 
-describe('Cross chain transaction <<>> Mocked Backend', function () {
+describe.only('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -285,7 +286,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     );
 
     // substrate vanchor deposit
-    await vanchorDeposit(
+    const data = await vanchorDeposit(
       typedTargetChainId.toString(),
       depositNote,
       treeId,
@@ -311,74 +312,74 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       },
     });
 
-    // console.log('Withdraw on evm');
-    //  // now we withdraw on evm chain
-    // const leaves = vanchor1.tree
-    //   .elements()
-    //   .map((el) => hexToU8a(el.toHexString()));
-    // const publicAmount = (1e13).toString();
+    console.log('Withdraw on evm');
+     // now we withdraw on evm chain
+    const leaves = vanchor1.tree
+      .elements()
+      .map((el) => hexToU8a(el.toHexString()));
+    const publicAmount = (1e13).toString();
 
-    // // get leaves for substrate chain
-    // //@ts-ignore
-    // const substrateLeaves = await api.derive.merkleTreeBn254.getLeavesForTree(
-    //   6,
-    //   0,
-    //   1
-    // );
-    // console.log('susbtrate leaves : ', substrateLeaves);
-    // const evmChainRoot = await vanchor1.contract.getLastRoot();
-    // const neigborRoots = await vanchor1.contract.getLatestNeighborRoots();
-    // const edges = await vanchor1.contract.getLatestNeighborEdges();
+    // get leaves for substrate chain
+    //@ts-ignore
+    const substrateLeaves = await api.derive.merkleTreeBn254.getLeavesForTree(
+      6,
+      0,
+      1
+    );
+    console.log('susbtrate leaves : ', substrateLeaves);
+    const evmChainRoot = await vanchor1.contract.getLastRoot();
+    const neigborRoots = await vanchor1.contract.getLatestNeighborRoots();
+    const edges = await vanchor1.contract.getLatestNeighborEdges();
 
-    // console.log('evmChainRoot : ', evmChainRoot);
-    // console.log('neigborRoots: ', neigborRoots);
-    // console.log('edges: ', edges);
-    // let index = substrateLeaves.findIndex(
-    //   (leaf) => data.outputUtxo.commitment.toString() === leaf.toString()
-    // );
-    // console.log('index : ', index);
-    // console.log('outputnote: ', data.outputUtxo.serialize());
-    // const withdrawUtxo = await CircomUtxo.generateUtxo({
-    //   curve: 'Bn254',
-    //   backend: 'Circom',
-    //   amount: publicAmount,
-    //   originChainId: typedSourceChainId.toString(),
-    //   chainId: typedTargetChainId.toString(),
-    //   keypair: data.keyPair,
-    //   index: index.toString(),
-    // });
-    // console.log('withdrawal UTXO : ', withdrawUtxo.serialize());
-    // let res = await vanchor1.transact(
-    //   [withdrawUtxo],
-    //   [],
-    //   {
-    //     [localChain1.chainId]: leaves,
-    //     [typedSourceChainId]: substrateLeaves,
-    //   },
-    //   '0',
-    //   '0',
-    //   '0',
-    //   '0'
-    // );
-    // console.log(res);
-    // // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
-    // await webbRelayer.waitForEvent({
-    //   kind: 'signing_backend',
-    //   event: {
-    //     backend: 'Mocked',
-    //   },
-    // });
+    console.log('evmChainRoot : ', evmChainRoot);
+    console.log('neigborRoots: ', neigborRoots);
+    console.log('edges: ', edges);
+    let index = substrateLeaves.findIndex(
+      (leaf) => data.outputUtxo.commitment.toString() === leaf.toString()
+    );
+    console.log('index : ', index);
+    console.log('outputnote: ', data.outputUtxo.serialize());
+    const withdrawUtxo = await CircomUtxo.generateUtxo({
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: publicAmount,
+      originChainId: typedSourceChainId.toString(),
+      chainId: typedTargetChainId.toString(),
+      keypair: data.keyPair,
+      index: index.toString(),
+    });
+    console.log('withdrawal UTXO : ', withdrawUtxo.serialize());
+    let res = await vanchor1.transact(
+      [withdrawUtxo],
+      [],
+      {
+        [localChain1.chainId]: leaves,
+        [typedSourceChainId]: substrateLeaves,
+      },
+      '0',
+      '0',
+      '0',
+      '0'
+    );
+    console.log(res);
+    // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
+    await webbRelayer.waitForEvent({
+      kind: 'signing_backend',
+      event: {
+        backend: 'Mocked',
+      },
+    });
 
-    // // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
+    // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
 
-    // await webbRelayer.waitForEvent({
-    //   kind: 'tx_queue',
-    //   event: {
-    //     ty: 'Substrate',
-    //     chain_id: substrateChainId.toString(),
-    //     finalized: true,
-    //   },
-    // });
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'Substrate',
+        chain_id: substrateChainId.toString(),
+        finalized: true,
+      },
+    });
   });
 
   after(async () => {
