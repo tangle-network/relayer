@@ -66,7 +66,7 @@ import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import { VAnchor } from '@webb-tools/anchors';
 const { ecdsaSign } = pkg;
 
-describe.only('Cross chain transaction <<>> Mocked Backend', function () {
+describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
