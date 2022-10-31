@@ -313,7 +313,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     });
 
     console.log('Withdraw on evm');
-     // now we withdraw on evm chain
+    // now we withdraw on evm chain
     const leaves = vanchor1.tree
       .elements()
       .map((el) => hexToU8a(el.toHexString()));
@@ -327,7 +327,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       0,
       1
     );
-    assert(substrateLeaves.length === 2, "Invalid substrate leaves length");
+    assert(substrateLeaves.length === 2, 'Invalid substrate leaves length');
     const index = substrateLeaves.findIndex(
       (leaf) => data.outputUtxo.commitment.toString() === leaf.toString()
     );
@@ -342,10 +342,20 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       index: index.toString(),
     });
     assert(data.outputUtxo.amount === withdrawUtxo.amount, 'Invalid amount');
-    assert(data.outputUtxo.blinding === withdrawUtxo.blinding, 'Invalid blinding factor');
+    assert(
+      data.outputUtxo.blinding === withdrawUtxo.blinding,
+      'Invalid blinding factor'
+    );
     assert(data.outputUtxo.chainId === withdrawUtxo.chainId, 'Invalid chainId');
-    assert(data.outputUtxo.secret_key === withdrawUtxo.secret_key, 'Invalid secret key');
-    assert(toFixedHex(data.outputUtxo.commitment) === toFixedHex(withdrawUtxo.commitment), 'Invalid commitment');
+    assert(
+      data.outputUtxo.secret_key === withdrawUtxo.secret_key,
+      'Invalid secret key'
+    );
+    assert(
+      toFixedHex(data.outputUtxo.commitment) ===
+        toFixedHex(withdrawUtxo.commitment),
+      'Invalid commitment'
+    );
     // 1. When we call this function we get a set membership if enabled error on line 29
     //    - This means that we have some root R and some set S and we want to prove that R is in S.
     //    - The circuit is throwing an error telling us this is not true. We need to figure out why this is the case.
