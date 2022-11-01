@@ -24,7 +24,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { BigNumberish, Contract, ethers } from 'ethers';
+import { ethers } from 'ethers';
 import {
   WebbRelayer,
   Pallet,
@@ -48,11 +48,7 @@ import {
   Keypair,
   Note,
   CircomUtxo,
-  randomBN,
   toFixedHex,
-  CircomProvingManager,
-  FIELD_SIZE,
-  LeafIdentifier,
 } from '@webb-tools/sdk-core';
 
 import {
@@ -227,7 +223,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });

@@ -270,12 +270,13 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       output.publicInputs,
       output.extData
     );
-    console.log('After withdraw');
-
+    // now we wait for relayer to execute private transaction.
     await webbRelayer.waitForEvent({
-      kind: 'leaves_store',
+      kind: 'private_tx',
       event: {
-        leaf_index: '1',
+        ty: 'EVM',
+        chain_id: localChain2.underlyingChainId.toString(),
+        finalized: true,
       },
     });
   });

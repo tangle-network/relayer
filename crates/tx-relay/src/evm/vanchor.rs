@@ -192,5 +192,5 @@ pub async fn handle_vanchor_relay_tx<'a>(
     ctx.metrics
         .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u64() as f64);
-    handle_evm_tx(call, stream).await;
+    handle_evm_tx(call, stream, cmd.chain_id).await;
 }

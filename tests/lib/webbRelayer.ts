@@ -509,6 +509,7 @@ type EventKind =
   | 'relay_tx'
   | 'signing_backend'
   | 'tx_queue'
+  | 'private_tx'
   | 'leaves_store'
   | 'signing_backend'
   | 'signature_bridge'

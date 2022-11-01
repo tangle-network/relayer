@@ -107,5 +107,5 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         }
     };
 
-    handle_substrate_tx(event_stream, stream).await;
+    handle_substrate_tx(event_stream, stream, cmd.chain_id).await;
 }
