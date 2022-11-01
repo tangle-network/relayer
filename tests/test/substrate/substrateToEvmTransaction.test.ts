@@ -257,7 +257,6 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
-    console.log('treeId : ', treeId);
     // ChainId of the substrate chain
     const substrateChainId = await aliceNode.getChainId();
     const typedSourceChainId = calculateTypedChainId(
@@ -356,11 +355,6 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
         toFixedHex(withdrawUtxo.commitment),
       'Invalid commitment'
     );
-    // 1. When we call this function we get a set membership if enabled error on line 29
-    //    - This means that we have some root R and some set S and we want to prove that R is in S.
-    //    - The circuit is throwing an error telling us this is not true. We need to figure out why this is the case.
-    // 1a. It must be that R is NOT in S. -- the circuit is telling us that this is true (R is NOT in S)
-    // 1b. It must be that we are computing R and/or S incorrectly.
     const res = await vanchor1.transact(
       [],
       [],
@@ -373,7 +367,6 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       '0',
       '0'
     );
-    console.log(res);
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
       kind: 'signing_backend',
@@ -413,7 +406,7 @@ async function setResourceIdProposal(
   const nonce = 1;
   const palletIndex = '0x2C';
   const callIndex = '0x02';
-  // set resource ID
+  // set resource ID on signature bridge.
   const resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
   const proposalHeader = new ProposalHeader(
     resourceId,
@@ -430,14 +423,13 @@ async function setResourceIdProposal(
   const proposalBytes = encodeResourceIdUpdateProposal(
     resourceIdUpdateProposal
   );
-  console.log('proosal bytes : ', proposalBytes);
   const hash = ethers.utils.keccak256(proposalBytes);
   const msg = ethers.utils.arrayify(hash);
   // sign the message
   const sigObj = ecdsaSign(msg, hexToU8a(PK1));
   const signature = new Uint8Array([...sigObj.signature, sigObj.recid]);
 
-  // execute proposal call to handler
+  // execute proposal call to handler on signature bridge.
   const setResourceCall = api.tx.signatureBridge.setResourceWithSignature(
     calculateTypedChainId(ChainType.Substrate, chainId),
     u8aToHex(proposalBytes),
@@ -456,8 +448,6 @@ async function vanchorDeposit(
 ): Promise<{ outputUtxo: Utxo; keyPair: Keypair }> {
   const account = createAccount('//Dave');
   const typedSourceChainId = depositNote.note.sourceChainId;
-  console.log('typedSourceChainId : ', typedSourceChainId);
-  console.log('typedTargetChainId : ', typedTargetChainId);
   const secret = randomAsU8a();
   // Key pair for deposit UTXO for spend
   const randomKeypair = new Keypair();
@@ -521,7 +511,7 @@ async function vanchorDeposit(
   const extAmount = currencyToUnitI128(10);
   const fee = 0;
   const refund = 0;
-  // Empty leaves
+  // Initially leaves will be empty
   leavesMap[typedTargetChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);
   const root = tree.unwrap().root.toHex();
@@ -587,7 +577,7 @@ async function vanchorDeposit(
   );
   console.log('Is proof valid : ', isValidProof);
 
-  // now we call the vanchor transact
+  // now we call the vanchor transact to deposit on substrate.
   const transactCall = api.tx.vAnchorBn254.transact(
     treeId,
     vanchorProofData,

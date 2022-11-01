@@ -75,7 +75,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   let wallet1: ethers.Wallet;
   let signatureVBridge: VBridge.VBridge;
 
-  // Governer key
+  // Governer key used for signing proposals.
   const GOV = u8aToHex(ethers.utils.randomBytes(32));
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
   const governorWallet = new ethers.Wallet(GOV);
