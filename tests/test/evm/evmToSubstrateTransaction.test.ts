@@ -32,7 +32,6 @@ import {
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import { BigNumber } from 'ethers';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
@@ -47,6 +46,7 @@ import {
   ProposalHeader,
   CircomUtxo,
   LeafIdentifier,
+  Note,
 } from '@webb-tools/sdk-core';
 
 import {
@@ -60,9 +60,10 @@ import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
 import {
   defaultEventsWatcherValue,
-  generateArkworksUtxoTest,
+  generateVAnchorNote,
 } from '../../lib/utils.js';
-import { UsageMode } from '@webb-tools/test-utils';
+import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
+import { VAnchor } from '@webb-tools/anchors';
 const { ecdsaSign } = pkg;
 
 describe('Cross chain transaction <<>> Mocked Backend', function () {
@@ -74,7 +75,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   let wallet1: ethers.Wallet;
   let signatureVBridge: VBridge.VBridge;
 
-  // Governer key
+  // Governer key used for signing proposals.
   const GOV = u8aToHex(ethers.utils.randomBytes(32));
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
   const governorWallet = new ethers.Wallet(GOV);
@@ -169,7 +170,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       governorWallet
     );
 
-    // get the anhor on localchain1
+    // Get the anhor on localchain1
     const vanchor = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor.setSigner(wallet1);
 
@@ -234,8 +235,6 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   it('Evm to Substrate cross chain transaction', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(wallet1);
-
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
@@ -245,29 +244,27 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     );
     const tx = await token.approveSpending(vanchor1.contract.address);
     await tx.wait();
-    await token.mintTokens(
-      wallet1.address,
-      ethers.utils.parseEther('100000000000000000000000')
-    );
+
+    // Mint 1000 * 10^18 tokens to wallet1
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
 
     const api = await aliceNode.api();
     const account = createAccount('//Dave');
-    //create vanchor
+    // Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
-    // chainId
     const substrateChainId = await aliceNode.getChainId();
     const typedTargetChainId = calculateTypedChainId(
       ChainType.Substrate,
       substrateChainId
     );
     const typedSourceChainId = localChain1.chainId;
-    // now we set resource through proposal execution
+    // now we set resource Id in the signature bridge
     const setResourceIdProposalCall = await setResourceIdProposal(
       api,
       GOV,
@@ -277,10 +274,12 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     const txSigned = await setResourceIdProposalCall.signAsync(account);
     await aliceNode.executeTransaction(txSigned);
 
+    // deposit amount on evm
+    const publicAmount = currencyToUnitI128(10);
     const depositUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
-      amount: (1e6).toString(),
+      amount: publicAmount.toString(),
       originChainId: typedSourceChainId.toString(),
       chainId: typedTargetChainId.toString(),
     });
@@ -293,7 +292,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       [],
       [depositUtxo],
       {
-        [typedTargetChainId]: leaves,
+        [typedSourceChainId]: leaves,
       },
       '0',
       '0',
@@ -319,37 +318,43 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
         finalized: true,
       },
     });
-    // console.log('Withdraw on substrate');
-    // // now we withdraw on substrate chain
+    // now we withdraw on substrate chain
+    console.log('Withdraw on substrate');
+    // dummy Deposit Note. Input note is directed toward source chain
+    const depositNote = await generateVAnchorNote(
+      0,
+      typedTargetChainId,
+      typedTargetChainId,
+      0
+    );
+    // substrate vanchor withdraw
+    await vanchorWithdraw(
+      vanchor1,
+      10,
+      typedTargetChainId.toString(),
+      depositNote,
+      treeId,
+      api,
+      aliceNode
+    );
 
-    // // dummy Deposit Note. Input note is directed toward source chain
-    //   const depositNote = await generateVAnchorNote(
-    //     0,
-    //     typedSourceChainId,
-    //     typedSourceChainId,
-    //     0
-    //   );
-    //   // substrate vanchor deposit
-    //   await vanchorWithdraw(typedTargetChainId.toString(),depositNote, treeId, api, aliceNode);
+    // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
+    await webbRelayer.waitForEvent({
+      kind: 'signing_backend',
+      event: {
+        backend: 'Mocked',
+      },
+    });
 
-    // // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
-    // await webbRelayer.waitForEvent({
-    //   kind: 'signing_backend',
-    //   event: {
-    //     backend: 'Mocked',
-    //   },
-    // });
-
-    // // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
-
-    // await webbRelayer.waitForEvent({
-    //   kind: 'tx_queue',
-    //   event: {
-    //     ty: 'EVM',
-    //     chain_id: localChain1.underlyingChainId.toString(),
-    //     finalized: true,
-    //   },
-    // });
+    // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain1.underlyingChainId.toString(),
+        finalized: true,
+      },
+    });
   });
 
   after(async () => {
@@ -404,17 +409,16 @@ async function setResourceIdProposal(
 }
 
 async function vanchorWithdraw(
+  vanchor1: VAnchor,
+  publicAmountUint: number,
   typedTargetChainId: string,
-  inputUtxo: Utxo,
+  depositNote: Note,
   treeId: number,
   api: ApiPromise,
   aliceNode: LocalProtocolSubstrate
 ) {
   const account = createAccount('//Dave');
-  if (!inputUtxo.originChainId) {
-    throw new Error('tried to withdraw without an origin chainId');
-  }
-  const typedSourceChainId = inputUtxo.originChainId;
+  const typedSourceChainId = depositNote.note.sourceChainId;
   const secret = randomAsU8a();
   const gitRoot = child
     .execSync('git rev-parse --show-toplevel')
@@ -435,7 +439,10 @@ async function vanchorWithdraw(
   const pk_hex = fs.readFileSync(pkPath).toString('hex');
   const pk = hexToU8a(pk_hex);
 
-  const publicAmount = currencyToUnitI128(10);
+  let note1 = depositNote;
+  const note2 = await note1.getDefaultUtxoNote();
+  const publicAmount = currencyToUnitI128(publicAmountUint);
+  const notes = [note1, note2];
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({
     curve: 'Bn254',
@@ -453,13 +460,17 @@ async function vanchorWithdraw(
   // Configure a new proving manager with direct call
   const provingManager = new ArkworksProvingManager(null);
   const leavesMap = {};
-
+  const assetId = new Uint8Array([254, 255, 255, 255]);
   const address = account.address;
   const extAmount = currencyToUnitI128(10);
   const fee = 0;
   const refund = 0;
-  // Empty leaves
-  leavesMap[typedTargetChainId.toString()] = [];
+  // get source chain (evm) leaves.
+  const leaves = vanchor1.tree
+    .elements()
+    .map((el) => hexToU8a(el.toHexString()));
+  leavesMap[typedSourceChainId.toString()] = leaves;
+
   const tree = await api.query.merkleTreeBn254.trees(treeId);
   const root = tree.unwrap().root.toHex();
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -475,16 +486,11 @@ async function vanchorWithdraw(
     index: 0,
     typedChainId: Number(typedSourceChainId.toString()),
   };
-  const defaultInput = await generateArkworksUtxoTest(
-    0,
-    Number(typedTargetChainId),
-    Number(typedTargetChainId)
-  );
 
   const setup: ProvingManagerSetupInput<'vanchor'> = {
     chainId: typedTargetChainId.toString(),
     leafIds: [leafId, leafId],
-    inputUtxos: [inputUtxo, defaultInput],
+    inputUtxos: notes.map((n) => new Utxo(n.note.getUtxo())),
     leavesMap: leavesMap,
     output: [output1, output2],
     encryptedCommitments: [comEnc1, comEnc2],
@@ -496,7 +502,7 @@ async function vanchorWithdraw(
     extAmount: extAmount.toString(),
     fee: fee.toString(),
     refund: String(refund),
-    token: decodedAddress,
+    token: assetId,
   };
 
   const data = await provingManager.prove('vanchor', setup);
@@ -505,36 +511,28 @@ async function vanchorWithdraw(
     recipient: address,
     fee,
     refund: String(refund),
-    token: decodedAddress,
+    token: assetId,
     extAmount: extAmount,
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };
-
-  const vanchorProofData = {
+  let vanchorProofData = {
     proof: `0x${data.proof}`,
     publicAmount: data.publicAmount,
     roots: rootsSet,
     inputNullifiers: data.inputUtxos.map((input) => `0x${input.nullifier}`),
-    outputCommitments: data.outputNotes.map((note) =>
-      u8aToHex(note.note.getLeafCommitment())
-    ),
+    outputCommitments: data.outputUtxos.map((utxo) => utxo.commitment),
     extDataHash: data.extDataHash,
   };
 
-  // now we call the vanchor transact
-  const transactCall = api.tx.vAnchorBn254.transact(
+  // now we call the vanchor transact to withdraw on substrate
+  let transactCall = api.tx.vAnchorBn254!.transact!(
     treeId,
     vanchorProofData,
     extData
   );
   const txSigned = await transactCall.signAsync(account);
   await aliceNode.executeTransaction(txSigned);
-}
-
-function currencyToUnitI128(currencyAmount: number) {
-  const bn = BigNumber.from(currencyAmount);
-  return bn.mul(1_000_000_000_000);
 }
 
 function createAccount(accountId: string): any {
