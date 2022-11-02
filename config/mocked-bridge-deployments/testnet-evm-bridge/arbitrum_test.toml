@@ -39,11 +39,11 @@ enabled = true
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0x91a9a1e76fa609f6ba8fcd718a60b030678765ad"
+address = "0x12f2c4a1469b035e4459539e38ae68bc4dd5ba07"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 171869
+deployed-at = 908813
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
@@ -57,22 +57,21 @@ withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" 
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { chain = "ropsten", chain-id = "3", address = "0x35295fbb71273b84f66e70b8e341d408150dcaf9" },
-  { chain = "rinkeby", chain-id = "4", address = "0x7ae23a95881bf8ab86174e89bd79199f398d19bf" },
-  { chain = "goerli", chain-id = "5", address = "0x4e22da303c403daaf4653d3d9d63ef009bae89a6" },
-  { chain = "polygontestnet", chain-id = "80001", address = "0xe6b075ecc4ccbc6e66569b1a2984cc47e88ee246" },
-  { chain = "optimismtestnet", chain-id = "420", address = "0x12f2c4a1469b035e4459539e38ae68bc4dd5ba07" },
-  { chain = "moonbase", chain-id = "1287", address = "0xc6b43568f0c39e3a68b597a3bb54a7b9e4308bf3"}
+  { type = "Evm", chain = "goerli", chain-id = "5", address = "0xdc9f140987073619d64898be00143dd312cdc71a" },
+  { type = "Evm", chain = "sepolia", chain-id = "11155111", address = "0xa5672fdfe6700452a828c514a9d5b3b4dc5230bf" },
+  { type = "Evm", chain = "polygontestnet", chain-id = "80001", address = "0xcc1f5ebddb858f96051ef315969edaa936ae70e3" },
+  { type = "Evm", chain = "optimismtestnet", chain-id = "420", address = "0xc3393b00a5c6a7250a5ee7ef99f0a06ff29bc18f" },
+  { type = "Evm", chain = "moonbase", chain-id = "1287", address = "0x1349f444a5cd98c5863f786496ca53f3f651f7c7"}
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "$ARBITRUM_TESTNET_PRIVATE_KEY" }
 
 [[evm.arbitrumtestnet.contracts]]
 contract = "SignatureBridge"
-address = "0x563519f0ff4aae3d4384e7d0560aa5d58e5a6664"
+address = "0x3dd2457c44e79af992120e817ff4be22b023e22a"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 171869
+deployed-at = 908813
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.

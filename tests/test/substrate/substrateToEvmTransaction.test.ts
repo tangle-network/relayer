@@ -402,7 +402,7 @@ async function setResourceIdProposal(
   const palletIndex = '0x2C';
   const callIndex = '0x02';
   // set resource ID
-  let resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
+  const resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
   const proposalHeader = new ProposalHeader(
     resourceId,
     functionSignature,
@@ -481,7 +481,7 @@ async function vanchorDeposit(
   const vk_hex = fs.readFileSync(vkPath).toString('hex');
   const vk = hexToU8a(vk_hex);
 
-  let note1 = depositNote;
+  const note1 = depositNote;
   const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(10);
   const notes = [note1, note2];
