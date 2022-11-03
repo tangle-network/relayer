@@ -28,7 +28,8 @@ import child from 'child_process';
 import {
   WebbRelayer,
   Pallet,
-  LeavesCacheResponse,
+  SubstrateVanchorExtData,
+  SubstrateVanchorProofData,
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 
@@ -42,13 +43,8 @@ import {
   ProvingManagerSetupInput,
   ArkworksProvingManager,
   Utxo,
-  VAnchorProof,
-  LeafIdentifier,
   calculateTypedChainId,
   ChainType,
-  Note,
-  Keypair,
-  toFixedHex,
 } from '@webb-tools/sdk-core';
 import { UsageMode } from '@webb-tools/test-utils';
 import {
@@ -116,19 +112,17 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
 
-  it('should relay private transaction ', async () => {
+  it('should withdraw using private transaction ', async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Dave');
-    // Create vanchor on Substrate chain with height 30 and maxEdges = 1
+    // 1. Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
     // execute sudo transaction.
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
-
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
 
@@ -138,27 +132,16 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ChainType.Substrate,
       substrateChainId
     );
-    
-     // dummy Deposit Note. Input note is directed toward source chain
-     const depositNote = await generateVAnchorNote(
-      0,
-      typedSourceChainId,
-      typedSourceChainId,
-      0
-    );
-    
-    // substrate vanchor deposit
+
+    // 2. Deposit amount on substrate chain.
     const data = await vanchorDeposit(
-      typedSourceChainId.toString(),
-      depositNote,
-      // public amount
-      10,
+      typedSourceChainId.toString(), // source chain Id
+      typedSourceChainId.toString(), // target chain Id
+      10, // public amount
       treeId,
       api,
       aliceNode
     );
-
-    console.log("deposit made");
 
     // now we wait for all deposit to be saved in LeafStorageCache.
     await webbRelayer.waitForEvent({
@@ -168,35 +151,74 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       },
     });
 
-    console.log("Vnahcor withdraw");
+    // 3. Now we withdraw it on bob's account using private transaction.
+    const account = createAccount('//Bob');
+    // Bob's balance after withdrawal
+    const bobBalanceBefore = await api.query.system.account(account.address);
 
-    
     const vanchorData = await vanchorWithdraw(
       typedSourceChainId.toString(),
       typedSourceChainId.toString(),
+      account.address,
       data.depositUtxos,
       treeId,
-      api,
-      aliceNode
-    )
-    
+      api
+    );
+    // Now we construct payload for substrate private transaction.
+    // Convert [u8;4] to u32 asset Id
+    const token = new DataView(vanchorData.extData.token.buffer, 0);
+    let substrateExtData: SubstrateVanchorExtData = {
+      recipient: vanchorData.extData.recipient,
+      relayer: vanchorData.extData.relayer,
+      extAmount: Number(vanchorData.extData.extAmount),
+      fee: Number(vanchorData.extData.fee),
+      encryptedOutput1: Array.from(
+        hexToU8a(vanchorData.extData.encryptedOutput1)
+      ),
+      encryptedOutput2: Array.from(
+        hexToU8a(vanchorData.extData.encryptedOutput2)
+      ),
+      refund: Number(vanchorData.extData.refund),
+      token: token.getUint32(0, true),
+    };
+
+    let substrateProofData: SubstrateVanchorProofData = {
+      proof: Array.from(hexToU8a(vanchorData.proofData.proof)),
+      extDataHash: Array.from(vanchorData.proofData.extDataHash),
+      publicAmount: Array.from(vanchorData.proofData.publicAmount),
+      roots: vanchorData.proofData.roots.map((root) => Array.from(root)),
+      outputCommitments: vanchorData.proofData.outputCommitments.map((com) =>
+        Array.from(com)
+      ),
+      inputNullifiers: vanchorData.proofData.inputNullifiers.map((com) =>
+        Array.from(hexToU8a(com))
+      ),
+    };
+
     // now we withdraw using private transaction
-    const txHash = await webbRelayer.substrateVAnchorWithdraw(
+    await webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
-      vanchorData.extData,
-      vanchorData.vanchorProofData
-      )
+      substrateExtData,
+      substrateProofData
+    );
 
     // now we wait for relayer to execute private transaction.
     await webbRelayer.waitForEvent({
-        kind: 'private_tx',
-        event: {
-          ty: 'SUBSTRATE',
-          chain_id: substrateChainId.toString(),
-          finalized: true,
-        },
-      });
+      kind: 'private_tx',
+      event: {
+        ty: 'SUBSTRATE',
+        chain_id: substrateChainId.toString(),
+        finalized: true,
+      },
+    });
+
+    // Bob's balance after withdrawal.
+    const BobBalanceAfter = await api.query.system.account(account.address);
+    //@ts-ignore
+    console.log('balance after : ', BobBalanceAfter.data.free);
+    //@ts-ignore
+    assert(BobBalanceAfter.data.free > bobBalanceBefore.data.free);
   });
 
   after(async () => {
@@ -220,16 +242,14 @@ function createAccount(accountId: string): any {
   return account;
 }
 
-
 async function vanchorWithdraw(
   typedTargetChainId: string,
   typedSourceChainId: string,
-  depositUtxos:[Utxo, Utxo],
+  recipient: string,
+  depositUtxos: [Utxo, Utxo],
   treeId: number,
-  api: ApiPromise,
-  aliceNode: LocalProtocolSubstrate
-): Promise<{ extData: any; vanchorProofData: any }> {
-  const account = createAccount('//Dave');
+  api: ApiPromise
+): Promise<{ extData: any; proofData: any }> {
   const secret = randomAsU8a();
   const gitRoot = child
     .execSync('git rev-parse --show-toplevel')
@@ -258,16 +278,13 @@ async function vanchorWithdraw(
     1
   );
   assert(substrateLeaves.length === 2, 'Invalid substrate leaves length');
-  substrateLeaves.map(
-    (leaf, index) =>  {
-      if(depositUtxos[0].commitment.toString() === leaf.toString()){
-        depositUtxos[0].setIndex(index)
-      }
-      else if(depositUtxos[1].commitment.toString() === leaf.toString()){
-        depositUtxos[1].setIndex(index)
-      }
-  }
-  );
+  substrateLeaves.map((leaf, index) => {
+    if (depositUtxos[0].commitment.toString() === leaf.toString()) {
+      depositUtxos[0].setIndex(index);
+    } else if (depositUtxos[1].commitment.toString() === leaf.toString()) {
+      depositUtxos[1].setIndex(index);
+    }
+  });
   leavesMap[typedSourceChainId.toString()] = substrateLeaves;
 
   // Output UTXOs configs
@@ -275,19 +292,20 @@ async function vanchorWithdraw(
     curve: 'Bn254',
     backend: 'Arkworks',
     amount: '0',
-    chainId: typedSourceChainId
+    chainId: typedSourceChainId,
   });
   const output2 = await Utxo.generateUtxo({
     curve: 'Bn254',
     backend: 'Arkworks',
     amount: '0',
-    chainId: typedSourceChainId
+    chainId: typedSourceChainId,
   });
 
   // Configure a new proving manager with direct call
   const provingManager = new ArkworksProvingManager(null);
   const assetId = new Uint8Array([254, 255, 255, 255]);
-  const address = account.address;
+
+  const address = recipient;
   const fee = 0;
   const refund = 0;
   const withdrawAmount = depositUtxos.reduce((acc, utxo) => {
@@ -296,7 +314,7 @@ async function vanchorWithdraw(
   const extAmount = -withdrawAmount;
 
   const publicAmount = -withdrawAmount;
- 
+
   const tree = await api.query.merkleTreeBn254.trees(treeId);
   const root = tree.unwrap().root.toHex();
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -314,8 +332,8 @@ async function vanchorWithdraw(
     leafIds: depositUtxos.map((utxo) => {
       return {
         index: utxo.index!,
-        typedChainId: Number(utxo.chainId)
-      } 
+        typedChainId: Number(utxo.chainId),
+      };
     }),
     inputUtxos: depositUtxos,
     leavesMap: leavesMap,
@@ -343,7 +361,7 @@ async function vanchorWithdraw(
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };
-  let vanchorProofData = {
+  let proofData = {
     proof: `0x${data.proof}`,
     publicAmount: data.publicAmount,
     roots: rootsSet,
@@ -352,30 +370,19 @@ async function vanchorWithdraw(
     extDataHash: data.extDataHash,
   };
 
-  // now we call the vanchor transact to withdraw on substrate
-  let transactCall = api.tx.vAnchorBn254!.transact!(
-    treeId,
-    vanchorProofData,
-    extData
-  );
-  const txSigned = await transactCall.signAsync(account);
-  await aliceNode.executeTransaction(txSigned);
-  return {extData, vanchorProofData}
+  return { extData, proofData };
 }
 
 async function vanchorDeposit(
   typedTargetChainId: string,
-  depositNote: Note,
+  typedSourceChainId: string,
   publicAmountUint: number,
   treeId: number,
   api: ApiPromise,
   aliceNode: LocalProtocolSubstrate
-): Promise<{ depositUtxos: [Utxo , Utxo]}> {
+): Promise<{ depositUtxos: [Utxo, Utxo] }> {
   const account = createAccount('//Dave');
-  const typedSourceChainId = depositNote.note.sourceChainId;
   const secret = randomAsU8a();
-  // Key pair for deposit UTXO for spend
-  const randomKeypair = new Keypair();
   const gitRoot = child
     .execSync('git rev-parse --show-toplevel')
     .toString()
@@ -408,6 +415,14 @@ async function vanchorDeposit(
   );
   const vk_hex = fs.readFileSync(vkPath).toString('hex');
   const vk = hexToU8a(vk_hex);
+
+  // dummy Deposit Note. Input note is directed toward source chain
+  const depositNote = await generateVAnchorNote(
+    0,
+    Number(typedSourceChainId),
+    Number(typedSourceChainId),
+    0
+  );
 
   const note1 = depositNote;
   const note2 = await note1.getDefaultUtxoNote();
@@ -503,4 +518,3 @@ async function vanchorDeposit(
   await aliceNode.executeTransaction(txSigned);
   return { depositUtxos: data.outputUtxos };
 }
-

@@ -326,8 +326,8 @@ export class WebbRelayer {
   public async substrateVAnchorWithdraw(
     chainId: number,
     id: number,
-    extData: any,
-    proofData: any,
+    extData: SubstrateVanchorExtData,
+    proofData: SubstrateVanchorProofData
   ): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
     // create a new websocket connection to the relayer.
@@ -338,25 +338,9 @@ export class WebbRelayer {
         vAnchor: {
           chainId: chainId,
           id,
-          extData: {
-            recipient: extData.recipient,
-            relayer: extData.relayer,
-            extAmount: extData.extAmount,
-            fee: extData.fee,
-            encryptedOutput1: Array.from(hexToU8a(extData.encryptedOutput1)),
-            encryptedOutput2: Array.from(hexToU8a(extData.encryptedOutput2)),
-            refund: 0,
-            token: 0,
-          },
-          proofData: {
-            proof: Array.from(hexToU8a(proofData.proof)),
-            extDataHash: Array.from(proofData.extDataHash),
-            publicAmount: Array.from(proofData.publicAmount),
-            roots: proofData.roots.map((root) => Array.from(root)),
-            outputCommitments: proofData.outputCommitments.map((com) => Array.from(com)),
-            inputNullifiers: proofData.inputNullifiers.map((com) => Array.from(hexToU8a(com))),
-          },
-        }
+          extData,
+          proofData,
+        },
       },
     };
 
@@ -524,6 +508,26 @@ type EventTarget = 'webb_probe';
 export type EventSelector = {
   kind: EventKind;
   event?: any;
+};
+
+export type SubstrateVanchorExtData = {
+  recipient: string;
+  relayer: string;
+  extAmount: number;
+  fee: number;
+  encryptedOutput1: number[];
+  encryptedOutput2: number[];
+  refund: number;
+  token: number;
+};
+
+export type SubstrateVanchorProofData = {
+  proof: number[];
+  extDataHash: number[];
+  publicAmount: number[];
+  roots: number[][];
+  outputCommitments: number[][];
+  inputNullifiers: number[][];
 };
 
 export interface FeaturesConfig {
