@@ -18,7 +18,7 @@ import {
 import { ConvertToKebabCase } from './tsHacks.js';
 
 const STANDALONE_DOCKER_IMAGE_URL =
-  'ghcr.io/webb-tools/protocol-substrate-standalone-node:edge';
+'ghcr.io/webb-tools/protocol-substrate-standalone-node@sha256:4ae579079b845ee7341bdf6e965755355f262ea27e0edf869291f7bdd36fb927';
 
 type ExportedConfigOptions = {
   suri: string;
