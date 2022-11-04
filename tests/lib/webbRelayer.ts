@@ -326,8 +326,8 @@ export class WebbRelayer {
   public async substrateVAnchorWithdraw(
     chainId: number,
     id: number,
-    extData: SubstrateVanchorExtData,
-    proofData: SubstrateVanchorProofData
+    extData: SubstrateVAnchorExtData,
+    proofData: SubstrateVAnchorProofData
   ): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
     // create a new websocket connection to the relayer.
@@ -510,7 +510,7 @@ export type EventSelector = {
   event?: any;
 };
 
-export type SubstrateVanchorExtData = {
+export type SubstrateVAnchorExtData = {
   recipient: string;
   relayer: string;
   extAmount: number;
@@ -521,7 +521,7 @@ export type SubstrateVanchorExtData = {
   token: number;
 };
 
-export type SubstrateVanchorProofData = {
+export type SubstrateVAnchorProofData = {
   proof: number[];
   extDataHash: number[];
   publicAmount: number[];

@@ -28,8 +28,8 @@ import child from 'child_process';
 import {
   WebbRelayer,
   Pallet,
-  SubstrateVanchorExtData,
-  SubstrateVanchorProofData,
+  SubstrateVAnchorExtData,
+  SubstrateVAnchorProofData,
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 
@@ -167,7 +167,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     // Now we construct payload for substrate private transaction.
     // Convert [u8;4] to u32 asset Id
     const token = new DataView(vanchorData.extData.token.buffer, 0);
-    let substrateExtData: SubstrateVanchorExtData = {
+    let substrateExtData: SubstrateVAnchorExtData = {
       recipient: vanchorData.extData.recipient,
       relayer: vanchorData.extData.relayer,
       extAmount: Number(vanchorData.extData.extAmount),
@@ -182,7 +182,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       token: token.getUint32(0, true),
     };
 
-    let substrateProofData: SubstrateVanchorProofData = {
+    let substrateProofData: SubstrateVAnchorProofData = {
       proof: Array.from(hexToU8a(vanchorData.proofData.proof)),
       extDataHash: Array.from(vanchorData.proofData.extDataHash),
       publicAmount: Array.from(vanchorData.proofData.publicAmount),
