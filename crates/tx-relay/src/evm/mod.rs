@@ -19,6 +19,7 @@ pub mod vanchor;
 pub async fn handle_evm_tx<M, D>(
     call: ContractCall<M, D>,
     stream: CommandStream,
+    chain_id: u64,
 ) where
     M: Middleware,
     D: Detokenize,
@@ -43,7 +44,15 @@ pub async fn handle_evm_tx<M, D>(
         Ok(pending) => {
             let _ = stream.send(Withdraw(WithdrawStatus::Sent)).await;
             let tx_hash = *pending;
-            tracing::debug!(%tx_hash, "Tx is submitted and pending!");
+            tracing::event!(
+                target: webb_relayer_utils::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %webb_relayer_utils::probe::Kind::PrivateTx,
+                ty = "EVM",
+                chain_id = %chain_id,
+                pending = true,
+                %tx_hash,
+            );
             let result = pending.interval(Duration::from_millis(1000)).await;
             let _ = stream
                 .send(Withdraw(WithdrawStatus::Submitted { tx_hash }))
@@ -51,7 +60,15 @@ pub async fn handle_evm_tx<M, D>(
             result
         }
         Err(e) => {
-            tracing::error!("Error while sending Tx: {}", e);
+            tracing::event!(
+                target: webb_relayer_utils::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %webb_relayer_utils::probe::Kind::PrivateTx,
+                ty = "EVM",
+                chain_id = %chain_id,
+                errored = true,
+                error = %e
+            );
             let err = into_withdraw_error(e);
             let _ = stream.send(Withdraw(err)).await;
             return;
@@ -59,7 +76,15 @@ pub async fn handle_evm_tx<M, D>(
     };
     match tx {
         Ok(Some(receipt)) => {
-            tracing::debug!("Finalized Tx #{}", receipt.transaction_hash);
+            tracing::event!(
+                target: webb_relayer_utils::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %webb_relayer_utils::probe::Kind::PrivateTx,
+                ty = "EVM",
+                chain_id = %chain_id,
+                finalized = true,
+                tx_hash = %receipt.transaction_hash,
+            );
             let _ = stream
                 .send(Withdraw(WithdrawStatus::Finalized {
                     tx_hash: receipt.transaction_hash,
@@ -74,7 +99,16 @@ pub async fn handle_evm_tx<M, D>(
         }
         Err(e) => {
             let reason = e.to_string();
-            tracing::error!("Transaction Errored: {}", reason);
+            tracing::event!(
+                target: webb_relayer_utils::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %webb_relayer_utils::probe::Kind::PrivateTx,
+                ty = "EVM",
+                chain_id = %chain_id,
+                errored = true,
+                error = %reason
+            );
+
             let _ = stream
                 .send(Withdraw(WithdrawStatus::Errored { reason, code: 4 }))
                 .await;

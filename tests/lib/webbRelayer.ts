@@ -27,6 +27,7 @@ import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
+import { hexToU8a } from '@polkadot/util';
 
 export type CommonConfig = {
   features?: FeaturesConfig;
@@ -322,41 +323,28 @@ export class WebbRelayer {
     return substrateTxHashOrReject(ws, cmd);
   }
 
-  public async substrateAnchorWithdraw(inputs: {
-    chainId: number;
-    id: number;
-    proof: number[];
-    roots: number[][];
-    nullifierHash: number[];
-    recipient: string;
-    relayer: string;
-    fee: number;
-    refund: number;
-    refreshCommitment: number[];
-    extDataHash: number[];
-  }): Promise<`0x${string}`> {
+  public async substrateVAnchorWithdraw(
+    chainId: number,
+    id: number,
+    extData: SubstrateVAnchorExtData,
+    proofData: SubstrateVAnchorProofData
+  ): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
     // create a new websocket connection to the relayer.
     const ws = new WebSocket(wsEndpoint);
     await new Promise((resolve) => ws.once('open', resolve));
-
     const cmd = {
       substrate: {
-        anchor: {
-          chainId: inputs.chainId,
-          id: inputs.id,
-          proof: inputs.proof,
-          roots: inputs.roots,
-          nullifierHash: inputs.nullifierHash,
-          recipient: inputs.recipient,
-          relayer: inputs.relayer,
-          fee: inputs.fee,
-          refund: inputs.refund,
-          refreshCommitment: inputs.refreshCommitment,
-          extDataHash: inputs.extDataHash,
+        vAnchor: {
+          chainId: chainId,
+          id,
+          extData,
+          proofData,
         },
       },
     };
+
+    console.log(cmd);
     return substrateTxHashOrReject(ws, cmd);
   }
 }
@@ -509,6 +497,7 @@ type EventKind =
   | 'relay_tx'
   | 'signing_backend'
   | 'tx_queue'
+  | 'private_tx'
   | 'leaves_store'
   | 'signing_backend'
   | 'signature_bridge'
@@ -519,6 +508,26 @@ type EventTarget = 'webb_probe';
 export type EventSelector = {
   kind: EventKind;
   event?: any;
+};
+
+export type SubstrateVAnchorExtData = {
+  recipient: string;
+  relayer: string;
+  extAmount: number;
+  fee: number;
+  encryptedOutput1: number[];
+  encryptedOutput2: number[];
+  refund: number;
+  token: number;
+};
+
+export type SubstrateVAnchorProofData = {
+  proof: number[];
+  extDataHash: number[];
+  publicAmount: number[];
+  roots: number[][];
+  outputCommitments: number[][];
+  inputNullifiers: number[][];
 };
 
 export interface FeaturesConfig {
