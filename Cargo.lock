@@ -5891,6 +5891,37 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb-light-client-relayer"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "backoff",
+ "colored",
+ "dotenv",
+ "ethereum-types",
+ "futures",
+ "native-tls",
+ "paw",
+ "serde_json",
+ "tempfile",
+ "tokio",
+ "tracing",
+ "webb",
+ "webb-proposal-signing-backends",
+ "webb-relayer",
+ "webb-relayer-config",
+ "webb-relayer-context",
+ "webb-relayer-handler-utils",
+ "webb-relayer-handlers",
+ "webb-relayer-store",
+ "webb-relayer-tx-queue",
+ "webb-relayer-tx-relay",
+ "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
 name = "webb-proposal-signing-backends"
 version = "0.1.0"
 dependencies = [

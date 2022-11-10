@@ -8,6 +8,8 @@ http-endpoint = "$GOERLI_HTTP_URL"
 ws-endpoint = "$GOERLI_WS_URL"
 # chain specific id from evm opcode
 chain-id = 5002
+# block confirmations
+block-confirmations = 1
 
 [evm.goerli.block-poller]
 # The starting block to listen at.

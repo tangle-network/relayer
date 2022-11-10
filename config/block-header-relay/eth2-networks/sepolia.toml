@@ -8,6 +8,8 @@ http-endpoint = "$SEPOLIA_HTTP_URL"
 ws-endpoint = "$SEPOLIA_WS_URL"
 # chain specific id from evm opcode
 chain-id = 11155111
+# block confirmations
+block-confirmations = 1
 
 [evm.sepolia.block-poller]
 # The starting block to listen at.

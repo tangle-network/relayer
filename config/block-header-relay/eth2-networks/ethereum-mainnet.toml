@@ -8,6 +8,8 @@ http-endpoint = "$ETHEREUM_MAINNET_HTTP_URL"
 ws-endpoint = "$ETHEREUM_MAINNET_WS_URL"
 # chain specific id from evm opcode
 chain-id = 1
+# block confirmations
+block-confirmations = 1
 
 [evm.mainnet.block-poller]
 # The starting block to listen at.
