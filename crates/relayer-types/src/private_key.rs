@@ -114,4 +114,3 @@ impl<'de> Deserialize<'de> for PrivateKey {
         Ok(Self(secret))
     }
 }
-
