@@ -66,7 +66,7 @@ import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import { VAnchor } from '@webb-tools/anchors';
 const { ecdsaSign } = pkg;
 
-describe.only('Cross chain transaction <<>> Mocked Backend', function () {
+describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -75,11 +75,14 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
   let wallet1: ethers.Wallet;
   let signatureVBridge: VBridge.VBridge;
 
-  // Governer key used for signing proposals.
-  const GOV = u8aToHex(ethers.utils.randomBytes(32));
-  console.log("GOV KEY")
+  // Mnemonic seed phrase to created governor key used for signing proposals.
+  const mnemonic = fs.readFileSync("../sample_seed.txt");
+  const governorWallet  = ethers.Wallet.fromMnemonic(mnemonic.toString());
+  const GOV = governorWallet.privateKey;
+  // File path to secrets containing mnemonic seed phrase
+  const secretFile = "file:../sample_seed.txt";
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
-  const governorWallet = new ethers.Wallet(GOV);
+
   // slice 0x04 from public key
   const uncompressedKey = governorWallet
     ._signingKey()
@@ -195,7 +198,7 @@ describe.only('Cross chain transaction <<>> Mocked Backend', function () {
     // save the evm chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      proposalSigningBackend: { type: 'Mocked', privateKey: secretFile },
       linkedAnchors: [
         { type: 'Raw', resourceId: substrateResourceId.toString() },
       ],

@@ -3,6 +3,7 @@ use std::str::FromStr;
 use ethereum_types::Secret;
 use serde::Deserialize;
 use webb::evm::ethers::signers::{coins_bip39::English, MnemonicBuilder};
+
 /// PrivateKey represents a private key.
 #[derive(Clone)]
 pub struct PrivateKey(Secret);
@@ -81,7 +82,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                                 file_path, e
                             ))
                         })?;
-                    if value.starts_with("0x") {
+                    if val.starts_with("0x") {
                         let maybe_hex = Secret::from_str(&val);
                         match maybe_hex {
                             Ok(val) => Ok(val),
@@ -90,7 +91,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     } else {
                         // read mnemonic word list
                         let wallet = MnemonicBuilder::<English>::default()
-                            .phrase(value)
+                            .phrase(val.as_str())
                             .build()
                             .map_err(|e| {
                                 serde::de::Error::custom(format!(
@@ -113,3 +114,9 @@ impl<'de> Deserialize<'de> for PrivateKey {
         Ok(Self(secret))
     }
 }
+
+// #[test]
+// fn test_private_key(){
+//     let secret_key: PrivateKey = "file:../../../sample_file.txt";
+//     <PrivateKey as Deserialize>::deserialize(secret_key)
+// }
