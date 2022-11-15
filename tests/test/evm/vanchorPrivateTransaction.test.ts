@@ -272,7 +272,7 @@ describe('Vanchor Tx relaying with mocked governor', function () {
     );
     // now we wait for relayer to relay the transaction.
     await webbRelayer.waitForEvent({
-      kind: 'private_tx',
+      kind: 'tx_relay',
       event: {
         ty: 'EVM',
         chain_id: localChain2.underlyingChainId.toString(),

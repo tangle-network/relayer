@@ -75,7 +75,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     let file_path =
                         value.strip_prefix("file:").unwrap_or(value);
                     let val =
-                        std::fs::read_to_string(&file_path).map_err(|e| {
+                        std::fs::read_to_string(file_path).map_err(|e| {
                             serde::de::Error::custom(format!(
                                 "error while reading file path {} : {}",
                                 file_path, e
