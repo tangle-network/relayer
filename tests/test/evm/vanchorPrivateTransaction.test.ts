@@ -542,7 +542,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
         'Exception while processing transaction'
       );
     }
-  });``
+  });
 
   it('should fail to query leaves data api', async () => {
     this.retries(0);
