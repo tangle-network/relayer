@@ -47,7 +47,7 @@ pub async fn handle_substrate_tx(
                 tracing::event!(
                     target: webb_relayer_utils::probe::TARGET,
                     tracing::Level::DEBUG,
-                    kind = %webb_relayer_utils::probe::Kind::TxRelay,
+                    kind = %webb_relayer_utils::probe::Kind::PrivateTx,
                     ty = "SUBSTRATE",
                     chain_id = %chain_id,
                     status = "InBlock",
@@ -66,7 +66,7 @@ pub async fn handle_substrate_tx(
                 tracing::event!(
                     target: webb_relayer_utils::probe::TARGET,
                     tracing::Level::DEBUG,
-                    kind = %webb_relayer_utils::probe::Kind::TxRelay,
+                    kind = %webb_relayer_utils::probe::Kind::PrivateTx,
                     ty = "SUBSTRATE",
                     chain_id = %chain_id,
                     status = "Finalized",
@@ -96,7 +96,7 @@ pub async fn handle_substrate_tx(
                 tracing::event!(
                     target: webb_relayer_utils::probe::TARGET,
                     tracing::Level::DEBUG,
-                    kind = %webb_relayer_utils::probe::Kind::TxRelay,
+                    kind = %webb_relayer_utils::probe::Kind::PrivateTx,
                     ty = "SUBSTRATE",
                     chain_id = %chain_id,
                     status = "Dropped",
@@ -109,7 +109,7 @@ pub async fn handle_substrate_tx(
                 tracing::event!(
                     target: webb_relayer_utils::probe::TARGET,
                     tracing::Level::DEBUG,
-                    kind = %webb_relayer_utils::probe::Kind::TxRelay,
+                    kind = %webb_relayer_utils::probe::Kind::PrivateTx,
                     ty = "SUBSTRATE",
                     chain_id = %chain_id,
                     status = "Invalid",

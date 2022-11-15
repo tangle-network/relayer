@@ -32,7 +32,7 @@ import {
 import getPort, { portNumbers } from 'get-port';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 // const assert = require('assert');
-describe('Data querying', function () {
+describe('Vanchor Transaction relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

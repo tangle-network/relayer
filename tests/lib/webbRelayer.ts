@@ -82,7 +82,7 @@ export class WebbRelayer {
       features: {
         'data-query': opts.commonConfig.features?.dataQuery ?? true,
         'governance-relay': opts.commonConfig.features?.governanceRelay ?? true,
-        'tx-relay': opts.commonConfig.features?.txRelay ?? true,
+        'private-tx-relay': opts.commonConfig.features?.privateTxRelay ?? true,
       },
       port: opts.commonConfig.port,
     };
@@ -497,7 +497,7 @@ type EventKind =
   | 'relay_tx'
   | 'signing_backend'
   | 'tx_queue'
-  | 'tx_relay'
+  | 'private_tx'
   | 'leaves_store'
   | 'signing_backend'
   | 'signature_bridge'
@@ -533,7 +533,7 @@ export type SubstrateVAnchorProofData = {
 export interface FeaturesConfig {
   dataQuery?: boolean;
   governanceRelay?: boolean;
-  txRelay?: boolean;
+  privateTxRelay?: boolean;
 }
 export interface WithdrawConfig {
   withdrawFeePercentage: number;

@@ -34,9 +34,9 @@ pub enum Kind {
     /// Relayer Transaction Queue state on a specific chain/node.
     #[display(fmt = "tx_queue")]
     TxQueue,
-    /// Relayer transaction state on a specific chain/node.
-    #[display(fmt = "tx_relay")]
-    TxRelay,
+    /// Relayer Private transaction state on a specific chain/node.
+    #[display(fmt = "private_tx")]
+    PrivateTx,
     /// Relayer Leaves Store state on a specific chain/node.
     #[display(fmt = "leaves_store")]
     LeavesStore,

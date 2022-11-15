@@ -48,7 +48,7 @@ async fn main() -> anyhow::Result<()> {
         port: 9955,
         features: FeaturesConfig {
             data_query: true,
-            tx_relay: true,
+            private_tx_relay: true,
             governance_relay: true,
         },
         evm: HashMap::from([(

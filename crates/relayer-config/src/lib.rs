@@ -109,7 +109,7 @@ pub struct WebbRelayerConfig {
     /// Features:
     /// 1. Data quering for leafs
     /// 2. Governance relaying
-    /// 3. Transaction relaying
+    /// 3. Private transaction relaying
     #[serde(default)]
     pub features: FeaturesConfig,
 }
@@ -121,12 +121,12 @@ impl WebbRelayerConfig {
     pub fn verify(&self) -> webb_relayer_utils::Result<()> {
         // The first check is to make sure that the private key is there when needed.
         // to say more on the above check, we **must** have a private key in the following conditions:
-        // 1. We are running the relayer as a transaction relayer.
+        // 1. We are running the relayer as a private transaction relayer.
         // 2. we are running the relayer as a governance system.
         //
         // However, if we are running the relayer as only a data serving relayer, we don't need a private key.
         let check_features =
-            self.features.governance_relay || self.features.tx_relay;
+            self.features.governance_relay || self.features.private_tx_relay;
         let check_evm = check_features
             && self
                 .evm
@@ -165,15 +165,15 @@ pub struct FeaturesConfig {
     pub data_query: bool,
     /// Enable governance relaying
     pub governance_relay: bool,
-    /// Enable tx relaying
-    pub tx_relay: bool,
+    /// Enable private tx relaying
+    pub private_tx_relay: bool,
 }
 impl Default for FeaturesConfig {
     fn default() -> Self {
         Self {
             data_query: true,
             governance_relay: true,
-            tx_relay: true,
+            private_tx_relay: true,
         }
     }
 }

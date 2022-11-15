@@ -31,7 +31,7 @@ In the Webb Protocol, the relayer plays a variety of roles. This repo contains c
 
 The relayer system is composed of three main components. Each of these components should be thought of as entirely separate because they could be handled by different entities entirely.
 
-1. Transaction relaying (of user bridge transactions like Tornado Cash’s relayer)
+1. Private transaction relaying (of user bridge transactions like Tornado Cash’s relayer)
 2. Data querying (for zero-knowledge proof generation)
 3. Event listening, proposing, and signature relaying (of DKG proposals where the relayer acts like an oracle)
 
@@ -166,7 +166,7 @@ webb-relayer -vv -c ./config
 | `address`                  | The address of this contract on this chain.                                                | Required    |
 | `deployed-at`              | The block number where this contract got deployed at.                                      | Required    |
 | `events-watcher`           | Control the events watcher for this contract.                                              | Optional    |
-| `withdraw-config`          | Config the fees and gas limits of your transaction relayer.                        | Optional    |
+| `withdraw-config`          | Config the fees and gas limits of your private transaction relayer.                        | Optional    |
 | `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`) | Optional    |
 
 ### Docker 🐳

@@ -47,7 +47,7 @@ pub async fn handle_evm_tx<M, D>(
             tracing::event!(
                 target: webb_relayer_utils::probe::TARGET,
                 tracing::Level::DEBUG,
-                kind = %webb_relayer_utils::probe::Kind::TxRelay,
+                kind = %webb_relayer_utils::probe::Kind::PrivateTx,
                 ty = "EVM",
                 chain_id = %chain_id,
                 pending = true,
@@ -63,7 +63,7 @@ pub async fn handle_evm_tx<M, D>(
             tracing::event!(
                 target: webb_relayer_utils::probe::TARGET,
                 tracing::Level::DEBUG,
-                kind = %webb_relayer_utils::probe::Kind::TxRelay,
+                kind = %webb_relayer_utils::probe::Kind::PrivateTx,
                 ty = "EVM",
                 chain_id = %chain_id,
                 errored = true,
@@ -79,7 +79,7 @@ pub async fn handle_evm_tx<M, D>(
             tracing::event!(
                 target: webb_relayer_utils::probe::TARGET,
                 tracing::Level::DEBUG,
-                kind = %webb_relayer_utils::probe::Kind::TxRelay,
+                kind = %webb_relayer_utils::probe::Kind::PrivateTx,
                 ty = "EVM",
                 chain_id = %chain_id,
                 finalized = true,
@@ -102,7 +102,7 @@ pub async fn handle_evm_tx<M, D>(
             tracing::event!(
                 target: webb_relayer_utils::probe::TARGET,
                 tracing::Level::DEBUG,
-                kind = %webb_relayer_utils::probe::Kind::TxRelay,
+                kind = %webb_relayer_utils::probe::Kind::PrivateTx,
                 ty = "EVM",
                 chain_id = %chain_id,
                 errored = true,

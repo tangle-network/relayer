@@ -33,7 +33,7 @@ import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 
 // const assert = require('assert');
-describe('Vanchor Tx relaying with mocked governor', function () {
+describe('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -199,7 +199,7 @@ describe('Vanchor Tx relaying with mocked governor', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should relay transaction', async () => {
+  it('should relay private transaction', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
 
@@ -270,9 +270,9 @@ describe('Vanchor Tx relaying with mocked governor', function () {
       output.publicInputs,
       output.extData
     );
-    // now we wait for relayer to relay the transaction.
+    // now we wait for relayer to execute private transaction.
     await webbRelayer.waitForEvent({
-      kind: 'tx_relay',
+      kind: 'private_tx',
       event: {
         ty: 'EVM',
         chain_id: localChain2.underlyingChainId.toString(),
@@ -362,7 +362,7 @@ describe('Vanchor Tx relaying with mocked governor', function () {
         output.extData
       );
     } catch (e) {
-      // should fail since relay transaction since invalid merkle root is provided.
+      // should fail since private transaction since invalid merkle root is provided.
       expect(JSON.stringify(e)).to.contain('Cannot find your merkle root');
     }
   });
@@ -447,7 +447,7 @@ describe('Vanchor Tx relaying with mocked governor', function () {
         output.extData
       );
     } catch (e) {
-      // should fail to relay transaction since invalid proof is provided
+      // should fail since private transaction since invalid proof is provided
       expect(JSON.stringify(e)).to.contain(
         'Exception while processing transaction'
       );
@@ -537,7 +537,7 @@ describe('Vanchor Tx relaying with mocked governor', function () {
         output.extData
       );
     } catch (e) {
-      // should fail to relay transaction since invalid proof is provided
+      // should fail since private transaction since invalid proof is provided
       expect(JSON.stringify(e)).to.contain(
         'Exception while processing transaction'
       );
