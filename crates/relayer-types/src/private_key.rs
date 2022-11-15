@@ -115,8 +115,3 @@ impl<'de> Deserialize<'de> for PrivateKey {
     }
 }
 
-// #[test]
-// fn test_private_key(){
-//     let secret_key: PrivateKey = "file:../../../sample_file.txt";
-//     <PrivateKey as Deserialize>::deserialize(secret_key)
-// }
