@@ -657,7 +657,7 @@ pub async fn handle_cmd(
     stream: CommandStream,
 ) {
     use CommandResponse::*;
-    if ctx.config.features.private_tx_relay {
+    if ctx.config.features.tx_relay {
         match cmd {
             Command::Substrate(sub) => handle_substrate(ctx, sub, stream).await,
             Command::Evm(evm) => handle_evm(ctx, evm, stream).await,
@@ -666,10 +666,11 @@ pub async fn handle_cmd(
             }
         }
     } else {
-        tracing::error!("Private transaction relaying is not configured..!");
+        tracing::error!("Transaction relaying is not enabled for the relayer.");
         let _ = stream
             .send(Error(
-                "Private transaction relaying is not enabled.".to_string(),
+                "Transaction relaying is not enabled for the relayer."
+                    .to_string(),
             ))
             .await;
     }

@@ -289,12 +289,12 @@ pub fn postloading_process(
                     }
                 }
             }
-            // validate config for private transaction relaying
-            if config.features.private_tx_relay {
+            // validate config for transaction relaying
+            if config.features.tx_relay {
                 // check if withdraw fee is configured
                 if anchor.withdraw_config.is_none() {
                     tracing::warn!(
-                        "!!WARNING!!: In order to enable private transaction relaying,
+                        "!!WARNING!!: In order to enable transaction relaying,
                         withdraw-config should also be configured for ({})",
                         anchor.common.address
                     );
@@ -383,12 +383,12 @@ pub fn postloading_process(
                     }
                 }
             }
-            // validate config for private transaction relaying
-            if config.features.private_tx_relay {
+            // validate config for transaction relaying
+            if config.features.tx_relay {
                 // check if withdraw fee is configured
                 if anchor.withdraw_config.is_none() {
                     tracing::warn!(
-                        "!!WARNING!!: In order to enable private transaction relaying,
+                        "!!WARNING!!: In order to enable transaction relaying,
                         withdraw-config should also be configured for ({})",
                         anchor.common.address
                     );

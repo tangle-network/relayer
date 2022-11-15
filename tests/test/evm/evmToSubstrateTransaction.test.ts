@@ -66,7 +66,7 @@ import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import { VAnchor } from '@webb-tools/anchors';
 const { ecdsaSign } = pkg;
 
-describe('Cross chain transaction <<>> Mocked Backend', function () {
+describe.only('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalProtocolSubstrate;
@@ -77,6 +77,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
 
   // Governer key used for signing proposals.
   const GOV = u8aToHex(ethers.utils.randomBytes(32));
+  console.log("GOV KEY")
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
   const governorWallet = new ethers.Wallet(GOV);
   // slice 0x04 from public key
@@ -227,7 +228,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });

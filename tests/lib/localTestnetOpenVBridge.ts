@@ -391,7 +391,7 @@ export class LocalChain {
       features: {
         'data-query': opts.features?.dataQuery ?? true,
         'governance-relay': opts.features?.governanceRelay ?? true,
-        'private-tx-relay': opts.features?.privateTxRelay ?? true,
+        'tx-relay': opts.features?.txRelay ?? true,
       },
     };
     const configString = JSON.stringify(fullConfigFile, null, 2);

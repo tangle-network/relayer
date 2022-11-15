@@ -31,11 +31,11 @@
 //! The relayer system is composed of three main components. Each of these components should be thought of as entirely
 //! separate because they could be handled by different entities entirely.
 //!
-//!   1. Private transaction relaying (of user bridge transactions like Tornado Cash’s relayer)
+//!   1. Transaction relaying (of user bridge transactions like Tornado Cash’s relayer)
 //!   2. Data querying (for zero-knowledge proof generation)
 //!   3. Data proposing and signature relaying (of DKG proposals)
 //!
-//! #### Private Transaction Relaying
+//! #### Transaction Relaying
 //!
 //! The relayer allows for submitting proofs for privacy-preserving transactions against the Mixer, Anchor and
 //! VAnchor protocols. The users generate zero-knowledge proof data, format a proper payload, and submit

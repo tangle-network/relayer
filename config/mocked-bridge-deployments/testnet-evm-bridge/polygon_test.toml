@@ -48,7 +48,7 @@ deployed-at = 27776591
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
 events-watcher = { enabled = true, polling-interval = 15000 }
-# Configuration related to withdraw (for private transaction relaying)
+# Configuration related to withdraw (for transaction relaying)
 #    - withdraw-gasLimit: Value which specifies the maximum amount of gas which will be used when
 #                         submitting a withdraw transaction
 #    - withdraw-fee-percentage: Value which specifies the fees that this relayer will collect upon

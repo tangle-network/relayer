@@ -52,7 +52,7 @@ import {
   generateVAnchorNote,
 } from '../../lib/utils.js';
 
-describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
+describe('Substrate VAnchor Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -117,7 +117,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should withdraw using private transaction ', async () => {
+  it('should withdraw by relaying transaction ', async () => {
     const api = await aliceNode.api();
     // 1. Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
@@ -151,7 +151,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       },
     });
 
-    // 3. Now we withdraw it on bob's account using private transaction.
+    // 3. Now we withdraw it on bob's account using relayer to relay transaction.
     const account = createAccount('//Bob');
     // Bob's balance after withdrawal
     const bobBalanceBefore = await api.query.system.account(account.address);
@@ -164,7 +164,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       treeId,
       api
     );
-    // Now we construct payload for substrate private transaction.
+    // Now we construct payload for substrate relay transaction.
     // Convert [u8;4] to u32 asset Id
     const token = new DataView(vanchorData.extData.token.buffer, 0);
     let substrateExtData: SubstrateVAnchorExtData = {
@@ -195,7 +195,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ),
     };
 
-    // now we withdraw using private transaction
+    // now we withdraw using relayer to relay the transaction.
     await webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
@@ -203,9 +203,9 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       substrateProofData
     );
 
-    // now we wait for relayer to execute private transaction.
+    // now we wait for relayer to relay transaction.
     await webbRelayer.waitForEvent({
-      kind: 'private_tx',
+      kind: 'tx_relay',
       event: {
         ty: 'SUBSTRATE',
         chain_id: substrateChainId.toString(),

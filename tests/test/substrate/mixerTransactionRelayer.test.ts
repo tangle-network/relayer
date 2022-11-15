@@ -110,7 +110,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     });
     // now we wait for relayer to execute transaction.
     await webbRelayer.waitForEvent({
-      kind: 'private_tx',
+      kind: 'tx_relay',
       event: {
         ty: 'SUBSTRATE',
         chain_id: chainId.toString(),
