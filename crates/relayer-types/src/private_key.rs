@@ -89,7 +89,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                             Err(e) => Err(serde::de::Error::custom(format!("{e}\n expected a 66 chars string (including the 0x prefix) but found {} char",  val.len())))
                         }
                     } else {
-                        // read mnemonic word list
+                        // if secret file does not start with '0x' and has 12 or 24 words in it
                         let wallet = MnemonicBuilder::<English>::default()
                             .phrase(val.as_str())
                             .build()
@@ -105,7 +105,18 @@ impl<'de> Deserialize<'de> for PrivateKey {
                 } else if value.starts_with('>') {
                     todo!("Implement command execution to extract the private key")
                 } else {
-                    todo!("Parse the string as mnemonic seed.")
+                    // if it doesn't contains special characters and has 12 or 24 words in it
+                    let wallet = MnemonicBuilder::<English>::default()
+                        .phrase(value)
+                        .build()
+                        .map_err(|e| {
+                            serde::de::Error::custom(format!(
+                                "{e}\n expected valid mnemonic word list",
+                            ))
+                        })?;
+                    let private_key: [u8; 32] =
+                        wallet.signer().to_bytes().into();
+                    Ok(Secret::from(&private_key))
                 }
             }
         }
