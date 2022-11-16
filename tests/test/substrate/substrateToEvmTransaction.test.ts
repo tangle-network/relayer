@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-// This is Substrate VAnchor Transaction Relayer Tests.
+// This is substrate to evm cross transaction tests using relayer.
 // In this test we will deposit on substrate vanchor system
 // and withdraw through evm vanchor system.
 
