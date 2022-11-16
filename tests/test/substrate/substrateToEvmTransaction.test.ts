@@ -15,7 +15,8 @@
  *
  */
 // This is Substrate VAnchor Transaction Relayer Tests.
-// In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
+// In this test we will deposit on substrate vanchor system
+// and withdraw through evm vanchor system.
 
 import '@webb-tools/protocol-substrate-types';
 import getPort, { portNumbers } from 'get-port';
