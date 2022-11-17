@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use ethereum_types::Secret;
 use serde::Deserialize;
+use webb::evm::ethers::signers::{coins_bip39::English, MnemonicBuilder};
 
 /// PrivateKey represents a private key.
 #[derive(Clone)]
@@ -68,11 +69,54 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     let maybe_hex = Secret::from_str(&val);
                     match maybe_hex {
                         Ok(val) => Ok(val),
-                        Err(e) => Err(serde::de::Error::custom(format!("{e}\n expected a 66 chars string (including the 0x prefix) but found {} char",  val.len()))),                    }
+                        Err(e) => Err(serde::de::Error::custom(format!("{e}\n expected a 66 chars string (including the 0x prefix) but found {} char",  val.len())))
+                    }
+                } else if value.starts_with("file:") {
+                    // Read secrets from the file path
+                    let file_path =
+                        value.strip_prefix("file:").unwrap_or(value);
+                    let val =
+                        std::fs::read_to_string(file_path).map_err(|e| {
+                            serde::de::Error::custom(format!(
+                                "error while reading file path {} : {}",
+                                file_path, e
+                            ))
+                        })?;
+                    if val.starts_with("0x") {
+                        let maybe_hex = Secret::from_str(&val);
+                        match maybe_hex {
+                            Ok(val) => Ok(val),
+                            Err(e) => Err(serde::de::Error::custom(format!("{e}\n expected a 66 chars string (including the 0x prefix) but found {} char",  val.len())))
+                        }
+                    } else {
+                        // if secret file does not start with '0x' and has 12 or 24 words in it
+                        let wallet = MnemonicBuilder::<English>::default()
+                            .phrase(val.as_str())
+                            .build()
+                            .map_err(|e| {
+                                serde::de::Error::custom(format!(
+                                    "{e}\n expected valid mnemonic word list",
+                                ))
+                            })?;
+                        let private_key: [u8; 32] =
+                            wallet.signer().to_bytes().into();
+                        Ok(Secret::from(&private_key))
+                    }
                 } else if value.starts_with('>') {
                     todo!("Implement command execution to extract the private key")
                 } else {
-                    todo!("Parse the string as mnemonic seed.")
+                    // if it doesn't contains special characters and has 12 or 24 words in it
+                    let wallet = MnemonicBuilder::<English>::default()
+                        .phrase(value)
+                        .build()
+                        .map_err(|e| {
+                            serde::de::Error::custom(format!(
+                                "{e}\n expected valid mnemonic word list",
+                            ))
+                        })?;
+                    let private_key: [u8; 32] =
+                        wallet.signer().to_bytes().into();
+                    Ok(Secret::from(&private_key))
                 }
             }
         }

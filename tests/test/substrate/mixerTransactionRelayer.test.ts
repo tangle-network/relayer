@@ -108,6 +108,15 @@ describe('Substrate Mixer Transaction Relayer', function () {
       recipient: withdrawalProof.recipient,
       relayer: withdrawalProof.relayer,
     });
+    // now we wait for relayer to execute transaction.
+    await webbRelayer.waitForEvent({
+      kind: 'private_tx',
+      event: {
+        ty: 'SUBSTRATE',
+        chain_id: chainId.toString(),
+        finalized: true,
+      },
+    });
     expect(txHash).to.be.not.null;
 
     // get the balance after withdrawal is done and see if it increases
