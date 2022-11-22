@@ -10,7 +10,7 @@ backoff = { version = "0.4.0", features = ["tokio"] }
 serde_path_to_error = "0.1.5"
 thiserror = "^1"
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
-webb = { version = "0.5.7", default-features = false }
+webb = { version = "0.5.10", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 glob = "^0.3"

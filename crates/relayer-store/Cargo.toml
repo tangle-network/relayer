@@ -13,7 +13,7 @@ sled = { version = "^0.34" }
 serde = { version = "^1", default-features = false, features = ["derive"] }
 serde_json = { version = "^1", default-features = false }
 hex = { version = "0.4", default-features = false }
-webb = { version = "0.5.7", default-features = false }
+webb = { version = "0.5.10", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
