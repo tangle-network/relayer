@@ -43,16 +43,21 @@ pub struct EvmChainConfig {
     ///    private key.
     ///    Example: 0x8917174396171783496173419137618235192359106130478137647163400318
     ///
-    /// 2. if it starts with '$' then it would be considered as an Enviroment variable
+    /// 2. if it starts with '$' then it would be considered as an Environment variable
     ///    of a hex-encoded private key.
     ///   Example: $HARMONY_PRIVATE_KEY
     ///
-    /// 3. if it starts with '> ' then it would be considered as a command that
+    /// 3. if it starts with 'file:' then it would be considered as secrets which will
+    ///    be fetched from given file path
+    ///    Example: file:/Users/Bob/relayer/secrets.txt
+    ///    File should include (64 bytes) hex encoded private key or valid mnemonic word list.
+    ///    
+    /// 4. if it starts with '> ' then it would be considered as a command that
     ///   the relayer would execute and the output of this command would be the
     ///   hex encoded private key.
     ///   Example: > pass harmony-privatekey
     ///
-    /// 4. if it doesn't contains special characters and has 12 or 24 words in it
+    /// 5. if it doesn't contains special characters and has 12 or 24 words in it
     ///   then we should process it as a mnemonic string: 'word two three four ...'
     #[serde(skip_serializing)]
     pub private_key: Option<PrivateKey>,

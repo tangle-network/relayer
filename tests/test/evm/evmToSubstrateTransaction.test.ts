@@ -14,8 +14,9 @@
  * limitations under the License.
  *
  */
-// This is Substrate VAnchor Transaction Relayer Tests.
-// In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
+// This is evm to substrate cross transaction relayer tests.
+// In this test we will deposit on evm vanchor system
+// and withdraw through substrate vanchor system.
 
 import '@webb-tools/protocol-substrate-types';
 import getPort, { portNumbers } from 'get-port';
@@ -75,10 +76,14 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   let wallet1: ethers.Wallet;
   let signatureVBridge: VBridge.VBridge;
 
-  // Governer key used for signing proposals.
-  const GOV = u8aToHex(ethers.utils.randomBytes(32));
+  // Mnemonic seed phrase to created governor key used for signing proposals.
+  const filePath = path.join(path.resolve("../"), "sample_seed.txt");
+  const mnemonic = fs.readFileSync(filePath);
+  const governorWallet  = ethers.Wallet.fromMnemonic(mnemonic.toString());
+  const GOV = governorWallet.privateKey;
+  // File path to secrets containing mnemonic seed phrase
+  const secretFile = `file:${filePath}`;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
-  const governorWallet = new ethers.Wallet(GOV);
   // slice 0x04 from public key
   const uncompressedKey = governorWallet
     ._signingKey()
@@ -194,7 +199,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     // save the evm chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: GOV },
+      proposalSigningBackend: { type: 'Mocked', privateKey: secretFile },
       linkedAnchors: [
         { type: 'Raw', resourceId: substrateResourceId.toString() },
       ],
