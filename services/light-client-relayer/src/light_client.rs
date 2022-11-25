@@ -4,15 +4,18 @@ use std::sync::Arc;
 use std::time::Duration;
 use webb_relayer_config::block_poller::BlockPollerConfig;
 
-use webb::{evm::ethers::{
-    providers::{self, Middleware},
-    types::{Block, TxHash},
-}, substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId};
+use webb::{
+    evm::ethers::{
+        providers::{self, Middleware},
+        types::{Block, TxHash},
+    },
+    substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId,
+};
 
 use webb_relayer_store::HistoryStore;
 use webb_relayer_utils::retry;
 
-use crate::{substrate_client, eth2substrate::Eth2SubstrateRelay};
+use crate::{eth2substrate::Eth2SubstrateRelay, substrate_client};
 
 /// A trait that defines a handler for a specific set of event types.
 ///
@@ -64,7 +67,9 @@ pub trait LightClientHandlerWithRetry: LightClientHandler {
 impl<T> LightClientHandlerWithRetry for T where T: LightClientHandler + ?Sized {}
 
 pub type LightClientHandlerFor<W> = Box<
-    dyn LightClientHandler<Store = <W as LightClientPoller>::Store> + Send + Sync,
+    dyn LightClientHandler<Store = <W as LightClientPoller>::Store>
+        + Send
+        + Sync,
 >;
 
 /// A trait for watching block headers using a provider.
@@ -90,7 +95,8 @@ pub trait LightClientPoller {
         store: Arc<Self::Store>,
         listener_config: BlockPollerConfig,
     ) -> crate::Result<()> {
-        let eth2SubstrateRelayer = Eth2SubstrateRelay::new(client.clone(), store.clone());
+        let eth2SubstrateRelayer =
+            Eth2SubstrateRelay::new(client.clone(), store.clone());
         eth2SubstrateRelayer.run().await?;
         Ok(())
     }

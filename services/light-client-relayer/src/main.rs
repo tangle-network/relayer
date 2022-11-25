@@ -45,7 +45,10 @@ pub async fn ignite(
         );
 
         if let Some(poller_config) = &chain_config.block_poller {
-            tracing::debug!("Starting light client relay ({:#?})", poller_config,);
+            tracing::debug!(
+                "Starting light client relay ({:#?})",
+                poller_config,
+            );
             start_light_client_service(
                 ctx,
                 chain_id,

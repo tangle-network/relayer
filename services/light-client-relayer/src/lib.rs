@@ -1,12 +1,12 @@
 use std::sync::Arc;
 
-use crate::light_client::{LightClientPoller};
+use crate::light_client::LightClientPoller;
 use ethereum_types::U256;
 use webb_relayer::service::{Client, Store};
 use webb_relayer_config::block_poller::BlockPollerConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::SledStore;
-use webb_relayer_utils::{Result};
+use webb_relayer_utils::Result;
 
 mod light_client;
 mod substrate_client;
@@ -40,11 +40,8 @@ pub fn start_light_client_service(
         );
 
         let light_client_watcher = LightClientWatcher::default();
-        let light_client_watcher_task = light_client_watcher.run(
-            client,
-            store,
-            poller_config,
-        );
+        let light_client_watcher_task =
+            light_client_watcher.run(client, store, poller_config);
         tokio::select! {
             _ = light_client_watcher_task => {
                 tracing::warn!("Block watcher stopped unexpectedly for chain {}", chain_id);

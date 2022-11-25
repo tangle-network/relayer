@@ -928,7 +928,7 @@ dependencies = [
  "bitvec 1.0.1",
  "derive_more",
  "eth-types",
- "ethereum-types 0.13.1",
+ "ethereum-types 0.14.0",
  "hex",
  "merkle_proof 0.2.0",
  "parity-scale-codec",
@@ -1568,7 +1568,7 @@ dependencies = [
  "derive_more",
  "eth2_serde_utils 0.1.1",
  "eth2_ssz 0.4.1",
- "ethereum-types 0.13.1",
+ "ethereum-types 0.14.0",
  "hex",
  "parity-scale-codec",
  "rlp",
@@ -1724,10 +1724,8 @@ checksum = "11da94e443c60508eb62cf256243a64da87304c2802ac2528847f79d750007ef"
 dependencies = [
  "crunchy",
  "fixed-hash 0.7.0",
- "impl-codec",
  "impl-rlp",
  "impl-serde 0.3.2",
- "scale-info",
  "tiny-keccak",
 ]
 
@@ -1754,11 +1752,9 @@ checksum = "b2827b94c556145446fcce834ca86b7abf0c39a805883fe20e72c5bfdb5a0dc6"
 dependencies = [
  "ethbloom 0.12.1",
  "fixed-hash 0.7.0",
- "impl-codec",
  "impl-rlp",
  "impl-serde 0.3.2",
  "primitive-types 0.11.1",
- "scale-info",
  "uint",
 ]
 
@@ -4177,7 +4173,6 @@ dependencies = [
  "impl-codec",
  "impl-rlp",
  "impl-serde 0.3.2",
- "scale-info",
  "uint",
 ]
 
@@ -6979,6 +6974,7 @@ dependencies = [
  "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/lighthouse.git?branch=develop)",
  "ethereum-types 0.13.1",
  "finality-update-verify",
+ "funty",
  "futures",
  "hex",
  "lazy_static",
