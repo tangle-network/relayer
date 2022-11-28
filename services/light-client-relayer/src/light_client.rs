@@ -15,8 +15,6 @@ use webb::{
 use webb_relayer_store::HistoryStore;
 use webb_relayer_utils::retry;
 
-use crate::{eth2substrate::Eth2SubstrateRelay, substrate_client};
-
 /// A trait that defines a handler for a specific set of event types.
 ///
 /// The handlers are implemented separately from the watchers, so that we can have
@@ -95,9 +93,9 @@ pub trait LightClientPoller {
         store: Arc<Self::Store>,
         listener_config: BlockPollerConfig,
     ) -> crate::Result<()> {
-        let eth2SubstrateRelayer =
-            Eth2SubstrateRelay::new(client.clone(), store.clone());
-        eth2SubstrateRelayer.run().await?;
+        // let eth2SubstrateRelayer =
+        //     Eth2SubstrateRelay::new(client.clone(), store.clone());
+        // eth2SubstrateRelayer.run().await?;
         Ok(())
     }
 }

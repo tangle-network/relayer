@@ -15,7 +15,6 @@
 use std::sync::Arc;
 use webb::substrate::subxt::ext::sp_core::hashing::keccak_256;
 use webb::substrate::subxt::{self, OnlineClient, dynamic::Value};
-use webb::substrate::protocol_substrate_runtime::api::runtime_types::webb_standalone_runtime::Call;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
 use webb_event_watcher_traits::substrate::{BlockNumberOf, SubstrateBridgeWatcher};
 use webb_event_watcher_traits::SubstrateEventWatcher;
@@ -27,7 +26,7 @@ use webb::substrate::{
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
-use webb::substrate::scale;
+
 use webb::substrate::scale::Encode;
 use webb_relayer_utils::metric;
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
@@ -184,10 +183,10 @@ where
         );
 
         // parse proposal call
-        let parsed_proposal_bytes =
+        let _parsed_proposal_bytes =
             parse_call_from_proposal_data(&proposal_data);
-        let _proposal_encoded_call: Call =
-            scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())?;
+        // let _proposal_encoded_call: Call =
+        //     scale::Decode::decode(&mut parsed_proposal_bytes.as_slice())?;
         let typed_chain_id = webb_proposals::TypedChainId::Substrate(chain_id);
 
         // Enqueue transaction call data in protocol-substrate transaction queue

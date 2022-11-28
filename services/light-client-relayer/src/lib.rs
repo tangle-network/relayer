@@ -9,7 +9,6 @@ use webb_relayer_store::SledStore;
 use webb_relayer_utils::Result;
 
 mod light_client;
-mod substrate_client;
 
 /// A struct for listening to blocks / block headers that implements
 /// the [`LightClientPoller`] trait.
