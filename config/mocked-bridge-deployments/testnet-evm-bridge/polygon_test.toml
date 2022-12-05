@@ -62,10 +62,9 @@ linked-anchors = [
   { type = "Evm", chain = "goerli", chain-id = 5, address = "0xdc9f140987073619d64898be00143dd312cdc71a" },
   { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0xa5672fdfe6700452a828c514a9d5b3b4dc5230bf" },
   { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0xc3393b00a5c6a7250a5ee7ef99f0a06ff29bc18f" },
-  { type = "Evm", chain = "arbitrumtestnet", chain-id = 421613, address = "0x12f2c4a1469b035e4459539e38ae68bc4dd5ba07" },
   { type = "Evm", chain = "moonbase", chain-id = 1287, address = "0x1349f444a5cd98c5863f786496ca53f3f651f7c7"}
 ]
-proposal-signing-backend = { type = "Mocked", private-key = "$ARBITRUM_TESTNET_PRIVATE_KEY" }
+proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }
 
 [[evm.polygontestnet.contracts]]
 contract = "SignatureBridge"
