@@ -12,10 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
+
 use prometheus::core::{AtomicF64, GenericCounter, GenericGauge};
 use prometheus::{register_counter, register_gauge, Encoder, TextEncoder};
+use webb_proposals::ResourceId;
 
-/// A struct definition for collecting metrics in the relayer
+/// A struct for collecting metrics for given resource.
+#[derive(Debug, Clone)]
+pub struct ResourceMetric {
+    /// Total gas spent on Resource.
+    pub total_gas_spent: GenericCounter<AtomicF64>,
+    /// Total fees earned on Resource.
+    pub total_fee_earned: GenericCounter<AtomicF64>,
+    /// Account Balance
+    pub account_balance: GenericGauge<AtomicF64>,
+}
+
+/// A struct definition for collecting metrics in the relayer.
 #[derive(Debug, Clone)]
 pub struct Metrics {
     /// Bridge watcher back off metric
@@ -46,6 +60,8 @@ pub struct Metrics {
     pub gas_spent: GenericCounter<AtomicF64>,
     /// Total amount of data stored metric
     pub total_amount_of_data_stored: GenericGauge<AtomicF64>,
+    /// Resource metric
+    pub resource_metric_map: HashMap<ResourceId, ResourceMetric>,
 }
 
 impl Metrics {
@@ -120,6 +136,9 @@ impl Metrics {
             "The Total number of data stored",
         );
 
+        let resource_metric_map: HashMap<ResourceId, ResourceMetric> =
+            HashMap::new();
+
         Self {
             bridge_watcher_back_off: bridge_watcher_back_off_counter.unwrap(),
             total_active_relayer: total_active_relayer_counter.unwrap(),
@@ -142,6 +161,7 @@ impl Metrics {
             gas_spent: gas_spent_counter.unwrap(),
             total_amount_of_data_stored: total_amount_of_data_stored_counter
                 .unwrap(),
+            resource_metric_map,
         }
     }
 
@@ -155,6 +175,39 @@ impl Metrics {
         encoder.encode(&metric_families, &mut buffer).unwrap();
 
         String::from_utf8(buffer.clone()).unwrap()
+    }
+
+    /// Registers new counters to track metric for individual resources.
+    pub fn register_resource_id_counters(mut self, resource_id: ResourceId) {
+        let resource_hex = hex::encode(resource_id.to_bytes().as_ref());
+        // Total gas fee spent on particular resource.
+        let total_gas_spent_counter = register_counter!(
+            format!("{}_total_gas_spent", resource_hex),
+            format!(
+                "The total number of gas spent on resource : {}",
+                resource_hex
+            )
+        );
+        // Total fee earned on particular resource.
+        let total_fee_earned_counter = register_counter!(
+            format!("{}_total_fees_earned", resource_hex),
+            format!(
+                "The total number of fees earned on resource : {}",
+                resource_hex
+            )
+        );
+        // Account Balance
+        let account_balance_counter = register_gauge!(
+            format!("{}_account_balance", resource_hex),
+            format!("Total account balance : {}", resource_hex)
+        );
+        let resource_metric = ResourceMetric {
+            total_gas_spent: total_gas_spent_counter.unwrap(),
+            total_fee_earned: total_fee_earned_counter.unwrap(),
+            account_balance: account_balance_counter.unwrap(),
+        };
+        self.resource_metric_map
+            .insert(resource_id, resource_metric);
     }
 }
 

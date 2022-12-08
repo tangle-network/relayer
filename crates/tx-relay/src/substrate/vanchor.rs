@@ -8,6 +8,9 @@ use webb::substrate::{
     },
     subxt::{tx::PairSigner, SubstrateConfig},
 };
+use webb_proposals::{
+    ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
+};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::SubstrateCommand;
 
@@ -108,4 +111,24 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     };
 
     handle_substrate_tx(event_stream, stream, cmd.chain_id).await;
+    // update metric for total fee earned for given resource
+    let pallet_index = {
+        let metadata = client.metadata();
+        let pallet = metadata.pallet("VAnchorHandlerBn254").unwrap();
+        pallet.index()
+    };
+    let target = SubstrateTargetSystem::builder()
+        .pallet_index(pallet_index)
+        .tree_id(cmd.id)
+        .build();
+    let target_system = TargetSystem::Substrate(target);
+    let typed_chain_id = TypedChainId::Substrate(cmd.chain_id as u32);
+    let resource_id = ResourceId::new(target_system, typed_chain_id);
+    let resource_metric =
+        ctx.metrics.resource_metric_map.get(&resource_id).unwrap();
+    resource_metric
+        .total_gas_spent
+        .inc_by(cmd.ext_data.fee as f64);
+    // update metric for total fee earned by relayer
+    ctx.metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
 }

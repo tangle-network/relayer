@@ -8,6 +8,7 @@ use webb::evm::{
     },
     ethers::prelude::{Signer, SignerMiddleware},
 };
+use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
 use webb_relayer_tx_relay_utils::calculate_fee;
@@ -188,9 +189,21 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let call = contract.transact(proof, ext_data);
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
 
-    // metric for total fee
+    handle_evm_tx(call, stream, cmd.chain_id).await;
+
+    // update metric for total fee earned for given resource
+    let target_system = TargetSystem::new_contract_address(
+        contract_config.common.address.to_fixed_bytes(),
+    );
+    let typed_chain_id = TypedChainId::Evm(chain.chain_id);
+    let resource_id = ResourceId::new(target_system, typed_chain_id);
+    let resource_metric =
+        ctx.metrics.resource_metric_map.get(&resource_id).unwrap();
+    resource_metric
+        .total_gas_spent
+        .inc_by(cmd.ext_data.fee.as_u64() as f64);
+    // update metric for total fee earned by relayer
     ctx.metrics
         .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u64() as f64);
-    handle_evm_tx(call, stream, cmd.chain_id).await;
 }
