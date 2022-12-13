@@ -1,0 +1,79 @@
+# Block which represents properties for a network
+[evm.optimismtestnet]
+name = "optimismtestnet"
+# Http(s) Endpoint for quick Req/Res
+http-endpoint = "$OPTIMISM_TESTNET_HTTPS_URL"
+# Websocket Endpoint for long living connections
+ws-endpoint = "$OPTIMISM_TESTNET_WSS_URL"
+# Block Explorer
+# Optinal, and used for generating clickable links
+# for transactions that happen on this chain.
+explorer = "https://blockscout.com/optimism/goerli/"
+# chain specific id from evm opcode
+chain-id = 420
+
+block-confirmations = 2
+# The Private Key of this account on this network
+# the format is more dynamic here:
+# 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
+#    private key.
+#    Example: 0x8917174396171783496173419137618235192359106130478137647163400318
+#
+# 2. if it starts with '$' then it would be considered as an Enviroment variable
+#    of a hex-encoded private key.
+#    Example: $OPTIMISM_TESTNET_PRIVATE_KEY
+#
+# 3. if it starts with '> ' then it would be considered as a command that
+#    the relayer would execute and the output of this command would be the
+#    hex encoded private key.
+#    Example: > ./getKey.sh optimismtestnet-privatekey
+#
+# 4. if it doesn't contains special characters and has 12 or 24 words in it
+#    then we should process it as a mnemonic string: 'word two three four ...'
+private-key = "$OPTIMISM_TESTNET_PRIVATE_KEY"
+# Value to indicate that the relayer should enable services for this chain
+enabled = true
+
+# Block which represents the configuration for a supported contract on the network
+[[evm.optimismtestnet.contracts]]
+# The contract can be one of these values
+# - VAnchor (Variable Anchor)
+# - SignatureBridge
+contract = "VAnchor"
+# The address of the contract
+address = "0x26a37ce74e5214dd661070601db14a6a8a2fadd9"
+# The deployed block number of the contract. When a relayer does not have information for
+# this contract in its store, it will start to sync and query for relevant historical data
+# starting at this block number
+deployed-at = 3091427
+# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
+# and the polling interval specifies the period of time (in ms) that the events-watcher thread
+# will wait before issuing another query for new events.
+events-watcher = { enabled = true, polling-interval = 15000 }
+# Configuration related to withdraw (for private transaction relaying)
+#    - withdraw-gasLimit: Value which specifies the maximum amount of gas which will be used when
+#                         submitting a withdraw transaction
+#    - withdraw-fee-percentage: Value which specifies the fees that this relayer will collect upon
+#                               submitting a withdraw transaction
+withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
+# Entries for this anchor contract's connected edges.
+# These fields are used to determine the generation of AnchorUpdate proposals
+linked-anchors = [
+  { type = "Evm", chain = "goerli", chain-id = 5, address = "0xbd7e08ef54dfb43e9a86eb12a3ecab7564dee931" },
+  { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74" },
+  { type = "Evm", chain = "polygontestnet", chain-id = 80001, address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74" },
+  { type = "Evm", chain = "moonbase", chain-id = 1287, address = "0x75e452a3ce366575f75737438c0fdfe618853946"}
+]
+proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }
+
+[[evm.optimismtestnet.contracts]]
+contract = "SignatureBridge"
+address = "0xb34ec2c9546c6f4f9c1c818b8b66feca781a3073"
+# The deployed block number of the contract. When a relayer does not have information for
+# this contract in its store, it will start to sync and query for relevant historical data
+# starting at this block number
+deployed-at = 3091344
+# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
+# and the polling interval specifies the period of time (in ms) that the events-watcher thread
+# will wait before issuing another query for new events.
+events-watcher = { enabled = true, polling-interval = 45000, print-progress-interval = 0 }
