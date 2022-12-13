@@ -35,7 +35,7 @@ withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" 
 linked-anchors = [
   { type = "Evm", chain = "goerli", chain-id = 5, address = "0xbd7e08ef54dfb43e9a86eb12a3ecab7564dee931" },
   { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74" },
-  { type = "Evm", chain = "polygontestnet", chain-id = 80001, address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74" },
+  { type = "Evm", chain = "mumbai", chain-id = 80001, address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74" },
   { type = "Evm", chain = "moonbase", chain-id = 1287, address = "0x75e452a3ce366575f75737438c0fdfe618853946"}
 ]
 # proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }

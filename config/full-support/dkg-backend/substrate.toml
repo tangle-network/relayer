@@ -1,11 +1,14 @@
-    [substrate.tangle]
-    name="tangle"
-    enabled=true
-    http-endpoint = "https://tangle1.webb.tools"
-    ws-endpoint = "wss://tangle1.webb.tools"
-    runtime = "DKG"
-    suri = "//Alice//stash"
-    chain-id = "1080"
-    [[substrate.tangle.pallets]]
-    pallet = "DKGProposalHandler"
-    events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }
+[substrate.tangle]
+name = "tangle"
+enabled = true
+http-endpoint = "https://tangle1.webb.tools"
+ws-endpoint = "wss://tangle1.webb.tools"
+runtime = "DKG"
+suri = "$TANGLE_WEBB_RELAYER_SURI"
+chain-id = "1080"
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true, polling-interval = 12000, print-progress-interval = 60000 }
+[[substrate.tangle.pallets]]
+pallet = "DKGProposalHandler"
+events-watcher = { enabled = true, polling-interval = 12000, print-progress-interval = 60000 }

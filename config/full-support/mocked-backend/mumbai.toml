@@ -1,10 +1,10 @@
 # Block which represents properties for a network
-[evm.polygontestnet]
-name = "polygontestnet"
+[evm.mumbai]
+name = "mumbai"
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "$POLYGON_TESTNET_HTTPS_URL"
+http-endpoint = "$MUMBAI_TESTNET_HTTPS_URL"
 # Websocket Endpoint for long living connections
-ws-endpoint = "$POLYGON_TESTNET_WSS_URL"
+ws-endpoint = "$MUMBAI_TESTNET_WSS_URL"
 # Block Explorer
 # Optinal, and used for generating clickable links
 # for transactions that happen on this chain.
@@ -26,16 +26,16 @@ block-confirmations = 2
 # 3. if it starts with '> ' then it would be considered as a command that
 #    the relayer would execute and the output of this command would be the
 #    hex encoded private key.
-#    Example: > ./getKey.sh polygontestnet-privatekey
+#    Example: > ./getKey.sh mumbai-privatekey
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "$POLYGON_TESTNET_PRIVATE_KEY"
+private-key = "$MUMBAI_TESTNET_PRIVATE_KEY"
 # Value to indicate that the relayer should enable services for this chain
 enabled = true
 
 # Block which represents the configuration for a supported contract on the network
-[[evm.polygontestnet.contracts]]
+[[evm.mumbai.contracts]]
 # The contract can be one of these values
 # - VAnchor (Variable Anchor)
 # - SignatureBridge
@@ -66,7 +66,7 @@ linked-anchors = [
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }
 
-[[evm.polygontestnet.contracts]]
+[[evm.mumbai.contracts]]
 contract = "SignatureBridge"
 address = "0x5aaf73ac093fbc429c308e101b73b8b85649dffb"
 # The deployed block number of the contract. When a relayer does not have information for
