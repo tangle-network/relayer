@@ -2,12 +2,44 @@ use serde::{Deserialize, Serialize};
 
 /// An RPC URL Wrapper around [`url::Url`] to support the `serde` deserialization
 /// from environment variables.
-#[derive(derive_more::Display, Clone, Serialize)]
+#[derive(Clone, Serialize)]
 pub struct RpcUrl(url::Url);
+
+impl RpcUrl {
+    /// Returns the inner [`url::Url`].
+    pub fn as_url(&self) -> &url::Url {
+        &self.0
+    }
+}
+
+impl std::fmt::Display for RpcUrl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Display the inner url, not the wrapper.
+        // with all the parts, scheme, host, port, path, query, fragment.
+        let scheme = self.0.scheme();
+        write!(f, "{}", scheme)?;
+        if let Some(host) = self.0.host_str() {
+            write!(f, "://{}", host)?;
+        }
+        if let Some(port) = self.0.port_or_known_default() {
+            write!(f, ":{}", port)?;
+        }
+        write!(f, "{}", self.0.path())?;
+
+        if let Some(query) = self.0.query() {
+            write!(f, "?{}", query)?;
+        }
+        if let Some(fragment) = self.0.fragment() {
+            write!(f, "#{}", fragment)?;
+        }
+        Ok(())
+    }
+}
 
 impl std::fmt::Debug for RpcUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("RpcUrl").field(&self.0).finish()
+        write!(f, "{}", self)?;
+        Ok(())
     }
 }
 

@@ -1,0 +1,47 @@
+# Block which represents properties for a network
+[evm.moonbase]
+name = "moonbase"
+# Http(s) Endpoint for quick Req/Res
+http-endpoint = "$MOONBASE_HTTPS_URL"
+# Websocket Endpoint for long living connections
+ws-endpoint = "$MOONBASE_WSS_URL"
+
+explorer = "https://moonbase.moonscan.io/"
+# chain specific id from evm opcode
+chain-id = 1287
+
+block-confirmations = 2
+
+private-key = "$MOONBASE_PRIVATE_KEY"
+# Value to indicate that the relayer should enable services for this chain
+enabled = true
+
+# Block which represents the configuration for a supported contract on the network
+[[evm.moonbase.contracts]]
+
+contract = "VAnchor"
+# The address of the contract
+address = "0x75e452a3ce366575f75737438c0fdfe618853946"
+
+deployed-at = 3239271
+
+events-watcher = { enabled = true, polling-interval = 15000 }
+
+withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
+
+linked-anchors = [
+  { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74" },
+  { type = "Evm", chain = "mumbai", chain-id = 80001, address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74" },
+  { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0x26a37ce74e5214dd661070601db14a6a8a2fadd9" },
+  { type = "Evm", chain = "goerli", chain-id = 5, address = "0xbd7e08ef54dfb43e9a86eb12a3ecab7564dee931"}
+]
+# proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }
+proposal-signing-backend = { type = "DKGNode", node = "tangle" }
+
+[[evm.moonbase.contracts]]
+contract = "SignatureBridge"
+address = "0xff6aa4e35fd62e4ea9a2e9d11047327b9fd77e28"
+
+deployed-at = 3239229
+
+events-watcher = { enabled = true, polling-interval = 45000, print-progress-interval = 0 }

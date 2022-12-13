@@ -1,16 +1,16 @@
 # Block which represents properties for a network
-[evm.optimismtestnet]
-name = "optimismtestnet"
+[evm.mumbai]
+name = "mumbai"
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "$OPTIMISM_TESTNET_HTTPS_URL"
+http-endpoint = "$MUMBAI_TESTNET_HTTPS_URL"
 # Websocket Endpoint for long living connections
-ws-endpoint = "$OPTIMISM_TESTNET_WSS_URL"
+ws-endpoint = "$MUMBAI_TESTNET_WSS_URL"
 # Block Explorer
 # Optinal, and used for generating clickable links
 # for transactions that happen on this chain.
-explorer = "https://blockscout.com/optimism/goerli/"
+explorer = "https://mumbai.polygonscan.com/"
 # chain specific id from evm opcode
-chain-id = 420
+chain-id = 80001
 
 block-confirmations = 2
 # The Private Key of this account on this network
@@ -21,31 +21,31 @@ block-confirmations = 2
 #
 # 2. if it starts with '$' then it would be considered as an Enviroment variable
 #    of a hex-encoded private key.
-#    Example: $OPTIMISM_TESTNET_PRIVATE_KEY
+#    Example: $POLYGONTESTNET_PRIVATE_KEY
 #
 # 3. if it starts with '> ' then it would be considered as a command that
 #    the relayer would execute and the output of this command would be the
 #    hex encoded private key.
-#    Example: > ./getKey.sh optimismtestnet-privatekey
+#    Example: > ./getKey.sh mumbai-privatekey
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "$OPTIMISM_TESTNET_PRIVATE_KEY"
+private-key = "$MUMBAI_TESTNET_PRIVATE_KEY"
 # Value to indicate that the relayer should enable services for this chain
 enabled = true
 
 # Block which represents the configuration for a supported contract on the network
-[[evm.optimismtestnet.contracts]]
+[[evm.mumbai.contracts]]
 # The contract can be one of these values
 # - VAnchor (Variable Anchor)
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0x26a37ce74e5214dd661070601db14a6a8a2fadd9"
+address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 3091427
+deployed-at = 29416496
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
@@ -61,18 +61,18 @@ withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" 
 linked-anchors = [
   { type = "Evm", chain = "goerli", chain-id = 5, address = "0xbd7e08ef54dfb43e9a86eb12a3ecab7564dee931" },
   { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74" },
-  { type = "Evm", chain = "mumbai", chain-id = 80001, address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74" },
+  { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0x26a37ce74e5214dd661070601db14a6a8a2fadd9" },
   { type = "Evm", chain = "moonbase", chain-id = 1287, address = "0x75e452a3ce366575f75737438c0fdfe618853946"}
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }
 
-[[evm.optimismtestnet.contracts]]
+[[evm.mumbai.contracts]]
 contract = "SignatureBridge"
-address = "0xb34ec2c9546c6f4f9c1c818b8b66feca781a3073"
+address = "0x5aaf73ac093fbc429c308e101b73b8b85649dffb"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 3091344
+deployed-at = 29416379
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
