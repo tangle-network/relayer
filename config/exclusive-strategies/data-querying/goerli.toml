@@ -1,0 +1,33 @@
+[evm.goerli]
+name = "goerli"
+# Http(s) Endpoint for quick Req/Res
+http-endpoint = "$GOERLI_HTTPS_URL"
+# Websocket Endpoint for long living connections
+ws-endpoint = "$GOERLI_WSS_URL"
+# Block Explorer
+# Optinal, and used for generating clickable links
+# for transactions that happen on this chain.
+explorer = "https://goerli.etherscan.io"
+# chain specific id from evm opcode
+chain-id = 5
+
+block-confirmations = 2
+# Value to indicate that the relayer should enable services for this chain
+enabled = true
+
+# Block which represents the configuration for a supported contract on the network
+[[evm.goerli.contracts]]
+# The contract can be one of these values
+# - VAnchor (Variable Anchor)
+# - SignatureBridge
+contract = "VAnchor"
+# The address of the contract
+address = "0xbd7e08ef54dfb43e9a86eb12a3ecab7564dee931"
+# The deployed block number of the contract. When a relayer does not have information for
+# this contract in its store, it will start to sync and query for relevant historical data
+# starting at this block number
+deployed-at = 8048194
+# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
+# and the polling interval specifies the period of time (in ms) that the events-watcher thread
+# will wait before issuing another query for new events.
+events-watcher = { enabled = true, polling-interval = 15000 }

@@ -1,0 +1,8 @@
+# Webb Relayer Network Port
+# default: 9955
+port = 9955
+
+[features]
+governance-relay = false
+data-query = false
+private-tx-relay = true
