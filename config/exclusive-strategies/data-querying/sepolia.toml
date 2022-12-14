@@ -22,11 +22,11 @@ enabled = true
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0x965c94a6e1b713e751164d2ba09aa0306f48ee74"
+address = "0x1f88e3903a36f1c2f997822579a651cb8022c64b"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 8048141
+deployed-at = 2478565
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
