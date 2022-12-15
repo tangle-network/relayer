@@ -21,7 +21,7 @@ import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
 
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain, setupVanchorEvmTx } from '../../lib/localTestnet.js';
 import {
@@ -33,7 +33,7 @@ import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 
 // const assert = require('assert');
-describe('Vanchor Private Tx relaying with mocked governor', function () {
+describe.only('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -152,7 +152,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       tokenAddress,
       govWallet1
     );
-    let tx = await token.approveSpending(vanchor1.contract.address);
+    let tx = await token.approveSpending(vanchor1.contract.address, BigNumber.from(1e10));
     await tx.wait();
     await token.mintTokens(
       govWallet1.address,
@@ -170,7 +170,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       govWallet2
     );
 
-    tx = await token2.approveSpending(vanchor2.contract.address);
+    tx = await token2.approveSpending(vanchor2.contract.address, BigNumber.from(1e10));
     await tx.wait();
     await token2.mintTokens(
       govWallet2.address,
@@ -194,7 +194,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
+      verbosity: 4
     });
     await webbRelayer.waitUntilReady();
   });
@@ -243,6 +244,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       0,
       '0',
       '0',
+      '',
       govWallet1
     );
 
@@ -326,6 +328,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       0,
       '0',
       '0',
+      '',
       govWallet1
     );
 
@@ -412,6 +415,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       0,
       '0',
       '0',
+      '',
       govWallet1
     );
 
@@ -499,6 +503,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       0,
       '0',
       '0',
+      '',
       govWallet1
     );
 
@@ -520,15 +525,15 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2
     );
 
-    const nullifierHash = hexToU8a(output.publicInputs.inputNullifiers[0]);
+    const nullifierHash = output.publicInputs.inputNullifiers[0];
     // flip a bit in the proof, so it is invalid
-    nullifierHash[0] = 0x42;
+    // nullifierHash[0] = 0x42;
 
-    const invalidnullifierHash = u8aToHex(nullifierHash);
+    const invalidnullifierHash = BigNumber.from(400);
     expect(output.publicInputs.inputNullifiers[0]).to.not.eq(
       invalidnullifierHash
     );
-    output.publicInputs.proof = invalidnullifierHash;
+    output.publicInputs.inputNullifiers[0] = invalidnullifierHash;
     try {
       await webbRelayer.vanchorWithdraw(
         localChain2.underlyingChainId,

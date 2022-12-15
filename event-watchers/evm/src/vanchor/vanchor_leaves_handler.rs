@@ -47,8 +47,8 @@ impl EventHandler for VAnchorLeavesHandler {
         use VAnchorContractEvents::*;
         match event {
             NewCommitmentFilter(deposit) => {
-                let commitment = deposit.commitment;
-                let leaf_index = deposit.index.as_u32();
+                let commitment: [u8; 32] = deposit.commitment.into();
+                let leaf_index = deposit.leaf_index.as_u32();
                 let value = (leaf_index, commitment.to_vec());
                 let chain_id = wrapper.contract.client().get_chainid().await?;
                 let target_system = TargetSystem::new_contract_address(
@@ -79,31 +79,33 @@ impl EventHandler for VAnchorLeavesHandler {
                 );
             }
             EdgeAdditionFilter(v) => {
+                let merkle_root: [u8; 32] = v.merkle_root.into();
                 tracing::debug!(
                     "Edge Added of chain {} at index {} with root 0x{}",
                     v.chain_id,
                     v.latest_leaf_index,
-                    hex::encode(v.merkle_root)
+                    hex::encode(merkle_root)
                 );
             }
             EdgeUpdateFilter(v) => {
+                let merkle_root: [u8; 32] = v.merkle_root.into();
                 tracing::debug!(
                     "Edge Updated of chain {} at index {} with root 0x{}",
                     v.chain_id,
                     v.latest_leaf_index,
-                    hex::encode(v.merkle_root)
+                    hex::encode(merkle_root)
                 );
             }
             NewNullifierFilter(v) => {
                 tracing::debug!(
                     "new nullifier {} found",
-                    H256::from_slice(&v.nullifier)
+                    H256::from(&v.nullifier.into())
                 );
             }
             InsertionFilter(v) => {
                 tracing::debug!(
                     "Leaf {:?} inserted at index {} on time {}",
-                    H256::from_slice(&v.commitment),
+                    H256::from(&v.commitment.into()),
                     v.leaf_index,
                     v.timestamp
                 );

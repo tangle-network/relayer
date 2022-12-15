@@ -23,8 +23,7 @@ import {
   IVariableAnchorExtData,
   IVariableAnchorPublicInputs,
 } from '@webb-tools/interfaces';
-import { MintableToken } from '@webb-tools/tokens';
-import { GovernedTokenWrapper } from '@webb-tools/tokens';
+import { FungibleTokenWrapper, MintableToken } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import { LocalEvmChain } from '@webb-tools/test-utils';
 import path from 'path';
@@ -133,7 +132,7 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    const webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
+    const webbTokens1 = new Map<number, FungibleTokenWrapper | undefined>();
     webbTokens1.set(this.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
@@ -214,9 +213,9 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    const webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
+    const webbTokens1: Map<number, FungibleTokenWrapper | undefined> = new Map<
       number,
-      GovernedTokenWrapper | undefined
+      FungibleTokenWrapper | undefined
     >();
     webbTokens1.set(this.chainId, null!);
     webbTokens1.set(otherChain.chainId, null!);

@@ -20,7 +20,7 @@
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo } from '@webb-tools/sdk-core';
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import {
@@ -138,7 +138,7 @@ describe('Vanchor Transaction relayer', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(vanchor1.contract.address);
+    let tx = await token.approveSpending(vanchor1.contract.address, BigNumber.from(1e10));
     await tx.wait();
     await token.mintTokens(
       wallet1.address,
@@ -156,7 +156,7 @@ describe('Vanchor Transaction relayer', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(vanchor2.contract.address);
+    tx = await token2.approveSpending(vanchor2.contract.address, BigNumber.from(1e10));
     await tx.wait();
     await token2.mintTokens(
       wallet2.address,
@@ -221,13 +221,14 @@ describe('Vanchor Transaction relayer', function () {
       await vanchor1.transact(
         [],
         [depositUtxo],
+        0,
+        0,
+        '0',
+        '0',
+        '',
         {
           [localChain1.chainId]: leaves,
         },
-        '0',
-        '0',
-        '0',
-        '0'
       );
     }
 
@@ -298,13 +299,14 @@ describe('Vanchor Transaction relayer', function () {
       await vanchor1.transact(
         [],
         [depositUtxo],
+        0,
+        0,
+        '0',
+        '0',
+        '',
         {
           [localChain1.chainId]: leaves,
         },
-        '0',
-        '0',
-        '0',
-        '0'
       );
     }
 

@@ -65,8 +65,8 @@ where
         let event_data = match event {
             NewCommitmentFilter(data) => {
                 let chain_id = wrapper.contract.client().get_chainid().await?;
-                let info =
-                    (data.index.as_u32(), H256::from_slice(&data.commitment));
+                let commitment: [u8; 32] = data.commitment.into();
+                let info = (data.leaf_index.as_u32(), H256::from(commitment));
                 tracing::event!(
                     target: webb_relayer_utils::probe::TARGET,
                     tracing::Level::DEBUG,
@@ -90,10 +90,10 @@ where
             "OpenVAnchor new leaf event",
         );
 
-        if event_data.index.as_u32() % 2 == 0 {
+        if event_data.leaf_index.as_u32() % 2 == 0 {
             tracing::debug!(
-                leaf_index = %event_data.index,
-                is_even_index = %event_data.index.as_u32() % 2 == 0,
+                leaf_index = %event_data.leaf_index,
+                is_even_index = %event_data.leaf_index.as_u32() % 2 == 0,
                 "Open VAnchor new leaf index does not satisfy the condition, skipping proposal.",
             );
             return Ok(());
@@ -101,8 +101,9 @@ where
 
         let client = wrapper.contract.client();
         let chain_id = client.get_chainid().await?;
-        let root = wrapper.contract.get_last_root().call().await?;
-        let leaf_index = event_data.index.as_u32();
+        let root: [u8; 32] =
+            wrapper.contract.get_last_root().call().await?.into();
+        let leaf_index = event_data.leaf_index.as_u32();
         let src_chain_id = webb_proposals::TypedChainId::Evm(chain_id.as_u32());
         let src_target_system =
             webb_proposals::TargetSystem::new_contract_address(

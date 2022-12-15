@@ -25,7 +25,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import {
   WebbRelayer,
   Pallet,
@@ -247,7 +247,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       tokenAddress,
       wallet1
     );
-    const tx = await token.approveSpending(vanchor1.contract.address);
+    const tx = await token.approveSpending(vanchor1.contract.address, BigNumber.from(1e10));
     await tx.wait();
 
     // Mint 1000 * 10^18 tokens to wallet1
@@ -296,14 +296,16 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     await vanchor1.transact(
       [],
       [depositUtxo],
+      0,
+      0,
+      '0',
+      '0',
+      '',
       {
         [typedSourceChainId]: leaves,
       },
-      '0',
-      '0',
-      '0',
-      '0'
     );
+    
 
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({

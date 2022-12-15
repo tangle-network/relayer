@@ -49,7 +49,7 @@ impl EventHandler for VAnchorEncryptedOutputHandler {
             NewCommitmentFilter(deposit) => {
                 let encrypted_output_bytes = deposit.encrypted_output.clone();
                 let encrypted_output = deposit.encrypted_output.to_vec();
-                let encrypted_output_index = deposit.index.as_u32();
+                let encrypted_output_index = deposit.leaf_index.as_u32();
                 let value = (encrypted_output_index, encrypted_output.clone());
                 let chain_id = wrapper.contract.client().get_chainid().await?;
                 let target_system = TargetSystem::new_contract_address(
@@ -83,31 +83,33 @@ impl EventHandler for VAnchorEncryptedOutputHandler {
                 );
             }
             EdgeAdditionFilter(v) => {
+                let merkle_root: [u8; 32] = v.merkle_root.into();
                 tracing::debug!(
                     "Edge Added of chain {} at index {} with root 0x{}",
                     v.chain_id,
                     v.latest_leaf_index,
-                    hex::encode(v.merkle_root)
+                    hex::encode(merkle_root)
                 );
             }
             EdgeUpdateFilter(v) => {
+                let merkle_root: [u8; 32] = v.merkle_root.into();
                 tracing::debug!(
                     "Edge Updated of chain {} at index {} with root 0x{}",
                     v.chain_id,
                     v.latest_leaf_index,
-                    hex::encode(v.merkle_root)
+                    hex::encode(merkle_root)
                 );
             }
             NewNullifierFilter(v) => {
                 tracing::debug!(
                     "new nullifier {} found",
-                    H256::from_slice(&v.nullifier)
+                    H256::from(&v.nullifier.into())
                 );
             }
             InsertionFilter(v) => {
                 tracing::debug!(
                     "Encrypted Output {:?} inserted at index {} on time {}",
-                    H256::from_slice(&v.commitment),
+                    H256::from(&v.commitment.into()),
                     v.leaf_index,
                     v.timestamp
                 );
