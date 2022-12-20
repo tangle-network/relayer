@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use tokio::sync::Mutex;
+use webb_relayer_utils::metric;
+
 use super::*;
 
 /// Represents a Substrate event watcher.
@@ -40,7 +43,7 @@ pub trait SubstrateEventWatcher {
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        metrics: Arc<webb_relayer_utils::metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()>;
 
     /// Returns a task that should be running in the background
@@ -58,10 +61,11 @@ pub trait SubstrateEventWatcher {
         chain_id: u32,
         client: Arc<Self::Client>,
         store: Arc<Self::Store>,
-        metrics: Arc<webb_relayer_utils::metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
-
+        let metrics_clone = metrics.clone();
+        let metrics = metrics.lock().await;
         let task = || async {
             let mut instant = std::time::Instant::now();
             let step = 1u64;
@@ -160,7 +164,7 @@ pub trait SubstrateEventWatcher {
                                 store.clone(),
                                 client.clone(),
                                 (event, block_number),
-                                metrics.clone(),
+                                metrics_clone.clone(),
                             )
                             .await;
                         match result {

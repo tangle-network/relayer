@@ -14,6 +14,7 @@
 
 use std::sync::Arc;
 
+use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime;
 use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
@@ -49,8 +50,9 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         store: Arc<Self::Store>,
         _api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
+        let metrics = metrics.lock().await;
         tracing::event!(
             target: webb_relayer_utils::probe::TARGET,
             tracing::Level::DEBUG,

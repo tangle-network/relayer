@@ -13,11 +13,13 @@
 // limitations under the License.
 
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api::system;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use webb::substrate::{dkg_runtime, subxt};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledStore;
+use webb_relayer_utils::metric;
 
 use crate::substrate::BlockNumberOf;
 use crate::SubstrateEventWatcher;
@@ -43,7 +45,7 @@ impl SubstrateEventWatcher for RemarkedEventWatcher {
         _store: Arc<Self::Store>,
         _client: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        _metrics: Arc<webb_relayer_utils::metric::Metrics>,
+        _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         tracing::debug!(
             "Received `Remarked` Event: {:?} at block number: #{}",

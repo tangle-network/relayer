@@ -15,6 +15,7 @@
 use super::{HttpProvider, OpenVAnchorContractWrapper};
 use ethereum_types::H256;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::OpenVAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb_event_watcher_traits::EventHandler;
@@ -59,7 +60,7 @@ where
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         use OpenVAnchorContractEvents::*;
         let event_data = match event {

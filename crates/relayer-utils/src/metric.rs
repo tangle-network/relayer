@@ -178,7 +178,9 @@ impl Metrics {
     }
 
     /// Registers new counters to track metric for individual resources.
-    pub fn register_resource_id_counters(mut self, resource_id: ResourceId) {
+    pub fn register_resource_id_counters(
+        resource_id: ResourceId,
+    ) -> ResourceMetric {
         let resource_hex = hex::encode(resource_id.to_bytes().as_ref());
         // Total gas fee spent on particular resource.
         let total_gas_spent_counter = register_counter!(
@@ -201,13 +203,15 @@ impl Metrics {
             format!("{}_account_balance", resource_hex),
             format!("Total account balance : {}", resource_hex)
         );
-        let resource_metric = ResourceMetric {
+        ResourceMetric {
             total_gas_spent: total_gas_spent_counter.unwrap(),
             total_fee_earned: total_fee_earned_counter.unwrap(),
             account_balance: account_balance_counter.unwrap(),
-        };
-        self.resource_metric_map
-            .insert(resource_id, resource_metric);
+        }
+    }
+
+    pub fn update_proposals_processed_tx_queue(self) {
+        self.proposals_processed_tx_queue.inc();
     }
 }
 

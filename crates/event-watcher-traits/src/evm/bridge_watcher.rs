@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use tokio::sync::Mutex;
+
 use super::{event_watcher::EventWatcher, *};
 
 /// A Bridge Watcher is a trait for Bridge contracts that not specific for watching events from that contract,
@@ -51,9 +53,10 @@ where
         client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
+        let metrics = metrics.lock().await;
         let task = || async {
             let my_chain_id = client
                 .get_chainid()

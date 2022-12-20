@@ -1,4 +1,5 @@
 use super::*;
+use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
 use webb::evm::{
@@ -9,12 +10,11 @@ use webb::evm::{
     ethers::prelude::{Signer, SignerMiddleware},
 };
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
+use webb_relayer_config::anchor::VAnchorWithdrawConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
 use webb_relayer_tx_relay_utils::calculate_fee;
-
-use crate::evm::handle_evm_tx;
-use webb_relayer_config::anchor::VAnchorWithdrawConfig;
+use webb_relayer_utils::metric::Metrics;
 
 /// Handler for VAnchor commands
 ///
@@ -187,23 +187,31 @@ pub async fn handle_vanchor_relay_tx<'a>(
     };
     tracing::trace!(?proof, ?ext_data, "Client Proof");
     let call = contract.transact(proof, ext_data);
-    tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
 
-    handle_evm_tx(call, stream, cmd.chain_id).await;
-
-    // update metric for total fee earned for given resource
     let target_system = TargetSystem::new_contract_address(
         contract_config.common.address.to_fixed_bytes(),
     );
     let typed_chain_id = TypedChainId::Evm(chain.chain_id);
     let resource_id = ResourceId::new(target_system, typed_chain_id);
-    let resource_metric =
-        ctx.metrics.resource_metric_map.get(&resource_id).unwrap();
+
+    tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
+    handle_evm_tx(call, stream, cmd.chain_id, ctx.metrics.clone(), resource_id)
+        .await;
+
+    // update metric
+    let metrics_clone = ctx.metrics.clone();
+    let mut metrics = metrics_clone.lock().await;
+    // update metric for total fee earned by relayer on particular resource
+    let resource_metric = metrics
+        .resource_metric_map
+        .entry(resource_id)
+        .or_insert_with(|| Metrics::register_resource_id_counters(resource_id));
     resource_metric
-        .total_gas_spent
+        .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u64() as f64);
+
     // update metric for total fee earned by relayer
-    ctx.metrics
+    metrics
         .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u64() as f64);
 }

@@ -16,6 +16,7 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 
+use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::{
     SignatureBridgeContract, SignatureBridgeContractEvents,
 };
@@ -119,7 +120,7 @@ impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         e: (Self::Events, LogMeta),
-        _metrics: Arc<metric::Metrics>,
+        _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let event = e.0;
         match event {

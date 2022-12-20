@@ -114,7 +114,8 @@ where
             starting = true,
         );
 
-        let metrics = self.ctx.metrics.clone();
+        let metrics_clone = self.ctx.metrics.clone();
+        let metrics = metrics_clone.lock().await;
         let task = || async {
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");

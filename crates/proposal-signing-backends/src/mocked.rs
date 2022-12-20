@@ -1,6 +1,7 @@
 use ethereum_types::H256;
 use std::collections::HashSet;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use typed_builder::TypedBuilder;
 use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
@@ -59,10 +60,11 @@ where
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // Proposal will be signed by active governor/maintainer.
         // Proposal will be then enqueued for execution with BridgeKey as TypedChainId
+        let metrics = metrics.lock().await;
         let resource_id = proposal.header().resource_id();
         let dest_chain_id = resource_id.typed_chain_id();
         let signer = self.signer(dest_chain_id)?;

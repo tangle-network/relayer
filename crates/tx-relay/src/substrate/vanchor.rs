@@ -13,6 +13,7 @@ use webb_proposals::{
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::SubstrateCommand;
+use webb_relayer_utils::metric::Metrics;
 
 /// Handler for Substrate Anchor commands
 ///
@@ -111,7 +112,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     };
 
     handle_substrate_tx(event_stream, stream, cmd.chain_id).await;
-    // update metric for total fee earned for given resource
+
     let pallet_index = {
         let metadata = client.metadata();
         let pallet = metadata.pallet("VAnchorHandlerBn254").unwrap();
@@ -124,11 +125,19 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     let target_system = TargetSystem::Substrate(target);
     let typed_chain_id = TypedChainId::Substrate(cmd.chain_id as u32);
     let resource_id = ResourceId::new(target_system, typed_chain_id);
-    let resource_metric =
-        ctx.metrics.resource_metric_map.get(&resource_id).unwrap();
+
+    // update metric
+    let metrics_clone = ctx.metrics.clone();
+    let mut metrics = metrics_clone.lock().await;
+    // update metric for total fee earned by relayer on particular resource
+    let resource_metric = metrics
+        .resource_metric_map
+        .entry(resource_id)
+        .or_insert_with(|| Metrics::register_resource_id_counters(resource_id));
+
     resource_metric
-        .total_gas_spent
+        .total_fee_earned
         .inc_by(cmd.ext_data.fee as f64);
     // update metric for total fee earned by relayer
-    ctx.metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
+    metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
 }
