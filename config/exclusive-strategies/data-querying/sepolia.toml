@@ -1,0 +1,33 @@
+[evm.sepolia]
+name = "sepolia"
+# Http(s) Endpoint for quick Req/Res
+http-endpoint = "$SEPOLIA_HTTPS_URL"
+# Websocket Endpoint for long living connections
+ws-endpoint = "$SEPOLIA_WSS_URL"
+# Block Explorer
+# Optinal, and used for generating clickable links
+# for transactions that happen on this chain.
+explorer = "https://sepolia.etherscan.io"
+# chain specific id from evm opcode
+chain-id = 11155111
+
+block-confirmations = 2
+# Value to indicate that the relayer should enable services for this chain
+enabled = true
+
+# Block which represents the configuration for a supported contract on the network
+[[evm.sepolia.contracts]]
+# The contract can be one of these values
+# - VAnchor (Variable Anchor)
+# - SignatureBridge
+contract = "VAnchor"
+# The address of the contract
+address = "0x1f88e3903a36f1c2f997822579a651cb8022c64b"
+# The deployed block number of the contract. When a relayer does not have information for
+# this contract in its store, it will start to sync and query for relevant historical data
+# starting at this block number
+deployed-at = 2478565
+# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
+# and the polling interval specifies the period of time (in ms) that the events-watcher thread
+# will wait before issuing another query for new events.
+events-watcher = { enabled = true, polling-interval = 15000 }

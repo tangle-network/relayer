@@ -132,7 +132,7 @@ impl RelayerContext {
                 }
             })?;
         let client = subxt::OnlineClient::<C>::from_url(
-            node_config.ws_endpoint.as_str(),
+            node_config.ws_endpoint.to_string(),
         )
         .await?;
         Ok(client)

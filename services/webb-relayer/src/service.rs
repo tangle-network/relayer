@@ -1105,6 +1105,12 @@ pub fn start_tx_queue(
     chain_id: String,
     store: Arc<Store>,
 ) -> crate::Result<()> {
+    // Start tx_queue only when governance relaying feature is enabled for relayer.
+    if !ctx.config.features.governance_relay {
+        tracing::warn!("Tx Queue disabled for ({})", chain_id,);
+        return Ok(());
+    }
+
     let mut shutdown_signal = ctx.shutdown_signal();
     let tx_queue = TxQueue::new(ctx, chain_id.clone(), store);
 
@@ -1144,6 +1150,15 @@ pub fn start_protocol_substrate_tx_queue(
     chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
+    // Start tx_queue only when governance relaying feature is enabled for relayer.
+    if !ctx.config.features.governance_relay {
+        tracing::warn!(
+            "Tx Queue disabled for Protocol-Substrate node ({})",
+            chain_id,
+        );
+        return Ok(());
+    }
+
     let mut shutdown_signal = ctx.shutdown_signal();
 
     let tx_queue = SubstrateTxQueue::new(ctx, chain_id, store);

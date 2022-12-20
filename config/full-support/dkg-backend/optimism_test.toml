@@ -1,0 +1,50 @@
+# Block which represents properties for a network
+[evm.optimismtestnet]
+name = "optimismtestnet"
+# Http(s) Endpoint for quick Req/Res
+http-endpoint = "$OPTIMISM_TESTNET_HTTPS_URL"
+# Websocket Endpoint for long living connections
+ws-endpoint = "$OPTIMISM_TESTNET_WSS_URL"
+# Block Explorer
+# Optinal, and used for generating clickable links
+# for transactions that happen on this chain.
+explorer = "https://blockscout.com/optimism/goerli/"
+# chain specific id from evm opcode
+chain-id = 420
+
+block-confirmations = 2
+
+private-key = "$OPTIMISM_TESTNET_PRIVATE_KEY"
+# Value to indicate that the relayer should enable services for this chain
+enabled = true
+
+# Block which represents the configuration for a supported contract on the network
+[[evm.optimismtestnet.contracts]]
+
+contract = "VAnchor"
+# The address of the contract
+address = "0xd2fbe0fd50315c13ac9a9331dadb1784c1ef6bb8"
+
+deployed-at = 3447785
+
+events-watcher = { enabled = true, polling-interval = 15000 }
+
+withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
+# Entries for this anchor contract's connected edges.
+# These fields are used to determine the generation of AnchorUpdate proposals
+linked-anchors = [
+  { type = "Evm", chain = "goerli", chain-id = 5, address = "0x98c1024dfd61a8f7439108acedcb51a27754f2af" },
+  { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0x1f88e3903a36f1c2f997822579a651cb8022c64b" },
+  { type = "Evm", chain = "mumbai", chain-id = 80001, address = "0xdb3365f086e9e3536d0f12abb822d048c7a60ebd" },
+  { type = "Evm", chain = "moonbase", chain-id = 1287, address = "0xdb3365f086e9e3536d0f12abb822d048c7a60ebd"}
+]
+# proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }
+proposal-signing-backend = { type = "DKGNode", node = "tangle" }
+
+[[evm.optimismtestnet.contracts]]
+contract = "SignatureBridge"
+address = "0x863ef3e8c0c76a3e363d274760232d1f10083b50"
+
+deployed-at = 3447698
+
+events-watcher = { enabled = true, polling-interval = 45000, print-progress-interval = 0 }
