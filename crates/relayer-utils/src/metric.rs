@@ -18,7 +18,7 @@ use prometheus::core::{AtomicF64, GenericCounter, GenericGauge};
 use prometheus::{register_counter, register_gauge, Encoder, TextEncoder};
 use webb_proposals::ResourceId;
 
-/// A struct for collecting metrics for given resource.
+/// A struct for collecting metrics for particular resource.
 #[derive(Debug, Clone)]
 pub struct ResourceMetric {
     /// Total gas spent on Resource.
@@ -203,15 +203,12 @@ impl Metrics {
             format!("{}_account_balance", resource_hex),
             format!("Total account balance : {}", resource_hex)
         );
+
         ResourceMetric {
             total_gas_spent: total_gas_spent_counter.unwrap(),
             total_fee_earned: total_fee_earned_counter.unwrap(),
             account_balance: account_balance_counter.unwrap(),
         }
-    }
-
-    pub fn update_proposals_processed_tx_queue(self) {
-        self.proposals_processed_tx_queue.inc();
     }
 }
 

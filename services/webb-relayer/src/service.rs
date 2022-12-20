@@ -59,10 +59,8 @@ use webb_relayer_config::substrate::{
 use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handlers::routes::{
-    handle_encrypted_outputs_cache_evm, handle_leaves_cache_evm,
-    handle_leaves_cache_substrate, handle_metric_info, handle_relayer_info,
-};
+
+use webb_relayer_handlers::routes::{encrypted_leaves, info, leaves, metric};
 use webb_relayer_store::SledStore;
 use webb_relayer_tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
 
@@ -133,7 +131,7 @@ pub fn build_web_services(
     let info_filter = warp::path("info")
         .and(warp::get())
         .and(ctx_filter)
-        .and_then(handle_relayer_info)
+        .and_then(info::handle_relayer_info)
         .boxed();
 
     // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
@@ -148,7 +146,7 @@ pub fn build_web_services(
         .and(warp::path::param())
         .and(warp::path::param())
         .and_then(move |store, chain_id, contract| {
-            handle_leaves_cache_evm(
+            leaves::handle_leaves_cache_evm(
                 store,
                 chain_id,
                 contract,
@@ -171,7 +169,7 @@ pub fn build_web_services(
         .and(warp::path::param())
         .and(warp::path::param())
         .and_then(move |store, chain_id, tree_id, pallet_id| {
-            handle_leaves_cache_substrate(
+            leaves::handle_leaves_cache_substrate(
                 store,
                 chain_id,
                 tree_id,
@@ -190,7 +188,7 @@ pub fn build_web_services(
         .and(warp::path::param())
         .and(warp::path::param())
         .and_then(move |store, chain_id, contract| {
-            handle_encrypted_outputs_cache_evm(
+            encrypted_leaves::handle_encrypted_outputs_cache_evm(
                 store,
                 chain_id,
                 contract,
@@ -201,7 +199,39 @@ pub fn build_web_services(
 
     let relayer_metrics_info = warp::path("metrics")
         .and(warp::get())
-        .and_then(handle_metric_info)
+        .and_then(metric::handle_metric_info)
+        .boxed();
+
+    //  Relayer metric for particular evm resource
+    let ctx_arc = Arc::new(ctx.clone());
+    let relayer_metrics_info_evm = warp::path("metrics")
+        .and(warp::path("evm"))
+        .and(warp::path::param())
+        .and(warp::path::param())
+        .and_then(move |chain_id, contract| {
+            metric::handle_evm_metric_info(
+                chain_id,
+                contract,
+                Arc::clone(&ctx_arc),
+            )
+        })
+        .boxed();
+
+    //  Relayer metric for particular substrate resource
+    let ctx_arc = Arc::new(ctx.clone());
+    let relayer_metrics_info_substrate = warp::path("leaves")
+        .and(warp::path("substrate"))
+        .and(warp::path::param())
+        .and(warp::path::param())
+        .and(warp::path::param())
+        .and_then(move |chain_id, tree_id, pallet_id| {
+            metric::handle_substrate_metric_info(
+                chain_id,
+                tree_id,
+                pallet_id,
+                Arc::clone(&ctx_arc),
+            )
+        })
         .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.
@@ -211,6 +241,8 @@ pub fn build_web_services(
         .or(leaves_cache_filter_substrate)
         .or(encrypted_output_cache_filter_evm)
         .or(relayer_metrics_info)
+        .or(relayer_metrics_info_evm)
+        .or(relayer_metrics_info_substrate)
         .boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();
