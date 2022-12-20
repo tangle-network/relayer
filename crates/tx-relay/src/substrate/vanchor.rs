@@ -140,4 +140,5 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .inc_by(cmd.ext_data.fee as f64);
     // update metric for total fee earned by relayer
     metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
+    drop(metrics);
 }

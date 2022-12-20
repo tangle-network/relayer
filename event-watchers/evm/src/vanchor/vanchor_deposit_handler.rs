@@ -65,7 +65,6 @@ where
     ) -> webb_relayer_utils::Result<()> {
         use VAnchorContractEvents::*;
         let metrics_clone = metrics.clone();
-        let metrics = metrics.lock().await;
         let event_data = match event {
             NewCommitmentFilter(data) => {
                 let chain_id = wrapper.contract.client().get_chainid().await?;
@@ -135,7 +134,9 @@ where
                 _ => unreachable!("unsupported"),
             };
             // Anchor update proposal proposed metric
+            let metrics = metrics.lock().await;
             metrics.anchor_update_proposals.inc();
+            drop(metrics);
             let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
@@ -171,7 +172,9 @@ where
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;
         store.store_event(&events_bytes)?;
+        let metrics = metrics.lock().await;
         metrics.total_transaction_made.inc();
+        drop(metrics);
         Ok(())
     }
 }

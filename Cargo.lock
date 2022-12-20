@@ -5602,6 +5602,7 @@ dependencies = [
  "serde_path_to_error",
  "sled",
  "thiserror",
+ "tracing",
  "url",
  "warp",
  "webb",

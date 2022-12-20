@@ -7,6 +7,8 @@ use webb_proposals::{
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::metric::Metrics;
 
+use crate::routes::UnsupportedFeature;
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct ResourceMetricResponse {
@@ -46,7 +48,19 @@ pub async fn handle_evm_metric_info(
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
     let metrics_clone = ctx.metrics.clone();
-    let mut metrics = metrics_clone.lock().await;
+    // let mut metrics = metrics_clone.try_lock();
+    let mut metrics = match metrics_clone.try_lock() {
+        Ok(metrics) => metrics,
+        Err(_) => {
+            return Ok(warp::reply::with_status(
+                warp::reply::json(&UnsupportedFeature {
+                    message: "Too many requests, please try after some time."
+                        .to_string(),
+                }),
+                warp::http::StatusCode::TOO_MANY_REQUESTS,
+            ));
+        }
+    };
     // create resource_id for evm target system
     let target_system =
         TargetSystem::new_contract_address(contract.to_fixed_bytes());
@@ -81,7 +95,19 @@ pub async fn handle_substrate_metric_info(
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
     let metrics_clone = ctx.metrics.clone();
-    let mut metrics = metrics_clone.lock().await;
+    // let mut metrics = metrics_clone.try_lock();
+    let mut metrics = match metrics_clone.try_lock() {
+        Ok(metrics) => metrics,
+        Err(_) => {
+            return Ok(warp::reply::with_status(
+                warp::reply::json(&UnsupportedFeature {
+                    message: "Too many requests, please try after some time."
+                        .to_string(),
+                }),
+                warp::http::StatusCode::TOO_MANY_REQUESTS,
+            ));
+        }
+    };
     // create resource_id for substrate target system
     let target = SubstrateTargetSystem::builder()
         .pallet_index(pallet_id)

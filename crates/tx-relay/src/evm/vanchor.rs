@@ -214,4 +214,5 @@ pub async fn handle_vanchor_relay_tx<'a>(
     metrics
         .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u64() as f64);
+    drop(metrics);
 }

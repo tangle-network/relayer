@@ -65,7 +65,8 @@ async fn main(args: Opts) -> anyhow::Result<()> {
             let metrics = metrics_clone.lock().await;
             metrics
                 .total_amount_of_data_stored
-                .set(cloned_store.get_data_stored_size() as f64)
+                .set(cloned_store.get_data_stored_size() as f64);
+            drop(metrics);
         }
     });
 

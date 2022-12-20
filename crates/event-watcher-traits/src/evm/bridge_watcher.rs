@@ -56,7 +56,6 @@ where
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
-        let metrics = metrics.lock().await;
         let task = || async {
             let my_chain_id = client
                 .get_chainid()
@@ -90,14 +89,19 @@ where
                         // this a transient error, so we will retry again.
                         tracing::warn!("Restarting bridge event watcher ...");
                         // metric for when the bridge watcher enters back off
+                        let metrics = metrics.lock().await;
                         metrics.bridge_watcher_back_off.inc();
+                        drop(metrics);
                         return Err(backoff::Error::transient(e));
                     }
                 }
             }
         };
         // Bridge watcher backoff metric
+        let metrics = metrics.lock().await;
         metrics.bridge_watcher_back_off.inc();
+        drop(metrics);
+
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }

@@ -64,7 +64,6 @@ where
     ) -> webb_relayer_utils::Result<()> {
         // Proposal will be signed by active governor/maintainer.
         // Proposal will be then enqueued for execution with BridgeKey as TypedChainId
-        let metrics = metrics.lock().await;
         let resource_id = proposal.header().resource_id();
         let dest_chain_id = resource_id.typed_chain_id();
         let signer = self.signer(dest_chain_id)?;
@@ -88,7 +87,9 @@ where
             signature = ?hex::encode(&signature_bytes),
         );
         // Proposal signed metric
+        let metrics = metrics.lock().await;
         metrics.proposals_signed.inc();
+        drop(metrics);
         // now all we have to do is to send the data and the signature to the signature bridge.
         self.store.enqueue_item(
             SledQueueKey::from_bridge_key(bridge_key),

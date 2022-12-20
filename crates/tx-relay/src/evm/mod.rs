@@ -44,7 +44,6 @@ pub async fn handle_evm_tx<M, D>(
             return;
         }
     };
-    let mut metrics = metrics.lock().await;
 
     let tx = match call.send().await {
         Ok(pending) => {
@@ -93,6 +92,7 @@ pub async fn handle_evm_tx<M, D>(
             );
             // gas spent by relayer on particular resource.
             let gas_price = receipt.gas_used.unwrap_or_default();
+            let mut metrics = metrics.lock().await;
             let resource_metric = metrics
                 .resource_metric_map
                 .entry(resource_id)
@@ -103,7 +103,7 @@ pub async fn handle_evm_tx<M, D>(
             resource_metric
                 .total_gas_spent
                 .inc_by(gas_price.as_u64() as f64);
-
+            drop(metrics);
             let _ = stream
                 .send(Withdraw(WithdrawStatus::Finalized {
                     tx_hash: receipt.transaction_hash,

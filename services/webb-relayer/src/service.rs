@@ -219,7 +219,7 @@ pub fn build_web_services(
 
     //  Relayer metric for particular substrate resource
     let ctx_arc = Arc::new(ctx.clone());
-    let relayer_metrics_info_substrate = warp::path("leaves")
+    let relayer_metrics_info_substrate = warp::path("metrics")
         .and(warp::path("substrate"))
         .and(warp::path::param())
         .and(warp::path::param())
@@ -240,9 +240,9 @@ pub fn build_web_services(
         .or(leaves_cache_filter_evm)
         .or(leaves_cache_filter_substrate)
         .or(encrypted_output_cache_filter_evm)
-        .or(relayer_metrics_info)
         .or(relayer_metrics_info_evm)
         .or(relayer_metrics_info_substrate)
+        .or(relayer_metrics_info)
         .boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();

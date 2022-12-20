@@ -1,3 +1,5 @@
+use serde::Serialize;
+
 /// Module for handling encrypted commitment leaves API
 pub mod encrypted_leaves;
 
@@ -9,3 +11,10 @@ pub mod metric;
 
 /// Module for handling relayer info API
 pub mod info;
+
+// Unsupported feature response
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct UnsupportedFeature {
+    message: String,
+}

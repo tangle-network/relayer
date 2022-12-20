@@ -79,7 +79,6 @@ where
             "V-Anchor new leaf event",
         );
         let metrics_clone = metrics.clone();
-        let metrics = metrics.lock().await;
         // fetch chain_id
         let chain_id_addrs = RuntimeApi::constants()
             .linkable_tree_bn254()
@@ -133,7 +132,9 @@ where
                 _ => unreachable!("unsupported"),
             };
             // Proposal proposed metric
+            let metrics = metrics.lock().await;
             metrics.anchor_update_proposals.inc();
+            drop(metrics);
             let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
@@ -169,7 +170,9 @@ where
         // mark this event as processed.
         let events_bytes = &event.encode();
         store.store_event(events_bytes)?;
+        let metrics = metrics.lock().await;
         metrics.total_transaction_made.inc();
+        drop(metrics);
         Ok(())
     }
 }

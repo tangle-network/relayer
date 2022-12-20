@@ -82,7 +82,6 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        let metrics = metrics.lock().await;
         let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
@@ -141,8 +140,10 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
                     let maybe_success = v.wait_for_success().await;
                     match maybe_success {
                         Ok(_events) => {
-                            tracing::debug!("tx finalized");
+                            let metrics = metrics.lock().await;
                             metrics.proposals_signed.inc();
+                            drop(metrics);
+                            tracing::debug!("tx finalized");
                         }
                         Err(err) => {
                             tracing::error!(error = %err, "tx failed");

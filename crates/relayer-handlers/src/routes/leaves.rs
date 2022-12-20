@@ -22,6 +22,16 @@ use webb_proposals::{
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::LeafCacheStore;
 
+use crate::routes::UnsupportedFeature;
+
+// Leaves cache response
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct LeavesCacheResponse {
+    leaves: Vec<Vec<u8>>,
+    last_queried_block: u64,
+}
+
 /// Handles leaf data requests for evm
 ///
 /// Returns a Result with the `LeafDataResponse` on success
@@ -39,20 +49,6 @@ pub async fn handle_leaves_cache_evm(
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
     let config = ctx.config.clone();
-
-    #[derive(Debug, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    struct LeavesCacheResponse {
-        leaves: Vec<Vec<u8>>,
-        last_queried_block: u64,
-    }
-    // Unsupported feature response
-    #[derive(Debug, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    struct UnsupportedFeature {
-        message: String,
-    }
-
     // check if data query is enabled for relayer
     if !config.features.data_query {
         tracing::warn!("Data query is not enabled for relayer.");
@@ -162,19 +158,6 @@ pub async fn handle_leaves_cache_substrate(
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
     let config = ctx.config.clone();
-    // Leaves cache response
-    #[derive(Debug, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    struct LeavesCacheResponse {
-        leaves: Vec<Vec<u8>>,
-        last_queried_block: u64,
-    }
-    // Unsupported feature response
-    #[derive(Debug, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    struct UnsupportedFeature {
-        message: String,
-    }
     // check if data querying is enabled
     if !config.features.data_query {
         tracing::warn!("Data query is not enabled for relayer.");

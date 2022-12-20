@@ -52,7 +52,6 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        let metrics = metrics.lock().await;
         tracing::event!(
             target: webb_relayer_utils::probe::TARGET,
             tracing::Level::DEBUG,
@@ -144,7 +143,9 @@ impl SubstrateEventWatcher for ProposalHandlerWatcher {
             signature = ?hex::encode(&event.signature),
         );
         // Proposal signed metric
+        let metrics = metrics.lock().await;
         metrics.proposals_signed.inc();
+        drop(metrics);
         store.enqueue_item(
             SledQueueKey::from_bridge_key(bridge_key),
             BridgeCommand::ExecuteProposalWithSignature {

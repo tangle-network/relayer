@@ -19,6 +19,8 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::EncryptedOutputCacheStore;
 
+use crate::routes::UnsupportedFeature;
+
 /// Handles encrypted outputs data requests for evm
 ///
 /// Returns a Result with the `EncryptedOutputDataResponse` on success
@@ -42,12 +44,6 @@ pub async fn handle_encrypted_outputs_cache_evm(
     struct EncryptedOutputsCacheResponse {
         encrypted_outputs: Vec<Vec<u8>>,
         last_queried_block: u64,
-    }
-    // Unsupported feature response
-    #[derive(Debug, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    struct UnsupportedFeature {
-        message: String,
     }
 
     // check if data query is enabled for relayer

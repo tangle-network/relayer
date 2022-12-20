@@ -65,7 +65,6 @@ pub trait SubstrateEventWatcher {
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let metrics_clone = metrics.clone();
-        let metrics = metrics.lock().await;
         let task = || async {
             let mut instant = std::time::Instant::now();
             let step = 1u64;
@@ -227,7 +226,9 @@ pub trait SubstrateEventWatcher {
             }
         };
         // Bridge watcher backoff metric
+        let metrics = metrics.lock().await;
         metrics.bridge_watcher_back_off.inc();
+        drop(metrics);
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }
