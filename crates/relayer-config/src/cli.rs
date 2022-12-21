@@ -95,8 +95,12 @@ pub fn setup_logger(verbosity: i32, filter: &str) -> anyhow::Result<()> {
     let directive_1 = format!("{filter}={log_level}")
         .parse()
         .expect("valid log level");
+    let directive_2 = format!("webb_={log_level}")
+        .parse()
+        .expect("valid log level");
     let env_filter = tracing_subscriber::EnvFilter::from_default_env()
-        .add_directive(directive_1);
+        .add_directive(directive_1)
+        .add_directive(directive_2);
     let logger = tracing_subscriber::fmt()
         .with_target(true)
         .with_max_level(log_level)
