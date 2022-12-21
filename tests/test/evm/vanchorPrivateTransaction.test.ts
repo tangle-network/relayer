@@ -27,6 +27,7 @@ import { LocalChain, setupVanchorEvmTx } from '../../lib/localTestnet.js';
 import {
   defaultWithdrawConfigValue,
   EnabledContracts,
+  ResourceMetricResponse,
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
@@ -278,6 +279,18 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
         chain_id: localChain2.underlyingChainId.toString(),
         finalized: true,
       },
+    });
+    // fetch resource metrics.
+    const response = await webbRelayer.getResourceMetricsEvm(
+      localChain2.underlyingChainId.toString(),
+      vanchor2.contract.address
+    );
+    expect(response.status).equal(200);
+    const metricsResponse = response.json() as Promise<ResourceMetricResponse>;
+    metricsResponse.then((metrics) => {
+      console.log(metrics);
+      expect(metrics.totalGasSpent).greaterThan(0);
+      
     });
   });
 

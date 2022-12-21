@@ -48,7 +48,6 @@ pub async fn handle_evm_metric_info(
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
     let metrics_clone = ctx.metrics.clone();
-    // let mut metrics = metrics_clone.try_lock();
     let mut metrics = match metrics_clone.try_lock() {
         Ok(metrics) => metrics,
         Err(_) => {
