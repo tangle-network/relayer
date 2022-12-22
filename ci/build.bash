@@ -28,6 +28,6 @@ if [ -z "$RELEASE_DOCKER" ]; then
     true
 else
     # build for docker
-    $CROSS build --target $TARGET_TRIPLE --all-features --release
+    $CROSS build -p webb-relayer --target "$TARGET_TRIPLE" --features cli --release
     mkdir -p build && cp target/"$TARGET_TRIPLE"/release/webb-relayer build/webb-relayer
 fi
