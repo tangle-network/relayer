@@ -566,9 +566,9 @@ export interface RelayerMetricResponse {
 }
 
 export interface ResourceMetricResponse {
-  totalGasSpent: number,
-  totalFeeEarned: number,
-  accountBalance: number
+  totalGasSpent: string,
+  totalFeeEarned: string,
+  accountBalance: string
 }
 
 export interface Evm {

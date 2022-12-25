@@ -235,7 +235,6 @@ where
                             metrics.proposals_processed_evm_tx_queue.inc();
                             // gas spent metric
                             metrics.gas_spent.inc_by(gas_price.as_u64() as f64);
-                            drop(metrics);
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,

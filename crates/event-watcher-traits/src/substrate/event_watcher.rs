@@ -226,8 +226,7 @@ pub trait SubstrateEventWatcher {
             }
         };
         // Bridge watcher backoff metric
-        let metrics = metrics.lock().await;
-        metrics.bridge_watcher_back_off.inc();
+        metrics.lock().await.bridge_watcher_back_off.inc();
         drop(metrics);
         backoff::future::retry(backoff, task).await?;
         Ok(())

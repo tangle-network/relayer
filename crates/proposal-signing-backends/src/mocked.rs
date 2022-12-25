@@ -87,9 +87,7 @@ where
             signature = ?hex::encode(&signature_bytes),
         );
         // Proposal signed metric
-        let metrics = metrics.lock().await;
-        metrics.proposals_signed.inc();
-        drop(metrics);
+        metrics.lock().await.proposals_signed.inc();
         // now all we have to do is to send the data and the signature to the signature bridge.
         self.store.enqueue_item(
             SledQueueKey::from_bridge_key(bridge_key),

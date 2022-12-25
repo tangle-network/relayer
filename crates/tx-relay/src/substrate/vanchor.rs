@@ -113,15 +113,21 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
 
     handle_substrate_tx(event_stream, stream, cmd.chain_id).await;
 
-    let pallet_index = {
+    let target = {
         let metadata = client.metadata();
-        let pallet = metadata.pallet("VAnchorHandlerBn254").unwrap();
-        pallet.index()
+        let pallet = metadata.pallet("VAnchorHandlerBn254");
+        match pallet {
+            Ok(pallet) => SubstrateTargetSystem::builder()
+                .pallet_index(pallet.index())
+                .tree_id(cmd.id)
+                .build(),
+            Err(e) => {
+                tracing::error!("Vanchor handler pallet not found: {}", e);
+                return;
+            }
+        }
     };
-    let target = SubstrateTargetSystem::builder()
-        .pallet_index(pallet_index)
-        .tree_id(cmd.id)
-        .build();
+
     let target_system = TargetSystem::Substrate(target);
     let typed_chain_id = TypedChainId::Substrate(cmd.chain_id as u32);
     let resource_id = ResourceId::new(target_system, typed_chain_id);
@@ -140,5 +146,4 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .inc_by(cmd.ext_data.fee as f64);
     // update metric for total fee earned by relayer
     metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
-    drop(metrics);
 }

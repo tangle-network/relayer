@@ -140,9 +140,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
                     let maybe_success = v.wait_for_success().await;
                     match maybe_success {
                         Ok(_events) => {
-                            let metrics = metrics.lock().await;
-                            metrics.proposals_signed.inc();
-                            drop(metrics);
+                            metrics.lock().await.proposals_signed.inc();
                             tracing::debug!("tx finalized");
                         }
                         Err(err) => {

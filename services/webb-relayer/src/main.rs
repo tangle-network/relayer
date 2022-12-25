@@ -62,11 +62,11 @@ async fn main(args: Opts) -> anyhow::Result<()> {
         loop {
             sled_data_metric_interval.tick().await;
             // set data stored
-            let metrics = metrics_clone.lock().await;
-            metrics
+            metrics_clone
+                .lock()
+                .await
                 .total_amount_of_data_stored
                 .set(cloned_store.get_data_stored_size() as f64);
-            drop(metrics);
         }
     });
 

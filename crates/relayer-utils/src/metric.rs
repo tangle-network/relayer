@@ -136,8 +136,7 @@ impl Metrics {
             "The Total number of data stored",
         );
 
-        let resource_metric_map: HashMap<ResourceId, ResourceMetric> =
-            HashMap::new();
+        let resource_metric_map = HashMap::new();
 
         Self {
             bridge_watcher_back_off: bridge_watcher_back_off_counter.unwrap(),

@@ -270,7 +270,6 @@ where
                                 metrics
                                     .proposals_processed_substrate_tx_queue
                                     .inc();
-                                drop(metrics);
                             }
 
                             TransactionStatus::Usurped(_) => {
