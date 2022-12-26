@@ -80,7 +80,7 @@ where
             }
             _ => return Ok(()),
         };
-        
+
         let client = wrapper.contract.client();
         let chain_id = client.get_chainid().await?;
         let root: [u8; 32] =

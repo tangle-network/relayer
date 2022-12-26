@@ -28,7 +28,7 @@ config = { version = "0.11", default-features = false, features = ["toml", "json
 serde_json = { version = "^1", default-features = false }
 rand = { version = "0.8", default-features = false, features = ["getrandom"] }
 hex = { version = "0.4", default-features = false }
-webb = { path = "/Users/salman01zz/Webb-Tools/webb-rs/", version = "0.5.11", default-features = false }
+webb = { version = "0.5.11", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
