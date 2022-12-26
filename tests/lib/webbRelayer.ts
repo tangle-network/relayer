@@ -529,6 +529,7 @@ export type SubstrateVAnchorExtData = {
 export type SubstrateVAnchorProofData = {
   proof: number[];
   extDataHash: number[];
+  extensionRoots: number[],
   publicAmount: number[];
   roots: number[][];
   outputCommitments: number[][];

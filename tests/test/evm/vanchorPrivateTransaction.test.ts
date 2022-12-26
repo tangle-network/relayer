@@ -534,11 +534,11 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       tokenAddress
     );
 
-    const nullifierHash = output.publicInputs.inputNullifiers[0];
-    // flip a bit in the proof, so it is invalid
-    // nullifierHash[0] = 0x42;
+    const nullifierHash = hexToU8a(output.publicInputs.inputNullifiers[0]?.toHexString());
+    // flip a bit in the nullifier, so it is invalid
+    nullifierHash[0] = 0x42;
 
-    const invalidnullifierHash = BigNumber.from(400);
+    const invalidnullifierHash = BigNumber.from(u8aToHex(nullifierHash));
     expect(output.publicInputs.inputNullifiers[0]).to.not.eq(
       invalidnullifierHash
     );

@@ -113,6 +113,7 @@ where
         }
         Err(e) => {
             tracing::warn!("Got invalid payload: {:?}", e);
+            tracing::debug!("Invalid payload: {:?}", v);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
             tx.send(Message::text(value))
