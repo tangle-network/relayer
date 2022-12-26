@@ -27,7 +27,7 @@ import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
-import { hexToU8a } from '@polkadot/util';
+import { padHexString } from '../lib/utils.js';
 
 export type CommonConfig = {
   features?: FeaturesConfig;
@@ -283,10 +283,10 @@ export class WebbRelayer {
             publicAmount: publicInputs.publicAmount,
             roots: publicInputs.roots,
             outputCommitments: publicInputs.outputCommitments.map((output) =>
-              output.toHexString()
+              padHexString(output.toHexString())
             ),
             inputNullifiers: publicInputs.inputNullifiers.map((nullifier) =>
-              nullifier.toHexString()
+              padHexString(nullifier.toHexString())
             ),
           },
         },
@@ -529,7 +529,7 @@ export type SubstrateVAnchorExtData = {
 export type SubstrateVAnchorProofData = {
   proof: number[];
   extDataHash: number[];
-  extensionRoots: number[],
+  extensionRoots: number[];
   publicAmount: number[];
   roots: number[][];
   outputCommitments: number[][];

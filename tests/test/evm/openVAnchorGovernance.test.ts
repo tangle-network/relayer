@@ -196,7 +196,7 @@ describe('Open VAnchor Governance Relayer', function () {
       token.contract.address
     );
     await tx.wait();
-  
+
     tx = await openVAnchor1.contract.wrapAndDeposit(
       destChainId,
       depositAmount,

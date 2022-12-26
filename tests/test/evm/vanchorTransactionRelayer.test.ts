@@ -20,7 +20,7 @@
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo } from '@webb-tools/sdk-core';
-import { BigNumber, ethers } from 'ethers';
+import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import {
@@ -31,7 +31,7 @@ import {
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
-// const assert = require('assert');
+
 describe('Vanchor Transaction relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
@@ -143,10 +143,7 @@ describe('Vanchor Transaction relayer', function () {
       ethers.utils.parseEther('1000')
     );
     await tx.wait();
-    await token.mintTokens(
-      wallet1.address,
-      ethers.utils.parseEther('1000')
-    );
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
@@ -164,10 +161,7 @@ describe('Vanchor Transaction relayer', function () {
       ethers.utils.parseEther('1000')
     );
     await tx.wait();
-    await token2.mintTokens(
-      wallet2.address,
-      ethers.utils.parseEther('1000')
-    );
+    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
@@ -200,10 +194,7 @@ describe('Vanchor Transaction relayer', function () {
       wallet1
     );
     // mint tokens to the account everytime.
-    await token.mintTokens(
-      wallet1.address,
-      ethers.utils.parseEther('1000')
-    );
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     // check webbBalance
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to

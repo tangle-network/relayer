@@ -213,7 +213,7 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    const webbTokens1 = new Map<number,FungibleTokenWrapper | undefined>();
+    const webbTokens1 = new Map<number, FungibleTokenWrapper | undefined>();
     webbTokens1.set(this.chainId, null!);
     webbTokens1.set(otherChain.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {

@@ -156,10 +156,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       ethers.utils.parseEther('1000')
     );
     await tx.wait();
-    await token.mintTokens(
-      govWallet1.address,
-      ethers.utils.parseEther('1000')
-    );
+    await token.mintTokens(govWallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
@@ -221,10 +218,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       govWallet1
     );
     // mint tokens to the account everytime.
-    await token.mintTokens(
-      govWallet1.address,
-      ethers.utils.parseEther('1000')
-    );
+    await token.mintTokens(govWallet1.address, ethers.utils.parseEther('1000'));
     // check webbBalance
     const webbBalance = await token.getBalance(govWallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
@@ -271,7 +265,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress
     );
-    console.log(output);
+
     await webbRelayer.vanchorWithdraw(
       localChain2.underlyingChainId,
       vanchor2.getAddress(),
@@ -356,7 +350,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress
     );
-    console.log(output);
+
     const rootBytes = hexToU8a(output.publicInputs.roots);
     // flip a bit in the proof, so it is invalid
     rootBytes[0] = 0x42;
@@ -444,7 +438,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress
     );
-    console.log(output);
+
     const proofBytes = hexToU8a(output.publicInputs.proof);
     // flip a bit in the proof, so it is invalid
     proofBytes[0] = 0x42;
@@ -533,8 +527,10 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress
     );
-    console.log(output);
-    const nullifierHash = hexToU8a(output.publicInputs.inputNullifiers[0]?.toHexString());
+
+    const nullifierHash = hexToU8a(
+      output.publicInputs.inputNullifiers[0]?.toHexString()
+    );
     // flip a bit in the nullifier, so it is invalid
     nullifierHash[0] = 0x42;
 
