@@ -271,7 +271,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress
     );
-
+    console.log(output);
     await webbRelayer.vanchorWithdraw(
       localChain2.underlyingChainId,
       vanchor2.getAddress(),
@@ -356,7 +356,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress
     );
-
+    console.log(output);
     const rootBytes = hexToU8a(output.publicInputs.roots);
     // flip a bit in the proof, so it is invalid
     rootBytes[0] = 0x42;
@@ -444,7 +444,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress
     );
-
+    console.log(output);
     const proofBytes = hexToU8a(output.publicInputs.proof);
     // flip a bit in the proof, so it is invalid
     proofBytes[0] = 0x42;
@@ -533,7 +533,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress
     );
-
+    console.log(output);
     const nullifierHash = hexToU8a(output.publicInputs.inputNullifiers[0]?.toHexString());
     // flip a bit in the nullifier, so it is invalid
     nullifierHash[0] = 0x42;

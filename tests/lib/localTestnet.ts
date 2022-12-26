@@ -284,7 +284,6 @@ export class LocalChain {
     );
 
     this.signatureVBridge = vBridge;
-    console.log('vbridge deployed');
     if (initialGovernors) {
       const govEntries = Object.entries(initialGovernors);
 
