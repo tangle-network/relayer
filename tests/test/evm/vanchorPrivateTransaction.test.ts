@@ -449,7 +449,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     // flip a bit in the proof, so it is invalid
     proofBytes[0] = 0x42;
     const invalidProofBytes = u8aToHex(proofBytes);
-    expect(output.publicInputs.roots).to.not.eq(invalidProofBytes);
+    expect(output.publicInputs.proof).to.not.eq(invalidProofBytes);
     output.publicInputs.proof = invalidProofBytes;
     try {
       await webbRelayer.vanchorWithdraw(
