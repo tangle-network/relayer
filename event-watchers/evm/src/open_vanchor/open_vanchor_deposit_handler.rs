@@ -80,25 +80,7 @@ where
             }
             _ => return Ok(()),
         };
-        // Only construct the `AnchorUpdateProposal` if this condition evaluates to `true`: `leaf_index % 2 != 0`
-        // The reason behind this is that `VAnchor` on every `transact` call, emits two events,
-        // similar to the `Deposit` event but we call it the `Insertion` event, a la two `UTXO`
-        // and since we only need to update the target `VAnchor` only when needed,
-        // the first `Insertion` event sounds redundant in this case.
-        tracing::debug!(
-            event = ?event_data,
-            "OpenVAnchor new leaf event",
-        );
-
-        if event_data.leaf_index.as_u32() % 2 == 0 {
-            tracing::debug!(
-                leaf_index = %event_data.leaf_index,
-                is_even_index = %event_data.leaf_index.as_u32() % 2 == 0,
-                "Open VAnchor new leaf index does not satisfy the condition, skipping proposal.",
-            );
-            return Ok(());
-        }
-
+        
         let client = wrapper.contract.client();
         let chain_id = client.get_chainid().await?;
         let root: [u8; 32] =

@@ -20,7 +20,7 @@ import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
 import { LocalChain } from '../lib/localTestnet.js';
@@ -216,7 +216,10 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(anchor.contract.address);
+    let tx = await token.approveSpending(
+      anchor.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
@@ -231,7 +234,10 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(anchor2.contract.address);
+    tx = await token2.approveSpending(
+      anchor2.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
@@ -289,7 +295,16 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     });
 
     // Make the deposit transaction
-    await signatureBridge.transact([], [depositUtxo], 0, 0, '0', '0', wallet1);
+    await signatureBridge.transact(
+      [],
+      [depositUtxo],
+      0,
+      0,
+      '0',
+      '0',
+      tokenAddress,
+      wallet1
+    );
 
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
@@ -310,7 +325,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const neigborRoots = await anchor2.contract.getLatestNeighborRoots();
     const edges = await anchor2.contract.getLatestNeighborEdges();
     const isKnownNeighborRoot = neigborRoots.some(
-      (root: string) => root === srcChainRoot
+      (root: BigNumber) => root.toHexString() === srcChainRoot.toHexString()
     );
     if (!isKnownNeighborRoot) {
       console.log({
@@ -437,7 +452,10 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(anchor.contract.address);
+    let tx = await token.approveSpending(
+      anchor.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
@@ -452,7 +470,10 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(anchor2.contract.address);
+    tx = await token2.approveSpending(
+      anchor2.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
@@ -518,17 +539,9 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
       .elements()
       .map((el) => hexToU8a(el.toHexString()));
 
-    await anchor1.transact(
-      [],
-      [depositUtxo],
-      {
-        [localChain1.chainId]: leaves,
-      },
-      '0',
-      '0',
-      '0',
-      '0'
-    );
+    await anchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
+      [localChain1.chainId]: leaves,
+    });
 
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
@@ -549,7 +562,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     const neigborRoots = await anchor2.contract.getLatestNeighborRoots();
     const edges = await anchor2.contract.getLatestNeighborEdges();
     const isKnownNeighborRoot = neigborRoots.some(
-      (root: string) => root === srcChainRoot
+      (root: BigNumber) => root.toHexString() === srcChainRoot.toHexString()
     );
     if (!isKnownNeighborRoot) {
       console.log({

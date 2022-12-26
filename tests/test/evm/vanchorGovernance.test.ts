@@ -132,7 +132,10 @@ describe('VAnchor Governance Relayer', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(vanchor.contract.address, BigNumber.from(1e10));
+    let tx = await token.approveSpending(
+      vanchor.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
@@ -147,7 +150,10 @@ describe('VAnchor Governance Relayer', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(vanchor2.contract.address, BigNumber.from(1e10));
+    tx = await token2.approveSpending(
+      vanchor2.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
@@ -216,10 +222,10 @@ describe('VAnchor Governance Relayer', function () {
       0,
       '0',
       '0',
-      '',
+      tokenAddress,
       {
         [localChain1.chainId]: leaves,
-      },
+      }
     );
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
@@ -240,7 +246,7 @@ describe('VAnchor Governance Relayer', function () {
     const neigborRoots = await vanchor2.contract.getLatestNeighborRoots();
     const edges = await vanchor2.contract.getLatestNeighborEdges();
     const isKnownNeighborRoot = neigborRoots.some(
-      (root: BigNumber) => root === srcChainRoot
+      (root: BigNumber) => root.toHexString() === srcChainRoot.toHexString()
     );
     if (!isKnownNeighborRoot) {
       console.log({

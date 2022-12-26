@@ -32,8 +32,7 @@ import {
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 
-// const assert = require('assert');
-describe.only('Vanchor Private Tx relaying with mocked governor', function () {
+describe('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -152,11 +151,14 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       tokenAddress,
       govWallet1
     );
-    let tx = await token.approveSpending(vanchor1.contract.address, BigNumber.from(1e10));
+    let tx = await token.approveSpending(
+      vanchor1.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token.mintTokens(
       govWallet1.address,
-      ethers.utils.parseEther('100000000000000000000000')
+      ethers.utils.parseEther('1000')
     );
 
     // do the same but on localchain2
@@ -170,11 +172,14 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       govWallet2
     );
 
-    tx = await token2.approveSpending(vanchor2.contract.address, BigNumber.from(1e10));
+    tx = await token2.approveSpending(
+      vanchor2.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token2.mintTokens(
       govWallet2.address,
-      ethers.utils.parseEther('100000000000000000000000')
+      ethers.utils.parseEther('1000')
     );
 
     // Set governor
@@ -195,7 +200,7 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       tmp: true,
       configDir: tmpDirPath,
       showLogs: true,
-      verbosity: 4
+      verbosity: 4,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -218,7 +223,7 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
     // mint tokens to the account everytime.
     await token.mintTokens(
       govWallet1.address,
-      ethers.utils.parseEther('100000000000000000000000')
+      ethers.utils.parseEther('1000')
     );
     // check webbBalance
     const webbBalance = await token.getBalance(govWallet1.address);
@@ -244,7 +249,7 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       0,
       '0',
       '0',
-      '',
+      tokenAddress,
       govWallet1
     );
 
@@ -263,7 +268,8 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       randomKeypair,
       vanchor1,
       vanchor2,
-      relayerWallet2
+      relayerWallet2,
+      tokenAddress
     );
 
     await webbRelayer.vanchorWithdraw(
@@ -328,7 +334,7 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       0,
       '0',
       '0',
-      '',
+      tokenAddress,
       govWallet1
     );
 
@@ -347,7 +353,8 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       randomKeypair,
       vanchor1,
       vanchor2,
-      relayerWallet2
+      relayerWallet2,
+      tokenAddress
     );
 
     const rootBytes = hexToU8a(output.publicInputs.roots);
@@ -415,7 +422,7 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       0,
       '0',
       '0',
-      '',
+      tokenAddress,
       govWallet1
     );
 
@@ -434,7 +441,8 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       randomKeypair,
       vanchor1,
       vanchor2,
-      relayerWallet2
+      relayerWallet2,
+      tokenAddress
     );
 
     const proofBytes = hexToU8a(output.publicInputs.proof);
@@ -503,7 +511,7 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       0,
       '0',
       '0',
-      '',
+      tokenAddress,
       govWallet1
     );
 
@@ -522,7 +530,8 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       randomKeypair,
       vanchor1,
       vanchor2,
-      relayerWallet2
+      relayerWallet2,
+      tokenAddress
     );
 
     const nullifierHash = output.publicInputs.inputNullifiers[0];

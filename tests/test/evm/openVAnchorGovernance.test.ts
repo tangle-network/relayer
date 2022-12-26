@@ -196,7 +196,7 @@ describe('Open VAnchor Governance Relayer', function () {
       token.contract.address
     );
     await tx.wait();
-
+  
     tx = await openVAnchor1.contract.wrapAndDeposit(
       destChainId,
       depositAmount,
@@ -227,7 +227,7 @@ describe('Open VAnchor Governance Relayer', function () {
     const neigborRoots = await openVAnchor2.contract.getLatestNeighborRoots();
     const edges = await openVAnchor2.contract.getLatestNeighborEdges();
     const isKnownNeighborRoot = neigborRoots.some(
-      (root: BigNumber) => root === srcChainRoot
+      (root: BigNumber) => root.toHexString() === srcChainRoot.toHexString()
     );
     if (!isKnownNeighborRoot) {
       console.log({

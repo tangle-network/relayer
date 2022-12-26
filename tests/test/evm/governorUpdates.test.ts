@@ -222,7 +222,10 @@ describe.skip('SignatureBridge Governor Updates', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(anchor.contract.address, BigNumber.from(1e10));
+    let tx = await token.approveSpending(
+      anchor.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
@@ -237,7 +240,10 @@ describe.skip('SignatureBridge Governor Updates', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(anchor2.contract.address, BigNumber.from(1e10));
+    tx = await token2.approveSpending(
+      anchor2.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 

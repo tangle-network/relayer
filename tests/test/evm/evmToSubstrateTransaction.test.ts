@@ -77,9 +77,9 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   let signatureVBridge: VBridge.VBridge;
 
   // Mnemonic seed phrase to created governor key used for signing proposals.
-  const filePath = path.join(path.resolve("../"), "sample_seed.txt");
+  const filePath = path.join(path.resolve('../'), 'sample_seed.txt');
   const mnemonic = fs.readFileSync(filePath);
-  const governorWallet  = ethers.Wallet.fromMnemonic(mnemonic.toString());
+  const governorWallet = ethers.Wallet.fromMnemonic(mnemonic.toString());
   const GOV = governorWallet.privateKey;
   // File path to secrets containing mnemonic seed phrase
   const secretFile = `file:${filePath}`;
@@ -177,6 +177,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
 
     // Get the anhor on localchain1
     const vanchor = signatureVBridge.getVAnchor(localChain1.chainId);
+    
     await vanchor.setSigner(wallet1);
 
     const evmResourceId = await vanchor.createResourceId();
@@ -203,7 +204,6 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       linkedAnchors: [
         { type: 'Raw', resourceId: substrateResourceId.toString() },
       ],
-      blockConfirmations: 15,
     });
 
     // This are pre-requisites for creating substrate chain.
@@ -247,7 +247,11 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       tokenAddress,
       wallet1
     );
-    const tx = await token.approveSpending(vanchor1.contract.address, BigNumber.from(1e10));
+    
+    const tx = await token.approveSpending(
+      vanchor1.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
 
     // Mint 1000 * 10^18 tokens to wallet1
@@ -293,20 +297,11 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       .elements()
       .map((el) => hexToU8a(el.toHexString()));
 
-    await vanchor1.transact(
-      [],
-      [depositUtxo],
-      0,
-      0,
-      '0',
-      '0',
-      '',
-      {
-        [typedSourceChainId]: leaves,
-      },
-    );
+      
+    await vanchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
+      [typedSourceChainId]: leaves,
+    });
     
-
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
       kind: 'signing_backend',
@@ -314,7 +309,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
         backend: 'Mocked',
       },
     });
-
+    
     // now we wait for proposals to be verified and executed by signature bridge through transaction queue.
 
     await webbRelayer.waitForEvent({

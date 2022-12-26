@@ -165,7 +165,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     };
     let public_inputs = PublicInputs {
         roots: roots.into(),
-        extension_roots: b"0x".into(),
+        extension_roots: cmd.proof_data.extension_roots,
         input_nullifiers: cmd
             .proof_data
             .input_nullifiers

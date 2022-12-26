@@ -138,11 +138,14 @@ describe('Vanchor Transaction relayer', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(vanchor1.contract.address, BigNumber.from(1e10));
+    let tx = await token.approveSpending(
+      vanchor1.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token.mintTokens(
       wallet1.address,
-      ethers.utils.parseEther('100000000000000000000000')
+      ethers.utils.parseEther('1000')
     );
 
     // do the same but on localchain2
@@ -156,11 +159,14 @@ describe('Vanchor Transaction relayer', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(vanchor2.contract.address, BigNumber.from(1e10));
+    tx = await token2.approveSpending(
+      vanchor2.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token2.mintTokens(
       wallet2.address,
-      ethers.utils.parseEther('100000000000000000000000')
+      ethers.utils.parseEther('1000')
     );
 
     // now start the relayer
@@ -196,7 +202,7 @@ describe('Vanchor Transaction relayer', function () {
     // mint tokens to the account everytime.
     await token.mintTokens(
       wallet1.address,
-      ethers.utils.parseEther('100000000000000000000000')
+      ethers.utils.parseEther('1000')
     );
     // check webbBalance
     const webbBalance = await token.getBalance(wallet1.address);
@@ -225,11 +231,10 @@ describe('Vanchor Transaction relayer', function () {
         0,
         '0',
         '0',
-        '',
+        tokenAddress,
         {
-          [localChain1.chainId]: leaves,
-        },
-      );
+        [localChain1.chainId]: leaves,
+      });
     }
 
     // now we wait for all deposits to be saved in LeafStorageCache
@@ -303,9 +308,9 @@ describe('Vanchor Transaction relayer', function () {
         0,
         '0',
         '0',
-        '',
+        tokenAddress,
         {
-          [localChain1.chainId]: leaves,
+        [localChain1.chainId]: leaves,
         },
       );
     }
