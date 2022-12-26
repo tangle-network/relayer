@@ -23,8 +23,7 @@ import {
   IVariableAnchorExtData,
   IVariableAnchorPublicInputs,
 } from '@webb-tools/interfaces';
-import { MintableToken } from '@webb-tools/tokens';
-import { GovernedTokenWrapper } from '@webb-tools/tokens';
+import { FungibleTokenWrapper, MintableToken } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 import { LocalEvmChain } from '@webb-tools/test-utils';
 import path from 'path';
@@ -133,7 +132,7 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    const webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
+    const webbTokens1 = new Map<number, FungibleTokenWrapper | undefined>();
     webbTokens1.set(this.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
@@ -214,10 +213,7 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    const webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
-      number,
-      GovernedTokenWrapper | undefined
-    >();
+    const webbTokens1 = new Map<number, FungibleTokenWrapper | undefined>();
     webbTokens1.set(this.chainId, null!);
     webbTokens1.set(otherChain.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {
@@ -288,7 +284,6 @@ export class LocalChain {
     );
 
     this.signatureVBridge = vBridge;
-
     if (initialGovernors) {
       const govEntries = Object.entries(initialGovernors);
 
@@ -341,7 +336,7 @@ export class LocalChain {
         eventsWatcher: {
           enabled: true,
           pollingInterval: 1000,
-          printProgressInterval: 60_000,
+          printProgressInterval: 7000,
         },
         linkedAnchors: opts.linkedAnchors,
       },
@@ -352,7 +347,7 @@ export class LocalChain {
         eventsWatcher: {
           enabled: true,
           pollingInterval: 1000,
-          printProgressInterval: 60_000,
+          printProgressInterval: 7000,
         },
       },
     ];
@@ -361,7 +356,7 @@ export class LocalChain {
       enabled: true,
       httpEndpoint: this.endpoint,
       wsEndpoint: this.endpoint.replace('http', 'ws'),
-      blockConfirmations: opts.blockConfirmations ?? 1,
+      blockConfirmations: opts.blockConfirmations ?? 0,
       chainId: this.underlyingChainId,
       beneficiary: (wallet as ethers.Wallet).address,
       privateKey: (wallet as ethers.Wallet).privateKey,
@@ -507,7 +502,8 @@ export async function setupVanchorEvmTx(
   randomKeypair: Keypair,
   srcVanchor: Anchors.VAnchor,
   destVanchor: Anchors.VAnchor,
-  relayerWallet2: Wallet
+  relayerWallet2: Wallet,
+  tokenAddress: string
 ): Promise<{
   extData: IVariableAnchorExtData;
   publicInputs: IVariableAnchorPublicInputs;
@@ -577,9 +573,9 @@ export async function setupVanchorEvmTx(
     extAmount,
     0,
     0,
-    relayerWallet2.address,
     recipient,
     relayerWallet2.address,
+    tokenAddress,
     leavesMap
   );
 

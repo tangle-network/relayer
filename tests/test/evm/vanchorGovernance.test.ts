@@ -18,7 +18,7 @@
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo } from '@webb-tools/sdk-core';
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import { EnabledContracts, WebbRelayer } from '../../lib/webbRelayer.js';
@@ -132,7 +132,10 @@ describe('VAnchor Governance Relayer', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(vanchor.contract.address);
+    let tx = await token.approveSpending(
+      vanchor.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
@@ -147,7 +150,10 @@ describe('VAnchor Governance Relayer', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(vanchor2.contract.address);
+    tx = await token2.approveSpending(
+      vanchor2.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
@@ -212,13 +218,14 @@ describe('VAnchor Governance Relayer', function () {
     await vanchor1.transact(
       [],
       [depositUtxo],
+      0,
+      0,
+      '0',
+      '0',
+      tokenAddress,
       {
         [localChain1.chainId]: leaves,
-      },
-      '0',
-      '0',
-      '0',
-      '0'
+      }
     );
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
@@ -239,7 +246,7 @@ describe('VAnchor Governance Relayer', function () {
     const neigborRoots = await vanchor2.contract.getLatestNeighborRoots();
     const edges = await vanchor2.contract.getLatestNeighborEdges();
     const isKnownNeighborRoot = neigborRoots.some(
-      (root: string) => root === srcChainRoot
+      (root: BigNumber) => root.toHexString() === srcChainRoot.toHexString()
     );
     if (!isKnownNeighborRoot) {
       console.log({

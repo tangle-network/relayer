@@ -228,7 +228,10 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(anchor.contract.address);
+    let tx = await token.approveSpending(
+      anchor.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
@@ -243,7 +246,10 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(anchor2.contract.address);
+    tx = await token2.approveSpending(
+      anchor2.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
@@ -251,7 +257,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const resourceId1 = await anchor.createResourceId();
     const resourceId2 = await anchor2.createResourceId();
     const governedTokenAddress = anchor.token!;
-    const governedToken = Tokens.GovernedTokenWrapper.connect(
+    const governedToken = Tokens.FungibleTokenWrapper.connect(
       governedTokenAddress,
       wallet1
     );
@@ -287,7 +293,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       wallet1
     );
     const governedTokenAddress = anchor.token!;
-    const governedToken = Tokens.GovernedTokenWrapper.connect(
+    const governedToken = Tokens.FungibleTokenWrapper.connect(
       governedTokenAddress,
       wallet1
     );
@@ -344,7 +350,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
-    const governedToken = Tokens.GovernedTokenWrapper.connect(
+    const governedToken = Tokens.FungibleTokenWrapper.connect(
       governedTokenAddress,
       wallet1
     );
@@ -406,7 +412,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
-    const governedToken = Tokens.GovernedTokenWrapper.connect(
+    const governedToken = Tokens.FungibleTokenWrapper.connect(
       governedTokenAddress,
       wallet1
     );

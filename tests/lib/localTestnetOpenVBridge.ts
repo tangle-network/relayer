@@ -19,7 +19,7 @@ import { ethers, Wallet } from 'ethers';
 import { Utility, VBridge } from '@webb-tools/protocol-solidity';
 import { DeployerConfig, GovernorConfig } from '@webb-tools/interfaces';
 import { MintableToken } from '@webb-tools/tokens';
-import { GovernedTokenWrapper } from '@webb-tools/tokens';
+import { FungibleTokenWrapper } from '@webb-tools/tokens';
 import { LocalEvmChain } from '@webb-tools/test-utils';
 import child from 'child_process';
 import {
@@ -122,7 +122,7 @@ export class LocalChain {
     localWallet: ethers.Wallet,
     initialGovernor: ethers.Wallet
   ): Promise<VBridge.OpenVBridge> {
-    const webbTokens1 = new Map<number, GovernedTokenWrapper | undefined>();
+    const webbTokens1 = new Map<number, FungibleTokenWrapper | undefined>();
     webbTokens1.set(this.chainId, null!);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
@@ -157,9 +157,9 @@ export class LocalChain {
     otherWallet: ethers.Wallet,
     initialGovernors?: GovernorConfig
   ): Promise<VBridge.OpenVBridge> {
-    const webbTokens1: Map<number, GovernedTokenWrapper | undefined> = new Map<
+    const webbTokens1: Map<number, FungibleTokenWrapper | undefined> = new Map<
       number,
-      GovernedTokenWrapper | undefined
+      FungibleTokenWrapper | undefined
     >();
     webbTokens1.set(this.chainId, null!);
     webbTokens1.set(otherChain.chainId, null!);

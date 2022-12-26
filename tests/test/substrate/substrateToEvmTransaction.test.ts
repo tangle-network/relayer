@@ -355,15 +355,16 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     const res = await vanchor1.transact(
       [],
       [],
+      0,
+      0,
+      '0',
+      '0',
+      tokenAddress,
       {
         [localChain1.chainId]: leaves,
         [typedSourceChainId]: substrateLeaves,
-      },
-      '0',
-      '0',
-      '0',
-      '0'
-    );
+      }
+      );
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
       kind: 'signing_backend',

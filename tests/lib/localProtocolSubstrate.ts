@@ -18,7 +18,7 @@ import {
 import { ConvertToKebabCase } from './tsHacks.js';
 
 const STANDALONE_DOCKER_IMAGE_URL =
-'ghcr.io/webb-tools/protocol-substrate-standalone-node:edge'
+  'ghcr.io/webb-tools/protocol-substrate-standalone-node:edge';
 type ExportedConfigOptions = {
   suri: string;
   proposalSigningBackend?: ProposalSigningBackend;

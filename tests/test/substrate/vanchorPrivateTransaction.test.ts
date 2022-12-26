@@ -185,6 +185,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     let substrateProofData: SubstrateVAnchorProofData = {
       proof: Array.from(hexToU8a(vanchorData.proofData.proof)),
       extDataHash: Array.from(vanchorData.proofData.extDataHash),
+      extensionRoots: vanchorData.proofData.roots.map((root) => Array.from(root)),
       publicAmount: Array.from(vanchorData.proofData.publicAmount),
       roots: vanchorData.proofData.roots.map((root) => Array.from(root)),
       outputCommitments: vanchorData.proofData.outputCommitments.map((com) =>

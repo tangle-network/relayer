@@ -27,7 +27,7 @@ import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
-import { hexToU8a } from '@polkadot/util';
+import { padHexString } from '../lib/utils.js';
 
 export type CommonConfig = {
   features?: FeaturesConfig;
@@ -269,20 +269,25 @@ export class WebbRelayer {
           extData: {
             recipient: extData.recipient,
             relayer: extData.relayer,
-            extAmount: extData.extAmount.replace('0x', '') as any,
-            fee: extData.fee.toString() as any,
-            refund: extData.refund.toString() as any,
+            extAmount: extData.extAmount.replace('0x', ''),
+            fee: extData.fee,
+            refund: extData.refund,
             token: extData.token,
             encryptedOutput1: extData.encryptedOutput1,
             encryptedOutput2: extData.encryptedOutput2,
           },
           proofData: {
             proof: publicInputs.proof,
-            extDataHash: publicInputs.extDataHash,
+            extensionRoots: publicInputs.extensionRoots,
+            extDataHash: publicInputs.extDataHash.toHexString(),
             publicAmount: publicInputs.publicAmount,
             roots: publicInputs.roots,
-            outputCommitments: publicInputs.outputCommitments,
-            inputNullifiers: publicInputs.inputNullifiers,
+            outputCommitments: publicInputs.outputCommitments.map((output) =>
+              padHexString(output.toHexString())
+            ),
+            inputNullifiers: publicInputs.inputNullifiers.map((nullifier) =>
+              padHexString(nullifier.toHexString())
+            ),
           },
         },
       },
@@ -524,6 +529,7 @@ export type SubstrateVAnchorExtData = {
 export type SubstrateVAnchorProofData = {
   proof: number[];
   extDataHash: number[];
+  extensionRoots: number[];
   publicAmount: number[];
   roots: number[][];
   outputCommitments: number[][];

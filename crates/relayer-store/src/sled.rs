@@ -735,7 +735,7 @@ mod tests {
 
         let events = (0..20)
             .map(|_| NewNullifierFilter {
-                nullifier: types::H256::random().to_fixed_bytes(),
+                nullifier: types::H256::random().to_fixed_bytes().into(),
             })
             .collect::<Vec<_>>();
 
