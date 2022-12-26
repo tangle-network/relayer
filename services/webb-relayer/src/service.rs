@@ -878,7 +878,7 @@ pub async fn start_evm_open_vanchor_events_watcher(
 ) -> crate::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
-            "VAnchor events watcher is disabled for ({}).",
+            "Open VAnchor events watcher is disabled for ({}).",
             config.common.address,
         );
         return Ok(());
@@ -894,7 +894,7 @@ pub async fn start_evm_open_vanchor_events_watcher(
     let my_config = config.clone();
     let task = async move {
         tracing::debug!(
-            "VAnchor events watcher for ({}) Started.",
+            "Open VAnchor events watcher for ({}) Started.",
             contract_address,
         );
         let contract_watcher = OpenVAnchorContractWatcher::default();
@@ -921,13 +921,13 @@ pub async fn start_evm_open_vanchor_events_watcher(
                 tokio::select! {
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
-                            "VAnchor watcher task stopped for ({})",
+                            "Open VAnchor watcher task stopped for ({})",
                             contract_address,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping VAnchor watcher for ({})",
+                            "Stopping Open VAnchor watcher for ({})",
                             contract_address,
                         );
                     },
@@ -946,13 +946,13 @@ pub async fn start_evm_open_vanchor_events_watcher(
                 tokio::select! {
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
-                            "VAnchor watcher task stopped for ({})",
+                            "Open VAnchor watcher task stopped for ({})",
                             contract_address,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping VAnchor watcher for ({})",
+                            "Stopping Open VAnchor watcher for ({})",
                             contract_address,
                         );
                     },
@@ -970,13 +970,13 @@ pub async fn start_evm_open_vanchor_events_watcher(
                 tokio::select! {
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
-                            "VAnchor watcher task stopped for ({})",
+                            "Open VAnchor watcher task stopped for ({})",
                             contract_address,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping VAnchor watcher for ({})",
+                            "Stopping Open VAnchor watcher for ({})",
                             contract_address,
                         );
                     },

@@ -184,13 +184,14 @@ describe('Open VAnchor Governance Relayer', function () {
     const destChainId = localChain2.chainId;
     const recipient = await wallet1.getAddress();
     const delegatedCalldata = '0x00';
-
+    const blinding = BigNumber.from(1010101010);
     await openVAnchor1.setSigner(wallet1);
     tx = await openVAnchor1.contract.wrapAndDeposit(
       destChainId,
       depositAmount,
       recipient,
       delegatedCalldata,
+      blinding,
       BigNumber.from(1010101010),
       token.contract.address
     );
@@ -201,6 +202,7 @@ describe('Open VAnchor Governance Relayer', function () {
       depositAmount,
       recipient,
       delegatedCalldata,
+      blinding,
       BigNumber.from(1010101011),
       token.contract.address
     );
@@ -225,7 +227,7 @@ describe('Open VAnchor Governance Relayer', function () {
     const neigborRoots = await openVAnchor2.contract.getLatestNeighborRoots();
     const edges = await openVAnchor2.contract.getLatestNeighborEdges();
     const isKnownNeighborRoot = neigborRoots.some(
-      (root: string) => root === srcChainRoot
+      (root: BigNumber) => root.toHexString() === srcChainRoot.toHexString()
     );
     if (!isKnownNeighborRoot) {
       console.log({

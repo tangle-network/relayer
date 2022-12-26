@@ -7,6 +7,11 @@ export const defaultEventsWatcherValue: EventsWatcher = {
   pollingInterval: 3000,
 };
 
+// Pad hexString with zero to make it of length 64.
+export function padHexString(hexString: string): string {
+  return '0x' + hexString.substring(2).padStart(64, '0');
+}
+
 export async function generateArkworksUtxoTest(
   amount: number,
   chainId: number,

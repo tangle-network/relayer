@@ -31,7 +31,7 @@ import {
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
-// const assert = require('assert');
+
 describe('Vanchor Transaction relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
@@ -138,12 +138,12 @@ describe('Vanchor Transaction relayer', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(vanchor1.contract.address);
-    await tx.wait();
-    await token.mintTokens(
-      wallet1.address,
-      ethers.utils.parseEther('100000000000000000000000')
+    let tx = await token.approveSpending(
+      vanchor1.contract.address,
+      ethers.utils.parseEther('1000')
     );
+    await tx.wait();
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
@@ -156,12 +156,12 @@ describe('Vanchor Transaction relayer', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(vanchor2.contract.address);
-    await tx.wait();
-    await token2.mintTokens(
-      wallet2.address,
-      ethers.utils.parseEther('100000000000000000000000')
+    tx = await token2.approveSpending(
+      vanchor2.contract.address,
+      ethers.utils.parseEther('1000')
     );
+    await tx.wait();
+    await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
@@ -194,10 +194,7 @@ describe('Vanchor Transaction relayer', function () {
       wallet1
     );
     // mint tokens to the account everytime.
-    await token.mintTokens(
-      wallet1.address,
-      ethers.utils.parseEther('100000000000000000000000')
-    );
+    await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     // check webbBalance
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
@@ -221,14 +218,14 @@ describe('Vanchor Transaction relayer', function () {
       await vanchor1.transact(
         [],
         [depositUtxo],
+        0,
+        0,
+        '0',
+        '0',
+        tokenAddress,
         {
-          [localChain1.chainId]: leaves,
-        },
-        '0',
-        '0',
-        '0',
-        '0'
-      );
+        [localChain1.chainId]: leaves,
+      });
     }
 
     // now we wait for all deposits to be saved in LeafStorageCache
@@ -298,13 +295,14 @@ describe('Vanchor Transaction relayer', function () {
       await vanchor1.transact(
         [],
         [depositUtxo],
+        0,
+        0,
+        '0',
+        '0',
+        tokenAddress,
         {
-          [localChain1.chainId]: leaves,
+        [localChain1.chainId]: leaves,
         },
-        '0',
-        '0',
-        '0',
-        '0'
       );
     }
 

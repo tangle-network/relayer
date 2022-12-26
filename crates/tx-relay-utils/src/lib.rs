@@ -83,6 +83,8 @@ pub struct ProofData<P, R, E> {
     pub output_commitments: Vec<E>,
     /// External data hash consisting of arbitrary data inputs
     pub ext_data_hash: E,
+    /// Root extension
+    pub extension_roots: R,
 }
 
 /// External data for the VAnchor on any chain.

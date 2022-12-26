@@ -20,7 +20,7 @@
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { VBridge, Tokens } from '@webb-tools/protocol-solidity';
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
 import { LocalChain } from '../../lib/localTestnet.js';
@@ -222,7 +222,10 @@ describe.skip('SignatureBridge Governor Updates', function () {
       tokenAddress,
       wallet1
     );
-    let tx = await token.approveSpending(anchor.contract.address);
+    let tx = await token.approveSpending(
+      anchor.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
@@ -237,7 +240,10 @@ describe.skip('SignatureBridge Governor Updates', function () {
       wallet2
     );
 
-    tx = await token2.approveSpending(anchor2.contract.address);
+    tx = await token2.approveSpending(
+      anchor2.contract.address,
+      ethers.utils.parseEther('1000')
+    );
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 

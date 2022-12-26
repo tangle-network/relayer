@@ -4,7 +4,7 @@ use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
 use webb::evm::{
     contract::protocol_solidity::{
-        variable_anchor::{ExtData, Proof},
+        variable_anchor::{CommonExtData, Encryptions, PublicInputs},
         VAnchorContract,
     },
     ethers::prelude::{Signer, SignerMiddleware},
@@ -156,44 +156,47 @@ pub async fn handle_vanchor_relay_tx<'a>(
         return;
     }
 
-    let ext_data = ExtData {
+    let common_ext_data = CommonExtData {
         recipient: cmd.ext_data.recipient,
+        ext_amount: cmd.ext_data.ext_amount.0,
         relayer: cmd.ext_data.relayer,
         fee: cmd.ext_data.fee,
         refund: cmd.ext_data.refund,
-        ext_amount: cmd.ext_data.ext_amount.0,
         token: cmd.ext_data.token,
-        encrypted_output_1: cmd.ext_data.encrypted_output1,
-        encrypted_output_2: cmd.ext_data.encrypted_output2,
     };
-
-    let proof = Proof {
-        proof: cmd.proof_data.proof,
+    let public_inputs = PublicInputs {
         roots: roots.into(),
-        ext_data_hash: cmd.proof_data.ext_data_hash.to_fixed_bytes(),
-        public_amount: U256::from_big_endian(
-            &cmd.proof_data.public_amount.to_fixed_bytes(),
-        ),
+        extension_roots: cmd.proof_data.extension_roots,
         input_nullifiers: cmd
             .proof_data
             .input_nullifiers
             .iter()
-            .map(|v| v.to_fixed_bytes())
+            .map(|v| v.to_fixed_bytes().into())
             .collect(),
         output_commitments: [
-            cmd.proof_data.output_commitments[0].to_fixed_bytes(),
-            cmd.proof_data.output_commitments[1].to_fixed_bytes(),
+            cmd.proof_data.output_commitments[0].to_fixed_bytes().into(),
+            cmd.proof_data.output_commitments[1].to_fixed_bytes().into(),
         ],
+        public_amount: U256::from_big_endian(
+            &cmd.proof_data.public_amount.to_fixed_bytes(),
+        ),
+        ext_data_hash: cmd.proof_data.ext_data_hash.to_fixed_bytes().into(),
     };
-    tracing::trace!(?proof, ?ext_data, "Client Proof");
-    let call = contract.transact(proof, ext_data);
 
-    let target_system = TargetSystem::new_contract_address(
-        contract_config.common.address.to_fixed_bytes(),
+    let encryptions = Encryptions {
+        encrypted_output_1: cmd.ext_data.encrypted_output1,
+        encrypted_output_2: cmd.ext_data.encrypted_output2,
+    };
+
+    tracing::trace!(?cmd.proof_data.proof, ?common_ext_data, "Client Proof");
+
+    let call = contract.transact(
+        cmd.proof_data.proof,
+        [0u8; 32].into(),
+        common_ext_data,
+        public_inputs,
+        encryptions,
     );
-    let typed_chain_id = TypedChainId::Evm(chain.chain_id);
-    let resource_id = ResourceId::new(target_system, typed_chain_id);
-
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
     handle_evm_tx(call, stream, cmd.chain_id, ctx.metrics.clone(), resource_id)
         .await;
