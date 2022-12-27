@@ -21,26 +21,26 @@ enabled = true
 
 contract = "VAnchor"
 # The address of the contract
-address = "0x1f88e3903a36f1c2f997822579a651cb8022c64b"
+address = "0xb2d1d8d651c53a00e13ea0a363aab575a6886391"
 
-deployed-at = 2478565
+deployed-at = 2545802
 
 events-watcher = { enabled = true, polling-interval = 15000 }
 
 withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
 
 linked-anchors = [
-  { type = "Evm", chain = "goerli", chain-id = 5, address = "0x98c1024dfd61a8f7439108acedcb51a27754f2af" },
-  { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0xd2fbe0fd50315c13ac9a9331dadb1784c1ef6bb8" },
-  { type = "Evm", chain = "mumbai", chain-id = 80001, address = "0xdb3365f086e9e3536d0f12abb822d048c7a60ebd" },
-  { type = "Evm", chain = "moonbase", chain-id = 1287, address = "0xdb3365f086e9e3536d0f12abb822d048c7a60ebd"}
+  { type = "Evm", chain = "goerli", chain-id = 5, address = "0x3a4233bf223622f6571b8543498a62b9e2a3b31f" },
+  { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0x9d36b94f245857ec7280415140800dde7642addb" },
+  { type = "Evm", chain = "mumbai", chain-id = 80001, address = "0xda27349ee55e7c91e1b521ece4c3dcc390383026" },
+  { type = "Evm", chain = "moonbase", chain-id = 1287, address = "0xda27349ee55e7c91e1b521ece4c3dcc390383026"}
 ]
 # proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }
 proposal-signing-backend = { type = "DKGNode", node = "tangle" }
 
 [[evm.sepolia.contracts]]
 contract = "SignatureBridge"
-address = "0x636179602b36b1eb4f00c9d74e3fce607a148314"
+address = "0xc99aea79d36227ff5760372f56d37f683954bc2a"
 
 deployed-at = 2478538
 

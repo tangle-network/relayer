@@ -41,11 +41,11 @@ enabled = true
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0xdb3365f086e9e3536d0f12abb822d048c7a60ebd"
+address = "0xda27349ee55e7c91e1b521ece4c3dcc390383026"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 3355037
+deployed-at = 3418157
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
@@ -59,20 +59,20 @@ withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" 
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0x1f88e3903a36f1c2f997822579a651cb8022c64b" },
-  { type = "Evm", chain = "mumbai", chain-id = 80001, address = "0xdb3365f086e9e3536d0f12abb822d048c7a60ebd" },
-  { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0xd2fbe0fd50315c13ac9a9331dadb1784c1ef6bb8" },
-  { type = "Evm", chain = "goerli", chain-id = 5, address = "0x98c1024dfd61a8f7439108acedcb51a27754f2af"}
+  { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0xb2d1d8d651c53a00e13ea0a363aab575a6886391" },
+  { type = "Evm", chain = "mumbai", chain-id = 80001, address = "0xda27349ee55e7c91e1b521ece4c3dcc390383026" },
+  { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0x9d36b94f245857ec7280415140800dde7642addb" },
+  { type = "Evm", chain = "goerli", chain-id = 5, address = "0x3a4233bf223622f6571b8543498a62b9e2a3b31f"}
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }
 
 [[evm.moonbase.contracts]]
 contract = "SignatureBridge"
-address = "0x00fcd1fe99d5605cf7bfa53bacdb84d892a446ed"
+address = "0x206b293e2bc9e81d6af554a4302529d58eef7de7"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 3354999
+deployed-at = 3418117
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
