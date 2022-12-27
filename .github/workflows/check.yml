@@ -93,7 +93,10 @@ jobs:
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
 
-      - uses: actions-rs/cargo@v1
+      - name: Install cross
+        run: cargo install cross --locked
+      - name: Build target
+        uses: actions-rs/cargo@v1
         with:
           use-cross: true
           args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
@@ -136,8 +139,10 @@ jobs:
         run: |
             touch .env
             echo ETH1_INFURA_API_KEY = ${{ secrets.ETH1_INFURA_API_KEY }} >> .env
-          
-      - uses: actions-rs/cargo@v1
+      - name: Install cross
+        run: cargo install cross --locked
+      - name: Build target
+        uses: actions-rs/cargo@v1
         with:
           use-cross: true
           args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
