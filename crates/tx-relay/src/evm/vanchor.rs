@@ -197,6 +197,13 @@ pub async fn handle_vanchor_relay_tx<'a>(
         public_inputs,
         encryptions,
     );
+
+    let target_system = TargetSystem::new_contract_address(
+        contract_config.common.address.to_fixed_bytes(),
+    );
+    let typed_chain_id = TypedChainId::Evm(chain.chain_id);
+    let resource_id = ResourceId::new(target_system, typed_chain_id);
+
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
     handle_evm_tx(call, stream, cmd.chain_id, ctx.metrics.clone(), resource_id)
         .await;
