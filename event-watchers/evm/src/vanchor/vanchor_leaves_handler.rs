@@ -15,6 +15,7 @@
 use super::{HttpProvider, VAnchorContractWrapper};
 use ethereum_types::H256;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb_event_watcher_traits::evm::EventHandler;
@@ -42,7 +43,7 @@ impl EventHandler for VAnchorLeavesHandler {
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
-        _metrics: Arc<metric::Metrics>,
+        _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         use VAnchorContractEvents::*;
         match event {

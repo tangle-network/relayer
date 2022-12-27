@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use tokio::sync::Mutex;
 use webb_relayer_utils::retry;
 
 use super::*;
@@ -265,7 +266,7 @@ pub trait EventHandler {
         store: Arc<Self::Store>,
         contract: &Self::Contract,
         (event, log): (Self::Events, contract::LogMeta),
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()>;
 }
 
@@ -290,7 +291,7 @@ pub trait EventHandlerWithRetry: EventHandler {
         contract: &Self::Contract,
         (event, log): (Self::Events, contract::LogMeta),
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let wrapped_task = || {
             self.handle_event(

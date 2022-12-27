@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb::substrate::protocol_substrate_runtime;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
@@ -71,12 +72,13 @@ where
         store: Arc<Self::Store>,
         api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         tracing::debug!(
             event = ?event,
             "V-Anchor new leaf event",
         );
+        let metrics_clone = metrics.clone();
         // fetch chain_id
         let chain_id_addrs = RuntimeApi::constants()
             .linkable_tree_bn254()
@@ -130,7 +132,7 @@ where
                 _ => unreachable!("unsupported"),
             };
             // Proposal proposed metric
-            metrics.anchor_update_proposals.inc();
+            metrics.lock().await.anchor_update_proposals.inc();
             let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
@@ -142,7 +144,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
-                        metrics.clone(),
+                        metrics_clone.clone(),
                     )
                     .await
                 }
@@ -157,7 +159,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
-                        metrics.clone(),
+                        metrics_clone.clone(),
                     )
                     .await
                 }
@@ -166,7 +168,7 @@ where
         // mark this event as processed.
         let events_bytes = &event.encode();
         store.store_event(events_bytes)?;
-        metrics.total_transaction_made.inc();
+        metrics.lock().await.total_transaction_made.inc();
         Ok(())
     }
 }

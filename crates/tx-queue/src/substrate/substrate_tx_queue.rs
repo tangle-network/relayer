@@ -114,7 +114,7 @@ where
             starting = true,
         );
 
-        let metrics = self.ctx.metrics.clone();
+        let metrics_clone = self.ctx.metrics.clone();
         let task = || async {
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
@@ -265,6 +265,7 @@ where
                                     finalized = true,
                                 );
                                 // metrics for proposal processed by substrate tx queue
+                                let metrics = metrics_clone.lock().await;
                                 metrics.proposals_processed_tx_queue.inc();
                                 metrics
                                     .proposals_processed_substrate_tx_queue
@@ -314,8 +315,10 @@ where
             }
         };
         // transaction queue backoff metric
+        let metrics = self.ctx.metrics.lock().await;
         metrics.transaction_queue_back_off.inc();
         metrics.substrate_transaction_queue_back_off.inc();
+        drop(metrics);
         backoff::future::retry::<(), _, _, _, _>(backoff, task).await?;
         Ok(())
     }

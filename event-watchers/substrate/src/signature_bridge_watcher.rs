@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb::substrate::subxt::ext::sp_core::hashing::keccak_256;
 use webb::substrate::subxt::{self, dynamic::Value, OnlineClient};
 
@@ -56,7 +57,7 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
         _store: Arc<Self::Store>,
         _api: Arc<Self::Client>,
         (event, _block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        _metrics: Arc<metric::Metrics>,
+        _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // todo
         // if the ownership is transferred to the new owner, we need to

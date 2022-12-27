@@ -23,6 +23,7 @@
 //! - `DKGProposalSigningBackend`: This is the actual proposal signing backend that is used in production.
 
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb_proposals::ProposalTrait;
 
 /// A module to handle proposals
@@ -62,6 +63,6 @@ pub trait ProposalSigningBackend {
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()>;
 }

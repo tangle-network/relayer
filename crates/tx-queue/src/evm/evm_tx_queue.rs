@@ -95,17 +95,7 @@ where
             chain_id = %chain_id,
             starting = true,
         );
-
-        let metrics = self.ctx.metrics.clone();
-        let gas_price = client
-            .get_gas_price()
-            .map_err(|_| {
-                webb_relayer_utils::Error::Generic("Failed to get gas price")
-            })
-            .await?;
-        // gas spent metric
-        metrics.gas_spent.inc_by(gas_price.as_u64() as f64);
-
+        let metrics_clone = self.ctx.metrics.clone();
         let task = || async {
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
@@ -148,6 +138,7 @@ where
                             continue; // keep going.
                         }
                     }
+
                     let pending_tx =
                         client.send_transaction(raw_tx.clone(), None);
                     let tx = match pending_tx.await {
@@ -236,9 +227,14 @@ where
                                     tx_hash_string,
                                 );
                             }
+                            let gas_price =
+                                receipt.gas_used.unwrap_or_default();
                             // metrics for  transaction processed by evm tx queue
+                            let metrics = metrics_clone.lock().await;
                             metrics.proposals_processed_tx_queue.inc();
                             metrics.proposals_processed_evm_tx_queue.inc();
+                            // gas spent metric
+                            metrics.gas_spent.inc_by(gas_price.as_u64() as f64);
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -311,8 +307,10 @@ where
             }
         };
         // transaction queue backoff metric
+        let metrics = self.ctx.metrics.lock().await;
         metrics.transaction_queue_back_off.inc();
         metrics.evm_transaction_queue_back_off.inc();
+        drop(metrics);
         backoff::future::retry::<(), _, _, _, _>(backoff, task).await?;
         Ok(())
     }

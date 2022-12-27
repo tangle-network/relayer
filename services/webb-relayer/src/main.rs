@@ -53,7 +53,8 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // persistent storage for the relayer
     let store = create_store(&args).await?;
     let cloned_store = store.clone();
-    let cloned_ctx = ctx.clone();
+    let metrics_clone = ctx.metrics.clone();
+
     // metric for data stored which is determined every 1 hour
     let sled_metric_task_handle = tokio::task::spawn(async move {
         let mut sled_data_metric_interval =
@@ -61,10 +62,11 @@ async fn main(args: Opts) -> anyhow::Result<()> {
         loop {
             sled_data_metric_interval.tick().await;
             // set data stored
-            cloned_ctx
-                .metrics
+            metrics_clone
+                .lock()
+                .await
                 .total_amount_of_data_stored
-                .set(cloned_store.get_data_stored_size() as f64)
+                .set(cloned_store.get_data_stored_size() as f64);
         }
     });
 
