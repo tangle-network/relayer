@@ -35,9 +35,6 @@ pub mod block_poller;
 /// CLI configuration
 #[cfg(feature = "cli")]
 pub mod cli;
-/// Cosmwasm / Cosmos configuration
-#[cfg(feature = "cosmwasm")]
-pub mod cosmwasm;
 /// Event watcher configuration
 pub mod event_watcher;
 /// EVM configuration
@@ -49,7 +46,6 @@ pub mod substrate;
 /// Utils for processing configuration
 pub mod utils;
 
-use cosmwasm::CosmwasmConfig;
 use evm::EvmChainConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -95,11 +91,6 @@ pub struct WebbRelayerConfig {
     /// a map between chain name and its configuration.
     #[serde(default)]
     pub substrate: HashMap<String, SubstrateConfig>,
-    /// Cosmwasm based networks and the configuration.
-    ///
-    /// a map between chain name and its configuration.
-    #[serde(default)]
-    pub cosmwasm: HashMap<String, CosmwasmConfig>,
     /// For Experimental Options
     #[serde(default)]
     pub experimental: ExperimentalConfig,

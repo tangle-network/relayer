@@ -1,9 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::{
-    anchor::LinkedAnchorConfig, cosmwasm::CosmwasmContract, evm::Contract,
-    substrate::Pallet,
-};
+use crate::{anchor::LinkedAnchorConfig, evm::Contract, substrate::Pallet};
 
 use super::*;
 
@@ -38,9 +35,6 @@ pub fn parse_from_files(
 ) -> webb_relayer_utils::Result<WebbRelayerConfig> {
     let mut cfg = config::Config::new();
     let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
-    let cosmwasm_contracts: HashMap<String, Vec<CosmwasmContract>> =
-        HashMap::new();
-
     // read through all config files for the first time
     // build up a collection of [contracts]
     for config_file in files {
@@ -78,15 +72,6 @@ pub fn parse_from_files(
             // merge in all of the contracts into the config
             for (network_name, network_chain) in c.evm.iter_mut() {
                 if let Some(stored_contracts) = contracts.get(network_name) {
-                    network_chain.contracts = stored_contracts.clone();
-                }
-            }
-
-            // merge in all of the contracts into the config
-            for (network_name, network_chain) in c.cosmwasm.iter_mut() {
-                if let Some(stored_contracts) =
-                    cosmwasm_contracts.get(network_name)
-                {
                     network_chain.contracts = stored_contracts.clone();
                 }
             }
@@ -152,16 +137,6 @@ pub fn postloading_process(
         config.substrate.insert(v.chain_id.to_string(), v);
     }
 
-    // do the same for cosmwasm
-    #[cfg(feature = "cosmwasm")]
-    let old_cosmwasm = config
-        .cosmwasm
-        .drain()
-        .filter(|(_, chain)| chain.enabled)
-        .collect::<HashMap<_, _>>();
-    for (_, v) in old_cosmwasm {
-        config.cosmwasm.insert(v.name.to_string(), v);
-    }
     //Chain list is used to validate if linked anchor configuration is provided to the relayer.
     let mut chain_list: HashSet<webb_proposals::TypedChainId> = HashSet::new();
     // Convert linked anchor to Raw ResourceId type for evm chains
@@ -302,100 +277,7 @@ pub fn postloading_process(
             }
         }
     }
-    #[cfg(feature = "cosmwasm")]
-    for (chain_name, chain_config) in &config.cosmwasm {
-        let vanchors = chain_config.contracts.iter().filter_map(|c| match c {
-            CosmwasmContract::VAnchor(cfg) => Some(cfg),
-            _ => None,
-        });
-        // validation checks for vanchor
-        for anchor in vanchors {
-            // validate config for data querying
-            if config.features.data_query {
-                // check if events watcher is enabled
-                if !anchor.events_watcher.enabled {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable data querying,
-                        event-watcher should also be enabled for ({})",
-                        anchor.common.address
-                    );
-                }
-                // check if data-query is enabled in evenst-watcher config
-                if !anchor.events_watcher.enable_data_query {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable data querying,
-                        enable-data-query in events-watcher config should also be enabled for ({})",
-                        anchor.common.address
-                    );
-                }
-            }
-            // validate config for governance relaying
-            if config.features.governance_relay {
-                // check if proposal signing backend is configured
-                if anchor.proposal_signing_backend.is_none() {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable governance relaying,
-                        proposal-signing-backend should be configured for ({})",
-                        anchor.common.address
-                    );
-                }
-                // check if event watchers is enabled
-                if !anchor.events_watcher.enabled {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable governance relaying,
-                        event-watcher should also be enabled for ({})",
-                        anchor.common.address
-                    );
-                }
-                // check if linked anchor is configured
-                match &anchor.linked_anchors {
-                    None => {
-                        tracing::warn!(
-                            "!!WARNING!!: In order to enable governance relaying,
-                            linked-anchors should also be configured for ({})",
-                            anchor.common.address
-                        );
-                    }
-                    Some(linked_anchors) => {
-                        if linked_anchors.is_empty() {
-                            tracing::warn!(
-                                "!!WARNING!!: In order to enable governance relaying,
-                                linked-anchors cannot be empty.
-                                Please congigure Linked anchors for ({})",
-                                anchor.common.address
-                            );
-                        } else {
-                            for linked_anchor in linked_anchors {
-                                let chain_defined = config
-                                    .cosmwasm
-                                    .contains_key(&linked_anchor.chain);
-                                if !chain_defined {
-                                    tracing::warn!("!!WARNING!!: chain {} is not defined in the config.
-                                        which is required by the Anchor Contract ({}) defined on {} chain.
-                                        Please, define it manually, to allow the relayer to work properly.",
-                                        linked_anchor.chain,
-                                        anchor.common.address,
-                                        chain_name
-                                    );
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            // validate config for private transaction relaying
-            if config.features.private_tx_relay {
-                // check if withdraw fee is configured
-                if anchor.withdraw_config.is_none() {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable private transaction relaying,
-                        withdraw-config should also be configured for ({})",
-                        anchor.common.address
-                    );
-                }
-            }
-        }
-    }
+
     tracing::trace!(
         "postloaded config: {}",
         serde_json::to_string_pretty(&config)?
