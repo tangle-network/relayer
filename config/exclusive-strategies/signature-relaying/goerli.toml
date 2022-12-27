@@ -41,11 +41,11 @@ enabled = true
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0x98c1024dfd61a8f7439108acedcb51a27754f2af"
+address = "0x3a4233bf223622f6571b8543498a62b9e2a3b31f"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 8134383
+deployed-at = 8188267
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
@@ -54,18 +54,18 @@ events-watcher = { enabled = true, polling-interval = 15000 }
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0x1f88e3903a36f1c2f997822579a651cb8022c64b" },
-  { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0xd2fbe0fd50315c13ac9a9331dadb1784c1ef6bb8" },
+  { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0xb2d1d8d651c53a00e13ea0a363aab575a6886391" },
+  { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0x9d36b94f245857ec7280415140800dde7642addb" },
 ]
 proposal-signing-backend = { type = "Mocked", private-key = "$MOCKED_BACKEND_KEY" }
 
 [[evm.goerli.contracts]]
 contract = "SignatureBridge"
-address = "0x0e19aeadd743ed0bfab6b0a06a970ba152a9646c"
+address = "0x773cf4c29a6f2239b9d6ef821d17ab1d705390b9"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 8134350
+deployed-at = 8188232
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
