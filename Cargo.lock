@@ -5085,23 +5085,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "webb"
-version = "0.5.12"
-dependencies = [
- "async-trait",
- "ethers",
- "hex",
- "parity-scale-codec",
- "rand 0.8.5",
- "scale-info",
- "serde",
- "serde_json",
- "subxt",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
 name = "webb-block-poller"
 version = "0.1.0"
 dependencies = [
@@ -5118,7 +5101,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tracing",
- "webb 0.5.11",
+ "webb",
  "webb-proposal-signing-backends",
  "webb-relayer",
  "webb-relayer-config",
@@ -5159,7 +5142,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -5195,7 +5178,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-event-watcher-traits",
  "webb-proposals",
  "webb-relayer-config",
@@ -5231,7 +5214,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
  "webb-proposals",
@@ -5269,7 +5252,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
  "webb-proposals",
@@ -5306,7 +5289,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -5360,7 +5343,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-event-watcher-traits",
  "webb-ew-dkg",
  "webb-ew-evm",
@@ -5396,7 +5379,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "url",
- "webb 0.5.11",
+ "webb",
  "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types",
@@ -5430,7 +5413,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -5446,7 +5429,7 @@ dependencies = [
  "serde",
  "tokio",
  "tracing",
- "webb 0.5.12",
+ "webb",
  "webb-relayer-tx-relay-utils",
 ]
 
@@ -5477,7 +5460,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -5501,7 +5484,7 @@ dependencies = [
  "sled",
  "tempfile",
  "tracing",
- "webb 0.5.11",
+ "webb",
  "webb-proposals",
  "webb-relayer-utils",
 ]
@@ -5533,7 +5516,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -5569,7 +5552,7 @@ dependencies = [
  "url",
  "warp",
  "warp-real-ip",
- "webb 0.5.12",
+ "webb",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -5586,7 +5569,7 @@ version = "0.1.0"
 dependencies = [
  "native-tls",
  "serde",
- "webb 0.5.12",
+ "webb",
 ]
 
 [[package]]
@@ -5601,7 +5584,7 @@ dependencies = [
  "tiny-keccak",
  "tracing",
  "url",
- "webb 0.5.11",
+ "webb",
 ]
 
 [[package]]
@@ -5621,7 +5604,7 @@ dependencies = [
  "thiserror",
  "url",
  "warp",
- "webb 0.5.11",
+ "webb",
  "webb-proposals",
 ]
 
