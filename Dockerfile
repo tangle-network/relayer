@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static
 
 LABEL APP ="Webb Relayer"
 LABEL AUTHOR="Webb Developers <dev@webb.tools>"
