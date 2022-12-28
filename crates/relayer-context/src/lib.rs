@@ -20,7 +20,7 @@ use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::Duration;
 
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 
 #[cfg(feature = "evm")]
 use webb::evm::ethers::core::k256::SecretKey;
@@ -32,8 +32,7 @@ use webb::substrate::subxt;
 #[cfg(feature = "substrate")]
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
 
-use webb_relayer_utils::metric;
-use webb_relayer_utils::metric::Metrics;
+use webb_relayer_utils::metric::{self, Metrics};
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
@@ -50,14 +49,14 @@ pub struct RelayerContext {
     /// safe terminal state, and completes the task.
     notify_shutdown: broadcast::Sender<()>,
     /// Represents the metrics for the relayer
-    pub metrics: Arc<metric::Metrics>,
+    pub metrics: Arc<Mutex<metric::Metrics>>,
 }
 
 impl RelayerContext {
     /// Creates a new RelayerContext.
     pub fn new(config: webb_relayer_config::WebbRelayerConfig) -> Self {
         let (notify_shutdown, _) = broadcast::channel(2);
-        let metrics = Arc::new(Metrics::new());
+        let metrics = Arc::new(Mutex::new(Metrics::new()));
         Self {
             config,
             notify_shutdown,

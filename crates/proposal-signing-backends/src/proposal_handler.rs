@@ -14,6 +14,7 @@
 
 use crate::ProposalSigningBackend;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::v_anchor_contract;
 use webb::evm::ethers::prelude::EthCall;
 use webb_proposals::ProposalTrait;
@@ -22,7 +23,7 @@ use webb_relayer_utils::metric;
 pub async fn handle_proposal<P>(
     proposal: &(impl ProposalTrait + Sync + Send + 'static),
     proposal_signing_backend: &P,
-    metrics: Arc<metric::Metrics>,
+    metrics: Arc<Mutex<metric::Metrics>>,
 ) -> webb_relayer_utils::Result<()>
 where
     P: ProposalSigningBackend,

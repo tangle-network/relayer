@@ -1,12 +1,15 @@
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
+use tokio::sync::Mutex;
 use webb::evm::ethers::{
     abi::Detokenize,
     prelude::{builders::ContractCall, Middleware},
 };
+use webb_proposals::ResourceId;
 use webb_relayer_handler_utils::{
     into_withdraw_error, CommandResponse, CommandStream, WithdrawStatus,
 };
+use webb_relayer_utils::metric::{self, Metrics};
 
 /// Variable Anchor transaction relayer.
 pub mod vanchor;
@@ -20,6 +23,8 @@ pub async fn handle_evm_tx<M, D>(
     call: ContractCall<M, D>,
     stream: CommandStream,
     chain_id: u64,
+    metrics: Arc<Mutex<metric::Metrics>>,
+    resource_id: ResourceId,
 ) where
     M: Middleware,
     D: Detokenize,
@@ -85,6 +90,20 @@ pub async fn handle_evm_tx<M, D>(
                 finalized = true,
                 tx_hash = %receipt.transaction_hash,
             );
+            // gas spent by relayer on particular resource.
+            let gas_price = receipt.gas_used.unwrap_or_default();
+            let mut metrics = metrics.lock().await;
+            let resource_metric = metrics
+                .resource_metric_map
+                .entry(resource_id)
+                .or_insert_with(|| {
+                    Metrics::register_resource_id_counters(resource_id)
+                });
+
+            resource_metric
+                .total_gas_spent
+                .inc_by(gas_price.as_u64() as f64);
+            drop(metrics);
             let _ = stream
                 .send(Withdraw(WithdrawStatus::Finalized {
                     tx_hash: receipt.transaction_hash,

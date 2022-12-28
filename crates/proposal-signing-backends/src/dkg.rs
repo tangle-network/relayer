@@ -1,5 +1,6 @@
 use std::sync::Arc;
 use futures::StreamExt;
+use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
@@ -79,7 +80,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
@@ -139,8 +140,8 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
                     let maybe_success = v.wait_for_success().await;
                     match maybe_success {
                         Ok(_events) => {
+                            metrics.lock().await.proposals_signed.inc();
                             tracing::debug!("tx finalized");
-                            metrics.proposals_signed.inc();
                         }
                         Err(err) => {
                             tracing::error!(error = %err, "tx failed");

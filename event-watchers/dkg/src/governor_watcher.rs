@@ -14,6 +14,7 @@
 
 use ethereum_types::U256;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api as RuntimeApi;
 use webb::substrate::dkg_runtime::{self, api::dkg};
 use webb::substrate::subxt::{self, OnlineClient};
@@ -57,7 +58,7 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        _metrics: Arc<metric::Metrics>,
+        _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // we got that the signature of the DKG public key changed.
         // that means the DKG Public Key itself changed.

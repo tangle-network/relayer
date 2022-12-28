@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use tokio::sync::Mutex;
+
 use super::{event_watcher::EventWatcher, *};
 
 /// A Bridge Watcher is a trait for Bridge contracts that not specific for watching events from that contract,
@@ -51,7 +53,7 @@ where
         client: Arc<providers::Provider<providers::Http>>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
@@ -87,14 +89,19 @@ where
                         // this a transient error, so we will retry again.
                         tracing::warn!("Restarting bridge event watcher ...");
                         // metric for when the bridge watcher enters back off
+                        let metrics = metrics.lock().await;
                         metrics.bridge_watcher_back_off.inc();
+                        drop(metrics);
                         return Err(backoff::Error::transient(e));
                     }
                 }
             }
         };
         // Bridge watcher backoff metric
+        let metrics = metrics.lock().await;
         metrics.bridge_watcher_back_off.inc();
+        drop(metrics);
+
         backoff::future::retry(backoff, task).await?;
         Ok(())
     }

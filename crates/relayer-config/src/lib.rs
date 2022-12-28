@@ -26,7 +26,6 @@
 //! * `evm`: EVM based networks and the configuration. See [config/config-6sided-eth-bridge](./config/config-6sided-eth-bridge)
 //! for an example.
 //! * `substrate`: Substrate based networks and the configuration. See [config/local-substrate](./config/local-substrate) for an example.
-//! * `cosmwasm`: Cosmos-SDK based networks and the configuration.
 
 /// Generic anchor configuration
 pub mod anchor;

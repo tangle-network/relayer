@@ -180,6 +180,12 @@ export class WebbRelayer {
     const response = await fetch(endpoint);
     return response;
   }
+   // API to fetch metrics for particular resource
+   public async getResourceMetricsEvm(chainId: string, contractAddress: string) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/metrics/evm/${chainId}/${contractAddress}`;
+    const response = await fetch(endpoint);
+    return response;
+  }
 
   public async stop(): Promise<void> {
     this.#process.kill('SIGINT');
@@ -563,6 +569,12 @@ export interface EncryptedOutputsCacheResponse {
 
 export interface RelayerMetricResponse {
   metrics: string;
+}
+
+export interface ResourceMetricResponse {
+  totalGasSpent: string,
+  totalFeeEarned: string,
+  accountBalance: string
 }
 
 export interface Evm {

@@ -14,6 +14,7 @@
 
 use ethereum_types::H256;
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb_event_watcher_traits::evm::EventHandler;
@@ -60,9 +61,10 @@ where
         store: Arc<Self::Store>,
         wrapper: &Self::Contract,
         (event, log): (Self::Events, LogMeta),
-        metrics: Arc<metric::Metrics>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         use VAnchorContractEvents::*;
+        let metrics_clone = metrics.clone();
         let event_data = match event {
             NewCommitmentFilter(data) => {
                 let chain_id = wrapper.contract.client().get_chainid().await?;
@@ -133,7 +135,8 @@ where
                 _ => unreachable!("unsupported"),
             };
             // Anchor update proposal proposed metric
-            metrics.anchor_update_proposals.inc();
+            metrics.lock().await.anchor_update_proposals.inc();
+
             let _ = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
@@ -145,7 +148,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
-                        metrics.clone(),
+                        metrics_clone.clone(),
                     )
                     .await
                 }
@@ -160,7 +163,7 @@ where
                     proposal_handler::handle_proposal(
                         &proposal,
                         &self.proposal_signing_backend,
-                        metrics.clone(),
+                        metrics_clone.clone(),
                     )
                     .await
                 }
@@ -169,7 +172,7 @@ where
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;
         store.store_event(&events_bytes)?;
-        metrics.total_transaction_made.inc();
+        metrics.lock().await.total_transaction_made.inc();
         Ok(())
     }
 }

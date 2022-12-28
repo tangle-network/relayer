@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::sync::Arc;
+use tokio::sync::Mutex;
 use webb::substrate::protocol_substrate_runtime;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
@@ -49,7 +50,7 @@ impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
         store: Arc<Self::Store>,
         api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
-        _metrics: Arc<metric::Metrics>,
+        _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let at_hash_addr = RuntimeApi::storage()
             .system()
