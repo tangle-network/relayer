@@ -285,7 +285,7 @@ export class WebbRelayer {
           proofData: {
             proof: publicInputs.proof,
             extensionRoots: publicInputs.extensionRoots,
-            extDataHash: publicInputs.extDataHash.toHexString(),
+            extDataHash: padHexString(publicInputs.extDataHash.toHexString()),
             publicAmount: publicInputs.publicAmount,
             roots: publicInputs.roots,
             outputCommitments: publicInputs.outputCommitments.map((output) =>
