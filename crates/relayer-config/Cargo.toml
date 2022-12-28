@@ -25,20 +25,17 @@ webb-proposals = { version = "0.5.4", default-features = false, features = ["sca
 ethereum-types = "0.13.1"
 glob = "^0.3"
 serde_path_to_error = "0.1.5"
-cosmwasm-std = { version = "1.1.4", optional = true }
 
 [features]
-default = ["evm-runtime", "substrate-runtime", "cli", "cosmwasm"]
+default = ["evm-runtime", "substrate-runtime", "cli"]
 cli = [
     "evm-runtime",
     "substrate-runtime",
     "anyhow",
-    "cosmwasm",
     "tracing-subscriber",
     "structopt",
     "directories-next"
 ]
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
 substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]
-cosmwasm = ["cosmwasm-std"]
 integration-tests = ["tracing-subscriber/json"]
