@@ -61,12 +61,11 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
 ```
 
-Configure the Rust toolchain to default to the latest stable version, add nightly:
+Configure the Rust toolchain to default to the latest stable version:
 
 ```bash
 rustup default stable
 rustup update
-rustup update nightly
 ```
 
 Great! Now your Rust environment is ready! 🚀🚀
@@ -99,7 +98,7 @@ Eager to try out the Webb Relayer and see it in action? Run a relayer with our p
 ```bash
 # Update your local env file
 cp ./config/development/evm-localnet/.env.example .env
-cargo run --features cli -- -c ./config/development/evm-localnet -vvv
+cargo run --bin webb-relayer --features cli -- -c ./config/development/evm-localnet -vvv
 ```
 
 > Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
@@ -109,7 +108,7 @@ cargo run --features cli -- -c ./config/development/evm-localnet -vvv
 To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer. You can follow this [guide](https://docs.webb.tools/how-to-guides/v1/substrate-mixer/local-mixer/) to use the relayer for the Substrate mixer!
 
 ```
-cargo run --features cli -- -c ./config/development/local-substrate -vvv
+cargo run --bin webb-relayer --features cli -- -c ./config/development/local-substrate -vvv
 ```
 
 ### Run 🏃
