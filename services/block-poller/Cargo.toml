@@ -14,12 +14,6 @@ path = "src/main.rs"
 required-features = ["cli"]
 
 [dependencies]
-webb-proposal-signing-backends = { path = "../../crates/proposal-signing-backends" }
-webb-relayer-types = { path = "../../crates/relayer-types" }
-webb-relayer-tx-relay = { path = "../../crates/tx-relay" }
-webb-relayer-tx-queue = { path = "../../crates/tx-queue" }
-webb-relayer-handlers = { path = "../../crates/relayer-handlers" }
-webb-relayer-handler-utils = { path = "../../crates/relayer-handler-utils" }
 webb-relayer-store = { path = "../../crates/relayer-store" }
 webb-relayer-config = { path = "../../crates/relayer-config" }
 webb-relayer-context = { path = "../../crates/relayer-context" }
@@ -42,7 +36,6 @@ dotenv = "0.15.0"
 
 [dev-dependencies]
 tempfile = "^3.2"
-colored = "2"
 
 [features]
 default = ["cli"]

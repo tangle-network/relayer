@@ -23,7 +23,6 @@ url = { version = "^2.2", features = ["serde"] }
 serde_json = { version = "^1", default-features = false }
 derive_more = { version = "0.99", default-features = false, features = ["display"] }
 prometheus = "0.13.2"
-tracing = { version = "^0.1", features = ["log"] }
 
 [features]
 default = ["evm-runtime", "substrate-runtime"]
