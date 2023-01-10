@@ -1,3 +1,11 @@
+[profile.release]
+strip = "symbols"
+lto = "thin"
+
+[profile.dev]
+strip = "symbols"
+debug = 0
+
 [workspace]
 members = [
     ".",
