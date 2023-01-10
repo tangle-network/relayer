@@ -40,7 +40,7 @@ jobs:
         continue-on-error: false
         with:
           command: clippy
-          args: -- -D warnings
+          args: --workspace --all-targets -- -D warnings -D deprecated -D clippy::perf -D clippy::complexity -D clippy::style -D clippy::correctness -D clippy::suspicious
 
   rustfmt:
     name: Rust Format
