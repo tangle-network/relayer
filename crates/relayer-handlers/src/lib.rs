@@ -19,6 +19,7 @@
 use std::convert::Infallible;
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
+use std::sync::Arc;
 
 use futures::prelude::*;
 
@@ -32,6 +33,7 @@ use webb_relayer_handler_utils::{
     IpInformationResponse, SubstrateCommand,
 };
 
+use crate::routes::fees::calculate_fees;
 use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use webb_relayer_tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
@@ -213,4 +215,18 @@ pub async fn handle_substrate<'a>(
             handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await;
         }
     }
+}
+
+// TODO: do we need to add another endpoint for substrate?
+pub async fn handle_fee_info(
+    chain_id: u32,
+    client_ip: IpAddr,
+    ctx: Arc<RelayerContext>,
+) -> Result<impl warp::Reply, Infallible> {
+    let fee_info = calculate_fees(chain_id, client_ip, ctx).await.unwrap();
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&fee_info),
+        warp::http::StatusCode::OK,
+    ))
 }

@@ -140,6 +140,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     // check the fee
     // TODO: Match this up in the context of variable transfers
+    // TODO: read FeeInfo entry here, or generate new fee estimate if no valid item exists
+    //       (same ip, less than 1 minute old)
     let expected_fee = calculate_fee(
         withdraw_config.withdraw_fee_percentage,
         cmd.ext_data.ext_amount.0.abs().as_u128().into(),

@@ -12,6 +12,9 @@ pub mod metric;
 /// Module for handling relayer info API
 pub mod info;
 
+/// Module for relay fees API
+pub mod fees;
+
 // Unsupported feature response
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

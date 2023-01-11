@@ -25,3 +25,6 @@ webb = { version = "0.5.13", default-features = false }
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.13.1"
+chrono = { version = "0.4.23", features = ["serde"] }
+ethers = {version = "0.17.0", features = ["rustls"] }
+coingecko = "1.0.1"

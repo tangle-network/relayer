@@ -22,6 +22,7 @@
 //! Services handle keeping up to date with the configured chains.
 
 use std::collections::HashSet;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use webb::evm::ethers::providers;
 
@@ -59,6 +60,7 @@ use webb_relayer_config::substrate::{
 use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
+use webb_relayer_handlers::handle_fee_info;
 
 use webb_relayer_handlers::routes::{encrypted_outputs, info, leaves, metric};
 use webb_relayer_store::SledStore;
@@ -221,6 +223,22 @@ pub fn build_web_services(
         })
         .boxed();
 
+    //  Information about relayer fees
+    let ctx_arc = Arc::new(ctx.clone());
+    let relayer_fee_info = warp::path("fee_info")
+        .and(warp::path::param())
+        .and(warp_real_ip::real_ip(vec![proxy_addr]))
+        .and(warp::addr::remote())
+        .and_then(
+            move |chain_id,
+                  real_ip: Option<IpAddr>,
+                  client_ip: Option<SocketAddr>| {
+                let client_ip = real_ip.unwrap_or(client_ip.unwrap().ip());
+                handle_fee_info(chain_id, client_ip, Arc::clone(&ctx_arc))
+            },
+        )
+        .boxed();
+
     // Code that will map the request handlers above to a defined http endpoint.
     let routes = ip_filter
         .or(info_filter)
@@ -230,6 +248,7 @@ pub fn build_web_services(
         .or(relayer_metrics_info_evm)
         .or(relayer_metrics_info_substrate)
         .or(relayer_metrics_info)
+        .or(relayer_fee_info)
         .boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();
