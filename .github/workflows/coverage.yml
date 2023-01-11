@@ -37,6 +37,7 @@ jobs:
       - name: Run Tarpaulin
         uses: actions-rs/tarpaulin@v0.1
         with:
+          version: '0.22.0'
           args: '--avoid-cfg-tarpaulin --out Xml --locked --jobs 1 --timeout 3600 --skip-clean -- --test-threads 16 '
 
       - name: Upload CodeCov
