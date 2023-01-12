@@ -140,19 +140,15 @@ pub fn build_web_services(
     let evm_store = Arc::new(store.clone());
     let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
     let ctx_arc = Arc::new(ctx.clone());
+    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
     let leaves_cache_filter_evm = warp::path("leaves")
         .and(warp::path("evm"))
         .and(store_filter)
         .and(warp::path::param())
         .and(warp::path::param())
-        .and_then(move |store, chain_id, contract| {
-            leaves::handle_leaves_cache_evm(
-                store,
-                chain_id,
-                contract,
-                Arc::clone(&ctx_arc),
-            )
-        })
+        .and(warp::query())
+        .and(ctx_filter)
+        .and_then(leaves::handle_leaves_cache_evm)
         .boxed();
     // leaf api handler for substrate
     let substrate_store = Arc::new(store.clone());
