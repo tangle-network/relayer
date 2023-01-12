@@ -16,6 +16,7 @@ use webb::{evm::ethers, substrate::subxt};
 
 pub mod clickable_link;
 
+pub mod fees;
 /// Metrics functionality
 pub mod metric;
 /// A module used for debugging relayer lifecycle, sync state, or other relayer state.
