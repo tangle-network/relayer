@@ -215,18 +215,9 @@ describe('VAnchor Governance Relayer', function () {
       .elements()
       .map((el) => hexToU8a(el.toHexString()));
 
-    await vanchor1.transact(
-      [],
-      [depositUtxo],
-      0,
-      0,
-      '0',
-      '0',
-      tokenAddress,
-      {
-        [localChain1.chainId]: leaves,
-      }
-    );
+    await vanchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
+      [localChain1.chainId]: leaves,
+    });
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',

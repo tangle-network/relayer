@@ -151,9 +151,23 @@ export class WebbRelayer {
     return response.json() as Promise<WebbRelayerInfo>;
   }
   // data querying api for evm
-  public async getLeavesEvm(chainId: string, contractAddress: string) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/leaves/evm/${chainId}/${contractAddress}`;
-    const response = await fetch(endpoint);
+  public async getLeavesEvm(
+    chainId: string,
+    contractAddress: string,
+    queryRange?: { start?: number; end?: number }
+  ) {
+    const endpoint = new URL(
+      `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/leaves/evm/${chainId}/${contractAddress}`
+    );
+    if (queryRange) {
+      if (queryRange.start) {
+        endpoint.searchParams.append('start', queryRange.start.toString());
+      }
+      if (queryRange.end) {
+        endpoint.searchParams.append('end', queryRange.end.toString());
+      }
+    }
+    const response = await fetch(endpoint.toString());
     return response;
   }
   // data querying api for substrate
@@ -180,8 +194,8 @@ export class WebbRelayer {
     const response = await fetch(endpoint);
     return response;
   }
-   // API to fetch metrics for particular resource
-   public async getResourceMetricsEvm(chainId: string, contractAddress: string) {
+  // API to fetch metrics for particular resource
+  public async getResourceMetricsEvm(chainId: string, contractAddress: string) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/metrics/evm/${chainId}/${contractAddress}`;
     const response = await fetch(endpoint);
     return response;
@@ -572,9 +586,9 @@ export interface RelayerMetricResponse {
 }
 
 export interface ResourceMetricResponse {
-  totalGasSpent: string,
-  totalFeeEarned: string,
-  accountBalance: string
+  totalGasSpent: string;
+  totalFeeEarned: string;
+  accountBalance: string;
 }
 
 export interface Evm {
