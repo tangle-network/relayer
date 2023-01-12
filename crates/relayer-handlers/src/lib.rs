@@ -19,7 +19,6 @@
 use std::convert::Infallible;
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
-use std::sync::Arc;
 
 use futures::prelude::*;
 
@@ -219,17 +218,9 @@ pub async fn handle_substrate<'a>(
 
 /// Handler for fee estimation
 ///
-/// # Arguments
-///
-/// * `chain_id` - An U256 representing the chain id of the chain to query
-/// * `ctx` - RelayContext reference that holds the configuration
-///
 /// TODO: do we need to add another endpoint for substrate?
-pub async fn handle_fee_info(
-    chain_id: u32,
-    ctx: Arc<RelayerContext>,
-) -> Result<impl warp::Reply, Infallible> {
-    let fee_info = calculate_fees(chain_id, ctx).await.unwrap();
+pub async fn handle_fee_info() -> Result<impl warp::Reply, Infallible> {
+    let fee_info = calculate_fees().await.unwrap();
 
     Ok(warp::reply::with_status(
         warp::reply::json(&fee_info),
