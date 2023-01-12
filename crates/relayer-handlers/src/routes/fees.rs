@@ -12,7 +12,7 @@ pub struct FeeInfo {
     /// Estimated fee for an average relay transaction, in `wrappedToken`
     /// TODO: We dont know the actual gas amount of the transaction here, so it would make more
     ///       sense to return a gas price, and then calculate the fee on the client using estimated
-    ///       gas amount.
+    ///       gas amount. Then we could remove the hardcoded `estimated_gas_amount`.
     fee: U256,
     /// Exchange rate for refund from `wrappedToken` to `nativeToken`
     refund_exchange_rate: f64,
@@ -22,7 +22,7 @@ pub struct FeeInfo {
 
 /// Calculate fee for an average transaction over the relay. Also returns information about refund.
 pub async fn calculate_fees() -> webb_relayer_utils::Result<FeeInfo> {
-    // TODO: hardcoded for now
+    // TODO: hardcoded
     let estimated_gas_amount = U256::from(1_721_713);
 
     // TODO: need to get the actual tokens which are being exchanged (also in handle_vanchor_relay_tx)

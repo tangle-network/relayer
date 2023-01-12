@@ -10,7 +10,6 @@ use webb::evm::{
     ethers::prelude::{Signer, SignerMiddleware},
 };
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
-use webb_relayer_config::anchor::VAnchorWithdrawConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
 use webb_relayer_utils::fees::{
@@ -66,19 +65,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
             return;
         }
     };
-    // validate contract withdraw configuration
-    let withdraw_config: &VAnchorWithdrawConfig = match &contract_config
-        .withdraw_config
-    {
-        Some(cfg) => cfg,
-        None => {
-            tracing::error!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain_id);
-            let _ = stream
-                .send(Error(format!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain_id)))
-                .await;
-            return;
-        }
-    };
 
     let wallet = match ctx.evm_wallet(&cmd.chain_id.to_string()).await {
         Ok(v) => v,
@@ -119,8 +105,13 @@ pub async fn handle_vanchor_relay_tx<'a>(
     // validate refund amount
     let exchange_rate = calculate_exchange_rate("usd-coin", "ethereum").await;
     let max_refund = max_refund("usd-coin").await;
-    if max_refund < cmd.ext_data.refund {
-        // TODO: return error message "requested refund too high"
+    // TODO: This can fail unexpectedly if the exchange rate changes.
+    if cmd.ext_data.refund > max_refund {
+        tracing::error!(
+            "User requested a refund which is higher than the maximum"
+        );
+        let msg = format!("User requested a refund which is higher than the maximum of {max_refund}"        );
+        let _ = stream.send(Error(msg)).await;
         return;
     }
 
@@ -194,18 +185,21 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let gas_estimate = client.estimate_gas(&call.tx).await.unwrap();
     let expected_fee_wrapped =
         calculate_wrapped_fee(gas_estimate, exchange_rate).await;
-    // TODO: doesnt make sense anymore to calculate fee with fixed percentage, because this
-    //       will always fail in case of high transaction amount. should remove calculate_fee()
-    //       and config var.
+    // TODO: It doesnt make sense anymore to calculate fee with fixed percentage, because this
+    //       will always fail in case of high transaction amount. We should remove calculate_fee()
+    //       and the config value.
     /*
     let expected_fee = calculate_fee(
         withdraw_config.withdraw_fee_percentage,
         cmd.ext_data.ext_amount.0.abs().as_u128().into(),
     );
     */
-    // TODO: this check will fail if exchange rate or gas price changed since client requested
-    //       fee_info. should make the check less strict so that it wont fail too often. maybe
-    //       allow for fee +- 10% of what we calculated here.
+    // TODO: Just like refund, this check can fail unexpectedly if exchange rate or gas price change.
+    //       Its probably better to lock in the price for each user at the time fee_info is called,
+    //       and use the exact same exchange rate/transaction fee here.
+    //       This could be done based on IP address, but its fragile because multiple users can have
+    //       the same IP. Better to return a token with `FeeInfo` which then gets passed to
+    //       `handle_vanchor_relay_tx()` in order to use that preagreed fee (for a limited time).
     if cmd.ext_data.fee < expected_fee_wrapped {
         tracing::error!("Received a fee lower than configuration");
         let msg = format!(
