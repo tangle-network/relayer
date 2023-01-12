@@ -223,9 +223,8 @@ pub fn build_web_services(
         .boxed();
 
     //  Information about relayer fees
-    let relayer_fee_info = warp::path("fee_info")
-        .and_then(move || handle_fee_info())
-        .boxed();
+    let relayer_fee_info =
+        warp::path("fee_info").and_then(handle_fee_info).boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.
     let routes = ip_filter

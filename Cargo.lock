@@ -5962,6 +5962,7 @@ dependencies = [
  "hex",
  "libsecp256k1",
  "native-tls",
+ "once_cell",
  "prometheus",
  "serde_json",
  "serde_path_to_error",
