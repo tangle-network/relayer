@@ -13,7 +13,7 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_config::anchor::VAnchorWithdrawConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
-use webb_relayer_tx_relay_utils::calculate_fee;
+use webb_relayer_utils::fees::{calculate_exchange_rate, estimate_gas_price};
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for VAnchor commands
@@ -136,27 +136,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     let client = SignerMiddleware::new(provider, wallet);
     let client = Arc::new(client);
-    let contract = VAnchorContract::new(cmd.id, client);
-
-    // check the fee
-    // TODO: Match this up in the context of variable transfers
-    // TODO: read FeeInfo entry here, or generate new fee estimate if no valid item exists
-    //       (same ip, less than 1 minute old)
-    let expected_fee = calculate_fee(
-        withdraw_config.withdraw_fee_percentage,
-        cmd.ext_data.ext_amount.0.abs().as_u128().into(),
-    );
-    let (_, unacceptable_fee) =
-        U256::overflowing_sub(cmd.ext_data.fee, expected_fee);
-    if unacceptable_fee {
-        tracing::error!("Received a fee lower than configuration");
-        let msg = format!(
-            "User sent a fee that is too low {} but expected {expected_fee}",
-            cmd.ext_data.fee,
-        );
-        let _ = stream.send(Error(msg)).await;
-        return;
-    }
+    let contract = VAnchorContract::new(cmd.id, client.clone());
 
     let common_ext_data = CommonExtData {
         recipient: cmd.ext_data.recipient,
@@ -199,6 +179,35 @@ pub async fn handle_vanchor_relay_tx<'a>(
         public_inputs,
         encryptions,
     );
+
+    // check the fee
+    let gas_estimate = client.estimate_gas(&call.tx).await.unwrap();
+    let gas_price = estimate_gas_price().await.unwrap();
+    let expected_fee_native = gas_estimate * gas_price;
+    let exchange_rate =
+        calculate_exchange_rate("usd-coin", "ethereum").await as u32;
+    let expected_fee_wrapped = expected_fee_native * exchange_rate;
+    // TODO: doesnt make sense anymore to calculate fee with fixed percentage, because this
+    //       will always fail in case of high transaction amount. should remove calculate_fee()
+    //       and config var.
+    /*
+    let expected_fee = calculate_fee(
+        withdraw_config.withdraw_fee_percentage,
+        cmd.ext_data.ext_amount.0.abs().as_u128().into(),
+    );
+    */
+    // TODO: this check will fail if exchange rate or gas price changed since client requested
+    //       fee_info. should make the check less strict so that it wont fail too often. maybe
+    //       allow for fee +- 10% of what we calculated here?
+    if cmd.ext_data.fee < expected_fee_wrapped {
+        tracing::error!("Received a fee lower than configuration");
+        let msg = format!(
+            "User sent a fee that is too low {} but expected {expected_fee_wrapped}",
+            cmd.ext_data.fee,
+        );
+        let _ = stream.send(Error(msg)).await;
+        return;
+    }
 
     let target_system = TargetSystem::new_contract_address(
         contract_config.common.address.to_fixed_bytes(),

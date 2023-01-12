@@ -217,13 +217,19 @@ pub async fn handle_substrate<'a>(
     }
 }
 
-// TODO: do we need to add another endpoint for substrate?
+/// Handler for fee estimation
+///
+/// # Arguments
+///
+/// * `chain_id` - An U256 representing the chain id of the chain to query
+/// * `ctx` - RelayContext reference that holds the configuration
+///
+/// TODO: do we need to add another endpoint for substrate?
 pub async fn handle_fee_info(
     chain_id: u32,
-    client_ip: IpAddr,
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
-    let fee_info = calculate_fees(chain_id, client_ip, ctx).await.unwrap();
+    let fee_info = calculate_fees(chain_id, ctx).await.unwrap();
 
     Ok(warp::reply::with_status(
         warp::reply::json(&fee_info),

@@ -22,7 +22,6 @@
 //! Services handle keeping up to date with the configured chains.
 
 use std::collections::HashSet;
-use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use webb::evm::ethers::providers;
 
@@ -227,16 +226,9 @@ pub fn build_web_services(
     let ctx_arc = Arc::new(ctx.clone());
     let relayer_fee_info = warp::path("fee_info")
         .and(warp::path::param())
-        .and(warp_real_ip::real_ip(vec![proxy_addr]))
-        .and(warp::addr::remote())
-        .and_then(
-            move |chain_id,
-                  real_ip: Option<IpAddr>,
-                  client_ip: Option<SocketAddr>| {
-                let client_ip = real_ip.unwrap_or(client_ip.unwrap().ip());
-                handle_fee_info(chain_id, client_ip, Arc::clone(&ctx_arc))
-            },
-        )
+        .and_then(move |chain_id| {
+            handle_fee_info(chain_id, Arc::clone(&ctx_arc))
+        })
         .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.

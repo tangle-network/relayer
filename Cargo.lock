@@ -507,7 +507,6 @@ dependencies = [
  "js-sys",
  "num-integer",
  "num-traits",
- "serde",
  "time 0.1.45",
  "wasm-bindgen",
  "winapi",
@@ -5854,10 +5853,7 @@ dependencies = [
 name = "webb-relayer-handlers"
 version = "0.1.0"
 dependencies = [
- "chrono",
- "coingecko",
  "ethereum-types",
- "ethers",
  "futures",
  "native-tls",
  "serde",
@@ -5958,8 +5954,10 @@ name = "webb-relayer-utils"
 version = "0.1.0"
 dependencies = [
  "backoff",
+ "coingecko",
  "config",
  "derive_more",
+ "ethers",
  "glob",
  "hex",
  "libsecp256k1",
