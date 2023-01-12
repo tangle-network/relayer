@@ -25,6 +25,7 @@ derive_more = { version = "0.99", default-features = false, features = ["display
 prometheus = "0.13.2"
 coingecko = "1.0.1"
 ethers = {version = "0.17.0", features = ["rustls"] }
+once_cell = "1.17.0"
 
 [features]
 default = ["evm-runtime", "substrate-runtime"]

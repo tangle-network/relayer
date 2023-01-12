@@ -1,6 +1,7 @@
 use coingecko::CoinGeckoClient;
 use ethers::etherscan;
 use ethers::types::Chain;
+use once_cell::sync::Lazy;
 use webb::evm::ethers::prelude::U256;
 
 /// Maximum refund amount per relay transaction in USD.
@@ -8,6 +9,19 @@ const MAX_REFUND_USD: f64 = 1.;
 
 /// Number of digits after the comma of USD-Coin.
 const USDC_DECIMALS: u32 = 6;
+
+static COIN_GECKO_CLIENT: Lazy<CoinGeckoClient> =
+    Lazy::new(CoinGeckoClient::default);
+
+static ETHERSCAN_CLIENT: Lazy<etherscan::Client> = Lazy::new(|| {
+    etherscan::Client::builder()
+        // TODO: Need to add actual api key via config to increase rate limit
+        .with_api_key("YourApiKeyToken")
+        .chain(Chain::Mainnet)
+        .unwrap()
+        .build()
+        .unwrap()
+});
 
 /// Calculate fee in `wrappedToken`, using the estimated gas price from etherscan.
 pub async fn calculate_wrapped_fee(
@@ -26,16 +40,9 @@ pub async fn calculate_exchange_rate(
     wrapped_token: &str,
     base_token: &str,
 ) -> f64 {
-    let client = CoinGeckoClient::default();
-    let prices = client
-        .price(
-            &[wrapped_token, base_token],
-            &["usd"],
-            false,
-            false,
-            false,
-            false,
-        )
+    let tokens = &[wrapped_token, base_token];
+    let prices = COIN_GECKO_CLIENT
+        .price(tokens, &["usd"], false, false, false, false)
         .await
         .unwrap();
     let wrapped_price = prices[wrapped_token].usd.unwrap();
@@ -46,27 +53,19 @@ pub async fn calculate_exchange_rate(
 /// Estimate gas price using etherscan.io. Note that this functionality is only available
 /// on mainnet.
 async fn estimate_gas_price() -> crate::Result<u64> {
-    // fee estimation using etherscan, only supports mainnet
-    let client = etherscan::Client::builder()
-        // TODO: Need to add actual api key via config to increase rate limit
-        .with_api_key("YourApiKeyToken")
-        .chain(Chain::Mainnet)
-        .unwrap()
-        .build()
-        .unwrap();
-    // using "average" gas price
-    Ok(client.gas_oracle().await.unwrap().propose_gas_price)
+    let gas_oracle = ETHERSCAN_CLIENT.gas_oracle().await.unwrap();
+    // use the "average" gas price
+    Ok(gas_oracle.propose_gas_price)
 }
 
 /// Calculate the maximum refund amount per relay transaction in `wrappedToken`, based on
 /// `MAX_REFUND_USD`.
 pub async fn max_refund(wrapped_token: &str) -> U256 {
-    let client = CoinGeckoClient::default();
-    let prices = client
+    let prices = COIN_GECKO_CLIENT
         .price(&[wrapped_token], &["usd"], false, false, false, false)
         .await
         .unwrap();
-    let wrapped_price = prices[wrapped_token].usd.unwrap() as f64;
+    let wrapped_price = prices[wrapped_token].usd.unwrap();
     let max_refund_wrapped = MAX_REFUND_USD / wrapped_price;
 
     to_u256(max_refund_wrapped)
