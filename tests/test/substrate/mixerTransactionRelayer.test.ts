@@ -439,9 +439,9 @@ async function createMixerWithdrawProof(
       ''
     );
     const treeId = 0;
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
     const leafCount: number =
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
       await api.derive.merkleTreeBn254.getLeafCountForTree(treeId);
     const treeLeaves: Uint8Array[] =
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment

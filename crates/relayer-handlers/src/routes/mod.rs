@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Module for handling encrypted commitment leaves API
-pub mod encrypted_leaves;
+pub mod encrypted_outputs;
 
 /// Module for handle commitment leaves API
 pub mod leaves;

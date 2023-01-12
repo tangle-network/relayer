@@ -60,7 +60,7 @@ use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOut
 use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
 
-use webb_relayer_handlers::routes::{encrypted_leaves, info, leaves, metric};
+use webb_relayer_handlers::routes::{encrypted_outputs, info, leaves, metric};
 use webb_relayer_store::SledStore;
 use webb_relayer_tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
 
@@ -178,19 +178,15 @@ pub fn build_web_services(
     let evm_store = Arc::new(store);
     let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
     let ctx_arc = Arc::new(ctx.clone());
+    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
     let encrypted_output_cache_filter_evm = warp::path("encrypted_outputs")
         .and(warp::path("evm"))
         .and(store_filter)
         .and(warp::path::param())
         .and(warp::path::param())
-        .and_then(move |store, chain_id, contract| {
-            encrypted_leaves::handle_encrypted_outputs_cache_evm(
-                store,
-                chain_id,
-                contract,
-                Arc::clone(&ctx_arc),
-            )
-        })
+        .and(warp::query())
+        .and(ctx_filter)
+        .and_then(encrypted_outputs::handle_encrypted_outputs_cache_evm)
         .boxed();
 
     let relayer_metrics_info = warp::path("metrics")

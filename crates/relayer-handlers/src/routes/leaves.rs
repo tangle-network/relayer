@@ -22,8 +22,7 @@ use webb_proposals::{
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::LeafCacheStore;
 
-use super::OptionalRangeQuery;
-use super::UnsupportedFeature;
+use super::{OptionalRangeQuery, UnsupportedFeature};
 
 // Leaves cache response
 #[derive(Debug, Serialize)]

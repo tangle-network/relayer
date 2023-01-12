@@ -391,9 +391,30 @@ describe('Vanchor Transaction relayer', function () {
     expect(response.status).equal(200);
 
     const store = response.json() as Promise<EncryptedOutputsCacheResponse>;
-    const result = store.then((resp) => {
-      expect(resp.encrypted_outputs.length).to.equal(10);
-      return true;
+    await store.then((resp) => {
+      expect(resp.encryptedOutputs.length).to.equal(10);
+    });
+
+    const response1 = await webbRelayer.getEncryptedOutputsEvm(
+      chainId,
+      vanchor1.contract.address,
+      { start: 20, end: 30 }
+    );
+    expect(response1.status).equal(200);
+    const store1 = response1.json() as Promise<EncryptedOutputsCacheResponse>;
+    await store1.then((resp) => {
+      expect(resp.encryptedOutputs.length).to.equal(0);
+    });
+
+    const response2 = await webbRelayer.getEncryptedOutputsEvm(
+      chainId,
+      vanchor1.contract.address,
+      { start: 1, end: 5 }
+    );
+    expect(response2.status).equal(200);
+    const store2 = response2.json() as Promise<EncryptedOutputsCacheResponse>;
+    await store2.then((resp) => {
+      expect(resp.encryptedOutputs.length).to.equal(4);
     });
   });
 
