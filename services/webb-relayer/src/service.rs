@@ -223,12 +223,8 @@ pub fn build_web_services(
         .boxed();
 
     //  Information about relayer fees
-    let ctx_arc = Arc::new(ctx.clone());
     let relayer_fee_info = warp::path("fee_info")
-        .and(warp::path::param())
-        .and_then(move |chain_id| {
-            handle_fee_info(chain_id, Arc::clone(&ctx_arc))
-        })
+        .and_then(move || handle_fee_info())
         .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.

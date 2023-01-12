@@ -13,7 +13,9 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_config::anchor::VAnchorWithdrawConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
-use webb_relayer_utils::fees::{calculate_exchange_rate, estimate_gas_price};
+use webb_relayer_utils::fees::{
+    calculate_exchange_rate, calculate_wrapped_fee, max_refund,
+};
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for VAnchor commands
@@ -114,6 +116,14 @@ pub async fn handle_vanchor_relay_tx<'a>(
         return;
     }
 
+    // validate refund amount
+    let exchange_rate = calculate_exchange_rate("usd-coin", "ethereum").await;
+    let max_refund = max_refund("usd-coin").await;
+    if max_refund < cmd.ext_data.refund {
+        // TODO: return error message "requested refund too high"
+        return;
+    }
+
     tracing::debug!(
         "Connecting to chain {:?} .. at {}",
         cmd.chain_id,
@@ -182,11 +192,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     // check the fee
     let gas_estimate = client.estimate_gas(&call.tx).await.unwrap();
-    let gas_price = estimate_gas_price().await.unwrap();
-    let expected_fee_native = gas_estimate * gas_price;
-    let exchange_rate =
-        calculate_exchange_rate("usd-coin", "ethereum").await as u32;
-    let expected_fee_wrapped = expected_fee_native * exchange_rate;
+    let expected_fee_wrapped =
+        calculate_wrapped_fee(gas_estimate, exchange_rate).await;
     // TODO: doesnt make sense anymore to calculate fee with fixed percentage, because this
     //       will always fail in case of high transaction amount. should remove calculate_fee()
     //       and config var.
@@ -198,7 +205,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     */
     // TODO: this check will fail if exchange rate or gas price changed since client requested
     //       fee_info. should make the check less strict so that it wont fail too often. maybe
-    //       allow for fee +- 10% of what we calculated here?
+    //       allow for fee +- 10% of what we calculated here.
     if cmd.ext_data.fee < expected_fee_wrapped {
         tracing::error!("Received a fee lower than configuration");
         let msg = format!(
