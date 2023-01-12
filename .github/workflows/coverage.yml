@@ -11,7 +11,7 @@ on:
 env:
   ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
 
-jobs:
+# jobs:
   # code coverage job
   # coverage:
   #   name: coverage
