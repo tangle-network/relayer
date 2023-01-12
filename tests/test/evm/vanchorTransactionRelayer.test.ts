@@ -392,7 +392,7 @@ describe('Vanchor Transaction relayer', function () {
 
     const store = response.json() as Promise<EncryptedOutputsCacheResponse>;
     await store.then((resp) => {
-      expect(resp.encryptedOutputs.length).to.equal(10);
+      expect(resp.encryptedOutputs.length).to.equal(18);
     });
 
     const response1 = await webbRelayer.getEncryptedOutputsEvm(
