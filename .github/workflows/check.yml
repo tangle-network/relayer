@@ -16,6 +16,11 @@ jobs:
   macos-build:
     runs-on: macos-latest
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
@@ -49,6 +54,11 @@ jobs:
   macos-unit-tests:
     runs-on: macos-latest
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
@@ -83,6 +93,11 @@ jobs:
   linux-build:
     runs-on: ubuntu-latest
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get upgrade && sudo apt-get install ${DEV_PACKAGES}
 
@@ -113,6 +128,11 @@ jobs:
   linux-unit-tests:
     runs-on: ubuntu-latest
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get upgrade && sudo apt-get install ${DEV_PACKAGES}
 
@@ -160,6 +180,11 @@ jobs:
   linux-integration-tests:
     runs-on: ubuntu-latest
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+          
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get upgrade && sudo apt-get install ${DEV_PACKAGES}
 
