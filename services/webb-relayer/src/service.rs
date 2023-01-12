@@ -156,6 +156,7 @@ pub fn build_web_services(
         .map(move || Arc::clone(&substrate_store))
         .boxed();
     let ctx_arc = Arc::new(ctx.clone());
+    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
 
     // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
     let leaves_cache_filter_substrate = warp::path("leaves")
@@ -164,15 +165,9 @@ pub fn build_web_services(
         .and(warp::path::param())
         .and(warp::path::param())
         .and(warp::path::param())
-        .and_then(move |store, chain_id, tree_id, pallet_id| {
-            leaves::handle_leaves_cache_substrate(
-                store,
-                chain_id,
-                tree_id,
-                pallet_id,
-                Arc::clone(&ctx_arc),
-            )
-        })
+        .and(warp::query())
+        .and(ctx_filter)
+        .and_then(leaves::handle_leaves_cache_substrate)
         .boxed();
 
     let evm_store = Arc::new(store);
