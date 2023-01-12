@@ -50,8 +50,11 @@ impl Default for OptionalRangeQuery {
 
 impl From<OptionalRangeQuery> for core::ops::Range<u32> {
     fn from(range: OptionalRangeQuery) -> Self {
-        let start = range.start.unwrap_or(0);
-        let end = range.end.unwrap_or(u32::MAX);
+        let start = range
+            .start
+            .or_else(default_zero)
+            .expect("start is not None");
+        let end = range.end.or_else(default_u32_max).expect("end is not None");
         start..end
     }
 }
