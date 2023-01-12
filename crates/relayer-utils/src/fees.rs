@@ -26,8 +26,6 @@ pub async fn calculate_exchange_rate(
     wrapped_token: &str,
     base_token: &str,
 ) -> f64 {
-    // TODO: relatively heavyweight as it pulls in reqwest. would be better for build time
-    //       to make a simple http request, if we dont need other coingecko functionality
     let client = CoinGeckoClient::default();
     let prices = client
         .price(
@@ -50,7 +48,7 @@ pub async fn calculate_exchange_rate(
 async fn estimate_gas_price() -> crate::Result<u64> {
     // fee estimation using etherscan, only supports mainnet
     let client = etherscan::Client::builder()
-        // TODO: need to add actual api key via config
+        // TODO: Need to add actual api key via config to increase rate limit
         .with_api_key("YourApiKeyToken")
         .chain(Chain::Mainnet)
         .unwrap()
