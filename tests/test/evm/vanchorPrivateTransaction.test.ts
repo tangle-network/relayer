@@ -292,7 +292,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     metricsResponse.then((metrics) => {
       console.log(metrics);
       expect(metrics.totalGasSpent).greaterThan(0);
-      
     });
   });
 

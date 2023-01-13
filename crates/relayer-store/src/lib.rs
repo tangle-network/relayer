@@ -40,7 +40,7 @@ pub use self::sled::SledStore;
 pub use mem::InMemoryStore;
 
 /// HistoryStoreKey contains the keys used to store the history of events.
-#[derive(Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash)]
 pub enum HistoryStoreKey {
     /// Block Queue Key
     Block { chain_id: u32 },
@@ -143,11 +143,11 @@ impl HistoryStoreKey {
 impl Display for HistoryStoreKey {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Block { chain_id } => write!(f, "Block({chain_id})"),
+            Self::Block { chain_id } => write!(f, "Block(ChainId {chain_id})"),
             Self::ResourceId { resource_id } => {
                 write!(
                     f,
-                    "ResourceId( ChainId {})",
+                    "ResourceId(ChainId {})",
                     resource_id.typed_chain_id().underlying_chain_id()
                 )
             }
@@ -242,10 +242,16 @@ pub trait LeafCacheStore: HistoryStore {
     /// The Output type which is the leaf.
     type Output: IntoIterator<Item = Vec<u8>>;
 
-    /// Get the leaves for the given key.
+    /// Get all the leaves for the given key.
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
+    ) -> crate::Result<Self::Output>;
+    /// Get the leaves for the given key and with the given range of indices.
+    fn get_leaves_with_range<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        range: core::ops::Range<u32>,
     ) -> crate::Result<Self::Output>;
 
     /// Insert the leaves for the given key.
@@ -277,10 +283,17 @@ pub trait EncryptedOutputCacheStore: HistoryStore {
     /// The Output type which is the encrypted output.
     type Output: IntoIterator<Item = Vec<u8>>;
 
-    /// Get the encrypted output for the given key.
+    /// Get all the encrypted output for the given key.
     fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
+    ) -> crate::Result<Self::Output>;
+
+    /// Get the encrypted output for the given key and with the given range of indices.
+    fn get_encrypted_output_with_range<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        range: core::ops::Range<u32>,
     ) -> crate::Result<Self::Output>;
 
     /// Insert the encrypted output for the given key.

@@ -352,19 +352,10 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
         toFixedHex(withdrawUtxo.commitment),
       'Invalid commitment'
     );
-    const res = await vanchor1.transact(
-      [],
-      [],
-      0,
-      0,
-      '0',
-      '0',
-      tokenAddress,
-      {
-        [localChain1.chainId]: leaves,
-        [typedSourceChainId]: substrateLeaves,
-      }
-      );
+    const res = await vanchor1.transact([], [], 0, 0, '0', '0', tokenAddress, {
+      [localChain1.chainId]: leaves,
+      [typedSourceChainId]: substrateLeaves,
+    });
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
       kind: 'signing_backend',

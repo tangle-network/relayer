@@ -10,6 +10,10 @@ jobs:
     name: Rust Clippy
     runs-on: ubuntu-latest
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
       - name: Checkout sources
@@ -40,12 +44,17 @@ jobs:
         continue-on-error: false
         with:
           command: clippy
-          args: -- -D warnings
+          args: --workspace --all-targets -- -D warnings -D deprecated -D clippy::perf -D clippy::complexity -D clippy::style -D clippy::correctness -D clippy::suspicious
 
   rustfmt:
     name: Rust Format
     runs-on: ubuntu-latest
     steps:
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.9.1
+        with:
+          access_token: ${{ github.token }}
+          
       - name: Checkout sources
         uses: actions/checkout@v2
 
