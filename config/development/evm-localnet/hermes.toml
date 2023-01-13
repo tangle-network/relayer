@@ -8,7 +8,7 @@ http-endpoint = "$HERMES_HTTP_URL"
 ws-endpoint = "$HERMES_WS_URL"
 # chain specific id from evm opcode
 chain-id = 5001
-block-confirmations = 2
+block-confirmations = 0
 # The Private Key of this account on this network
 # the format is more dynamic here:
 # 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
