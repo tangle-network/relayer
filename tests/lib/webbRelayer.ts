@@ -622,10 +622,10 @@ export interface ChainInfo {
 }
 
 export interface FeeInfo {
-    estimatedFee: BigNumberish,
-    gasPrice: BigNumberish,
+    estimatedFee: BigNumber,
+    gasPrice: BigNumber,
     refundExchangeRate: number,
-    maxRefund: BigNumberish,
+    maxRefund: BigNumber,
     timestamp: string,
 }
 

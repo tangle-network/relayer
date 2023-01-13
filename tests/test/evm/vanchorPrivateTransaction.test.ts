@@ -246,7 +246,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     await signatureVBridge.transact(
       [],
       [depositUtxo],
-      feeInfo.gasPrice,
+      feeInfo.estimatedFee,
       feeInfo.maxRefund,
       '0',
       '0',
