@@ -13,15 +13,8 @@ const USDC_DECIMALS: u32 = 6;
 static COIN_GECKO_CLIENT: Lazy<CoinGeckoClient> =
     Lazy::new(CoinGeckoClient::default);
 
-static ETHERSCAN_CLIENT: Lazy<etherscan::Client> = Lazy::new(|| {
-    etherscan::Client::builder()
-        // TODO: Need to add actual api key via config to increase rate limit
-        .with_api_key("YourApiKeyToken")
-        .chain(Chain::Mainnet)
-        .unwrap()
-        .build()
-        .unwrap()
-});
+static ETHERSCAN_CLIENT: Lazy<etherscan::Client> =
+    Lazy::new(|| etherscan::Client::new_from_env(Chain::Mainnet).unwrap());
 
 /// Calculate fee in `wrappedToken`, using the estimated gas price from etherscan.
 pub async fn calculate_wrapped_fee(
