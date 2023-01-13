@@ -27,6 +27,7 @@ import { LocalChain, setupVanchorEvmTx } from '../../lib/localTestnet.js';
 import {
   defaultWithdrawConfigValue,
   EnabledContracts,
+  FeeInfo,
   ResourceMetricResponse,
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
@@ -236,12 +237,17 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       keypair: randomKeypair,
     });
 
+    const feeInfoResponse = await (await webbRelayer.getFeeInfo());
+    expect(feeInfoResponse.status).equal(200);
+    const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
+    console.log(feeInfo);
+
     // SignatureVBridge will transact and update the anchors
     await signatureVBridge.transact(
       [],
       [depositUtxo],
-      0,
-      0,
+      feeInfo.gasPrice,
+      feeInfo.maxRefund,
       '0',
       '0',
       tokenAddress,

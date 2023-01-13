@@ -507,6 +507,7 @@ dependencies = [
  "js-sys",
  "num-integer",
  "num-traits",
+ "serde",
  "time 0.1.45",
  "wasm-bindgen",
  "winapi",
@@ -5954,6 +5955,7 @@ name = "webb-relayer-utils"
 version = "0.1.0"
 dependencies = [
  "backoff",
+ "chrono",
  "coingecko",
  "config",
  "derive_more",
@@ -5964,6 +5966,7 @@ dependencies = [
  "native-tls",
  "once_cell",
  "prometheus",
+ "serde",
  "serde_json",
  "serde_path_to_error",
  "sled",

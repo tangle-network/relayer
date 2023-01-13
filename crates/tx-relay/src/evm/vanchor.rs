@@ -12,9 +12,7 @@ use webb::evm::{
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
-use webb_relayer_utils::fees::{
-    calculate_exchange_rate, calculate_wrapped_fee, max_refund,
-};
+use webb_relayer_utils::fees::{calculate_wrapped_fee, get_fee_info};
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for VAnchor commands
@@ -102,19 +100,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
         return;
     }
 
-    // validate refund amount
-    let exchange_rate = calculate_exchange_rate("usd-coin", "ethereum").await;
-    let max_refund = max_refund("usd-coin").await;
-    // TODO: This can fail unexpectedly if the exchange rate changes.
-    if cmd.ext_data.refund > max_refund {
-        tracing::error!(
-            "User requested a refund which is higher than the maximum"
-        );
-        let msg = format!("User requested a refund which is higher than the maximum of {max_refund}"        );
-        let _ = stream.send(Error(msg)).await;
-        return;
-    }
-
     tracing::debug!(
         "Connecting to chain {:?} .. at {}",
         cmd.chain_id,
@@ -181,19 +166,38 @@ pub async fn handle_vanchor_relay_tx<'a>(
         encryptions,
     );
 
-    // check the fee
-    let gas_estimate = client.estimate_gas(&call.tx).await.unwrap();
-    let expected_fee_wrapped =
-        calculate_wrapped_fee(gas_estimate, exchange_rate).await;
+    let estimated_gas_amount = client.estimate_gas(&call.tx).await.unwrap();
+    // TODO: need to get the actual tokens which are being exchanged
+    let wrapped_token = "usd-coin";
+    let base_token = "ethereum";
+    let fee_info =
+        get_fee_info(estimated_gas_amount, wrapped_token, base_token).await;
 
-    // TODO: Just like refund, this check can fail unexpectedly if exchange rate or gas price change.
-    //       Its probably better to lock in the price for each user at the time fee_info is called,
-    //       and use the exact same exchange rate/transaction fee here.
-    //       This could be done based on IP address, but its fragile because multiple users can have
-    //       the same IP. Better to return a token with `FeeInfo` which then gets passed to
-    //       `handle_vanchor_relay_tx()` in order to use that preagreed fee (for a limited time).
+    // validate refund amount
+    if cmd.ext_data.refund > fee_info.max_refund {
+        tracing::error!(
+            "User requested a refund which is higher than the maximum"
+        );
+        let msg = format!(
+            "User requested a refund which is higher than the maximum of {}",
+            fee_info.max_refund
+        );
+        let _ = stream.send(Error(msg)).await;
+        return;
+    }
+
+    // dont use `fee_info.estimated_fee` because we can use a more accurate gas estimate here
+    let expected_fee = estimated_gas_amount * fee_info.gas_price;
+    let expected_fee_wrapped = calculate_wrapped_fee(
+        fee_info.gas_price,
+        expected_fee,
+        fee_info.refund_exchange_rate,
+    )
+    .await;
+
+    // check the fee
     if cmd.ext_data.fee < expected_fee_wrapped {
-        tracing::error!("Received a fee lower than configuration");
+        tracing::error!("Received a fee lower than expected");
         let msg = format!(
             "User sent a fee that is too low {} but expected {expected_fee_wrapped}",
             cmd.ext_data.fee,

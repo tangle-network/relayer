@@ -25,7 +25,7 @@ import {
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
-import { BigNumber } from 'ethers';
+import { BigNumber, BigNumberish } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
 import { padHexString } from '../lib/utils.js';
 
@@ -208,6 +208,12 @@ export class WebbRelayer {
   // API to fetch metrics for particular resource
   public async getResourceMetricsEvm(chainId: string, contractAddress: string) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/metrics/evm/${chainId}/${contractAddress}`;
+    const response = await fetch(endpoint);
+    return response;
+  }
+  // API to fetch metrics for particular resource
+  public async getFeeInfo() {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -613,6 +619,14 @@ export interface ChainInfo {
   beneficiary?: string;
   contracts: Contract[];
   blockConfirmations: number;
+}
+
+export interface FeeInfo {
+    estimatedFee: BigNumberish,
+    gasPrice: BigNumberish,
+    refundExchangeRate: number,
+    maxRefund: BigNumberish,
+    timestamp: string,
 }
 
 export interface Contract {
