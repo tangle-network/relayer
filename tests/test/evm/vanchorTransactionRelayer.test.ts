@@ -171,7 +171,7 @@ describe('Vanchor Transaction relayer', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -215,15 +215,7 @@ describe('Vanchor Transaction relayer', function () {
         .elements()
         .map((el) => hexToU8a(el.toHexString()));
 
-      await vanchor1.transact(
-        [],
-        [depositUtxo],
-        0,
-        0,
-        '0',
-        '0',
-        tokenAddress,
-        {
+      await vanchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
         [localChain1.chainId]: leaves,
       });
     }
@@ -236,6 +228,9 @@ describe('Vanchor Transaction relayer', function () {
       },
     });
 
+    const expectedLeaves = vanchor1.tree
+      .elements()
+      .map((el) => Array.from(hexToU8a(el.toHexString())));
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made. Each VAnchor deposit generates 2 leaf entries
     const chainId = localChain1.underlyingChainId.toString();
@@ -245,8 +240,89 @@ describe('Vanchor Transaction relayer', function () {
     );
     expect(response.status).equal(200);
     const leavesStore = response.json() as Promise<LeavesCacheResponse>;
-    leavesStore.then((resp) => {
+    await leavesStore.then((resp) => {
       expect(resp.leaves.length).to.equal(10);
+      expect(resp.leaves).to.deep.equal(expectedLeaves);
+    });
+
+    // Query a range of leaves.
+    // We will try this with different scenarios
+    // 1. Querying a range of leaves that are not present in the cache
+    // 2. Querying a range of leaves that are present in the cache (1..5)
+    // 2.1 Querying a range of leaves that are present in the cache (4..7).
+    // 3. Querying a range of leaves that are partially present in the cache (1..12)
+    // 4. Querying a range of leaves that is reverse (9..0)
+
+    // 1. Querying a range of leaves that are not present in the cache
+    const response1 = await webbRelayer.getLeavesEvm(
+      chainId,
+      vanchor1.contract.address,
+      { start: 20, end: 30 }
+    );
+    expect(response1.status).equal(200);
+    const leavesStore1 = response1.json() as Promise<LeavesCacheResponse>;
+    await leavesStore1.then((resp) => {
+      expect(resp.leaves.length).to.equal(0);
+    });
+
+    // 2. Querying a range of leaves that are present in the cache (1..5)
+    // We will query leaves from 1 to 5
+    const response2 = await webbRelayer.getLeavesEvm(
+      chainId,
+      vanchor1.contract.address,
+      { start: 1, end: 5 }
+    );
+    expect(response2.status).equal(200);
+    const leavesStore2 = response2.json() as Promise<LeavesCacheResponse>;
+    await leavesStore2.then((resp) => {
+      expect(resp.leaves.length).to.equal(4);
+      expect(resp.leaves).to.deep.equal(expectedLeaves.slice(1, 5));
+    });
+
+    // 2.1 Querying a range of leaves that are present in the cache (4..7).
+    // We will query leaves from 4 to 7
+    const response21 = await webbRelayer.getLeavesEvm(
+      chainId,
+      vanchor1.contract.address,
+      { start: 4, end: 7 }
+    );
+    expect(response21.status).equal(200);
+    const leavesStore21 = response21.json() as Promise<LeavesCacheResponse>;
+    await leavesStore21.then((resp) => {
+      expect(resp.leaves.length).to.equal(3);
+      expect(resp.leaves).to.deep.equal(expectedLeaves.slice(4, 7));
+    });
+
+    // 3. Querying a range of leaves that are partially present in the cache (1..12)
+    // We will query leaves from 1 to 12
+    const response3 = await webbRelayer.getLeavesEvm(
+      chainId,
+      vanchor1.contract.address,
+      { start: 1, end: 12 }
+    );
+    expect(response3.status).equal(200);
+    const leavesStore3 = response3.json() as Promise<LeavesCacheResponse>;
+    await leavesStore3.then((resp) => {
+      expect(resp.leaves.length).to.equal(9);
+      expect(resp.leaves).to.deep.equal(expectedLeaves.slice(1, 12));
+    });
+
+    // 4. Querying a range of leaves that is reverse (9..0)
+    // We will query leaves from 9 to 0
+    // This should return only one item, the last leaf
+    // It assumes that we want to start from index 9 and ends at index 0
+    // but we do not support reverse indices, hence we ignore the end index
+    // as long as it is less than the start index
+    const response4 = await webbRelayer.getLeavesEvm(
+      chainId,
+      vanchor1.contract.address,
+      { start: 9, end: 0 }
+    );
+    expect(response4.status).equal(200);
+    const leavesStore4 = response4.json() as Promise<LeavesCacheResponse>;
+    await leavesStore4.then((resp) => {
+      expect(resp.leaves.length).to.equal(1);
+      expect(resp.leaves).to.deep.equal(expectedLeaves.slice(9));
     });
   });
 
@@ -292,18 +368,9 @@ describe('Vanchor Transaction relayer', function () {
         .elements()
         .map((el) => hexToU8a(el.toHexString()));
 
-      await vanchor1.transact(
-        [],
-        [depositUtxo],
-        0,
-        0,
-        '0',
-        '0',
-        tokenAddress,
-        {
+      await vanchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
         [localChain1.chainId]: leaves,
-        },
-      );
+      });
     }
 
     await webbRelayer.waitForEvent({
@@ -324,9 +391,30 @@ describe('Vanchor Transaction relayer', function () {
     expect(response.status).equal(200);
 
     const store = response.json() as Promise<EncryptedOutputsCacheResponse>;
-    const result = store.then((resp) => {
-      expect(resp.encrypted_outputs.length).to.equal(10);
-      return true;
+    await store.then((resp) => {
+      expect(resp.encryptedOutputs.length).to.equal(18);
+    });
+
+    const response1 = await webbRelayer.getEncryptedOutputsEvm(
+      chainId,
+      vanchor1.contract.address,
+      { start: 20, end: 30 }
+    );
+    expect(response1.status).equal(200);
+    const store1 = response1.json() as Promise<EncryptedOutputsCacheResponse>;
+    await store1.then((resp) => {
+      expect(resp.encryptedOutputs.length).to.equal(0);
+    });
+
+    const response2 = await webbRelayer.getEncryptedOutputsEvm(
+      chainId,
+      vanchor1.contract.address,
+      { start: 1, end: 5 }
+    );
+    expect(response2.status).equal(200);
+    const store2 = response2.json() as Promise<EncryptedOutputsCacheResponse>;
+    await store2.then((resp) => {
+      expect(resp.encryptedOutputs.length).to.equal(4);
     });
   });
 

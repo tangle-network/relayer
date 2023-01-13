@@ -120,6 +120,28 @@ impl LeafCacheStore for SledStore {
     }
 
     #[tracing::instrument(skip(self))]
+    fn get_leaves_with_range<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        range: core::ops::Range<u32>,
+    ) -> crate::Result<Self::Output> {
+        let key: HistoryStoreKey = key.into();
+        let tree = self.db.open_tree(format!(
+            "leaves/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
+        let range_start = range.start.to_le_bytes();
+        let range_end = range.end.to_le_bytes();
+        let leaves = tree
+            .range(range_start..range_end)
+            .values()
+            .flatten()
+            .map(|v| v.to_vec())
+            .collect();
+        Ok(leaves)
+    }
+    #[tracing::instrument(skip(self))]
     fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
@@ -137,6 +159,7 @@ impl LeafCacheStore for SledStore {
         Ok(())
     }
 
+    #[tracing::instrument(skip(self))]
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
@@ -154,6 +177,7 @@ impl LeafCacheStore for SledStore {
         }
     }
 
+    #[tracing::instrument(skip(self))]
     fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
@@ -190,6 +214,29 @@ impl EncryptedOutputCacheStore for SledStore {
         ))?;
         let encrypted_outputs: Vec<_> =
             tree.iter().values().flatten().map(|v| v.to_vec()).collect();
+        Ok(encrypted_outputs)
+    }
+
+    #[tracing::instrument(skip(self))]
+    fn get_encrypted_output_with_range<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        range: core::ops::Range<u32>,
+    ) -> crate::Result<Self::Output> {
+        let key: HistoryStoreKey = key.into();
+        let tree = self.db.open_tree(format!(
+            "encrypted_outputs/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
+        let range_start = range.start.to_le_bytes();
+        let range_end = range.end.to_le_bytes();
+        let encrypted_outputs: Vec<_> = tree
+            .range(range_start..range_end)
+            .values()
+            .flatten()
+            .map(|v| v.to_vec())
+            .collect();
         Ok(encrypted_outputs)
     }
 
@@ -571,7 +618,7 @@ mod tests {
     }
 
     #[test]
-    fn get_leaves_should_work() {
+    fn get_last_block_number_should_work() {
         let tmp = tempfile::tempdir().unwrap();
         let store = SledStore::open(tmp.path()).unwrap();
         let chain_id = 1u32;
@@ -599,6 +646,38 @@ mod tests {
                 println!("Error encountered {:?}", e);
             }
         }
+    }
+
+    #[test]
+    fn get_leaves_with_range_should_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+        let chain_id = 1u32;
+        let contract =
+            types::H160::from_slice("11111111111111111111".as_bytes());
+        let history_store_key = (
+            TypedChainId::Evm(chain_id),
+            TargetSystem::new_contract_address(contract.to_fixed_bytes()),
+        );
+        let generated_leaves = (0..20u32)
+            .map(|i| (i, types::H256::random().to_fixed_bytes().to_vec()))
+            .collect::<Vec<_>>();
+        store
+            .insert_leaves(history_store_key, &generated_leaves)
+            .unwrap();
+        let leaves = store
+            .get_leaves_with_range(history_store_key, 5..10)
+            .unwrap();
+        assert_eq!(leaves.len(), 5);
+        assert_eq!(
+            leaves,
+            generated_leaves
+                .into_iter()
+                .skip(5)
+                .take(5)
+                .map(|(_, v)| v)
+                .collect::<Vec<_>>()
+        );
     }
 
     #[test]

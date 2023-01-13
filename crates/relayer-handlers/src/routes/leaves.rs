@@ -22,7 +22,7 @@ use webb_proposals::{
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::LeafCacheStore;
 
-use crate::routes::UnsupportedFeature;
+use super::{OptionalRangeQuery, UnsupportedFeature};
 
 // Leaves cache response
 #[derive(Debug, Serialize)]
@@ -41,11 +41,13 @@ struct LeavesCacheResponse {
 /// * `store` - [Sled](https://sled.rs)-based database store
 /// * `chain_id` - An u32 representing the chain id of the chain to query
 /// * `contract` - An address of the contract to query
+/// * `query_range` - An Optinal Query range.
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_evm(
     store: Arc<webb_relayer_store::sled::SledStore>,
     chain_id: u32,
     contract: Address,
+    query_range: OptionalRangeQuery,
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
     let config = ctx.config.clone();
@@ -126,7 +128,9 @@ pub async fn handle_leaves_cache_evm(
     let src_typed_chain_id = TypedChainId::Evm(chain_id);
     let history_store_key =
         ResourceId::new(src_target_system, src_typed_chain_id);
-    let leaves = store.get_leaves(history_store_key).unwrap();
+    let leaves = store
+        .get_leaves_with_range(history_store_key, query_range.into())
+        .unwrap();
     let last_queried_block = store
         .get_last_deposit_block_number(history_store_key)
         .unwrap();
@@ -149,12 +153,14 @@ pub async fn handle_leaves_cache_evm(
 /// * `chain_id` - An u32 representing the chain id of the chain to query
 /// * `tree_id` - Tree id of the the source system to query
 /// * `pallet_id` - Pallet id of the the source system to query
+/// * `query_range` - An Optinal Query range.
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_substrate(
     store: Arc<webb_relayer_store::sled::SledStore>,
     chain_id: u32,
     tree_id: u32,
     pallet_id: u8,
+    query_range: OptionalRangeQuery,
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
     let config = ctx.config.clone();
@@ -179,7 +185,9 @@ pub async fn handle_leaves_cache_substrate(
     let history_store_key =
         ResourceId::new(src_target_system, src_typed_chain_id);
 
-    let leaves = store.get_leaves(history_store_key).unwrap();
+    let leaves = store
+        .get_leaves_with_range(history_store_key, query_range.into())
+        .unwrap();
     let last_queried_block = store
         .get_last_deposit_block_number(history_store_key)
         .unwrap();

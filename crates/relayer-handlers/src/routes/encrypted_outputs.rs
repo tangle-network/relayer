@@ -19,8 +19,7 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::EncryptedOutputCacheStore;
 
-use crate::routes::UnsupportedFeature;
-
+use super::{OptionalRangeQuery, UnsupportedFeature};
 /// Handles encrypted outputs data requests for evm
 ///
 /// Returns a Result with the `EncryptedOutputDataResponse` on success
@@ -30,11 +29,13 @@ use crate::routes::UnsupportedFeature;
 /// * `store` - [Sled](https://sled.rs)-based database store
 /// * `chain_id` - An U256 representing the chain id of the chain to query
 /// * `contract` - An address of the contract to query
+/// * `query_range` - An optional range query
 /// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_encrypted_outputs_cache_evm(
     store: Arc<webb_relayer_store::sled::SledStore>,
     chain_id: u32,
     contract: Address,
+    query_range: OptionalRangeQuery,
     ctx: Arc<RelayerContext>,
 ) -> Result<impl warp::Reply, Infallible> {
     let config = ctx.config.clone();
@@ -123,8 +124,9 @@ pub async fn handle_encrypted_outputs_cache_evm(
     let src_typed_chain_id = TypedChainId::Evm(chain_id);
     let history_store_key =
         ResourceId::new(src_target_system, src_typed_chain_id);
-    let encrypted_output =
-        store.get_encrypted_output(history_store_key).unwrap();
+    let encrypted_output = store
+        .get_encrypted_output_with_range(history_store_key, query_range.into())
+        .unwrap();
     let last_queried_block = store
         .get_last_deposit_block_number_for_encrypted_output(history_store_key)
         .unwrap();
