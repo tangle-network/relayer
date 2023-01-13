@@ -185,15 +185,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let gas_estimate = client.estimate_gas(&call.tx).await.unwrap();
     let expected_fee_wrapped =
         calculate_wrapped_fee(gas_estimate, exchange_rate).await;
-    // TODO: It doesnt make sense anymore to calculate fee with fixed percentage, because this
-    //       will always fail in case of high transaction amount. We should remove calculate_fee()
-    //       and the config value.
-    /*
-    let expected_fee = calculate_fee(
-        withdraw_config.withdraw_fee_percentage,
-        cmd.ext_data.ext_amount.0.abs().as_u128().into(),
-    );
-    */
+
     // TODO: Just like refund, this check can fail unexpectedly if exchange rate or gas price change.
     //       Its probably better to lock in the price for each user at the time fee_info is called,
     //       and use the exact same exchange rate/transaction fee here.

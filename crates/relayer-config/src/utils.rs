@@ -264,17 +264,6 @@ pub fn postloading_process(
                     }
                 }
             }
-            // validate config for private transaction relaying
-            if config.features.private_tx_relay {
-                // check if withdraw fee is configured
-                if anchor.withdraw_config.is_none() {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable private transaction relaying,
-                        withdraw-config should also be configured for ({})",
-                        anchor.common.address
-                    );
-                }
-            }
         }
     }
 

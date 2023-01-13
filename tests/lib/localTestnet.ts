@@ -444,13 +444,6 @@ export class LocalChain {
                 node: contract.proposalSigningBackend?.node,
               }
             : undefined,
-        'withdraw-config': contract.withdrawConfig
-          ? {
-              'withdraw-fee-percentage':
-                contract.withdrawConfig?.withdrawFeePercentage,
-              'withdraw-gaslimit': contract.withdrawConfig?.withdrawGaslimit,
-            }
-          : undefined,
         'events-watcher': {
           enabled: contract.eventsWatcher.enabled,
           'polling-interval': contract.eventsWatcher.pollingInterval,
