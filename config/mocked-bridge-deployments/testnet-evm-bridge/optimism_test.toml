@@ -50,12 +50,6 @@ deployed-at = 3706371
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
 events-watcher = { enabled = true, polling-interval = 15000 }
-# Configuration related to withdraw (for private transaction relaying)
-#    - withdraw-gasLimit: Value which specifies the maximum amount of gas which will be used when
-#                         submitting a withdraw transaction
-#    - withdraw-fee-percentage: Value which specifies the fees that this relayer will collect upon
-#                               submitting a withdraw transaction
-withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [

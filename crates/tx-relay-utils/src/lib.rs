@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use serde::{Deserialize, Serialize};
-use webb::evm::ethers::types::U256;
 
 /// Contains data that is relayed to the Mixers
 #[derive(Debug, Clone, Deserialize)]
@@ -121,29 +120,4 @@ pub struct VAnchorRelayTransaction<Id, P, R, E, I, B, A, T> {
     pub proof_data: ProofData<P, R, E>,
     /// The external data structure for arbitrary inputs
     pub ext_data: ExtData<P, I, B, A, T>,
-}
-
-/// Calculates the fee for a given transaction
-pub fn calculate_fee(fee_percent: f64, principle: U256) -> U256 {
-    let mill_fee = (fee_percent * 1_000_000.0) as u32;
-    let mill_u256: U256 = principle * (mill_fee);
-    let fee_u256: U256 = mill_u256 / (1_000_000);
-    fee_u256
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn percent_fee() {
-        let submitted_value =
-            U256::from_dec_str("5000000000000000").ok().unwrap();
-        let expected_fee = U256::from_dec_str("250000000000000").ok().unwrap();
-        let withdraw_fee_percent_dec = 0.05f64;
-        let formatted_fee =
-            calculate_fee(withdraw_fee_percent_dec, submitted_value);
-
-        assert_eq!(expected_fee, formatted_fee);
-    }
 }

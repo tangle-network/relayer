@@ -79,10 +79,6 @@ async fn main() -> anyhow::Result<()> {
                             max_blocks_per_step: 1000,
                             print_progress_interval: 60_000,
                         },
-                        withdraw_config: Some(VAnchorWithdrawConfig {
-                            withdraw_gaslimit: 21000.into(),
-                            withdraw_fee_percentage: 0.01,
-                        }),
                         proposal_signing_backend: Some(
                             ProposalSigningBackendConfig::Mocked(
                                 MockedProposalSigningBackendConfig {
