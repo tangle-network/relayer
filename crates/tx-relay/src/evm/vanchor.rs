@@ -151,6 +151,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         ext_data_hash: cmd.proof_data.ext_data_hash.to_fixed_bytes().into(),
     };
 
+    dbg!(&cmd.ext_data);
     let encryptions = Encryptions {
         encrypted_output_1: cmd.ext_data.encrypted_output1,
         encrypted_output_2: cmd.ext_data.encrypted_output2,
@@ -199,8 +200,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
     if cmd.ext_data.fee < expected_fee_wrapped {
         tracing::error!("Received a fee lower than expected");
         let msg = format!(
-            "User sent a fee that is too low {} but expected {expected_fee_wrapped}",
-            cmd.ext_data.fee,
+            "User sent a fee that is too low {} but expected {}",
+            cmd.ext_data.fee, expected_fee_wrapped
         );
         let _ = stream.send(Error(msg)).await;
         return;

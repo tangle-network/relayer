@@ -97,10 +97,15 @@ export class WebbRelayer {
     const verbosity = opts.verbosity ?? 3;
     const levels = ['error', 'warn', 'info', 'debug', 'trace'];
     const logLevel = levels[verbosity] ?? 'debug';
-    const relayerPath = `${gitRoot}/target/${buildDir}/webb-relayer`;
     this.#process = spawn(
-      relayerPath,
+      'cargo',
       [
+        'run',
+        '--bin',
+        'webb-relayer',
+        '--features',
+        'integration-tests,cli',
+        '--',
         '-c',
         opts.configDir,
         opts.tmp ? '--tmp' : '',
@@ -135,6 +140,11 @@ export class WebbRelayer {
           this.#eventEmitter.emit(rawEvent.kind, rawEvent);
         }
       });
+    this.#process.stderr?.on('data', (data) => {
+      if (this.opts.showLogs) {
+        process.stdout.write(`${data}\n`);
+      }
+    });
 
     this.#process.on('close', (code) => {
       if (this.opts.showLogs) {
@@ -622,11 +632,11 @@ export interface ChainInfo {
 }
 
 export interface FeeInfo {
-    estimatedFee: BigNumber,
-    gasPrice: BigNumber,
-    refundExchangeRate: number,
-    maxRefund: BigNumber,
-    timestamp: string,
+  estimatedFee: BigNumber;
+  gasPrice: BigNumber;
+  refundExchangeRate: number;
+  maxRefund: BigNumber;
+  timestamp: string;
 }
 
 export interface Contract {
