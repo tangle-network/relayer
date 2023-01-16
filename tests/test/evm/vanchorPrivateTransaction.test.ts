@@ -207,7 +207,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
   it('should relay private transaction', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
-
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(govWallet2);
 
@@ -231,7 +230,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const depositUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
-      amount: (1e2).toString(),
+      amount: (1e12).toString(),
       originChainId: localChain1.chainId.toString(),
       chainId: localChain2.chainId.toString(),
       keypair: randomKeypair,
@@ -273,7 +272,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       feeInfo.estimatedFee,
       feeInfo.maxRefund
     );
-    console.log(output.extData);
 
     await webbRelayer.vanchorWithdraw(
       localChain2.underlyingChainId,
@@ -305,8 +303,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const refundBalance = await vanchor1.contract.provider.getBalance(
       output.extData.recipient
     );
-    console.log(refundBalance);
-    //expect(refundBalance).equal(feeInfo.maxRefund);
+    console.log('refund: ', refundBalance);
   });
 
   it('Should fail to withdraw with invalid root', async () => {
