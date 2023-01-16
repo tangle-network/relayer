@@ -38,7 +38,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - run: cargo build --release --target=${{ matrix.target }} --features native-tls/vendored --locked --use-cross=true
+      - run: cargo build --release --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
@@ -72,7 +72,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - run: cargo test --release --target=${{ matrix.target }} --locked --use-cross=true
+      - run: cargo test --release --target=${{ matrix.target }} --locked
           
     strategy:
       fail-fast: true
@@ -103,7 +103,7 @@ jobs:
       - name: Install cross
         run: cargo install cross --locked
       - name: Build target
-        run: cargo build --release --target=${{ matrix.target }} --features native-tls/vendored --locked --use-cross=true
+        run: cargo build --release --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
@@ -150,7 +150,7 @@ jobs:
       - name: Install cross
         run: cargo install cross --locked
       - name: Build target
-        run: cargo test --release --target=${{ matrix.target }} --features native-tls/vendored --locked --use-cross=true
+        run: cargo test --release --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
