@@ -33,6 +33,7 @@ import {
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
+import { padHexString } from '../../lib/utils.js';
 
 describe('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -237,22 +238,30 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       keypair: randomKeypair,
     });
 
-    const feeInfoResponse = await (await webbRelayer.getFeeInfo());
+    const feeInfoResponse = await await webbRelayer.getFeeInfo();
     expect(feeInfoResponse.status).equal(200);
     const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
     console.log(feeInfo);
+
+    const refundPk = u8aToHex(ethers.utils.randomBytes(32));
+    const refundWallet = new ethers.Wallet(refundPk, localChain2.provider());
 
     // SignatureVBridge will transact and update the anchors
     await signatureVBridge.transact(
       [],
       [depositUtxo],
+      // TODO: Fee and refund dont reach the Rust side, both end up as 0 in `ExtData`
       feeInfo.estimatedFee,
       feeInfo.maxRefund,
-      '0',
-      '0',
+      // TODO: Only one of these should be necessary
+      refundWallet.address,
+      refundWallet.address,
       tokenAddress,
       govWallet1
     );
+    // TODO: Check that refund is correct
+    console.log(refundWallet.getBalance());
+    //expect(await refundWallet.getBalance()).equal(feeInfo.maxRefund);
 
     // now we wait for the relayer to see the transaction
     await webbRelayer.waitForEvent({
