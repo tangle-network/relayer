@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 50
           
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
           profile: minimal
@@ -38,11 +38,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
-          command: build
+      - run: cargo build --release --target=${{ matrix.target }} --features native-tls/vendored --locked --use-cross=true
 
     strategy:
       fail-fast: true
@@ -64,7 +60,7 @@ jobs:
           fetch-depth: 50
           
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
           profile: minimal
@@ -76,11 +72,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
 
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          args: --release --target=${{ matrix.target }} --locked
-          command: test
+      - run: cargo test --release --target=${{ matrix.target }} --locked --use-cross=true
           
     strategy:
       fail-fast: true
@@ -111,11 +103,7 @@ jobs:
       - name: Install cross
         run: cargo install cross --locked
       - name: Build target
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
-          command: build
+        run: cargo build --release --target=${{ matrix.target }} --features native-tls/vendored --locked --use-cross=true
 
     strategy:
       fail-fast: true
@@ -162,11 +150,7 @@ jobs:
       - name: Install cross
         run: cargo install cross --locked
       - name: Build target
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
-          command: test
+        run: cargo test --release --target=${{ matrix.target }} --features native-tls/vendored --locked --use-cross=true
 
     strategy:
       fail-fast: true
