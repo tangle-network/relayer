@@ -498,12 +498,12 @@ export async function setupVanchorEvmTx(
   relayerWallet2: Wallet,
   tokenAddress: string,
   fee: BigNumberish,
-  refund: BigNumberish,
+  refund: BigNumberish
 ): Promise<{
   extData: IVariableAnchorExtData;
   publicInputs: IVariableAnchorPublicInputs;
 }> {
-  const extAmount = ethers.BigNumber.from(0).sub(depositUtxo.amount);
+  const extAmount = ethers.BigNumber.from(0).sub(depositUtxo.amount).add(fee);
 
   const dummyOutput1 = await CircomUtxo.generateUtxo({
     curve: 'Bn254',
