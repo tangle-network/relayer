@@ -15,7 +15,7 @@
  *
  */
 import fs from 'fs';
-import { ethers, Wallet } from 'ethers';
+import { BigNumberish, ethers, Wallet } from 'ethers';
 import { Anchors, Utility, VBridge } from '@webb-tools/protocol-solidity';
 import {
   DeployerConfig,
@@ -496,7 +496,9 @@ export async function setupVanchorEvmTx(
   srcVanchor: Anchors.VAnchor,
   destVanchor: Anchors.VAnchor,
   relayerWallet2: Wallet,
-  tokenAddress: string
+  tokenAddress: string,
+  fee: BigNumberish,
+  refund: BigNumberish,
 ): Promise<{
   extData: IVariableAnchorExtData;
   publicInputs: IVariableAnchorPublicInputs;
@@ -564,8 +566,8 @@ export async function setupVanchorEvmTx(
     [regeneratedUtxo, dummyInput],
     [dummyOutput1, dummyOutput2],
     extAmount,
-    0,
-    0,
+    fee,
+    refund,
     recipient,
     relayerWallet2.address,
     tokenAddress,
