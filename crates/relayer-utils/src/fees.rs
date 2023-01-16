@@ -35,7 +35,7 @@ pub struct FeeInfo {
     /// Price per gas using "normal" confirmation speed, in `nativeToken`
     pub gas_price: U256,
     /// Exchange rate for refund from `wrappedToken` to `nativeToken`
-    pub refund_exchange_rate: f64,
+    pub refund_exchange_rate: U256,
     /// Maximum amount of `wrappedToken` which can be exchanged to `nativeToken` by relay
     pub max_refund: U256,
     timestamp: DateTime<Utc>,
@@ -84,16 +84,18 @@ pub async fn get_fee_info(
 pub async fn calculate_wrapped_fee(
     gas_price: U256,
     estimated_gas_amount: U256,
-    exchange_rate: f64,
+    exchange_rate: U256,
 ) -> U256 {
-    let native_fee = (gas_price * estimated_gas_amount).as_u128() as f64;
-    let wrapped_fee = native_fee * exchange_rate;
-    to_u256(wrapped_fee)
+    let native_fee = gas_price * estimated_gas_amount;
+    native_fee * exchange_rate
 }
 
 /// Pull USD prices of wrapped token and base token from coingecko.com, and use these to
 /// calculate the exchange rate.
-async fn calculate_exchange_rate(wrapped_token: &str, base_token: &str) -> f64 {
+async fn calculate_exchange_rate(
+    wrapped_token: &str,
+    base_token: &str,
+) -> U256 {
     let tokens = &[wrapped_token, base_token];
     let prices = COIN_GECKO_CLIENT
         .price(tokens, &["usd"], false, false, false, false)
@@ -101,7 +103,8 @@ async fn calculate_exchange_rate(wrapped_token: &str, base_token: &str) -> f64 {
         .unwrap();
     let wrapped_price = prices[wrapped_token].usd.unwrap();
     let base_price = prices[base_token].usd.unwrap();
-    wrapped_price / base_price
+    let exchange_rate = wrapped_price / base_price;
+    to_u256(exchange_rate)
 }
 
 /// Estimate gas price using etherscan.io. Note that this functionality is only available
