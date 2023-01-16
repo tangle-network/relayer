@@ -634,7 +634,7 @@ export interface ChainInfo {
 export interface FeeInfo {
   estimatedFee: BigNumber;
   gasPrice: BigNumber;
-  refundExchangeRate: number;
+  refundExchangeRate: BigNumber;
   maxRefund: BigNumber;
   timestamp: string;
 }
