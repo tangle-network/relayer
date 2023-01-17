@@ -74,7 +74,7 @@ jobs:
           path: /tmp/
       - run: chmod +x /tmp/cross
 
-      - run: ci/set_rust_version.bash nightly x86_64-unknown-linux-musl
+      - run: ci/set_rust_version.bash stable x86_64-unknown-linux-musl
       - run: ci/build.bash /tmp/cross x86_64-unknown-linux-musl RELEASE DOCKER
 
       - name: Build Image

@@ -24,8 +24,7 @@ jobs:
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: nightly
+          toolchain: stable
 
       - name: Update apt repositories
         run: sudo apt update

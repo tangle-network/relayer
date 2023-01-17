@@ -32,7 +32,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          override: false
           components: clippy
       - name: Run cargo clippy
         run: cargo clippy  --workspace --all-targets -- -D warnings -D deprecated -D clippy::perf -D clippy::complexity -D clippy::style -D clippy::correctness -D clippy::suspicious
@@ -53,9 +52,7 @@ jobs:
       - name: Install stable toolchain with rustfmt available
         uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
           toolchain: stable
-          override: false
           components: rustfmt
 
       - name: Run cargo fmt
