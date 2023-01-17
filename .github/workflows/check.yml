@@ -98,6 +98,12 @@ jobs:
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
 
+      - name: Setup | Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
       - name: Install cross
         run: cargo install cross --locked
       - name: Build target
@@ -128,6 +134,12 @@ jobs:
 
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
+
+      - name: Setup | Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
 
       - name: Use Node.js
         uses: actions/setup-node@v3
