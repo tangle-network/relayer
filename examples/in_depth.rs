@@ -21,7 +21,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use webb_relayer::service;
 use webb_relayer_config::{
-    anchor::VAnchorWithdrawConfig,
     event_watcher::EventsWatcherConfig,
     evm::{
         CommonContractConfig, Contract, EvmChainConfig,

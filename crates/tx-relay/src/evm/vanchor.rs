@@ -151,7 +151,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
         ext_data_hash: cmd.proof_data.ext_data_hash.to_fixed_bytes().into(),
     };
 
-    dbg!(&cmd.ext_data);
     let encryptions = Encryptions {
         encrypted_output_1: cmd.ext_data.encrypted_output1,
         encrypted_output_2: cmd.ext_data.encrypted_output2,
@@ -204,8 +203,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
             cmd.ext_data.fee, expected_fee_wrapped
         );
         // TODO: fee estimation uses a different gas estimate here so it fails the check
-        //let _ = stream.send(Error(msg)).await;
-        //return;
+        let _ = stream.send(Error(msg)).await;
+        return;
     }
 
     let target_system = TargetSystem::new_contract_address(

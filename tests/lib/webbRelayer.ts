@@ -92,8 +92,6 @@ export class WebbRelayer {
     console.log('config string: ', configString);
 
     // Startup the relayer
-    const gitRoot = execSync('git rev-parse --show-toplevel').toString().trim();
-    const buildDir = opts.buildDir ?? 'debug';
     const verbosity = opts.verbosity ?? 3;
     const levels = ['error', 'warn', 'info', 'debug', 'trace'];
     const logLevel = levels[verbosity] ?? 'debug';
