@@ -498,7 +498,8 @@ export async function setupVanchorEvmTx(
   relayerWallet2: Wallet,
   tokenAddress: string,
   fee: BigNumberish,
-  refund: BigNumberish
+  refund: BigNumberish,
+  recipient: string
 ): Promise<{
   extData: IVariableAnchorExtData;
   publicInputs: IVariableAnchorPublicInputs;
@@ -529,8 +530,6 @@ export async function setupVanchorEvmTx(
     originChainId: destChain.chainId.toString(),
     keypair: randomKeypair,
   });
-
-  const recipient = '0x0000000001000000000100000000010000000001';
 
   // Populate the leavesMap for generating the zkp against the source chain
   //

@@ -13,7 +13,7 @@ use webb::evm::ethers::prelude::U256;
 /// Maximum refund amount per relay transaction in USD.
 const MAX_REFUND_USD: f64 = 1.;
 /// Amount of time for which a `FeeInfo` is valid after creation
-const FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
+static FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
 /// Number of digits after the comma of USD-Coin.
 const USDC_DECIMALS: u32 = 6;
 
@@ -128,14 +128,9 @@ async fn max_refund(wrapped_token: &str) -> U256 {
     to_u256(max_refund_wrapped)
 }
 
-/// To match types of `ExtData.refund` and `ExtData.fee`, methods here need to return U256,
-/// meaning a conversion is necessary. This conversion is done analogous to
-/// `ethers::utils::parse_ether`, with the actual amount of digits of USDC.
-///
-/// TODO: Needs to support other wrapped tokens with different number of digits. It would be easier
-///       to simply return the f64 amount, but that would require changing the type param for `ExtData`.
+/// Convert exchange rates to U256.
 fn to_u256(amount: f64) -> U256 {
-    let multiplier = 10_i32.pow(USDC_DECIMALS) as f64;
+    let multiplier = f64::from(10_i32.pow(USDC_DECIMALS));
     let val = amount * multiplier;
     U256::from_dec_str(&val.round().to_string()).unwrap()
 }

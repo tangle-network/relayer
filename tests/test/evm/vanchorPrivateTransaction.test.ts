@@ -209,6 +209,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     await vanchor1.setSigner(govWallet1);
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(govWallet2);
+    const wallet1Balance = (await govWallet1.getBalance()).toBigInt();
+    const wallet2Balance = (await govWallet2.getBalance()).toBigInt();
 
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
@@ -260,6 +262,9 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
     });
 
+    const refundPk = u8aToHex(ethers.utils.randomBytes(32));
+    const refundWallet = new ethers.Wallet(refundPk, localChain2.provider());
+
     const output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
@@ -270,7 +275,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress,
       feeInfo.estimatedFee,
-      feeInfo.maxRefund
+      feeInfo.maxRefund,
+      refundWallet.address
     );
 
     await webbRelayer.vanchorWithdraw(
@@ -300,10 +306,19 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       expect(metrics.totalGasSpent).greaterThan(0);
     });
     // TODO: Check that refund is correct
-    const refundBalance = await vanchor1.contract.provider.getBalance(
-      output.extData.recipient
+    console.log('refund: ', await refundWallet.getBalance());
+    console.log(
+      'govWallet1 balance before:',
+      wallet1Balance,
+      'after: ',
+      (await govWallet1.getBalance()).toBigInt()
     );
-    console.log('refund: ', refundBalance);
+    console.log(
+      'govWallet2 balance before:',
+      wallet2Balance,
+      'after: ',
+      (await govWallet2.getBalance()).toBigInt()
+    );
   });
 
   it('Should fail to withdraw with invalid root', async () => {
@@ -373,7 +388,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress,
       0,
-      0
+      0,
+      '0x0000000001000000000100000000010000000001'
     );
 
     const rootBytes = hexToU8a(output.publicInputs.roots);
@@ -463,7 +479,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress,
       0,
-      0
+      0,
+      '0x0000000001000000000100000000010000000001'
     );
 
     const proofBytes = hexToU8a(output.publicInputs.proof);
@@ -554,7 +571,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       relayerWallet2,
       tokenAddress,
       0,
-      0
+      0,
+      '0x0000000001000000000100000000010000000001'
     );
 
     const nullifierHash = hexToU8a(

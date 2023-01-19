@@ -296,6 +296,27 @@ The relayer has 3 endpoints available to query from. They are outlined below for
   ```json
   {
   "metrics": "# HELP bridge_watcher_back_off_metric specifies how many times the bridge watcher backed off\n# TYPE bridge_watcher_back_off_metric counter\nbridge_watcher_back_off_metric 0\n# HELP gas_spent_metric The total number of gas spent\n# TYPE gas_spent_metric counter\ngas_spent_metric 0\n# HELP handle_proposal_execution_metric How many times did the function handle_proposal get executed\n# TYPE handle_proposal_execution_metric counter\nhandle_proposal_execution_metric 0\n# HELP proposal_queue_attempt_metric How many times a proposal is attempted to be queued\n# TYPE proposal_queue_attempt_metric counter\nproposal_queue_attempt_metric 0\n# HELP total_active_relayer_metric The total number of active relayers\n# TYPE total_active_relayer_metric counter\ntotal_active_relayer_metric 0\n# HELP total_fee_earned_metric The total number of fees earned\n# TYPE total_fee_earned_metric counter\ntotal_fee_earned_metric 0\n# HELP total_number_of_data_stored_metric The Total number of data stored\n# TYPE total_number_of_data_stored_metric counter\ntotal_number_of_data_stored_metric 1572864\n# HELP total_number_of_proposals_metric The total number of proposals proposed\n# TYPE total_number_of_proposals_metric counter\ntotal_number_of_proposals_metric 0\n# HELP total_transaction_made_metric The total number of transaction made\n# TYPE total_transaction_made_metric counter\ntotal_transaction_made_metric 0\n# HELP transaction_queue_back_off_metric How many times the transaction queue backed off\n# TYPE transaction_queue_back_off_metric counter\ntransaction_queue_back_off_metric 0\n"
+}
+  ```
+</details>
+
+
+**Retrieve fee information**
+
+```
+/api/v1/fee_info
+```
+
+<details>
+  <summary>Expected Response</summary>
+
+  ```json
+  {
+      "estimatedFee": "0x476b26e0f",
+      "gasPrice": "0x11",
+      "refundExchangeRate": "0x28f",
+      "maxRefund": "0xf3e59",
+      "timestamp": "2023-01-19T06:29:49.556114073Z"
   }
   ```
 </details>
