@@ -106,8 +106,8 @@ jobs:
 
       - name: Install cross
         run: cargo install cross --locked
-      - name: Build target
-        run: cargo build --release --target=${{ matrix.target }} --features native-tls/vendored --locked
+      - name: Build target using cross
+        run: cross build --release --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
@@ -159,8 +159,8 @@ jobs:
             echo ETH1_INFURA_API_KEY = ${{ secrets.ETH1_INFURA_API_KEY }} >> .env
       - name: Install cross
         run: cargo install cross --locked
-      - name: Build target
-        run: cargo test --release --target=${{ matrix.target }} --features native-tls/vendored --locked
+      - name: Build target using cross
+        run: cross test --release --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
