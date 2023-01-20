@@ -207,14 +207,14 @@ pub async fn handle_vanchor_relay_tx<'a>(
         return;
     }
 
-    // dont use `fee_info.estimated_fee` because we can use a more accurate gas estimate here
-    let expected_fee = estimated_gas_amount * fee_info.gas_price;
     let expected_fee_wrapped = calculate_wrapped_fee(
         fee_info.gas_price,
-        expected_fee,
+        estimated_gas_amount,
         fee_info.refund_exchange_rate,
     )
     .await;
+    // allow for 10% variation due to difference in fee calculation
+    let expected_fee_wrapped = expected_fee_wrapped / 10 * 9;
 
     // check the fee
     if cmd.ext_data.fee < expected_fee_wrapped {
