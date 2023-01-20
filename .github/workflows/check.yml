@@ -8,7 +8,7 @@ on:
 
   workflow_dispatch:
 env:
-  DEV_PACKAGES: build-essential musl musl-dev musl-tools pkg-config libssl-dev librust-openssl-sys-dev libc6
+  DEV_PACKAGES: build-essential musl musl-dev musl-tools pkg-config libssl-dev librust-openssl-sys-dev libc6 clang
   ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
 
 jobs:
@@ -26,23 +26,18 @@ jobs:
           fetch-depth: 50
           
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly
-          profile: minimal
-          target: ${{ matrix.target }}
+          toolchain: stable
+          targets: ${{ matrix.target }}
 
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
         
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
-
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
-          command: build
+      - name: Build target
+        run: cargo build --release --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
@@ -64,23 +59,18 @@ jobs:
           fetch-depth: 50
           
       - name: Setup | Rust
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly
-          profile: minimal
-          target: ${{ matrix.target }}
+          toolchain: stable
+          targets: ${{ matrix.target }}
 
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
         
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
-
-      - uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          args: --release --target=${{ matrix.target }} --locked
-          command: test
+      - name: Build target
+        run: cargo test --release --target=${{ matrix.target }} --locked
           
     strategy:
       fail-fast: true
@@ -108,14 +98,16 @@ jobs:
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
 
+      - name: Setup | Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
       - name: Install cross
         run: cargo install cross --locked
-      - name: Build target
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
-          command: build
+      - name: Build target using cross
+        run: cross build --release --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
@@ -143,6 +135,12 @@ jobs:
       - name: Setup DVC
         uses: iterative/setup-dvc@v1
 
+      - name: Setup | Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: ${{ matrix.target }}
+
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
@@ -161,12 +159,8 @@ jobs:
             echo ETH1_INFURA_API_KEY = ${{ secrets.ETH1_INFURA_API_KEY }} >> .env
       - name: Install cross
         run: cargo install cross --locked
-      - name: Build target
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: true
-          args: --release --target=${{ matrix.target }} --features native-tls/vendored --locked
-          command: test
+      - name: Build target using cross
+        run: cross test --release --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
