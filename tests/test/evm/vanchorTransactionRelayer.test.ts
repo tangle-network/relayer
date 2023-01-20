@@ -171,7 +171,7 @@ describe('Vanchor Transaction relayer', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
