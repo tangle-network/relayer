@@ -217,13 +217,17 @@ pub async fn handle_substrate<'a>(
 }
 
 /// Handler for fee estimation
-///
-/// TODO: do we need to add another endpoint for substrate?
 pub async fn handle_fee_info() -> Result<impl warp::Reply, Infallible> {
-    let fee_info = calculate_fees().await.unwrap();
-
-    Ok(warp::reply::with_status(
-        warp::reply::json(&fee_info),
-        warp::http::StatusCode::OK,
-    ))
+    let fee_info = calculate_fees()
+        .await
+        .and_then(|f| Ok(serde_json::to_string(&f)?));
+    Ok(match fee_info {
+        Ok(value) => {
+            warp::reply::with_status(value, warp::http::StatusCode::OK)
+        }
+        Err(e) => warp::reply::with_status(
+            e.to_string(),
+            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
+        ),
+    })
 }

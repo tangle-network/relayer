@@ -166,12 +166,33 @@ pub async fn handle_vanchor_relay_tx<'a>(
         encryptions,
     );
 
-    let estimated_gas_amount = client.estimate_gas(&call.tx).await.unwrap();
+    let estimated_gas_amount = match client.estimate_gas(&call.tx).await {
+        Ok(value) => value,
+        Err(e) => {
+            let reason = e.to_string();
+            let _ =
+                stream.send(Network(NetworkStatus::Failed { reason })).await;
+            let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
+            return;
+        }
+    };
     // TODO: need to get the actual tokens which are being exchanged
     let wrapped_token = "usd-coin";
     let base_token = "ethereum";
     let fee_info =
-        get_fee_info(estimated_gas_amount, wrapped_token, base_token).await;
+        match get_fee_info(estimated_gas_amount, wrapped_token, base_token)
+            .await
+        {
+            Ok(value) => value,
+            Err(e) => {
+                let reason = e.to_string();
+                let _ = stream
+                    .send(Network(NetworkStatus::Failed { reason }))
+                    .await;
+                let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
+                return;
+            }
+        };
 
     // validate refund amount
     if cmd.ext_data.refund > fee_info.max_refund {

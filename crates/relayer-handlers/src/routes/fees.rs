@@ -9,7 +9,5 @@ pub async fn calculate_fees() -> webb_relayer_utils::Result<FeeInfo> {
     let wrapped_token = "usd-coin";
     let base_token = "ethereum";
 
-    let fee_info =
-        get_fee_info(estimated_gas_amount, wrapped_token, base_token).await;
-    Ok(fee_info)
+    get_fee_info(estimated_gas_amount, wrapped_token, base_token).await
 }
