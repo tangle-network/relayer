@@ -10,6 +10,7 @@ on:
 env:
   DEV_PACKAGES: build-essential musl musl-dev musl-tools pkg-config libssl-dev librust-openssl-sys-dev libc6 clang
   ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
+  ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
 
 jobs:
 
@@ -157,6 +158,7 @@ jobs:
         run: |
             touch .env
             echo ETH1_INFURA_API_KEY = ${{ secrets.ETH1_INFURA_API_KEY }} >> .env
+            echo ETHERSCAN_API_KEY = ${{ secrets.ETHERSCAN_API_KEY }} >> .env
       - name: Install cross
         run: cargo install cross --locked
       - name: Build target using cross
