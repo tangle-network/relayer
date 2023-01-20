@@ -41,14 +41,6 @@ pub struct FeeInfo {
     timestamp: DateTime<Utc>,
 }
 
-#[derive(Debug, thiserror::Error)]
-pub enum FeeError {
-    #[error(transparent)]
-    FetchExchangeRateErr(#[from] reqwest::Error),
-    #[error(transparent)]
-    EtherscanErr(#[from] etherscan::errors::EtherscanError),
-}
-
 /// Get the current fee info.
 ///
 /// If fee info was recently requested, the cached value is used. Otherwise it is regenerated
@@ -102,7 +94,7 @@ pub async fn calculate_wrapped_fee(
 async fn fetch_exchange_rate(
     wrapped_token: &str,
     base_token: &str,
-) -> Result<U256, FeeError> {
+) -> crate::Result<U256> {
     let tokens = &[wrapped_token, base_token];
     let prices = COIN_GECKO_CLIENT
         .price(tokens, &["usd"], false, false, false, false)
@@ -115,7 +107,7 @@ async fn fetch_exchange_rate(
 
 /// Estimate gas price using etherscan.io. Note that this functionality is only available
 /// on mainnet.
-async fn estimate_gas_price() -> Result<U256, FeeError> {
+async fn estimate_gas_price() -> crate::Result<U256> {
     let gas_oracle = ETHERSCAN_CLIENT.gas_oracle().await?;
     // use the "average" gas price
     Ok(U256::from(gas_oracle.propose_gas_price))
@@ -123,7 +115,7 @@ async fn estimate_gas_price() -> Result<U256, FeeError> {
 
 /// Calculate the maximum refund amount per relay transaction in `wrappedToken`, based on
 /// `MAX_REFUND_USD`.
-async fn max_refund(wrapped_token: &str) -> Result<U256, FeeError> {
+async fn max_refund(wrapped_token: &str) -> crate::Result<U256> {
     let prices = COIN_GECKO_CLIENT
         .price(&[wrapped_token], &["usd"], false, false, false, false)
         .await?;

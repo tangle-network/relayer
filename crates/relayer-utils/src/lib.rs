@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::fees::FeeError;
 use webb::{evm::ethers, substrate::subxt};
 
 pub mod clickable_link;
@@ -84,8 +83,12 @@ pub enum Error {
     SledTransaction(
         #[from] sled::transaction::TransactionError<std::io::Error>,
     ),
+    /// Reqwest error
     #[error(transparent)]
-    FeeError(#[from] FeeError),
+    Reqwest(#[from] reqwest::Error),
+    /// Etherscan API error
+    #[error(transparent)]
+    Etherscan(#[from] ethers::etherscan::errors::EtherscanError),
     /// Generic error.
     #[error("{}", _0)]
     Generic(&'static str),
