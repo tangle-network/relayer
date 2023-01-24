@@ -176,10 +176,14 @@ async fn get_wrapped_token_name(
 
 /// Hardcodede mapping from chain id to base token name. Testnets use the mainnet name because
 /// otherwise there is no exchange rate available.
+///
+/// https://github.com/DefiLlama/chainlist/blob/main/constants/chainIds.json
 fn get_base_token_name(chain_id: u64) -> crate::Result<&'static str> {
-    // TODO: add all supported chain ids
     match chain_id {
-        1 => Ok("ethereum"),
+        1 | 5 | 5001 | 5002 | 5003 | 11155111 => Ok("ethereum"),
+        10 | 420 => Ok("optimism"),
+        127 | 80001 => Ok("polygon"),
+        1284 | 1287 => Ok("moonbeam"),
         _ => {
             // Typescript tests use randomly generated chain id, so we always return "ethereum"
             // in debug mode to make them work.
