@@ -95,6 +95,8 @@ pub fn build_web_services(
     let port = ctx.config.port;
     let ctx_arc = Arc::new(ctx.clone());
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
+    let evm_store = Arc::new(store.clone());
+    let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
 
     // the websocket server for users to submit relay transaction requests
     let ws_filter = warp::path("ws")
@@ -131,57 +133,43 @@ pub fn build_web_services(
     // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
     let info_filter = warp::path("info")
         .and(warp::get())
-        .and(ctx_filter)
+        .and(ctx_filter.clone())
         .and_then(info::handle_relayer_info)
         .boxed();
 
     // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
     // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
     // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let evm_store = Arc::new(store.clone());
-    let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
-    let ctx_arc = Arc::new(ctx.clone());
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
     let leaves_cache_filter_evm = warp::path("leaves")
         .and(warp::path("evm"))
-        .and(store_filter)
+        .and(store_filter.clone())
         .and(warp::path::param())
         .and(warp::path::param())
         .and(warp::query())
-        .and(ctx_filter)
+        .and(ctx_filter.clone())
         .and_then(leaves::handle_leaves_cache_evm)
         .boxed();
-    // leaf api handler for substrate
-    let substrate_store = Arc::new(store.clone());
-    let store_filter = warp::any()
-        .map(move || Arc::clone(&substrate_store))
-        .boxed();
-    let ctx_arc = Arc::new(ctx.clone());
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
 
+    // leaf api handler for substrate
     // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
     let leaves_cache_filter_substrate = warp::path("leaves")
         .and(warp::path("substrate"))
-        .and(store_filter)
+        .and(store_filter.clone())
         .and(warp::path::param())
         .and(warp::path::param())
         .and(warp::path::param())
         .and(warp::query())
-        .and(ctx_filter)
+        .and(ctx_filter.clone())
         .and_then(leaves::handle_leaves_cache_substrate)
         .boxed();
 
-    let evm_store = Arc::new(store);
-    let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
-    let ctx_arc = Arc::new(ctx.clone());
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
     let encrypted_output_cache_filter_evm = warp::path("encrypted_outputs")
         .and(warp::path("evm"))
         .and(store_filter)
         .and(warp::path::param())
         .and(warp::path::param())
         .and(warp::query())
-        .and(ctx_filter)
+        .and(ctx_filter.clone())
         .and_then(encrypted_outputs::handle_encrypted_outputs_cache_evm)
         .boxed();
 
@@ -191,40 +179,31 @@ pub fn build_web_services(
         .boxed();
 
     //  Relayer metric for particular evm resource
-    let ctx_arc = Arc::new(ctx.clone());
     let relayer_metrics_info_evm = warp::path("metrics")
         .and(warp::path("evm"))
         .and(warp::path::param())
         .and(warp::path::param())
-        .and_then(move |chain_id, contract| {
-            metric::handle_evm_metric_info(
-                chain_id,
-                contract,
-                Arc::clone(&ctx_arc),
-            )
-        })
+        .and(ctx_filter.clone())
+        .and_then(metric::handle_evm_metric_info)
         .boxed();
 
     //  Relayer metric for particular substrate resource
-    let ctx_arc = Arc::new(ctx.clone());
     let relayer_metrics_info_substrate = warp::path("metrics")
         .and(warp::path("substrate"))
         .and(warp::path::param())
         .and(warp::path::param())
         .and(warp::path::param())
-        .and_then(move |chain_id, tree_id, pallet_id| {
-            metric::handle_substrate_metric_info(
-                chain_id,
-                tree_id,
-                pallet_id,
-                Arc::clone(&ctx_arc),
-            )
-        })
+        .and(ctx_filter.clone())
+        .and_then(metric::handle_substrate_metric_info)
         .boxed();
 
     //  Information about relayer fees
-    let relayer_fee_info =
-        warp::path("fee_info").and_then(handle_fee_info).boxed();
+    let relayer_fee_info = warp::path("fee_info")
+        .and(warp::path::param())
+        .and(warp::path::param())
+        .and(ctx_filter)
+        .and_then(handle_fee_info)
+        .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.
     let routes = ip_filter

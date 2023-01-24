@@ -120,8 +120,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         }
     };
 
-    let client = SignerMiddleware::new(provider, wallet);
-    let client = Arc::new(client);
+    let client = Arc::new(SignerMiddleware::new(provider, wallet));
     let contract = VAnchorContract::new(cmd.id, client.clone());
 
     let common_ext_data = CommonExtData {
@@ -176,23 +175,23 @@ pub async fn handle_vanchor_relay_tx<'a>(
             return;
         }
     };
-    // TODO: need to get the actual tokens which are being exchanged
-    let wrapped_token = "usd-coin";
-    let base_token = "ethereum";
-    let fee_info =
-        match get_fee_info(estimated_gas_amount, wrapped_token, base_token)
-            .await
-        {
-            Ok(value) => value,
-            Err(e) => {
-                let reason = e.to_string();
-                let _ = stream
-                    .send(Network(NetworkStatus::Failed { reason }))
-                    .await;
-                let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
-                return;
-            }
-        };
+    let fee_info = match get_fee_info(
+        estimated_gas_amount,
+        contract_config.common.address,
+        client,
+        cmd.chain_id.into(),
+    )
+    .await
+    {
+        Ok(value) => value,
+        Err(e) => {
+            let reason = e.to_string();
+            let _ =
+                stream.send(Network(NetworkStatus::Failed { reason })).await;
+            let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
+            return;
+        }
+    };
 
     // validate refund amount
     if cmd.ext_data.refund > fee_info.max_refund {

@@ -238,7 +238,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       keypair: randomKeypair,
     });
 
-    const feeInfoResponse = await webbRelayer.getFeeInfo();
+    const feeInfoResponse = await webbRelayer.getFeeInfo(vanchor1.getAddress(), localChain2.underlyingChainId);
     expect(feeInfoResponse.status).equal(200);
     const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
     console.log(feeInfo);

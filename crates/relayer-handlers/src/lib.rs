@@ -16,9 +16,11 @@
 
 #![allow(clippy::large_enum_variant)]
 #![warn(missing_docs)]
+use ethereum_types::Address;
 use std::convert::Infallible;
 use std::error::Error;
 use std::net::{IpAddr, SocketAddr};
+use std::sync::Arc;
 
 use futures::prelude::*;
 
@@ -217,8 +219,21 @@ pub async fn handle_substrate<'a>(
 }
 
 /// Handler for fee estimation
-pub async fn handle_fee_info() -> Result<impl warp::Reply, Infallible> {
-    let fee_info = calculate_fees()
+///
+/// # Arguments
+///
+/// * `vanchor` - Address of the smart contract
+/// * `chain_id` - ID of the blockchain
+/// * `ctx` - RelayContext reference that holds the configuration
+pub async fn handle_fee_info(
+    vanchor: Address,
+    chain_id: u64,
+    ctx: Arc<RelayerContext>,
+) -> Result<impl warp::Reply, Infallible> {
+    // TODO: cant use TypedChainId becuase it only supports mainnet chains. When passing one of
+    //       the randomly generated chain ids from Typescript tests, it fails.
+    //let chain_id = TypedChainId::from(chain_id);
+    let fee_info = calculate_fees(vanchor, chain_id, ctx)
         .await
         .and_then(|f| Ok(serde_json::to_string(&f)?));
     Ok(match fee_info {

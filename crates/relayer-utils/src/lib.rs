@@ -72,6 +72,17 @@ pub enum Error {
             ethers::providers::Provider<ethers::providers::Http>,
         >,
     ),
+    /// Smart contract error.
+    #[error(transparent)]
+    EthersContract2(
+        #[from]
+        ethers::contract::ContractError<
+            ethers::middleware::SignerMiddleware<
+                ethers::providers::Provider<ethers::providers::Http>,
+                ethers::prelude::Wallet<ethers::core::k256::ecdsa::SigningKey>,
+            >,
+        >,
+    ),
     /// SCALE Codec error.
     #[error(transparent)]
     ScaleCodec(#[from] webb::substrate::scale::Error),

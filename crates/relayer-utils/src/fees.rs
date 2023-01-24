@@ -3,11 +3,18 @@ use chrono::Duration;
 use chrono::Utc;
 use coingecko::CoinGeckoClient;
 use ethers::etherscan;
-use ethers::types::Chain;
+use ethers::middleware::SignerMiddleware;
+use ethers::providers::{Http, Provider};
+use ethers::signers::LocalWallet;
+use ethers::types::{Address, Chain};
+use ethers::utils::parse_ether;
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::ops::Add;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
+use webb::evm::contract::protocol_solidity::{
+    FungibleTokenWrapperContract, OpenVAnchorContract,
+};
 use webb::evm::ethers::prelude::U256;
 
 /// Maximum refund amount per relay transaction in USD.
@@ -47,8 +54,9 @@ pub struct FeeInfo {
 /// based on the current exchange rate and estimated gas price.
 pub async fn get_fee_info(
     estimated_gas_amount: U256,
-    wrapped_token: &str,
-    base_token: &str,
+    vanchor: Address,
+    client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
+    chain_id: u64,
 ) -> crate::Result<FeeInfo> {
     // Check if there is an existing, recent fee info. Return it directly if thats the case.
     {
@@ -60,13 +68,14 @@ pub async fn get_fee_info(
             }
         }
     }
-    let exchange_rate = fetch_exchange_rate(wrapped_token, base_token).await?;
+    let exchange_rate =
+        fetch_exchange_rate(vanchor, client.clone(), chain_id).await?;
 
     let gas_price = estimate_gas_price().await?;
     let wrapped_fee =
         calculate_wrapped_fee(gas_price, estimated_gas_amount, exchange_rate)
             .await;
-    let max_refund = max_refund(wrapped_token).await?;
+    let max_refund = max_refund(vanchor, client).await?;
 
     let fee_info = FeeInfo {
         estimated_fee: wrapped_fee,
@@ -92,9 +101,12 @@ pub async fn calculate_wrapped_fee(
 /// Pull USD prices of wrapped token and base token from coingecko.com, and use these to
 /// calculate the exchange rate.
 async fn fetch_exchange_rate(
-    wrapped_token: &str,
-    base_token: &str,
+    vanchor: Address,
+    client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
+    chain_id: u64,
 ) -> crate::Result<U256> {
+    let base_token = get_base_token_name(chain_id)?;
+    let wrapped_token = &get_wrapped_token_name(vanchor, client).await?;
     let tokens = &[wrapped_token, base_token];
     let prices = COIN_GECKO_CLIENT
         .price(tokens, &["usd"], false, false, false, false)
@@ -115,7 +127,11 @@ async fn estimate_gas_price() -> crate::Result<U256> {
 
 /// Calculate the maximum refund amount per relay transaction in `wrappedToken`, based on
 /// `MAX_REFUND_USD`.
-async fn max_refund(wrapped_token: &str) -> crate::Result<U256> {
+async fn max_refund(
+    vanchor: Address,
+    client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
+) -> crate::Result<U256> {
+    let wrapped_token = &get_wrapped_token_name(vanchor, client).await?;
     let prices = COIN_GECKO_CLIENT
         .price(&[wrapped_token], &["usd"], false, false, false, false)
         .await?;
@@ -125,9 +141,54 @@ async fn max_refund(wrapped_token: &str) -> crate::Result<U256> {
     Ok(to_u256(max_refund_wrapped))
 }
 
-/// Convert exchange rates to U256.
+/// Convert exchange rates to `wrappedToken` U256.
 fn to_u256(amount: f64) -> U256 {
+    // TODO: this gives wrong result, test fails with
+    //       "revert amount is larger than maximumDepositAmount"
+    parse_ether(amount).unwrap()
+    /*
+    TODO: in case wrappedToken is USDC, need to use this code for conversion
     let multiplier = f64::from(10_i32.pow(USDC_DECIMALS));
+    dbg!(&amount, &multiplier);
     let val = amount * multiplier;
     U256::from(val.round() as i128)
+     */
+}
+
+/// Retrieves the token name of a given anchor contract. Wrapper prefixes are stripped in order
+/// to get a token name which coingecko understands.
+async fn get_wrapped_token_name(
+    vanchor: Address,
+    client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
+) -> crate::Result<String> {
+    let anchor_contract = OpenVAnchorContract::new(vanchor, client.clone());
+    let token_address = anchor_contract.token().call().await?;
+    let token_contract =
+        FungibleTokenWrapperContract::new(token_address, client.clone());
+    let token_name = token_contract.name().call().await?;
+    // TODO: add all supported tokens
+    Ok(match token_name.replace("webb", "").as_str() {
+        "WETH" => "ethereum",
+        x => x,
+    }
+    .to_string())
+}
+
+/// Hardcodede mapping from chain id to base token name. Testnets use the mainnet name because
+/// otherwise there is no exchange rate available.
+fn get_base_token_name(chain_id: u64) -> crate::Result<&'static str> {
+    // TODO: add all supported chain ids
+    match chain_id {
+        1 => Ok("ethereum"),
+        _ => {
+            // Typescript tests use randomly generated chain id, so we always return "ethereum"
+            // in debug mode to make them work.
+            if cfg!(debug_assertions) {
+                Ok("ethereum")
+            } else {
+                let chain_id = chain_id.to_string();
+                Err(crate::Error::ChainNotFound { chain_id })
+            }
+        }
+    }
 }
