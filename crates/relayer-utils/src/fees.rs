@@ -10,6 +10,7 @@ use ethers::types::{Address, Chain};
 use ethers::utils::parse_ether;
 use once_cell::sync::Lazy;
 use serde::Serialize;
+use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use webb::evm::contract::protocol_solidity::{
@@ -28,9 +29,10 @@ static COIN_GECKO_CLIENT: Lazy<CoinGeckoClient> =
     Lazy::new(CoinGeckoClient::default);
 static ETHERSCAN_CLIENT: Lazy<etherscan::Client> =
     Lazy::new(|| etherscan::Client::new_from_env(Chain::Mainnet).unwrap());
-/// Fee info which was previously generated. It is still valid if `timestamp` is no older than
-/// `FEE_CACHE_TIME`.
-static FEE_INFO_CACHED: Mutex<Option<FeeInfo>> = Mutex::new(None);
+/// Cache for previously generated fee info. Key consists of the VAnchor address and chain id.
+/// Entries are valid as long as `timestamp` is no older than `FEE_CACHE_TIME`.
+static FEE_INFO_CACHED: Lazy<Mutex<HashMap<(Address, u64), FeeInfo>>> =
+    Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// Return value of fee_info API call. Contains information about relay transaction fee and refunds.
 #[derive(Debug, Serialize, Clone)]
@@ -58,14 +60,12 @@ pub async fn get_fee_info(
     client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
     chain_id: u64,
 ) -> crate::Result<FeeInfo> {
-    // Check if there is an existing, recent fee info. Return it directly if thats the case.
+    evict_cache();
+    // Check if there is an existing fee info. Return it directly if thats the case.
     {
         let lock = FEE_INFO_CACHED.lock().unwrap();
-        if let Some(fee_info) = &*lock {
-            let fee_info_valid_time = fee_info.timestamp.add(*FEE_CACHE_TIME);
-            if fee_info_valid_time > Utc::now() {
-                return Ok(fee_info.clone());
-            }
+        if let Some(fee_info) = lock.get(&(vanchor, chain_id)) {
+            return Ok(fee_info.clone());
         }
     }
     let exchange_rate =
@@ -84,8 +84,21 @@ pub async fn get_fee_info(
         max_refund,
         timestamp: Utc::now(),
     };
-    *FEE_INFO_CACHED.lock().unwrap() = Some(fee_info.clone());
+    // Insert newly generated fee info into cache.
+    FEE_INFO_CACHED
+        .lock()
+        .unwrap()
+        .insert((vanchor, chain_id), fee_info.clone());
     Ok(fee_info)
+}
+
+/// Remove all items from fee_info cache which are older than `FEE_CACHE_TIME`.
+fn evict_cache() {
+    let mut cache = FEE_INFO_CACHED.lock().unwrap();
+    cache.retain(|_, v| {
+        let fee_info_valid_time = v.timestamp.add(*FEE_CACHE_TIME);
+        fee_info_valid_time > Utc::now()
+    });
 }
 
 /// Calculate fee in `wrappedToken`, using the estimated gas price from etherscan.

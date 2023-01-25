@@ -95,7 +95,7 @@ pub fn build_web_services(
     let port = ctx.config.port;
     let ctx_arc = Arc::new(ctx.clone());
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
-    let evm_store = Arc::new(store.clone());
+    let evm_store = Arc::new(store);
     let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
 
     // the websocket server for users to submit relay transaction requests

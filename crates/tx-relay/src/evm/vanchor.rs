@@ -179,7 +179,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         estimated_gas_amount,
         contract_config.common.address,
         client,
-        cmd.chain_id.into(),
+        cmd.chain_id,
     )
     .await
     {
