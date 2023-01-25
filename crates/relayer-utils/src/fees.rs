@@ -24,6 +24,8 @@ const MAX_REFUND_USD: f64 = 1.;
 static FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
 /// Number of digits after the comma of USD-Coin.
 const USDC_DECIMALS: u32 = 6;
+/// How much profit the relay will make from fee and exchange rate (currently 1%).
+const EXCHANGE_PROFIT: f64 = 1.01;
 
 static COIN_GECKO_CLIENT: Lazy<CoinGeckoClient> =
     Lazy::new(CoinGeckoClient::default);
@@ -127,7 +129,8 @@ async fn fetch_exchange_rate(
     let wrapped_price = prices[wrapped_token].usd.unwrap();
     let base_price = prices[base_token].usd.unwrap();
     let exchange_rate = wrapped_price / base_price;
-    Ok(to_u256(exchange_rate))
+    let with_profit = exchange_rate * EXCHANGE_PROFIT;
+    Ok(to_u256(with_profit))
 }
 
 /// Estimate gas price using etherscan.io. Note that this functionality is only available
@@ -149,7 +152,8 @@ async fn max_refund(
         .price(&[wrapped_token], &["usd"], false, false, false, false)
         .await?;
     let wrapped_price = prices[wrapped_token].usd.unwrap();
-    let max_refund_wrapped = MAX_REFUND_USD / wrapped_price;
+    let with_profit = wrapped_price * EXCHANGE_PROFIT;
+    let max_refund_wrapped = MAX_REFUND_USD / with_profit;
 
     Ok(to_u256(max_refund_wrapped))
 }
