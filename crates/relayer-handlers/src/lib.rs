@@ -222,18 +222,15 @@ pub async fn handle_substrate<'a>(
 ///
 /// # Arguments
 ///
-/// * `vanchor` - Address of the smart contract
-/// * `chain_id` - ID of the blockchain
 /// * `ctx` - RelayContext reference that holds the configuration
+/// * `chain_id` - ID of the blockchain
+/// * `vanchor` - Address of the smart contract
 pub async fn handle_fee_info(
-    vanchor: Address,
-    chain_id: u64,
     ctx: Arc<RelayerContext>,
+    chain_id: u64,
+    vanchor: Address,
 ) -> Result<impl warp::Reply, Infallible> {
-    // TODO: cant use TypedChainId becuase it only supports mainnet chains. When passing one of
-    //       the randomly generated chain ids from Typescript tests, it fails.
-    //let chain_id = TypedChainId::from(chain_id);
-    let fee_info = calculate_fees(vanchor, chain_id, ctx)
+    let fee_info = calculate_fees(ctx, chain_id, vanchor)
         .await
         .and_then(|f| Ok(serde_json::to_string(&f)?));
     Ok(match fee_info {

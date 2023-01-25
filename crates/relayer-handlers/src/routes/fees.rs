@@ -6,9 +6,9 @@ use webb_relayer_utils::fees::{get_fee_info, FeeInfo};
 
 /// Calculate fee for an average transaction over the relay. Also returns information about refund.
 pub async fn calculate_fees(
-    vanchor: Address,
-    chain_id: u64,
     ctx: Arc<RelayerContext>,
+    chain_id: u64,
+    vanchor: Address,
 ) -> webb_relayer_utils::Result<FeeInfo> {
     // TODO: hardcoded
     let estimated_gas_amount = U256::from(1_721_713);
@@ -17,5 +17,5 @@ pub async fn calculate_fees(
     let wallet = ctx.evm_wallet(&chain_name).await?;
     let provider = ctx.evm_provider(&chain_name).await?;
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
-    get_fee_info(estimated_gas_amount, vanchor, client, chain_id).await
+    get_fee_info(chain_id, vanchor, estimated_gas_amount, client).await
 }

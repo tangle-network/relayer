@@ -57,10 +57,10 @@ pub struct FeeInfo {
 /// If fee info was recently requested, the cached value is used. Otherwise it is regenerated
 /// based on the current exchange rate and estimated gas price.
 pub async fn get_fee_info(
-    estimated_gas_amount: U256,
-    vanchor: Address,
-    client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
     chain_id: u64,
+    vanchor: Address,
+    estimated_gas_amount: U256,
+    client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
 ) -> crate::Result<FeeInfo> {
     evict_cache();
     // Check if there is an existing fee info. Return it directly if thats the case.

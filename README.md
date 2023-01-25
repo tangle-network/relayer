@@ -307,6 +307,11 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 /api/v1/fee_info
 ```
 
+##### Parameters
+
+- `chain_id`
+- `contract_address`
+
 <details>
   <summary>Expected Response</summary>
 

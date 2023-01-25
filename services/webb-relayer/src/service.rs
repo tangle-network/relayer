@@ -199,9 +199,9 @@ pub fn build_web_services(
 
     //  Information about relayer fees
     let relayer_fee_info = warp::path("fee_info")
-        .and(warp::path::param())
-        .and(warp::path::param())
         .and(ctx_filter)
+        .and(warp::path::param())
+        .and(warp::path::param())
         .and_then(handle_fee_info)
         .boxed();
 

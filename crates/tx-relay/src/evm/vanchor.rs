@@ -176,10 +176,10 @@ pub async fn handle_vanchor_relay_tx<'a>(
         }
     };
     let fee_info = match get_fee_info(
-        estimated_gas_amount,
-        contract_config.common.address,
-        client,
         cmd.chain_id,
+        contract_config.common.address,
+        estimated_gas_amount,
+        client,
     )
     .await
     {
