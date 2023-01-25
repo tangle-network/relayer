@@ -7,7 +7,7 @@ use ethers::middleware::SignerMiddleware;
 use ethers::providers::{Http, Provider};
 use ethers::signers::LocalWallet;
 use ethers::types::{Address, Chain};
-use ethers::utils::parse_ether;
+use ethers::utils::{parse_ether, parse_units};
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -26,6 +26,7 @@ static FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
 const USDC_DECIMALS: u32 = 6;
 /// How much profit the relay will make from fee and exchange rate (currently 1%).
 const EXCHANGE_PROFIT: f64 = 1.01;
+const TRANSACTION_PROFIT_USD: f64 = 5.;
 
 static COIN_GECKO_CLIENT: Lazy<CoinGeckoClient> =
     Lazy::new(CoinGeckoClient::default);
@@ -70,19 +71,22 @@ pub async fn get_fee_info(
             return Ok(fee_info.clone());
         }
     }
-    let exchange_rate =
-        fetch_exchange_rate(vanchor, client.clone(), chain_id).await?;
+    let transaction_profit = fetch_transaction_profit(chain_id).await?;
 
-    let gas_price = estimate_gas_price().await?;
-    let wrapped_fee =
-        calculate_wrapped_fee(gas_price, estimated_gas_amount, exchange_rate)
-            .await;
+    let gas_price_gwei = estimate_gas_price().await?;
+    let gas_price = parse_units(gas_price_gwei, "gwei").unwrap();
+    let wrapped_fee = calculate_wrapped_fee(
+        gas_price,
+        estimated_gas_amount,
+        transaction_profit,
+    )
+    .await;
     let max_refund = max_refund(vanchor, client).await?;
 
     let fee_info = FeeInfo {
         estimated_fee: wrapped_fee,
         gas_price,
-        refund_exchange_rate: exchange_rate,
+        refund_exchange_rate: 0.into(),
         max_refund,
         timestamp: Utc::now(),
     };
@@ -107,30 +111,23 @@ fn evict_cache() {
 pub async fn calculate_wrapped_fee(
     gas_price: U256,
     estimated_gas_amount: U256,
-    exchange_rate: U256,
+    transaction_profit: U256,
 ) -> U256 {
     let native_fee = gas_price * estimated_gas_amount;
-    native_fee * exchange_rate
+    native_fee + transaction_profit
 }
 
 /// Pull USD prices of wrapped token and base token from coingecko.com, and use these to
-/// calculate the exchange rate.
-async fn fetch_exchange_rate(
-    vanchor: Address,
-    client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
-    chain_id: u64,
-) -> crate::Result<U256> {
+/// calculate the transaction profit in wei.
+async fn fetch_transaction_profit(chain_id: u64) -> crate::Result<U256> {
     let base_token = get_base_token_name(chain_id)?;
-    let wrapped_token = &get_wrapped_token_name(vanchor, client).await?;
-    let tokens = &[wrapped_token, base_token];
+    let tokens = &[base_token];
     let prices = COIN_GECKO_CLIENT
         .price(tokens, &["usd"], false, false, false, false)
         .await?;
-    let wrapped_price = prices[wrapped_token].usd.unwrap();
-    let base_price = prices[base_token].usd.unwrap();
-    let exchange_rate = wrapped_price / base_price;
-    let with_profit = exchange_rate * EXCHANGE_PROFIT;
-    Ok(to_u256(with_profit))
+    let base_token_price = prices[base_token].usd.unwrap();
+    let fee_in_base_token = TRANSACTION_PROFIT_USD / base_token_price;
+    Ok(parse_ether(fee_in_base_token).unwrap())
 }
 
 /// Estimate gas price using etherscan.io. Note that this functionality is only available
@@ -152,8 +149,7 @@ async fn max_refund(
         .price(&[wrapped_token], &["usd"], false, false, false, false)
         .await?;
     let wrapped_price = prices[wrapped_token].usd.unwrap();
-    let with_profit = wrapped_price * EXCHANGE_PROFIT;
-    let max_refund_wrapped = MAX_REFUND_USD / with_profit;
+    let max_refund_wrapped = MAX_REFUND_USD / wrapped_price;
 
     Ok(to_u256(max_refund_wrapped))
 }
