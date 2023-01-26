@@ -213,10 +213,14 @@ async fn get_wrapped_token_name(
     let token_address = anchor_contract.token().call().await?;
     let token_contract =
         FungibleTokenWrapperContract::new(token_address, client.clone());
-    let token_name = token_contract.name().call().await?;
+    let token_symbol = token_contract.symbol().call().await?;
     // TODO: add all supported tokens
-    Ok(match token_name.replace("webb", "").as_str() {
+    Ok(match token_symbol.replace("webb", "").as_str() {
         "WETH" => "ethereum",
+        // only used in tests
+        "WEBB" if cfg!(debug_assertions) => {
+            "ethereum"
+        },
         x => x,
     }
     .to_string())

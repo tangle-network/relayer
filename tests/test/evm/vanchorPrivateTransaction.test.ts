@@ -111,16 +111,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     relayerWallet1 = new ethers.Wallet(relayerPk, localChain1.provider());
     relayerWallet2 = new ethers.Wallet(relayerPk, localChain2.provider());
     // Deploy the token.
-    const localToken1 = await localChain1.deployToken(
-      'Webb Token',
-      'WEBB',
-      govWallet1
-    );
-    const localToken2 = await localChain2.deployToken(
-      'Webb Token',
-      'WEBB',
-      govWallet2
-    );
+    const localToken1 = await localChain1.deployToken('Webb Token', 'WEBB');
+    const localToken2 = await localChain2.deployToken('Webb Token', 'WEBB');
 
     signatureVBridge = await localChain1.deploySignatureVBridge(
       localChain2,
@@ -238,7 +230,10 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       keypair: randomKeypair,
     });
 
-    const feeInfoResponse = await webbRelayer.getFeeInfo(localChain2.underlyingChainId, vanchor1.getAddress(), );
+    const feeInfoResponse = await webbRelayer.getFeeInfo(
+      localChain2.underlyingChainId,
+      vanchor1.getAddress()
+    );
     expect(feeInfoResponse.status).equal(200);
     const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
     console.log(feeInfo);

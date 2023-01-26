@@ -157,16 +157,8 @@ describe.skip('SignatureBridge Governor Updates', function () {
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
     // Deploy the token.
-    const localToken1 = await localChain1.deployToken(
-      'Webb Token',
-      'WEBB',
-      wallet1
-    );
-    const localToken2 = await localChain2.deployToken(
-      'Webb Token',
-      'WEBB',
-      wallet2
-    );
+    const localToken1 = await localChain1.deployToken('Webb Token', 'WEBB');
+    const localToken2 = await localChain2.deployToken('Webb Token', 'WEBB');
 
     signatureBridge = await localChain1.deploySignatureVBridge(
       localChain2,

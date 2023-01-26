@@ -40,6 +40,7 @@ import {
 import { ConvertToKebabCase } from './tsHacks';
 import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
+import { TokenConfig } from '@webb-tools/vbridge/lib/VBridge';
 
 export type GanacheAccounts = {
   balance: string;
@@ -116,15 +117,14 @@ export class LocalChain {
     await this.localEvmChain.stop();
   }
 
-  public async deployToken(
-    name: string,
-    symbol: string,
-    wallet: ethers.Wallet
-  ): Promise<MintableToken> {
-    return MintableToken.createToken(name, symbol, wallet);
+  public async deployToken(name: string, symbol: string): Promise<TokenConfig> {
+    return {
+      name,
+      symbol,
+    };
   }
   public async deployVBridge(
-    localToken: MintableToken,
+    localToken: TokenConfig,
     localWallet: ethers.Wallet,
     initialGovernor: ethers.Wallet
   ): Promise<VBridge.VBridge> {
@@ -132,16 +132,17 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    const webbTokens1 = new Map<number, FungibleTokenWrapper | undefined>();
-    webbTokens1.set(this.chainId, null!);
+    const tokenConfigs = new Map<number, TokenConfig | undefined>();
+    tokenConfigs.set(this.chainId, localToken);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
         asset: {
-          [this.chainId]: [localToken.contract.address],
+          [this.chainId]: [localWallet.address],
         },
       },
       chainIDs: [this.chainId],
-      webbTokens: webbTokens1,
+      webbTokens: new Map<number, FungibleTokenWrapper | undefined>(),
+      tokenConfigs: tokenConfigs,
     };
     const deployerConfig: DeployerConfig = {
       [this.chainId]: localWallet,
@@ -203,8 +204,8 @@ export class LocalChain {
 
   public async deploySignatureVBridge(
     otherChain: LocalChain,
-    localToken: MintableToken,
-    otherToken: MintableToken,
+    localToken: TokenConfig,
+    otherToken: TokenConfig,
     localWallet: ethers.Wallet,
     otherWallet: ethers.Wallet,
     initialGovernors?: GovernorConfig
@@ -213,18 +214,19 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    const webbTokens1 = new Map<number, FungibleTokenWrapper | undefined>();
-    webbTokens1.set(this.chainId, null!);
-    webbTokens1.set(otherChain.chainId, null!);
+    const tokenConfigs = new Map<number, TokenConfig | undefined>();
+    tokenConfigs.set(this.chainId, localToken);
+    tokenConfigs.set(otherChain.chainId, otherToken!);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
         asset: {
-          [this.chainId]: [localToken.contract.address],
-          [otherChain.chainId]: [otherToken.contract.address],
+          [this.chainId]: [localWallet.address],
+          [otherChain.chainId]: [otherWallet.address],
         },
       },
       chainIDs: [this.chainId, otherChain.chainId],
-      webbTokens: webbTokens1,
+      tokenConfigs: tokenConfigs,
+      webbTokens: new Map<number, FungibleTokenWrapper | undefined>(),
     };
     const deployerConfig: DeployerConfig = {
       [this.chainId]: localWallet,
@@ -564,7 +566,6 @@ export async function setupVanchorEvmTx(
   const { extData, publicInputs } = await destVanchor.setupTransaction(
     [regeneratedUtxo, dummyInput],
     [dummyOutput1, dummyOutput2],
-    extAmount,
     fee,
     refund,
     recipient,
