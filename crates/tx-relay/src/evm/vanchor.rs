@@ -206,8 +206,9 @@ pub async fn handle_vanchor_relay_tx<'a>(
         return;
     }
 
-    // allow for 10% variation due to difference in fee calculation
-    let estimated_fee = fee_info.estimated_fee / 10 * 9;
+    // Allow for 2% variation due to difference in fee calculation.
+    // NOTE: This can be exploited by attackers.
+    let estimated_fee = fee_info.estimated_fee / 100 * 98;
 
     // check the fee
     if cmd.ext_data.fee < estimated_fee {
