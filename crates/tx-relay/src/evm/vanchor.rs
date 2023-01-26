@@ -12,7 +12,7 @@ use webb::evm::{
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
-use webb_relayer_utils::fees::{calculate_wrapped_fee, get_fee_info};
+use webb_relayer_utils::fees::get_fee_info;
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for VAnchor commands
@@ -206,23 +206,16 @@ pub async fn handle_vanchor_relay_tx<'a>(
         return;
     }
 
-    let expected_fee_wrapped = calculate_wrapped_fee(
-        fee_info.gas_price,
-        estimated_gas_amount,
-        fee_info.refund_exchange_rate,
-    )
-    .await;
     // allow for 10% variation due to difference in fee calculation
-    let expected_fee_wrapped = expected_fee_wrapped / 10 * 9;
+    let estimated_fee = fee_info.estimated_fee / 10 * 9;
 
     // check the fee
-    if cmd.ext_data.fee < expected_fee_wrapped {
+    if cmd.ext_data.fee < estimated_fee {
         tracing::error!("Received a fee lower than expected");
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
-            cmd.ext_data.fee, expected_fee_wrapped
+            cmd.ext_data.fee, estimated_fee
         );
-        // TODO: fee estimation uses a different gas estimate here so it fails the check
         let _ = stream.send(Error(msg)).await;
         return;
     }

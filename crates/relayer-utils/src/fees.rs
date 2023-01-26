@@ -22,10 +22,7 @@ use webb::evm::ethers::prelude::U256;
 const MAX_REFUND_USD: f64 = 1.;
 /// Amount of time for which a `FeeInfo` is valid after creation
 static FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
-/// Number of digits after the comma of USD-Coin.
-const USDC_DECIMALS: u32 = 6;
-/// How much profit the relay will make from fee and exchange rate (currently 1%).
-const EXCHANGE_PROFIT: f64 = 1.01;
+/// Amount of profit that the relay should make with each transaction (in USD).
 const TRANSACTION_PROFIT_USD: f64 = 5.;
 
 static COIN_GECKO_CLIENT: Lazy<CoinGeckoClient> =
@@ -43,13 +40,14 @@ static FEE_INFO_CACHED: Lazy<Mutex<HashMap<(Address, u64), FeeInfo>>> =
 pub struct FeeInfo {
     /// Estimated fee for an average relay transaction, in `wrappedToken`. This is only for
     /// display to the user
-    estimated_fee: U256,
+    pub estimated_fee: U256,
     /// Price per gas using "normal" confirmation speed, in `nativeToken`
     pub gas_price: U256,
     /// Exchange rate for refund from `wrappedToken` to `nativeToken`
     pub refund_exchange_rate: U256,
     /// Maximum amount of `wrappedToken` which can be exchanged to `nativeToken` by relay
     pub max_refund: U256,
+    /// Time when this FeeInfo was generated
     timestamp: DateTime<Utc>,
 }
 
@@ -71,22 +69,17 @@ pub async fn get_fee_info(
             return Ok(fee_info.clone());
         }
     }
-    let transaction_profit = fetch_transaction_profit(chain_id).await?;
 
-    let gas_price_gwei = estimate_gas_price().await?;
-    let gas_price = parse_units(gas_price_gwei, "gwei").unwrap();
-    let wrapped_fee = calculate_wrapped_fee(
-        gas_price,
-        estimated_gas_amount,
-        transaction_profit,
-    )
-    .await;
+    let gas_price = estimate_gas_price().await?;
+    let estimated_fee =
+        calculate_transaction_fee(gas_price, estimated_gas_amount, chain_id)
+            .await?;
     let max_refund = max_refund(vanchor, client).await?;
 
     let fee_info = FeeInfo {
-        estimated_fee: wrapped_fee,
+        estimated_fee,
         gas_price,
-        refund_exchange_rate: 0.into(),
+        refund_exchange_rate: 0.into(), // TODO
         max_refund,
         timestamp: Utc::now(),
     };
@@ -107,27 +100,24 @@ fn evict_cache() {
     });
 }
 
-/// Calculate fee in `wrappedToken`, using the estimated gas price from etherscan.
-pub async fn calculate_wrapped_fee(
+/// Pull USD prices of base token from coingecko.com, and use this to calculate the transaction
+/// fee in wei. This fee includes a profit for the relay of `TRANSACTION_PROFIT_USD`.
+async fn calculate_transaction_fee(
     gas_price: U256,
-    estimated_gas_amount: U256,
-    transaction_profit: U256,
-) -> U256 {
-    let native_fee = gas_price * estimated_gas_amount;
-    native_fee + transaction_profit
-}
-
-/// Pull USD prices of wrapped token and base token from coingecko.com, and use these to
-/// calculate the transaction profit in wei.
-async fn fetch_transaction_profit(chain_id: u64) -> crate::Result<U256> {
+    gas_amount: U256,
+    chain_id: u64,
+) -> crate::Result<U256> {
     let base_token = get_base_token_name(chain_id)?;
     let tokens = &[base_token];
     let prices = COIN_GECKO_CLIENT
         .price(tokens, &["usd"], false, false, false, false)
         .await?;
     let base_token_price = prices[base_token].usd.unwrap();
-    let fee_in_base_token = TRANSACTION_PROFIT_USD / base_token_price;
-    Ok(parse_ether(fee_in_base_token).unwrap())
+    let relay_profit = parse_ether(TRANSACTION_PROFIT_USD / base_token_price)?;
+
+    let transaction_fee = gas_price * gas_amount;
+    let fee_with_profit = relay_profit + transaction_fee;
+    Ok(fee_with_profit)
 }
 
 /// Estimate gas price using etherscan.io. Note that this functionality is only available
@@ -135,7 +125,8 @@ async fn fetch_transaction_profit(chain_id: u64) -> crate::Result<U256> {
 async fn estimate_gas_price() -> crate::Result<U256> {
     let gas_oracle = ETHERSCAN_CLIENT.gas_oracle().await?;
     // use the "average" gas price
-    Ok(U256::from(gas_oracle.propose_gas_price))
+    let gas_price_gwei = U256::from(gas_oracle.propose_gas_price);
+    Ok(parse_units(gas_price_gwei, "gwei")?)
 }
 
 /// Calculate the maximum refund amount per relay transaction in `wrappedToken`, based on

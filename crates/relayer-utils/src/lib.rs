@@ -100,6 +100,9 @@ pub enum Error {
     /// Etherscan API error
     #[error(transparent)]
     Etherscan(#[from] ethers::etherscan::errors::EtherscanError),
+    /// Ethers currency conversion error
+    #[error(transparent)]
+    Conversion(#[from] ethers::utils::ConversionError),
     /// Generic error.
     #[error("{}", _0)]
     Generic(&'static str),
@@ -133,7 +136,7 @@ pub enum Error {
     /// a backgorund task failed and force restarted.
     #[error("Task Force Restarted from an error")]
     ForceRestart,
-    /// a backgorund task failed and stopped Apnormally.
+    /// a backgorund task failed and stopped Abnormally.
     #[error("Task Stopped Apnormally")]
     TaskStoppedAbnormally,
 }
