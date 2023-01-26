@@ -7,7 +7,7 @@ use ethers::middleware::SignerMiddleware;
 use ethers::providers::{Http, Provider};
 use ethers::signers::LocalWallet;
 use ethers::types::{Address, Chain};
-use ethers::utils::{parse_ether, parse_units};
+use ethers::utils::{format_units, parse_ether, parse_units};
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -116,23 +116,43 @@ async fn calculate_transaction_fee(
     vanchor: Address,
     client: &Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
 ) -> crate::Result<U256> {
-    // Convert relay profit from USD to base token
-    let base_token = get_base_token_name(chain_id)?;
-    let base_token_price = fetch_token_price(base_token).await?;
-    let relay_profit = parse_ether(TRANSACTION_PROFIT_USD / base_token_price)?;
+    // The Algorithm for calculating the relayer fees is as follows:
+    // 1. Calculate the tx fee in native token (ETH or MATIC for example), using the gas price and
+    //   the estimated gas amount.
+    // 2. Convert the tx fee to USD using the coingecko API, for example.
+    // 3. Calculate the profit that the relayer should make, and add it to the tx fee in USD.
+    // 4. Now we have the total amount of USD that the relayer should receive. Convert this to
+    //  `wrappedToken` using the exchange rate for the underlying wrapped token.
+    // 5. Convert the result to wrapped token units and return it.
 
-    // Calculate network transaction fee and  add it to the relay profit
-    let network_fee = gas_price * gas_amount;
-    let fee_with_profit = relay_profit + network_fee;
-
-    // Convert the result from native token to wrapped token
-    let wrapped_token = get_wrapped_token_name(vanchor, &client).await?;
+    // Step 1: Calculate the tx fee in native token (in wei)
+    let tx_fee_native_token_wei = dbg!(gas_price * gas_amount);
+    let tx_fee_native_token =
+        dbg!(format_units(tx_fee_native_token_wei, "ether"))?;
+    // Step 2: Convert the tx fee to USD using the coingecko API.
+    let native_token = get_base_token_name(chain_id)?;
+    // This the price of 1 native token in USD (e.g. 1 ETH in USD)
+    let native_token_price = fetch_token_price(&native_token).await?;
+    let tx_fee_tokens = dbg!(tx_fee_native_token);
+    let tx_fee_tokens = tx_fee_tokens
+        .parse::<f64>()
+        .expect("Failed to parse tx fee");
+    let tx_fee_usd = tx_fee_tokens * native_token_price;
+    dbg!(native_token_price, tx_fee_tokens, tx_fee_usd);
+    // Step 3: Calculate the profit that the relayer should make, and add it to the tx fee in USD.
+    // This is the total amount of USD that the relayer should receive.
+    let total_fee_with_profit_in_usd =
+        dbg!(tx_fee_usd + TRANSACTION_PROFIT_USD);
+    // Step 4: Convert the total fee to `wrappedToken` using the exchange rate for the underlying
+    // wrapped token.
+    let wrapped_token = get_wrapped_token_name(vanchor, client).await?;
     let wrapped_token_price = fetch_token_price(wrapped_token).await?;
-    // TODO: should be like this but types dont work
-    let exchange_rate = base_token_price / wrapped_token_price;
-    //let wrapped_fee = fee_with_profit * exchange_rate;
-    //dbg!(&fee_with_profit, wrapped_fee, exchange_rate);
-
+    // This is the total amount of `wrappedToken` that the relayer should receive.
+    // This is in `wrappedToken` units, not wei.
+    let total_fee_tokens = total_fee_with_profit_in_usd / wrapped_token_price;
+    // Step 5: Convert the result to wei and return it.
+    // TODO: Hardcoded decimals for wrapped token. This should be fetched from the contract.
+    let fee_with_profit = dbg!(parse_units(total_fee_tokens, 18)?);
     Ok(fee_with_profit)
 }
 
