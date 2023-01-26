@@ -19,7 +19,7 @@ use webb::evm::contract::protocol_solidity::{
 use webb::evm::ethers::prelude::U256;
 
 /// Maximum refund amount per relay transaction in USD.
-const MAX_REFUND_USD: f64 = 1.;
+const MAX_REFUND_USD: f64 = 5.;
 /// Amount of time for which a `FeeInfo` is valid after creation
 static FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
 /// Amount of profit that the relay should make with each transaction (in USD).
@@ -44,7 +44,7 @@ pub struct FeeInfo {
     /// Price per gas using "normal" confirmation speed, in `nativeToken`
     pub gas_price: U256,
     /// Exchange rate for refund from `wrappedToken` to `nativeToken`
-    pub refund_exchange_rate: U256,
+    pub refund_exchange_rate: f64,
     /// Maximum amount of `wrappedToken` which can be exchanged to `nativeToken` by relay
     pub max_refund: U256,
     /// Time when this FeeInfo was generated
@@ -71,15 +71,22 @@ pub async fn get_fee_info(
     }
 
     let gas_price = estimate_gas_price().await?;
-    let estimated_fee =
-        calculate_transaction_fee(gas_price, estimated_gas_amount, chain_id)
-            .await?;
+    let estimated_fee = calculate_transaction_fee(
+        gas_price,
+        estimated_gas_amount,
+        chain_id,
+        vanchor,
+        &client,
+    )
+    .await?;
+    let refund_exchange_rate =
+        calculate_refund_exchange_rate(chain_id, vanchor, &client).await?;
     let max_refund = max_refund(vanchor, client).await?;
 
     let fee_info = FeeInfo {
         estimated_fee,
         gas_price,
-        refund_exchange_rate: 0.into(), // TODO
+        refund_exchange_rate,
         max_refund,
         timestamp: Utc::now(),
     };
@@ -101,23 +108,47 @@ fn evict_cache() {
 }
 
 /// Pull USD prices of base token from coingecko.com, and use this to calculate the transaction
-/// fee in wei. This fee includes a profit for the relay of `TRANSACTION_PROFIT_USD`.
+/// fee in `wrappedToken` wei. This fee includes a profit for the relay of `TRANSACTION_PROFIT_USD`.
 async fn calculate_transaction_fee(
     gas_price: U256,
     gas_amount: U256,
     chain_id: u64,
+    vanchor: Address,
+    client: &Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
 ) -> crate::Result<U256> {
+    // Convert relay profit from USD to base token
     let base_token = get_base_token_name(chain_id)?;
-    let tokens = &[base_token];
-    let prices = COIN_GECKO_CLIENT
-        .price(tokens, &["usd"], false, false, false, false)
-        .await?;
-    let base_token_price = prices[base_token].usd.unwrap();
+    let base_token_price = fetch_token_price(base_token).await?;
     let relay_profit = parse_ether(TRANSACTION_PROFIT_USD / base_token_price)?;
 
-    let transaction_fee = gas_price * gas_amount;
-    let fee_with_profit = relay_profit + transaction_fee;
+    // Calculate network transaction fee and  add it to the relay profit
+    let network_fee = gas_price * gas_amount;
+    let fee_with_profit = relay_profit + network_fee;
+
+    // Convert the result from native token to wrapped token
+    let wrapped_token = get_wrapped_token_name(vanchor, &client).await?;
+    let wrapped_token_price = fetch_token_price(wrapped_token).await?;
+    // TODO: should be like this but types dont work
+    let exchange_rate = base_token_price / wrapped_token_price;
+    //let wrapped_fee = fee_with_profit * exchange_rate;
+    //dbg!(&fee_with_profit, wrapped_fee, exchange_rate);
+
     Ok(fee_with_profit)
+}
+
+/// Calculate the exchange rate from wrapped token to native token which is used for the refund.
+async fn calculate_refund_exchange_rate(
+    chain_id: u64,
+    vanchor: Address,
+    client: &Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
+) -> crate::Result<f64> {
+    let base_token = get_base_token_name(chain_id)?;
+    let base_token_price = fetch_token_price(base_token).await?;
+    let wrapped_token = get_wrapped_token_name(vanchor, &client).await?;
+    let wrapped_token_price = fetch_token_price(wrapped_token).await?;
+
+    let exchange_rate = base_token_price / wrapped_token_price;
+    Ok(exchange_rate)
 }
 
 /// Estimate gas price using etherscan.io. Note that this functionality is only available
@@ -135,35 +166,28 @@ async fn max_refund(
     vanchor: Address,
     client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
 ) -> crate::Result<U256> {
-    let wrapped_token = &get_wrapped_token_name(vanchor, client).await?;
-    let prices = COIN_GECKO_CLIENT
-        .price(&[wrapped_token], &["usd"], false, false, false, false)
-        .await?;
-    let wrapped_price = prices[wrapped_token].usd.unwrap();
-    let max_refund_wrapped = MAX_REFUND_USD / wrapped_price;
+    let wrapped_token = get_wrapped_token_name(vanchor, &client).await?;
+    let wrapped_token_price = fetch_token_price(wrapped_token).await?;
+    let max_refund_wrapped = MAX_REFUND_USD / wrapped_token_price;
 
-    Ok(to_u256(max_refund_wrapped))
+    Ok(parse_ether(max_refund_wrapped)?)
 }
 
-/// Convert exchange rates to `wrappedToken` U256.
-fn to_u256(amount: f64) -> U256 {
-    // TODO: this gives wrong result, test fails with
-    //       "revert amount is larger than maximumDepositAmount"
-    parse_ether(amount).unwrap()
-    /*
-    TODO: in case wrappedToken is USDC, need to use this code for conversion
-    let multiplier = f64::from(10_i32.pow(USDC_DECIMALS));
-    dbg!(&amount, &multiplier);
-    let val = amount * multiplier;
-    U256::from(val.round() as i128)
-     */
+/// Fetch USD price for the given token from coingecko API.
+async fn fetch_token_price<Id: AsRef<str>>(
+    token_name: Id,
+) -> crate::Result<f64> {
+    let prices = COIN_GECKO_CLIENT
+        .price(&[token_name.as_ref()], &["usd"], false, false, false, false)
+        .await?;
+    Ok(prices[token_name.as_ref()].usd.unwrap())
 }
 
 /// Retrieves the token name of a given anchor contract. Wrapper prefixes are stripped in order
 /// to get a token name which coingecko understands.
 async fn get_wrapped_token_name(
     vanchor: Address,
-    client: Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
+    client: &Arc<SignerMiddleware<Provider<Http>, LocalWallet>>,
 ) -> crate::Result<String> {
     let anchor_contract = OpenVAnchorContract::new(vanchor, client.clone());
     let token_address = anchor_contract.token().call().await?;
