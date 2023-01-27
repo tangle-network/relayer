@@ -38,7 +38,7 @@ pub struct FeeInfo {
     /// Price per gas using "normal" confirmation speed, in `nativeToken`
     pub gas_price: U256,
     /// Exchange rate for refund from `wrappedToken` to `nativeToken`
-    pub refund_exchange_rate: f64,
+    pub refund_exchange_rate: U256,
     /// Maximum amount of `wrappedToken` which can be exchanged to `nativeToken` by relay
     pub max_refund: U256,
     /// Time when this FeeInfo was generated
@@ -141,8 +141,9 @@ async fn generate_fee_info(
     .await?;
 
     // Calculate the exchange rate from wrapped token to native token which is used for the refund.
-    // TODO: this should be converted to U256
-    let refund_exchange_rate = native_token_price / wrapped_token_price;
+    // TODO: hardcoded decimals for wrapped token
+    let refund_exchange_rate =
+        parse_units(native_token_price / wrapped_token_price, 18)?;
 
     // Calculate the maximum refund amount per relay transaction in `wrappedToken`.
     // TODO: hardcoded decimals for wrapped token
