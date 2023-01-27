@@ -222,9 +222,18 @@ async fn get_wrapped_token_name(
 /// https://github.com/DefiLlama/chainlist/blob/main/constants/chainIds.json
 fn get_base_token_name(chain_id: u64) -> Result<&'static str> {
     match chain_id {
-        1 | 5 | 5001 | 5002 | 5003 | 11155111 => Ok("ethereum"),
+        1 | // ethereum mainnet
+        5 | // goerli testnet
+        5001 | // hermes testnet
+        5002 | // athena testnet
+        5003 | // demeter testnet
+        11155111 // sepolia testnet
+        => Ok("ethereum"),
+        // optimism mainnet and testnet
         10 | 420 => Ok("optimism"),
+        // polygon mainnet and testnet
         127 | 80001 => Ok("polygon"),
+        // moonbeam mainnet and testnet
         1284 | 1287 => Ok("moonbeam"),
         _ => {
             // Typescript tests use randomly generated chain id, so we always return "ethereum"
