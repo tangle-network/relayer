@@ -6240,6 +6240,8 @@ dependencies = [
 name = "webb-relayer-context"
 version = "0.1.0"
 dependencies = [
+ "coingecko",
+ "ethers",
  "native-tls",
  "tokio",
  "webb",
@@ -6322,9 +6324,13 @@ dependencies = [
 name = "webb-relayer-tx-relay"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "ethereum-types",
+ "ethers",
  "futures",
  "native-tls",
+ "once_cell",
+ "serde",
  "tokio",
  "tracing",
  "webb",
@@ -6332,7 +6338,6 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-handler-utils",
- "webb-relayer-tx-relay-utils",
  "webb-relayer-utils",
 ]
 
@@ -6342,7 +6347,6 @@ version = "0.1.0"
 dependencies = [
  "native-tls",
  "serde",
- "webb",
 ]
 
 [[package]]
@@ -6363,24 +6367,18 @@ name = "webb-relayer-utils"
 version = "0.1.0"
 dependencies = [
  "backoff",
- "chrono",
- "coingecko",
  "config",
  "derive_more",
- "ethers",
  "glob",
  "hex",
  "libsecp256k1",
  "native-tls",
- "once_cell",
  "prometheus",
  "reqwest",
- "serde",
  "serde_json",
  "serde_path_to_error",
  "sled",
  "thiserror",
- "tokio",
  "url",
  "warp",
  "webb",

@@ -11,6 +11,7 @@ use webb_relayer_handler_utils::{
 };
 use webb_relayer_utils::metric::{self, Metrics};
 
+pub mod fees;
 /// Variable Anchor transaction relayer.
 pub mod vanchor;
 

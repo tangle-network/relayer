@@ -12,6 +12,8 @@ tokio = { version = "^1", features = ["full"] }
 webb = { version = "0.5.13", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
+coingecko = "1.0.1"
+ethers = {version = "0.17.0", features = ["rustls"] }
 
 [features]
 default = ["std", "evm", "substrate"]

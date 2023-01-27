@@ -32,6 +32,8 @@ use webb::substrate::subxt;
 #[cfg(feature = "substrate")]
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
 
+use coingecko::CoinGeckoClient;
+use ethers::etherscan;
 use webb_relayer_utils::metric::{self, Metrics};
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
@@ -50,6 +52,10 @@ pub struct RelayerContext {
     notify_shutdown: broadcast::Sender<()>,
     /// Represents the metrics for the relayer
     pub metrics: Arc<Mutex<metric::Metrics>>,
+    /// API client for https://www.coingecko.com/
+    coin_gecko_client: Arc<CoinGeckoClient>,
+    /// API client for https://etherscan.io/
+    etherscan_client: etherscan::Client,
 }
 
 impl RelayerContext {
@@ -57,10 +63,15 @@ impl RelayerContext {
     pub fn new(config: webb_relayer_config::WebbRelayerConfig) -> Self {
         let (notify_shutdown, _) = broadcast::channel(2);
         let metrics = Arc::new(Mutex::new(Metrics::new()));
+        let coin_gecko_client = Arc::new(CoinGeckoClient::default());
+        let etherscan_client =
+            etherscan::Client::new_from_env(Chain::Mainnet).unwrap();
         Self {
             config,
             notify_shutdown,
             metrics,
+            coin_gecko_client,
+            etherscan_client,
         }
     }
     /// Returns a broadcast receiver handle for the shutdown signal.
@@ -159,6 +170,16 @@ impl RelayerContext {
             .suri
             .ok_or(webb_relayer_utils::Error::MissingSecrets)?;
         Ok(suri_key.into())
+    }
+
+    /// Returns API client for https://www.coingecko.com/
+    pub fn coin_gecko_client(&self) -> &Arc<CoinGeckoClient> {
+        &self.coin_gecko_client
+    }
+
+    /// Returns API client for https://etherscan.io/
+    pub fn etherscan_client(&self) -> &etherscan::Client {
+        &self.etherscan_client
     }
 }
 

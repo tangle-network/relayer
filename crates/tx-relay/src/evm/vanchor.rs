@@ -1,4 +1,5 @@
 use super::*;
+use crate::evm::fees::get_fee_info;
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
@@ -12,7 +13,6 @@ use webb::evm::{
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
-use webb_relayer_utils::fees::get_fee_info;
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for VAnchor commands
@@ -179,7 +179,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         cmd.chain_id,
         contract_config.common.address,
         estimated_gas_amount,
-        client,
+        &ctx,
     )
     .await
     {
