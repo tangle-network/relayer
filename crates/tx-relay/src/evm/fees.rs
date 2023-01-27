@@ -3,7 +3,7 @@ use chrono::Duration;
 use chrono::Utc;
 use ethers::middleware::SignerMiddleware;
 use ethers::types::Address;
-use ethers::utils::{format_units, parse_ether, parse_units};
+use ethers::utils::{format_units, parse_units};
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -43,6 +43,12 @@ pub struct FeeInfo {
     pub max_refund: U256,
     /// Time when this FeeInfo was generated
     timestamp: DateTime<Utc>,
+    /// Price of the native token in USD, internally cached to recalculate estimated fee
+    #[serde(skip)]
+    native_token_price: f64,
+    /// Price of the wrapped token in USD, internally cached to recalculate estimated fee
+    #[serde(skip)]
+    wrapped_token_price: f64,
 }
 
 /// Get the current fee info.
@@ -52,53 +58,105 @@ pub struct FeeInfo {
 pub async fn get_fee_info(
     chain_id: u64,
     vanchor: Address,
-    estimated_gas_amount: U256,
+    gas_amount: U256,
     ctx: &RelayerContext,
 ) -> Result<FeeInfo> {
-    evict_cache();
-    // Check if there is an existing fee info. Return it directly if thats the case.
-    {
-        let lock = FEE_INFO_CACHED.lock().unwrap();
-        if let Some(fee_info) = lock.get(&(vanchor, chain_id)) {
-            return Ok(fee_info.clone());
+    // Retrieve cached fee info item
+    let fee_info_cached = {
+        let mut lock = FEE_INFO_CACHED.lock().unwrap();
+        // Remove all items from cache which are older than `FEE_CACHE_TIME`
+        lock.retain(|_, v| {
+            let fee_info_valid_time = v.timestamp.add(*FEE_CACHE_TIME);
+            fee_info_valid_time > Utc::now()
+        });
+        lock.get(&(vanchor, chain_id)).cloned()
+    };
+
+    match fee_info_cached {
+        // There is a cached fee info, use it
+        Some(mut fee_info) => {
+            // Need to recalculate estimated fee with the gas amount that was passed in. We use
+            // cached exchange rate so that this matches calculation on the client.
+            fee_info.estimated_fee = calculate_transaction_fee(
+                fee_info.gas_price,
+                gas_amount,
+                fee_info.native_token_price,
+                fee_info.wrapped_token_price,
+            )
+            .await?;
+            Ok(fee_info)
+        }
+        // No cached fee info, generate new one
+        None => {
+            let fee_info =
+                generate_fee_info(chain_id, vanchor, gas_amount, ctx).await?;
+
+            // Insert newly generated fee info into cache.
+            FEE_INFO_CACHED
+                .lock()
+                .unwrap()
+                .insert((vanchor, chain_id), fee_info.clone());
+            Ok(fee_info)
         }
     }
+}
 
-    let gas_price = estimate_gas_price(ctx).await?;
+/// Generate new fee info by fetching relevant data from remote APIs and doing calculations.
+async fn generate_fee_info(
+    chain_id: u64,
+    vanchor: Address,
+    gas_amount: U256,
+    ctx: &RelayerContext,
+) -> Result<FeeInfo> {
+    // Get token names
+    let native_token = get_native_token_name(chain_id)?;
+    let wrapped_token = get_wrapped_token_name(chain_id, vanchor, ctx).await?;
+
+    // Fetch USD prices for tokens from coingecko API (eg value of 1 ETH in USD).
+    let prices = ctx
+        .coin_gecko_client()
+        .price(
+            &[native_token, &wrapped_token],
+            &["usd"],
+            false,
+            false,
+            false,
+            false,
+        )
+        .await?;
+    let native_token_price = prices[native_token].usd.unwrap();
+    let wrapped_token_price = prices[&wrapped_token].usd.unwrap();
+
+    // Fetch native gas price estimate from etherscan.io, using "average" value
+    let gas_oracle = ctx.etherscan_client().gas_oracle().await?;
+    let gas_price_gwei = U256::from(gas_oracle.propose_gas_price);
+    let gas_price = parse_units(gas_price_gwei, "gwei")?;
+
     let estimated_fee = calculate_transaction_fee(
         gas_price,
-        estimated_gas_amount,
-        chain_id,
-        vanchor,
-        ctx,
+        gas_amount,
+        native_token_price,
+        wrapped_token_price,
     )
     .await?;
-    let refund_exchange_rate =
-        calculate_refund_exchange_rate(chain_id, vanchor, ctx).await?;
-    let max_refund = max_refund(chain_id, vanchor, ctx).await?;
 
-    let fee_info = FeeInfo {
+    // Calculate the exchange rate from wrapped token to native token which is used for the refund.
+    // TODO: this should be converted to U256
+    let refund_exchange_rate = native_token_price / wrapped_token_price;
+
+    // Calculate the maximum refund amount per relay transaction in `wrappedToken`.
+    // TODO: hardcoded decimals for wrapped token
+    let max_refund = parse_units(MAX_REFUND_USD / wrapped_token_price, 18)?;
+
+    Ok(FeeInfo {
         estimated_fee,
         gas_price,
         refund_exchange_rate,
         max_refund,
         timestamp: Utc::now(),
-    };
-    // Insert newly generated fee info into cache.
-    FEE_INFO_CACHED
-        .lock()
-        .unwrap()
-        .insert((vanchor, chain_id), fee_info.clone());
-    Ok(fee_info)
-}
-
-/// Remove all items from fee_info cache which are older than `FEE_CACHE_TIME`.
-fn evict_cache() {
-    let mut cache = FEE_INFO_CACHED.lock().unwrap();
-    cache.retain(|_, v| {
-        let fee_info_valid_time = v.timestamp.add(*FEE_CACHE_TIME);
-        fee_info_valid_time > Utc::now()
-    });
+        native_token_price,
+        wrapped_token_price,
+    })
 }
 
 /// Pull USD prices of base token from coingecko.com, and use this to calculate the transaction
@@ -108,17 +166,13 @@ fn evict_cache() {
 async fn calculate_transaction_fee(
     gas_price: U256,
     gas_amount: U256,
-    chain_id: u64,
-    vanchor: Address,
-    ctx: &RelayerContext,
+    native_token_price: f64,
+    wrapped_token_price: f64,
 ) -> Result<U256> {
     // Step 1: Calculate the tx fee in native token (in wei)
     let tx_fee_native_token_wei = gas_price * gas_amount;
     let tx_fee_native_token = format_units(tx_fee_native_token_wei, "ether")?;
     // Step 2: Convert the tx fee to USD using the coingecko API.
-    let native_token = get_base_token_name(chain_id)?;
-    // This the price of 1 native token in USD (e.g. 1 ETH in USD)
-    let native_token_price = fetch_token_price(&native_token, ctx).await?;
     let tx_fee_tokens = tx_fee_native_token
         .parse::<f64>()
         .expect("Failed to parse tx fee");
@@ -128,8 +182,6 @@ async fn calculate_transaction_fee(
     let total_fee_with_profit_in_usd = tx_fee_usd + TRANSACTION_PROFIT_USD;
     // Step 4: Convert the total fee to `wrappedToken` using the exchange rate for the underlying
     // wrapped token.
-    let wrapped_token = get_wrapped_token_name(chain_id, vanchor, ctx).await?;
-    let wrapped_token_price = fetch_token_price(wrapped_token, ctx).await?;
     // This is the total amount of `wrappedToken` that the relayer should receive.
     // This is in `wrappedToken` units, not wei.
     let total_fee_tokens = total_fee_with_profit_in_usd / wrapped_token_price;
@@ -137,56 +189,6 @@ async fn calculate_transaction_fee(
     // TODO: Hardcoded decimals for wrapped token. This should be fetched from the contract.
     let fee_with_profit = parse_units(total_fee_tokens, 18)?;
     Ok(fee_with_profit)
-}
-
-/// Calculate the exchange rate from wrapped token to native token which is used for the refund.
-async fn calculate_refund_exchange_rate(
-    chain_id: u64,
-    vanchor: Address,
-    ctx: &RelayerContext,
-) -> Result<f64> {
-    let base_token = get_base_token_name(chain_id)?;
-    let base_token_price = fetch_token_price(base_token, ctx).await?;
-    let wrapped_token = get_wrapped_token_name(chain_id, vanchor, ctx).await?;
-    let wrapped_token_price = fetch_token_price(wrapped_token, ctx).await?;
-
-    let exchange_rate = base_token_price / wrapped_token_price;
-    Ok(exchange_rate)
-}
-
-/// Estimate gas price using etherscan.io. Note that this functionality is only available
-/// on mainnet.
-async fn estimate_gas_price(ctx: &RelayerContext) -> Result<U256> {
-    let gas_oracle = ctx.etherscan_client().gas_oracle().await?;
-    // use the "average" gas price
-    let gas_price_gwei = U256::from(gas_oracle.propose_gas_price);
-    Ok(parse_units(gas_price_gwei, "gwei")?)
-}
-
-/// Calculate the maximum refund amount per relay transaction in `wrappedToken`, based on
-/// `MAX_REFUND_USD`.
-async fn max_refund(
-    chain_id: u64,
-    vanchor: Address,
-    ctx: &RelayerContext,
-) -> Result<U256> {
-    let wrapped_token = get_wrapped_token_name(chain_id, vanchor, ctx).await?;
-    let wrapped_token_price = fetch_token_price(wrapped_token, ctx).await?;
-    let max_refund_wrapped = MAX_REFUND_USD / wrapped_token_price;
-
-    Ok(parse_ether(max_refund_wrapped)?)
-}
-
-/// Fetch USD price for the given token from coingecko API.
-async fn fetch_token_price<Id: AsRef<str>>(
-    token_name: Id,
-    ctx: &RelayerContext,
-) -> Result<f64> {
-    let prices = ctx
-        .coin_gecko_client()
-        .price(&[token_name.as_ref()], &["usd"], false, false, false, false)
-        .await?;
-    Ok(prices[token_name.as_ref()].usd.unwrap())
 }
 
 /// Retrieves the token name of a given anchor contract. Wrapper prefixes are stripped in order
@@ -220,7 +222,7 @@ async fn get_wrapped_token_name(
 /// otherwise there is no exchange rate available.
 ///
 /// https://github.com/DefiLlama/chainlist/blob/main/constants/chainIds.json
-fn get_base_token_name(chain_id: u64) -> Result<&'static str> {
+fn get_native_token_name(chain_id: u64) -> Result<&'static str> {
     match chain_id {
         1 | // ethereum mainnet
         5 | // goerli testnet
