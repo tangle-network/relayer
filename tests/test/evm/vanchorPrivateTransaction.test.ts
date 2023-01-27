@@ -33,6 +33,7 @@ import {
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
+import { MintableToken } from '@webb-tools/tokens';
 
 describe('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -113,13 +114,25 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     // Deploy the token.
     const localToken1 = await localChain1.deployToken('Webb Token', 'WEBB');
     const localToken2 = await localChain2.deployToken('Webb Token', 'WEBB');
+    const unwrappedToken1 = await MintableToken.createToken(
+      'Wrapped Ethereum',
+      'WETH',
+      govWallet1
+    );
+    const unwrappedToken2 = await MintableToken.createToken(
+      'Wrapped Ethereum',
+      'WETH',
+      govWallet2
+    );
 
     signatureVBridge = await localChain1.deploySignatureVBridge(
       localChain2,
       localToken1,
       localToken2,
       govWallet1,
-      govWallet2
+      govWallet2,
+      unwrappedToken1,
+      unwrappedToken2
     );
 
     // save the chain configs.
@@ -141,16 +154,21 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      govWallet1
+    const token = Tokens.FungibleTokenWrapper.connect(tokenAddress, govWallet1);
+    await unwrappedToken1.mintTokens(
+      govWallet1.address,
+      ethers.utils.parseEther('1000')
     );
-    let tx = await token.approveSpending(
+    let tx = await token.contract.approve(
       vanchor1.contract.address,
       ethers.utils.parseEther('1000')
     );
     await tx.wait();
-    await token.mintTokens(govWallet1.address, ethers.utils.parseEther('1000'));
+    //await token.mintTokens(govWallet1.address, ethers.utils.parseEther('1000'));
+    unwrappedToken1.approveSpending(
+      token.contract.address,
+      ethers.utils.parseEther('1000')
+    );
 
     // do the same but on localchain2
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
@@ -158,18 +176,23 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
       localChain2.chainId
     )!;
-    const token2 = await Tokens.MintableToken.tokenFromAddress(
+    const token2 = Tokens.FungibleTokenWrapper.connect(
       tokenAddress2,
       govWallet2
     );
 
-    tx = await token2.approveSpending(
+    await unwrappedToken2.mintTokens(
+      govWallet2.address,
+      ethers.utils.parseEther('1000')
+    );
+    let tx2 = await token2.contract.approve(
       vanchor2.contract.address,
       ethers.utils.parseEther('1000')
     );
-    await tx.wait();
-    await token2.mintTokens(
-      govWallet2.address,
+    await tx2.wait();
+    //await token2.mintTokens(govWallet2.address, ethers.utils.parseEther('1000'));
+    unwrappedToken2.approveSpending(
+      token2.contract.address,
       ethers.utils.parseEther('1000')
     );
 
@@ -191,7 +214,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       tmp: true,
       configDir: tmpDirPath,
       showLogs: true,
-      verbosity: 4,
+      verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -207,24 +230,16 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    // get token
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      govWallet1
-    );
-    // mint tokens to the account everytime.
-    await token.mintTokens(govWallet1.address, ethers.utils.parseEther('1000'));
-    // check webbBalance
-    const webbBalance = await token.getBalance(govWallet1.address);
-    expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
-      .be.true;
+    const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
+      localChain2.chainId
+    )!;
 
     const randomKeypair = new Keypair();
 
     const depositUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
-      amount: (1e12).toString(),
+      amount: ethers.utils.parseEther('1').toString(),
       originChainId: localChain1.chainId.toString(),
       chainId: localChain2.chainId.toString(),
       keypair: randomKeypair,
@@ -237,6 +252,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     expect(feeInfoResponse.status).equal(200);
     const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
     console.log(feeInfo);
+    //console.log({"estimated fee": (feeInfo.estimatedFee).div(1e18).toNumber()})
 
     // SignatureVBridge will transact and update the anchors
     await signatureVBridge.transact(
@@ -260,6 +276,12 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const refundPk = u8aToHex(ethers.utils.randomBytes(32));
     const refundWallet = new ethers.Wallet(refundPk, localChain2.provider());
 
+    console.log({
+      'vanchor1 token': await vanchor1.contract.token(),
+      'vanchor2 token': await vanchor2.contract.token(),
+      'token address': tokenAddress,
+      'token 2 address': tokenAddress2,
+    });
     const output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
@@ -273,6 +295,16 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       feeInfo.maxRefund,
       refundWallet.address
     );
+
+    const estimatedGas = await vanchor2.contract.estimateGas.transact(
+      output.publicInputs.proof,
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      output.extData,
+      output.publicInputs,
+      output.extData
+    );
+    console.log('estimate gas');
+    console.log(estimatedGas.toBigInt());
 
     await webbRelayer.vanchorWithdraw(
       localChain2.underlyingChainId,

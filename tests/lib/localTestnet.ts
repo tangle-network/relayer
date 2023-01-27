@@ -208,6 +208,8 @@ export class LocalChain {
     otherToken: TokenConfig,
     localWallet: ethers.Wallet,
     otherWallet: ethers.Wallet,
+    unwrappedToken1: MintableToken,
+    unwrappedToken2: MintableToken,
     initialGovernors?: GovernorConfig
   ): Promise<VBridge.VBridge> {
     const gitRoot = child
@@ -220,8 +222,8 @@ export class LocalChain {
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
         asset: {
-          [this.chainId]: [localWallet.address],
-          [otherChain.chainId]: [otherWallet.address],
+          [this.chainId]: [unwrappedToken1.contract.address],
+          [otherChain.chainId]: [unwrappedToken2.contract.address],
         },
       },
       chainIDs: [this.chainId, otherChain.chainId],

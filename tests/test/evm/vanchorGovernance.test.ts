@@ -100,6 +100,8 @@ describe('VAnchor Governance Relayer', function () {
       localToken2,
       wallet1,
       wallet2,
+      null!,
+      null!,
       {
         [localChain1.chainId]: govWallet.address,
         [localChain2.chainId]: govWallet.address,

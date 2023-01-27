@@ -171,7 +171,9 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       localToken1,
       localToken2,
       wallet1,
-      wallet2
+      wallet2,
+      null!,
+      null!
     );
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
