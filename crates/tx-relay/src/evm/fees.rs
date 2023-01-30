@@ -49,6 +49,9 @@ pub struct FeeInfo {
     /// Price of the wrapped token in USD, internally cached to recalculate estimated fee
     #[serde(skip)]
     wrapped_token_price: f64,
+    /// Number of decimals of the wrapped token, internally cached to recalculate estimated fee
+    #[serde(skip)]
+    wrapped_token_decimals: u32,
 }
 
 /// Get the current fee info.
@@ -82,6 +85,7 @@ pub async fn get_fee_info(
                 gas_amount,
                 fee_info.native_token_price,
                 fee_info.wrapped_token_price,
+                fee_info.wrapped_token_decimals,
             )
             .await?;
             Ok(fee_info)
@@ -110,13 +114,14 @@ async fn generate_fee_info(
 ) -> Result<FeeInfo> {
     // Get token names
     let native_token = get_native_token_name(chain_id)?;
-    let wrapped_token = get_wrapped_token_name(chain_id, vanchor, ctx).await?;
+    let wrapped_token =
+        get_wrapped_token_name_and_decimals(chain_id, vanchor, ctx).await?;
 
     // Fetch USD prices for tokens from coingecko API (eg value of 1 ETH in USD).
     let prices = ctx
         .coin_gecko_client()
         .price(
-            &[native_token, &wrapped_token],
+            &[native_token, &wrapped_token.0],
             &["usd"],
             false,
             false,
@@ -125,7 +130,7 @@ async fn generate_fee_info(
         )
         .await?;
     let native_token_price = prices[native_token].usd.unwrap();
-    let wrapped_token_price = prices[&wrapped_token].usd.unwrap();
+    let wrapped_token_price = prices[&wrapped_token.0].usd.unwrap();
 
     // Fetch native gas price estimate from etherscan.io, using "average" value
     let gas_oracle = ctx.etherscan_client().gas_oracle().await?;
@@ -137,17 +142,17 @@ async fn generate_fee_info(
         gas_amount,
         native_token_price,
         wrapped_token_price,
+        wrapped_token.1,
     )
     .await?;
 
     // Calculate the exchange rate from wrapped token to native token which is used for the refund.
-    // TODO: hardcoded decimals for wrapped token
     let refund_exchange_rate =
-        parse_units(native_token_price / wrapped_token_price, 18)?;
+        parse_units(native_token_price / wrapped_token_price, wrapped_token.1)?;
 
     // Calculate the maximum refund amount per relay transaction in `wrappedToken`.
-    // TODO: hardcoded decimals for wrapped token
-    let max_refund = parse_units(MAX_REFUND_USD / wrapped_token_price, 18)?;
+    let max_refund =
+        parse_units(MAX_REFUND_USD / wrapped_token_price, wrapped_token.1)?;
 
     Ok(FeeInfo {
         estimated_fee,
@@ -157,6 +162,7 @@ async fn generate_fee_info(
         timestamp: Utc::now(),
         native_token_price,
         wrapped_token_price,
+        wrapped_token_decimals: wrapped_token.1,
     })
 }
 
@@ -169,6 +175,7 @@ async fn calculate_transaction_fee(
     gas_amount: U256,
     native_token_price: f64,
     wrapped_token_price: f64,
+    wrapped_token_decimals: u32,
 ) -> Result<U256> {
     // Step 1: Calculate the tx fee in native token (in wei)
     let tx_fee_native_token_wei = gas_price * gas_amount;
@@ -187,18 +194,18 @@ async fn calculate_transaction_fee(
     // This is in `wrappedToken` units, not wei.
     let total_fee_tokens = total_fee_with_profit_in_usd / wrapped_token_price;
     // Step 5: Convert the result to wei and return it.
-    // TODO: Hardcoded decimals for wrapped token. This should be fetched from the contract.
-    let fee_with_profit = parse_units(total_fee_tokens, 18)?;
+    let fee_with_profit =
+        parse_units(total_fee_tokens, wrapped_token_decimals)?;
     Ok(fee_with_profit)
 }
 
 /// Retrieves the token name of a given anchor contract. Wrapper prefixes are stripped in order
 /// to get a token name which coingecko understands.
-async fn get_wrapped_token_name(
+async fn get_wrapped_token_name_and_decimals(
     chain_id: u64,
     vanchor: Address,
     ctx: &RelayerContext,
-) -> Result<String> {
+) -> Result<(String, u32)> {
     let chain_name = chain_id.to_string();
     let wallet = ctx.evm_wallet(&chain_name).await?;
     let provider = ctx.evm_provider(&chain_name).await?;
@@ -210,13 +217,15 @@ async fn get_wrapped_token_name(
         FungibleTokenWrapperContract::new(token_address, client.clone());
     let token_symbol = token_contract.symbol().call().await?;
     // TODO: add all supported tokens
-    Ok(match token_symbol.replace("webb", "").as_str() {
+    let name = match token_symbol.replace("webb", "").as_str() {
         "WETH" => "ethereum",
         // only used in tests
         "WEBB" if cfg!(debug_assertions) => "ethereum",
         x => x,
     }
-    .to_string())
+    .to_string();
+    let decimals = token_contract.decimals().call().await?;
+    Ok((name, decimals.into()))
 }
 
 /// Hardcodede mapping from chain id to base token name. Testnets use the mainnet name because
