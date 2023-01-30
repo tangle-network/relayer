@@ -117,8 +117,11 @@ Webb Relayer is easy to run and with flexible config 👌. The first step is to 
 Example:
 
 - Create an `.env` file with the following values for the networks you wish to support.
+- You also need to request an API key on [etherscan.io](https://docs.etherscan.io/getting-started/viewing-api-usage-statistics) and add it.
 
 ```
+ETHERSCAN_API_KEY=your-key
+
 WEBB_EVM_<network>_ENABLED=true
 WEBB_EVM_<network>_PRIVATE_KEY=<0X_PREFIXED_PRIVATE_KEY>
 
