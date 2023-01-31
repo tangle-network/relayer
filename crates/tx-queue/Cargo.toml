@@ -19,7 +19,7 @@ rand = { version = "0.8", default-features = false, features = ["getrandom"] }
 webb = { version = "0.5.11", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
-ethereum-types = "0.13.1"
+ethereum-types = "0.14"
 
 [features]
 default = ["std", "evm", "substrate"]

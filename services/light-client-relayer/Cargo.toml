@@ -14,7 +14,8 @@ path = "src/main.rs"
 required-features = ["cli"]
 
 [dependencies]
-eth-rpc-client = { package = "eth_rpc_client", git = "https://github.com/webb-tools/pallet-eth2-light-client" }
+eth-rpc-client = { package = "eth_rpc_client", git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
+eth2_to_substrate_relay = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
 # webb-beacon-chain-relay ={ path = "../../crates/beacon-chain-relay" }
 webb-proposal-signing-backends = { path = "../../crates/proposal-signing-backends" }
 webb-relayer-types = { path = "../../crates/relayer-types" }

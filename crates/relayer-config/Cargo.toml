@@ -22,7 +22,7 @@ webb = { version = "0.5.7", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
-ethereum-types = "0.13.1"
+ethereum-types = "0.14"
 glob = "^0.3"
 serde_path_to_error = "0.1.5"
 
