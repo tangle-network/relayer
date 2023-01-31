@@ -2,11 +2,7 @@ use futures::prelude::*;
 use std::sync::Arc;
 use webb_relayer_config::block_poller::BlockPollerConfig;
 
-use webb::{
-    evm::ethers::{
-        providers::{self, Middleware},
-    },
-};
+use webb::evm::ethers::providers::{self, Middleware};
 
 use webb_relayer_store::HistoryStore;
 
@@ -88,8 +84,9 @@ pub trait LightClientPoller {
         store: Arc<Self::Store>,
         listener_config: BlockPollerConfig,
     ) -> crate::Result<()> {
-         let eth2SubstrateRelayer = Eth2SubstrateRelay::new(client.clone(), store.clone());
-         eth2SubstrateRelayer.run().await?;
+        let eth2SubstrateRelayer =
+            Eth2SubstrateRelay::new(client.clone(), store.clone());
+        eth2SubstrateRelayer.run().await?;
         Ok(())
     }
 }
