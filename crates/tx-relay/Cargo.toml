@@ -14,7 +14,7 @@ webb-relayer-utils = { path = "../relayer-utils"}
 tracing = { version = "^0.1", features = ["log"] }
 futures = { version = "^0.3", default-features = false }
 tokio = { version = "^1", features = ["full"] }
-webb = { version = "0.5.11", default-features = false }
+webb = { version = "0.5.13", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
