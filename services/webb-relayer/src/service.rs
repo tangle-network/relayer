@@ -202,6 +202,7 @@ pub fn build_web_services(
         .and(ctx_filter)
         .and(warp::path::param())
         .and(warp::path::param())
+        .and(warp::path::param())
         .and_then(handle_fee_info)
         .boxed();
 

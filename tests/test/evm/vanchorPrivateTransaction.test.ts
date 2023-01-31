@@ -61,7 +61,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
         contract: 'VAnchor',
       },
     ];
-    parseTypedChainId
+    parseTypedChainId;
     localChain1 = await LocalChain.init({
       port: localChain1Port,
       chainId: localChain1Port,
@@ -113,8 +113,14 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     relayerWallet1 = new ethers.Wallet(relayerPk, localChain1.provider());
     relayerWallet2 = new ethers.Wallet(relayerPk, localChain2.provider());
     // Deploy the token.
-    const wrappedToken1 = await localChain1.deployToken('Wrapped Ethereum', 'WETH');
-    const wrappedToken2 = await localChain2.deployToken('Wrapped Ethereum', 'WETH');
+    const wrappedToken1 = await localChain1.deployToken(
+      'Wrapped Ethereum',
+      'WETH'
+    );
+    const wrappedToken2 = await localChain2.deployToken(
+      'Wrapped Ethereum',
+      'WETH'
+    );
     const unwrappedToken1 = await MintableToken.createToken(
       'Webb Token',
       'WEBB',
@@ -155,16 +161,19 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token =  await Tokens.MintableToken.tokenFromAddress(tokenAddress, govWallet1);
-    console.log("token name: ", token.name)
-    
+    const token = await Tokens.MintableToken.tokenFromAddress(
+      tokenAddress,
+      govWallet1
+    );
+    console.log('token name: ', token.name);
+
     // aprove token spending for vanchor
     const tx = await token.approveSpending(
       vanchor1.contract.address,
       ethers.utils.parseEther('1000')
     );
     await tx.wait();
-    
+
     // mint tokens on wallet
     await token.mintTokens(govWallet1.address, ethers.utils.parseEther('1000'));
 
@@ -180,18 +189,21 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       tokenAddress2,
       govWallet2
     );
-    console.log("token2 name: ", token.name)
-    
+    console.log('token2 name: ', token.name);
+
     // Approve token spending for vanchor
     const tx2 = await token2.approveSpending(
       vanchor2.contract.address,
       ethers.utils.parseEther('1000')
     );
     await tx2.wait();
-    
+
     // Mint tokens on wallet
-    await token2.mintTokens(govWallet2.address, ethers.utils.parseEther('1000'));
-   
+    await token2.mintTokens(
+      govWallet2.address,
+      ethers.utils.parseEther('1000')
+    );
+
     // Set governor
     const governorAddress = govWallet1.address;
     const currentGovernor = await signatureVBridge
@@ -215,7 +227,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it.only('should relay private transaction', async () => {
+  it('should relay private transaction', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
@@ -230,8 +242,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       localChain2.chainId
     )!;
 
-    
-
     const randomKeypair = new Keypair();
 
     const depositUtxo = await CircomUtxo.generateUtxo({
@@ -243,20 +253,11 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       keypair: randomKeypair,
     });
 
-    const feeInfoResponse = await webbRelayer.getFeeInfo(
-      localChain2.chainId,
-      vanchor1.getAddress()
-    );
-    expect(feeInfoResponse.status).equal(200);
-    const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
-    console.log(feeInfo);
-    //console.log({"estimated fee": (feeInfo.estimatedFee).div(1e18).toNumber()})
-
     // SignatureVBridge will transact and update the anchors
     await signatureVBridge.transact(
       [],
       [depositUtxo],
-      feeInfo.estimatedFee,
+      0,
       0,
       '0',
       relayerWallet1.address,
@@ -274,12 +275,37 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const refundPk = u8aToHex(ethers.utils.randomBytes(32));
     const refundWallet = new ethers.Wallet(refundPk, localChain2.provider());
 
-    console.log({
-      'vanchor1 token': await vanchor1.contract.token(),
-      'vanchor2 token': await vanchor2.contract.token(),
-      'token address': tokenAddress,
-      'token 2 address': tokenAddress2,
-    });
+    const dummyOutput = await setupVanchorEvmTx(
+      depositUtxo,
+      localChain1,
+      localChain2,
+      randomKeypair,
+      vanchor1,
+      vanchor2,
+      relayerWallet2,
+      tokenAddress,
+      0,
+      0,
+      refundWallet.address
+    );
+
+    const gas_amount = await vanchor2.contract.estimateGas.transact(
+      dummyOutput.publicInputs.proof,
+      '0x0000000000000000000000000000000000000000000000000000000000000000',
+      dummyOutput.extData,
+      dummyOutput.publicInputs,
+      dummyOutput.extData
+    );
+
+    const feeInfoResponse = await webbRelayer.getFeeInfo(
+      localChain2.chainId,
+      vanchor2.getAddress(),
+      gas_amount
+    );
+    expect(feeInfoResponse.status).equal(200);
+    const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
+    console.log(feeInfo);
+
     const output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
@@ -293,16 +319,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       feeInfo.maxRefund,
       refundWallet.address
     );
-
-    const estimatedGas = await vanchor2.contract.estimateGas.transact(
-      output.publicInputs.proof,
-      '0x0000000000000000000000000000000000000000000000000000000000000000',
-      output.extData,
-      output.publicInputs,
-      output.extData
-    );
-    console.log('estimate gas');
-    console.log(estimatedGas.toBigInt());
 
     await webbRelayer.vanchorWithdraw(
       localChain2.underlyingChainId,

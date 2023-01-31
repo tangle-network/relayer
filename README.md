@@ -314,6 +314,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 
 - `chain_id`
 - `contract_address`
+- `gas_amount`
 
 <details>
   <summary>Expected Response</summary>

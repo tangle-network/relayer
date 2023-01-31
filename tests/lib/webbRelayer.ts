@@ -220,8 +220,12 @@ export class WebbRelayer {
     return response;
   }
   // API to fetch metrics for particular resource
-  public async getFeeInfo(chainId: number, vanchor: string) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/${chainId}/${vanchor}`;
+  public async getFeeInfo(
+    chainId: number,
+    vanchor: string,
+    gas_amount: BigNumber
+  ) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/${chainId}/${vanchor}/${gas_amount}`;
     const response = await fetch(endpoint);
     return response;
   }

@@ -165,7 +165,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         encryptions,
     );
 
-    let estimated_gas_amount = match client.estimate_gas(&call.tx).await {
+    let gas_amount = match client.estimate_gas(&call.tx).await {
         Ok(value) => value,
         Err(e) => {
             let reason = e.to_string();
@@ -175,11 +175,11 @@ pub async fn handle_vanchor_relay_tx<'a>(
             return;
         }
     };
-    dbg!(&estimated_gas_amount);
+    let typed_chain_id = TypedChainId::Evm(chain.chain_id);
     let fee_info = match get_fee_info(
-        TypedChainId::from(cmd.chain_id),
+        typed_chain_id,
         contract_config.common.address,
-        estimated_gas_amount,
+        gas_amount,
         &ctx,
     )
     .await
@@ -208,20 +208,21 @@ pub async fn handle_vanchor_relay_tx<'a>(
     }
 
     // check the fee
-    if cmd.ext_data.fee < fee_info.estimated_fee {
+    // TODO: This adjustment could potentially be exploited
+    let adjusted_fee = fee_info.estimated_fee / 100 * 98;
+    if cmd.ext_data.fee < adjusted_fee {
         tracing::error!("Received a fee lower than expected");
-        // let msg = format!(
-        //     "User sent a fee that is too low {} but expected {}",
-        //     cmd.ext_data.fee, fee_info.estimated_fee
-        // );
-        // let _ = stream.send(Error(msg)).await;
-        // return;
+        let msg = format!(
+            "User sent a fee that is too low {} but expected {}",
+            cmd.ext_data.fee, fee_info.estimated_fee
+        );
+        let _ = stream.send(Error(msg)).await;
+        return;
     }
 
     let target_system = TargetSystem::new_contract_address(
         contract_config.common.address.to_fixed_bytes(),
     );
-    let typed_chain_id = TypedChainId::Evm(chain.chain_id);
     let resource_id = ResourceId::new(target_system, typed_chain_id);
 
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
