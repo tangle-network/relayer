@@ -36,7 +36,7 @@
     "@webb-tools/vbridge": "0.5.11",
     "@webb-tools/protocol-solidity": "0.5.11",
     "@webb-tools/tokens": "0.5.11",
-    "@webb-tools/utils": "0.5.11",
+    "@webb-tools/utils": "0.5.7",
     "@webb-tools/api": "0.1.4-117",
     "@webb-tools/api-derive": "0.1.4-117",
     "@webb-tools/sdk-core": "0.1.4-117",
