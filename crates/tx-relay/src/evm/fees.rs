@@ -207,7 +207,7 @@ async fn get_wrapped_token_name_and_decimals(
     vanchor: Address,
     ctx: &RelayerContext,
 ) -> Result<(String, u32)> {
-    let chain_name = chain_id.chain_id().to_string();
+    let chain_name = chain_id.underlying_chain_id().to_string();
     let wallet = ctx.evm_wallet(&chain_name).await?;
     let provider = ctx.evm_provider(&chain_name).await?;
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
@@ -252,14 +252,14 @@ fn get_native_token_name(chain_id: TypedChainId) -> Result<&'static str> {
                 // moonbeam mainnet and testnet
                 1284 | 1287 => Ok("moonbeam"),
                 _ => {
-                // Typescript tests use randomly generated chain id, so we always return "ethereum"
-                // in debug mode to make them work.
-                if cfg!(debug_assertions) {
-                    Ok("ethereum")
-                } else {
-                    let chain_id = chain_id.chain_id().to_string();
-                    Err(webb_relayer_utils::Error::ChainNotFound { chain_id })
-                }
+                    // Typescript tests use randomly generated chain id, so we always return
+                    // "ethereum" in debug mode to make them work.
+                    if cfg!(debug_assertions) {
+                        Ok("ethereum")
+                    } else {
+                        let chain_id = chain_id.chain_id().to_string();
+                        Err(webb_relayer_utils::Error::ChainNotFound { chain_id })
+                    }
                 }
             }
         }
