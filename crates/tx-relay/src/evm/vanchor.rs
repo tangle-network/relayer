@@ -177,7 +177,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     };
     dbg!(&estimated_gas_amount);
     let fee_info = match get_fee_info(
-        cmd.chain_id,
+        TypedChainId::from(cmd.chain_id),
         contract_config.common.address,
         estimated_gas_amount,
         &ctx,

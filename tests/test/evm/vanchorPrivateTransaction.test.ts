@@ -19,7 +19,7 @@
 
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
+import { CircomUtxo, Keypair, parseTypedChainId } from '@webb-tools/sdk-core';
 
 import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
@@ -61,6 +61,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
         contract: 'VAnchor',
       },
     ];
+    parseTypedChainId
     localChain1 = await LocalChain.init({
       port: localChain1Port,
       chainId: localChain1Port,
@@ -243,7 +244,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     });
 
     const feeInfoResponse = await webbRelayer.getFeeInfo(
-      localChain2.underlyingChainId,
+      localChain2.chainId,
       vanchor1.getAddress()
     );
     expect(feeInfoResponse.status).equal(200);

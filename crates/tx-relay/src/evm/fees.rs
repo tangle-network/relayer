@@ -13,6 +13,7 @@ use webb::evm::contract::protocol_solidity::{
     FungibleTokenWrapperContract, OpenVAnchorContract,
 };
 use webb::evm::ethers::prelude::U256;
+use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
 
@@ -25,7 +26,7 @@ const TRANSACTION_PROFIT_USD: f64 = 5.;
 
 /// Cache for previously generated fee info. Key consists of the VAnchor address and chain id.
 /// Entries are valid as long as `timestamp` is no older than `FEE_CACHE_TIME`.
-static FEE_INFO_CACHED: Lazy<Mutex<HashMap<(Address, u64), FeeInfo>>> =
+static FEE_INFO_CACHED: Lazy<Mutex<HashMap<(Address, TypedChainId), FeeInfo>>> =
     Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// Return value of fee_info API call. Contains information about relay transaction fee and refunds.
@@ -59,7 +60,7 @@ pub struct FeeInfo {
 /// If fee info was recently requested, the cached value is used. Otherwise it is regenerated
 /// based on the current exchange rate and estimated gas price.
 pub async fn get_fee_info(
-    chain_id: u64,
+    chain_id: TypedChainId,
     vanchor: Address,
     gas_amount: U256,
     ctx: &RelayerContext,
@@ -107,7 +108,7 @@ pub async fn get_fee_info(
 
 /// Generate new fee info by fetching relevant data from remote APIs and doing calculations.
 async fn generate_fee_info(
-    chain_id: u64,
+    chain_id: TypedChainId,
     vanchor: Address,
     gas_amount: U256,
     ctx: &RelayerContext,
@@ -202,11 +203,11 @@ async fn calculate_transaction_fee(
 /// Retrieves the token name of a given anchor contract. Wrapper prefixes are stripped in order
 /// to get a token name which coingecko understands.
 async fn get_wrapped_token_name_and_decimals(
-    chain_id: u64,
+    chain_id: TypedChainId,
     vanchor: Address,
     ctx: &RelayerContext,
 ) -> Result<(String, u32)> {
-    let chain_name = chain_id.to_string();
+    let chain_name = chain_id.chain_id().to_string();
     let wallet = ctx.evm_wallet(&chain_name).await?;
     let provider = ctx.evm_provider(&chain_name).await?;
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
@@ -232,30 +233,36 @@ async fn get_wrapped_token_name_and_decimals(
 /// otherwise there is no exchange rate available.
 ///
 /// https://github.com/DefiLlama/chainlist/blob/main/constants/chainIds.json
-fn get_native_token_name(chain_id: u64) -> Result<&'static str> {
+fn get_native_token_name(chain_id: TypedChainId) -> Result<&'static str> {
+    use TypedChainId::*;
     match chain_id {
-        1 | // ethereum mainnet
-        5 | // goerli testnet
-        5001 | // hermes testnet
-        5002 | // athena testnet
-        5003 | // demeter testnet
-        11155111 // sepolia testnet
-        => Ok("ethereum"),
-        // optimism mainnet and testnet
-        10 | 420 => Ok("optimism"),
-        // polygon mainnet and testnet
-        127 | 80001 => Ok("polygon"),
-        // moonbeam mainnet and testnet
-        1284 | 1287 => Ok("moonbeam"),
-        _ => {
-            // Typescript tests use randomly generated chain id, so we always return "ethereum"
-            // in debug mode to make them work.
-            if cfg!(debug_assertions) {
-                Ok("ethereum")
-            } else {
-                let chain_id = chain_id.to_string();
-                Err(webb_relayer_utils::Error::ChainNotFound { chain_id })
+        Evm(id) => {
+            match id {
+                1 | // ethereum mainnet
+                    5 | // goerli testnet
+                    5001 | // hermes testnet
+                    5002 | // athena testnet
+                    5003 | // demeter testnet
+                    11155111 // sepolia testnet
+                => Ok("ethereum"),
+                // optimism mainnet and testnet
+                10 | 420 => Ok("optimism"),
+                // polygon mainnet and testnet
+                127 | 80001 => Ok("polygon"),
+                // moonbeam mainnet and testnet
+                1284 | 1287 => Ok("moonbeam"),
+                _ => {
+                // Typescript tests use randomly generated chain id, so we always return "ethereum"
+                // in debug mode to make them work.
+                if cfg!(debug_assertions) {
+                    Ok("ethereum")
+                } else {
+                    let chain_id = chain_id.chain_id().to_string();
+                    Err(webb_relayer_utils::Error::ChainNotFound { chain_id })
+                }
+                }
             }
         }
+        _ => unimplemented!(),
     }
 }

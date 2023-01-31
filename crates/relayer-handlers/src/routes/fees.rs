@@ -1,5 +1,6 @@
 use ethereum_types::{Address, U256};
 use std::sync::Arc;
+use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_tx_relay::evm::fees::{get_fee_info, FeeInfo};
 
@@ -12,5 +13,6 @@ pub async fn calculate_fees(
     // TODO: hardcoded
     let estimated_gas_amount = U256::from(1_721_713);
 
+    let chain_id = TypedChainId::from(chain_id);
     get_fee_info(chain_id, vanchor, estimated_gas_amount, ctx.as_ref()).await
 }
