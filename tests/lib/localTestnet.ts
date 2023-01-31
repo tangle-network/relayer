@@ -204,8 +204,8 @@ export class LocalChain {
 
   public async deploySignatureVBridge(
     otherChain: LocalChain,
-    localToken: TokenConfig,
-    otherToken: TokenConfig,
+    wrappedToken1: TokenConfig,
+    wrappedToken2: TokenConfig,
     localWallet: ethers.Wallet,
     otherWallet: ethers.Wallet,
     unwrappedToken1: MintableToken,
@@ -217,8 +217,8 @@ export class LocalChain {
       .toString()
       .trim();
     const tokenConfigs = new Map<number, TokenConfig | undefined>();
-    tokenConfigs.set(this.chainId, localToken);
-    tokenConfigs.set(otherChain.chainId, otherToken!);
+    tokenConfigs.set(this.chainId, wrappedToken1);
+    tokenConfigs.set(otherChain.chainId, wrappedToken2);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
         asset: {

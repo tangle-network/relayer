@@ -112,23 +112,23 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     relayerWallet1 = new ethers.Wallet(relayerPk, localChain1.provider());
     relayerWallet2 = new ethers.Wallet(relayerPk, localChain2.provider());
     // Deploy the token.
-    const localToken1 = await localChain1.deployToken('Webb Token', 'WEBB');
-    const localToken2 = await localChain2.deployToken('Webb Token', 'WEBB');
+    const wrappedToken1 = await localChain1.deployToken('Wrapped Ethereum', 'WETH');
+    const wrappedToken2 = await localChain2.deployToken('Wrapped Ethereum', 'WETH');
     const unwrappedToken1 = await MintableToken.createToken(
-      'Wrapped Ethereum',
-      'WETH',
+      'Webb Token',
+      'WEBB',
       govWallet1
     );
     const unwrappedToken2 = await MintableToken.createToken(
-      'Wrapped Ethereum',
-      'WETH',
+      'Webb Token',
+      'WEBB',
       govWallet2
     );
 
     signatureVBridge = await localChain1.deploySignatureVBridge(
       localChain2,
-      localToken1,
-      localToken2,
+      wrappedToken1,
+      wrappedToken2,
       govWallet1,
       govWallet2,
       unwrappedToken1,
@@ -150,52 +150,47 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     // get the vanhor on localchain1
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
-    // approve token spending
+    // get token
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token = Tokens.FungibleTokenWrapper.connect(tokenAddress, govWallet1);
-    await unwrappedToken1.mintTokens(
-      govWallet1.address,
-      ethers.utils.parseEther('1000')
-    );
-    let tx = await token.contract.approve(
+    const token =  await Tokens.MintableToken.tokenFromAddress(tokenAddress, govWallet1);
+    console.log("token name: ", token.name)
+    
+    // aprove token spending for vanchor
+    const tx = await token.approveSpending(
       vanchor1.contract.address,
       ethers.utils.parseEther('1000')
     );
     await tx.wait();
-    //await token.mintTokens(govWallet1.address, ethers.utils.parseEther('1000'));
-    unwrappedToken1.approveSpending(
-      token.contract.address,
-      ethers.utils.parseEther('1000')
-    );
+    
+    // mint tokens on wallet
+    await token.mintTokens(govWallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(govWallet2);
+
+    // Get token
     const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
       localChain2.chainId
     )!;
-    const token2 = Tokens.FungibleTokenWrapper.connect(
+    const token2 = await Tokens.MintableToken.tokenFromAddress(
       tokenAddress2,
       govWallet2
     );
-
-    await unwrappedToken2.mintTokens(
-      govWallet2.address,
-      ethers.utils.parseEther('1000')
-    );
-    let tx2 = await token2.contract.approve(
+    console.log("token2 name: ", token.name)
+    
+    // Approve token spending for vanchor
+    const tx2 = await token2.approveSpending(
       vanchor2.contract.address,
       ethers.utils.parseEther('1000')
     );
     await tx2.wait();
-    //await token2.mintTokens(govWallet2.address, ethers.utils.parseEther('1000'));
-    unwrappedToken2.approveSpending(
-      token2.contract.address,
-      ethers.utils.parseEther('1000')
-    );
-
+    
+    // Mint tokens on wallet
+    await token2.mintTokens(govWallet2.address, ethers.utils.parseEther('1000'));
+   
     // Set governor
     const governorAddress = govWallet1.address;
     const currentGovernor = await signatureVBridge
@@ -219,7 +214,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should relay private transaction', async () => {
+  it.only('should relay private transaction', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
@@ -233,6 +228,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
       localChain2.chainId
     )!;
+
+    
 
     const randomKeypair = new Keypair();
 

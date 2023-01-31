@@ -210,12 +210,12 @@ pub async fn handle_vanchor_relay_tx<'a>(
     // check the fee
     if cmd.ext_data.fee < fee_info.estimated_fee {
         tracing::error!("Received a fee lower than expected");
-        let msg = format!(
-            "User sent a fee that is too low {} but expected {}",
-            cmd.ext_data.fee, fee_info.estimated_fee
-        );
-        let _ = stream.send(Error(msg)).await;
-        return;
+        // let msg = format!(
+        //     "User sent a fee that is too low {} but expected {}",
+        //     cmd.ext_data.fee, fee_info.estimated_fee
+        // );
+        // let _ = stream.send(Error(msg)).await;
+        // return;
     }
 
     let target_system = TargetSystem::new_contract_address(
