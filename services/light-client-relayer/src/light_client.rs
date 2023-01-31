@@ -5,6 +5,7 @@ use webb_relayer_config::block_poller::BlockPollerConfig;
 use webb::evm::ethers::providers::{self, Middleware};
 
 use webb_relayer_store::HistoryStore;
+use eth2_to_substrate_relay::eth2substrate_relay::Eth2SubstrateRelay;
 
 /// A trait that defines a handler for a specific set of event types.
 ///
@@ -84,9 +85,15 @@ pub trait LightClientPoller {
         store: Arc<Self::Store>,
         listener_config: BlockPollerConfig,
     ) -> crate::Result<()> {
+        /*
+            config: &Config,
+            eth_pallet: Box<dyn EthClientPalletTrait<Error = Box<dyn std::error::Error>>>,
+            enable_binsearch: bool,
+            submit_only_finalized_blocks: bool,        
+        */
         let eth2SubstrateRelayer =
-            Eth2SubstrateRelay::new(client.clone(), store.clone());
-        eth2SubstrateRelayer.run().await?;
+            Eth2SubstrateRelay::init(client.clone(), store.clone(), true, true).await;
+        eth2SubstrateRelayer.run(None).await;
         Ok(())
     }
 }

@@ -34,6 +34,8 @@ use webb::substrate::scale::Encode;
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb_relayer_utils::metric;
 
+use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+
 /// A SignatureBridge contract events & commands watcher.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct SubstrateBridgeEventWatcher;
@@ -160,7 +162,7 @@ where
         let is_signature_valid = validate_ecdsa_signature(
             proposal_data.as_slice(),
             signature.as_slice(),
-            current_maintainer.as_slice(),
+            current_maintainer.0.as_slice(),
         )
         .unwrap_or(false);
 
@@ -189,8 +191,8 @@ where
         // Enqueue transaction call data in protocol-substrate transaction queue
         let execute_proposal_call = ExecuteProposal {
             src_id: typed_chain_id.chain_id(),
-            proposal_data: proposal_data.clone(),
-            signature: signature.clone(),
+            proposal_data: BoundedVec(proposal_data.clone()),
+            signature: BoundedVec(signature.clone()),
         };
         // webb dynamic payload
         let execute_proposal_tx = WebbDynamicTxPayload {
@@ -244,9 +246,9 @@ where
         // 2. check if the nonce is greater than the current nonce.
         // 3. ~check if the signature is valid.~
 
-        if new_maintainer == current_maintainer {
+        if new_maintainer == current_maintainer.0 {
             tracing::warn!(
-                current_maintainer =  %hex::encode(&current_maintainer),
+                current_maintainer =  %hex::encode(&current_maintainer.0),
                 new_maintainer = %hex::encode(&new_maintainer),
                 %nonce,
                 signature = %hex::encode(&signature),
@@ -283,8 +285,8 @@ where
         );
 
         let set_maintainer_call = SetMaintainer {
-            message: new_maintainer.clone(),
-            signature: signature.clone(),
+            message: BoundedVec(new_maintainer.clone()),
+            signature: BoundedVec(signature.clone()),
         };
 
         // webb dynamic payload
