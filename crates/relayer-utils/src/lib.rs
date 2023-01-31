@@ -48,6 +48,9 @@ pub enum Error {
     /// Error in the underlying Http/Ws server.
     #[error(transparent)]
     Warp(#[from] warp::Error),
+    /// HTTP error
+    #[error(transparent)]
+    Hyper(#[from] warp::hyper::Error),
     /// Elliptic Curve error.
     #[error(transparent)]
     EllipticCurve(#[from] ethers::core::k256::elliptic_curve::Error),

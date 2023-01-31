@@ -20,6 +20,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::signal::unix;
 use tokio::time;
+use webb_relayer::service::build_axum_services;
 
 use webb_relayer_config::cli::{create_store, load_config, setup_logger, Opts};
 use webb_relayer_context::RelayerContext;
@@ -69,6 +70,8 @@ async fn main(args: Opts) -> anyhow::Result<()> {
                 .set(cloned_store.get_data_stored_size() as f64);
         }
     });
+
+    tokio::spawn(build_axum_services(ctx.clone()));
 
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer

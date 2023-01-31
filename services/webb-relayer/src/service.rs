@@ -21,7 +21,10 @@
 //! Services are tasks which the relayer constantly runs throughout its lifetime.
 //! Services handle keeping up to date with the configured chains.
 
+use axum::routing::get;
+use axum::Router;
 use std::collections::HashSet;
+use std::net::SocketAddr;
 use std::sync::Arc;
 use webb::evm::ethers::providers;
 
@@ -59,7 +62,7 @@ use webb_relayer_config::substrate::{
 use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handlers::handle_fee_info;
+use webb_relayer_handlers::{handle_fee_info, handle_socket_info};
 
 use webb_relayer_handlers::routes::{encrypted_outputs, info, leaves, metric};
 use webb_relayer_store::SledStore;
@@ -73,6 +76,18 @@ pub type DkgClient = OnlineClient<PolkadotConfig>;
 pub type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 /// Type alias for [Sled](https://sled.rs)-based database store
 pub type Store = webb_relayer_store::sled::SledStore;
+
+pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
+    let app = Router::new().route("/api/v1/ip", get(handle_socket_info));
+
+    // TODO: run one port higher for now so it works in parallel with warp
+    let socket_addr =
+        SocketAddr::new("0.0.0.0".parse().unwrap(), ctx.config.port + 1);
+    axum::Server::bind(&socket_addr)
+        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
+        .await?;
+    Ok(())
+}
 
 /// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
 /// instantiates the database store. Allows clients to interact with the relayer.
@@ -111,22 +126,6 @@ pub fn build_web_services(
                 .await;
             })
         })
-        .boxed();
-
-    // get the ip of the caller.
-    let proxy_addr = [127, 0, 0, 1].into();
-
-    // First check the x-forwarded-for with 'real_ip' for reverse proxy setups
-    // This code identifies the client's ip address and sends it back to them
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let ip_filter = warp::path("ip")
-        .and(warp::get())
-        .and(warp_real_ip::real_ip(vec![proxy_addr]))
-        .and_then(webb_relayer_handlers::handle_ip_info)
-        .or(warp::path("ip")
-            .and(warp::get())
-            .and(warp::addr::remote())
-            .and_then(webb_relayer_handlers::handle_socket_info))
         .boxed();
 
     // Define the handling of a request for this relayer's information (supported networks)
@@ -207,8 +206,7 @@ pub fn build_web_services(
         .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.
-    let routes = ip_filter
-        .or(info_filter)
+    let routes = info_filter
         .or(leaves_cache_filter_evm)
         .or(leaves_cache_filter_substrate)
         .or(encrypted_output_cache_filter_evm)

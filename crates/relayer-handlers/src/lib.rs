@@ -19,11 +19,12 @@
 use ethereum_types::{Address, U256};
 use std::convert::Infallible;
 use std::error::Error;
-use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 
 use futures::prelude::*;
 
+use axum::Json;
+use axum_client_ip::ClientIp;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use warp::ws::Message;
@@ -120,33 +121,17 @@ where
     Ok(())
 }
 
-/// Handles the `ip` address response
-///
-/// Returns a Result with the `IpInformationResponse` on success
-///
-/// # Arguments
-///
-/// * `ip` - Option containing the IP address
-pub async fn handle_ip_info(
-    ip: Option<IpAddr>,
-) -> Result<impl warp::Reply, Infallible> {
-    Ok(warp::reply::json(&IpInformationResponse {
-        ip: ip.unwrap().to_string(),
-    }))
-}
 /// Handles the socket address response
 ///
 /// Returns a Result with the `IpInformationResponse` on success
 ///
 /// # Arguments
 ///
-/// * `ip` - Option containing the socket address
+/// * `ip` - Extractor for client IP, taking into account x-forwarded-for and similar headers
 pub async fn handle_socket_info(
-    ip: Option<SocketAddr>,
-) -> Result<impl warp::Reply, Infallible> {
-    Ok(warp::reply::json(&IpInformationResponse {
-        ip: ip.unwrap().ip().to_string(),
-    }))
+    ClientIp(ip): ClientIp,
+) -> Json<IpInformationResponse> {
+    Json(IpInformationResponse { ip: ip.to_string() })
 }
 
 /// Handles the command prompts for EVM and Substrate chains
