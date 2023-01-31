@@ -1,0 +1,60 @@
+[package]
+name = "webb-light-client-relayer"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+doctest = false
+
+[[bin]]
+name = "webb-light-client-relayer"
+path = "src/main.rs"
+required-features = ["cli"]
+
+[dependencies]
+eth-rpc-client = { package = "eth_rpc_client", git = "https://github.com/webb-tools/pallet-eth2-light-client" }
+# webb-beacon-chain-relay ={ path = "../../crates/beacon-chain-relay" }
+webb-proposal-signing-backends = { path = "../../crates/proposal-signing-backends" }
+webb-relayer-types = { path = "../../crates/relayer-types" }
+webb-relayer-tx-relay = { path = "../../crates/tx-relay" }
+webb-relayer-tx-queue = { path = "../../crates/tx-queue" }
+webb-relayer-handlers = { path = "../../crates/relayer-handlers" }
+webb-relayer-handler-utils = { path = "../../crates/relayer-handler-utils" }
+webb-relayer-store = { path = "../../crates/relayer-store" }
+webb-relayer-config = { path = "../../crates/relayer-config" }
+webb-relayer-context = { path = "../../crates/relayer-context" }
+webb-relayer-utils = { path = "../../crates/relayer-utils"}
+webb-relayer = { path = "../webb-relayer" }
+eth-types = { git = "https://github.com/webb-tools/pallet-eth2-light-client" }
+
+anyhow = { version = "^1", optional = true }
+async-trait = "^0.1"
+tracing = { version = "^0.1", features = ["log"] }
+futures = { version = "^0.3", default-features = false }
+backoff = { version = "0.4.0", features = ["tokio"] }
+tokio = { version = "^1", features = ["full"] }
+serde_json = { version = "^1", default-features = false }
+paw = { version = "^1.0", optional = true }
+webb = { git = "https://github.com/webb-tools/webb-rs" , default-features = false, features = ["evm-runtime"] }
+webb-proposals = { version = "0.5.4", default-features = false, features = ["scale", "evm", "substrate"] }
+# Used by ethers (but we need it to be vendored with the lib).
+native-tls = { version = "^0.2", features = ["vendored"], optional = true }
+ethereum-types = "0.14.0"
+dotenv = "0.15.0"
+thiserror = "^1"
+prometheus = { version = "0.9", features = ["process"] }
+
+[dev-dependencies]
+tempfile = "^3.2"
+colored = "2"
+
+[features]
+default = ["cli"]
+cli = [
+    "anyhow",
+    "paw",
+    "webb-relayer-config/cli"
+]
+integration-tests = ["webb-relayer-config/integration-tests"]
