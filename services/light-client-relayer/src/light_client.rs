@@ -1,12 +1,10 @@
 use futures::prelude::*;
 use std::sync::Arc;
-use webb_relayer_config::block_poller::BlockPollerConfig;
-
-use webb::evm::ethers::providers::{self, Middleware};
 
 use webb_relayer_store::HistoryStore;
-use eth2_to_substrate_relay::eth2substrate_relay::Eth2SubstrateRelay;
-
+use eth2_to_substrate_relay::config::Config;
+use eth2_to_substrate_relay::test_utils::get_relay;
+use eth2_to_substrate_relay::config_for_tests::ConfigForTests;
 /// A trait that defines a handler for a specific set of event types.
 ///
 /// The handlers are implemented separately from the watchers, so that we can have
@@ -75,25 +73,15 @@ pub trait LightClientPoller {
     #[tracing::instrument(
         skip_all,
         fields(
-            chain_id = ?client.get_chainid().await,
             tag = %Self::TAG,
         ),
     )]
     async fn run(
         &self,
-        client: Arc<crate::light_client::providers::Provider<providers::Http>>,
-        store: Arc<Self::Store>,
-        listener_config: BlockPollerConfig,
+        config: &ConfigForTests,
     ) -> crate::Result<()> {
-        /*
-            config: &Config,
-            eth_pallet: Box<dyn EthClientPalletTrait<Error = Box<dyn std::error::Error>>>,
-            enable_binsearch: bool,
-            submit_only_finalized_blocks: bool,        
-        */
-        let eth2SubstrateRelayer =
-            Eth2SubstrateRelay::init(client.clone(), store.clone(), true, true).await;
-        eth2SubstrateRelayer.run(None).await;
+		let mut relay = get_relay(true, true, &config).await;
+        relay.run(None).await;
         Ok(())
     }
 }

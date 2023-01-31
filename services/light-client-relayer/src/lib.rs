@@ -8,6 +8,8 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::Result;
 
+use eth2_to_substrate_relay::config_for_tests::ConfigForTests;
+
 mod light_client;
 
 /// A struct for listening to blocks / block headers that implements
@@ -19,6 +21,10 @@ pub struct LightClientWatcher;
 impl LightClientPoller for LightClientWatcher {
     const TAG: &'static str = "Block Watcher";
     type Store = SledStore;
+}
+
+fn get_test_config() -> ConfigForTests {
+    ConfigForTests::load_from_toml("config_for_tests.toml".try_into().unwrap())
 }
 
 /// Start the block poller service which polls ETH blocks
@@ -39,8 +45,10 @@ pub fn start_light_client_service(
         );
 
         let light_client_watcher = LightClientWatcher::default();
-        let light_client_watcher_task =
-            light_client_watcher.run(client, store, poller_config);
+        /*let light_client_watcher_task =
+            light_client_watcher.run(client, store, poller_config);*/
+            let config_for_tests = get_test_config();
+            let light_client_watcher_task = light_client_watcher.run(&config_for_tests);
         tokio::select! {
             _ = light_client_watcher_task => {
                 tracing::warn!("Block watcher stopped unexpectedly for chain {}", chain_id);
