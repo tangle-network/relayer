@@ -179,7 +179,7 @@ describe('VAnchor Governance Relayer', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();

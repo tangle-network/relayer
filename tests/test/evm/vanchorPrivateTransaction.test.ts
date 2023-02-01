@@ -197,7 +197,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
       verbosity: 4,
     });
     await webbRelayer.waitUntilReady();
