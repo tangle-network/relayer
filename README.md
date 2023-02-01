@@ -27,7 +27,7 @@
 
 <h2 id="start"> Getting Started  🎉 </h2>
 
-In the Webb Protocol, the relayer plays a variety of roles. This repo contains code for an Anchor Protcol oracle, transaction and data relayer, and protocol governance participant. The aim is that these can all be run exclusive to one another to ensure maximum flexibility of external participants to the Webb Protocol.
+In the Webb Protocol, the relayer plays a variety of roles. This repo contains code for an Anchor System oracle, transaction and data relayer, and protocol governance participant. The aim is that these can all be run exclusive to one another to ensure maximum flexibility of external participants to the Webb Protocol.
 
 The relayer system is composed of three main components. Each of these components should be thought of as entirely separate because they could be handled by different entities entirely.
 
@@ -92,7 +92,7 @@ cargo build --release --features cli
 
 #### Local EVM Setup
 
-Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM Local Network configuration to get up and running immediately. You can follow this [guide](https://docs.webb.tools/how-to-guides/v1/evm-bridge/local-bridge/) to use the relayer for the EVM bridge! You will have to configure an `.env` file in the root directory as well. See below configuration section for more details.
+Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM Local Network configuration to get up and running immediately. You can follow this [guide](https://github.com/webb-tools/webb-dapp/tree/develop/apps/bridge-dapp#run-local-webb-relayer-and-local-network-alongside-hubble-bridge) to use the relayer for the EVM bridge! You will have to configure an `.env` file in the root directory as well. See below configuration section for more details.
 
 ```bash
 # Update your local env file
@@ -104,7 +104,7 @@ cargo run --bin webb-relayer --features cli -- -c ./config/development/evm-local
 
 #### Local Substrate Mixer
 
-To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer. You can follow this [guide](https://docs.webb.tools/how-to-guides/v1/substrate-mixer/local-mixer/) to use the relayer for the Substrate mixer!
+To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer.
 
 ```
 cargo run --bin webb-relayer --features cli -- -c ./config/development/local-substrate -vvv
