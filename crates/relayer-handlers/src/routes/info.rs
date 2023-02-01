@@ -23,10 +23,6 @@ pub struct RelayerInformationResponse {
 /// Handles relayer configuration requests
 ///
 /// Returns a Result with the `RelayerConfigurationResponse` on success
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_relayer_info(
     State(ctx): State<Arc<RelayerContext>>,
 ) -> Json<RelayerInformationResponse> {

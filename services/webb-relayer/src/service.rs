@@ -21,6 +21,7 @@
 //! Services are tasks which the relayer constantly runs throughout its lifetime.
 //! Services handle keeping up to date with the configured chains.
 
+use axum::extract::State;
 use axum::routing::get;
 use axum::Router;
 use std::collections::HashSet;
@@ -65,6 +66,7 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::{handle_fee_info, handle_socket_info};
 
 use webb_relayer_handlers::routes::info::handle_relayer_info;
+use webb_relayer_handlers::routes::leaves::handle_leaves_cache_evm;
 use webb_relayer_handlers::routes::{encrypted_outputs, leaves, metric};
 use webb_relayer_store::SledStore;
 use webb_relayer_tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
@@ -76,12 +78,16 @@ pub type DkgClient = OnlineClient<PolkadotConfig>;
 /// Type alias for the WebbProtocol DefaultConfig
 pub type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 /// Type alias for [Sled](https://sled.rs)-based database store
-pub type Store = webb_relayer_store::sled::SledStore;
+pub type Store = SledStore;
 
 pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
     let api = Router::new()
         .route("/ip", get(handle_socket_info))
         .route("/info", get(handle_relayer_info))
+        .route(
+            "/leaves/evm/:chain_id/:contract",
+            get(handle_leaves_cache_evm),
+        )
         .with_state(Arc::new(ctx.clone()));
 
     let app = Router::new()
@@ -131,19 +137,6 @@ pub fn build_web_services(
                 .await;
             })
         })
-        .boxed();
-
-    // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
-    // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let leaves_cache_filter_evm = warp::path("leaves")
-        .and(warp::path("evm"))
-        .and(store_filter.clone())
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::query())
-        .and(ctx_filter.clone())
-        .and_then(leaves::handle_leaves_cache_evm)
         .boxed();
 
     // leaf api handler for substrate
@@ -203,8 +196,7 @@ pub fn build_web_services(
         .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.
-    let routes = leaves_cache_filter_evm
-        .or(leaves_cache_filter_substrate)
+    let routes = leaves_cache_filter_substrate
         .or(encrypted_output_cache_filter_evm)
         .or(relayer_metrics_info_evm)
         .or(relayer_metrics_info_substrate)

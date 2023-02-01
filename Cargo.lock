@@ -6332,6 +6332,7 @@ dependencies = [
  "tokio",
  "webb",
  "webb-relayer-config",
+ "webb-relayer-store",
  "webb-relayer-utils",
 ]
 

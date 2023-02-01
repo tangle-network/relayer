@@ -12,6 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::Json;
 use std::{collections::HashMap, convert::Infallible, sync::Arc};
 
 use ethereum_types::Address;
@@ -27,9 +31,17 @@ use super::{OptionalRangeQuery, UnsupportedFeature};
 // Leaves cache response
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct LeavesCacheResponse {
+pub struct LeavesCacheResponse {
     leaves: Vec<Vec<u8>>,
     last_queried_block: u64,
+}
+
+pub struct LeavesError(StatusCode, String);
+
+impl IntoResponse for LeavesError {
+    fn into_response(self) -> Response {
+        (self.0, Json(UnsupportedFeature { message: self.1 })).into_response()
+    }
 }
 
 /// Handles leaf data requests for evm
@@ -38,27 +50,21 @@ struct LeavesCacheResponse {
 ///
 /// # Arguments
 ///
-/// * `store` - [Sled](https://sled.rs)-based database store
 /// * `chain_id` - An u32 representing the chain id of the chain to query
 /// * `contract` - An address of the contract to query
 /// * `query_range` - An Optinal Query range.
-/// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_evm(
-    store: Arc<webb_relayer_store::sled::SledStore>,
-    chain_id: u32,
-    contract: Address,
-    query_range: OptionalRangeQuery,
-    ctx: Arc<RelayerContext>,
-) -> Result<impl warp::Reply, Infallible> {
+    State(ctx): State<Arc<RelayerContext>>,
+    Path((chain_id, contract)): Path<(u32, Address)>,
+    Query(query_range): Query<OptionalRangeQuery>,
+) -> Result<Json<LeavesCacheResponse>, LeavesError> {
     let config = ctx.config.clone();
     // check if data query is enabled for relayer
     if !config.features.data_query {
         tracing::warn!("Data query is not enabled for relayer.");
-        return Ok(warp::reply::with_status(
-            warp::reply::json(&UnsupportedFeature {
-                message: "Data query is not enabled for relayer.".to_string(),
-            }),
-            warp::http::StatusCode::FORBIDDEN,
+        return Err(LeavesError(
+            StatusCode::FORBIDDEN,
+            "Data query is not enabled for relayer.".to_string(),
         ));
     }
 
@@ -66,12 +72,10 @@ pub async fn handle_leaves_cache_evm(
     let chain = match ctx.config.evm.get(&chain_id.to_string()) {
         Some(v) => v,
         None => {
-            tracing::warn!("Unsupported Chain: {}", chain_id);
-            return Ok(warp::reply::with_status(
-                warp::reply::json(&UnsupportedFeature {
-                    message: format!("Unsupported Chain: {chain_id}"),
-                }),
-                warp::http::StatusCode::BAD_REQUEST,
+            tracing::warn!("Unsupported Chain: {chain_id}");
+            return Err(LeavesError(
+                StatusCode::BAD_REQUEST,
+                format!("Unsupported Chain: {chain_id}"),
             ));
         }
     };
@@ -94,30 +98,22 @@ pub async fn handle_leaves_cache_evm(
         Some(config) => config,
         None => {
             tracing::warn!(
-                "Unsupported Contract: {:?} for chaind : {}",
-                contract,
-                chain_id
+                "Unsupported Contract: {contract} for chaind : {chain_id}"
             );
-            return Ok(warp::reply::with_status(
-                warp::reply::json(&UnsupportedFeature {
-                    message: format!(
-                        "Unsupported Contract: {contract} for chaind : {chain_id}"
-                    ),
-                }),
-                warp::http::StatusCode::BAD_REQUEST,
+            return Err(LeavesError(
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "Unsupported Contract: {contract} for chaind : {chain_id}",
+                ),
             ));
         }
     };
     // check if data query is enabled for contract
     if !event_watcher_config.enable_data_query {
-        tracing::warn!("Enbable data query for contract : ({})", contract);
-        return Ok(warp::reply::with_status(
-            warp::reply::json(&UnsupportedFeature {
-                message: format!(
-                    "Enbable data query for contract : ({contract})"
-                ),
-            }),
-            warp::http::StatusCode::FORBIDDEN,
+        tracing::warn!("Enbable data query for contract : ({contract})");
+        return Err(LeavesError(
+            StatusCode::FORBIDDEN,
+            format!("Enbable data query for contract : ({contract})"),
         ));
     }
     // create history store key
@@ -126,21 +122,21 @@ pub async fn handle_leaves_cache_evm(
     let src_typed_chain_id = TypedChainId::Evm(chain_id);
     let history_store_key =
         ResourceId::new(src_target_system, src_typed_chain_id);
-    let leaves = store
+    let leaves = ctx
+        .store()
         .get_leaves_with_range(history_store_key, query_range.into())
         .unwrap();
-    let last_queried_block = store
+    let last_queried_block = ctx
+        .store()
         .get_last_deposit_block_number(history_store_key)
         .unwrap();
 
-    Ok(warp::reply::with_status(
-        warp::reply::json(&LeavesCacheResponse {
-            leaves,
-            last_queried_block,
-        }),
-        warp::http::StatusCode::OK,
-    ))
+    Ok(Json(LeavesCacheResponse {
+        leaves,
+        last_queried_block,
+    }))
 }
+
 /// Handles leaf data requests for substrate
 ///
 /// Returns a Result with the `LeafDataResponse` on success
