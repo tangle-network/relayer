@@ -97,8 +97,7 @@ pub async fn handle_encrypted_outputs_cache_evm(
             return Ok(warp::reply::with_status(
                 warp::reply::json(&UnsupportedFeature {
                     message: format!(
-                        "Unsupported Contract: {} for chaind : {}",
-                        contract, chain_id
+                        "Unsupported Contract: {contract} for chaind : {chain_id}"
                     ),
                 }),
                 warp::http::StatusCode::BAD_REQUEST,
@@ -111,8 +110,7 @@ pub async fn handle_encrypted_outputs_cache_evm(
         return Ok(warp::reply::with_status(
             warp::reply::json(&UnsupportedFeature {
                 message: format!(
-                    "Enbable data query for contract : ({})",
-                    contract
+                    "Enbable data query for contract : ({contract})"
                 ),
             }),
             warp::http::StatusCode::FORBIDDEN,

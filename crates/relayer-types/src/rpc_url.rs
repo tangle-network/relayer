@@ -17,20 +17,20 @@ impl std::fmt::Display for RpcUrl {
         // Display the inner url, not the wrapper.
         // with all the parts, scheme, host, port, path, query, fragment.
         let scheme = self.0.scheme();
-        write!(f, "{}", scheme)?;
+        write!(f, "{scheme}")?;
         if let Some(host) = self.0.host_str() {
-            write!(f, "://{}", host)?;
+            write!(f, "://{host}")?;
         }
         if let Some(port) = self.0.port_or_known_default() {
-            write!(f, ":{}", port)?;
+            write!(f, ":{port}")?;
         }
         write!(f, "{}", self.0.path())?;
 
         if let Some(query) = self.0.query() {
-            write!(f, "?{}", query)?;
+            write!(f, "?{query}")?;
         }
         if let Some(fragment) = self.0.fragment() {
-            write!(f, "#{}", fragment)?;
+            write!(f, "#{fragment}")?;
         }
         Ok(())
     }
@@ -38,7 +38,7 @@ impl std::fmt::Display for RpcUrl {
 
 impl std::fmt::Debug for RpcUrl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self)?;
+        write!(f, "{self}")?;
         Ok(())
     }
 }
@@ -91,8 +91,7 @@ impl<'de> Deserialize<'de> for RpcUrl {
                     tracing::trace!("Reading {} from env", var);
                     let val = std::env::var(var).map_err(|e| {
                         serde::de::Error::custom(format!(
-                            "error while loading this env {}: {}",
-                            var, e,
+                            "error while loading this env {var}: {e}",
                         ))
                     })?;
                     let maybe_rpc_url = url::Url::parse(&val);
