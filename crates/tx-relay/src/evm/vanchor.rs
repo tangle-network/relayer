@@ -165,7 +165,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         encryptions,
     );
 
-    let gas_amount = match client.estimate_gas(&call.tx).await {
+    let gas_amount = match client.estimate_gas(&call.tx, None).await {
         Ok(value) => value,
         Err(e) => {
             let reason = e.to_string();

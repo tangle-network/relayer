@@ -33,7 +33,6 @@ use webb::substrate::subxt;
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
 
 use coingecko::CoinGeckoClient;
-use ethers::etherscan;
 use webb_relayer_utils::metric::{self, Metrics};
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
@@ -55,7 +54,7 @@ pub struct RelayerContext {
     /// API client for https://www.coingecko.com/
     coin_gecko_client: Arc<CoinGeckoClient>,
     /// API client for https://etherscan.io/
-    etherscan_client: etherscan::Client,
+    etherscan_client: Client,
 }
 
 impl RelayerContext {
@@ -64,8 +63,7 @@ impl RelayerContext {
         let (notify_shutdown, _) = broadcast::channel(2);
         let metrics = Arc::new(Mutex::new(Metrics::new()));
         let coin_gecko_client = Arc::new(CoinGeckoClient::default());
-        let etherscan_client =
-            etherscan::Client::new_from_env(Chain::Mainnet).unwrap();
+        let etherscan_client = Client::new_from_env(Chain::Mainnet).unwrap();
         Self {
             config,
             notify_shutdown,
@@ -178,7 +176,7 @@ impl RelayerContext {
     }
 
     /// Returns API client for https://etherscan.io/
-    pub fn etherscan_client(&self) -> &etherscan::Client {
+    pub fn etherscan_client(&self) -> &Client {
         &self.etherscan_client
     }
 }

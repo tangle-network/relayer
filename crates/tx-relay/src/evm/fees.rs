@@ -1,9 +1,6 @@
 use chrono::DateTime;
 use chrono::Duration;
 use chrono::Utc;
-use ethers::middleware::SignerMiddleware;
-use ethers::types::Address;
-use ethers::utils::{format_units, parse_units};
 use once_cell::sync::Lazy;
 use serde::Serialize;
 use std::collections::HashMap;
@@ -12,7 +9,10 @@ use std::sync::{Arc, Mutex};
 use webb::evm::contract::protocol_solidity::{
     FungibleTokenWrapperContract, OpenVAnchorContract,
 };
+use webb::evm::ethers::middleware::SignerMiddleware;
 use webb::evm::ethers::prelude::U256;
+use webb::evm::ethers::types::Address;
+use webb::evm::ethers::utils::{format_units, parse_units};
 use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
