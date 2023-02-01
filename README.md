@@ -149,7 +149,7 @@ webb-relayer -vv -c ./config
 | `http-endpoint` | Http(s) Endpoint for quick Req/Res                                                                                                 | Required               |
 | `ws-endpoint`   | Websocket Endpoint for long living connections                                                                                     | Required               |
 | `name`          | The Chain/Node name                                                                                                                | Required               |
-| `explorer`      | Block explorer, used forv generating clickable links for transactions that happens on this chain.                                   | Optional               |
+| `explorer`      | Block explorer, used for generating clickable links for transactions that happens on this chain.                                   | Optional               |
 | `chain-id`      | Chain specific id.                                                                                                                 | Required               |
 | `private-key`   | The Private Key of this account on this network. See [PrivateKey Docs for secure setup]()                                          | Required               |
 | `beneficiary`   | The address of the account that will receive relayer fees.                                                                         | Optional               |
@@ -282,7 +282,6 @@ The relayer has 3 endpoints available to query from. They are outlined below for
   <summary>Expected Response</summary>
   
   ```json
-   leaves api resp
 {
   "leaves": [
     [
@@ -389,13 +388,14 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 #example
 /api/v1/metrics/substrate/4/9/44
 ```
-
 <details>
-  <summary>Expected Response </summary>
-  ```json
+  <summary>Expected Response</summary>
   
+  ```json
   { 
-    'totalGasSpent': '1733870', 'totalFeeEarned': '1787343976', 'accountBalance': '10000003900094' 
+    "totalGasSpent": "1733870",
+    "totalFeeEarned": "1787343976",
+    "accountBalance": "10000003900094" 
   }
   ```
 </details>
