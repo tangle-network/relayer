@@ -1,0 +1,18 @@
+[eth2.testnet]
+enabled = true
+name = "testnet config"
+chain_id = 0
+beacon_endpoint = "https://lodestar-goerli.chainsafe.io"
+eth1_endpoint = "https://goerli.infura.io/v3/ETH1_INFURA_API_KEY"
+substrate_endpoint = "localhost:9944"
+signer_account_id = "NaN"
+path_to_signer_secret_key = "NaN"
+contract_account_id = "NaN"
+ethereum_network = "Goerli"
+substrate_network_id = "Testnet"
+eth_requests_timeout_seconds = 30
+validate_updates = true
+verify_bls_signature = false
+hashes_gc_threshold = 51000
+max_submitted_blocks_by_account = 8000
+beacon_rpc_version = "V1_1"
