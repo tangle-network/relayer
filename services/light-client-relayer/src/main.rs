@@ -7,7 +7,7 @@ use ethereum_types::U256;
 use std::sync::Arc;
 use tokio::signal::unix;
 use webb_light_client_relayer::start_light_client_service;
-use webb_relayer::service::Store;
+
 use webb_relayer_config::cli::{create_store, load_config, setup_logger, Opts};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
@@ -22,7 +22,6 @@ use webb_relayer_utils::Result;
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub async fn ignite(
     ctx: &RelayerContext,
-    store: Arc<Store>,
 ) -> crate::Result<()> {
     tracing::debug!(
         "Relayer configuration: {}",
@@ -37,7 +36,7 @@ pub async fn ignite(
         let chain_name = &chain_config.name;
         let chain_id = U256::from(chain_config.chain_id);
         let provider = ctx.evm_provider(&chain_id.to_string()).await?;
-        let client = Arc::new(provider);
+        let _client = Arc::new(provider);
         tracing::debug!(
             "Starting Background Services for ({}) chain. ({:?})",
             chain_name,
@@ -52,9 +51,6 @@ pub async fn ignite(
             start_light_client_service(
                 ctx,
                 chain_id,
-                client,
-                store.clone(),
-                poller_config.clone(),
             )?;
         }
     }
@@ -98,7 +94,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let server_handle = tokio::spawn(server);
     // start all background services.
     // this does not block, will fire the services on background tasks.
-    ignite(&ctx, Arc::new(store)).await?;
+    ignite(&ctx).await?;
     tracing::event!(
         target: webb_relayer_utils::probe::TARGET,
         tracing::Level::DEBUG,

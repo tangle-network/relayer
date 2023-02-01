@@ -1,9 +1,9 @@
-use std::sync::Arc;
+
 
 use crate::light_client::LightClientPoller;
 use ethereum_types::U256;
-use webb_relayer::service::{Client, Store};
-use webb_relayer_config::block_poller::BlockPollerConfig;
+
+
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::Result;
@@ -31,9 +31,6 @@ fn get_test_config() -> ConfigForTests {
 pub fn start_light_client_service(
     ctx: &RelayerContext,
     chain_id: U256,
-    client: Arc<Client>,
-    store: Arc<Store>,
-    poller_config: BlockPollerConfig,
 ) -> Result<()> {
     let mut shutdown_signal = ctx.shutdown_signal();
     let _my_ctx = ctx.clone();

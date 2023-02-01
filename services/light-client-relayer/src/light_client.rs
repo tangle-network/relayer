@@ -2,7 +2,7 @@ use futures::prelude::*;
 use std::sync::Arc;
 
 use webb_relayer_store::HistoryStore;
-use eth2_to_substrate_relay::config::Config;
+
 use eth2_to_substrate_relay::test_utils::get_relay;
 use eth2_to_substrate_relay::config_for_tests::ConfigForTests;
 /// A trait that defines a handler for a specific set of event types.
@@ -53,13 +53,6 @@ pub trait LightClientHandlerWithRetry: LightClientHandler {
 }
 
 impl<T> LightClientHandlerWithRetry for T where T: LightClientHandler + ?Sized {}
-
-pub type LightClientHandlerFor<W> = Box<
-    dyn LightClientHandler<Store = <W as LightClientPoller>::Store>
-        + Send
-        + Sync,
->;
-
 /// A trait for watching block headers using a provider.
 /// LightClientPoller trait exists for EVM based
 #[async_trait::async_trait]
