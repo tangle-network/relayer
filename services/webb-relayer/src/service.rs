@@ -21,7 +21,6 @@
 //! Services are tasks which the relayer constantly runs throughout its lifetime.
 //! Services handle keeping up to date with the configured chains.
 
-use axum::extract::State;
 use axum::routing::get;
 use axum::Router;
 use std::collections::HashSet;
@@ -66,8 +65,10 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::{handle_fee_info, handle_socket_info};
 
 use webb_relayer_handlers::routes::info::handle_relayer_info;
-use webb_relayer_handlers::routes::leaves::handle_leaves_cache_evm;
-use webb_relayer_handlers::routes::{encrypted_outputs, leaves, metric};
+use webb_relayer_handlers::routes::leaves::{
+    handle_leaves_cache_evm, handle_leaves_cache_substrate,
+};
+use webb_relayer_handlers::routes::{encrypted_outputs, metric};
 use webb_relayer_store::SledStore;
 use webb_relayer_tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
 
@@ -87,6 +88,10 @@ pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
         .route(
             "/leaves/evm/:chain_id/:contract",
             get(handle_leaves_cache_evm),
+        )
+        .route(
+            "/leaves/substrate/:chain_id/:tree_id/:pallet_id",
+            get(handle_leaves_cache_substrate),
         )
         .with_state(Arc::new(ctx.clone()));
 
@@ -139,19 +144,6 @@ pub fn build_web_services(
         })
         .boxed();
 
-    // leaf api handler for substrate
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let leaves_cache_filter_substrate = warp::path("leaves")
-        .and(warp::path("substrate"))
-        .and(store_filter.clone())
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::query())
-        .and(ctx_filter.clone())
-        .and_then(leaves::handle_leaves_cache_substrate)
-        .boxed();
-
     let encrypted_output_cache_filter_evm = warp::path("encrypted_outputs")
         .and(warp::path("evm"))
         .and(store_filter)
@@ -196,8 +188,7 @@ pub fn build_web_services(
         .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.
-    let routes = leaves_cache_filter_substrate
-        .or(encrypted_output_cache_filter_evm)
+    let routes = encrypted_output_cache_filter_evm
         .or(relayer_metrics_info_evm)
         .or(relayer_metrics_info_substrate)
         .or(relayer_metrics_info)

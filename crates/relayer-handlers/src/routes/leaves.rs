@@ -16,7 +16,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 
 use ethereum_types::Address;
 use serde::Serialize;
@@ -137,35 +137,18 @@ pub async fn handle_leaves_cache_evm(
     }))
 }
 
-/// Handles leaf data requests for substrate
-///
-/// Returns a Result with the `LeafDataResponse` on success
-///
-/// # Arguments
-///
-/// * `store` - [Sled](https://sled.rs)-based database store
-/// * `chain_id` - An u32 representing the chain id of the chain to query
-/// * `tree_id` - Tree id of the the source system to query
-/// * `pallet_id` - Pallet id of the the source system to query
-/// * `query_range` - An Optinal Query range.
-/// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_substrate(
-    store: Arc<webb_relayer_store::sled::SledStore>,
-    chain_id: u32,
-    tree_id: u32,
-    pallet_id: u8,
-    query_range: OptionalRangeQuery,
-    ctx: Arc<RelayerContext>,
-) -> Result<impl warp::Reply, Infallible> {
+    State(ctx): State<Arc<RelayerContext>>,
+    Path((chain_id, tree_id, pallet_id)): Path<(u32, u32, u8)>,
+    Query(query_range): Query<OptionalRangeQuery>,
+) -> Result<Json<LeavesCacheResponse>, LeavesError> {
     let config = ctx.config.clone();
     // check if data querying is enabled
     if !config.features.data_query {
         tracing::warn!("Data query is not enabled for relayer.");
-        return Ok(warp::reply::with_status(
-            warp::reply::json(&UnsupportedFeature {
-                message: "Data query is not enabled for relayer.".to_string(),
-            }),
-            warp::http::StatusCode::FORBIDDEN,
+        return Err(LeavesError(
+            StatusCode::FORBIDDEN,
+            "Data query is not enabled for relayer.".to_string(),
         ));
     }
 
@@ -179,18 +162,17 @@ pub async fn handle_leaves_cache_substrate(
     let history_store_key =
         ResourceId::new(src_target_system, src_typed_chain_id);
 
-    let leaves = store
+    let leaves = ctx
+        .store()
         .get_leaves_with_range(history_store_key, query_range.into())
         .unwrap();
-    let last_queried_block = store
+    let last_queried_block = ctx
+        .store()
         .get_last_deposit_block_number(history_store_key)
         .unwrap();
 
-    Ok(warp::reply::with_status(
-        warp::reply::json(&LeavesCacheResponse {
-            leaves,
-            last_queried_block,
-        }),
-        warp::http::StatusCode::OK,
-    ))
+    Ok(Json(LeavesCacheResponse {
+        leaves,
+        last_queried_block,
+    }))
 }
