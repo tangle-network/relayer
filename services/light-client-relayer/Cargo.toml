@@ -15,6 +15,7 @@ required-features = ["cli"]
 
 [dependencies]
 eth-rpc-client = { package = "eth_rpc_client", git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
+eth2-pallet-init = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
 eth2_to_substrate_relay = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
 # webb-beacon-chain-relay ={ path = "../../crates/beacon-chain-relay" }
 webb-proposal-signing-backends = { path = "../../crates/proposal-signing-backends" }
@@ -24,11 +25,11 @@ webb-relayer-tx-queue = { path = "../../crates/tx-queue" }
 webb-relayer-handlers = { path = "../../crates/relayer-handlers" }
 webb-relayer-handler-utils = { path = "../../crates/relayer-handler-utils" }
 webb-relayer-store = { path = "../../crates/relayer-store" }
-webb-relayer-config = { path = "../../crates/relayer-config" }
+webb-relayer-config = { path = "../../crates/relayer-config", features = ["eth2"] }
 webb-relayer-context = { path = "../../crates/relayer-context" }
 webb-relayer-utils = { path = "../../crates/relayer-utils"}
 webb-relayer = { path = "../webb-relayer" }
-eth-types = { git = "https://github.com/webb-tools/pallet-eth2-light-client" }
+eth-types = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
 
 anyhow = { version = "^1", optional = true }
 async-trait = "^0.1"

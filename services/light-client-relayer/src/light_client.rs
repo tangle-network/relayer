@@ -3,8 +3,9 @@ use std::sync::Arc;
 
 use webb_relayer_store::HistoryStore;
 
-use eth2_to_substrate_relay::test_utils::get_relay;
-use eth2_to_substrate_relay::config_for_tests::ConfigForTests;
+use eth2_pallet_init::config::Config;
+use eth2_pallet_init::substrate_pallet_client::{EthClientPallet, setup_api};
+use eth2_pallet_init::init_pallet::init_pallet;
 /// A trait that defines a handler for a specific set of event types.
 ///
 /// The handlers are implemented separately from the watchers, so that we can have
@@ -71,10 +72,15 @@ pub trait LightClientPoller {
     )]
     async fn run(
         &self,
-        config: &ConfigForTests,
+        config: Config,
     ) -> crate::Result<()> {
-		let mut relay = get_relay(true, true, &config).await;
-        relay.run(None).await;
+	let api = setup_api().await.unwrap();
+	let mut eth_client_contract = EthClientPallet::new(api);
+
+	init_pallet(&config, &mut eth_client_contract)
+		.await
+		.expect("Error on contract initialization");
+
         Ok(())
     }
 }

@@ -9,6 +9,7 @@ edition = "2021"
 webb-relayer-store = { path = "../relayer-store" }
 webb-relayer-types = { path = "../relayer-types" }
 webb-relayer-utils = { path = "../relayer-utils" }
+eth2-pallet-init = { optional = true, git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
 anyhow = { version = "^1", optional = true }
 tracing = { version = "^0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3.1", features = ["parking_lot", "env-filter"], optional = true }
@@ -39,3 +40,4 @@ cli = [
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
 substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]
 integration-tests = ["tracing-subscriber/json"]
+eth2 = ["eth2-pallet-init"]

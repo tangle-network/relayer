@@ -8,7 +8,7 @@ use std::sync::Arc;
 use tokio::signal::unix;
 use webb_light_client_relayer::start_light_client_service;
 
-use webb_relayer_config::cli::{create_store, load_config, setup_logger, Opts};
+use webb_relayer_config::{cli::{create_store, load_config, setup_logger, Opts}, block_poller::BlockPollerConfig};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
 
@@ -29,30 +29,32 @@ pub async fn ignite(
     );
 
     // now we go through each chain, in our configuration
-    for chain_config in ctx.config.evm.values() {
+    for chain_config in ctx.config.eth2.values() {
         if !chain_config.enabled {
             continue;
         }
+
+        let chain_config = chain_config.clone();
+
         let chain_name = &chain_config.name;
         let chain_id = U256::from(chain_config.chain_id);
         let provider = ctx.evm_provider(&chain_id.to_string()).await?;
         let _client = Arc::new(provider);
+        let poller_config = BlockPollerConfig::default();
         tracing::debug!(
-            "Starting Background Services for ({}) chain. ({:?})",
+            "Starting Background Services for ({}) chain ({:?})",
             chain_name,
-            chain_config.block_poller
+            poller_config
         );
 
-        if let Some(poller_config) = &chain_config.block_poller {
-            tracing::debug!(
-                "Starting light client relay ({:#?})",
-                poller_config,
-            );
-            start_light_client_service(
-                ctx,
-                chain_id,
-            )?;
-        }
+        tracing::debug!(
+            "Starting light client relay ({:#?})",
+            poller_config,
+        );
+        start_light_client_service(
+            ctx,
+            chain_config
+        )?;
     }
     Ok(())
 }
