@@ -44,6 +44,7 @@ import { hexToU8a } from '@polkadot/util';
 import { ChainType } from '@webb-tools/sdk-core';
 import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../lib/utils.js';
+import { MintableToken } from '@webb-tools/tokens';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -163,17 +164,33 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
     // Deploy the token.
-    const localToken1 = await localChain1.deployToken('Webb Token', 'WEBB');
-    const localToken2 = await localChain2.deployToken('Webb Token', 'WEBB');
+    const wrappedToken1 = await localChain1.deployToken(
+      'Wrapped Ethereum',
+      'WETH'
+    );
+    const wrappedToken2 = await localChain2.deployToken(
+      'Wrapped Ethereum',
+      'WETH'
+    );
+    const unwrappedToken1 = await MintableToken.createToken(
+      'Webb Token',
+      'WEBB',
+      wallet1
+    );
+    const unwrappedToken2 = await MintableToken.createToken(
+      'Webb Token',
+      'WEBB',
+      wallet2
+    );
 
     signatureBridge = await localChain1.deploySignatureVBridge(
       localChain2,
-      localToken1,
-      localToken2,
+      wrappedToken1,
+      wrappedToken2,
       wallet1,
       wallet2,
-      null!,
-      null!
+      unwrappedToken1,
+      unwrappedToken2
     );
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {

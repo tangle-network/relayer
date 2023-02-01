@@ -31,6 +31,7 @@ import {
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
+import { MintableToken } from '@webb-tools/tokens';
 
 describe('Vanchor Transaction relayer', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -94,17 +95,33 @@ describe('Vanchor Transaction relayer', function () {
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
     govWallet = new ethers.Wallet(GOV, localChain2.provider());
     // Deploy the token.
-    const localToken1 = await localChain1.deployToken('Webb Token', 'WEBB');
-    const localToken2 = await localChain2.deployToken('Webb Token', 'WEBB');
+    const wrappedToken1 = await localChain1.deployToken(
+      'Wrapped Ethereum',
+      'WETH'
+    );
+    const wrappedToken2 = await localChain2.deployToken(
+      'Wrapped Ethereum',
+      'WETH'
+    );
+    const unwrappedToken1 = await MintableToken.createToken(
+      'Webb Token',
+      'WEBB',
+      wallet1
+    );
+    const unwrappedToken2 = await MintableToken.createToken(
+      'Webb Token',
+      'WEBB',
+      wallet2
+    );
 
     signatureVBridge = await localChain1.deploySignatureVBridge(
       localChain2,
-      localToken1,
-      localToken2,
+      wrappedToken1,
+      wrappedToken2,
       wallet1,
       wallet2,
-      null!,
-      null!,
+      unwrappedToken1,
+      unwrappedToken2,
       {
         [localChain1.chainId]: govWallet.address,
         [localChain2.chainId]: govWallet.address,
