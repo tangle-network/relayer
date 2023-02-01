@@ -64,7 +64,8 @@ use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::{handle_fee_info, handle_socket_info};
 
-use webb_relayer_handlers::routes::{encrypted_outputs, info, leaves, metric};
+use webb_relayer_handlers::routes::info::handle_relayer_info;
+use webb_relayer_handlers::routes::{encrypted_outputs, leaves, metric};
 use webb_relayer_store::SledStore;
 use webb_relayer_tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
 
@@ -78,14 +79,18 @@ pub type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 pub type Store = webb_relayer_store::sled::SledStore;
 
 pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
-    let app = Router::new().route("/api/v1/ip", get(handle_socket_info));
+    let api = Router::new()
+        .route("/ip", get(handle_socket_info))
+        .route("/info", get(handle_relayer_info))
+        .with_state(Arc::new(ctx.clone()));
 
+    let app = Router::new()
+        .nest("/api/v1", api)
+        .into_make_service_with_connect_info::<SocketAddr>();
     // TODO: run one port higher for now so it works in parallel with warp
     let socket_addr =
         SocketAddr::new("0.0.0.0".parse().unwrap(), ctx.config.port + 1);
-    axum::Server::bind(&socket_addr)
-        .serve(app.into_make_service_with_connect_info::<SocketAddr>())
-        .await?;
+    axum::Server::bind(&socket_addr).serve(app).await?;
     Ok(())
 }
 
@@ -126,14 +131,6 @@ pub fn build_web_services(
                 .await;
             })
         })
-        .boxed();
-
-    // Define the handling of a request for this relayer's information (supported networks)
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let info_filter = warp::path("info")
-        .and(warp::get())
-        .and(ctx_filter.clone())
-        .and_then(info::handle_relayer_info)
         .boxed();
 
     // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
@@ -206,8 +203,7 @@ pub fn build_web_services(
         .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.
-    let routes = info_filter
-        .or(leaves_cache_filter_evm)
+    let routes = leaves_cache_filter_evm
         .or(leaves_cache_filter_substrate)
         .or(encrypted_output_cache_filter_evm)
         .or(relayer_metrics_info_evm)
