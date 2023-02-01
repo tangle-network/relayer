@@ -54,8 +54,7 @@ impl<'de> Deserialize<'de> for Suri {
                     tracing::trace!("Reading {} from env", var);
                     let val = std::env::var(var).map_err(|e| {
                         serde::de::Error::custom(format!(
-                            "error while loading this env {}: {}",
-                            var, e,
+                            "error while loading this env {var}: {e}",
                         ))
                     })?;
                     let maybe_pair =

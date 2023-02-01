@@ -639,11 +639,11 @@ mod tests {
 
         match block {
             Ok(b) => {
-                println!("retrieved block {:?}", block);
+                println!("retrieved block {block:?}");
                 assert_eq!(b, 20u64);
             }
             Err(e) => {
-                println!("Error encountered {:?}", e);
+                println!("Error encountered {e:?}");
             }
         }
     }

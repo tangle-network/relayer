@@ -42,8 +42,7 @@ impl<'de> Deserialize<'de> for Mnemonic {
                 let str_value = if value.starts_with("0x") {
                     // hex value
                     return Err(serde::de::Error::custom(format!(
-                        "got {} but expected a 12/24 word list ",
-                        value
+                        "got {value} but expected a 12/24 word list "
                     )));
                 } else if value.starts_with('>') {
                     todo!("Implement command execution to extract the mnemonic")
@@ -53,8 +52,7 @@ impl<'de> Deserialize<'de> for Mnemonic {
                     tracing::trace!("Reading {} from env", var);
                     std::env::var(var).map_err(|e| {
                         serde::de::Error::custom(format!(
-                            "error while loading this env {}: {}",
-                            var, e,
+                            "error while loading this env {var}: {e}",
                         ))
                     })?
                 } else {
@@ -63,8 +61,7 @@ impl<'de> Deserialize<'de> for Mnemonic {
                 BipMnemonic::from_phrase(&str_value, Language::English).map_err(
                     |_| {
                         serde::de::Error::custom(format!(
-                            "Cannot get the mnemonic from string: {}",
-                            value
+                            "Cannot get the mnemonic from string: {value}"
                         ))
                     },
                 )

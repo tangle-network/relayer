@@ -62,8 +62,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     tracing::trace!("Reading {} from env", var);
                     let val = std::env::var(var).map_err(|e| {
                         serde::de::Error::custom(format!(
-                            "error while loading this env {}: {}",
-                            var, e,
+                            "error while loading this env {var}: {e}",
                         ))
                     })?;
                     let maybe_hex = Secret::from_str(&val);
@@ -78,8 +77,7 @@ impl<'de> Deserialize<'de> for PrivateKey {
                     let val =
                         std::fs::read_to_string(file_path).map_err(|e| {
                             serde::de::Error::custom(format!(
-                                "error while reading file path {} : {}",
-                                file_path, e
+                                "error while reading file path {file_path} : {e}"
                             ))
                         })?;
                     if val.starts_with("0x") {

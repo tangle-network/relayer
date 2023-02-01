@@ -33,6 +33,7 @@ use std::borrow::Cow;
 use webb::substrate::scale::Encode;
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb_relayer_utils::metric;
+use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
 /// A SignatureBridge contract events & commands watcher.
 #[derive(Copy, Clone, Debug, Default)]
@@ -154,7 +155,8 @@ where
             .storage()
             .fetch(&current_maintainer_addrs, None)
             .await?
-            .unwrap();
+            .unwrap()
+            .0;
 
         // Verify proposal signature
         let is_signature_valid = validate_ecdsa_signature(
@@ -189,8 +191,8 @@ where
         // Enqueue transaction call data in protocol-substrate transaction queue
         let execute_proposal_call = ExecuteProposal {
             src_id: typed_chain_id.chain_id(),
-            proposal_data: proposal_data.clone(),
-            signature: signature.clone(),
+            proposal_data: BoundedVec(proposal_data.clone()),
+            signature: BoundedVec(signature.clone()),
         };
         // webb dynamic payload
         let execute_proposal_tx = WebbDynamicTxPayload {
@@ -238,7 +240,8 @@ where
             .storage()
             .fetch(&current_maintainer_addrs, None)
             .await?
-            .unwrap();
+            .unwrap()
+            .0;
         // we need to do some checks here:
         // 1. convert the public key to address and check it is not the same as the current maintainer.
         // 2. check if the nonce is greater than the current nonce.
@@ -283,8 +286,8 @@ where
         );
 
         let set_maintainer_call = SetMaintainer {
-            message: new_maintainer.clone(),
-            signature: signature.clone(),
+            message: BoundedVec(new_maintainer.clone()),
+            signature: BoundedVec(signature.clone()),
         };
 
         // webb dynamic payload
