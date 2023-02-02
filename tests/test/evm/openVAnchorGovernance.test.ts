@@ -155,7 +155,7 @@ describe('Open VAnchor Governance Relayer', function () {
         port: relayerPort,
       },
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
       verbosity: 4,
     });
     await webbRelayer.waitUntilReady();
