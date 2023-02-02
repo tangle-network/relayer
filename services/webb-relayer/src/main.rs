@@ -76,7 +76,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
     let (addr, server) =
-        webb_relayer::service::build_web_services(ctx.clone(), store.clone())?;
+        webb_relayer::service::build_web_services(ctx.clone())?;
     tracing::info!("Starting the server on {}", addr);
     // start the server.
     let server_handle = tokio::spawn(server);

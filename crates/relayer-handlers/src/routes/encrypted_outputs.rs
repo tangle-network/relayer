@@ -18,12 +18,12 @@ use axum::http::StatusCode;
 use axum::Json;
 use ethereum_types::Address;
 use serde::Serialize;
-use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::EncryptedOutputCacheStore;
 
-use super::{OptionalRangeQuery, UnsupportedFeature};
+use super::OptionalRangeQuery;
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]

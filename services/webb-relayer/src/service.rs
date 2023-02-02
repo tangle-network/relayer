@@ -64,7 +64,6 @@ use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::{handle_fee_info, handle_socket_info};
 
-use webb_relayer_handlers::routes::encrypted_outputs::handle_encrypted_outputs_cache_evm;
 use webb_relayer_handlers::routes::info::handle_relayer_info;
 use webb_relayer_handlers::routes::leaves::{
     handle_leaves_cache_evm, handle_leaves_cache_substrate,
@@ -96,7 +95,16 @@ pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
         )
         .route(
             "/encrypted_outputs/evm/:chain_id/:contract_address",
-            get(handle_encrypted_outputs_cache_evm),
+            get(encrypted_outputs::handle_encrypted_outputs_cache_evm),
+        )
+        .route("/metrics", get(metric::handle_metric_info))
+        .route(
+            "/metrics/evm/:chain_id/:contract",
+            get(metric::handle_evm_metric_info),
+        )
+        .route(
+            "/metrics/substrate/:chain_id/:tree_id/:pallet_id",
+            get(metric::handle_substrate_metric_info),
         )
         .with_state(Arc::new(ctx.clone()));
 
@@ -121,7 +129,6 @@ pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
 /// * `store` - [Sled](https://sled.rs)-based database store
 pub fn build_web_services(
     ctx: RelayerContext,
-    store: webb_relayer_store::sled::SledStore,
 ) -> crate::Result<(
     std::net::SocketAddr,
     impl core::future::Future<Output = ()> + 'static,
@@ -131,8 +138,6 @@ pub fn build_web_services(
     let port = ctx.config.port;
     let ctx_arc = Arc::new(ctx.clone());
     let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
-    let evm_store = Arc::new(store);
-    let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
 
     // the websocket server for users to submit relay transaction requests
     let ws_filter = warp::path("ws")
@@ -149,30 +154,6 @@ pub fn build_web_services(
         })
         .boxed();
 
-    let relayer_metrics_info = warp::path("metrics")
-        .and(warp::get())
-        .and_then(metric::handle_metric_info)
-        .boxed();
-
-    //  Relayer metric for particular evm resource
-    let relayer_metrics_info_evm = warp::path("metrics")
-        .and(warp::path("evm"))
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(ctx_filter.clone())
-        .and_then(metric::handle_evm_metric_info)
-        .boxed();
-
-    //  Relayer metric for particular substrate resource
-    let relayer_metrics_info_substrate = warp::path("metrics")
-        .and(warp::path("substrate"))
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(ctx_filter.clone())
-        .and_then(metric::handle_substrate_metric_info)
-        .boxed();
-
     //  Information about relayer fees
     let relayer_fee_info = warp::path("fee_info")
         .and(ctx_filter)
@@ -183,11 +164,7 @@ pub fn build_web_services(
         .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.
-    let routes = relayer_metrics_info_evm
-        .or(relayer_metrics_info_substrate)
-        .or(relayer_metrics_info)
-        .or(relayer_fee_info)
-        .boxed(); // will add more routes here.
+    let routes = relayer_fee_info.boxed(); // will add more routes here.
     let http_filter =
         warp::path("api").and(warp::path("v1")).and(routes).boxed();
 
