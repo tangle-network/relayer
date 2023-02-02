@@ -74,13 +74,18 @@ pub trait LightClientPoller {
         &self,
         config: Config,
     ) -> crate::Result<()> {
-	let api = setup_api().await.unwrap();
+	let api = setup_api().await.map_err(std_err)?;
 	let mut eth_client_contract = EthClientPallet::new(api);
 
 	init_pallet(&config, &mut eth_client_contract)
 		.await
 		.expect("Error on contract initialization");
 
+        panic!("It should not get here");
         Ok(())
     }
+}
+
+fn std_err<T: std::fmt::Debug>(err: T) -> std::io::Error {
+    std::io::Error::new(std::io::ErrorKind::Other, format!("{err:?}"))
 }

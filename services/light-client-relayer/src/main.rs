@@ -37,9 +37,9 @@ pub async fn ignite(
         let chain_config = chain_config.clone();
 
         let chain_name = &chain_config.name;
-        let chain_id = U256::from(chain_config.chain_id);
-        let provider = ctx.evm_provider(&chain_id.to_string()).await?;
-        let _client = Arc::new(provider);
+        //let chain_id = U256::from(chain_config.chain_id);
+        //let provider = ctx.evm_provider(&chain_id.to_string()).await?;
+        //let _client = Arc::new(provider);
         let poller_config = BlockPollerConfig::default();
         tracing::debug!(
             "Starting Background Services for ({}) chain ({:?})",
@@ -65,7 +65,7 @@ pub async fn ignite(
 ///
 /// * `args` - The command line arguments.
 #[paw::main]
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread")]
 async fn main(args: Opts) -> anyhow::Result<()> {
     setup_logger(args.verbose, "webb_light_client_relayer")?;
     match dotenv::dotenv() {

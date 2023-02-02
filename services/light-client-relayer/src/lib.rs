@@ -46,8 +46,8 @@ pub fn start_light_client_service(
             //let config_for_tests = get_test_config();
             let light_client_watcher_task = light_client_watcher.run(config);
         tokio::select! {
-            _ = light_client_watcher_task => {
-                tracing::warn!("Block watcher stopped unexpectedly for chain {}", chain_id);
+            res = light_client_watcher_task => {
+                tracing::warn!("Block watcher stopped unexpectedly for chain {} | reason: {:?}", chain_id, res);
             },
             _ = shutdown_signal.recv() => {
                 tracing::debug!("Shutting down the network for {}", chain_id);

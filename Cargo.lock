@@ -425,7 +425,7 @@ dependencies = [
 [[package]]
 name = "bls"
 version = "0.2.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
  "eth2_serde_utils 0.1.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
@@ -831,7 +831,7 @@ dependencies = [
 [[package]]
 name = "consensus_types"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "bitvec 1.0.1",
  "derive_more",
@@ -1064,9 +1064,9 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "1.0.88"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "322296e2f2e5af4270b54df9e85a02ff037e271af20ba3e7fe1575515dc840b8"
+checksum = "bc831ee6a32dd495436e317595e639a587aa9907bef96fe6e6abc290ab6204e9"
 dependencies = [
  "cc",
  "cxxbridge-flags",
@@ -1076,9 +1076,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.88"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "017a1385b05d631e7875b1f151c9f012d37b53491e2a87f65bff5c262b2111d8"
+checksum = "94331d54f1b1a8895cd81049f7eaaaef9d05a7dcb4d1fd08bf3ff0806246789d"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -1091,15 +1091,15 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.88"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c26bbb078acf09bc1ecda02d4223f03bdd28bd4874edcb0379138efc499ce971"
+checksum = "48dcd35ba14ca9b40d6e4b4b39961f23d835dbb8eed74565ded361d93e1feb8a"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.88"
+version = "1.0.89"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "357f40d1f06a24b60ae1fe122542c1fb05d28d32acb2aed064e84bc2ad1e252e"
+checksum = "81bbeb29798b407ccd82a3324ade1a7286e0d29851475990b612670f6f5124d2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1459,7 +1459,7 @@ dependencies = [
 [[package]]
 name = "eth-types"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "derive_more",
  "eth2_serde_utils 0.1.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
@@ -1479,7 +1479,7 @@ dependencies = [
 [[package]]
 name = "eth2-pallet-init"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "async-trait",
  "clap 3.2.23",
@@ -1515,7 +1515,7 @@ dependencies = [
 [[package]]
 name = "eth2_hashing"
 version = "0.3.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "lazy_static",
  "ring",
@@ -1552,7 +1552,7 @@ dependencies = [
 [[package]]
 name = "eth2_serde_utils"
 version = "0.1.1"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "ethereum-types 0.14.1",
  "hex",
@@ -1573,7 +1573,7 @@ dependencies = [
 [[package]]
 name = "eth2_ssz"
 version = "0.4.1"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "ethereum-types 0.14.1",
  "itertools",
@@ -1609,7 +1609,7 @@ dependencies = [
 [[package]]
 name = "eth2_to_substrate_relay"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1650,7 +1650,7 @@ dependencies = [
 [[package]]
 name = "eth_rpc_client"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "async-std",
  "atomic_refcell",
@@ -2279,7 +2279,7 @@ dependencies = [
 [[package]]
 name = "finality-update-verify"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "bitvec 1.0.1",
  "bls 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
@@ -2872,9 +2872,9 @@ dependencies = [
 
 [[package]]
 name = "hyper"
-version = "0.14.23"
+version = "0.14.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "034711faac9d2166cb1baf1a2fb0b60b1f277f8492fd72176c17f3515e1abd3c"
+checksum = "5e011372fa0b68db8350aa7a248930ecc7839bf46d8485577d69f117a75f164c"
 dependencies = [
  "bytes 1.4.0",
  "futures-channel",
@@ -2901,7 +2901,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1788965e61b367cd03a62950836d5cd41560c3577d90e40e0819373194d1661c"
 dependencies = [
  "http",
- "hyper 0.14.23",
+ "hyper 0.14.24",
  "log",
  "rustls",
  "rustls-native-certs",
@@ -2917,7 +2917,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6183ddfa99b85da61a140bea0efc93fdf56ceaa041b37d553518030827f9905"
 dependencies = [
  "bytes 1.4.0",
- "hyper 0.14.23",
+ "hyper 0.14.24",
  "native-tls",
  "tokio 1.25.0",
  "tokio-native-tls",
@@ -3171,7 +3171,7 @@ dependencies = [
  "futures-channel",
  "futures-timer",
  "futures-util",
- "hyper 0.14.23",
+ "hyper 0.14.24",
  "jsonrpsee-types",
  "rustc-hash",
  "serde",
@@ -3188,7 +3188,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc345b0a43c6bc49b947ebeb936e886a419ee3d894421790c969cc56040542ad"
 dependencies = [
  "async-trait",
- "hyper 0.14.23",
+ "hyper 0.14.24",
  "hyper-rustls",
  "jsonrpsee-core",
  "jsonrpsee-types",
@@ -3497,7 +3497,7 @@ dependencies = [
 [[package]]
 name = "merkle_proof"
 version = "0.2.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
  "ethereum-types 0.14.1",
@@ -3547,9 +3547,9 @@ dependencies = [
 
 [[package]]
 name = "miniz_oxide"
-version = "0.6.3"
+version = "0.6.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "913e8a62b0f7df0bdeca8b7273d2c616d26350a1f9b64d3627fc518ae9fd94e8"
+checksum = "b275950c28b37e794e8c55d88aeb5e139d0ce23fdbbeda68f8d7174abdf9e8fa"
 dependencies = [
  "adler",
 ]
@@ -4590,7 +4590,7 @@ dependencies = [
  "h2 0.3.15",
  "http",
  "http-body 0.4.5",
- "hyper 0.14.23",
+ "hyper 0.14.24",
  "hyper-rustls",
  "hyper-tls",
  "ipnet",
@@ -4850,7 +4850,7 @@ source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28
 [[package]]
 name = "safe_arith"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 
 [[package]]
 name = "safemem"
@@ -6633,9 +6633,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-test"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9e3d272c44878d2bbc9f4a20ad463724f03e19dbc667c6e84ac433ab7ffcc70b"
+checksum = "3a2c0ff408fe918a94c428a3f2ad04e4afd5c95bbc08fcf868eff750c15728a4"
 dependencies = [
  "lazy_static",
  "tracing-core",
@@ -6645,9 +6645,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-test-macro"
-version = "0.2.3"
+version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "744324b12d69a9fc1edea4b38b7b1311295b662d161ad5deac17bb1358224a08"
+checksum = "258bc1c4f8e2e73a977812ab339d503e6feeb92700f6d07a6de4d321522d5c08"
 dependencies = [
  "lazy_static",
  "quote",
@@ -6667,7 +6667,7 @@ dependencies = [
 [[package]]
 name = "tree_hash"
 version = "0.4.1"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
  "ethereum-types 0.14.1",
@@ -6687,7 +6687,7 @@ dependencies = [
 [[package]]
 name = "tree_hash_derive"
 version = "0.4.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#ed6a06337603ecd8df5e999386ac42bd170d142a"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2bb9de20d20c6d68d6edf673299f1bcecfb701be"
 dependencies = [
  "darling 0.13.4",
  "quote",
@@ -7042,7 +7042,7 @@ dependencies = [
  "futures-util",
  "headers",
  "http",
- "hyper 0.14.23",
+ "hyper 0.14.24",
  "log",
  "mime",
  "mime_guess",
@@ -7776,7 +7776,7 @@ dependencies = [
 [[package]]
 name = "webb-relayer-utils"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/relayer.git#190fda8ea5b922dc2eee499e4adb542c2b05a466"
+source = "git+https://github.com/webb-tools/relayer.git#438863332d65a3923fcb8666ff63b0071a0d10f8"
 dependencies = [
  "backoff",
  "config",
