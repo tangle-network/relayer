@@ -232,7 +232,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
             "beneficiary": "0x58fcd47ece3ed24ace88fee06efd90dcb38f541f",
             "contracts": [{
                 "contract": "Anchor",
-                "address": "0x626fec5ffa7bf1ee8ced7dabde545630473e3abb",
+                "address": "0x9d36b94f245857ec7280415140800dde7642addb",
                 "deployedAt": 8896800,
                 "eventsWatcher": {
                     "enabled": true,
@@ -267,7 +267,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 ```
 /api/v1/leaves/{target_system}/{chain_id}/{contract_address}
 #example
-/api/v1/leaves/evm/4/0x626fec5ffa7bf1ee8ced7dabde545630473e3abb
+/api/v1/leaves/evm/4/0x9d36b94f245857ec7280415140800dde7642addb
 ```
 
 ##### For substrate
@@ -318,9 +318,9 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 **Retrieve encrypted leaves cache**
 ##### For evm
 ```
-/api/v1/encrypted_outputs/{target_system}/{chain_id}/{contract_address}
+/api/v1/encrypted_outputs/evm/{chain_id}/{contract_address}
 #example
-/api/v1/encrypted_outputs/evm/4/0x626fec5ffa7bf1ee8ced7dabde545630473e3abb
+/api/v1/encrypted_outputs/evm/4/0x9d36b94f245857ec7280415140800dde7642addb
 ```
 <details>
   <summary>Expected Response</summary>
@@ -379,7 +379,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 ```
 /api/v1/metrics/{target_system}/{chain_id}/{contract_address}
 #example
-/api/v1/metrics/evm/4/0x626fec5ffa7bf1ee8ced7dabde545630473e3abb
+/api/v1/metrics/evm/4/0x9d36b94f245857ec7280415140800dde7642addb
 ```
 
 ##### For substrate
