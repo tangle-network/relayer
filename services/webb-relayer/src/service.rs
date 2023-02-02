@@ -64,6 +64,7 @@ use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::{handle_fee_info, handle_socket_info};
 
+use webb_relayer_handlers::routes::encrypted_outputs::handle_encrypted_outputs_cache_evm;
 use webb_relayer_handlers::routes::info::handle_relayer_info;
 use webb_relayer_handlers::routes::leaves::{
     handle_leaves_cache_evm, handle_leaves_cache_substrate,
@@ -92,6 +93,10 @@ pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
         .route(
             "/leaves/substrate/:chain_id/:tree_id/:pallet_id",
             get(handle_leaves_cache_substrate),
+        )
+        .route(
+            "/encrypted_outputs/evm/:chain_id/:contract_address",
+            get(handle_encrypted_outputs_cache_evm),
         )
         .with_state(Arc::new(ctx.clone()));
 
@@ -144,16 +149,6 @@ pub fn build_web_services(
         })
         .boxed();
 
-    let encrypted_output_cache_filter_evm = warp::path("encrypted_outputs")
-        .and(warp::path("evm"))
-        .and(store_filter)
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::query())
-        .and(ctx_filter.clone())
-        .and_then(encrypted_outputs::handle_encrypted_outputs_cache_evm)
-        .boxed();
-
     let relayer_metrics_info = warp::path("metrics")
         .and(warp::get())
         .and_then(metric::handle_metric_info)
@@ -188,8 +183,7 @@ pub fn build_web_services(
         .boxed();
 
     // Code that will map the request handlers above to a defined http endpoint.
-    let routes = encrypted_output_cache_filter_evm
-        .or(relayer_metrics_info_evm)
+    let routes = relayer_metrics_info_evm
         .or(relayer_metrics_info_substrate)
         .or(relayer_metrics_info)
         .or(relayer_fee_info)

@@ -14,10 +14,10 @@
 
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
-use axum::response::{IntoResponse, Response};
 use axum::Json;
 use std::{collections::HashMap, sync::Arc};
 
+use crate::routes::HandlerError;
 use ethereum_types::Address;
 use serde::Serialize;
 use webb_proposals::{
@@ -26,7 +26,7 @@ use webb_proposals::{
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::LeafCacheStore;
 
-use super::{OptionalRangeQuery, UnsupportedFeature};
+use super::OptionalRangeQuery;
 
 // Leaves cache response
 #[derive(Debug, Serialize)]
@@ -34,14 +34,6 @@ use super::{OptionalRangeQuery, UnsupportedFeature};
 pub struct LeavesCacheResponse {
     leaves: Vec<Vec<u8>>,
     last_queried_block: u64,
-}
-
-pub struct LeavesError(StatusCode, String);
-
-impl IntoResponse for LeavesError {
-    fn into_response(self) -> Response {
-        (self.0, Json(UnsupportedFeature { message: self.1 })).into_response()
-    }
 }
 
 /// Handles leaf data requests for evm
@@ -57,12 +49,12 @@ pub async fn handle_leaves_cache_evm(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, contract)): Path<(u32, Address)>,
     Query(query_range): Query<OptionalRangeQuery>,
-) -> Result<Json<LeavesCacheResponse>, LeavesError> {
+) -> Result<Json<LeavesCacheResponse>, HandlerError> {
     let config = ctx.config.clone();
     // check if data query is enabled for relayer
     if !config.features.data_query {
         tracing::warn!("Data query is not enabled for relayer.");
-        return Err(LeavesError(
+        return Err(HandlerError(
             StatusCode::FORBIDDEN,
             "Data query is not enabled for relayer.".to_string(),
         ));
@@ -73,7 +65,7 @@ pub async fn handle_leaves_cache_evm(
         Some(v) => v,
         None => {
             tracing::warn!("Unsupported Chain: {chain_id}");
-            return Err(LeavesError(
+            return Err(HandlerError(
                 StatusCode::BAD_REQUEST,
                 format!("Unsupported Chain: {chain_id}"),
             ));
@@ -100,7 +92,7 @@ pub async fn handle_leaves_cache_evm(
             tracing::warn!(
                 "Unsupported Contract: {contract} for chaind : {chain_id}"
             );
-            return Err(LeavesError(
+            return Err(HandlerError(
                 StatusCode::BAD_REQUEST,
                 format!(
                     "Unsupported Contract: {contract} for chaind : {chain_id}",
@@ -111,7 +103,7 @@ pub async fn handle_leaves_cache_evm(
     // check if data query is enabled for contract
     if !event_watcher_config.enable_data_query {
         tracing::warn!("Enbable data query for contract : ({contract})");
-        return Err(LeavesError(
+        return Err(HandlerError(
             StatusCode::FORBIDDEN,
             format!("Enbable data query for contract : ({contract})"),
         ));
@@ -141,12 +133,12 @@ pub async fn handle_leaves_cache_substrate(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, tree_id, pallet_id)): Path<(u32, u32, u8)>,
     Query(query_range): Query<OptionalRangeQuery>,
-) -> Result<Json<LeavesCacheResponse>, LeavesError> {
+) -> Result<Json<LeavesCacheResponse>, HandlerError> {
     let config = ctx.config.clone();
     // check if data querying is enabled
     if !config.features.data_query {
         tracing::warn!("Data query is not enabled for relayer.");
-        return Err(LeavesError(
+        return Err(HandlerError(
             StatusCode::FORBIDDEN,
             "Data query is not enabled for relayer.".to_string(),
         ));
