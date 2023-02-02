@@ -16,8 +16,9 @@
 
 #![allow(clippy::large_enum_variant)]
 #![warn(missing_docs)]
+use axum::extract::{Path, State};
+use axum::http::StatusCode;
 use ethereum_types::{Address, U256};
-use std::convert::Infallible;
 use std::error::Error;
 use std::sync::Arc;
 
@@ -35,8 +36,9 @@ use webb_relayer_handler_utils::{
     Command, CommandResponse, CommandStream, CommandType, EvmCommand,
     IpInformationResponse, SubstrateCommand,
 };
-use webb_relayer_tx_relay::evm::fees::get_fee_info;
+use webb_relayer_tx_relay::evm::fees::{get_fee_info, FeeInfo};
 
+use crate::routes::HandlerError;
 use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use webb_relayer_tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
@@ -208,29 +210,20 @@ pub async fn handle_substrate<'a>(
 ///
 /// # Arguments
 ///
-/// * `ctx` - RelayContext reference that holds the configuration
 /// * `chain_id` - ID of the blockchain
 /// * `vanchor` - Address of the smart contract
 /// * `gas_amount` - How much gas the transaction needs. Don't use U256 here because it
 ///                  gets parsed incorrectly.
 pub async fn handle_fee_info(
-    ctx: Arc<RelayerContext>,
-    chain_id: u64,
-    vanchor: Address,
-    gas_amount: u64,
-) -> Result<impl warp::Reply, Infallible> {
+    State(ctx): State<Arc<RelayerContext>>,
+    Path((chain_id, vanchor, gas_amount)): Path<(u64, Address, u64)>,
+) -> Result<Json<FeeInfo>, HandlerError> {
     let chain_id = TypedChainId::from(chain_id);
     let gas_amount = U256::from(gas_amount);
-    let fee_info = get_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
+    get_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
         .await
-        .and_then(|f| Ok(serde_json::to_string(&f)?));
-    Ok(match fee_info {
-        Ok(value) => {
-            warp::reply::with_status(value, warp::http::StatusCode::OK)
-        }
-        Err(e) => warp::reply::with_status(
-            e.to_string(),
-            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
-        ),
-    })
+        .map(Json)
+        .map_err(|e| {
+            HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })
 }

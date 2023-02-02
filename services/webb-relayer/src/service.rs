@@ -106,6 +106,10 @@ pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
             "/metrics/substrate/:chain_id/:tree_id/:pallet_id",
             get(metric::handle_substrate_metric_info),
         )
+        .route(
+            "/fee_info/:chain_id/:vanchor/:gas_amount",
+            get(handle_fee_info),
+        )
         .with_state(Arc::new(ctx.clone()));
 
     let app = Router::new()
@@ -154,25 +158,8 @@ pub fn build_web_services(
         })
         .boxed();
 
-    //  Information about relayer fees
-    let relayer_fee_info = warp::path("fee_info")
-        .and(ctx_filter)
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and_then(handle_fee_info)
-        .boxed();
-
-    // Code that will map the request handlers above to a defined http endpoint.
-    let routes = relayer_fee_info.boxed(); // will add more routes here.
-    let http_filter =
-        warp::path("api").and(warp::path("v1")).and(routes).boxed();
-
     let cors = warp::cors().allow_any_origin();
-    let service = http_filter
-        .or(ws_filter)
-        .with(cors)
-        .with(warp::trace::request());
+    let service = ws_filter.with(cors).with(warp::trace::request());
     let mut shutdown_signal = ctx.shutdown_signal();
     let shutdown_signal = async move {
         shutdown_signal.recv().await;
