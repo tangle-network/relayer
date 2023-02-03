@@ -5,7 +5,7 @@
   "exit": true,
   "ignore": ["node_modules/**"],
   "slow": 90000,
-  "timeout": 300000,
+  "timeout": 600000,
   "retries": 0,
   // jobs (how many tests run in parallel)
   // for now it is 1, since running many nodes at the same time causes

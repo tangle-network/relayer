@@ -220,7 +220,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
