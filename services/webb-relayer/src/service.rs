@@ -26,6 +26,9 @@ use axum::Router;
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use tower_http::cors::Any;
+use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
 use webb::evm::ethers::providers;
 
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
@@ -62,7 +65,9 @@ use webb_relayer_config::substrate::{
 use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handlers::{handle_fee_info, handle_socket_info};
+use webb_relayer_handlers::{
+    handle_fee_info, handle_socket_info, websocket_handler,
+};
 
 use webb_relayer_handlers::routes::info::handle_relayer_info;
 use webb_relayer_handlers::routes::leaves::{
@@ -81,7 +86,14 @@ pub type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 /// Type alias for [Sled](https://sled.rs)-based database store
 pub type Store = SledStore;
 
-pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
+/// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to
+/// handled code) and instantiates the database store. Allows clients to interact with the relayer.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration and database
+pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
+    let socket_addr = SocketAddr::new([0, 0, 0, 0].into(), ctx.config.port);
     let api = Router::new()
         .route("/ip", get(handle_socket_info))
         .route("/info", get(handle_relayer_info))
@@ -109,64 +121,19 @@ pub async fn build_axum_services(ctx: RelayerContext) -> crate::Result<()> {
         .route(
             "/fee_info/:chain_id/:vanchor/:gas_amount",
             get(handle_fee_info),
-        )
-        .with_state(Arc::new(ctx.clone()));
+        );
 
     let app = Router::new()
         .nest("/api/v1", api)
+        .route("/ws", get(websocket_handler))
+        .layer(CorsLayer::new().allow_origin(Any))
+        .layer(TraceLayer::new_for_http())
+        .with_state(Arc::new(ctx))
         .into_make_service_with_connect_info::<SocketAddr>();
-    // TODO: run one port higher for now so it works in parallel with warp
-    let socket_addr =
-        SocketAddr::new("0.0.0.0".parse().unwrap(), ctx.config.port + 1);
+
+    tracing::info!("Starting the server on {}", socket_addr);
     axum::Server::bind(&socket_addr).serve(app).await?;
     Ok(())
-}
-
-/// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
-/// instantiates the database store. Allows clients to interact with the relayer.
-///
-/// Returns `Ok((addr, server))` on success, or `Err(anyhow::Error)` on failure.
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `store` - [Sled](https://sled.rs)-based database store
-pub fn build_web_services(
-    ctx: RelayerContext,
-) -> crate::Result<(
-    std::net::SocketAddr,
-    impl core::future::Future<Output = ()> + 'static,
-)> {
-    use warp::Filter;
-
-    let port = ctx.config.port;
-    let ctx_arc = Arc::new(ctx.clone());
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
-
-    // the websocket server for users to submit relay transaction requests
-    let ws_filter = warp::path("ws")
-        .and(warp::ws())
-        .and(ctx_filter.clone())
-        .map(|ws: warp::ws::Ws, ctx: Arc<RelayerContext>| {
-            ws.on_upgrade(|socket| async move {
-                let _ = webb_relayer_handlers::accept_connection(
-                    ctx.as_ref(),
-                    socket,
-                )
-                .await;
-            })
-        })
-        .boxed();
-
-    let cors = warp::cors().allow_any_origin();
-    let service = ws_filter.with(cors).with(warp::trace::request());
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let shutdown_signal = async move {
-        shutdown_signal.recv().await;
-    };
-    warp::serve(service)
-        .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), shutdown_signal)
-        .map_err(Into::into)
 }
 
 /// Starts all background services for all chains configured in the config file.

@@ -25,6 +25,7 @@ use webb_relayer_store::EncryptedOutputCacheStore;
 
 use super::OptionalRangeQuery;
 
+/// Response containing encrypted outputs.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EncryptedOutputsCacheResponse {

@@ -176,6 +176,7 @@ impl RelayerContext {
         Ok(suri_key.into())
     }
 
+    /// Returns [Sled](https://sled.rs)-based database store
     pub fn store(&self) -> &SledStore {
         &self.store
     }

@@ -7,7 +7,7 @@ use ethereum_types::U256;
 use std::sync::Arc;
 use tokio::signal::unix;
 use webb_block_poller::start_block_poller_service;
-use webb_relayer::service::Store;
+use webb_relayer::service::{build_web_services, Store};
 use webb_relayer_config::cli::{create_store, load_config, setup_logger, Opts};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
@@ -88,11 +88,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     tracing::trace!("Created persistent storage..");
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
-    let (addr, server) =
-        webb_relayer::service::build_web_services(ctx.clone())?;
-    tracing::info!("Starting the server on {}", addr);
-    // start the server.
-    let server_handle = tokio::spawn(server);
+    let server_handle = tokio::spawn(build_web_services(ctx.clone()));
     // start all background services.
     // this does not block, will fire the services on background tasks.
     ignite(&ctx, Arc::new(store)).await?;

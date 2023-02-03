@@ -16,7 +16,7 @@
 
 #![allow(clippy::large_enum_variant)]
 #![warn(missing_docs)]
-use axum::extract::{Path, State};
+use axum::extract::{Path, State, WebSocketUpgrade};
 use axum::http::StatusCode;
 use ethereum_types::{Address, U256};
 use std::error::Error;
@@ -24,11 +24,12 @@ use std::sync::Arc;
 
 use futures::prelude::*;
 
+use axum::extract::ws::{Message, WebSocket};
+use axum::response::Response;
 use axum::Json;
 use axum_client_ip::ClientIp;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use warp::ws::Message;
 use webb_proposals::TypedChainId;
 
 use webb_relayer_context::RelayerContext;
@@ -46,28 +47,43 @@ use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx
 /// Module handles relayer API
 pub mod routes;
 
+/// Wait for websocket connection upgrade
+pub async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(ctx): State<Arc<RelayerContext>>,
+) -> Response {
+    ws.on_upgrade(move |socket| accept_websocket_connection(socket, ctx))
+}
+
 /// Sets up a websocket connection.
-///
-/// Returns `Ok(())` on success
 ///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `stream` - Websocket stream
-pub async fn accept_connection(
-    ctx: &RelayerContext,
-    stream: warp::ws::WebSocket,
-) -> webb_relayer_utils::Result<()> {
-    let (mut tx, mut rx) = stream.split();
+async fn accept_websocket_connection(ws: WebSocket, ctx: Arc<RelayerContext>) {
+    let (mut tx, mut rx) = ws.split();
 
     // Wait for client to send over text (such as relay transaction requests)
-    while let Some(msg) = rx.try_next().await? {
-        if let Ok(text) = msg.to_str() {
-            handle_text(ctx, text, &mut tx).await?;
+    while let Some(msg) = rx.next().await {
+        match msg {
+            Ok(msg) => {
+                if let Ok(text) = msg.to_text() {
+                    // Use inspect_err() here once stabilized
+                    let _ =
+                        handle_text(&ctx, text, &mut tx).await.map_err(|e| {
+                            tracing::warn!("Websocket handler error: {e}")
+                        });
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Websocket error: {e}");
+                return;
+            }
         }
     }
-    Ok(())
 }
+
 /// Sets up a websocket channels for message sending.
 ///
 /// This is primarily used for transaction relaying. The intention is
@@ -104,7 +120,7 @@ where
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
                 .inspect(|v| tracing::trace!("Sending: {}", v))
-                .map(Message::text)
+                .map(Message::Text)
                 .map(Result::Ok)
                 .forward(tx)
                 .map_err(|_| webb_relayer_utils::Error::FailedToSendResponse)
@@ -115,7 +131,7 @@ where
             tracing::debug!("Invalid payload: {:?}", v);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
-            tx.send(Message::text(value))
+            tx.send(Message::Text(value))
                 .map_err(|_| webb_relayer_utils::Error::FailedToSendResponse)
                 .await?;
         }

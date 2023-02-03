@@ -28,7 +28,7 @@ use webb_relayer_store::LeafCacheStore;
 
 use super::OptionalRangeQuery;
 
-// Leaves cache response
+/// Leaves cache response
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LeavesCacheResponse {
@@ -129,6 +129,17 @@ pub async fn handle_leaves_cache_evm(
     }))
 }
 
+/// Handles leaf data requests for substrate
+///
+/// Returns a Result with the `LeafDataResponse` on success
+///
+/// # Arguments
+///
+/// * `chain_id` - An u32 representing the chain id of the chain to query
+/// * `tree_id` - Tree id of the the source system to query
+/// * `pallet_id` - Pallet id of the the source system to query
+/// * `query_range` - An Optional Query range.
+/// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_leaves_cache_substrate(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, tree_id, pallet_id)): Path<(u32, u32, u8)>,

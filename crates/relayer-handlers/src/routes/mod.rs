@@ -70,7 +70,13 @@ const fn default_u32_max() -> Option<u32> {
     Some(u32::MAX)
 }
 
-pub struct HandlerError(pub(crate) StatusCode, pub(crate) String);
+/// Error type for HTTP handlers
+pub struct HandlerError(
+    /// HTTP status code for response
+    pub(crate) StatusCode,
+    /// Response message
+    pub(crate) String,
+);
 
 impl IntoResponse for HandlerError {
     fn into_response(self) -> Response {

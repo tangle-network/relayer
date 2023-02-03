@@ -9,12 +9,14 @@ use webb_proposals::{
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::metric::Metrics;
 
+/// Response with metrics message
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RelayerMetricResponse {
     metrics: String,
 }
 
+/// Response with resource metrics data
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResourceMetricResponse {
