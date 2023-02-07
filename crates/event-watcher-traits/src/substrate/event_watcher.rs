@@ -126,7 +126,7 @@ pub trait SubstrateEventWatcher {
                 let dest_block = cmp::min(block + step, current_block_number);
                 // check if we are now on the latest block.
                 let should_cooldown = dest_block == current_block_number;
-                tracing::debug!(
+                tracing::trace!(
                     %dest_block,
                     %current_block_number,
                     %block
