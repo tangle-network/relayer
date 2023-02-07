@@ -28,7 +28,7 @@ backoff = { version = "0.4.0", features = ["tokio"] }
 tokio = { version = "^1", features = ["full"] }
 serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0", optional = true }
-webb = { version = "0.5.7", default-features = false }
+webb = { version = "0.5.14", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 ethereum-types = "0.13.1"

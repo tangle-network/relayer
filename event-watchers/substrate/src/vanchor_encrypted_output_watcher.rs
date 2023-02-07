@@ -35,6 +35,8 @@ pub struct SubstrateVAnchorEncryptedOutputHandler;
 impl SubstrateEventWatcher for SubstrateVAnchorEncryptedOutputHandler {
     const TAG: &'static str = "Substrate V-Anchor encrypted output handler";
 
+    const PALLET_NAME: &'static str = "VAnchorBn254";
+
     type RuntimeConfig = subxt::SubstrateConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;

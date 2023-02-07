@@ -15,7 +15,6 @@
 use ethereum_types::U256;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::dkg_runtime::api as RuntimeApi;
 use webb::substrate::dkg_runtime::{self, api::dkg};
 use webb::substrate::subxt::{self, OnlineClient};
 use webb_event_watcher_traits::SubstrateEventWatcher;
@@ -42,6 +41,8 @@ impl DKGGovernorWatcher {
 impl SubstrateEventWatcher for DKGGovernorWatcher {
     const TAG: &'static str = "DKG Governor Watcher";
 
+    const PALLET_NAME: &'static str = "DKG";
+
     type RuntimeConfig = subxt::PolkadotConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;
@@ -56,40 +57,19 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
     async fn handle_event(
         &self,
         store: Arc<Self::Store>,
-        api: Arc<Self::Client>,
+        _api: Arc<Self::Client>,
         (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // we got that the signature of the DKG public key changed.
-        // that means the DKG Public Key itself changed.
-        // so we need to query the public key from the storage:
-
-        // Note: here we need to get the public key from the storage at the moment of that event.
-        let at_hash_addrs =
-            RuntimeApi::storage().system().block_hash(block_number);
-
-        let at_hash = api.storage().fetch(&at_hash_addrs, None).await?.unwrap();
-        let dkg_public_key_addrs = RuntimeApi::storage().dkg().dkg_public_key();
-
-        let (_authority_id, public_key_compressed) = api
-            .storage()
-            .fetch(&dkg_public_key_addrs, Some(at_hash))
-            .await?
-            .unwrap();
-
-        let refresh_nonce_addrs = RuntimeApi::storage().dkg().refresh_nonce();
-        let refresh_nonce = api
-            .storage()
-            .fetch(&refresh_nonce_addrs, Some(at_hash))
-            .await?
-            .unwrap();
-        // next is that we need to uncompress the public key.
-        let public_key_uncompressed =
-            decompress_public_key(public_key_compressed)?;
+        // that means the DKG Public Key itself changed
+        let event_details = event.clone();
+        let public_key_uncompressed = event_details.uncompressed_pub_key;
+        let nonce = event_details.nonce;
         tracing::debug!(
-            %at_hash,
             public_key_uncompressed = %hex::encode(&public_key_uncompressed),
-            %refresh_nonce,
+            %nonce,
+            %block_number,
             "DKG Public Key Changed",
         );
         let bridge_keys = self
@@ -111,36 +91,18 @@ impl SubstrateEventWatcher for DKGGovernorWatcher {
                 backend = "DKG",
                 signal_bridge = %bridge_key,
                 public_key = %hex::encode(&public_key_uncompressed),
-                nonce = %refresh_nonce,
+                nonce = %nonce,
                 signature = %hex::encode(&event.pub_key_sig),
             );
             store.enqueue_item(
                 SledQueueKey::from_bridge_key(bridge_key),
                 BridgeCommand::TransferOwnershipWithSignature {
                     public_key: public_key_uncompressed.clone(),
-                    nonce: refresh_nonce,
+                    nonce,
                     signature: event.pub_key_sig.clone(),
                 },
             )?;
         }
         Ok(())
-    }
-}
-
-/// Decompress the compressed public key and return the uncompressed public key.
-/// **Note:** it also removes the 0x04 prefix, so the result is the uncompressed public key without the prefix.
-pub fn decompress_public_key(
-    compressed: Vec<u8>,
-) -> webb_relayer_utils::Result<Vec<u8>> {
-    let result = libsecp256k1::PublicKey::parse_slice(
-        &compressed,
-        Some(libsecp256k1::PublicKeyFormat::Compressed),
-    )
-    .map(|pk| pk.serialize())?;
-    if result.len() == 65 {
-        // remove the 0x04 prefix
-        Ok(result[1..].to_vec())
-    } else {
-        Ok(result.to_vec())
     }
 }

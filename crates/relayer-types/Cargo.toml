@@ -9,7 +9,7 @@ edition = "2021"
 tracing = { version = "^0.1", features = ["log"] }
 url = { version = "^2.2", features = ["serde"] }
 serde = { version = "^1", default-features = false, features = ["derive"] }
-webb = { version = "0.5.7", default-features = false }
+webb = { version = "0.5.14", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 ethereum-types = "0.13.1"

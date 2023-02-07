@@ -6050,9 +6050,9 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.5.13"
+version = "0.5.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4abc6fa133bba5d0f08f8fd284d6b833bd3e276300dfa622ccde86ac6f49beba"
+checksum = "6f4b44033927362d0172cfe15bc797bf1ef7fde5f5bdd79b810f0427e692302f"
 dependencies = [
  "async-trait",
  "ethers 0.17.0",

@@ -22,6 +22,8 @@ use super::*;
 pub trait SubstrateEventWatcher {
     /// A helper unique tag to help identify the event watcher in the tracing logs.
     const TAG: &'static str;
+    /// Pallet name  used to fetch pallet id for given target system
+    const PALLET_NAME: &'static str;
     /// The Config of this Runtime [`subxt::PolkadotConfig`, `subxt::SubstrateConfig`]
     type RuntimeConfig: subxt::Config + Send + Sync + 'static;
     /// The Runtime Client that can be used to perform API calls.
@@ -69,6 +71,15 @@ pub trait SubstrateEventWatcher {
             let mut instant = std::time::Instant::now();
             let step = 1u64;
             let rpc = client.rpc();
+            // get pallet index
+            let pallet_index = {
+                let metadata = client.metadata();
+                let pallet = metadata
+                    .pallet(Self::PALLET_NAME)
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::permanent)?;
+                pallet.index()
+            };
             loop {
                 // now we start polling for new events.
                 // get the latest seen block number.
@@ -76,7 +87,7 @@ pub trait SubstrateEventWatcher {
                 // create history store key
                 let src_typed_chain_id = TypedChainId::Substrate(chain_id);
                 let target = SubstrateTargetSystem::builder()
-                    .pallet_index(chain_id as u8)
+                    .pallet_index(pallet_index)
                     .tree_id(chain_id)
                     .build();
                 let src_target_system = TargetSystem::Substrate(target);
@@ -115,6 +126,11 @@ pub trait SubstrateEventWatcher {
                 let dest_block = cmp::min(block + step, current_block_number);
                 // check if we are now on the latest block.
                 let should_cooldown = dest_block == current_block_number;
+                tracing::trace!(
+                    %dest_block,
+                    %current_block_number,
+                    %block
+                );
                 tracing::trace!("Reading from #{} to #{}", block, dest_block);
                 // Only handle events from found blocks if they are new
                 if dest_block != block {
@@ -122,7 +138,7 @@ pub trait SubstrateEventWatcher {
                     // range [block, dest_block].
                     // so first we get the hash of the block we want to start from.
                     let maybe_from = rpc
-                        .block_hash(Some(block.into()))
+                        .block_hash(Some(dest_block.into()))
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;
