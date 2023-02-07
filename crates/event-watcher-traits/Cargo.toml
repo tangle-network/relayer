@@ -17,7 +17,7 @@ sled = { version = "^0.34" }
 futures = { version = "^0.3", default-features = false }
 backoff = { version = "0.4.0", features = ["tokio"] }
 tokio = { version = "^1", features = ["full"] }
-webb = { version = "0.5.13", default-features = false }
+webb = { version = "0.5.14", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }

@@ -35,6 +35,8 @@ pub struct ProposalHandlerWatcher;
 impl SubstrateEventWatcher for ProposalHandlerWatcher {
     const TAG: &'static str = "DKG Signed Proposal Watcher";
 
+    const PALLET_NAME: &'static str = "DKGProposalHandler";
+
     type RuntimeConfig = subxt::PolkadotConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;

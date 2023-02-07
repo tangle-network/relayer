@@ -9,7 +9,7 @@ edition = "2021"
 webb-relayer-config = { path = "../relayer-config"}
 webb-relayer-utils = { path = "../relayer-utils"}
 tokio = { version = "^1", features = ["full"] }
-webb = { version = "0.5.13", default-features = false }
+webb = { version = "0.5.14", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 

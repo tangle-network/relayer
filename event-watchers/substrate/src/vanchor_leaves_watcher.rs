@@ -35,6 +35,8 @@ pub struct SubstrateVAnchorLeavesWatcher;
 impl SubstrateEventWatcher for SubstrateVAnchorLeavesWatcher {
     const TAG: &'static str = "Substrate V-Anchor leaves watcher";
 
+    const PALLET_NAME: &'static str = "VAnchorBn254";
+
     type RuntimeConfig = subxt::SubstrateConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;
