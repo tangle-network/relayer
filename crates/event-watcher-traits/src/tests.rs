@@ -65,14 +65,14 @@ async fn substrate_event_watcher_should_work() -> webb_relayer_utils::Result<()>
 {
     let node_name = String::from("test-node");
     let chain_id = 5u32;
-    let store = Arc::new(SledStore::temporary()?);
+    let store = SledStore::temporary()?;
     let client = OnlineClient::<PolkadotConfig>::new().await?;
     let watcher = RemarkedEventWatcher::default();
     let config = webb_relayer_config::WebbRelayerConfig::default();
-    let ctx = RelayerContext::new(config);
+    let ctx = RelayerContext::new(config, store.clone());
     let metrics = ctx.metrics.clone();
     watcher
-        .run(node_name, chain_id, client.into(), store, metrics)
+        .run(node_name, chain_id, client.into(), Arc::new(store), metrics)
         .await?;
     Ok(())
 }
