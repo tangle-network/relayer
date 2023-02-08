@@ -1,0 +1,10 @@
+port = 9955
+
+[experimental]
+smart-anchor-updates = false
+smart-anchor-updates-retries = 3
+
+[features]
+governance-relay = true
+data-query = true
+private-tx-relay = true
