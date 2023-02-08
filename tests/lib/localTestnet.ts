@@ -15,7 +15,7 @@
  *
  */
 import fs from 'fs';
-import { ethers, Wallet } from 'ethers';
+import { BigNumberish, ethers, Wallet } from 'ethers';
 import { Anchors, Utility, VBridge } from '@webb-tools/protocol-solidity';
 import {
   DeployerConfig,
@@ -40,6 +40,7 @@ import {
 import { ConvertToKebabCase } from './tsHacks';
 import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
+import { TokenConfig } from '@webb-tools/vbridge/lib/VBridge';
 
 export type GanacheAccounts = {
   balance: string;
@@ -116,15 +117,14 @@ export class LocalChain {
     await this.localEvmChain.stop();
   }
 
-  public async deployToken(
-    name: string,
-    symbol: string,
-    wallet: ethers.Wallet
-  ): Promise<MintableToken> {
-    return MintableToken.createToken(name, symbol, wallet);
+  public async deployToken(name: string, symbol: string): Promise<TokenConfig> {
+    return {
+      name,
+      symbol,
+    };
   }
   public async deployVBridge(
-    localToken: MintableToken,
+    localToken: TokenConfig,
     localWallet: ethers.Wallet,
     initialGovernor: ethers.Wallet
   ): Promise<VBridge.VBridge> {
@@ -132,16 +132,17 @@ export class LocalChain {
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    const webbTokens1 = new Map<number, FungibleTokenWrapper | undefined>();
-    webbTokens1.set(this.chainId, null!);
+    const tokenConfigs = new Map<number, TokenConfig | undefined>();
+    tokenConfigs.set(this.chainId, localToken);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
         asset: {
-          [this.chainId]: [localToken.contract.address],
+          [this.chainId]: [localWallet.address],
         },
       },
       chainIDs: [this.chainId],
-      webbTokens: webbTokens1,
+      webbTokens: new Map<number, FungibleTokenWrapper | undefined>(),
+      tokenConfigs: tokenConfigs,
     };
     const deployerConfig: DeployerConfig = {
       [this.chainId]: localWallet,
@@ -203,28 +204,31 @@ export class LocalChain {
 
   public async deploySignatureVBridge(
     otherChain: LocalChain,
-    localToken: MintableToken,
-    otherToken: MintableToken,
+    wrappedToken1: TokenConfig,
+    wrappedToken2: TokenConfig,
     localWallet: ethers.Wallet,
     otherWallet: ethers.Wallet,
+    unwrappedToken1: MintableToken,
+    unwrappedToken2: MintableToken,
     initialGovernors?: GovernorConfig
   ): Promise<VBridge.VBridge> {
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
-    const webbTokens1 = new Map<number, FungibleTokenWrapper | undefined>();
-    webbTokens1.set(this.chainId, null!);
-    webbTokens1.set(otherChain.chainId, null!);
+    const tokenConfigs = new Map<number, TokenConfig | undefined>();
+    tokenConfigs.set(this.chainId, wrappedToken1);
+    tokenConfigs.set(otherChain.chainId, wrappedToken2);
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
         asset: {
-          [this.chainId]: [localToken.contract.address],
-          [otherChain.chainId]: [otherToken.contract.address],
+          [this.chainId]: [unwrappedToken1.contract.address],
+          [otherChain.chainId]: [unwrappedToken2.contract.address],
         },
       },
       chainIDs: [this.chainId, otherChain.chainId],
-      webbTokens: webbTokens1,
+      tokenConfigs: tokenConfigs,
+      webbTokens: new Map<number, FungibleTokenWrapper | undefined>(),
     };
     const deployerConfig: DeployerConfig = {
       [this.chainId]: localWallet,
@@ -444,13 +448,6 @@ export class LocalChain {
                 node: contract.proposalSigningBackend?.node,
               }
             : undefined,
-        'withdraw-config': contract.withdrawConfig
-          ? {
-              'withdraw-fee-percentage':
-                contract.withdrawConfig?.withdrawFeePercentage,
-              'withdraw-gaslimit': contract.withdrawConfig?.withdrawGaslimit,
-            }
-          : undefined,
         'events-watcher': {
           enabled: contract.eventsWatcher.enabled,
           'polling-interval': contract.eventsWatcher.pollingInterval,
@@ -503,13 +500,14 @@ export async function setupVanchorEvmTx(
   srcVanchor: Anchors.VAnchor,
   destVanchor: Anchors.VAnchor,
   relayerWallet2: Wallet,
-  tokenAddress: string
+  tokenAddress: string,
+  fee: BigNumberish,
+  refund: BigNumberish,
+  recipient: string
 ): Promise<{
   extData: IVariableAnchorExtData;
   publicInputs: IVariableAnchorPublicInputs;
 }> {
-  const extAmount = ethers.BigNumber.from(0).sub(depositUtxo.amount);
-
   const dummyOutput1 = await CircomUtxo.generateUtxo({
     curve: 'Bn254',
     backend: 'Circom',
@@ -534,8 +532,6 @@ export async function setupVanchorEvmTx(
     originChainId: destChain.chainId.toString(),
     keypair: randomKeypair,
   });
-
-  const recipient = '0x0000000001000000000100000000010000000001';
 
   // Populate the leavesMap for generating the zkp against the source chain
   //
@@ -570,9 +566,8 @@ export async function setupVanchorEvmTx(
   const { extData, publicInputs } = await destVanchor.setupTransaction(
     [regeneratedUtxo, dummyInput],
     [dummyOutput1, dummyOutput2],
-    extAmount,
-    0,
-    0,
+    fee,
+    refund,
     recipient,
     relayerWallet2.address,
     tokenAddress,

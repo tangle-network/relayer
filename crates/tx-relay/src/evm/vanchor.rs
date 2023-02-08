@@ -1,4 +1,5 @@
 use super::*;
+use crate::evm::fees::get_fee_info;
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
@@ -10,10 +11,8 @@ use webb::evm::{
     ethers::prelude::{Signer, SignerMiddleware},
 };
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
-use webb_relayer_config::anchor::VAnchorWithdrawConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
-use webb_relayer_tx_relay_utils::calculate_fee;
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for VAnchor commands
@@ -60,19 +59,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
             tracing::warn!("Unsupported Contract: {:?}", cmd.id);
             let _ = stream
                 .send(Network(NetworkStatus::UnsupportedContract))
-                .await;
-            return;
-        }
-    };
-    // validate contract withdraw configuration
-    let withdraw_config: &VAnchorWithdrawConfig = match &contract_config
-        .withdraw_config
-    {
-        Some(cfg) => cfg,
-        None => {
-            tracing::error!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain_id);
-            let _ = stream
-                .send(Error(format!("Misconfigured Network : ({}). Please set withdraw configuration.", cmd.chain_id)))
                 .await;
             return;
         }
@@ -134,27 +120,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
         }
     };
 
-    let client = SignerMiddleware::new(provider, wallet);
-    let client = Arc::new(client);
-    let contract = VAnchorContract::new(cmd.id, client);
-
-    // check the fee
-    // TODO: Match this up in the context of variable transfers
-    let expected_fee = calculate_fee(
-        withdraw_config.withdraw_fee_percentage,
-        cmd.ext_data.ext_amount.0.abs().as_u128().into(),
-    );
-    let (_, unacceptable_fee) =
-        U256::overflowing_sub(cmd.ext_data.fee, expected_fee);
-    if unacceptable_fee {
-        tracing::error!("Received a fee lower than configuration");
-        let msg = format!(
-            "User sent a fee that is too low {} but expected {expected_fee}",
-            cmd.ext_data.fee,
-        );
-        let _ = stream.send(Error(msg)).await;
-        return;
-    }
+    let client = Arc::new(SignerMiddleware::new(provider, wallet));
+    let contract = VAnchorContract::new(cmd.id, client.clone());
 
     let common_ext_data = CommonExtData {
         recipient: cmd.ext_data.recipient,
@@ -198,10 +165,64 @@ pub async fn handle_vanchor_relay_tx<'a>(
         encryptions,
     );
 
+    let gas_amount = match client.estimate_gas(&call.tx, None).await {
+        Ok(value) => value,
+        Err(e) => {
+            let reason = e.to_string();
+            let _ =
+                stream.send(Network(NetworkStatus::Failed { reason })).await;
+            let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
+            return;
+        }
+    };
+    let typed_chain_id = TypedChainId::Evm(chain.chain_id);
+    let fee_info = match get_fee_info(
+        typed_chain_id,
+        contract_config.common.address,
+        gas_amount,
+        &ctx,
+    )
+    .await
+    {
+        Ok(value) => value,
+        Err(e) => {
+            let reason = e.to_string();
+            let _ =
+                stream.send(Network(NetworkStatus::Failed { reason })).await;
+            let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
+            return;
+        }
+    };
+
+    // validate refund amount
+    if cmd.ext_data.refund > fee_info.max_refund {
+        tracing::error!(
+            "User requested a refund which is higher than the maximum"
+        );
+        let msg = format!(
+            "User requested a refund which is higher than the maximum of {}",
+            fee_info.max_refund
+        );
+        let _ = stream.send(Error(msg)).await;
+        return;
+    }
+
+    // check the fee
+    // TODO: This adjustment could potentially be exploited
+    let adjusted_fee = fee_info.estimated_fee / 100 * 98;
+    if cmd.ext_data.fee < adjusted_fee {
+        tracing::error!("Received a fee lower than expected");
+        let msg = format!(
+            "User sent a fee that is too low {} but expected {}",
+            cmd.ext_data.fee, fee_info.estimated_fee
+        );
+        let _ = stream.send(Error(msg)).await;
+        return;
+    }
+
     let target_system = TargetSystem::new_contract_address(
         contract_config.common.address.to_fixed_bytes(),
     );
-    let typed_chain_id = TypedChainId::Evm(chain.chain_id);
     let resource_id = ResourceId::new(target_system, typed_chain_id);
 
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);

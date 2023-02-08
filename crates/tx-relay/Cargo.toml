@@ -6,7 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-webb-relayer-tx-relay-utils = { path = "../tx-relay-utils" }
 webb-relayer-handler-utils = { path = "../relayer-handler-utils" }
 webb-relayer-config = { path = "../relayer-config"}
 webb-relayer-context = { path = "../relayer-context"}
@@ -19,6 +18,9 @@ webb = { version = "0.5.14", default-features = false }
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.13.1"
+once_cell = "1.17.0"
+chrono = {version = "0.4.23", features = ["serde"] }
+serde = { version = "^1", default-features = false, features = ["derive"] }
 
 [features]
 default = ["std", "evm", "substrate"]

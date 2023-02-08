@@ -10,6 +10,7 @@ on:
 env:
   DEV_PACKAGES: build-essential musl musl-dev musl-tools pkg-config libssl-dev librust-openssl-sys-dev libc6 clang
   ETH1_INFURA_API_KEY: ${{ secrets.ETH1_INFURA_API_KEY }}
+  ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
 
 jobs:
 

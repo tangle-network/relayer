@@ -71,6 +71,17 @@ pub enum Error {
             ethers::providers::Provider<ethers::providers::Http>,
         >,
     ),
+    /// Smart contract error.
+    #[error(transparent)]
+    EthersContract2(
+        #[from]
+        ethers::contract::ContractError<
+            ethers::middleware::SignerMiddleware<
+                ethers::providers::Provider<ethers::providers::Http>,
+                ethers::prelude::Wallet<ethers::core::k256::ecdsa::SigningKey>,
+            >,
+        >,
+    ),
     /// SCALE Codec error.
     #[error(transparent)]
     ScaleCodec(#[from] webb::substrate::scale::Error),
@@ -82,6 +93,15 @@ pub enum Error {
     SledTransaction(
         #[from] sled::transaction::TransactionError<std::io::Error>,
     ),
+    /// Reqwest error
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+    /// Etherscan API error
+    #[error(transparent)]
+    Etherscan(#[from] ethers::etherscan::errors::EtherscanError),
+    /// Ethers currency conversion error
+    #[error(transparent)]
+    Conversion(#[from] ethers::utils::ConversionError),
     /// Generic error.
     #[error("{}", _0)]
     Generic(&'static str),
@@ -115,7 +135,7 @@ pub enum Error {
     /// a backgorund task failed and force restarted.
     #[error("Task Force Restarted from an error")]
     ForceRestart,
-    /// a backgorund task failed and stopped Apnormally.
+    /// a backgorund task failed and stopped Abnormally.
     #[error("Task Stopped Apnormally")]
     TaskStoppedAbnormally,
 }

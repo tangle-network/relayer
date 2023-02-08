@@ -21,7 +21,6 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use webb_relayer::service;
 use webb_relayer_config::{
-    anchor::VAnchorWithdrawConfig,
     event_watcher::EventsWatcherConfig,
     evm::{
         CommonContractConfig, Contract, EvmChainConfig,
@@ -79,10 +78,6 @@ async fn main() -> anyhow::Result<()> {
                             max_blocks_per_step: 1000,
                             print_progress_interval: 60_000,
                         },
-                        withdraw_config: Some(VAnchorWithdrawConfig {
-                            withdraw_gaslimit: 21000.into(),
-                            withdraw_fee_percentage: 0.01,
-                        }),
                         proposal_signing_backend: Some(
                             ProposalSigningBackendConfig::Mocked(
                                 MockedProposalSigningBackendConfig {
