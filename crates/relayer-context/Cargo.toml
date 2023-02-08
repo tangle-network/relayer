@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 webb-relayer-config = { path = "../relayer-config"}
 webb-relayer-utils = { path = "../relayer-utils"}
+webb-relayer-store = { path = "../relayer-store" }
 tokio = { version = "^1", features = ["full"] }
 webb = { version = "0.5.14", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).

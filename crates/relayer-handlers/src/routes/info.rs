@@ -1,4 +1,6 @@
-use std::{convert::Infallible, sync::Arc};
+use axum::extract::State;
+use axum::Json;
+use std::sync::Arc;
 
 use serde::Serialize;
 use webb::{
@@ -10,22 +12,20 @@ use webb::{
 };
 use webb_relayer_context::RelayerContext;
 
+/// Relayer config data
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RelayerInformationResponse {
+    #[serde(flatten)]
+    config: webb_relayer_config::WebbRelayerConfig,
+}
+
 /// Handles relayer configuration requests
 ///
 /// Returns a Result with the `RelayerConfigurationResponse` on success
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_relayer_info(
-    ctx: Arc<RelayerContext>,
-) -> Result<impl warp::Reply, Infallible> {
-    #[derive(Debug, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    struct RelayerInformationResponse {
-        #[serde(flatten)]
-        config: webb_relayer_config::WebbRelayerConfig,
-    }
+    State(ctx): State<Arc<RelayerContext>>,
+) -> Json<RelayerInformationResponse> {
     // clone the original config, to update it with accounts.
     let mut config = ctx.config.clone();
 
@@ -55,5 +55,5 @@ pub async fn handle_relayer_info(
             v.beneficiary = Some(suri.public());
             webb_relayer_utils::Result::Ok(())
         });
-    Ok(warp::reply::json(&RelayerInformationResponse { config }))
+    Json(RelayerInformationResponse { config })
 }

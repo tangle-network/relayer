@@ -20,4 +20,3 @@ webb = { version = "0.5.14", default-features = false }
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.13.1"
-libsecp256k1 = "0.7.0"

@@ -20,6 +20,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::signal::unix;
 use tokio::time;
+use webb_relayer::service::build_web_services;
 
 use webb_relayer_config::cli::{create_store, load_config, setup_logger, Opts};
 use webb_relayer_context::RelayerContext;
@@ -45,14 +46,14 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // The configuration is validated and configured from the given directory
     let config = load_config(args.config_dir.clone())?;
 
-    // The RelayerContext takes a configuration, and populates objects that are needed
-    // throughout the lifetime of the relayer. Items such as wallets and providers, as well
-    // as a convenient place to access the configuration.
-    let ctx = RelayerContext::new(config);
-
     // persistent storage for the relayer
     let store = create_store(&args).await?;
     let cloned_store = store.clone();
+
+    // The RelayerContext takes a configuration, and populates objects that are needed
+    // throughout the lifetime of the relayer. Items such as wallets and providers, as well
+    // as a convenient place to access the configuration.
+    let ctx = RelayerContext::new(config, store.clone());
     let metrics_clone = ctx.metrics.clone();
 
     // metric for data stored which is determined every 1 hour
@@ -72,11 +73,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
 
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
-    let (addr, server) =
-        webb_relayer::service::build_web_services(ctx.clone(), store.clone())?;
-    tracing::info!("Starting the server on {}", addr);
-    // start the server.
-    let server_handle = tokio::spawn(server);
+    let server_handle = tokio::spawn(build_web_services(ctx.clone()));
     // start all background services.
     // this does not block, will fire the services on background tasks.
     webb_relayer::service::ignite(&ctx, Arc::new(store)).await?;

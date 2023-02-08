@@ -16,17 +16,20 @@
 
 #![allow(clippy::large_enum_variant)]
 #![warn(missing_docs)]
+use axum::extract::{Path, State, WebSocketUpgrade};
+use axum::http::StatusCode;
 use ethereum_types::{Address, U256};
-use std::convert::Infallible;
 use std::error::Error;
-use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 
 use futures::prelude::*;
 
+use axum::extract::ws::{Message, WebSocket};
+use axum::response::Response;
+use axum::Json;
+use axum_client_ip::ClientIp;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use warp::ws::Message;
 use webb_proposals::TypedChainId;
 
 use webb_relayer_context::RelayerContext;
@@ -34,8 +37,9 @@ use webb_relayer_handler_utils::{
     Command, CommandResponse, CommandStream, CommandType, EvmCommand,
     IpInformationResponse, SubstrateCommand,
 };
-use webb_relayer_tx_relay::evm::fees::get_fee_info;
+use webb_relayer_tx_relay::evm::fees::{get_fee_info, FeeInfo};
 
+use crate::routes::HandlerError;
 use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use webb_relayer_tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
@@ -43,28 +47,43 @@ use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx
 /// Module handles relayer API
 pub mod routes;
 
+/// Wait for websocket connection upgrade
+pub async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(ctx): State<Arc<RelayerContext>>,
+) -> Response {
+    ws.on_upgrade(move |socket| accept_websocket_connection(socket, ctx))
+}
+
 /// Sets up a websocket connection.
-///
-/// Returns `Ok(())` on success
 ///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `stream` - Websocket stream
-pub async fn accept_connection(
-    ctx: &RelayerContext,
-    stream: warp::ws::WebSocket,
-) -> webb_relayer_utils::Result<()> {
-    let (mut tx, mut rx) = stream.split();
+async fn accept_websocket_connection(ws: WebSocket, ctx: Arc<RelayerContext>) {
+    let (mut tx, mut rx) = ws.split();
 
     // Wait for client to send over text (such as relay transaction requests)
-    while let Some(msg) = rx.try_next().await? {
-        if let Ok(text) = msg.to_str() {
-            handle_text(ctx, text, &mut tx).await?;
+    while let Some(msg) = rx.next().await {
+        match msg {
+            Ok(msg) => {
+                if let Ok(text) = msg.to_text() {
+                    // Use inspect_err() here once stabilized
+                    let _ =
+                        handle_text(&ctx, text, &mut tx).await.map_err(|e| {
+                            tracing::warn!("Websocket handler error: {e}")
+                        });
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Websocket error: {e}");
+                return;
+            }
         }
     }
-    Ok(())
 }
+
 /// Sets up a websocket channels for message sending.
 ///
 /// This is primarily used for transaction relaying. The intention is
@@ -101,7 +120,7 @@ where
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
                 .inspect(|v| tracing::trace!("Sending: {}", v))
-                .map(Message::text)
+                .map(Message::Text)
                 .map(Result::Ok)
                 .forward(tx)
                 .map_err(|_| webb_relayer_utils::Error::FailedToSendResponse)
@@ -112,7 +131,7 @@ where
             tracing::debug!("Invalid payload: {:?}", v);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
-            tx.send(Message::text(value))
+            tx.send(Message::Text(value))
                 .map_err(|_| webb_relayer_utils::Error::FailedToSendResponse)
                 .await?;
         }
@@ -120,33 +139,17 @@ where
     Ok(())
 }
 
-/// Handles the `ip` address response
-///
-/// Returns a Result with the `IpInformationResponse` on success
-///
-/// # Arguments
-///
-/// * `ip` - Option containing the IP address
-pub async fn handle_ip_info(
-    ip: Option<IpAddr>,
-) -> Result<impl warp::Reply, Infallible> {
-    Ok(warp::reply::json(&IpInformationResponse {
-        ip: ip.unwrap().to_string(),
-    }))
-}
 /// Handles the socket address response
 ///
 /// Returns a Result with the `IpInformationResponse` on success
 ///
 /// # Arguments
 ///
-/// * `ip` - Option containing the socket address
+/// * `ip` - Extractor for client IP, taking into account x-forwarded-for and similar headers
 pub async fn handle_socket_info(
-    ip: Option<SocketAddr>,
-) -> Result<impl warp::Reply, Infallible> {
-    Ok(warp::reply::json(&IpInformationResponse {
-        ip: ip.unwrap().ip().to_string(),
-    }))
+    ClientIp(ip): ClientIp,
+) -> Json<IpInformationResponse> {
+    Json(IpInformationResponse { ip: ip.to_string() })
 }
 
 /// Handles the command prompts for EVM and Substrate chains
@@ -223,29 +226,20 @@ pub async fn handle_substrate<'a>(
 ///
 /// # Arguments
 ///
-/// * `ctx` - RelayContext reference that holds the configuration
 /// * `chain_id` - ID of the blockchain
 /// * `vanchor` - Address of the smart contract
 /// * `gas_amount` - How much gas the transaction needs. Don't use U256 here because it
 ///                  gets parsed incorrectly.
 pub async fn handle_fee_info(
-    ctx: Arc<RelayerContext>,
-    chain_id: u64,
-    vanchor: Address,
-    gas_amount: u64,
-) -> Result<impl warp::Reply, Infallible> {
+    State(ctx): State<Arc<RelayerContext>>,
+    Path((chain_id, vanchor, gas_amount)): Path<(u64, Address, u64)>,
+) -> Result<Json<FeeInfo>, HandlerError> {
     let chain_id = TypedChainId::from(chain_id);
     let gas_amount = U256::from(gas_amount);
-    let fee_info = get_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
+    get_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
         .await
-        .and_then(|f| Ok(serde_json::to_string(&f)?));
-    Ok(match fee_info {
-        Ok(value) => {
-            warp::reply::with_status(value, warp::http::StatusCode::OK)
-        }
-        Err(e) => warp::reply::with_status(
-            e.to_string(),
-            warp::http::StatusCode::INTERNAL_SERVER_ERROR,
-        ),
-    })
+        .map(Json)
+        .map_err(|e| {
+            HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })
 }
