@@ -56,6 +56,8 @@ where
 {
     const TAG: &'static str = "Substrate V-Anchor Watcher";
 
+    const PALLET_NAME: &'static str = "VAnchorBn254";
+
     type RuntimeConfig = subxt::SubstrateConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;

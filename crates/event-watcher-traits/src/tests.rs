@@ -31,6 +31,8 @@ struct RemarkedEventWatcher;
 impl SubstrateEventWatcher for RemarkedEventWatcher {
     const TAG: &'static str = "Remarked Event Watcher";
 
+    const PALLET_NAME: &'static str = "System";
+
     type RuntimeConfig = subxt::PolkadotConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;
