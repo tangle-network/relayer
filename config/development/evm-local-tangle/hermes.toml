@@ -1,13 +1,14 @@
 # Block which represents properties for a network
-[evm.athena]
+[evm.hermes]
 # The name that the chain is indexed on, for linkable anchors
-name = "athena"
+name = "hermes"
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "$ATHENA_HTTP_URL"
+http-endpoint = "$HERMES_HTTP_URL"
 # Websocket Endpoint for long living connections
-ws-endpoint = "$ATHENA_WS_URL"
+ws-endpoint = "$HERMES_WS_URL"
 # chain specific id from evm opcode
-chain-id = 5002
+chain-id = 5001
+block-confirmations = 0
 # The Private Key of this account on this network
 # the format is more dynamic here:
 # 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
@@ -25,20 +26,19 @@ chain-id = 5002
 #
 # 4. if it doesn't contains special characters and has 12 or 24 words in it
 #    then we should process it as a mnemonic string: 'word two three four ...'
-private-key = "$ATHENA_PRIVATE_KEY"
-
+private-key = "$HERMES_PRIVATE_KEY"
 tx-queue = { max-sleep-interval = 1500 }
 # Value to indicate that the relayer should enable services for this chain
 enabled = true
 
 # Block which represents the configuration for a supported contract on the network
-[[evm.athena.contracts]]
+[[evm.hermes.contracts]]
 # The contract can be one of these values
 # - VAnchor (Variable Anchor)
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0x6595b34ED0a270B10a586FC1EA22030A95386f1e"
+address = "0xc705034ded85e817b9E56C977E61A2098362898B"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
@@ -46,23 +46,28 @@ deployed-at = 1
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
-events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 60000 }
+events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 30000 }
+# Configuration related to withdraw (for private transaction relaying)
+#    - withdraw-gasLimit: Value which specifies the maximum amount of gas which will be used when
+#                         submitting a withdraw transaction
+#    - withdraw-fee-percentage: Value which specifies the fees that this relayer will collect upon
+#                               submitting a withdraw transaction
+withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { type = "Evm", chain = "hermes", chain-id = 5001, address = "0x6595b34ED0a270B10a586FC1EA22030A95386f1e" },
+  { type = "Evm", chain = "athena", chain-id = 5002, address = "0x91eB86019FD8D7c5a9E31143D422850A13F670A3" },
   { type = "Evm", chain = "demeter", chain-id = 5003, address = "0x6595b34ED0a270B10a586FC1EA22030A95386f1e"},
 ]
-
 # Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
 # the signed proposals to the configured SignatureBridge of the relevant chains.
 
-proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
-# proposal-signing-backend = { type = "DKGNode", node = "5" }
+#proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
+proposal-signing-backend = { type = "DKGNode", node = "1080" }
 
-[[evm.athena.contracts]]
+[[evm.hermes.contracts]]
 contract = "SignatureBridge"
-address = "0xf2e246bb76df876cef8b38ae84130f4f55de395b"
+address = "0xDe09E74d4888Bc4e65F589e8c13Bce9F71DdF4c7"
 deployed-at = 1
-events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 60000 }
+events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 30000 }

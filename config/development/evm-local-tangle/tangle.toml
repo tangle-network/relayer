@@ -1,0 +1,15 @@
+[substrate.tangle]
+name = "tangle"
+http-endpoint = "http://localhost:9933"
+ws-endpoint = "ws://localhost:9944"
+chain-id = 1080
+enabled = true
+runtime = "DKG"
+suri = "//Bob"
+
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true, polling-interval = 3000, print-progress-interval = 30000 }
+[[substrate.tangle.pallets]]
+pallet = "DKGProposalHandler"
+events-watcher = { enabled = true, polling-interval = 3000, print-progress-interval = 30000 }
