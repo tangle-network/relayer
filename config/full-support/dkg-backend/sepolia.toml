@@ -27,8 +27,6 @@ deployed-at = 2545802
 
 events-watcher = { enabled = true, polling-interval = 15000 }
 
-withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
-
 linked-anchors = [
   { type = "Evm", chain = "goerli", chain-id = 5, address = "0x3a4233bf223622f6571b8543498a62b9e2a3b31f" },
   { type = "Evm", chain = "optimismtestnet", chain-id = 420, address = "0x9d36b94f245857ec7280415140800dde7642addb" },

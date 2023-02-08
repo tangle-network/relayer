@@ -29,7 +29,6 @@ deployed-at = 3706371
 
 events-watcher = { enabled = true, polling-interval = 15000 }
 
-withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [

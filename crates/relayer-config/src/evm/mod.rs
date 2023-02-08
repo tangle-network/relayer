@@ -2,8 +2,7 @@ use ethereum_types::Address;
 use webb_relayer_types::{private_key::PrivateKey, rpc_url::RpcUrl};
 
 use crate::{
-    anchor::{LinkedAnchorConfig, VAnchorWithdrawConfig},
-    block_poller::BlockPollerConfig,
+    anchor::LinkedAnchorConfig, block_poller::BlockPollerConfig,
     event_watcher::EventsWatcherConfig,
     signing_backend::ProposalSigningBackendConfig,
 };
@@ -116,9 +115,6 @@ pub struct VAnchorContractConfig {
     /// Controls the events watcher
     #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
-    /// Anchor withdraw configuration.
-    #[serde(rename(serialize = "withdrawConfig"))]
-    pub withdraw_config: Option<VAnchorWithdrawConfig>,
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,

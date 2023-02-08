@@ -163,11 +163,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     // Deploy the token.
-    const localToken1 = await localChain1.deployToken(
-      'Webb Token',
-      'WEBB',
-      wallet1
-    );
+    const localToken1 = await localChain1.deployToken('Webb Token', 'WEBB');
 
     signatureVBridge = await localChain1.deployVBridge(
       localToken1,

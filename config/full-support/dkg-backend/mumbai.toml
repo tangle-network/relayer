@@ -27,8 +27,6 @@ deployed-at = 30098018
 
 events-watcher = { enabled = true, polling-interval = 15000 }
 
-withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
-
 linked-anchors = [
   { type = "Evm", chain = "goerli", chain-id = 5, address = "0x3a4233bf223622f6571b8543498a62b9e2a3b31f" },
   { type = "Evm", chain = "sepolia", chain-id = 11155111, address = "0xb2d1d8d651c53a00e13ea0a363aab575a6886391" },

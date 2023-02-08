@@ -117,8 +117,11 @@ Webb Relayer is easy to run and with flexible config 👌. The first step is to 
 Example:
 
 - Create an `.env` file with the following values for the networks you wish to support.
+- You also need to request an API key on [etherscan.io](https://docs.etherscan.io/getting-started/viewing-api-usage-statistics) and add it.
 
 ```
+ETHERSCAN_API_KEY=your-key
+
 WEBB_EVM_<network>_ENABLED=true
 WEBB_EVM_<network>_PRIVATE_KEY=<0X_PREFIXED_PRIVATE_KEY>
 
@@ -369,6 +372,33 @@ The relayer has 3 endpoints available to query from. They are outlined below for
   ```json
   {
   "metrics": "# HELP bridge_watcher_back_off_metric specifies how many times the bridge watcher backed off\n# TYPE bridge_watcher_back_off_metric counter\nbridge_watcher_back_off_metric 0\n# HELP gas_spent_metric The total number of gas spent\n# TYPE gas_spent_metric counter\ngas_spent_metric 0\n# HELP handle_proposal_execution_metric How many times did the function handle_proposal get executed\n# TYPE handle_proposal_execution_metric counter\nhandle_proposal_execution_metric 0\n# HELP proposal_queue_attempt_metric How many times a proposal is attempted to be queued\n# TYPE proposal_queue_attempt_metric counter\nproposal_queue_attempt_metric 0\n# HELP total_active_relayer_metric The total number of active relayers\n# TYPE total_active_relayer_metric counter\ntotal_active_relayer_metric 0\n# HELP total_fee_earned_metric The total number of fees earned\n# TYPE total_fee_earned_metric counter\ntotal_fee_earned_metric 0\n# HELP total_number_of_data_stored_metric The Total number of data stored\n# TYPE total_number_of_data_stored_metric counter\ntotal_number_of_data_stored_metric 1572864\n# HELP total_number_of_proposals_metric The total number of proposals proposed\n# TYPE total_number_of_proposals_metric counter\ntotal_number_of_proposals_metric 0\n# HELP total_transaction_made_metric The total number of transaction made\n# TYPE total_transaction_made_metric counter\ntotal_transaction_made_metric 0\n# HELP transaction_queue_back_off_metric How many times the transaction queue backed off\n# TYPE transaction_queue_back_off_metric counter\ntransaction_queue_back_off_metric 0\n"
+}
+  ```
+</details>
+
+
+**Retrieve fee information**
+
+```
+/api/v1/fee_info
+```
+
+##### Parameters
+
+- `chain_id`
+- `contract_address`
+- `gas_amount`
+
+<details>
+  <summary>Expected Response</summary>
+
+  ```json
+  {
+      "estimatedFee": "0x476b26e0f",
+      "gasPrice": "0x11",
+      "refundExchangeRate": "0x28f",
+      "maxRefund": "0xf3e59",
+      "timestamp": "2023-01-19T06:29:49.556114073Z"
   }
   ```
 </details>
@@ -421,10 +451,9 @@ Here is the basic setup you will need:
 3. Then fetch the submodules for the node `cd protocol-substrate && git submodule update --init`
 4. While you are there, build the standalone node `cargo build --release -p webb-standalone-node`
 5. And then go back to the relayer `cd ../relayer`
-6. Run `cargo build --features integration-tests,cli`
-7. Run `cd tests && dvc pull`
-8. Run `yarn install` (in `tests` dir)
-9. `yarn test`
+6. Run `cd tests && dvc pull`
+7. Run `yarn install` (in `tests` dir)
+8. `yarn test`
 
 ### Tips for E2E tests
 

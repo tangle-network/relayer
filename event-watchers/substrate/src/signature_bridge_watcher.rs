@@ -43,6 +43,8 @@ pub struct SubstrateBridgeEventWatcher;
 impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
     const TAG: &'static str = "Substrate bridge pallet Watcher";
 
+    const PALLET_NAME: &'static str = "SignatureBridge";
+
     type RuntimeConfig = subxt::SubstrateConfig;
 
     type Client = OnlineClient<Self::RuntimeConfig>;
