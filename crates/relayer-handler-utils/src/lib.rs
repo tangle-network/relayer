@@ -58,21 +58,29 @@ impl<'de> Deserialize<'de> for WebbI256 {
 #[serde(rename_all = "camelCase")]
 pub enum Command {
     /// Substrate specific subcommand.
-    Substrate(SubstrateCommand),
+    Substrate(SubstrateCommandType),
     /// EVM specific subcommand.
-    Evm(EvmCommand),
+    Evm(EvmCommandType),
     /// Ping?
     Ping(),
 }
 
-/// Enumerates the supported protocols for relaying transactions
+/// Enumerates the supported evm commands for relaying transactions
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub enum CommandType<Id, P, R, E, I, B, A, T> {
-    /// Webb Mixer.
-    Mixer(MixerRelayTransaction<Id, P, E, I, B>),
+pub enum EvmCommandType {
     /// Webb Variable Anchors.
-    VAnchor(VAnchorRelayTransaction<Id, P, R, E, I, B, A, T>),
+    VAnchor(EvmVanchorCommand),
+}
+
+/// Enumerates the supported substrate commands for relaying transactions
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum SubstrateCommandType {
+    /// Webb Mixer.
+    Mixer(SubstrateMixerCommand),
+    /// Webb Variable Anchors.
+    VAnchor(SubstrateVAchorCommand),
 }
 
 /// Enumerates the command responses
@@ -87,9 +95,6 @@ pub enum CommandResponse {
     Withdraw(WithdrawStatus),
     /// An error occurred
     Error(String),
-    /// Unsupported feature or yet to be implemented.
-    #[allow(unused)]
-    Unimplemented(&'static str),
 }
 /// Enumerates the network status response of the relayer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -148,8 +153,8 @@ pub enum WithdrawStatus {
 
 /// Type alias for mpsc::Sender<CommandResponse>
 pub type CommandStream = mpsc::Sender<CommandResponse>;
-/// The command type for EVM txes
-pub type EvmCommand = CommandType<
+/// The command type for EVM vanchor transactions
+pub type EvmVanchorCommand = VAnchorRelayTransaction<
     Address,  // Contract address
     Bytes,    // Proof bytes
     Bytes,    // Roots format
@@ -159,17 +164,21 @@ pub type EvmCommand = CommandType<
     WebbI256, // Signed amount type
     Address,  // Token Address
 >;
-/// The command type for Substrate pallet txes
-pub type SubstrateCommand = CommandType<
-    u32,           // Tree Id
-    Vec<u8>,       // Raw proof bytes
-    Vec<[u8; 32]>, // Roots format
-    [u8; 32],      // Element type
-    AccountId32,   // Account identifier
-    u128,          // Balance type
-    i128,          // Signed amount type
-    u32,           // AssetId
->;
+
+type Id = u32; //  Substrate tree Id
+type P = Vec<u8>; // Substrate raw proof bytes
+type R = Vec<[u8; 32]>; // Substrate roots format
+type E = [u8; 32]; // Substrate element type
+type I = AccountId32; // Substrate account identifier
+type B = u128; // Substrate balance type
+type A = i128; // Substrate signed amount type
+type T = u32; // Substrate assetId
+
+/// The command type for Substrate mixer txes
+pub type SubstrateMixerCommand = MixerRelayTransaction<Id, P, E, I, B>;
+/// The command type for Substrate vanchor txes
+pub type SubstrateVAchorCommand =
+    VAnchorRelayTransaction<Id, P, R, E, I, B, A, T>;
 
 /// A helper function to extract the error code and the reason from EVM errors.
 pub fn into_withdraw_error<M: Middleware>(

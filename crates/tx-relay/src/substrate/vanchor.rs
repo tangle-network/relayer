@@ -12,7 +12,7 @@ use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handler_utils::SubstrateCommand;
+use webb_relayer_handler_utils::SubstrateVAchorCommand;
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for Substrate Anchor commands
@@ -24,14 +24,10 @@ use webb_relayer_utils::metric::Metrics;
 /// * `stream` - The stream to write the response to
 pub async fn handle_substrate_vanchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: SubstrateCommand,
+    cmd: SubstrateVAchorCommand,
     stream: CommandStream,
-) {
+) -> Result<(), CommandResponse> {
     use CommandResponse::*;
-    let cmd = match cmd {
-        SubstrateCommand::VAnchor(cmd) => cmd,
-        _ => return,
-    };
 
     let proof_elements: vanchor::ProofData<Element> = vanchor::ProofData {
         proof: cmd.proof_data.proof,
@@ -67,28 +63,16 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     let maybe_client = ctx
         .substrate_provider::<SubstrateConfig>(&requested_chain.to_string())
         .await;
-    let client = match maybe_client {
-        Ok(c) => c,
-        Err(e) => {
-            tracing::error!("Error while getting Substrate client: {}", e);
-            let _ = stream.send(Error(format!("{e}"))).await;
-            return;
-        }
-    };
+    let client = maybe_client.map_err(|e| {
+        Error(format!("Error while getting Substrate client: {e}"))
+    })?;
 
-    let pair = match ctx.substrate_wallet(&cmd.chain_id.to_string()).await {
-        Ok(v) => v,
-        Err(e) => {
-            tracing::error!("Misconfigured Network: {}", e);
-            let _ = stream
-                .send(Error(format!(
-                    "Misconfigured Network: {:?}",
-                    cmd.chain_id
-                )))
-                .await;
-            return;
-        }
-    };
+    let pair = ctx
+        .substrate_wallet(&cmd.chain_id.to_string())
+        .await
+        .map_err(|e| {
+            Error(format!("Misconfigured Network {:?}: {e}", cmd.chain_id))
+        })?;
 
     let signer = PairSigner::new(pair);
 
@@ -102,31 +86,21 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .sign_and_submit_then_watch_default(&transact_tx, &signer)
         .await;
 
-    let event_stream = match transact_tx_hash {
-        Ok(s) => s,
-        Err(e) => {
-            tracing::error!("Error while sending Tx: {}", e);
-            let _ = stream.send(Error(format!("{e}"))).await;
-            return;
-        }
-    };
+    let event_stream = transact_tx_hash
+        .map_err(|e| Error(format!("Error while sending Tx: {e}")))?;
 
-    handle_substrate_tx(event_stream, stream, cmd.chain_id).await;
+    handle_substrate_tx(event_stream, stream, cmd.chain_id).await?;
 
-    let target = {
-        let metadata = client.metadata();
-        let pallet = metadata.pallet("VAnchorHandlerBn254");
-        match pallet {
-            Ok(pallet) => SubstrateTargetSystem::builder()
+    let target = client
+        .metadata()
+        .pallet("VAnchorHandlerBn254")
+        .map(|pallet| {
+            SubstrateTargetSystem::builder()
                 .pallet_index(pallet.index())
                 .tree_id(cmd.id)
-                .build(),
-            Err(e) => {
-                tracing::error!("Vanchor handler pallet not found: {}", e);
-                return;
-            }
-        }
-    };
+                .build()
+        })
+        .map_err(|e| Error(format!("Vanchor handler pallet not found: {e}")))?;
 
     let target_system = TargetSystem::Substrate(target);
     let typed_chain_id = TypedChainId::Substrate(cmd.chain_id as u32);
@@ -146,4 +120,5 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .inc_by(cmd.ext_data.fee as f64);
     // update metric for total fee earned by relayer
     metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
+    Ok(())
 }

@@ -34,8 +34,8 @@ use webb_proposals::TypedChainId;
 
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{
-    Command, CommandResponse, CommandStream, CommandType, EvmCommand,
-    IpInformationResponse, SubstrateCommand,
+    Command, CommandResponse, CommandStream, EvmCommandType,
+    IpInformationResponse, SubstrateCommandType,
 };
 use webb_relayer_tx_relay::evm::fees::{get_fee_info, FeeInfo};
 
@@ -113,7 +113,10 @@ where
     let res_stream = ReceiverStream::new(my_rx);
     match serde_json::from_str(v) {
         Ok(cmd) => {
-            handle_cmd(ctx.clone(), cmd, my_tx).await;
+            if let Err(e) = handle_cmd(ctx.clone(), cmd, my_tx.clone()).await {
+                tracing::error!("{:?}", e);
+                let _ = my_tx.send(e).await;
+            }
             // Send back the response, usually a transaction hash
             // from processing the transaction relaying command.
             res_stream
@@ -163,61 +166,30 @@ pub async fn handle_cmd(
     ctx: RelayerContext,
     cmd: Command,
     stream: CommandStream,
-) {
-    use CommandResponse::*;
-    if ctx.config.features.private_tx_relay {
-        match cmd {
-            Command::Substrate(sub) => handle_substrate(ctx, sub, stream).await,
-            Command::Evm(evm) => handle_evm(ctx, evm, stream).await,
-            Command::Ping() => {
-                let _ = stream.send(Pong()).await;
-            }
-        }
-    } else {
-        tracing::error!("Private transaction relaying is not configured..!");
-        let _ = stream
-            .send(Error(
-                "Private transaction relaying is not enabled.".to_string(),
-            ))
-            .await;
+) -> Result<(), CommandResponse> {
+    if !ctx.config.features.private_tx_relay {
+        return Err(CommandResponse::Error(
+            "Private transaction relaying is not enabled.".to_string(),
+        ));
     }
-}
 
-/// Handler for EVM commands
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `cmd` - The command to execute
-/// * `stream` - The stream to write the response to
-pub async fn handle_evm(
-    ctx: RelayerContext,
-    cmd: EvmCommand,
-    stream: CommandStream,
-) {
-    if let CommandType::VAnchor(_) = cmd {
-        handle_vanchor_relay_tx(ctx, cmd, stream).await
-    }
-}
-
-/// Handler for Substrate commands
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `cmd` - The command to execute
-/// * `stream` - The stream to write the response to
-pub async fn handle_substrate<'a>(
-    ctx: RelayerContext,
-    cmd: SubstrateCommand,
-    stream: CommandStream,
-) {
     match cmd {
-        CommandType::Mixer(_) => {
-            handle_substrate_mixer_relay_tx(ctx, cmd, stream).await;
-        }
-        CommandType::VAnchor(_) => {
-            handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await;
+        Command::Substrate(substrate) => match substrate {
+            SubstrateCommandType::VAnchor(vanchor) => {
+                handle_substrate_vanchor_relay_tx(ctx, vanchor, stream).await
+            }
+            SubstrateCommandType::Mixer(mixer) => {
+                handle_substrate_mixer_relay_tx(ctx, mixer, stream).await
+            }
+        },
+        Command::Evm(evm) => match evm {
+            EvmCommandType::VAnchor(vanchor) => {
+                handle_vanchor_relay_tx(ctx, vanchor, stream).await
+            }
+        },
+        Command::Ping() => {
+            let _ = stream.send(CommandResponse::Pong()).await;
+            Ok(())
         }
     }
 }
