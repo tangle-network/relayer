@@ -34,8 +34,8 @@ use webb_proposals::TypedChainId;
 
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{
-    Command, CommandResponse, CommandStream, CommandType, EvmCommand,
-    IpInformationResponse, SubstrateCommand,
+    Command, CommandResponse, CommandStream, EvmCommandType,
+    IpInformationResponse, SubstrateCommandType,
 };
 use webb_relayer_tx_relay::evm::fees::{get_fee_info, FeeInfo};
 
@@ -167,64 +167,31 @@ pub async fn handle_cmd(
     cmd: Command,
     stream: CommandStream,
 ) -> Result<(), CommandResponse> {
-    use CommandResponse::*;
-    if ctx.config.features.private_tx_relay {
-        match cmd {
-            Command::Substrate(sub) => {
-                handle_substrate(ctx, sub, stream).await?
-            }
-            Command::Evm(evm) => handle_evm(ctx, evm, stream).await?,
-            Command::Ping() => {
-                let _ = stream.send(Pong()).await;
-            }
-        }
-    } else {
-        return Err(Error(
+    if !ctx.config.features.private_tx_relay {
+        return Err(CommandResponse::Error(
             "Private transaction relaying is not enabled.".to_string(),
         ));
     }
-    Ok(())
-}
 
-/// Handler for EVM commands
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `cmd` - The command to execute
-/// * `stream` - The stream to write the response to
-pub async fn handle_evm(
-    ctx: RelayerContext,
-    cmd: EvmCommand,
-    stream: CommandStream,
-) -> Result<(), CommandResponse> {
-    if let CommandType::VAnchor(_) = cmd {
-        handle_vanchor_relay_tx(ctx, cmd, stream.clone()).await?;
-    }
-    Ok(())
-}
-
-/// Handler for Substrate commands
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `cmd` - The command to execute
-/// * `stream` - The stream to write the response to
-pub async fn handle_substrate<'a>(
-    ctx: RelayerContext,
-    cmd: SubstrateCommand,
-    stream: CommandStream,
-) -> Result<(), CommandResponse> {
     match cmd {
-        CommandType::Mixer(_) => {
-            handle_substrate_mixer_relay_tx(ctx, cmd, stream).await?;
-        }
-        CommandType::VAnchor(_) => {
-            handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await?;
+        Command::Substrate(substrate) => match substrate {
+            SubstrateCommandType::VAnchor(vanchor) => {
+                handle_substrate_vanchor_relay_tx(ctx, vanchor, stream).await
+            }
+            SubstrateCommandType::Mixer(mixer) => {
+                handle_substrate_mixer_relay_tx(ctx, mixer, stream).await
+            }
+        },
+        Command::Evm(evm) => match evm {
+            EvmCommandType::VAnchor(vanchor) => {
+                handle_vanchor_relay_tx(ctx, vanchor, stream).await
+            }
+        },
+        Command::Ping() => {
+            let _ = stream.send(CommandResponse::Pong()).await;
+            Ok(())
         }
     }
-    Ok(())
 }
 
 /// Handler for fee estimation

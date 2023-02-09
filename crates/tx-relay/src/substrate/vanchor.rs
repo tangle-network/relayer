@@ -12,7 +12,7 @@ use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handler_utils::SubstrateCommand;
+use webb_relayer_handler_utils::SubstrateVAchorCommand;
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for Substrate Anchor commands
@@ -24,14 +24,10 @@ use webb_relayer_utils::metric::Metrics;
 /// * `stream` - The stream to write the response to
 pub async fn handle_substrate_vanchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: SubstrateCommand,
+    cmd: SubstrateVAchorCommand,
     stream: CommandStream,
 ) -> Result<(), CommandResponse> {
     use CommandResponse::*;
-    let cmd = match cmd {
-        SubstrateCommand::VAnchor(cmd) => cmd,
-        _ => return Err(Unimplemented("Unsupported command")),
-    };
 
     let proof_elements: vanchor::ProofData<Element> = vanchor::ProofData {
         proof: cmd.proof_data.proof,

@@ -6,7 +6,7 @@ use webb::substrate::{
     subxt::{tx::PairSigner, SubstrateConfig},
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handler_utils::SubstrateCommand;
+use webb_relayer_handler_utils::SubstrateMixerCommand;
 
 /// Handler for Substrate Mixer commands
 ///
@@ -17,15 +17,10 @@ use webb_relayer_handler_utils::SubstrateCommand;
 /// * `stream` - The stream to write the response to
 pub async fn handle_substrate_mixer_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: SubstrateCommand,
+    cmd: SubstrateMixerCommand,
     stream: CommandStream,
 ) -> Result<(), CommandResponse> {
     use CommandResponse::*;
-
-    let cmd = match cmd {
-        SubstrateCommand::Mixer(cmd) => cmd,
-        _ => return Err(Unimplemented("Unsupported command")),
-    };
 
     let root_element = Element(cmd.root);
     let nullifier_hash_element = Element(cmd.nullifier_hash);

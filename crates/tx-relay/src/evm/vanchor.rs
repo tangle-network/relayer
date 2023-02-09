@@ -12,7 +12,8 @@ use webb::evm::{
 };
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handler_utils::{CommandStream, EvmCommand, NetworkStatus};
+use webb_relayer_handler_utils::EvmVanchorCommand;
+use webb_relayer_handler_utils::{CommandStream, NetworkStatus};
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for VAnchor commands
@@ -24,14 +25,10 @@ use webb_relayer_utils::metric::Metrics;
 /// * `stream` - The stream to write the response to
 pub async fn handle_vanchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: EvmCommand,
+    cmd: EvmVanchorCommand,
     stream: CommandStream,
 ) -> Result<(), CommandResponse> {
     use CommandResponse::*;
-    let cmd = match cmd {
-        EvmCommand::VAnchor(cmd) => cmd,
-        _ => return Err(Unimplemented("Unsupported command")),
-    };
 
     let requested_chain = cmd.chain_id;
     let chain = ctx
