@@ -354,6 +354,16 @@ where
             %nonce,
             signature = %hex::encode(&signature),
         );
+        // estimated gas
+        let estimate_gas = contract
+            .transfer_ownership_with_signature_pub_key(
+                public_key.clone().into(),
+                nonce,
+                signature.clone().into(),
+            )
+            .estimate_gas()
+            .await?;
+
         // get the current governor nonce.
         let call = contract
             .transfer_ownership_with_signature_pub_key(
@@ -361,7 +371,7 @@ where
                 nonce,
                 signature.into(),
             )
-            .gas(46656 * 3);
+            .gas(estimate_gas.saturating_mul(U256::from(2)));
 
         QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
         tracing::debug!(
