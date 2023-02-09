@@ -26,22 +26,19 @@ pub async fn handle_vanchor_relay_tx<'a>(
     ctx: RelayerContext,
     cmd: EvmCommand,
     stream: CommandStream,
-) {
+) -> Result<(), CommandResponse> {
     use CommandResponse::*;
     let cmd = match cmd {
         EvmCommand::VAnchor(cmd) => cmd,
-        _ => return,
+        _ => return Err(Unimplemented("Unsupported command")),
     };
 
     let requested_chain = cmd.chain_id;
-    let chain = match ctx.config.evm.get(&requested_chain.to_string()) {
-        Some(v) => v,
-        None => {
-            tracing::warn!("Unsupported Chain: {}", requested_chain);
-            let _ = stream.send(Network(NetworkStatus::UnsupportedChain)).await;
-            return;
-        }
-    };
+    let chain = ctx
+        .config
+        .evm
+        .get(&requested_chain.to_string())
+        .ok_or(Network(NetworkStatus::UnsupportedChain))?;
     let supported_contracts: HashMap<_, _> = chain
         .contracts
         .iter()
@@ -53,51 +50,28 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .map(|c| (c.common.address, c))
         .collect();
     // get the contract configuration
-    let contract_config = match supported_contracts.get(&cmd.id) {
-        Some(config) => config,
-        None => {
-            tracing::warn!("Unsupported Contract: {:?}", cmd.id);
-            let _ = stream
-                .send(Network(NetworkStatus::UnsupportedContract))
-                .await;
-            return;
-        }
-    };
+    let contract_config = supported_contracts
+        .get(&cmd.id)
+        .ok_or(Network(NetworkStatus::UnsupportedContract))?;
 
-    let wallet = match ctx.evm_wallet(&cmd.chain_id.to_string()).await {
-        Ok(v) => v,
-        Err(e) => {
-            tracing::error!("Misconfigured Network: {}", e);
-            let _ = stream
-                .send(Error(format!(
-                    "Misconfigured Network: {:?}",
-                    cmd.chain_id
-                )))
-                .await;
-            return;
-        }
-    };
+    let wallet =
+        ctx.evm_wallet(&cmd.chain_id.to_string())
+            .await
+            .map_err(|e| {
+                Error(format!("Misconfigured Network: {:?}, {e}", cmd.chain_id))
+            })?;
     // validate the relayer address first before trying
     // send the transaction.
-    let reward_address = match chain.beneficiary {
-        Some(account) => account,
-        None => wallet.address(),
-    };
+    let reward_address = chain.beneficiary.unwrap_or(wallet.address());
 
     if cmd.ext_data.relayer != reward_address {
-        let _ = stream
-            .send(Network(NetworkStatus::InvalidRelayerAddress))
-            .await;
-        return;
+        return Err(Network(NetworkStatus::InvalidRelayerAddress));
     }
 
     // validate that the roots are multiple of 32s
     let roots = cmd.proof_data.roots.to_vec();
     if roots.len() % 32 != 0 {
-        let _ = stream
-            .send(Withdraw(WithdrawStatus::InvalidMerkleRoots))
-            .await;
-        return;
+        return Err(Withdraw(WithdrawStatus::InvalidMerkleRoots));
     }
 
     tracing::debug!(
@@ -106,19 +80,15 @@ pub async fn handle_vanchor_relay_tx<'a>(
         chain.http_endpoint
     );
     let _ = stream.send(Network(NetworkStatus::Connecting)).await;
-    let provider = match ctx.evm_provider(&cmd.chain_id.to_string()).await {
-        Ok(value) => {
-            let _ = stream.send(Network(NetworkStatus::Connected)).await;
-            value
-        }
-        Err(e) => {
-            let reason = e.to_string();
-            let _ =
-                stream.send(Network(NetworkStatus::Failed { reason })).await;
-            let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
-            return;
-        }
-    };
+    let provider =
+        ctx.evm_provider(&cmd.chain_id.to_string())
+            .await
+            .map_err(|e| {
+                Network(NetworkStatus::Failed {
+                    reason: e.to_string(),
+                })
+            })?;
+    let _ = stream.send(Network(NetworkStatus::Connected)).await;
 
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
     let contract = VAnchorContract::new(cmd.id, client.clone());
@@ -165,59 +135,44 @@ pub async fn handle_vanchor_relay_tx<'a>(
         encryptions,
     );
 
-    let gas_amount = match client.estimate_gas(&call.tx, None).await {
-        Ok(value) => value,
-        Err(e) => {
-            let reason = e.to_string();
-            let _ =
-                stream.send(Network(NetworkStatus::Failed { reason })).await;
-            let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
-            return;
-        }
-    };
+    let gas_amount =
+        client.estimate_gas(&call.tx, None).await.map_err(|e| {
+            Network(NetworkStatus::Failed {
+                reason: e.to_string(),
+            })
+        })?;
     let typed_chain_id = TypedChainId::Evm(chain.chain_id);
-    let fee_info = match get_fee_info(
+    let fee_info = get_fee_info(
         typed_chain_id,
         contract_config.common.address,
         gas_amount,
         &ctx,
     )
     .await
-    {
-        Ok(value) => value,
-        Err(e) => {
-            let reason = e.to_string();
-            let _ =
-                stream.send(Network(NetworkStatus::Failed { reason })).await;
-            let _ = stream.send(Network(NetworkStatus::Disconnected)).await;
-            return;
-        }
-    };
+    .map_err(|e| {
+        Network(NetworkStatus::Failed {
+            reason: e.to_string(),
+        })
+    })?;
 
     // validate refund amount
     if cmd.ext_data.refund > fee_info.max_refund {
-        tracing::error!(
-            "User requested a refund which is higher than the maximum"
-        );
         let msg = format!(
             "User requested a refund which is higher than the maximum of {}",
             fee_info.max_refund
         );
-        let _ = stream.send(Error(msg)).await;
-        return;
+        return Err(Error(msg));
     }
 
     // check the fee
     // TODO: This adjustment could potentially be exploited
     let adjusted_fee = fee_info.estimated_fee / 100 * 98;
     if cmd.ext_data.fee < adjusted_fee {
-        tracing::error!("Received a fee lower than expected");
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
             cmd.ext_data.fee, fee_info.estimated_fee
         );
-        let _ = stream.send(Error(msg)).await;
-        return;
+        return Err(Error(msg));
     }
 
     let target_system = TargetSystem::new_contract_address(
@@ -227,7 +182,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
     handle_evm_tx(call, stream, cmd.chain_id, ctx.metrics.clone(), resource_id)
-        .await;
+        .await?;
 
     // update metric
     let metrics_clone = ctx.metrics.clone();
@@ -245,4 +200,5 @@ pub async fn handle_vanchor_relay_tx<'a>(
     metrics
         .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u64() as f64);
+    Ok(())
 }

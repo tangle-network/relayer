@@ -113,7 +113,10 @@ where
     let res_stream = ReceiverStream::new(my_rx);
     match serde_json::from_str(v) {
         Ok(cmd) => {
-            handle_cmd(ctx.clone(), cmd, my_tx).await;
+            if let Err(e) = handle_cmd(ctx.clone(), cmd, my_tx.clone()).await {
+                tracing::error!("{:?}", e);
+                let _ = my_tx.send(e).await;
+            }
             // Send back the response, usually a transaction hash
             // from processing the transaction relaying command.
             res_stream
@@ -163,24 +166,24 @@ pub async fn handle_cmd(
     ctx: RelayerContext,
     cmd: Command,
     stream: CommandStream,
-) {
+) -> Result<(), CommandResponse> {
     use CommandResponse::*;
     if ctx.config.features.private_tx_relay {
         match cmd {
-            Command::Substrate(sub) => handle_substrate(ctx, sub, stream).await,
-            Command::Evm(evm) => handle_evm(ctx, evm, stream).await,
+            Command::Substrate(sub) => {
+                handle_substrate(ctx, sub, stream).await?
+            }
+            Command::Evm(evm) => handle_evm(ctx, evm, stream).await?,
             Command::Ping() => {
                 let _ = stream.send(Pong()).await;
             }
         }
     } else {
-        tracing::error!("Private transaction relaying is not configured..!");
-        let _ = stream
-            .send(Error(
-                "Private transaction relaying is not enabled.".to_string(),
-            ))
-            .await;
+        return Err(Error(
+            "Private transaction relaying is not enabled.".to_string(),
+        ));
     }
+    Ok(())
 }
 
 /// Handler for EVM commands
@@ -194,10 +197,11 @@ pub async fn handle_evm(
     ctx: RelayerContext,
     cmd: EvmCommand,
     stream: CommandStream,
-) {
+) -> Result<(), CommandResponse> {
     if let CommandType::VAnchor(_) = cmd {
-        handle_vanchor_relay_tx(ctx, cmd, stream).await
+        handle_vanchor_relay_tx(ctx, cmd, stream.clone()).await?;
     }
+    Ok(())
 }
 
 /// Handler for Substrate commands
@@ -211,15 +215,16 @@ pub async fn handle_substrate<'a>(
     ctx: RelayerContext,
     cmd: SubstrateCommand,
     stream: CommandStream,
-) {
+) -> Result<(), CommandResponse> {
     match cmd {
         CommandType::Mixer(_) => {
-            handle_substrate_mixer_relay_tx(ctx, cmd, stream).await;
+            handle_substrate_mixer_relay_tx(ctx, cmd, stream).await?;
         }
         CommandType::VAnchor(_) => {
-            handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await;
+            handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await?;
         }
     }
+    Ok(())
 }
 
 /// Handler for fee estimation

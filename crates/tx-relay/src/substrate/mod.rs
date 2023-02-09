@@ -1,5 +1,5 @@
 use ethereum_types::H256;
-use futures::StreamExt;
+use futures::TryStreamExt;
 use webb::substrate::subxt::{
     tx::TxProgress, tx::TxStatus as TransactionStatus, OnlineClient,
     SubstrateConfig,
@@ -25,18 +25,16 @@ pub async fn handle_substrate_tx(
     >,
     stream: CommandStream,
     chain_id: u64,
-) {
+) -> Result<(), CommandResponse> {
     use CommandResponse::*;
     // Listen to the withdraw transaction, and send information back to the client
     loop {
-        let maybe_event = event_stream.next().await;
+        let maybe_event = event_stream
+            .try_next()
+            .await
+            .map_err(|e| Error(format!("Error while watching Tx: {e}")))?;
         let event = match maybe_event {
-            Some(Ok(v)) => v,
-            Some(Err(e)) => {
-                tracing::error!("Error while watching Tx: {}", e);
-                let _ = stream.send(Error(format!("{e}"))).await;
-                return;
-            }
+            Some(v) => v,
             None => break,
         };
         match event {
@@ -73,17 +71,11 @@ pub async fn handle_substrate_tx(
                     finalized = true,
                     block_hash = %info.block_hash(),
                 );
-                let _has_event = match info.wait_for_success().await {
-                    Ok(_) => {
-                        // TODO: check if the event is actually a withdraw event
-                        true
-                    }
-                    Err(e) => {
-                        tracing::error!("Error while watching Tx: {}", e);
-                        let _ = stream.send(Error(format!("{e}"))).await;
-                        false
-                    }
-                };
+                info.wait_for_success().await.map_err(|e| {
+                    Error(format!("Error while watching Tx: {e}"))
+                })?;
+                // TODO: check if the event is actually a withdraw event
+
                 let _ = stream
                     .send(Withdraw(WithdrawStatus::Finalized {
                         tx_hash: H256::from_slice(
@@ -101,9 +93,7 @@ pub async fn handle_substrate_tx(
                     chain_id = %chain_id,
                     status = "Dropped",
                 );
-                let _ = stream
-                    .send(Withdraw(WithdrawStatus::DroppedFromMemPool))
-                    .await;
+                return Err(Withdraw(WithdrawStatus::DroppedFromMemPool));
             }
             TransactionStatus::Invalid => {
                 tracing::event!(
@@ -114,14 +104,13 @@ pub async fn handle_substrate_tx(
                     chain_id = %chain_id,
                     status = "Invalid",
                 );
-                let _ = stream
-                    .send(Withdraw(WithdrawStatus::Errored {
-                        reason: "Invalid".to_string(),
-                        code: 4,
-                    }))
-                    .await;
+                return Err(Withdraw(WithdrawStatus::Errored {
+                    reason: "Invalid".to_string(),
+                    code: 4,
+                }));
             }
             _ => continue,
         }
     }
+    Ok(())
 }
