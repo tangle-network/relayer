@@ -15,4 +15,4 @@ validate_updates = true
 verify_bls_signature = false
 hashes_gc_threshold = 51000
 max_submitted_blocks_by_account = 8000
-beacon_rpc_version = "V1_1"
+beacon_rpc_version = "V1_2"
