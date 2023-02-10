@@ -1,9 +1,9 @@
 use super::*;
-use crate::evm::fees::get_fee_info;
+use crate::evm::fees::{get_fee_info, FeeInfo};
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
-use webb::evm::ethers::utils::format_units;
+use webb::evm::ethers::utils::{format_units, parse_ether};
 use webb::evm::{
     contract::protocol_solidity::{
         variable_anchor::{CommonExtData, Encryptions, PublicInputs},
@@ -186,11 +186,12 @@ pub async fn handle_vanchor_relay_tx<'a>(
     // check the fee
     // TODO: This adjustment could potentially be exploited
     let adjusted_fee = fee_info.estimated_fee / 100 * 98;
-    // TODO: how to use exchange rate?
-    //let refund_exchange_rate: f32 = format_units(fee_info.refund_exchange_rate, "ether").unwrap().parse().unwrap();
-    let native_refund = cmd.ext_data.refund; // / refund_exchange_rate;
-    dbg!(&native_refund);
-    if cmd.ext_data.fee < adjusted_fee + native_refund {
+    let wrapped_amount =
+        calculate_wrapped_refund_amount(cmd.ext_data.refund, &fee_info)
+            .map_err(|e| {
+                Error(format!("Failed to calculate wrapped refund amount: {e}"))
+            })?;
+    if cmd.ext_data.fee < adjusted_fee + wrapped_amount {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
             cmd.ext_data.fee, fee_info.estimated_fee
@@ -224,4 +225,14 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u64() as f64);
     Ok(())
+}
+
+fn calculate_wrapped_refund_amount(
+    refund: U256,
+    fee_info: &FeeInfo,
+) -> webb_relayer_utils::Result<U256> {
+    let refund_exchange_rate: f32 =
+        format_units(fee_info.refund_exchange_rate, "ether")?.parse()?;
+    let refund_amount: f32 = format_units(refund, "ether")?.parse()?;
+    Ok(parse_ether(refund_amount / refund_exchange_rate)?)
 }
