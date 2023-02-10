@@ -3,6 +3,7 @@ use crate::evm::fees::get_fee_info;
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
+use webb::evm::ethers::utils::format_units;
 use webb::evm::{
     contract::protocol_solidity::{
         variable_anchor::{CommonExtData, Encryptions, PublicInputs},
@@ -87,6 +88,19 @@ pub async fn handle_vanchor_relay_tx<'a>(
             })?;
     let _ = stream.send(Network(NetworkStatus::Connected)).await;
 
+    // ensure that relayer has enough balance for refund
+    let relayer_balance = provider
+        .get_balance(wallet.address(), None)
+        .await
+        .map_err(|e| {
+            Error(format!("Failed to retrieve relayer balance: {e}"))
+        })?;
+    if cmd.ext_data.refund > relayer_balance {
+        return Err(Error(
+            "Requested refund is higher than relayer balance".to_string(),
+        ));
+    }
+
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
     let contract = VAnchorContract::new(cmd.id, client.clone());
 
@@ -124,13 +138,20 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     tracing::trace!(?cmd.proof_data.proof, ?common_ext_data, "Client Proof");
 
-    let call = contract.transact(
+    dbg!(&common_ext_data);
+    let mut call = contract.transact(
         cmd.proof_data.proof,
         [0u8; 32].into(),
         common_ext_data,
         public_inputs,
         encryptions,
     );
+    // TODO: this is being set correctly but no refund is given
+    if !cmd.ext_data.refund.is_zero() {
+        dbg!("add refund value to call");
+        call = call.value(cmd.ext_data.refund);
+    }
+    dbg!(&call);
 
     let gas_amount =
         client.estimate_gas(&call.tx, None).await.map_err(|e| {
@@ -151,6 +172,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
             reason: e.to_string(),
         })
     })?;
+    dbg!(&fee_info);
 
     // validate refund amount
     if cmd.ext_data.refund > fee_info.max_refund {
@@ -164,7 +186,11 @@ pub async fn handle_vanchor_relay_tx<'a>(
     // check the fee
     // TODO: This adjustment could potentially be exploited
     let adjusted_fee = fee_info.estimated_fee / 100 * 98;
-    if cmd.ext_data.fee < adjusted_fee {
+    // TODO: how to use exchange rate?
+    //let refund_exchange_rate: f32 = format_units(fee_info.refund_exchange_rate, "ether").unwrap().parse().unwrap();
+    let native_refund = cmd.ext_data.refund; // / refund_exchange_rate;
+    dbg!(&native_refund);
+    if cmd.ext_data.fee < adjusted_fee + native_refund {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
             cmd.ext_data.fee, fee_info.estimated_fee

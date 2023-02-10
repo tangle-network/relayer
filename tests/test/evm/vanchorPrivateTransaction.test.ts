@@ -34,6 +34,7 @@ import {
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { MintableToken } from '@webb-tools/tokens';
+import { formatEther, parseEther } from 'ethers/lib/utils.js';
 
 describe('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -227,7 +228,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should relay private transaction', async () => {
+  it.only('should relay private transaction', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
@@ -306,6 +307,14 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
     console.log(feeInfo);
 
+    const maxRefund = BigNumber.from(feeInfo.maxRefund);
+    const refundExchangeRate = Number(formatEther(feeInfo.refundExchangeRate));
+    console.log("refundExchangeRate: ", refundExchangeRate);
+    const refundAmount = maxRefund.mul(refundExchangeRate);
+    console.log("refundAmount: ", refundAmount);
+    const totalFee = refundAmount.add(feeInfo.estimatedFee);
+    console.log("totalFee: ", totalFee);
+
     const output = await setupVanchorEvmTx(
       depositUtxo,
       localChain1,
@@ -315,11 +324,12 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       vanchor2,
       relayerWallet2,
       tokenAddress,
-      feeInfo.estimatedFee,
-      feeInfo.maxRefund,
+      totalFee,
+      refundAmount,
       refundWallet.address
     );
 
+    console.log("relayer balance before: ", await relayerWallet2.getBalance());
     await webbRelayer.vanchorWithdraw(
       localChain2.underlyingChainId,
       vanchor2.getAddress(),
@@ -348,18 +358,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     });
     // TODO: Check that refund is correct
     console.log('refund: ', await refundWallet.getBalance());
-    console.log(
-      'govWallet1 balance before:',
-      wallet1Balance,
-      'after: ',
-      (await govWallet1.getBalance()).toBigInt()
-    );
-    console.log(
-      'govWallet2 balance before:',
-      wallet2Balance,
-      'after: ',
-      (await govWallet2.getBalance()).toBigInt()
-    );
+    console.log("relayer balance after: ", await relayerWallet2.getBalance());
   });
 
   it('Should fail to withdraw with invalid root', async () => {
