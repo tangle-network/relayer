@@ -121,7 +121,7 @@ pub trait SubstrateEventWatcher {
                     current_block_number
                 );
                 let sync_blocks_from: u64 = event_watcher_config
-                    .sync_blocks_form
+                    .sync_blocks_from
                     .unwrap_or(current_block_number);
                 // get latest saved block number
                 let block = store

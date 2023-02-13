@@ -18,9 +18,12 @@ pub struct EventsWatcherConfig {
     pub max_blocks_per_step: u64,
     /// print sync progress frequency in milliseconds
     /// if it is zero, means no progress will be printed.
-    #[serde(skip_serializing, default = "print_progress_interval_default")]
+    #[serde(
+        rename(serialize = "printProgressInterval"),
+        default = "print_progress_interval_default"
+    )]
     pub print_progress_interval: u64,
-    /// Sync block from
+    /// Sync blocks from
     #[serde(rename(serialize = "syncBlocksFrom"))]
-    pub sync_blocks_form: Option<u64>,
+    pub sync_blocks_from: Option<u64>,
 }
