@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use tokio::sync::Mutex;
+use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_utils::metric;
 
 use super::*;
@@ -59,11 +60,11 @@ pub trait SubstrateEventWatcher {
     )]
     async fn run(
         &self,
-        _node_name: String,
         chain_id: u32,
         client: Arc<Self::Client>,
         store: Arc<Self::Store>,
         metrics: Arc<Mutex<metric::Metrics>>,
+        event_watcher_config: EventsWatcherConfig,
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let metrics_clone = metrics.clone();
@@ -80,24 +81,20 @@ pub trait SubstrateEventWatcher {
                     .map_err(backoff::Error::permanent)?;
                 pallet.index()
             };
+
+            // create history store key
+            let src_typed_chain_id = TypedChainId::Substrate(chain_id);
+            let target = SubstrateTargetSystem::builder()
+                .pallet_index(pallet_index)
+                .tree_id(chain_id)
+                .build();
+            let src_target_system = TargetSystem::Substrate(target);
+            let history_store_key =
+                ResourceId::new(src_target_system, src_typed_chain_id);
+
             loop {
                 // now we start polling for new events.
-                // get the latest seen block number.
-
-                // create history store key
-                let src_typed_chain_id = TypedChainId::Substrate(chain_id);
-                let target = SubstrateTargetSystem::builder()
-                    .pallet_index(pallet_index)
-                    .tree_id(chain_id)
-                    .build();
-                let src_target_system = TargetSystem::Substrate(target);
-                let history_store_key =
-                    ResourceId::new(src_target_system, src_typed_chain_id);
-
-                let block = store
-                    .get_last_block_number(history_store_key, 1u64)
-                    .map_err(Into::into)
-                    .map_err(backoff::Error::transient)?;
+                // get the current latest block number.
                 let latest_head = rpc
                     .finalized_head()
                     .map_err(Into::into)
@@ -123,6 +120,15 @@ pub trait SubstrateEventWatcher {
                     "Latest block number: #{}",
                     current_block_number
                 );
+                let sync_blocks_from: u64 = event_watcher_config
+                    .sync_blocks_form
+                    .unwrap_or(current_block_number);
+                // get latest saved block number
+                let block = store
+                    .get_last_block_number(history_store_key, sync_blocks_from)
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)?;
+
                 let dest_block = cmp::min(block + step, current_block_number);
                 // check if we are now on the latest block.
                 let should_cooldown = dest_block == current_block_number;
@@ -222,7 +228,12 @@ pub trait SubstrateEventWatcher {
                     tokio::time::sleep(duration).await;
                 }
                 // only print the progress if 7 seconds (by default) is passed.
-                if instant.elapsed() > Duration::from_secs(7) {
+                let print_progress_interval = Duration::from_millis(
+                    event_watcher_config.print_progress_interval,
+                );
+                if print_progress_interval != Duration::from_millis(0)
+                    && instant.elapsed() > print_progress_interval
+                {
                     // calculate sync progress.
                     let total = current_block_number as f64;
                     let current_value = dest_block as f64;
