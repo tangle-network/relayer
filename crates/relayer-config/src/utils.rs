@@ -1,3 +1,4 @@
+use config::{Config, File};
 use std::path::{Path, PathBuf};
 
 use crate::{anchor::LinkedAnchorConfig, evm::Contract, substrate::Pallet};
@@ -33,7 +34,7 @@ pub fn search_config_files<P: AsRef<Path>>(
 pub fn parse_from_files(
     files: &[PathBuf],
 ) -> webb_relayer_utils::Result<WebbRelayerConfig> {
-    let mut cfg = config::Config::new();
+    let mut builder = Config::builder();
     let contracts: HashMap<String, Vec<Contract>> = HashMap::new();
     // read through all config files for the first time
     // build up a collection of [contracts]
@@ -52,16 +53,14 @@ pub fn parse_from_files(
                 continue;
             }
         };
-        let file: config::File<_> =
-            config::File::from(config_file.as_path()).format(format);
-        if let Err(e) = cfg.merge(file) {
-            tracing::warn!("Error while loading config file: {} skipping!", e);
-            continue;
-        }
+        builder = builder
+            .add_source(File::from(config_file.as_path()).format(format));
     }
 
     // also merge in the environment (with a prefix of WEBB).
-    cfg.merge(config::Environment::with_prefix("WEBB").separator("_"))?;
+    let builder = builder
+        .add_source(config::Environment::with_prefix("WEBB").separator("_"));
+    let cfg = builder.build()?;
     // and finally deserialize the config and post-process it
     let config: Result<
         WebbRelayerConfig,

@@ -21,4 +21,4 @@ webb = { version = "0.5.14", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
-libsecp256k1 = "0.7.0"
+libsecp256k1 = "0.7.1"
