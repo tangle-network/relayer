@@ -656,6 +656,7 @@ export interface EventsWatcher {
   enabled: boolean;
   pollingInterval: number;
   printProgressInterval?: number;
+  syncBlocksFrom?: number;
 }
 
 export type RawResourceId = {
