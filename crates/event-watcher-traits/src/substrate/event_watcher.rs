@@ -227,7 +227,6 @@ pub trait SubstrateEventWatcher {
                     );
                     tokio::time::sleep(duration).await;
                 }
-                // only print the progress if 7 seconds (by default) is passed.
                 let print_progress_interval = Duration::from_millis(
                     event_watcher_config.print_progress_interval,
                 );
