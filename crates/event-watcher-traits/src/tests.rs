@@ -17,6 +17,7 @@ use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api::system;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use webb::substrate::{dkg_runtime, subxt};
+use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledStore;
 use webb_relayer_utils::metric;
@@ -63,7 +64,6 @@ impl SubstrateEventWatcher for RemarkedEventWatcher {
 #[ignore = "need to be run manually"]
 async fn substrate_event_watcher_should_work() -> webb_relayer_utils::Result<()>
 {
-    let node_name = String::from("test-node");
     let chain_id = 5u32;
     let store = Arc::new(SledStore::temporary()?);
     let client = OnlineClient::<PolkadotConfig>::new().await?;
@@ -71,8 +71,15 @@ async fn substrate_event_watcher_should_work() -> webb_relayer_utils::Result<()>
     let config = webb_relayer_config::WebbRelayerConfig::default();
     let ctx = RelayerContext::new(config);
     let metrics = ctx.metrics.clone();
+    let event_watcher_config = EventsWatcherConfig::default();
     watcher
-        .run(node_name, chain_id, client.into(), store, metrics)
+        .run(
+            chain_id,
+            client.into(),
+            Arc::new(store),
+            metrics,
+            event_watcher_config,
+        )
         .await?;
     Ok(())
 }

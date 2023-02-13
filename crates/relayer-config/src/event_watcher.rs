@@ -1,7 +1,7 @@
 use super::*;
 
 /// EventsWatchConfig is the configuration for the events watch.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default, Copy)]
 #[serde(rename_all = "kebab-case")]
 pub struct EventsWatcherConfig {
     /// A flag for enabling API endpoints for querying data from the relayer.
@@ -18,6 +18,12 @@ pub struct EventsWatcherConfig {
     pub max_blocks_per_step: u64,
     /// print sync progress frequency in milliseconds
     /// if it is zero, means no progress will be printed.
-    #[serde(skip_serializing, default = "print_progress_interval_default")]
+    #[serde(
+        rename(serialize = "printProgressInterval"),
+        default = "print_progress_interval_default"
+    )]
     pub print_progress_interval: u64,
+    /// Sync blocks from
+    #[serde(rename(serialize = "syncBlocksFrom"))]
+    pub sync_blocks_from: Option<u64>,
 }

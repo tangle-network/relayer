@@ -338,7 +338,6 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -348,7 +347,6 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -383,7 +381,6 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -393,7 +390,6 @@ pub async fn ignite(
                                 ctx.clone(),
                                 config,
                                 client.clone(),
-                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )
@@ -432,27 +428,25 @@ pub async fn ignite(
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - VAnchorBn254 configuration
 /// * `client` - WebbProtocol client
-/// * `node_name` - Name of the node
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_substrate_vanchor_event_watcher(
     ctx: &RelayerContext,
     config: &VAnchorBn254PalletConfig,
     client: WebbProtocolClient,
-    node_name: String,
     chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
             "Substrate VAnchor events watcher is disabled for ({}).",
-            node_name,
+            chain_id,
         );
         return Ok(());
     }
     tracing::debug!(
         "Substrate VAnchor events watcher for ({}) Started.",
-        node_name,
+        chain_id,
     );
 
     let my_ctx = ctx.clone();
@@ -462,11 +456,11 @@ pub fn start_substrate_vanchor_event_watcher(
     let task = async move {
         let watcher = SubstrateVAnchorLeavesWatcher::default();
         let substrate_leaves_watcher_task = watcher.run(
-            node_name.to_owned(),
             chain_id,
             client.clone().into(),
             store.clone(),
             metrics.clone(),
+            my_config.events_watcher,
         );
         let proposal_signing_backend = make_substrate_proposal_signing_backend(
             &my_ctx,
@@ -486,29 +480,29 @@ pub fn start_substrate_vanchor_event_watcher(
                     my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.to_owned(),
                     chain_id,
                     client.clone().into(),
                     store.clone(),
                     metrics.clone(),
+                    my_config.events_watcher,
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
                             "Substrate VAnchor watcher (DKG Backend) task stopped for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                     _ = substrate_leaves_watcher_task => {
                         tracing::warn!(
                             "Substrate VAnchor leaves watcher stopped for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
                             "Stopping Substrate VAnchor watcher (DKG Backend) for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                 }
@@ -521,29 +515,29 @@ pub fn start_substrate_vanchor_event_watcher(
                     my_config.linked_anchors.unwrap(),
                 );
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.to_owned(),
                     chain_id,
                     client.into(),
                     store.clone(),
                     metrics.clone(),
+                    my_config.events_watcher,
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
                             "Substrate VAnchor watcher (Mocked Backend) task stopped for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                     _ = substrate_leaves_watcher_task => {
                         tracing::warn!(
                             "Substrate VAnchor leaves watcher stopped for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
                             "Stopping Substrate VAnchor watcher (Mocked Backend) for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                 }
@@ -553,13 +547,13 @@ pub fn start_substrate_vanchor_event_watcher(
                     _ = substrate_leaves_watcher_task => {
                         tracing::warn!(
                             "Substrate VAnchor leaves watcher stopped for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
                             "Stopping Substrate VAnchor watcher (Mocked Backend) for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                 }
@@ -581,14 +575,12 @@ pub fn start_substrate_vanchor_event_watcher(
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - DKG proposal handler configuration
 /// * `client` - DKG client
-/// * `node_name` - Name of the node
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_dkg_proposal_handler(
     ctx: &RelayerContext,
     config: &DKGProposalHandlerPalletConfig,
     client: DkgClient,
-    node_name: String,
     chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
@@ -596,37 +588,37 @@ pub fn start_dkg_proposal_handler(
     if !config.events_watcher.enabled {
         tracing::warn!(
             "DKG Proposal Handler events watcher is disabled for ({}).",
-            node_name,
+            chain_id,
         );
         return Ok(());
     }
     tracing::debug!(
         "DKG Proposal Handler events watcher for ({}) Started.",
-        node_name,
+        chain_id,
     );
-    let node_name2 = node_name.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
     let metrics = ctx.metrics.clone();
+    let my_config = config.clone();
     let task = async move {
         let proposal_handler = ProposalHandlerWatcher::default();
         let watcher = proposal_handler.run(
-            node_name,
             chain_id,
             client.into(),
             store,
             metrics,
+            my_config.events_watcher,
         );
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
                     "DKG Proposal Handler events watcher stopped for ({})",
-                    node_name2,
+                    chain_id,
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
                     "Stopping DKG Proposal Handler events watcher for ({})",
-                    node_name2,
+                    chain_id,
                 );
             },
         }
@@ -645,14 +637,12 @@ pub fn start_dkg_proposal_handler(
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - DKG pallet configuration
 /// * `client` - DKG client
-/// * `node_name` - Name of the node
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_dkg_pallet_watcher(
     ctx: &RelayerContext,
     config: &DKGPalletConfig,
     client: DkgClient,
-    node_name: String,
     chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
@@ -660,35 +650,35 @@ pub fn start_dkg_pallet_watcher(
     if !config.events_watcher.enabled {
         tracing::warn!(
             "DKG Pallet events watcher is disabled for ({}).",
-            node_name,
+            chain_id,
         );
         return Ok(());
     }
-    tracing::debug!("DKG Pallet events watcher for ({}) Started.", node_name,);
-    let node_name2 = node_name.clone();
+    tracing::debug!("DKG Pallet events watcher for ({}) Started.", chain_id,);
     let mut shutdown_signal = ctx.shutdown_signal();
     let webb_config = ctx.config.clone();
     let metrics = ctx.metrics.clone();
+    let my_config = config.clone();
     let task = async move {
         let governor_watcher = DKGGovernorWatcher::new(webb_config);
         let watcher = governor_watcher.run(
-            node_name,
             chain_id,
             client.into(),
             store,
             metrics,
+            my_config.events_watcher,
         );
         tokio::select! {
             _ = watcher => {
                 tracing::warn!(
                     "DKG Pallet events watcher stopped for ({})",
-                    node_name2,
+                    chain_id,
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
                     "Stopping DKG Pallet events watcher for ({})",
-                    node_name2,
+                    chain_id,
                 );
             },
         }
@@ -1052,31 +1042,31 @@ pub async fn start_substrate_signature_bridge_events_watcher(
     ctx: RelayerContext,
     config: &SignatureBridgePalletConfig,
     client: WebbProtocolClient,
-    node_name: String,
     chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
             "Substrate Signature Bridge events watcher is disabled for ({}).",
-            node_name,
+            chain_id,
         );
         return Ok(());
     }
     let mut shutdown_signal = ctx.shutdown_signal();
+    let my_config = config.clone();
     let task = async move {
         tracing::debug!(
             "Substrate Signature Bridge watcher for ({}) Started.",
-            node_name
+            chain_id
         );
         let substrate_bridge_watcher = SubstrateBridgeEventWatcher::default();
         let events_watcher_task = SubstrateEventWatcher::run(
             &substrate_bridge_watcher,
-            node_name.to_owned(),
             chain_id,
             client.clone().into(),
             store.clone(),
             ctx.metrics.clone(),
+            my_config.events_watcher,
         );
         let cmd_handler_task = SubstrateBridgeWatcher::run(
             &substrate_bridge_watcher,
@@ -1088,19 +1078,19 @@ pub async fn start_substrate_signature_bridge_events_watcher(
             _ = events_watcher_task => {
                 tracing::warn!(
                     "Substrate signature bridge events watcher task stopped for ({})",
-                    node_name
+                    chain_id
                 );
             },
             _ = cmd_handler_task => {
                 tracing::warn!(
                     "Substrate signature bridge cmd handler task stopped for ({})",
-                    node_name
+                    chain_id
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
                     "Stopping Substrate Signature Bridge watcher for ({})",
-                    node_name,
+                    chain_id,
                 );
             },
         }
