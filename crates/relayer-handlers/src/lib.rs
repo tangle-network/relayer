@@ -27,7 +27,7 @@ use futures::prelude::*;
 use axum::extract::ws::{Message, WebSocket};
 use axum::response::Response;
 use axum::Json;
-use axum_client_ip::ClientIp;
+use axum_client_ip::InsecureClientIp;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
 use webb_proposals::TypedChainId;
@@ -150,7 +150,7 @@ where
 ///
 /// * `ip` - Extractor for client IP, taking into account x-forwarded-for and similar headers
 pub async fn handle_socket_info(
-    ClientIp(ip): ClientIp,
+    InsecureClientIp(ip): InsecureClientIp,
 ) -> Json<IpInformationResponse> {
     Json(IpInformationResponse { ip: ip.to_string() })
 }

@@ -171,6 +171,16 @@ webb-relayer -vv -c ./config
 | `withdraw-config`          | Config the fees and gas limits of your private transaction relayer.                        | Optional    |
 | `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`) | Optional    |
 
+#### Event Watcher Configuration
+
+| Field                      | Description                                                                                | Optionality |
+| -------------------------- | ------------------------------------------------------------------------------------------ | ----------- |
+| `enabled`                  | Boolean value. Default set to `true`                                                       | Optional    |
+| `polling-interval`         | Interval between polling next block in millisecond. Default value  is `3000ms`               | Optional    |
+| `print-progress-interval`  | Interval between printing sync progress in millisecond. Default value is `7000ms`            | Optional    |
+| `sync-blocks-from`         | Block number from which relayer will start syncing. Default will be `latest` block number    | Optional    |
+
+
 ### Docker 🐳
 
 To use Docker to run the relayer, you will need to specify a config file and provide an `.env` file as described above. Then proceed to save it into the `config` directory.
