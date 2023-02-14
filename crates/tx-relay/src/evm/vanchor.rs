@@ -138,7 +138,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     tracing::trace!(?cmd.proof_data.proof, ?common_ext_data, "Client Proof");
 
-    dbg!(&common_ext_data);
     let mut call = contract.transact(
         cmd.proof_data.proof,
         [0u8; 32].into(),
@@ -146,12 +145,9 @@ pub async fn handle_vanchor_relay_tx<'a>(
         public_inputs,
         encryptions,
     );
-    // TODO: this is being set correctly but no refund is given
     if !cmd.ext_data.refund.is_zero() {
-        dbg!("add refund value to call");
         call = call.value(cmd.ext_data.refund);
     }
-    dbg!(&call);
 
     let gas_amount =
         client.estimate_gas(&call.tx, None).await.map_err(|e| {
@@ -172,7 +168,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
             reason: e.to_string(),
         })
     })?;
-    dbg!(&fee_info);
 
     // validate refund amount
     if cmd.ext_data.refund > fee_info.max_refund {
@@ -185,7 +180,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     // check the fee
     // TODO: This adjustment could potentially be exploited
-    let adjusted_fee = fee_info.estimated_fee / 100 * 98;
+    let adjusted_fee = fee_info.estimated_fee / 100 * 96;
     let wrapped_amount =
         calculate_wrapped_refund_amount(cmd.ext_data.refund, &fee_info)
             .map_err(|e| {

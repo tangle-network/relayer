@@ -155,7 +155,7 @@ async fn generate_fee_info(
     let max_refund =
         parse_units(MAX_REFUND_USD / native_token_price, native_token.1)?;
 
-    dbg!(Ok(FeeInfo {
+    Ok(FeeInfo {
         estimated_fee,
         gas_price,
         refund_exchange_rate,
@@ -164,7 +164,7 @@ async fn generate_fee_info(
         native_token_price,
         wrapped_token_price,
         wrapped_token_decimals: wrapped_token.1,
-    }))
+    })
 }
 
 /// Pull USD prices of base token from coingecko.com, and use this to calculate the transaction
