@@ -95,6 +95,7 @@ export class WebbRelayer {
     const verbosity = opts.verbosity ?? 3;
     const levels = ['error', 'warn', 'info', 'debug', 'trace'];
     const logLevel = levels[verbosity] ?? 'debug';
+    console.log(opts);
     this.#process = spawn(
       'cargo',
       [

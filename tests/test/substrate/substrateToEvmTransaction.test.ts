@@ -81,9 +81,9 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   const GOV = u8aToHex(ethers.utils.randomBytes(32));
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
-  const governorWallet = new ethers.Wallet(GOV);
+  const governor_wallet = new ethers.Wallet(GOV);
   // slice 0x04 from public key
-  const uncompressedKey = governorWallet
+  const uncompressedKey = governor_wallet
     ._signingKey()
     .publicKey.toString()
     .slice(4);
@@ -162,7 +162,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     signatureVBridge = await localChain1.deployVBridge(
       localToken1,
       wallet1,
-      governorWallet
+      governor_wallet
     );
 
     // get the anhor on localchain1

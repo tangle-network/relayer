@@ -73,9 +73,9 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
 
   // Governer key
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
-  const governorWallet = new ethers.Wallet(PK1);
+  const governor_wallet = new ethers.Wallet(PK1);
   // slice 0x04 from public key
-  const uncompressedKey = governorWallet
+  const uncompressedKey = governor_wallet
     ._signingKey()
     .publicKey.toString()
     .slice(4);

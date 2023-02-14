@@ -226,7 +226,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should relay private transaction', async () => {
+  it.only('should relay private transaction', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);

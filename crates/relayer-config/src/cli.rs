@@ -14,7 +14,7 @@ pub const PACKAGE_ID: [&str; 3] = ["tools", "webb", "webb-relayer"];
 /// Start the relayer from a config file:
 ///
 /// $ webb-relayer -vvv -c <CONFIG_FILE_PATH>
-#[derive(StructOpt)]
+#[derive(StructOpt, Default)]
 #[structopt(name = "Webb Relayer")]
 pub struct Opts {
     /// A level of verbosity, and can be used multiple times

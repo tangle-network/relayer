@@ -7202,6 +7202,7 @@ dependencies = [
 [[package]]
 name = "webb"
 version = "0.5.14"
+source = "git+https://github.com/webb-tools/webb-rs.git?branch=felix/relayer-anvil#4b72d1c6b6e10e743b553cb94b16d5c1fd00453b"
 dependencies = [
  "async-trait",
  "ethers 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -7358,13 +7359,11 @@ dependencies = [
 name = "webb-relayer"
 version = "0.4.1"
 dependencies = [
- "anvil",
  "anyhow",
  "axum 0.6.4",
  "config",
  "dotenv",
  "ethereum-types",
- "ethers 1.0.2 (git+https://github.com/gakonst/ethers-rs)",
  "native-tls",
  "paw",
  "serde_json",
@@ -7502,8 +7501,10 @@ dependencies = [
 name = "webb-relayer-tx-relay"
 version = "0.1.0"
 dependencies = [
+ "anvil",
  "chrono",
  "ethereum-types",
+ "ethers 1.0.2 (git+https://github.com/gakonst/ethers-rs)",
  "futures",
  "native-tls",
  "once_cell",

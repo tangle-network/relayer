@@ -79,13 +79,13 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   // Mnemonic seed phrase to created governor key used for signing proposals.
   const filePath = path.join(path.resolve('../'), 'sample_seed.txt');
   const mnemonic = fs.readFileSync(filePath);
-  const governorWallet = ethers.Wallet.fromMnemonic(mnemonic.toString());
-  const GOV = governorWallet.privateKey;
+  const governor_wallet = ethers.Wallet.fromMnemonic(mnemonic.toString());
+  const GOV = governor_wallet.privateKey;
   // File path to secrets containing mnemonic seed phrase
   const secretFile = `file:${filePath}`;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
   // slice 0x04 from public key
-  const uncompressedKey = governorWallet
+  const uncompressedKey = governor_wallet
     ._signingKey()
     .publicKey.toString()
     .slice(4);
@@ -168,7 +168,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     signatureVBridge = await localChain1.deployVBridge(
       localToken1,
       wallet1,
-      governorWallet
+      governor_wallet
     );
 
     // Get the anhor on localchain1
