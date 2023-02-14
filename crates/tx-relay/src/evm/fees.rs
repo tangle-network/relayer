@@ -40,7 +40,7 @@ pub struct FeeInfo {
     pub gas_price: U256,
     /// Exchange rate for refund from `wrappedToken` to `nativeToken`
     pub refund_exchange_rate: U256,
-    /// Maximum amount of `wrappedToken` which can be exchanged to `nativeToken` by relay
+    /// Maximum amount of `nativeToken` which can be exchanged to `wrappedToken` by relay
     pub max_refund: U256,
     /// Time when this FeeInfo was generated
     timestamp: DateTime<Utc>,
@@ -114,7 +114,7 @@ async fn generate_fee_info(
     ctx: &RelayerContext,
 ) -> Result<FeeInfo> {
     // Get token names
-    let native_token = get_native_token_name(chain_id)?;
+    let native_token = get_native_token_name_and_decimals(chain_id)?;
     let wrapped_token =
         get_wrapped_token_name_and_decimals(chain_id, vanchor, ctx).await?;
 
@@ -122,7 +122,7 @@ async fn generate_fee_info(
     let prices = ctx
         .coin_gecko_client()
         .price(
-            &[native_token, &wrapped_token.0],
+            &[native_token.0, &wrapped_token.0],
             &["usd"],
             false,
             false,
@@ -130,7 +130,7 @@ async fn generate_fee_info(
             false,
         )
         .await?;
-    let native_token_price = prices[native_token].usd.unwrap();
+    let native_token_price = prices[native_token.0].usd.unwrap();
     let wrapped_token_price = prices[&wrapped_token.0].usd.unwrap();
 
     // Fetch native gas price estimate from etherscan.io, using "average" value
@@ -152,9 +152,9 @@ async fn generate_fee_info(
         parse_units(native_token_price / wrapped_token_price, wrapped_token.1)?
             .into();
 
-    // Calculate the maximum refund amount per relay transaction in `wrappedToken`.
+    // Calculate the maximum refund amount per relay transaction in `nativeToken`.
     let max_refund =
-        parse_units(MAX_REFUND_USD / wrapped_token_price, wrapped_token.1)?
+        parse_units(MAX_REFUND_USD / native_token_price, native_token.1)?
             .into();
 
     Ok(FeeInfo {
@@ -235,9 +235,11 @@ async fn get_wrapped_token_name_and_decimals(
 /// otherwise there is no exchange rate available.
 ///
 /// https://github.com/DefiLlama/chainlist/blob/main/constants/chainIds.json
-fn get_native_token_name(chain_id: TypedChainId) -> Result<&'static str> {
+fn get_native_token_name_and_decimals(
+    chain_id: TypedChainId,
+) -> Result<(&'static str, i32)> {
     use TypedChainId::*;
-    match chain_id {
+    let name = match chain_id {
         Evm(id) => {
             match id {
                 1 | // ethereum mainnet
@@ -246,25 +248,27 @@ fn get_native_token_name(chain_id: TypedChainId) -> Result<&'static str> {
                     5002 | // athena testnet
                     5003 | // demeter testnet
                     11155111 // sepolia testnet
-                => Ok("ethereum"),
+                => "ethereum",
                 // optimism mainnet and testnet
-                10 | 420 => Ok("optimism"),
+                10 | 420 => "optimism",
                 // polygon mainnet and testnet
-                127 | 80001 => Ok("polygon"),
+                127 | 80001 => "polygon",
                 // moonbeam mainnet and testnet
-                1284 | 1287 => Ok("moonbeam"),
+                1284 | 1287 => "moonbeam",
                 _ => {
                     // Typescript tests use randomly generated chain id, so we always return
                     // "ethereum" in debug mode to make them work.
                     if cfg!(debug_assertions) {
-                        Ok("ethereum")
+                        "ethereum"
                     } else {
                         let chain_id = chain_id.chain_id().to_string();
-                        Err(webb_relayer_utils::Error::ChainNotFound { chain_id })
+                        return Err(webb_relayer_utils::Error::ChainNotFound { chain_id });
                     }
                 }
             }
         }
         _ => unimplemented!(),
-    }
+    };
+    let decimals = 18;
+    Ok((name, decimals))
 }

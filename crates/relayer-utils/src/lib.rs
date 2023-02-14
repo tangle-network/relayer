@@ -105,6 +105,9 @@ pub enum Error {
     /// Ethers currency conversion error
     #[error(transparent)]
     Conversion(#[from] ethers::utils::ConversionError),
+    /// Failed to convert string to float
+    #[error(transparent)]
+    ParseFloatError(#[from] std::num::ParseFloatError),
     /// Generic error.
     #[error("{}", _0)]
     Generic(&'static str),

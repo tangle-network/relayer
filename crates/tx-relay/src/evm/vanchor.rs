@@ -1,8 +1,9 @@
 use super::*;
-use crate::evm::fees::get_fee_info;
+use crate::evm::fees::{get_fee_info, FeeInfo};
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
+use webb::evm::ethers::utils::{format_units, parse_ether};
 use webb::evm::{
     contract::protocol_solidity::{
         variable_anchor::{CommonExtData, Encryptions, PublicInputs},
@@ -87,6 +88,19 @@ pub async fn handle_vanchor_relay_tx<'a>(
             })?;
     let _ = stream.send(Network(NetworkStatus::Connected)).await;
 
+    // ensure that relayer has enough balance for refund
+    let relayer_balance = provider
+        .get_balance(wallet.address(), None)
+        .await
+        .map_err(|e| {
+            Error(format!("Failed to retrieve relayer balance: {e}"))
+        })?;
+    if cmd.ext_data.refund > relayer_balance {
+        return Err(Error(
+            "Requested refund is higher than relayer balance".to_string(),
+        ));
+    }
+
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
     let contract = VAnchorContract::new(cmd.id, client.clone());
 
@@ -124,13 +138,16 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     tracing::trace!(?cmd.proof_data.proof, ?common_ext_data, "Client Proof");
 
-    let call = contract.transact(
+    let mut call = contract.transact(
         cmd.proof_data.proof,
         [0u8; 32].into(),
         common_ext_data,
         public_inputs,
         encryptions,
     );
+    if !cmd.ext_data.refund.is_zero() {
+        call = call.value(cmd.ext_data.refund);
+    }
 
     let gas_amount =
         client.estimate_gas(&call.tx, None).await.map_err(|e| {
@@ -163,8 +180,13 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
     // check the fee
     // TODO: This adjustment could potentially be exploited
-    let adjusted_fee = fee_info.estimated_fee / 100 * 98;
-    if cmd.ext_data.fee < adjusted_fee {
+    let adjusted_fee = fee_info.estimated_fee / 100 * 96;
+    let wrapped_amount =
+        calculate_wrapped_refund_amount(cmd.ext_data.refund, &fee_info)
+            .map_err(|e| {
+                Error(format!("Failed to calculate wrapped refund amount: {e}"))
+            })?;
+    if cmd.ext_data.fee < adjusted_fee + wrapped_amount {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
             cmd.ext_data.fee, fee_info.estimated_fee
@@ -198,4 +220,14 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u64() as f64);
     Ok(())
+}
+
+fn calculate_wrapped_refund_amount(
+    refund: U256,
+    fee_info: &FeeInfo,
+) -> webb_relayer_utils::Result<U256> {
+    let refund_exchange_rate: f32 =
+        format_units(fee_info.refund_exchange_rate, "ether")?.parse()?;
+    let refund_amount: f32 = format_units(refund, "ether")?.parse()?;
+    Ok(parse_ether(refund_amount / refund_exchange_rate)?)
 }

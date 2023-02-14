@@ -34,6 +34,7 @@ import {
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { MintableToken } from '@webb-tools/tokens';
+import { formatEther, parseEther } from 'ethers/lib/utils.js';
 
 describe('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -165,7 +166,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       tokenAddress,
       govWallet1
     );
-    console.log('token name: ', token.name);
 
     // aprove token spending for vanchor
     const tx = await token.approveSpending(
@@ -189,7 +189,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       tokenAddress2,
       govWallet2
     );
-    console.log('token2 name: ', token.name);
 
     // Approve token spending for vanchor
     const tx2 = await token2.approveSpending(
@@ -232,14 +231,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     await vanchor1.setSigner(govWallet1);
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await vanchor2.setSigner(govWallet2);
-    const wallet1Balance = (await govWallet1.getBalance()).toBigInt();
-    const wallet2Balance = (await govWallet2.getBalance()).toBigInt();
-
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
-    )!;
-    const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
-      localChain2.chainId
     )!;
 
     const randomKeypair = new Keypair();
@@ -305,6 +298,12 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     expect(feeInfoResponse.status).equal(200);
     const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
     console.log(feeInfo);
+    const maxRefund = Number(formatEther(feeInfo.maxRefund));
+    const refundExchangeRate = Number(formatEther(feeInfo.refundExchangeRate));
+    const refundAmount = BigNumber.from(
+      parseEther((maxRefund * refundExchangeRate).toString())
+    );
+    const totalFee = refundAmount.add(feeInfo.estimatedFee);
 
     const output = await setupVanchorEvmTx(
       depositUtxo,
@@ -315,8 +314,8 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       vanchor2,
       relayerWallet2,
       tokenAddress,
-      feeInfo.estimatedFee,
-      feeInfo.maxRefund,
+      totalFee,
+      refundAmount,
       refundWallet.address
     );
 
@@ -346,20 +345,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       console.log(metrics);
       expect(metrics.totalGasSpent).greaterThan(0);
     });
-    // TODO: Check that refund is correct
-    console.log('refund: ', await refundWallet.getBalance());
-    console.log(
-      'govWallet1 balance before:',
-      wallet1Balance,
-      'after: ',
-      (await govWallet1.getBalance()).toBigInt()
-    );
-    console.log(
-      'govWallet2 balance before:',
-      wallet2Balance,
-      'after: ',
-      (await govWallet2.getBalance()).toBigInt()
-    );
+    expect((await refundWallet.getBalance()).eq(refundAmount));
   });
 
   it('Should fail to withdraw with invalid root', async () => {
