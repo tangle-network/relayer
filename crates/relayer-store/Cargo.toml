@@ -1,20 +1,27 @@
 [package]
 name = "webb-relayer-store"
 version = "0.1.0"
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-webb-relayer-utils = { path = "../relayer-utils" }
-parking_lot = "^0.12"
-tracing = { version = "^0.1", features = ["log"] }
-sled = { version = "^0.34" }
-serde = { version = "^1", default-features = false, features = ["derive"] }
-serde_json = { version = "^1", default-features = false }
-hex = { version = "0.4", default-features = false }
-webb = { version = "0.5.14", default-features = false }
+webb-relayer-utils = { workspace = true }
+
+tracing = { workspace = true }
+sled = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+hex = { workspace = true }
+webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "^0.2", features = ["vendored"], optional = true }
-webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
-tempfile = "^3.3"
+native-tls = { workspace = true, optional = true }
+webb-proposals = { workspace = true }
+tempfile = { workspace = true }
+
+parking_lot = "^0.12"

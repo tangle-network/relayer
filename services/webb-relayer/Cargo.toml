@@ -1,14 +1,14 @@
 [package]
 name = "webb-relayer"
 version = "0.4.1"
-authors = ["Webb Developers <drew@webb.tools>"]
-edition = "2021"
 description = "The Webb Relayer toolkit"
-license = "Apache-2.0"
-documentation = "https://docs.rs/webb-relayer"
-homepage = "https://webb.tools"
-repository = "https://github.com/webb-tools/relayer"
 exclude = ["tests", "config", ".github", "ci", "assets", "docker"]
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 [lib]
 doctest = false
@@ -24,37 +24,38 @@ path = "../../examples/in_depth.rs"
 required-features = ["cli"]
 
 [dependencies]
-webb-proposal-signing-backends = { path = "../../crates/proposal-signing-backends" }
-webb-relayer-tx-queue = { path = "../../crates/tx-queue" }
-webb-relayer-handlers = { path = "../../crates/relayer-handlers" }
-webb-relayer-store = { path = "../../crates/relayer-store" }
-webb-relayer-config = { path = "../../crates/relayer-config" }
-webb-relayer-context = { path = "../../crates/relayer-context" }
-webb-relayer-utils = { path = "../../crates/relayer-utils"}
-webb-event-watcher-traits = { path = "../../crates/event-watcher-traits"}
-webb-ew-dkg = { path = "../../event-watchers/dkg" }
-webb-ew-evm = { path = "../../event-watchers/evm" }
-webb-ew-substrate = { path = "../../event-watchers/substrate" }
+webb-proposal-signing-backends = { workspace = true }
+webb-relayer-tx-queue = { workspace = true }
+webb-relayer-handlers = { workspace = true }
+webb-relayer-store = { workspace = true }
+webb-relayer-config = { workspace = true }
+webb-relayer-context = { workspace = true }
+webb-relayer-utils = { workspace = true }
+webb-event-watcher-traits = { workspace = true }
+webb-ew-dkg = { workspace = true }
+webb-ew-evm = { workspace = true }
+webb-ew-substrate = { workspace = true }
 
-anyhow = { version = "^1", optional = true }
-tracing = { version = "^0.1", features = ["log"] }
-url = { version = "^2.3", features = ["serde"] }
-sled = { version = "^0.34" }
-tokio = { version = "^1", features = ["full"] }
-config = { version = "0.13", default-features = false, features = ["toml", "json"] }
-serde_json = { version = "^1", default-features = false }
-paw = { version = "^1.0", optional = true }
-webb = { version = "0.5.14", default-features = false }
+anyhow = { workspace = true, optional = true }
+tracing = { workspace = true }
+url = { workspace = true }
+sled = { workspace = true }
+tokio = { workspace = true }
+config = { workspace = true }
+serde_json = { workspace = true }
+paw = { workspace = true, optional = true }
+webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "^0.2", features = ["vendored"], optional = true }
-webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
-ethereum-types = "0.14.1"
-dotenv = "0.15.0"
-axum = { version = "0.6.4", features = ["ws"] }
+native-tls = { workspace = true, optional = true }
+webb-proposals = { workspace = true }
+ethereum-types = { workspace = true }
+dotenv = { workspace = true }
+axum = { workspace = true }
+
 tower-http = { version = "0.3.5", features = ["cors", "trace"] }
 
 [dev-dependencies]
-tempfile = "^3.3"
+tempfile = { workspace = true }
 
 [features]
 default = ["evm-runtime", "substrate-runtime"]

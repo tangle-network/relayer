@@ -1,11 +1,16 @@
 [package]
 name = "webb-relayer-tx-relay-utils"
 version = "0.1.0"
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde = { version = "^1", default-features = false, features = ["derive"] }
+serde = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "^0.2", features = ["vendored"], optional = true }
+native-tls = { workspace = true, optional = true }

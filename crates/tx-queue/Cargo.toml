@@ -1,25 +1,33 @@
 [package]
 name = "webb-relayer-tx-queue"
 version = "0.1.0"
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-webb-relayer-types = { path = "../relayer-types" }
-webb-relayer-store = { path = "../relayer-store" }
-webb-relayer-context = { path = "../relayer-context"}
-webb-relayer-utils = { path = "../relayer-utils"}
-tracing = { version = "^0.1", features = ["log"] }
-sled = { version = "^0.34" }
-futures = { version = "^0.3", default-features = false }
-backoff = { version = "0.4.0", features = ["tokio"] }
-tokio = { version = "^1", features = ["full"] }
-rand = { version = "0.8", default-features = false, features = ["getrandom"] }
-webb = { version = "0.5.14", default-features = false }
+webb-relayer-types = { workspace = true }
+webb-relayer-store = { workspace = true }
+webb-relayer-context = { workspace = true }
+webb-relayer-utils = { workspace = true }
+
+tracing = { workspace = true }
+sled = { workspace = true }
+futures = { workspace = true }
+backoff = { workspace = true }
+tokio = { workspace = true }
+webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "^0.2", features = ["vendored"], optional = true }
-ethereum-types = "0.14.1"
+native-tls = { workspace = true, optional = true }
+ethereum-types = { workspace = true }
+
+rand = { version = "0.8", default-features = false, features = ["getrandom"] }
+
 
 [features]
 default = ["std", "evm", "substrate"]
