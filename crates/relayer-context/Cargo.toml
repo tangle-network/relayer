@@ -1,7 +1,12 @@
 [package]
 name = "webb-relayer-context"
 version = "0.1.0"
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,10 +14,12 @@ edition = "2021"
 webb-relayer-config = { path = "../relayer-config"}
 webb-relayer-utils = { path = "../relayer-utils"}
 webb-relayer-store = { path = "../relayer-store" }
-tokio = { version = "^1", features = ["full"] }
-webb = { version = "0.5.14", default-features = false }
+
+tokio = { workspace = true }
+webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "^0.2", features = ["vendored"], optional = true }
+native-tls = { workspace = true }
+
 coingecko = "1.0.1"
 ethers = {version = "1.0.2", features = ["rustls"] }
 

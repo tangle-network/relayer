@@ -1,7 +1,12 @@
 [package]
 name = "webb-event-watcher-traits"
 version = "0.1.0"
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -10,17 +15,19 @@ webb-relayer-store = { path = "../relayer-store" }
 webb-relayer-config = { path = "../relayer-config" }
 webb-relayer-context = { path = "../relayer-context" }
 webb-relayer-utils = { path = "../relayer-utils" }
-async-trait = "^0.1"
-tracing = { version = "^0.1", features = ["log"] }
+
+async-trait = { workspace = true }
+tracing = { workspace = true }
+futures = { workspace = true }
+backoff = { workspace = true }
+tokio = { workspace = true }
+webb = { workspace = true }
+# Used by ethers (but we need it to be vendored with the lib).
+native-tls = { workspace = true }
+webb-proposals = { workspace = true }
+
 tracing-test = "0.2"
 sled = { version = "^0.34" }
-futures = { version = "^0.3", default-features = false }
-backoff = { version = "0.4.0", features = ["tokio"] }
-tokio = { version = "^1", features = ["full"] }
-webb = { version = "0.5.14", default-features = false }
-# Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "^0.2", features = ["vendored"], optional = true }
-webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 
 [features]
 default = ["std", "evm", "substrate"]

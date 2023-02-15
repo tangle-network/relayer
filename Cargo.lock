@@ -6326,7 +6326,6 @@ dependencies = [
  "dotenv",
  "ethereum-types 0.14.1",
  "futures",
- "native-tls",
  "paw",
  "serde_json",
  "tempfile",
