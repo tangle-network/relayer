@@ -93,10 +93,13 @@ pub trait LightClientPoller {
             .await
             .expect("Error on contract initialization");
 
+        // We removed the sleep (30s) from the end of the init_pallet function. In its place,
+        // we sleep here for 1/10th the time (for now)
         tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
         // Step 2: init relay
         let submit_only_finalized_blocks = true;
-        let mut relay = eth2_to_substrate_relay::eth2substrate_relay::Eth2SubstrateRelay::init(&config, Box::new(eth_client_contract), true, submit_only_finalized_blocks).await;
+        let enable_binsearch = true;
+        let mut relay = eth2_to_substrate_relay::eth2substrate_relay::Eth2SubstrateRelay::init(&config, Box::new(eth_client_contract), enable_binsearch, submit_only_finalized_blocks).await;
         
         // Step 3: run relay
         relay.run(None).await;
