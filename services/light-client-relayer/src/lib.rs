@@ -5,7 +5,7 @@ use crate::light_client::LightClientPoller;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::Result;
-use eth2_pallet_init::config::Config;
+use eth2_to_substrate_relay::config::Config;
 use eth2_to_substrate_relay::config_for_tests::ConfigForTests;
 
 mod light_client;
