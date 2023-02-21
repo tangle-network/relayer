@@ -18,7 +18,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::OpenVAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-use webb_event_watcher_traits::EventHandler;
+use webb_event_watcher_traits::evm::EventHandler;
 use webb_proposal_signing_backends::{
     proposal_handler, ProposalSigningBackend,
 };

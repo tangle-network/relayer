@@ -18,11 +18,15 @@ use webb_relayer_utils::{metric, retry};
 
 use super::*;
 
-pub type EventHandlerFor<W,RuntimeConfig> = Box<dyn EventHandler<
-    RuntimeConfig,
-    Client = <W as SubstrateEventWatcher<RuntimeConfig>>::Client,
-    Store = <W as SubstrateEventWatcher<RuntimeConfig>>::Store,
-> + Send + Sync>;
+/// A type alias to extract the event handler type from the event watcher.
+pub type EventHandlerFor<W, RuntimeConfig> = Box<
+    dyn EventHandler<
+            RuntimeConfig,
+            Client = <W as SubstrateEventWatcher<RuntimeConfig>>::Client,
+            Store = <W as SubstrateEventWatcher<RuntimeConfig>>::Store,
+        > + Send
+        + Sync,
+>;
 
 /// A trait that defines a handler for a specific set of event types.
 ///
@@ -31,13 +35,13 @@ pub type EventHandlerFor<W,RuntimeConfig> = Box<dyn EventHandler<
 #[async_trait::async_trait]
 pub trait EventHandler<RuntimeConfig>
 where
-    RuntimeConfig: subxt::Config + Send + Sync + 'static
-    {
+    RuntimeConfig: subxt::Config + Send + Sync + 'static,
+{
     /// The Runtime Client that can be used to perform API calls.
     type Client: OnlineClientT<RuntimeConfig> + Send + Sync;
-    /// The Storage backend, used by the event watcher to store its state.
+    /// The Storage backend, used by the event handler to store its state.
     type Store: HistoryStore;
-    /// a method to be called with the event information,
+    /// a method to be called with a list of events information,
     /// it is up to the handler to decide what to do with the event.
     ///
     /// If this method returned an error, the handler will be considered as failed and will
@@ -47,7 +51,7 @@ where
         &self,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
-        (event, block_number): (subxt::events::Events<RuntimeConfig> ,BlockNumberOf<RuntimeConfig>),
+        events: subxt::events::Events<RuntimeConfig>,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()>;
 }
@@ -56,24 +60,26 @@ where
 ///
 /// this trait is automatically implemented for all the event handlers.
 #[async_trait::async_trait]
-pub trait EventHandlerWithRetry<RuntimeConfig> : EventHandler<RuntimeConfig>
+pub trait EventHandlerWithRetry<RuntimeConfig>:
+    EventHandler<RuntimeConfig>
 where
-    RuntimeConfig: subxt::Config + Send + Sync + 'static  {
-    /// A method to be called with the event information,
-    /// it is up to the handler to decide what to do with the event.
+    RuntimeConfig: subxt::Config + Send + Sync + 'static,
+{
+    /// A method to be called with the list of events information,
+    /// it is up to the handler to decide what to do with these events.
     ///
     /// If this method returned an error, the handler will be considered as failed and will
     /// be retried again, depends on the retry strategy. if you do not care about the retry
     /// strategy, use the [`EventHandler::handle_events`] method instead.
     ///
-    /// If this method returns Ok(true), the event will be marked as handled.
+    /// If this method returns Ok(true), these events will be marked as handled.
     ///
     /// **Note**: this method is automatically implemented for all the event handlers.
     async fn handle_events_with_retry(
         &self,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
-        (event, block_number): (subxt::events::Events<RuntimeConfig>, BlockNumberOf<RuntimeConfig>),
+        events: subxt::events::Events<RuntimeConfig>,
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
@@ -81,7 +87,7 @@ where
             self.handle_events(
                 store.clone(),
                 client.clone(),
-                (event.clone(), block_number),
+                events.clone(),
                 metrics.clone(),
             )
             .map_err(backoff::Error::transient)
@@ -91,27 +97,30 @@ where
     }
 }
 
-impl<T,C> EventHandlerWithRetry<C> for T where 
-C: subxt::Config + Send + Sync + 'static,
-T: EventHandler<C> + ?Sized {}
-
-
+impl<T, C> EventHandlerWithRetry<C> for T
+where
+    C: subxt::Config + Send + Sync + 'static,
+    T: EventHandler<C> + ?Sized,
+{
+}
 
 /// Represents a Substrate event watcher.
 #[async_trait::async_trait]
 pub trait SubstrateEventWatcher<RuntimeConfig>
 where
-    RuntimeConfig: subxt::Config + Send + Sync + 'static 
-    {
+    RuntimeConfig: subxt::Config + Send + Sync + 'static,
+{
     /// A helper unique tag to help identify the event watcher in the tracing logs.
     const TAG: &'static str;
 
+    /// The name of the pallet that this event watcher is watching.
     const PALLET_NAME: &'static str;
     /// The Runtime Client that can be used to perform API calls.
     type Client: OnlineClientT<RuntimeConfig> + Send + Sync;
-   
+
+    /// The Storage backend, used by the event watcher to store its state.
     type Store: HistoryStore;
-        
+
     /// Returns a task that should be running in the background
     /// that will watch events
 
@@ -121,7 +130,7 @@ where
         client: Arc<Self::Client>,
         store: Arc<Self::Store>,
         event_watcher_config: EventsWatcherConfig,
-        handlers:  Vec<EventHandlerFor<Self,RuntimeConfig>>,
+        handlers: Vec<EventHandlerFor<Self, RuntimeConfig>>,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
@@ -206,26 +215,17 @@ where
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;
-                    
+
                     let from = maybe_from.unwrap_or(latest_head);
                     tracing::trace!(?from, "Querying events");
-                    let events = match client
-                        .events()
-                        .at(Some(from))
-                        .await {
-                            Ok(x) => tracing::debug!("okay no errors"),
-                            Err(e) => {
-                                tracing::debug!("error is : {}", e);
-                            }
-                        };
-                    tracing::debug!("call events");
                     let events = client
                         .events()
                         .at(Some(from))
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;
-
+                    let events_block_hash = events.block_hash();
+                    tracing::trace!("Found #{} events", events.len());
                     // wraps each handler future in a retry logic, that will retry the handler
                     // if it fails, up to `MAX_RETRY_COUNT`, after this it will ignore that event for
                     // that specific handler.
@@ -239,72 +239,63 @@ where
                         handler.handle_events_with_retry(
                             store.clone(),
                             client.clone(),
-                            (events, block_number),
+                            events.clone(),
                             backoff,
                             metrics_clone.clone(),
                         )
                     });
                     let result = futures::future::join_all(tasks).await;
 
-                    tracing::debug!("fetch events");
-                    let found_events = events
-                        .find::<Self::FilteredEvent>()
-                        .flatten()
-                        .map(|e| (from, e))
-                        .collect::<Vec<_>>();
-                    tracing::debug!("found events");
-                    tracing::trace!("Found #{} events", found_events.len());
-
-                    for (block_hash, event) in found_events {
-                        let maybe_header = rpc
-                            .header(Some(block_hash))
-                            .map_err(Into::into)
-                            .map_err(backoff::Error::transient)
-                            .await?;
-                        let header = if let Some(header) = maybe_header {
-                            header
-                        } else {
-                            tracing::warn!(
-                                "No header found for block #{:?}",
-                                block_hash
-                            );
-                            continue;
-                        };
-                        let block_number = *header.number();
-                        
-                        
-                        let result = Ok(());
-                        match result {
-                            Ok(_) => {
-                                let current_block_number: u64 =
-                                    block_number.into();
-
-                                store.set_last_block_number(
-                                    history_store_key,
-                                    current_block_number,
-                                )?;
-                                tracing::trace!(
-                                    "event handled successfully. at #{}",
-                                    current_block_number
-                                );
-                            }
-                            Err(e) => {
-                                tracing::error!(
-                                    "Error while handling event: {}",
-                                    e
-                                );
-                                tracing::warn!("Restarting event watcher ...");
-                                // this a transient error, so we will retry again.
-                                return Err(backoff::Error::transient(e));
-                            }
+                    // this event will be marked as handled if at least one handler succeeded.
+                    // this because, for the failed events, we arleady tried to handle them
+                    // many times (at this point), and there is no point in trying again.
+                    let mark_as_handled = result.iter().any(|r| r.is_ok());
+                    // also, for all the failed event handlers, we should print what went
+                    // wrong.
+                    result.iter().for_each(|r| {
+                        if let Err(e) = r {
+                            tracing::error!("{}", e);
                         }
+                    });
+                    let maybe_header = rpc
+                        .header(Some(events_block_hash))
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
+                        .await?;
+                    let header = if let Some(header) = maybe_header {
+                        header
+                    } else {
+                        tracing::warn!(
+                            block_hash = ?events_block_hash,
+                            "No header found for that block hash",
+                        );
+                        continue;
+                    };
+                    let block_number: u64 = (*header.number()).into();
+                    if mark_as_handled {
+                        store.set_last_block_number(
+                            history_store_key,
+                            block_number,
+                        )?;
+                        tracing::trace!(
+                            "event handled successfully. at #{}",
+                            block_number
+                        );
+                    } else {
+                        tracing::error!(
+                            "Error while handling event, all handlers failed."
+                        );
+                        tracing::warn!("Restarting event watcher ...");
+                        // this a transient error, so we will retry again.
+                        return Err(backoff::Error::transient(
+                            webb_relayer_utils::Error::ForceRestart,
+                        ));
                     }
-                    tracing::debug!("save events");
+
                     // move forward.
                     store
                         .set_last_block_number(history_store_key, dest_block)?;
                     tracing::trace!("Last saved block number: #{}", dest_block);
-                    tracing::debug!("saved events");
                 }
                 tracing::trace!("Polled from #{} to #{}", block, dest_block);
                 if should_cooldown {
@@ -319,7 +310,7 @@ where
                 let print_progress_interval = Duration::from_millis(
                     event_watcher_config.print_progress_interval,
                 );
-                
+
                 if print_progress_interval != Duration::from_millis(0)
                     && instant.elapsed() > print_progress_interval
                 {
@@ -338,8 +329,6 @@ where
                         sync_progress
                     );
                     instant = std::time::Instant::now();
-                }else{
-                    tracing::info!("elapsed time failed");
                 }
             }
         };

@@ -18,13 +18,10 @@ use futures::prelude::*;
 use std::cmp;
 use std::sync::Arc;
 use std::time::Duration;
-use webb::substrate::{
-    scale,
-    subxt::{
-        self,
-        client::{OfflineClientT, OnlineClientT},
-        ext::sp_runtime::traits::Header,
-    },
+use webb::substrate::subxt::{
+    self,
+    client::{OfflineClientT, OnlineClientT},
+    ext::sp_runtime::traits::Header,
 };
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
@@ -38,13 +35,9 @@ use webb_relayer_store::{
 mod event_watcher;
 pub use event_watcher::*;
 
-
 /// Bridge watching traits
 mod bridge_watcher;
 pub use bridge_watcher::*;
 
 /// Type alias for Substrate block number.
-pub type BlockNumberOf<T> =
-    <T as subxt::Config>::BlockNumber;
-
-
+pub type BlockNumberOf<T> = <T as subxt::Config>::BlockNumber;
