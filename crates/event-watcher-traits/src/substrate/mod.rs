@@ -38,10 +38,13 @@ use webb_relayer_store::{
 mod event_watcher;
 pub use event_watcher::*;
 
+
 /// Bridge watching traits
 mod bridge_watcher;
 pub use bridge_watcher::*;
 
 /// Type alias for Substrate block number.
 pub type BlockNumberOf<T> =
-    <<T as SubstrateEventWatcher>::RuntimeConfig as subxt::Config>::BlockNumber;
+    <<T as EventHandler>::RuntimeConfig as subxt::Config>::BlockNumber;
+
+
