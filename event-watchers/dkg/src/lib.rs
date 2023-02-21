@@ -20,3 +20,8 @@ pub use proposal_handler_watcher::*;
 mod governor_watcher;
 #[doc(hidden)]
 pub use governor_watcher::*;
+
+/// A module for listening on DKG Metadata pallet events.
+mod dkg_metadata;
+#[doc(hidden)]
+pub use dkg_metadata::*;
