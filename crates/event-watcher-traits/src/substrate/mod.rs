@@ -45,6 +45,6 @@ pub use bridge_watcher::*;
 
 /// Type alias for Substrate block number.
 pub type BlockNumberOf<T> =
-    <<T as EventHandler>::RuntimeConfig as subxt::Config>::BlockNumber;
+    <T as subxt::Config>::BlockNumber;
 
 

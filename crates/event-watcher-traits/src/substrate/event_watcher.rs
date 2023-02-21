@@ -14,16 +14,14 @@
 
 use tokio::sync::Mutex;
 use webb_relayer_config::event_watcher::EventsWatcherConfig;
-use webb_relayer_utils::metric;
+use webb_relayer_utils::{metric, retry};
 
 use super::*;
 
-pub type EventHandlerFor<W> = Box<dyn EventHandler<
-    RuntimeConfig = <W as SubstrateEventWatcher>::RuntimeConfig,
-    Client = <W as SubstrateEventWatcher>::Client,
-    Event = <W as SubstrateEventWatcher>::Event,
-    FilteredEvent = <W as SubstrateEventWatcher>::FilteredEvent,
-    Store = <W as SubstrateEventWatcher>::Store,
+pub type EventHandlerFor<W,RuntimeConfig> = Box<dyn EventHandler<
+    RuntimeConfig,
+    Client = <W as SubstrateEventWatcher<RuntimeConfig>>::Client,
+    Store = <W as SubstrateEventWatcher<RuntimeConfig>>::Store,
 > + Send + Sync>;
 
 /// A trait that defines a handler for a specific set of event types.
@@ -31,29 +29,25 @@ pub type EventHandlerFor<W> = Box<dyn EventHandler<
 /// The handlers are implemented separately from the watchers, so that we can have
 /// one event watcher and many event handlers that will run in parallel.
 #[async_trait::async_trait]
-pub trait EventHandler {
-    /// The Config of this Runtime [`subxt::PolkadotConfig`, `subxt::SubstrateConfig`]
-    type RuntimeConfig: subxt::Config + Send + Sync + 'static;
+pub trait EventHandler<RuntimeConfig>
+where
+    RuntimeConfig: subxt::Config + Send + Sync + 'static
+    {
     /// The Runtime Client that can be used to perform API calls.
-    type Client: OnlineClientT<Self::RuntimeConfig> + Send + Sync;
-    /// All types of events that are supported by this Runtime.
-    /// Usually it will be [`my_runtime::api::Event`] which is an enum of all events.
-    type Event: scale::Decode + Send + Sync + 'static;
-    /// The kind of event that this watcher is watching.
-    type FilteredEvent: subxt::events::StaticEvent + Send + Sync + 'static + Clone;
+    type Client: OnlineClientT<RuntimeConfig> + Send + Sync;
     /// The Storage backend, used by the event watcher to store its state.
     type Store: HistoryStore;
     /// a method to be called with the event information,
     /// it is up to the handler to decide what to do with the event.
     ///
     /// If this method returned an error, the handler will be considered as failed and will
-    /// be discarded. to have a retry mechanism, use the [`EventHandlerWithRetry::handle_event_with_retry`] method
+    /// be discarded. to have a retry mechanism, use the [`EventHandlerWithRetry::handle_events_with_retry`] method
     /// which does exactly what it says.
-    async fn handle_event(
+    async fn handle_events(
         &self,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
-        (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        (event, block_number): (subxt::events::Events<RuntimeConfig> ,BlockNumberOf<RuntimeConfig>),
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()>;
 }
@@ -62,27 +56,29 @@ pub trait EventHandler {
 ///
 /// this trait is automatically implemented for all the event handlers.
 #[async_trait::async_trait]
-pub trait EventHandlerWithRetry: EventHandler {
+pub trait EventHandlerWithRetry<RuntimeConfig> : EventHandler<RuntimeConfig>
+where
+    RuntimeConfig: subxt::Config + Send + Sync + 'static  {
     /// A method to be called with the event information,
     /// it is up to the handler to decide what to do with the event.
     ///
     /// If this method returned an error, the handler will be considered as failed and will
     /// be retried again, depends on the retry strategy. if you do not care about the retry
-    /// strategy, use the [`EventHandler::handle_event`] method instead.
+    /// strategy, use the [`EventHandler::handle_events`] method instead.
     ///
     /// If this method returns Ok(true), the event will be marked as handled.
     ///
     /// **Note**: this method is automatically implemented for all the event handlers.
-    async fn handle_event_with_retry(
+    async fn handle_events_with_retry(
         &self,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
-        (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        (event, block_number): (subxt::events::Events<RuntimeConfig>, BlockNumberOf<RuntimeConfig>),
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let wrapped_task = || {
-            self.handle_event(
+            self.handle_events(
                 store.clone(),
                 client.clone(),
                 (event.clone(), block_number),
@@ -95,27 +91,25 @@ pub trait EventHandlerWithRetry: EventHandler {
     }
 }
 
-impl<T> EventHandlerWithRetry for T where T: EventHandler + ?Sized {}
+impl<T,C> EventHandlerWithRetry<C> for T where 
+C: subxt::Config + Send + Sync + 'static,
+T: EventHandler<C> + ?Sized {}
 
 
 
 /// Represents a Substrate event watcher.
 #[async_trait::async_trait]
-pub trait SubstrateEventWatcher {
+pub trait SubstrateEventWatcher<RuntimeConfig>
+where
+    RuntimeConfig: subxt::Config + Send + Sync + 'static 
+    {
     /// A helper unique tag to help identify the event watcher in the tracing logs.
     const TAG: &'static str;
-    /// Pallet name  used to fetch pallet id for given target system
+
     const PALLET_NAME: &'static str;
-    /// The Config of this Runtime [`subxt::PolkadotConfig`, `subxt::SubstrateConfig`]
-    type RuntimeConfig: subxt::Config + Send + Sync + 'static;
     /// The Runtime Client that can be used to perform API calls.
-    type Client: OnlineClientT<Self::RuntimeConfig> + Send + Sync;
-    /// All types of events that are supported by this Runtime.
-    /// Usually it will be [`my_runtime::api::Event`] which is an enum of all events.
-    type Event: scale::Decode + Send + Sync + 'static;
-    /// The kind of event that this watcher is watching.
-    type FilteredEvent: subxt::events::StaticEvent + Send + Sync + 'static;
-    /// The Storage backend, used by the event watcher to store its state.
+    type Client: OnlineClientT<RuntimeConfig> + Send + Sync;
+   
     type Store: HistoryStore;
         
     /// Returns a task that should be running in the background
@@ -127,7 +121,7 @@ pub trait SubstrateEventWatcher {
         client: Arc<Self::Client>,
         store: Arc<Self::Store>,
         event_watcher_config: EventsWatcherConfig,
-        handler: Vec<EventHandlerFor<Self>>,
+        handlers:  Vec<EventHandlerFor<Self,RuntimeConfig>>,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
@@ -232,6 +226,26 @@ pub trait SubstrateEventWatcher {
                         .map_err(backoff::Error::transient)
                         .await?;
 
+                    // wraps each handler future in a retry logic, that will retry the handler
+                    // if it fails, up to `MAX_RETRY_COUNT`, after this it will ignore that event for
+                    // that specific handler.
+                    const MAX_RETRY_COUNT: usize = 5;
+                    let tasks = handlers.iter().map(|handler| {
+                        // a constant backoff with maximum retry count is used here.
+                        let backoff = retry::ConstantWithMaxRetryCount::new(
+                            Duration::from_millis(100),
+                            MAX_RETRY_COUNT,
+                        );
+                        handler.handle_events_with_retry(
+                            store.clone(),
+                            client.clone(),
+                            (events, block_number),
+                            backoff,
+                            metrics_clone.clone(),
+                        )
+                    });
+                    let result = futures::future::join_all(tasks).await;
+
                     tracing::debug!("fetch events");
                     let found_events = events
                         .find::<Self::FilteredEvent>()
@@ -257,14 +271,8 @@ pub trait SubstrateEventWatcher {
                             continue;
                         };
                         let block_number = *header.number();
-                        // let result = self
-                        //     .handle_event(
-                        //         store.clone(),
-                        //         client.clone(),
-                        //         (event, block_number),
-                        //         metrics_clone.clone(),
-                        //     )
-                        //     .await;
+                        
+                        
                         let result = Ok(());
                         match result {
                             Ok(_) => {
