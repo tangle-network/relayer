@@ -102,7 +102,6 @@ dependencies = [
 [[package]]
 name = "anvil"
 version = "0.1.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "anvil-core",
  "anvil-rpc",
@@ -146,7 +145,6 @@ dependencies = [
 [[package]]
 name = "anvil-core"
 version = "0.1.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "bytes",
  "ethers-core 1.0.2 (git+https://github.com/gakonst/ethers-rs)",
@@ -165,7 +163,6 @@ dependencies = [
 [[package]]
 name = "anvil-rpc"
 version = "0.1.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "serde",
  "serde_json",
@@ -174,7 +171,6 @@ dependencies = [
 [[package]]
 name = "anvil-server"
 version = "0.1.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "anvil-rpc",
  "async-trait",
@@ -1643,6 +1639,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_logger"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85cdab6a89accf66733ad5a1693a4dcced6aeff64602b634530dd73c1f3ee9f0"
+dependencies = [
+ "humantime",
+ "is-terminal",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
 name = "environmental"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2401,7 +2410,6 @@ checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
 [[package]]
 name = "forge"
 version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "comfy-table",
  "ethers 1.0.2 (git+https://github.com/gakonst/ethers-rs)",
@@ -2430,7 +2438,6 @@ dependencies = [
 [[package]]
 name = "forge-fmt"
 version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "ethers-core 1.0.2 (git+https://github.com/gakonst/ethers-rs)",
  "foundry-config",
@@ -2462,7 +2469,6 @@ dependencies = [
 [[package]]
 name = "foundry-common"
 version = "0.1.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "atty",
  "clap 4.1.4",
@@ -2491,7 +2497,6 @@ dependencies = [
 [[package]]
 name = "foundry-config"
 version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "Inflector",
  "dirs-next",
@@ -2520,7 +2525,6 @@ dependencies = [
 [[package]]
 name = "foundry-evm"
 version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "auto_impl 1.0.1",
  "bytes",
@@ -2552,7 +2556,6 @@ dependencies = [
 [[package]]
 name = "foundry-macros"
 version = "0.1.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "ethers-core 1.0.2 (git+https://github.com/gakonst/ethers-rs)",
  "foundry-common",
@@ -2562,7 +2565,6 @@ dependencies = [
 [[package]]
 name = "foundry-macros-impl"
 version = "0.0.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2572,7 +2574,6 @@ dependencies = [
 [[package]]
 name = "foundry-utils"
 version = "0.2.0"
-source = "git+https://github.com/foundry-rs/foundry.git?tag=nightly-550c548a7aa94a45c1f448071307108867848429#550c548a7aa94a45c1f448071307108867848429"
 dependencies = [
  "ethers-addressbook 1.0.2 (git+https://github.com/gakonst/ethers-rs)",
  "ethers-contract 1.0.2 (git+https://github.com/gakonst/ethers-rs)",
@@ -3058,6 +3059,12 @@ name = "httpdate"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4a1e36c821dbe04574f602848a19f742f4fb3c98d40449f11bcad18d6b17421"
+
+[[package]]
+name = "humantime"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "hyper"
@@ -7503,6 +7510,7 @@ version = "0.1.0"
 dependencies = [
  "anvil",
  "chrono",
+ "env_logger",
  "ethereum-types",
  "ethers 1.0.2 (git+https://github.com/gakonst/ethers-rs)",
  "futures",
