@@ -36,17 +36,18 @@ use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb_relayer_utils::metric;
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
-/// A SignatureBridge contract events & commands watcher.
+/// A MaintainerSetEvent handler handles `MaintainerSet` events and signals signature bridge watcher
+/// to remove pending tx trying to do governor transfer.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct SubstrateBridgeEventHandler;
+pub struct MaintainerSetEventHandler;
 
 #[async_trait::async_trait]
-impl EventHandler<SubstrateConfig> for SubstrateBridgeEventHandler {
+impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
     type Client = OnlineClient<SubstrateConfig>;
 
     type Store = SledStore;
 
-    async fn can_handle_event(
+    async fn can_handle_events(
         &self,
         events: subxt::events::Events<SubstrateConfig>,
     ) -> webb_relayer_utils::Result<bool> {
@@ -66,9 +67,6 @@ impl EventHandler<SubstrateConfig> for SubstrateBridgeEventHandler {
         // if the ownership is transferred to the new owner, we need to
         // to check our txqueue and remove any pending tx that was trying to
         // do this transfer.
-        if !self.can_handle_event(events.clone()).await? {
-            return Ok(());
-        }
         let maintainer_set_events = events
             .find::<signature_bridge::events::MaintainerSet>()
             .flatten()
@@ -94,7 +92,7 @@ impl EventHandler<SubstrateConfig> for SubstrateBridgeEventHandler {
     }
 }
 
-/// A SignatureBridge contract events & commands watcher.
+/// A SignatureBridge watcher watches for signature bridge events and bridge commands.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct SubstrateBridgeEventWatcher;
 

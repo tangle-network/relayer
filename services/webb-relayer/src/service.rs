@@ -30,11 +30,11 @@ use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb::evm::ethers::providers;
-use webb_ew_dkg::DKGEventWatcher;
+use webb_ew_dkg::DKGMetadataWatcher;
 use webb_ew_dkg::DKGProposalHandlerWatcher;
 use webb_ew_dkg::DKGPublicKeyChangedHandler;
 use webb_ew_dkg::ProposalSignedHandler;
-use webb_ew_substrate::SubstrateBridgeEventHandler;
+use webb_ew_substrate::MaintainerSetEventHandler;
 use webb_ew_substrate::SubstrateBridgeEventWatcher;
 use webb_ew_substrate::SubstrateVAnchorEventWatcher;
 
@@ -574,7 +574,7 @@ pub fn start_dkg_pallet_watcher(
     let metrics = ctx.metrics.clone();
     let my_config = config.clone();
     let task = async move {
-        let dkg_event_watcher = DKGEventWatcher::default();
+        let dkg_event_watcher = DKGMetadataWatcher::default();
         let public_key_changed_handler =
             DKGPublicKeyChangedHandler::new(webb_config);
 
@@ -978,7 +978,7 @@ pub async fn start_substrate_signature_bridge_events_watcher(
             chain_id
         );
         let substrate_bridge_watcher = SubstrateBridgeEventWatcher::default();
-        let bridge_event_handler = SubstrateBridgeEventHandler::default();
+        let bridge_event_handler = MaintainerSetEventHandler::default();
         let events_watcher_task = SubstrateEventWatcher::run(
             &substrate_bridge_watcher,
             chain_id,

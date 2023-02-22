@@ -37,7 +37,7 @@ impl EventHandler<SubstrateConfig> for SubstrateVAnchorEncryptedOutputHandler {
 
     type Store = SledStore;
 
-    async fn can_handle_event(
+    async fn can_handle_events(
         &self,
         events: subxt::events::Events<SubstrateConfig>,
     ) -> webb_relayer_utils::Result<bool> {
@@ -52,9 +52,6 @@ impl EventHandler<SubstrateConfig> for SubstrateVAnchorEncryptedOutputHandler {
         (events, block_number): (subxt::events::Events<SubstrateConfig>, u64),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        if !self.can_handle_event(events.clone()).await? {
-            return Ok(());
-        }
         let at_hash = events.block_hash();
         let transaction_events = events
             .find::<v_anchor_bn254::events::Transaction>()

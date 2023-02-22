@@ -28,7 +28,7 @@ use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_store::EventHashStore;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric;
-/// Represents an Anchor Watcher which will use a configured signing backend for signing proposals.
+/// SubstrateVAnchorDeposit handler handles `Transaction` event and creates `AnchorUpdate` proposals for linked anchors.
 pub struct SubstrateVAnchorDepositHandler<B> {
     proposal_signing_backend: B,
     linked_anchors: Vec<LinkedAnchorConfig>,
@@ -58,7 +58,7 @@ where
 
     type Store = SledStore;
 
-    async fn can_handle_event(
+    async fn can_handle_events(
         &self,
         events: subxt::events::Events<SubstrateConfig>,
     ) -> webb_relayer_utils::Result<bool> {
@@ -74,9 +74,6 @@ where
         (events, _block_number): (subxt::events::Events<SubstrateConfig>, u64),
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        if !self.can_handle_event(events.clone()).await? {
-            return Ok(());
-        }
         let at_hash = events.block_hash();
         let metrics_clone = metrics.clone();
         // fetch chain_id

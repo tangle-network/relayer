@@ -24,8 +24,8 @@ use webb_relayer_utils::metric;
 
 use webb_event_watcher_traits::substrate::EventHandler;
 
-/// A DKG Governor watcher for the DKG Substrate runtime.
-/// It watches for the DKG Public Key changes and try to update the signature bridge governor.
+/// DKGPublicKeyChanged handler handles the `PublicKeySignatureChanged` event and then signals
+/// signature bridge watcher to update governor.
 #[derive(Clone, Debug)]
 pub struct DKGPublicKeyChangedHandler {
     webb_config: webb_relayer_config::WebbRelayerConfig,
@@ -43,7 +43,7 @@ impl EventHandler<PolkadotConfig> for DKGPublicKeyChangedHandler {
 
     type Store = SledStore;
 
-    async fn can_handle_event(
+    async fn can_handle_events(
         &self,
         events: subxt::events::Events<PolkadotConfig>,
     ) -> webb_relayer_utils::Result<bool> {
@@ -59,9 +59,6 @@ impl EventHandler<PolkadotConfig> for DKGPublicKeyChangedHandler {
         (events, block_number): (subxt::events::Events<PolkadotConfig>, u64),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        if !self.can_handle_event(events.clone()).await? {
-            return Ok(());
-        }
         // we got that the signature of the DKG public key changed.
         // that means the DKG Public Key itself changed
         let pub_key_changed_events = events

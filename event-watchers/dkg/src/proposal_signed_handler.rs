@@ -26,8 +26,7 @@ use webb_relayer_utils::metric;
 
 use webb_event_watcher_traits::substrate::EventHandler;
 
-/// A ProposalHandler watcher for the DKG Substrate runtime.
-/// It watches for the `ProposalSigned` event and sends the proposal to the signature bridge.
+/// A ProposalSignedHandler handles the `ProposalSigned` event and signals signature bridge to execute them.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct ProposalSignedHandler;
 
@@ -37,7 +36,7 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
 
     type Store = SledStore;
 
-    async fn can_handle_event(
+    async fn can_handle_events(
         &self,
         events: subxt::events::Events<PolkadotConfig>,
     ) -> webb_relayer_utils::Result<bool> {
@@ -53,9 +52,6 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
         (events, block_number): (subxt::events::Events<PolkadotConfig>, u64),
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        if !self.can_handle_event(events.clone()).await? {
-            return Ok(());
-        }
         let proposal_signed_events = events
             .find::<dkg_proposal_handler::events::ProposalSigned>()
             .flatten()

@@ -23,15 +23,15 @@ pub use public_key_changed_handler::*;
 use webb::substrate::subxt::{self, PolkadotConfig};
 use webb_event_watcher_traits::SubstrateEventWatcher;
 
-/// The DKGEventWatcher watches for the events from Dkg Pallet.
+/// The DKGMetadataWatcher watches for the events from DkgMetdata Pallet.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct DKGEventWatcher;
+pub struct DKGMetadataWatcher;
 
 #[async_trait::async_trait]
-impl SubstrateEventWatcher<PolkadotConfig> for DKGEventWatcher {
-    const TAG: &'static str = "DKG Pallet Event Watcher";
+impl SubstrateEventWatcher<PolkadotConfig> for DKGMetadataWatcher {
+    const TAG: &'static str = "DKGMetadata Pallet Event Watcher";
 
-    const PALLET_NAME: &'static str = "DKG";
+    const PALLET_NAME: &'static str = "DKGMetadata";
 
     type Client = subxt::OnlineClient<PolkadotConfig>;
 

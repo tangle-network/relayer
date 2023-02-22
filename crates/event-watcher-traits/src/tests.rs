@@ -48,7 +48,7 @@ impl<PolkadotConfig: Sync + Send + Config> EventHandler<PolkadotConfig>
     type Client = OnlineClient<PolkadotConfig>;
     type Store = SledStore;
 
-    async fn can_handle_event(
+    async fn can_handle_events(
         &self,
         events: subxt::events::Events<PolkadotConfig>,
     ) -> webb_relayer_utils::Result<bool> {

@@ -55,8 +55,8 @@ where
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()>;
 
-    /// Check if events can be handled by handler
-    async fn can_handle_event(
+    /// Whether any of the events could be handled by the handler
+    async fn can_handle_events(
         &self,
         events: subxt::events::Events<RuntimeConfig>,
     ) -> webb_relayer_utils::Result<bool>;
@@ -89,6 +89,9 @@ where
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
+        if !self.can_handle_events(events.clone()).await? {
+            return Ok(());
+        };
         let wrapped_task = || {
             self.handle_events(
                 store.clone(),
@@ -129,7 +132,13 @@ where
 
     /// Returns a task that should be running in the background
     /// that will watch events
-
+    #[tracing::instrument(
+        skip_all,
+        fields(
+            chain_id = %chain_id,
+            tag = %Self::TAG
+        )
+    )]
     async fn run(
         &self,
         chain_id: u32,
