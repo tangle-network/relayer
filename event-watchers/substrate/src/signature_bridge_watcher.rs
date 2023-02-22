@@ -26,8 +26,8 @@ use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_relayer_store::sled::{SledQueueKey,SledStore};
 use webb_relayer_store::{BridgeCommand, QueueStore};
 
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::evm::ethers::utils;
+use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
 
 use std::borrow::Cow;
