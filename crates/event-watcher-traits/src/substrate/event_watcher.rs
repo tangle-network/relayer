@@ -51,9 +51,15 @@ where
         &self,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
-        events: subxt::events::Events<RuntimeConfig>,
+        (events, block_number): (subxt::events::Events<RuntimeConfig>, u64),
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()>;
+
+    /// Check if events can be handled by handler
+    async fn can_handle_event(
+        &self,
+        events: subxt::events::Events<RuntimeConfig>,
+    ) -> webb_relayer_utils::Result<bool>;
 }
 
 /// An Auxiliary trait to handle events with retry logic.
@@ -79,7 +85,7 @@ where
         &self,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
-        events: subxt::events::Events<RuntimeConfig>,
+        (events, block_number): (subxt::events::Events<RuntimeConfig>, u64),
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
@@ -87,7 +93,7 @@ where
             self.handle_events(
                 store.clone(),
                 client.clone(),
-                events.clone(),
+                (events.clone(), block_number),
                 metrics.clone(),
             )
             .map_err(backoff::Error::transient)
@@ -224,7 +230,7 @@ where
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;
-                    let events_block_hash = events.block_hash();
+
                     tracing::trace!("Found #{} events", events.len());
                     // wraps each handler future in a retry logic, that will retry the handler
                     // if it fails, up to `MAX_RETRY_COUNT`, after this it will ignore that event for
@@ -239,7 +245,7 @@ where
                         handler.handle_events_with_retry(
                             store.clone(),
                             client.clone(),
-                            events.clone(),
+                            (events.clone(), dest_block),
                             backoff,
                             metrics_clone.clone(),
                         )
@@ -257,29 +263,15 @@ where
                             tracing::error!("{}", e);
                         }
                     });
-                    let maybe_header = rpc
-                        .header(Some(events_block_hash))
-                        .map_err(Into::into)
-                        .map_err(backoff::Error::transient)
-                        .await?;
-                    let header = if let Some(header) = maybe_header {
-                        header
-                    } else {
-                        tracing::warn!(
-                            block_hash = ?events_block_hash,
-                            "No header found for that block hash",
-                        );
-                        continue;
-                    };
-                    let block_number: u64 = (*header.number()).into();
+
                     if mark_as_handled {
                         store.set_last_block_number(
                             history_store_key,
-                            block_number,
+                            dest_block,
                         )?;
                         tracing::trace!(
-                            "event handled successfully. at #{}",
-                            block_number
+                            "event handled successfully at block #{}",
+                            dest_block
                         );
                     } else {
                         tracing::error!(
@@ -291,11 +283,6 @@ where
                             webb_relayer_utils::Error::ForceRestart,
                         ));
                     }
-
-                    // move forward.
-                    store
-                        .set_last_block_number(history_store_key, dest_block)?;
-                    tracing::trace!("Last saved block number: #{}", dest_block);
                 }
                 tracing::trace!("Polled from #{} to #{}", block, dest_block);
                 if should_cooldown {

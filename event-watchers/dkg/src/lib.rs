@@ -13,15 +13,42 @@
 // limitations under the License.
 
 /// A module for listening on proposal events.
-mod proposal_handler_watcher;
+mod proposal_signed_handler;
 #[doc(hidden)]
-pub use proposal_handler_watcher::*;
+pub use proposal_signed_handler::*;
 /// A module for listening on DKG Governor Changes event.
-mod governor_watcher;
+mod public_key_changed_handler;
 #[doc(hidden)]
-pub use governor_watcher::*;
+pub use public_key_changed_handler::*;
+use webb::substrate::subxt::{self, PolkadotConfig};
+use webb_event_watcher_traits::SubstrateEventWatcher;
 
-/// A module for listening on DKG Metadata pallet events.
-mod dkg_metadata;
-#[doc(hidden)]
-pub use dkg_metadata::*;
+/// The DKGEventWatcher watches for the events from Dkg Pallet.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct DKGEventWatcher;
+
+#[async_trait::async_trait]
+impl SubstrateEventWatcher<PolkadotConfig> for DKGEventWatcher {
+    const TAG: &'static str = "DKG Pallet Event Watcher";
+
+    const PALLET_NAME: &'static str = "DKG";
+
+    type Client = subxt::OnlineClient<PolkadotConfig>;
+
+    type Store = webb_relayer_store::SledStore;
+}
+
+/// The DKGProposalHandlerWatcher watches for the events from Dkg Proposal Handler Pallet.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct DKGProposalHandlerWatcher;
+
+#[async_trait::async_trait]
+impl SubstrateEventWatcher<PolkadotConfig> for DKGProposalHandlerWatcher {
+    const TAG: &'static str = "DKG Proposal Handler Pallet Event Watcher";
+
+    const PALLET_NAME: &'static str = "DKGProposalHandler";
+
+    type Client = subxt::OnlineClient<PolkadotConfig>;
+
+    type Store = webb_relayer_store::SledStore;
+}

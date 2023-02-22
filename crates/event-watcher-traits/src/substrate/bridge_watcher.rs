@@ -18,7 +18,8 @@ use super::{event_watcher::SubstrateEventWatcher, *};
 /// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers
 /// from the actual action that should be taken depending on the event.
 #[async_trait::async_trait]
-pub trait SubstrateBridgeWatcher<RuntimeConfig>: SubstrateEventWatcher<RuntimeConfig>
+pub trait SubstrateBridgeWatcher<RuntimeConfig>:
+    SubstrateEventWatcher<RuntimeConfig>
 where
     RuntimeConfig: subxt::Config + Send + Sync + 'static,
     Self::Store: ProposalStore<Proposal = ()>

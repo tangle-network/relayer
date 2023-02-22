@@ -30,13 +30,19 @@ use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb::evm::ethers::providers;
+use webb_ew_dkg::DKGEventWatcher;
+use webb_ew_dkg::DKGProposalHandlerWatcher;
+use webb_ew_dkg::DKGPublicKeyChangedHandler;
+use webb_ew_dkg::ProposalSignedHandler;
+use webb_ew_substrate::SubstrateBridgeEventHandler;
+use webb_ew_substrate::SubstrateBridgeEventWatcher;
+use webb_ew_substrate::SubstrateVAnchorEventWatcher;
 
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
 use webb_event_watcher_traits::evm::{BridgeWatcher, EventWatcher};
 use webb_event_watcher_traits::substrate::SubstrateBridgeWatcher;
 use webb_event_watcher_traits::SubstrateEventWatcher;
-use webb_ew_dkg::{DKGGovernorWatcher, ProposalHandlerWatcher};
 use webb_ew_evm::open_vanchor::{
     OpenVAnchorDepositHandler, OpenVAnchorLeavesHandler,
 };
@@ -49,8 +55,8 @@ use webb_ew_evm::{
     VAnchorContractWatcher, VAnchorContractWrapper,
 };
 use webb_ew_substrate::{
-    SubstrateBridgeEventWatcher, SubstrateVAnchorLeavesWatcher,
-    SubstrateVAnchorWatcher,
+    SubstrateVAnchorDepositHandler, SubstrateVAnchorEncryptedOutputHandler,
+    SubstrateVAnchorLeavesHandler,
 };
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_config::evm::{
@@ -342,14 +348,6 @@ pub fn start_substrate_vanchor_event_watcher(
     let mut shutdown_signal = ctx.shutdown_signal();
     let metrics = ctx.metrics.clone();
     let task = async move {
-        let watcher = SubstrateVAnchorLeavesWatcher::default();
-        let substrate_leaves_watcher_task = watcher.run(
-            chain_id,
-            client.clone().into(),
-            store.clone(),
-            metrics.clone(),
-            my_config.events_watcher,
-        );
         let proposal_signing_backend = make_substrate_proposal_signing_backend(
             &my_ctx,
             store.clone(),
@@ -363,17 +361,28 @@ pub fn start_substrate_vanchor_event_watcher(
                 // its safe to use unwrap on linked_anchors here
                 // since this option is always going to return Some(value).
                 // linked_anchors are validated in make_proposal_signing_backend() method
-                let watcher = SubstrateVAnchorWatcher::new(
+                let deposit_handler = SubstrateVAnchorDepositHandler::new(
                     backend,
                     my_config.linked_anchors.unwrap(),
                 );
+                let leaves_handler = SubstrateVAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    SubstrateVAnchorEncryptedOutputHandler::default();
+
+                let watcher = SubstrateVAnchorEventWatcher::default();
                 let substrate_vanchor_watcher_task = watcher.run(
                     chain_id,
                     client.clone().into(),
                     store.clone(),
-                    metrics.clone(),
                     my_config.events_watcher,
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
+                    metrics.clone(),
                 );
+
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
@@ -381,12 +390,7 @@ pub fn start_substrate_vanchor_event_watcher(
                             chain_id,
                         );
                     },
-                    _ = substrate_leaves_watcher_task => {
-                        tracing::warn!(
-                            "Substrate VAnchor leaves watcher stopped for ({})",
-                            chain_id,
-                        );
-                    },
+
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
                             "Stopping Substrate VAnchor watcher (DKG Backend) for ({})",
@@ -398,27 +402,31 @@ pub fn start_substrate_vanchor_event_watcher(
             ProposalSigningBackendSelector::Mocked(backend) => {
                 // its safe to use unwrap on linked_anchors here
                 // since this option is always going to return Some(value).
-                let watcher = SubstrateVAnchorWatcher::new(
+                let deposit_handler = SubstrateVAnchorDepositHandler::new(
                     backend,
                     my_config.linked_anchors.unwrap(),
                 );
+                let leaves_handler = SubstrateVAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    SubstrateVAnchorEncryptedOutputHandler::default();
+
+                let watcher = SubstrateVAnchorEventWatcher::default();
                 let substrate_vanchor_watcher_task = watcher.run(
                     chain_id,
-                    client.into(),
+                    client.clone().into(),
                     store.clone(),
-                    metrics.clone(),
                     my_config.events_watcher,
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
+                    metrics.clone(),
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
                             "Substrate VAnchor watcher (Mocked Backend) task stopped for ({})",
-                            chain_id,
-                        );
-                    },
-                    _ = substrate_leaves_watcher_task => {
-                        tracing::warn!(
-                            "Substrate VAnchor leaves watcher stopped for ({})",
                             chain_id,
                         );
                     },
@@ -431,16 +439,32 @@ pub fn start_substrate_vanchor_event_watcher(
                 }
             }
             ProposalSigningBackendSelector::None => {
+                let leaves_handler = SubstrateVAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    SubstrateVAnchorEncryptedOutputHandler::default();
+
+                let watcher = SubstrateVAnchorEventWatcher::default();
+                let substrate_vanchor_watcher_task = watcher.run(
+                    chain_id,
+                    client.clone().into(),
+                    store.clone(),
+                    my_config.events_watcher,
+                    vec![
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
+                    metrics.clone(),
+                );
                 tokio::select! {
-                    _ = substrate_leaves_watcher_task => {
+                    _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
-                            "Substrate VAnchor leaves watcher stopped for ({})",
+                            "Substrate VAnchor watcher task stopped for ({})",
                             chain_id,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping Substrate VAnchor watcher (Mocked Backend) for ({})",
+                            "Stopping Substrate VAnchor watcher task for ({})",
                             chain_id,
                         );
                     },
@@ -488,16 +512,18 @@ pub fn start_dkg_proposal_handler(
     let metrics = ctx.metrics.clone();
     let my_config = config.clone();
     let task = async move {
-        let proposal_handler = ProposalHandlerWatcher::default();
-        let watcher = proposal_handler.run(
+        let proposal_handler_watcher = DKGProposalHandlerWatcher::default();
+        let proposal_signed_handler = ProposalSignedHandler::default();
+        let proposal_handler_watcher_task = proposal_handler_watcher.run(
             chain_id,
             client.into(),
             store,
-            metrics,
             my_config.events_watcher,
+            vec![Box::new(proposal_signed_handler)],
+            metrics,
         );
         tokio::select! {
-            _ = watcher => {
+            _ = proposal_handler_watcher_task => {
                 tracing::warn!(
                     "DKG Proposal Handler events watcher stopped for ({})",
                     chain_id,
@@ -548,16 +574,20 @@ pub fn start_dkg_pallet_watcher(
     let metrics = ctx.metrics.clone();
     let my_config = config.clone();
     let task = async move {
-        let governor_watcher = DKGGovernorWatcher::new(webb_config);
-        let watcher = governor_watcher.run(
+        let dkg_event_watcher = DKGEventWatcher::default();
+        let public_key_changed_handler =
+            DKGPublicKeyChangedHandler::new(webb_config);
+
+        let dkg_event_watcher_task = dkg_event_watcher.run(
             chain_id,
             client.into(),
             store,
-            metrics,
             my_config.events_watcher,
+            vec![Box::new(public_key_changed_handler)],
+            metrics,
         );
         tokio::select! {
-            _ = watcher => {
+            _ = dkg_event_watcher_task => {
                 tracing::warn!(
                     "DKG Pallet events watcher stopped for ({})",
                     chain_id,
@@ -948,13 +978,15 @@ pub async fn start_substrate_signature_bridge_events_watcher(
             chain_id
         );
         let substrate_bridge_watcher = SubstrateBridgeEventWatcher::default();
+        let bridge_event_handler = SubstrateBridgeEventHandler::default();
         let events_watcher_task = SubstrateEventWatcher::run(
             &substrate_bridge_watcher,
             chain_id,
             client.clone().into(),
             store.clone(),
-            ctx.metrics.clone(),
             my_config.events_watcher,
+            vec![Box::new(bridge_event_handler)],
+            ctx.metrics.clone(),
         );
         let cmd_handler_task = SubstrateBridgeWatcher::run(
             &substrate_bridge_watcher,

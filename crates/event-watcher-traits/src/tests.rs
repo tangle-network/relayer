@@ -15,8 +15,7 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api::system;
-use webb::substrate::subxt;
-use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
+use webb::substrate::subxt::{self, Config, OnlineClient, PolkadotConfig};
 use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledStore;
@@ -29,12 +28,12 @@ use crate::SubstrateEventWatcher;
 struct TestEventsWatcher;
 
 #[async_trait::async_trait]
-impl SubstrateEventWatcher<subxt::PolkadotConfig> for TestEventsWatcher {
+impl SubstrateEventWatcher<PolkadotConfig> for TestEventsWatcher {
     const TAG: &'static str = "Test Event Watcher";
 
     const PALLET_NAME: &'static str = "System";
 
-    type Client = OnlineClient<subxt::PolkadotConfig>;
+    type Client = OnlineClient<PolkadotConfig>;
 
     type Store = SledStore;
 }
@@ -43,30 +42,26 @@ impl SubstrateEventWatcher<subxt::PolkadotConfig> for TestEventsWatcher {
 struct RemarkedEventHandler;
 
 #[async_trait::async_trait]
-impl EventHandler<subxt::PolkadotConfig> for RemarkedEventHandler {
-    type Client = OnlineClient<subxt::PolkadotConfig>;
+impl<PolkadotConfig: Sync + Send + Config> EventHandler<PolkadotConfig>
+    for RemarkedEventHandler
+{
+    type Client = OnlineClient<PolkadotConfig>;
     type Store = SledStore;
 
+    async fn can_handle_event(
+        &self,
+        events: subxt::events::Events<PolkadotConfig>,
+    ) -> webb_relayer_utils::Result<bool> {
+        let has_event = events.has::<system::events::Remarked>()?;
+        Ok(has_event)
+    }
     async fn handle_events(
         &self,
         _store: Arc<Self::Store>,
-        client: Arc<Self::Client>,
-        events: subxt::events::Events<subxt::PolkadotConfig>,
+        _client: Arc<Self::Client>,
+        (events, block_number): (subxt::events::Events<PolkadotConfig>, u64),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        // fetch the block number from the events
-        let block_hash = events.block_hash();
-        let maybe_header = client.rpc().header(Some(block_hash)).await?;
-        let block_number = match maybe_header {
-            Some(header) => header.number,
-            None => {
-                tracing::warn!(
-                    "Failed to fetch block header for block hash: {:?}",
-                    block_hash
-                );
-                return Ok(());
-            }
-        };
         // find the `Remarked` event(s) in the events
         let remarked_events = events
             .find::<system::events::Remarked>()
