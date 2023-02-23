@@ -1,0 +1,25 @@
+[eth2.testnet]
+enabled = true
+name = "testnet config"
+chain_id = 0
+beacon_endpoint = "https://lodestar-mainnet.chainsafe.io"
+eth1_endpoint = "https://mainnet.infura.io/v3/eb55627f53de4592a75fd4a5b4289a92"
+substrate_endpoint = "localhost:9944"
+signer_account_id = "5Dqf9U5dgQ9GLqdfaxXGjpZf9af1sCV8UrnpRgqJPbe3wCwX"
+path_to_signer_secret_key = "/tmp/empty/6163636f4e85271af1330e5e9384bd3ac5bdc04c0f8ef5a8cc29c1a8ae483d674164745c"
+contract_account_id = "NaN"
+ethereum_network = "Goerli"
+substrate_network_name = "Testnet"
+substrate_network_id = "Testnet"
+eth_requests_timeout_seconds = 30
+validate_updates = true
+verify_bls_signature = true
+hashes_gc_threshold = 51000
+max_submitted_blocks_by_account = 8000
+beacon_rpc_version = "V1_2"
+headers_batch_size = 33
+interval_between_light_client_updates_submission_in_epochs = 1
+max_blocks_for_finalization = 5000
+state_requests_timeout_seconds = 1000
+sleep_time_on_sync_secs = 0
+sleep_time_after_submission_secs = 5
