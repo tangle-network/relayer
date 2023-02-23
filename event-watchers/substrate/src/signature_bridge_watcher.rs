@@ -16,6 +16,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use webb::substrate::subxt::config::SubstrateConfig;
+use webb::substrate::subxt::events::StaticEvent;
 use webb::substrate::subxt::ext::sp_core::hashing::keccak_256;
 
 use webb::substrate::subxt::{self, dynamic::Value, OnlineClient};
@@ -28,7 +29,7 @@ use webb_relayer_store::{BridgeCommand, QueueStore};
 
 use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
-use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
+use webb::substrate::protocol_substrate_runtime::api::signature_bridge::events::MaintainerSet;
 
 use std::borrow::Cow;
 use webb::substrate::scale::Encode;
@@ -51,8 +52,7 @@ impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
         &self,
         events: subxt::events::Events<SubstrateConfig>,
     ) -> webb_relayer_utils::Result<bool> {
-        let has_event =
-            events.has::<signature_bridge::events::MaintainerSet>()?;
+        let has_event = events.has::<MaintainerSet>()?;
         Ok(has_event)
     }
 
@@ -67,10 +67,8 @@ impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
         // if the ownership is transferred to the new owner, we need to
         // to check our txqueue and remove any pending tx that was trying to
         // do this transfer.
-        let maintainer_set_events = events
-            .find::<signature_bridge::events::MaintainerSet>()
-            .flatten()
-            .collect::<Vec<_>>();
+        let maintainer_set_events =
+            events.find::<MaintainerSet>().flatten().collect::<Vec<_>>();
 
         for event in maintainer_set_events {
             tracing::event!(
@@ -98,7 +96,7 @@ pub struct SubstrateBridgeEventWatcher;
 
 impl SubstrateEventWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
     const TAG: &'static str = "Substrate bridge pallet Watcher";
-    const PALLET_NAME: &'static str = "SignatureBridge";
+    const PALLET_NAME: &'static str = MaintainerSet::PALLET;
     type Client = OnlineClient<SubstrateConfig>;
     type Store = SledStore;
 }

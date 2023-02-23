@@ -20,18 +20,23 @@ pub use proposal_signed_handler::*;
 mod public_key_changed_handler;
 #[doc(hidden)]
 pub use public_key_changed_handler::*;
+use webb::substrate::dkg_runtime::api::{
+    dkg::events::PublicKeySignatureChanged,
+    dkg_proposal_handler::events::ProposalSigned,
+};
+use webb::substrate::subxt::events::StaticEvent;
 use webb::substrate::subxt::{self, PolkadotConfig};
 use webb_event_watcher_traits::SubstrateEventWatcher;
 
-/// The DKGMetadataWatcher watches for the events from DkgMetdata Pallet.
+/// The DKGMetadataWatcher watches for the events from Dkg Pallet.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct DKGMetadataWatcher;
 
 #[async_trait::async_trait]
 impl SubstrateEventWatcher<PolkadotConfig> for DKGMetadataWatcher {
-    const TAG: &'static str = "DKGMetadata Pallet Event Watcher";
+    const TAG: &'static str = "DKG Pallet Event Watcher";
 
-    const PALLET_NAME: &'static str = "DKGMetadata";
+    const PALLET_NAME: &'static str = PublicKeySignatureChanged::PALLET;
 
     type Client = subxt::OnlineClient<PolkadotConfig>;
 
@@ -46,7 +51,7 @@ pub struct DKGProposalHandlerWatcher;
 impl SubstrateEventWatcher<PolkadotConfig> for DKGProposalHandlerWatcher {
     const TAG: &'static str = "DKG Proposal Handler Pallet Event Watcher";
 
-    const PALLET_NAME: &'static str = "DKGProposalHandler";
+    const PALLET_NAME: &'static str = ProposalSigned::PALLET;
 
     type Client = subxt::OnlineClient<PolkadotConfig>;
 

@@ -25,7 +25,11 @@ pub use vanchor_deposit_handler::*;
 pub use vanchor_encrypted_output_handler::*;
 #[doc(hidden)]
 pub use vanchor_leaves_handler::*;
-use webb::substrate::subxt::{OnlineClient, SubstrateConfig};
+use webb::substrate::subxt::events::StaticEvent;
+use webb::substrate::{
+    protocol_substrate_runtime::api::v_anchor_bn254::events::Transaction,
+    subxt::{OnlineClient, SubstrateConfig},
+};
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_relayer_store::SledStore;
 
@@ -36,7 +40,7 @@ pub struct SubstrateVAnchorEventWatcher;
 impl SubstrateEventWatcher<SubstrateConfig> for SubstrateVAnchorEventWatcher {
     const TAG: &'static str = "Substrate VAnchor Event Watcher";
 
-    const PALLET_NAME: &'static str = "VAnchorBn254";
+    const PALLET_NAME: &'static str = Transaction::PALLET;
 
     type Client = OnlineClient<SubstrateConfig>;
 
