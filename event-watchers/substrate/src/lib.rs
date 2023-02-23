@@ -13,15 +13,36 @@
 // limitations under the License.
 
 mod signature_bridge_watcher;
-mod vanchor_encrypted_output_watcher;
-mod vanchor_leaves_watcher;
-mod vanchor_watcher;
+mod vanchor_deposit_handler;
+mod vanchor_encrypted_output_handler;
+mod vanchor_leaves_handler;
 
 #[doc(hidden)]
 pub use signature_bridge_watcher::*;
 #[doc(hidden)]
-pub use vanchor_encrypted_output_watcher::*;
+pub use vanchor_deposit_handler::*;
 #[doc(hidden)]
-pub use vanchor_leaves_watcher::*;
+pub use vanchor_encrypted_output_handler::*;
 #[doc(hidden)]
-pub use vanchor_watcher::*;
+pub use vanchor_leaves_handler::*;
+use webb::substrate::subxt::events::StaticEvent;
+use webb::substrate::{
+    protocol_substrate_runtime::api::v_anchor_bn254::events::Transaction,
+    subxt::{OnlineClient, SubstrateConfig},
+};
+use webb_event_watcher_traits::SubstrateEventWatcher;
+use webb_relayer_store::SledStore;
+
+#[derive(Copy, Clone, Debug, Default)]
+pub struct SubstrateVAnchorEventWatcher;
+
+#[async_trait::async_trait]
+impl SubstrateEventWatcher<SubstrateConfig> for SubstrateVAnchorEventWatcher {
+    const TAG: &'static str = "Substrate VAnchor Event Watcher";
+
+    const PALLET_NAME: &'static str = Transaction::PALLET;
+
+    type Client = OnlineClient<SubstrateConfig>;
+
+    type Store = SledStore;
+}
