@@ -102,14 +102,14 @@ pub trait LightClientPoller {
             init_pallet(&config.clone().into(), &mut eth_client_contract)
                 .await
                 .expect("Error on contract initialization");
+            // We removed the sleep (30s) from the end of the init_pallet function. In its place,
+            // we sleep here for 1/10th the time (for now)
             tracing::info!("Init pallet success (waiting 3s...)");
+            tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
         } else {
             tracing::info!("Pallet already initialized...");
         }
 
-        // We removed the sleep (30s) from the end of the init_pallet function. In its place,
-        // we sleep here for 1/10th the time (for now)
-        tokio::time::sleep(std::time::Duration::from_millis(3000)).await;
         // Step 2: init relay
         let submit_only_finalized_blocks = true;
         let enable_binsearch = true;
