@@ -1,7 +1,5 @@
 #[cfg(test)]
 mod tests {
     #[tokio::test]
-    async fn test_client() {
-        
-    }
+    async fn test_client() {}
 }

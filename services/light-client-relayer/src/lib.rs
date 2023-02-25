@@ -1,12 +1,10 @@
-
-
 use crate::light_client::LightClientPoller;
 
+use eth2_to_substrate_relay::config::Config;
+use eth2_to_substrate_relay::config_for_tests::ConfigForTests;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::Result;
-use eth2_to_substrate_relay::config::Config;
-use eth2_to_substrate_relay::config_for_tests::ConfigForTests;
 
 mod light_client;
 
@@ -42,9 +40,9 @@ pub fn start_light_client_service(
 
         let light_client_watcher = LightClientWatcher::default();
         /*let light_client_watcher_task =
-            light_client_watcher.run(client, store, poller_config);*/
-            //let config_for_tests = get_test_config();
-            let light_client_watcher_task = light_client_watcher.run(config);
+        light_client_watcher.run(client, store, poller_config);*/
+        //let config_for_tests = get_test_config();
+        let light_client_watcher_task = light_client_watcher.run(config);
         tokio::select! {
             res = light_client_watcher_task => {
                 tracing::warn!("Block watcher stopped unexpectedly for chain {} | reason: {:?}", chain_id, res);

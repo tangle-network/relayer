@@ -236,9 +236,9 @@ checksum = "d468802bab17cbc0cc575e9b053f41e72aa36bfa6b7f55e3529ffa43161b97fa"
 
 [[package]]
 name = "axum"
-version = "0.6.7"
+version = "0.6.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2fb79c228270dcf2426e74864cabc94babb5dbab01a4314e702d2f16540e1591"
+checksum = "2bd379e511536bad07447f899300aa526e9bae8e6f66dc5e5ca45d7587b7c1ec"
 dependencies = [
  "async-trait",
  "axum-core",
@@ -471,6 +471,23 @@ dependencies = [
 [[package]]
 name = "bls"
 version = "0.2.0"
+dependencies = [
+ "eth2_hashing 0.3.0",
+ "eth2_serde_utils 0.1.1",
+ "eth2_ssz 0.4.1",
+ "ethereum-types 0.14.1",
+ "hex",
+ "milagro_bls",
+ "rand 0.7.3",
+ "rand_chacha 0.3.1",
+ "serde",
+ "tree_hash 0.4.1",
+ "zeroize",
+]
+
+[[package]]
+name = "bls"
+version = "0.2.0"
 source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 dependencies = [
  "blst",
@@ -483,24 +500,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "tree_hash 0.4.1 (git+https://github.com/webb-tools/lighthouse.git?branch=develop)",
- "zeroize",
-]
-
-[[package]]
-name = "bls"
-version = "0.2.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
-dependencies = [
- "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "eth2_serde_utils 0.1.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "ethereum-types 0.14.1",
- "hex",
- "milagro_bls",
- "rand 0.7.3",
- "rand_chacha 0.3.1",
- "serde",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
  "zeroize",
 ]
 
@@ -955,21 +954,20 @@ dependencies = [
 [[package]]
 name = "consensus_types"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
 dependencies = [
  "bitvec 1.0.1",
  "derive_more",
  "eth-types",
  "ethereum-types 0.14.1",
  "hex",
- "merkle_proof 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "merkle_proof 0.2.0",
  "parity-scale-codec",
  "rlp",
  "rlp-derive",
  "scale-info",
  "serde",
  "tiny-keccak",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1",
 ]
 
 [[package]]
@@ -1583,11 +1581,10 @@ dependencies = [
 [[package]]
 name = "eth-types"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
 dependencies = [
  "derive_more",
- "eth2_serde_utils 0.1.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "eth2_serde_utils 0.1.1",
+ "eth2_ssz 0.4.1",
  "ethereum-types 0.14.1",
  "hex",
  "parity-scale-codec",
@@ -1596,14 +1593,13 @@ dependencies = [
  "scale-info",
  "serde",
  "tiny-keccak",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "tree_hash_derive 0.4.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1",
+ "tree_hash_derive 0.4.0",
 ]
 
 [[package]]
 name = "eth2-pallet-init"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
 dependencies = [
  "async-trait",
  "clap 3.2.23",
@@ -1611,7 +1607,7 @@ dependencies = [
  "eth-types",
  "eth_rpc_client",
  "log",
- "merkle_proof 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "merkle_proof 0.2.0",
  "parity-scale-codec",
  "reqwest",
  "scale-info",
@@ -1622,8 +1618,8 @@ dependencies = [
  "subxt",
  "tokio 1.25.0",
  "toml",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "webb 0.5.14 (git+https://github.com/webb-tools/webb-rs)",
+ "tree_hash 0.4.1",
+ "webb 0.5.14 (git+https://github.com/webb-tools/webb-rs.git)",
  "webb-proposals 0.5.5",
  "webb-relayer-types 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
  "webb-relayer-utils 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
@@ -1632,9 +1628,7 @@ dependencies = [
 [[package]]
 name = "eth2_hashing"
 version = "0.3.0"
-source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 dependencies = [
- "cpufeatures",
  "lazy_static",
  "ring",
  "sha2 0.10.6",
@@ -1643,8 +1637,9 @@ dependencies = [
 [[package]]
 name = "eth2_hashing"
 version = "0.3.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
+source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 dependencies = [
+ "cpufeatures",
  "lazy_static",
  "ring",
  "sha2 0.10.6",
@@ -1668,6 +1663,16 @@ dependencies = [
 [[package]]
 name = "eth2_serde_utils"
 version = "0.1.1"
+dependencies = [
+ "ethereum-types 0.14.1",
+ "hex",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "eth2_serde_utils"
+version = "0.1.1"
 source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 dependencies = [
  "ethereum-types 0.13.1",
@@ -1678,14 +1683,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "eth2_serde_utils"
-version = "0.1.1"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
+name = "eth2_ssz"
+version = "0.4.1"
 dependencies = [
  "ethereum-types 0.14.1",
- "hex",
- "serde",
- "serde_json",
+ "itertools",
+ "smallvec",
 ]
 
 [[package]]
@@ -1694,16 +1697,6 @@ version = "0.4.1"
 source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 dependencies = [
  "ethereum-types 0.13.1",
- "itertools",
- "smallvec",
-]
-
-[[package]]
-name = "eth2_ssz"
-version = "0.4.1"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
-dependencies = [
- "ethereum-types 0.14.1",
  "itertools",
  "smallvec",
 ]
@@ -1737,7 +1730,6 @@ dependencies = [
 [[package]]
 name = "eth2_to_substrate_relay"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1747,8 +1739,8 @@ dependencies = [
  "env_logger",
  "eth-types",
  "eth2-pallet-init",
- "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "eth2_hashing 0.3.0",
+ "eth2_ssz 0.4.1",
  "eth_rpc_client",
  "ethereum-types 0.14.1",
  "finality-update-verify",
@@ -1756,7 +1748,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "log",
- "merkle_proof 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "merkle_proof 0.2.0",
  "primitive-types 0.12.1",
  "prometheus 0.9.0",
  "reqwest",
@@ -1767,10 +1759,10 @@ dependencies = [
  "thread",
  "tokio 1.25.0",
  "toml",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1",
  "types",
  "warp 0.2.5",
- "webb 0.5.14 (git+https://github.com/webb-tools/webb-rs)",
+ "webb 0.5.14 (git+https://github.com/webb-tools/webb-rs.git)",
  "webb-proposals 0.5.5",
  "webb-relayer-utils 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
 ]
@@ -1778,7 +1770,6 @@ dependencies = [
 [[package]]
 name = "eth_rpc_client"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
 dependencies = [
  "async-std",
  "atomic_refcell",
@@ -2407,14 +2398,13 @@ dependencies = [
 [[package]]
 name = "finality-update-verify"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
 dependencies = [
  "bitvec 1.0.1",
- "bls 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "bls 0.2.0",
  "consensus_types",
  "eth-types",
  "serde",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1",
 ]
 
 [[package]]
@@ -3635,23 +3625,22 @@ checksum = "8452105ba047068f40ff7093dd1d9da90898e63dd61736462e9cdda6a90ad3c3"
 [[package]]
 name = "merkle_proof"
 version = "0.2.0"
+dependencies = [
+ "eth2_hashing 0.3.0",
+ "ethereum-types 0.14.1",
+ "lazy_static",
+ "safe_arith 0.1.0",
+]
+
+[[package]]
+name = "merkle_proof"
+version = "0.2.0"
 source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 dependencies = [
  "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/lighthouse.git?branch=develop)",
  "ethereum-types 0.13.1",
  "lazy_static",
  "safe_arith 0.1.0 (git+https://github.com/webb-tools/lighthouse.git?branch=develop)",
-]
-
-[[package]]
-name = "merkle_proof"
-version = "0.2.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
-dependencies = [
- "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "ethereum-types 0.14.1",
- "lazy_static",
- "safe_arith 0.1.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
 ]
 
 [[package]]
@@ -5016,12 +5005,11 @@ checksum = "7b4b9743ed687d4b4bcedf9ff5eaa7398495ae14e61cba0a295704edbc7decde"
 [[package]]
 name = "safe_arith"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 
 [[package]]
 name = "safe_arith"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
+source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 
 [[package]]
 name = "safemem"
@@ -6341,9 +6329,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.108"
+version = "1.0.109"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d56e159d99e6c2b93995d171050271edb50ecc5288fbc7cc17de8fdce4e58c14"
+checksum = "72b64191b275b66ffe2469e8af2c1cfe3bafa67b529ead792a6d0160888b4237"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6888,6 +6876,15 @@ dependencies = [
 [[package]]
 name = "tree_hash"
 version = "0.4.1"
+dependencies = [
+ "eth2_hashing 0.3.0",
+ "ethereum-types 0.14.1",
+ "smallvec",
+]
+
+[[package]]
+name = "tree_hash"
+version = "0.4.1"
 source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 dependencies = [
  "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/lighthouse.git?branch=develop)",
@@ -6896,19 +6893,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "tree_hash"
-version = "0.4.1"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
-dependencies = [
- "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "ethereum-types 0.14.1",
- "smallvec",
-]
-
-[[package]]
 name = "tree_hash_derive"
 version = "0.4.0"
-source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 dependencies = [
  "darling 0.13.4",
  "quote",
@@ -6918,7 +6904,7 @@ dependencies = [
 [[package]]
 name = "tree_hash_derive"
 version = "0.4.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#2fcaa86c4e6cd9750ede0386374ed125d2eeb6b4"
+source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28fb46ad651d3b6ca1efbfc85b68c3d314e3"
 dependencies = [
  "darling 0.13.4",
  "quote",
@@ -7613,7 +7599,7 @@ dependencies = [
 [[package]]
 name = "webb"
 version = "0.5.14"
-source = "git+https://github.com/webb-tools/webb-rs#ee6cd26cd4171af68963d5429ab3c150bb176526"
+source = "git+https://github.com/webb-tools/webb-rs.git#ee6cd26cd4171af68963d5429ab3c150bb176526"
 dependencies = [
  "async-trait",
  "ethers 0.17.0",
@@ -7758,7 +7744,7 @@ dependencies = [
  "thiserror",
  "tokio 1.25.0",
  "tracing",
- "webb 0.5.14 (git+https://github.com/webb-tools/webb-rs)",
+ "webb 0.5.14 (git+https://github.com/webb-tools/webb-rs.git)",
  "webb-proposal-signing-backends",
  "webb-proposals 0.5.4",
  "webb-relayer",
@@ -7810,7 +7796,7 @@ dependencies = [
 [[package]]
 name = "webb-proposals"
 version = "0.5.5"
-source = "git+https://github.com/webb-tools/webb-rs#ee6cd26cd4171af68963d5429ab3c150bb176526"
+source = "git+https://github.com/webb-tools/webb-rs.git#ee6cd26cd4171af68963d5429ab3c150bb176526"
 dependencies = [
  "num-traits",
  "parity-scale-codec",

@@ -86,7 +86,7 @@ pub struct WebbRelayerConfig {
     #[serde(default)]
     pub evm: HashMap<String, EvmChainConfig>,
     /// ETH2 based networks and the configuration
-    /// 
+    ///
     /// a map between chain name and its configuration
     #[cfg(feature = "eth2")]
     #[serde(default)]

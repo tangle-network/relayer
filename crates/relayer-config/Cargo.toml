@@ -9,7 +9,8 @@ edition = "2021"
 webb-relayer-store = { path = "../relayer-store" }
 webb-relayer-types = { path = "../relayer-types" }
 webb-relayer-utils = { path = "../relayer-utils" }
-eth2_to_substrate_relay = { optional = true, git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
+# eth2_to_substrate_relay = { optional = true, git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
+eth2_to_substrate_relay = { path ="../../../pallet-eth2-light-client/eth2substrate-block-relay-rs", optional = true }
 anyhow = { version = "^1", optional = true }
 tracing = { version = "^0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3.1", features = ["parking_lot", "env-filter"], optional = true }

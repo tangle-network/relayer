@@ -8,7 +8,10 @@ use std::sync::Arc;
 use tokio::signal::unix;
 use webb_light_client_relayer::start_light_client_service;
 
-use webb_relayer_config::{cli::{create_store, load_config, setup_logger, Opts}, block_poller::BlockPollerConfig};
+use webb_relayer_config::{
+    block_poller::BlockPollerConfig,
+    cli::{create_store, load_config, setup_logger, Opts},
+};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
 
@@ -20,9 +23,7 @@ use webb_relayer_utils::Result;
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `store` -[Sled](https://sled.rs)-based database store
-pub async fn ignite(
-    ctx: &RelayerContext,
-) -> crate::Result<()> {
+pub async fn ignite(ctx: &RelayerContext) -> crate::Result<()> {
     tracing::debug!(
         "Relayer configuration: {}",
         serde_json::to_string_pretty(&ctx.config)?
@@ -47,14 +48,8 @@ pub async fn ignite(
             poller_config
         );
 
-        tracing::debug!(
-            "Starting light client relay ({:#?})",
-            poller_config,
-        );
-        start_light_client_service(
-            ctx,
-            chain_config
-        )?;
+        tracing::debug!("Starting light client relay ({:#?})", poller_config,);
+        start_light_client_service(ctx, chain_config)?;
     }
     Ok(())
 }

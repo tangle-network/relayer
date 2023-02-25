@@ -33,7 +33,7 @@ impl Default for BlockPollerConfig {
             polling_interval: 6000,
             max_blocks_per_step: max_blocks_per_step_default(),
             print_progress_interval: print_progress_interval_default(),
-            light_client_rpc_url: None
+            light_client_rpc_url: None,
         }
     }
 }
