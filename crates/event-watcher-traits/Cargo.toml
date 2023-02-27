@@ -25,6 +25,8 @@ webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true }
 webb-proposals = { workspace = true }
+arkworks-native-gadgets = { version = "1.2.0", default-features = false }
+ark-bls12-381 = { version = "^0.3.0", default-features = false, features = ["curve"] }
 
 tracing-test = "0.2"
 sled = { version = "^0.34" }

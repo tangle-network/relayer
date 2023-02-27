@@ -13,6 +13,10 @@
 // limitations under the License.
 
 use tokio::sync::Mutex;
+use webb::evm::{
+    contract::protocol_solidity::VAnchorContract,
+    ethers::prelude::k256::elliptic_curve::consts::U56,
+};
 use webb_relayer_utils::retry;
 
 use super::*;
@@ -103,10 +107,7 @@ pub trait EventWatcher {
                 let src_typed_chain_id = TypedChainId::Evm(chain_id);
                 let history_store_key =
                     ResourceId::new(src_target_system, src_typed_chain_id);
-                let block = store.get_last_block_number(
-                    history_store_key,
-                    contract.deployed_at().as_u64(),
-                )?;
+
                 let current_block_number = client
                     .get_block_number()
                     .map_err(Into::into)
@@ -117,6 +118,50 @@ pub trait EventWatcher {
                     "Latest block number: #{}",
                     current_block_number
                 );
+
+                let latest_merkel_root =
+                    store.get_latest_merkle_root(history_store_key)?;
+                let anchor_contract =
+                    VAnchorContract::new(contract.address(), client.clone());
+                let on_chain_root: [u8; 32] = anchor_contract
+                    .get_last_root()
+                    .call()
+                    .map_err(Into::into)
+                    .map_err(backoff::Error::transient)
+                    .await?
+                    .into();
+
+                if latest_merkel_root == on_chain_root.to_vec() {
+                    tracing::info!(
+                        "Merkle roots matched with on chain value: {:?}",
+                        latest_merkel_root
+                    );
+                } else {
+                    tracing::info!("Fast sync blocks");
+                    let events_filter = contract
+                        .event_with_filter::<Self::Events>(Default::default())
+                        .from_block(contract.deployed_at().as_u64())
+                        .to_block(current_block_number);
+                    let found_events = events_filter
+                        .query_with_meta()
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
+                        .await?;
+                    let levels = anchor_contract
+                        .get_levels()
+                        .call()
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
+                        .await?;
+
+                    // create merkle tree
+                }
+
+                let block = store.get_last_block_number(
+                    history_store_key,
+                    contract.deployed_at().as_u64(),
+                )?;
+
                 // latest finalized block after n block_confirmations
                 let latest_finalized_block =
                     current_block_number.saturating_sub(block_confirmations);
