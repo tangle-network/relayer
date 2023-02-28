@@ -21,16 +21,28 @@
 //! Services are tasks which the relayer constantly runs throughout its lifetime.
 //! Services handle keeping up to date with the configured chains.
 
+use axum::routing::get;
+use axum::Router;
 use std::collections::HashSet;
+use std::net::SocketAddr;
 use std::sync::Arc;
+use tower_http::cors::Any;
+use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
 use webb::evm::ethers::providers;
+use webb_ew_dkg::DKGMetadataWatcher;
+use webb_ew_dkg::DKGProposalHandlerWatcher;
+use webb_ew_dkg::DKGPublicKeyChangedHandler;
+use webb_ew_dkg::ProposalSignedHandler;
+use webb_ew_substrate::MaintainerSetEventHandler;
+use webb_ew_substrate::SubstrateBridgeEventWatcher;
+use webb_ew_substrate::SubstrateVAnchorEventWatcher;
 
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
 use webb_event_watcher_traits::evm::{BridgeWatcher, EventWatcher};
 use webb_event_watcher_traits::substrate::SubstrateBridgeWatcher;
 use webb_event_watcher_traits::SubstrateEventWatcher;
-use webb_ew_dkg::{DKGGovernorWatcher, ProposalHandlerWatcher};
 use webb_ew_evm::open_vanchor::{
     OpenVAnchorDepositHandler, OpenVAnchorLeavesHandler,
 };
@@ -43,8 +55,8 @@ use webb_ew_evm::{
     VAnchorContractWatcher, VAnchorContractWrapper,
 };
 use webb_ew_substrate::{
-    SubstrateBridgeEventWatcher, SubstrateVAnchorLeavesWatcher,
-    SubstrateVAnchorWatcher,
+    SubstrateVAnchorDepositHandler, SubstrateVAnchorEncryptedOutputHandler,
+    SubstrateVAnchorLeavesHandler,
 };
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_config::evm::{
@@ -59,8 +71,15 @@ use webb_relayer_config::substrate::{
 use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
+use webb_relayer_handlers::{
+    handle_fee_info, handle_socket_info, websocket_handler,
+};
 
-use webb_relayer_handlers::routes::{encrypted_outputs, info, leaves, metric};
+use webb_relayer_handlers::routes::info::handle_relayer_info;
+use webb_relayer_handlers::routes::leaves::{
+    handle_leaves_cache_evm, handle_leaves_cache_substrate,
+};
+use webb_relayer_handlers::routes::{encrypted_outputs, metric};
 use webb_relayer_store::SledStore;
 use webb_relayer_tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
 
@@ -71,181 +90,56 @@ pub type DkgClient = OnlineClient<PolkadotConfig>;
 /// Type alias for the WebbProtocol DefaultConfig
 pub type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 /// Type alias for [Sled](https://sled.rs)-based database store
-pub type Store = webb_relayer_store::sled::SledStore;
+pub type Store = SledStore;
 
-/// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to handled code) and
-/// instantiates the database store. Allows clients to interact with the relayer.
-///
-/// Returns `Ok((addr, server))` on success, or `Err(anyhow::Error)` on failure.
+/// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to
+/// handled code) and instantiates the database store. Allows clients to interact with the relayer.
 ///
 /// # Arguments
 ///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `store` - [Sled](https://sled.rs)-based database store
-pub fn build_web_services(
-    ctx: RelayerContext,
-    store: webb_relayer_store::sled::SledStore,
-) -> crate::Result<(
-    std::net::SocketAddr,
-    impl core::future::Future<Output = ()> + 'static,
-)> {
-    use warp::Filter;
+/// * `ctx` - RelayContext reference that holds the configuration and database
+pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
+    let socket_addr = SocketAddr::new([0, 0, 0, 0].into(), ctx.config.port);
+    let api = Router::new()
+        .route("/ip", get(handle_socket_info))
+        .route("/info", get(handle_relayer_info))
+        .route(
+            "/leaves/evm/:chain_id/:contract",
+            get(handle_leaves_cache_evm),
+        )
+        .route(
+            "/leaves/substrate/:chain_id/:tree_id/:pallet_id",
+            get(handle_leaves_cache_substrate),
+        )
+        .route(
+            "/encrypted_outputs/evm/:chain_id/:contract_address",
+            get(encrypted_outputs::handle_encrypted_outputs_cache_evm),
+        )
+        .route("/metrics", get(metric::handle_metric_info))
+        .route(
+            "/metrics/evm/:chain_id/:contract",
+            get(metric::handle_evm_metric_info),
+        )
+        .route(
+            "/metrics/substrate/:chain_id/:tree_id/:pallet_id",
+            get(metric::handle_substrate_metric_info),
+        )
+        .route(
+            "/fee_info/:chain_id/:vanchor/:gas_amount",
+            get(handle_fee_info),
+        );
 
-    let port = ctx.config.port;
-    let ctx_arc = Arc::new(ctx.clone());
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
+    let app = Router::new()
+        .nest("/api/v1", api)
+        .route("/ws", get(websocket_handler))
+        .layer(CorsLayer::new().allow_origin(Any))
+        .layer(TraceLayer::new_for_http())
+        .with_state(Arc::new(ctx))
+        .into_make_service_with_connect_info::<SocketAddr>();
 
-    // the websocket server for users to submit relay transaction requests
-    let ws_filter = warp::path("ws")
-        .and(warp::ws())
-        .and(ctx_filter.clone())
-        .map(|ws: warp::ws::Ws, ctx: Arc<RelayerContext>| {
-            ws.on_upgrade(|socket| async move {
-                let _ = webb_relayer_handlers::accept_connection(
-                    ctx.as_ref(),
-                    socket,
-                )
-                .await;
-            })
-        })
-        .boxed();
-
-    // get the ip of the caller.
-    let proxy_addr = [127, 0, 0, 1].into();
-
-    // First check the x-forwarded-for with 'real_ip' for reverse proxy setups
-    // This code identifies the client's ip address and sends it back to them
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let ip_filter = warp::path("ip")
-        .and(warp::get())
-        .and(warp_real_ip::real_ip(vec![proxy_addr]))
-        .and_then(webb_relayer_handlers::handle_ip_info)
-        .or(warp::path("ip")
-            .and(warp::get())
-            .and(warp::addr::remote())
-            .and_then(webb_relayer_handlers::handle_socket_info))
-        .boxed();
-
-    // Define the handling of a request for this relayer's information (supported networks)
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let info_filter = warp::path("info")
-        .and(warp::get())
-        .and(ctx_filter)
-        .and_then(info::handle_relayer_info)
-        .boxed();
-
-    // Define the handling of a request for the leaves of a merkle tree. This is used by clients as a way to query
-    // for information needed to generate zero-knowledge proofs (it is faster than querying the chain history)
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let evm_store = Arc::new(store.clone());
-    let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
-    let ctx_arc = Arc::new(ctx.clone());
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
-    let leaves_cache_filter_evm = warp::path("leaves")
-        .and(warp::path("evm"))
-        .and(store_filter)
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::query())
-        .and(ctx_filter)
-        .and_then(leaves::handle_leaves_cache_evm)
-        .boxed();
-    // leaf api handler for substrate
-    let substrate_store = Arc::new(store.clone());
-    let store_filter = warp::any()
-        .map(move || Arc::clone(&substrate_store))
-        .boxed();
-    let ctx_arc = Arc::new(ctx.clone());
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
-
-    // TODO: PUT THE URL FOR THIS ENDPOINT HERE.
-    let leaves_cache_filter_substrate = warp::path("leaves")
-        .and(warp::path("substrate"))
-        .and(store_filter)
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::query())
-        .and(ctx_filter)
-        .and_then(leaves::handle_leaves_cache_substrate)
-        .boxed();
-
-    let evm_store = Arc::new(store);
-    let store_filter = warp::any().map(move || Arc::clone(&evm_store)).boxed();
-    let ctx_arc = Arc::new(ctx.clone());
-    let ctx_filter = warp::any().map(move || Arc::clone(&ctx_arc)).boxed();
-    let encrypted_output_cache_filter_evm = warp::path("encrypted_outputs")
-        .and(warp::path("evm"))
-        .and(store_filter)
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::query())
-        .and(ctx_filter)
-        .and_then(encrypted_outputs::handle_encrypted_outputs_cache_evm)
-        .boxed();
-
-    let relayer_metrics_info = warp::path("metrics")
-        .and(warp::get())
-        .and_then(metric::handle_metric_info)
-        .boxed();
-
-    //  Relayer metric for particular evm resource
-    let ctx_arc = Arc::new(ctx.clone());
-    let relayer_metrics_info_evm = warp::path("metrics")
-        .and(warp::path("evm"))
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and_then(move |chain_id, contract| {
-            metric::handle_evm_metric_info(
-                chain_id,
-                contract,
-                Arc::clone(&ctx_arc),
-            )
-        })
-        .boxed();
-
-    //  Relayer metric for particular substrate resource
-    let ctx_arc = Arc::new(ctx.clone());
-    let relayer_metrics_info_substrate = warp::path("metrics")
-        .and(warp::path("substrate"))
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and(warp::path::param())
-        .and_then(move |chain_id, tree_id, pallet_id| {
-            metric::handle_substrate_metric_info(
-                chain_id,
-                tree_id,
-                pallet_id,
-                Arc::clone(&ctx_arc),
-            )
-        })
-        .boxed();
-
-    // Code that will map the request handlers above to a defined http endpoint.
-    let routes = ip_filter
-        .or(info_filter)
-        .or(leaves_cache_filter_evm)
-        .or(leaves_cache_filter_substrate)
-        .or(encrypted_output_cache_filter_evm)
-        .or(relayer_metrics_info_evm)
-        .or(relayer_metrics_info_substrate)
-        .or(relayer_metrics_info)
-        .boxed(); // will add more routes here.
-    let http_filter =
-        warp::path("api").and(warp::path("v1")).and(routes).boxed();
-
-    let cors = warp::cors().allow_any_origin();
-    let service = http_filter
-        .or(ws_filter)
-        .with(cors)
-        .with(warp::trace::request());
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let shutdown_signal = async move {
-        shutdown_signal.recv().await;
-    };
-    warp::serve(service)
-        .try_bind_with_graceful_shutdown(([0, 0, 0, 0], port), shutdown_signal)
-        .map_err(Into::into)
+    tracing::info!("Starting the server on {}", socket_addr);
+    axum::Server::bind(&socket_addr).serve(app).await?;
+    Ok(())
 }
 
 /// Starts all background services for all chains configured in the config file.
@@ -338,7 +232,6 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -348,7 +241,6 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -383,7 +275,6 @@ pub async fn ignite(
                                 ctx,
                                 config,
                                 client.clone(),
-                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )?;
@@ -393,7 +284,6 @@ pub async fn ignite(
                                 ctx.clone(),
                                 config,
                                 client.clone(),
-                                node_name.to_owned(),
                                 chain_id,
                                 store.clone(),
                             )
@@ -432,27 +322,25 @@ pub async fn ignite(
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - VAnchorBn254 configuration
 /// * `client` - WebbProtocol client
-/// * `node_name` - Name of the node
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_substrate_vanchor_event_watcher(
     ctx: &RelayerContext,
     config: &VAnchorBn254PalletConfig,
     client: WebbProtocolClient,
-    node_name: String,
     chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
             "Substrate VAnchor events watcher is disabled for ({}).",
-            node_name,
+            chain_id,
         );
         return Ok(());
     }
     tracing::debug!(
         "Substrate VAnchor events watcher for ({}) Started.",
-        node_name,
+        chain_id,
     );
 
     let my_ctx = ctx.clone();
@@ -460,14 +348,6 @@ pub fn start_substrate_vanchor_event_watcher(
     let mut shutdown_signal = ctx.shutdown_signal();
     let metrics = ctx.metrics.clone();
     let task = async move {
-        let watcher = SubstrateVAnchorLeavesWatcher::default();
-        let substrate_leaves_watcher_task = watcher.run(
-            node_name.to_owned(),
-            chain_id,
-            client.clone().into(),
-            store.clone(),
-            metrics.clone(),
-        );
         let proposal_signing_backend = make_substrate_proposal_signing_backend(
             &my_ctx,
             store.clone(),
@@ -481,34 +361,40 @@ pub fn start_substrate_vanchor_event_watcher(
                 // its safe to use unwrap on linked_anchors here
                 // since this option is always going to return Some(value).
                 // linked_anchors are validated in make_proposal_signing_backend() method
-                let watcher = SubstrateVAnchorWatcher::new(
+                let deposit_handler = SubstrateVAnchorDepositHandler::new(
                     backend,
                     my_config.linked_anchors.unwrap(),
                 );
+                let leaves_handler = SubstrateVAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    SubstrateVAnchorEncryptedOutputHandler::default();
+
+                let watcher = SubstrateVAnchorEventWatcher::default();
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.to_owned(),
                     chain_id,
                     client.clone().into(),
                     store.clone(),
+                    my_config.events_watcher,
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
                     metrics.clone(),
                 );
+
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
                             "Substrate VAnchor watcher (DKG Backend) task stopped for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
-                    _ = substrate_leaves_watcher_task => {
-                        tracing::warn!(
-                            "Substrate VAnchor leaves watcher stopped for ({})",
-                            node_name,
-                        );
-                    },
+
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
                             "Stopping Substrate VAnchor watcher (DKG Backend) for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                 }
@@ -516,50 +402,70 @@ pub fn start_substrate_vanchor_event_watcher(
             ProposalSigningBackendSelector::Mocked(backend) => {
                 // its safe to use unwrap on linked_anchors here
                 // since this option is always going to return Some(value).
-                let watcher = SubstrateVAnchorWatcher::new(
+                let deposit_handler = SubstrateVAnchorDepositHandler::new(
                     backend,
                     my_config.linked_anchors.unwrap(),
                 );
+                let leaves_handler = SubstrateVAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    SubstrateVAnchorEncryptedOutputHandler::default();
+
+                let watcher = SubstrateVAnchorEventWatcher::default();
                 let substrate_vanchor_watcher_task = watcher.run(
-                    node_name.to_owned(),
                     chain_id,
-                    client.into(),
+                    client.clone().into(),
                     store.clone(),
+                    my_config.events_watcher,
+                    vec![
+                        Box::new(deposit_handler),
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
                     metrics.clone(),
                 );
                 tokio::select! {
                     _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
                             "Substrate VAnchor watcher (Mocked Backend) task stopped for ({})",
-                            node_name,
-                        );
-                    },
-                    _ = substrate_leaves_watcher_task => {
-                        tracing::warn!(
-                            "Substrate VAnchor leaves watcher stopped for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
                             "Stopping Substrate VAnchor watcher (Mocked Backend) for ({})",
-                            node_name,
+                            chain_id,
                         );
                     },
                 }
             }
             ProposalSigningBackendSelector::None => {
+                let leaves_handler = SubstrateVAnchorLeavesHandler::default();
+                let encrypted_output_handler =
+                    SubstrateVAnchorEncryptedOutputHandler::default();
+
+                let watcher = SubstrateVAnchorEventWatcher::default();
+                let substrate_vanchor_watcher_task = watcher.run(
+                    chain_id,
+                    client.clone().into(),
+                    store.clone(),
+                    my_config.events_watcher,
+                    vec![
+                        Box::new(leaves_handler),
+                        Box::new(encrypted_output_handler),
+                    ],
+                    metrics.clone(),
+                );
                 tokio::select! {
-                    _ = substrate_leaves_watcher_task => {
+                    _ = substrate_vanchor_watcher_task => {
                         tracing::warn!(
-                            "Substrate VAnchor leaves watcher stopped for ({})",
-                            node_name,
+                            "Substrate VAnchor watcher task stopped for ({})",
+                            chain_id,
                         );
                     },
                     _ = shutdown_signal.recv() => {
                         tracing::trace!(
-                            "Stopping Substrate VAnchor watcher (Mocked Backend) for ({})",
-                            node_name,
+                            "Stopping Substrate VAnchor watcher task for ({})",
+                            chain_id,
                         );
                     },
                 }
@@ -581,14 +487,12 @@ pub fn start_substrate_vanchor_event_watcher(
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - DKG proposal handler configuration
 /// * `client` - DKG client
-/// * `node_name` - Name of the node
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_dkg_proposal_handler(
     ctx: &RelayerContext,
     config: &DKGProposalHandlerPalletConfig,
     client: DkgClient,
-    node_name: String,
     chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
@@ -596,37 +500,39 @@ pub fn start_dkg_proposal_handler(
     if !config.events_watcher.enabled {
         tracing::warn!(
             "DKG Proposal Handler events watcher is disabled for ({}).",
-            node_name,
+            chain_id,
         );
         return Ok(());
     }
     tracing::debug!(
         "DKG Proposal Handler events watcher for ({}) Started.",
-        node_name,
+        chain_id,
     );
-    let node_name2 = node_name.clone();
     let mut shutdown_signal = ctx.shutdown_signal();
     let metrics = ctx.metrics.clone();
+    let my_config = config.clone();
     let task = async move {
-        let proposal_handler = ProposalHandlerWatcher::default();
-        let watcher = proposal_handler.run(
-            node_name,
+        let proposal_handler_watcher = DKGProposalHandlerWatcher::default();
+        let proposal_signed_handler = ProposalSignedHandler::default();
+        let proposal_handler_watcher_task = proposal_handler_watcher.run(
             chain_id,
             client.into(),
             store,
+            my_config.events_watcher,
+            vec![Box::new(proposal_signed_handler)],
             metrics,
         );
         tokio::select! {
-            _ = watcher => {
+            _ = proposal_handler_watcher_task => {
                 tracing::warn!(
                     "DKG Proposal Handler events watcher stopped for ({})",
-                    node_name2,
+                    chain_id,
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
                     "Stopping DKG Proposal Handler events watcher for ({})",
-                    node_name2,
+                    chain_id,
                 );
             },
         }
@@ -645,14 +551,12 @@ pub fn start_dkg_proposal_handler(
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `config` - DKG pallet configuration
 /// * `client` - DKG client
-/// * `node_name` - Name of the node
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_dkg_pallet_watcher(
     ctx: &RelayerContext,
     config: &DKGPalletConfig,
     client: DkgClient,
-    node_name: String,
     chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
@@ -660,35 +564,39 @@ pub fn start_dkg_pallet_watcher(
     if !config.events_watcher.enabled {
         tracing::warn!(
             "DKG Pallet events watcher is disabled for ({}).",
-            node_name,
+            chain_id,
         );
         return Ok(());
     }
-    tracing::debug!("DKG Pallet events watcher for ({}) Started.", node_name,);
-    let node_name2 = node_name.clone();
+    tracing::debug!("DKG Pallet events watcher for ({}) Started.", chain_id,);
     let mut shutdown_signal = ctx.shutdown_signal();
     let webb_config = ctx.config.clone();
     let metrics = ctx.metrics.clone();
+    let my_config = config.clone();
     let task = async move {
-        let governor_watcher = DKGGovernorWatcher::new(webb_config);
-        let watcher = governor_watcher.run(
-            node_name,
+        let dkg_event_watcher = DKGMetadataWatcher::default();
+        let public_key_changed_handler =
+            DKGPublicKeyChangedHandler::new(webb_config);
+
+        let dkg_event_watcher_task = dkg_event_watcher.run(
             chain_id,
             client.into(),
             store,
+            my_config.events_watcher,
+            vec![Box::new(public_key_changed_handler)],
             metrics,
         );
         tokio::select! {
-            _ = watcher => {
+            _ = dkg_event_watcher_task => {
                 tracing::warn!(
                     "DKG Pallet events watcher stopped for ({})",
-                    node_name2,
+                    chain_id,
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
                     "Stopping DKG Pallet events watcher for ({})",
-                    node_name2,
+                    chain_id,
                 );
             },
         }
@@ -1052,30 +960,32 @@ pub async fn start_substrate_signature_bridge_events_watcher(
     ctx: RelayerContext,
     config: &SignatureBridgePalletConfig,
     client: WebbProtocolClient,
-    node_name: String,
     chain_id: u32,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     if !config.events_watcher.enabled {
         tracing::warn!(
             "Substrate Signature Bridge events watcher is disabled for ({}).",
-            node_name,
+            chain_id,
         );
         return Ok(());
     }
     let mut shutdown_signal = ctx.shutdown_signal();
+    let my_config = config.clone();
     let task = async move {
         tracing::debug!(
             "Substrate Signature Bridge watcher for ({}) Started.",
-            node_name
+            chain_id
         );
         let substrate_bridge_watcher = SubstrateBridgeEventWatcher::default();
+        let bridge_event_handler = MaintainerSetEventHandler::default();
         let events_watcher_task = SubstrateEventWatcher::run(
             &substrate_bridge_watcher,
-            node_name.to_owned(),
             chain_id,
             client.clone().into(),
             store.clone(),
+            my_config.events_watcher,
+            vec![Box::new(bridge_event_handler)],
             ctx.metrics.clone(),
         );
         let cmd_handler_task = SubstrateBridgeWatcher::run(
@@ -1088,19 +998,19 @@ pub async fn start_substrate_signature_bridge_events_watcher(
             _ = events_watcher_task => {
                 tracing::warn!(
                     "Substrate signature bridge events watcher task stopped for ({})",
-                    node_name
+                    chain_id
                 );
             },
             _ = cmd_handler_task => {
                 tracing::warn!(
                     "Substrate signature bridge cmd handler task stopped for ({})",
-                    node_name
+                    chain_id
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
                     "Stopping Substrate Signature Bridge watcher for ({})",
-                    node_name,
+                    chain_id,
                 );
             },
         }

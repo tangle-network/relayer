@@ -183,24 +183,22 @@ impl Metrics {
         let resource_hex = hex::encode(resource_id.to_bytes().as_ref());
         // Total gas fee spent on particular resource.
         let total_gas_spent_counter = register_counter!(
-            format!("resource_{}_total_gas_spent", resource_hex),
+            format!("resource_{resource_hex}_total_gas_spent"),
             format!(
-                "The total number of gas spent on resource : {}",
-                resource_hex
+                "The total number of gas spent on resource : {resource_hex}"
             )
         );
         // Total fee earned on particular resource.
         let total_fee_earned_counter = register_counter!(
-            format!("resource_{}_total_fees_earned", resource_hex),
+            format!("resource_{resource_hex}_total_fees_earned"),
             format!(
-                "The total number of fees earned on resource : {}",
-                resource_hex
+                "The total number of fees earned on resource : {resource_hex}"
             )
         );
         // Account Balance
         let account_balance_counter = register_gauge!(
-            format!("resource_{}_account_balance", resource_hex),
-            format!("Total account balance : {}", resource_hex)
+            format!("resource_{resource_hex}_account_balance"),
+            format!("Total account balance : {resource_hex}")
         );
 
         ResourceMetric {

@@ -25,7 +25,7 @@ import {
 import { ChildProcess, spawn, execSync } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
-import { BigNumber } from 'ethers';
+import { BigNumber, BigNumberish } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
 import { padHexString } from '../lib/utils.js';
 
@@ -92,15 +92,18 @@ export class WebbRelayer {
     console.log('config string: ', configString);
 
     // Startup the relayer
-    const gitRoot = execSync('git rev-parse --show-toplevel').toString().trim();
-    const buildDir = opts.buildDir ?? 'debug';
     const verbosity = opts.verbosity ?? 3;
     const levels = ['error', 'warn', 'info', 'debug', 'trace'];
     const logLevel = levels[verbosity] ?? 'debug';
-    const relayerPath = `${gitRoot}/target/${buildDir}/webb-relayer`;
     this.#process = spawn(
-      relayerPath,
+      'cargo',
       [
+        'run',
+        '--bin',
+        'webb-relayer',
+        '--features',
+        'integration-tests,cli',
+        '--',
         '-c',
         opts.configDir,
         opts.tmp ? '--tmp' : '',
@@ -135,6 +138,11 @@ export class WebbRelayer {
           this.#eventEmitter.emit(rawEvent.kind, rawEvent);
         }
       });
+    this.#process.stderr?.on('data', (data) => {
+      if (this.opts.showLogs) {
+        process.stdout.write(`${data}\n`);
+      }
+    });
 
     this.#process.on('close', (code) => {
       if (this.opts.showLogs) {
@@ -208,6 +216,16 @@ export class WebbRelayer {
   // API to fetch metrics for particular resource
   public async getResourceMetricsEvm(chainId: string, contractAddress: string) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/metrics/evm/${chainId}/${contractAddress}`;
+    const response = await fetch(endpoint);
+    return response;
+  }
+  // API to fetch metrics for particular resource
+  public async getFeeInfo(
+    chainId: number,
+    vanchor: string,
+    gas_amount: BigNumber
+  ) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/${chainId}/${vanchor}/${gas_amount}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -615,6 +633,14 @@ export interface ChainInfo {
   blockConfirmations: number;
 }
 
+export interface FeeInfo {
+  estimatedFee: BigNumber;
+  gasPrice: BigNumber;
+  refundExchangeRate: BigNumber;
+  maxRefund: BigNumber;
+  timestamp: string;
+}
+
 export interface Contract {
   contract: ContractKind;
   address: string;
@@ -630,6 +656,7 @@ export interface EventsWatcher {
   enabled: boolean;
   pollingInterval: number;
   printProgressInterval?: number;
+  syncBlocksFrom?: number;
 }
 
 export type RawResourceId = {

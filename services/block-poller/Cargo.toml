@@ -1,7 +1,12 @@
 [package]
 name = "webb-block-poller"
 version = "0.1.0"
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -14,28 +19,26 @@ path = "src/main.rs"
 required-features = ["cli"]
 
 [dependencies]
-webb-relayer-store = { path = "../../crates/relayer-store" }
-webb-relayer-config = { path = "../../crates/relayer-config" }
-webb-relayer-context = { path = "../../crates/relayer-context" }
-webb-relayer-utils = { path = "../../crates/relayer-utils"}
-webb-relayer = { path = "../webb-relayer" }
+webb-relayer-store = { workspace = true }
+webb-relayer-config = { workspace = true }
+webb-relayer-context = { workspace = true }
+webb-relayer-utils = { workspace = true }
+webb-relayer = { workspace = true }
 
-anyhow = { version = "^1", optional = true }
-async-trait = "^0.1"
-tracing = { version = "^0.1", features = ["log"] }
-futures = { version = "^0.3", default-features = false }
-backoff = { version = "0.4.0", features = ["tokio"] }
-tokio = { version = "^1", features = ["full"] }
-serde_json = { version = "^1", default-features = false }
-paw = { version = "^1.0", optional = true }
-webb = { version = "0.5.7", default-features = false }
-# Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "^0.2", features = ["vendored"], optional = true }
-ethereum-types = "0.14"
-dotenv = "0.15.0"
+anyhow = { workspace = true, optional = true }
+async-trait = { workspace = true }
+tracing = { workspace = true }
+futures = { workspace = true }
+backoff = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+paw = { workspace = true, optional = true }
+webb = { workspace = true }
+ethereum-types = { workspace = true }
+dotenv = { workspace = true }
 
 [dev-dependencies]
-tempfile = "^3.2"
+tempfile = { workspace = true }
 
 [features]
 default = ["cli"]

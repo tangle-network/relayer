@@ -1,7 +1,12 @@
 [package]
 name = "webb-relayer-config"
 version = "0.1.0"
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,24 +14,24 @@ edition = "2021"
 webb-relayer-store = { path = "../relayer-store" }
 webb-relayer-types = { path = "../relayer-types" }
 webb-relayer-utils = { path = "../relayer-utils" }
-# eth2_to_substrate_relay = { optional = true, git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
-eth2_to_substrate_relay = { path ="../../../pallet-eth2-light-client/eth2substrate-block-relay-rs", optional = true }
-anyhow = { version = "^1", optional = true }
-tracing = { version = "^0.1", features = ["log"] }
-tracing-subscriber = { version = "0.3.1", features = ["parking_lot", "env-filter"], optional = true }
-url = { version = "^2.2", features = ["serde"] }
-serde = { version = "^1", default-features = false, features = ["derive"] }
-config = { version = "0.11", default-features = false, features = ["toml", "json"] }
-serde_json = { version = "^1", default-features = false }
+eth2_to_substrate_relay = { workspace = true, optional = true }
+anyhow = { workspace = true, optional = true }
+tracing = { workspace = true }
+url = { workspace = true }
+serde = { workspace = true }
+config = { workspace = true }
+serde_json = { workspace = true }
+webb = { workspace = true }
+# Used by ethers (but we need it to be vendored with the lib).
+native-tls = { workspace = true, optional = true }
+webb-proposals = { workspace = true }
+ethereum-types = { workspace = true }
+glob = { workspace = true }
+serde_path_to_error = { workspace = true }
+
 structopt = { version = "^0.3", features = ["paw"], optional = true }
 directories-next = { version = "^2.0", optional = true }
-webb = { version = "0.5.7", default-features = false }
-# Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "^0.2", features = ["vendored"], optional = true }
-webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
-ethereum-types = "0.14"
-glob = "^0.3"
-serde_path_to_error = "0.1.5"
+tracing-subscriber = { version = "0.3.16", features = ["parking_lot", "env-filter"], optional = true }
 
 [features]
 default = ["evm-runtime", "substrate-runtime", "cli"]
@@ -41,4 +46,7 @@ cli = [
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
 substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]
 integration-tests = ["tracing-subscriber/json"]
+<<<<<<< HEAD
 eth2 = ["eth2_to_substrate_relay"]
+=======
+>>>>>>> 09e4e0f19c541d746b3ca5f2b113c39e9479a8f7

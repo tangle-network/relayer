@@ -47,7 +47,10 @@ pub enum Error {
     Url(#[from] url::ParseError),
     /// Error in the underlying Http/Ws server.
     #[error(transparent)]
-    Warp(#[from] warp::Error),
+    Axum(#[from] axum::Error),
+    /// HTTP Error
+    #[error(transparent)]
+    Hyper(#[from] hyper::Error),
     /// Elliptic Curve error.
     #[error(transparent)]
     EllipticCurve(#[from] ethers::core::k256::elliptic_curve::Error),
@@ -71,6 +74,17 @@ pub enum Error {
             ethers::providers::Provider<ethers::providers::Http>,
         >,
     ),
+    /// Smart contract error.
+    #[error(transparent)]
+    EthersContract2(
+        #[from]
+        ethers::contract::ContractError<
+            ethers::middleware::SignerMiddleware<
+                ethers::providers::Provider<ethers::providers::Http>,
+                ethers::prelude::Wallet<ethers::core::k256::ecdsa::SigningKey>,
+            >,
+        >,
+    ),
     /// SCALE Codec error.
     #[error(transparent)]
     ScaleCodec(#[from] webb::substrate::scale::Error),
@@ -82,6 +96,18 @@ pub enum Error {
     SledTransaction(
         #[from] sled::transaction::TransactionError<std::io::Error>,
     ),
+    /// Reqwest error
+    #[error(transparent)]
+    Reqwest(#[from] reqwest::Error),
+    /// Etherscan API error
+    #[error(transparent)]
+    Etherscan(#[from] ethers::etherscan::errors::EtherscanError),
+    /// Ethers currency conversion error
+    #[error(transparent)]
+    Conversion(#[from] ethers::utils::ConversionError),
+    /// Failed to convert string to float
+    #[error(transparent)]
+    ParseFloatError(#[from] std::num::ParseFloatError),
     /// Generic error.
     #[error("{}", _0)]
     Generic(&'static str),
@@ -115,7 +141,7 @@ pub enum Error {
     /// a backgorund task failed and force restarted.
     #[error("Task Force Restarted from an error")]
     ForceRestart,
-    /// a backgorund task failed and stopped Apnormally.
+    /// a backgorund task failed and stopped Abnormally.
     #[error("Task Stopped Apnormally")]
     TaskStoppedAbnormally,
 }

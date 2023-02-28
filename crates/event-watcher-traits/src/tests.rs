@@ -15,41 +15,61 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api::system;
-use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
-use webb::substrate::{dkg_runtime, subxt};
+use webb::substrate::subxt::{self, Config, OnlineClient, PolkadotConfig};
+use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledStore;
 use webb_relayer_utils::metric;
 
-use crate::substrate::BlockNumberOf;
+use crate::substrate::EventHandler;
 use crate::SubstrateEventWatcher;
 
 #[derive(Debug, Clone, Default)]
-struct RemarkedEventWatcher;
+struct TestEventsWatcher;
 
 #[async_trait::async_trait]
-impl SubstrateEventWatcher for RemarkedEventWatcher {
-    const TAG: &'static str = "Remarked Event Watcher";
+impl SubstrateEventWatcher<PolkadotConfig> for TestEventsWatcher {
+    const TAG: &'static str = "Test Event Watcher";
 
-    type RuntimeConfig = subxt::PolkadotConfig;
+    const PALLET_NAME: &'static str = "System";
 
-    type Client = OnlineClient<Self::RuntimeConfig>;
-
-    type Event = dkg_runtime::api::Event;
-    type FilteredEvent = system::events::Remarked;
+    type Client = OnlineClient<PolkadotConfig>;
 
     type Store = SledStore;
+}
 
-    async fn handle_event(
+#[derive(Debug, Clone, Default)]
+struct RemarkedEventHandler;
+
+#[async_trait::async_trait]
+impl<PolkadotConfig: Sync + Send + Config> EventHandler<PolkadotConfig>
+    for RemarkedEventHandler
+{
+    type Client = OnlineClient<PolkadotConfig>;
+    type Store = SledStore;
+
+    async fn can_handle_events(
+        &self,
+        events: subxt::events::Events<PolkadotConfig>,
+    ) -> webb_relayer_utils::Result<bool> {
+        let has_event = events.has::<system::events::Remarked>()?;
+        Ok(has_event)
+    }
+    async fn handle_events(
         &self,
         _store: Arc<Self::Store>,
         _client: Arc<Self::Client>,
-        (event, block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        (events, block_number): (subxt::events::Events<PolkadotConfig>, u64),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
+        // find the `Remarked` event(s) in the events
+        let remarked_events = events
+            .find::<system::events::Remarked>()
+            .flatten()
+            .collect::<Vec<_>>();
         tracing::debug!(
             "Received `Remarked` Event: {:?} at block number: #{}",
-            event,
+            remarked_events,
             block_number
         );
         Ok(())
@@ -61,16 +81,23 @@ impl SubstrateEventWatcher for RemarkedEventWatcher {
 #[ignore = "need to be run manually"]
 async fn substrate_event_watcher_should_work() -> webb_relayer_utils::Result<()>
 {
-    let node_name = String::from("test-node");
     let chain_id = 5u32;
-    let store = Arc::new(SledStore::temporary()?);
+    let store = SledStore::temporary()?;
     let client = OnlineClient::<PolkadotConfig>::new().await?;
-    let watcher = RemarkedEventWatcher::default();
+    let watcher = TestEventsWatcher::default();
     let config = webb_relayer_config::WebbRelayerConfig::default();
-    let ctx = RelayerContext::new(config);
+    let ctx = RelayerContext::new(config, store.clone());
     let metrics = ctx.metrics.clone();
+    let event_watcher_config = EventsWatcherConfig::default();
     watcher
-        .run(node_name, chain_id, client.into(), store, metrics)
+        .run(
+            chain_id,
+            client.into(),
+            Arc::new(store),
+            event_watcher_config,
+            vec![Box::<RemarkedEventHandler>::default()],
+            metrics,
+        )
         .await?;
     Ok(())
 }

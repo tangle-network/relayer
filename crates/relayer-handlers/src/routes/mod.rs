@@ -1,3 +1,6 @@
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
+use axum::Json;
 use serde::{Deserialize, Serialize};
 
 /// Module for handling encrypted commitment leaves API
@@ -65,4 +68,18 @@ const fn default_zero() -> Option<u32> {
 
 const fn default_u32_max() -> Option<u32> {
     Some(u32::MAX)
+}
+
+/// Error type for HTTP handlers
+pub struct HandlerError(
+    /// HTTP status code for response
+    pub(crate) StatusCode,
+    /// Response message
+    pub(crate) String,
+);
+
+impl IntoResponse for HandlerError {
+    fn into_response(self) -> Response {
+        (self.0, Json(UnsupportedFeature { message: self.1 })).into_response()
+    }
 }

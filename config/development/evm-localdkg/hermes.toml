@@ -37,7 +37,7 @@ enabled = true
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0xbfce6B877Ebff977bB6e80B24FbBb7bC4eBcA4df"
+address = "0xc705034ded85e817b9E56C977E61A2098362898B"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
@@ -46,17 +46,11 @@ deployed-at = 1
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
 events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 60000 }
-# Configuration related to withdraw (for private transaction relaying)
-#    - withdraw-gasLimit: Value which specifies the maximum amount of gas which will be used when
-#                         submitting a withdraw transaction
-#    - withdraw-fee-percentage: Value which specifies the fees that this relayer will collect upon
-#                               submitting a withdraw transaction
-withdraw-config = { withdraw-fee-percentage = 0, withdraw-gaslimit = "0x350000" }
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { chain = "athena", chain-id = "5002", address = "0xcd75Ad7AC9C9325105f798c476E84176648F391A" },
-  { chain = "demeter", chain-id = "5003", address = "0x4e3df2073bf4b43B9944b8e5A463b1E185D6448C"},
+  { chain = "athena", chain-id = "5002", address = "0x91eB86019FD8D7c5a9E31143D422850A13F670A3" },
+  { chain = "demeter", chain-id = "5003", address = "0x6595b34ED0a270B10a586FC1EA22030A95386f1e"},
 ]
 # Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit

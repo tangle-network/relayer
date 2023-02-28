@@ -16,22 +16,30 @@
 
 #![allow(clippy::large_enum_variant)]
 #![warn(missing_docs)]
-use std::convert::Infallible;
+use axum::extract::{Path, State, WebSocketUpgrade};
+use axum::http::StatusCode;
+use ethereum_types::{Address, U256};
 use std::error::Error;
-use std::net::{IpAddr, SocketAddr};
+use std::sync::Arc;
 
 use futures::prelude::*;
 
+use axum::extract::ws::{Message, WebSocket};
+use axum::response::Response;
+use axum::Json;
+use axum_client_ip::InsecureClientIp;
 use tokio::sync::mpsc;
 use tokio_stream::wrappers::ReceiverStream;
-use warp::ws::Message;
+use webb_proposals::TypedChainId;
 
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{
-    Command, CommandResponse, CommandStream, CommandType, EvmCommand,
-    IpInformationResponse, SubstrateCommand,
+    Command, CommandResponse, CommandStream, EvmCommandType,
+    IpInformationResponse, SubstrateCommandType,
 };
+use webb_relayer_tx_relay::evm::fees::{get_fee_info, FeeInfo};
 
+use crate::routes::HandlerError;
 use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use webb_relayer_tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
@@ -39,28 +47,43 @@ use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx
 /// Module handles relayer API
 pub mod routes;
 
+/// Wait for websocket connection upgrade
+pub async fn websocket_handler(
+    ws: WebSocketUpgrade,
+    State(ctx): State<Arc<RelayerContext>>,
+) -> Response {
+    ws.on_upgrade(move |socket| accept_websocket_connection(socket, ctx))
+}
+
 /// Sets up a websocket connection.
-///
-/// Returns `Ok(())` on success
 ///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `stream` - Websocket stream
-pub async fn accept_connection(
-    ctx: &RelayerContext,
-    stream: warp::ws::WebSocket,
-) -> webb_relayer_utils::Result<()> {
-    let (mut tx, mut rx) = stream.split();
+async fn accept_websocket_connection(ws: WebSocket, ctx: Arc<RelayerContext>) {
+    let (mut tx, mut rx) = ws.split();
 
     // Wait for client to send over text (such as relay transaction requests)
-    while let Some(msg) = rx.try_next().await? {
-        if let Ok(text) = msg.to_str() {
-            handle_text(ctx, text, &mut tx).await?;
+    while let Some(msg) = rx.next().await {
+        match msg {
+            Ok(msg) => {
+                if let Ok(text) = msg.to_text() {
+                    // Use inspect_err() here once stabilized
+                    let _ =
+                        handle_text(&ctx, text, &mut tx).await.map_err(|e| {
+                            tracing::warn!("Websocket handler error: {e}")
+                        });
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Websocket error: {e}");
+                return;
+            }
         }
     }
-    Ok(())
 }
+
 /// Sets up a websocket channels for message sending.
 ///
 /// This is primarily used for transaction relaying. The intention is
@@ -90,14 +113,17 @@ where
     let res_stream = ReceiverStream::new(my_rx);
     match serde_json::from_str(v) {
         Ok(cmd) => {
-            handle_cmd(ctx.clone(), cmd, my_tx).await;
+            if let Err(e) = handle_cmd(ctx.clone(), cmd, my_tx.clone()).await {
+                tracing::error!("{:?}", e);
+                let _ = my_tx.send(e).await;
+            }
             // Send back the response, usually a transaction hash
             // from processing the transaction relaying command.
             res_stream
                 .fuse()
                 .map(|v| serde_json::to_string(&v).expect("bad value"))
                 .inspect(|v| tracing::trace!("Sending: {}", v))
-                .map(Message::text)
+                .map(Message::Text)
                 .map(Result::Ok)
                 .forward(tx)
                 .map_err(|_| webb_relayer_utils::Error::FailedToSendResponse)
@@ -108,7 +134,7 @@ where
             tracing::debug!("Invalid payload: {:?}", v);
             let error = CommandResponse::Error(e.to_string());
             let value = serde_json::to_string(&error)?;
-            tx.send(Message::text(value))
+            tx.send(Message::Text(value))
                 .map_err(|_| webb_relayer_utils::Error::FailedToSendResponse)
                 .await?;
         }
@@ -116,33 +142,17 @@ where
     Ok(())
 }
 
-/// Handles the `ip` address response
-///
-/// Returns a Result with the `IpInformationResponse` on success
-///
-/// # Arguments
-///
-/// * `ip` - Option containing the IP address
-pub async fn handle_ip_info(
-    ip: Option<IpAddr>,
-) -> Result<impl warp::Reply, Infallible> {
-    Ok(warp::reply::json(&IpInformationResponse {
-        ip: ip.unwrap().to_string(),
-    }))
-}
 /// Handles the socket address response
 ///
 /// Returns a Result with the `IpInformationResponse` on success
 ///
 /// # Arguments
 ///
-/// * `ip` - Option containing the socket address
+/// * `ip` - Extractor for client IP, taking into account x-forwarded-for and similar headers
 pub async fn handle_socket_info(
-    ip: Option<SocketAddr>,
-) -> Result<impl warp::Reply, Infallible> {
-    Ok(warp::reply::json(&IpInformationResponse {
-        ip: ip.unwrap().ip().to_string(),
-    }))
+    InsecureClientIp(ip): InsecureClientIp,
+) -> Json<IpInformationResponse> {
+    Json(IpInformationResponse { ip: ip.to_string() })
 }
 
 /// Handles the command prompts for EVM and Substrate chains
@@ -156,61 +166,52 @@ pub async fn handle_cmd(
     ctx: RelayerContext,
     cmd: Command,
     stream: CommandStream,
-) {
-    use CommandResponse::*;
-    if ctx.config.features.private_tx_relay {
-        match cmd {
-            Command::Substrate(sub) => handle_substrate(ctx, sub, stream).await,
-            Command::Evm(evm) => handle_evm(ctx, evm, stream).await,
-            Command::Ping() => {
-                let _ = stream.send(Pong()).await;
-            }
-        }
-    } else {
-        tracing::error!("Private transaction relaying is not configured..!");
-        let _ = stream
-            .send(Error(
-                "Private transaction relaying is not enabled.".to_string(),
-            ))
-            .await;
+) -> Result<(), CommandResponse> {
+    if !ctx.config.features.private_tx_relay {
+        return Err(CommandResponse::Error(
+            "Private transaction relaying is not enabled.".to_string(),
+        ));
     }
-}
 
-/// Handler for EVM commands
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `cmd` - The command to execute
-/// * `stream` - The stream to write the response to
-pub async fn handle_evm(
-    ctx: RelayerContext,
-    cmd: EvmCommand,
-    stream: CommandStream,
-) {
-    if let CommandType::VAnchor(_) = cmd {
-        handle_vanchor_relay_tx(ctx, cmd, stream).await
-    }
-}
-
-/// Handler for Substrate commands
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `cmd` - The command to execute
-/// * `stream` - The stream to write the response to
-pub async fn handle_substrate<'a>(
-    ctx: RelayerContext,
-    cmd: SubstrateCommand,
-    stream: CommandStream,
-) {
     match cmd {
-        CommandType::Mixer(_) => {
-            handle_substrate_mixer_relay_tx(ctx, cmd, stream).await;
-        }
-        CommandType::VAnchor(_) => {
-            handle_substrate_vanchor_relay_tx(ctx, cmd, stream).await;
+        Command::Substrate(substrate) => match substrate {
+            SubstrateCommandType::VAnchor(vanchor) => {
+                handle_substrate_vanchor_relay_tx(ctx, vanchor, stream).await
+            }
+            SubstrateCommandType::Mixer(mixer) => {
+                handle_substrate_mixer_relay_tx(ctx, mixer, stream).await
+            }
+        },
+        Command::Evm(evm) => match evm {
+            EvmCommandType::VAnchor(vanchor) => {
+                handle_vanchor_relay_tx(ctx, vanchor, stream).await
+            }
+        },
+        Command::Ping() => {
+            let _ = stream.send(CommandResponse::Pong()).await;
+            Ok(())
         }
     }
+}
+
+/// Handler for fee estimation
+///
+/// # Arguments
+///
+/// * `chain_id` - ID of the blockchain
+/// * `vanchor` - Address of the smart contract
+/// * `gas_amount` - How much gas the transaction needs. Don't use U256 here because it
+///                  gets parsed incorrectly.
+pub async fn handle_fee_info(
+    State(ctx): State<Arc<RelayerContext>>,
+    Path((chain_id, vanchor, gas_amount)): Path<(u64, Address, u64)>,
+) -> Result<Json<FeeInfo>, HandlerError> {
+    let chain_id = TypedChainId::from(chain_id);
+    let gas_amount = U256::from(gas_amount);
+    get_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
+        .await
+        .map(Json)
+        .map_err(|e| {
+            HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })
 }

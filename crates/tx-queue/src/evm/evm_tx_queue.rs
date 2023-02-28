@@ -98,7 +98,7 @@ where
         let metrics_clone = self.ctx.metrics.clone();
         let task = || async {
             loop {
-                tracing::trace!("Checking for any txs in the queue ...");
+                // tracing::trace!("Checking for any txs in the queue ...");
                 let maybe_tx = store
                     .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))?;
                 let maybe_explorer = &chain_config.explorer;
@@ -211,6 +211,17 @@ where
                         Ok(Some(receipt)) => {
                             let tx_hash_string =
                                 format!("0x{:x}", receipt.transaction_hash);
+                            match receipt.status {
+                                Some(v) if v.is_zero() => {
+                                    tracing::info!(
+                                        "Tx {} Failed",
+                                        tx_hash_string,
+                                    );
+                                    continue;
+                                }
+                                _ => {}
+                            }
+
                             if let Some(mut url) = maybe_explorer.clone() {
                                 url.set_path(&format!("tx/{tx_hash_string}"));
                                 let clickable_link = ClickableLink::new(

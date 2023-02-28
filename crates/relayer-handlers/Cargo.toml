@@ -1,7 +1,12 @@
 [package]
 name = "webb-relayer-handlers"
 version = "0.1.0"
-edition = "2021"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,16 +17,19 @@ webb-relayer-store = { path = "../relayer-store" }
 webb-relayer-config = { path = "../relayer-config" }
 webb-relayer-context = { path = "../relayer-context" }
 webb-relayer-utils = { path = "../relayer-utils" }
-tracing = { version = "^0.1", features = ["log"] }
-sled = { version = "^0.34" }
-futures = { version = "^0.3", default-features = false }
-serde = { version = "^1", default-features = false, features = ["derive"] }
-tokio = { version = "^1", features = ["full"] }
-tokio-stream = { version = "^0.1" }
-warp = { version = "0.3.3", default-features = false, features = ["websocket", "tls"] }
-serde_json = { version = "^1", default-features = false }
-webb = { version = "0.5.11", default-features = false }
+
+tracing = { workspace = true }
+futures = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
-native-tls = { version = "^0.2", features = ["vendored"], optional = true }
-webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
-ethereum-types = "0.14"
+native-tls = { workspace = true }
+webb-proposals = { workspace = true }
+ethereum-types = { workspace = true }
+axum = { workspace = true }
+
+axum-client-ip = "0.4.0"
+tokio-stream = { version = "^0.1" }
+

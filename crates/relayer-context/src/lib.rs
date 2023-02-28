@@ -32,6 +32,8 @@ use webb::substrate::subxt;
 #[cfg(feature = "substrate")]
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
 
+use coingecko::CoinGeckoClient;
+use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric::{self, Metrics};
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
@@ -50,17 +52,30 @@ pub struct RelayerContext {
     notify_shutdown: broadcast::Sender<()>,
     /// Represents the metrics for the relayer
     pub metrics: Arc<Mutex<metric::Metrics>>,
+    store: SledStore,
+    /// API client for https://www.coingecko.com/
+    coin_gecko_client: Arc<CoinGeckoClient>,
+    /// API client for https://etherscan.io/
+    etherscan_client: Client,
 }
 
 impl RelayerContext {
     /// Creates a new RelayerContext.
-    pub fn new(config: webb_relayer_config::WebbRelayerConfig) -> Self {
+    pub fn new(
+        config: webb_relayer_config::WebbRelayerConfig,
+        store: SledStore,
+    ) -> Self {
         let (notify_shutdown, _) = broadcast::channel(2);
         let metrics = Arc::new(Mutex::new(Metrics::new()));
+        let coin_gecko_client = Arc::new(CoinGeckoClient::default());
+        let etherscan_client = Client::new_from_env(Chain::Mainnet).unwrap();
         Self {
             config,
             notify_shutdown,
             metrics,
+            store,
+            coin_gecko_client,
+            etherscan_client,
         }
     }
     /// Returns a broadcast receiver handle for the shutdown signal.
@@ -159,6 +174,21 @@ impl RelayerContext {
             .suri
             .ok_or(webb_relayer_utils::Error::MissingSecrets)?;
         Ok(suri_key.into())
+    }
+
+    /// Returns [Sled](https://sled.rs)-based database store
+    pub fn store(&self) -> &SledStore {
+        &self.store
+    }
+
+    /// Returns API client for https://www.coingecko.com/
+    pub fn coin_gecko_client(&self) -> &Arc<CoinGeckoClient> {
+        &self.coin_gecko_client
+    }
+
+    /// Returns API client for https://etherscan.io/
+    pub fn etherscan_client(&self) -> &Client {
+        &self.etherscan_client
     }
 }
 

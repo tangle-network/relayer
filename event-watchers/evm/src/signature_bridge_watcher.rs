@@ -320,14 +320,27 @@ where
             return Ok(());
         }
 
-        let current_nonce = contract.refresh_nonce().call().await?;
-        if nonce <= current_nonce {
+        let refresh_nonce = contract.refresh_nonce().call().await?;
+
+        // require(refreshNonce < nonce, "Invalid nonce")
+        if nonce < refresh_nonce {
             tracing::warn!(
-                %current_nonce,
-                public_key = %hex::encode(&public_key),
+                %refresh_nonce,
                 %nonce,
+                public_key = %hex::encode(&public_key),
                 signature = %hex::encode(&signature),
-                "Skipping transfer ownership since the nonce is not greater than the current one",
+                "Skipping transfer ownership since the nonce is less than the refresh nonce",
+            );
+            return Ok(());
+        }
+        // require(nonce <= refreshNonce + 1, "Nonce must increment by 1");
+        if nonce != refresh_nonce + 1 {
+            tracing::warn!(
+                %refresh_nonce,
+                %nonce,
+                public_key = %hex::encode(&public_key),
+                signature = %hex::encode(&signature),
+                "Skipping transfer ownership since the nonce must increment by 1",
             );
             return Ok(());
         }
@@ -341,12 +354,25 @@ where
             %nonce,
             signature = %hex::encode(&signature),
         );
+        // estimated gas
+        let estimate_gas = contract
+            .transfer_ownership_with_signature_pub_key(
+                public_key.clone().into(),
+                nonce,
+                signature.clone().into(),
+            )
+            .estimate_gas()
+            .await?;
+
         // get the current governor nonce.
-        let call = contract.transfer_ownership_with_signature_pub_key(
-            public_key.into(),
-            nonce,
-            signature.into(),
-        );
+        let call = contract
+            .transfer_ownership_with_signature_pub_key(
+                public_key.into(),
+                nonce,
+                signature.into(),
+            )
+            .gas(estimate_gas.saturating_mul(U256::from(2)));
+
         QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
         tracing::debug!(
             chain_id = %chain_id.as_u64(),

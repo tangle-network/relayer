@@ -12,49 +12,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::routes::HandlerError;
+use axum::extract::{Path, Query, State};
+use axum::http::StatusCode;
+use axum::Json;
 use ethereum_types::Address;
 use serde::Serialize;
-use std::{collections::HashMap, convert::Infallible, sync::Arc};
+use std::{collections::HashMap, sync::Arc};
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::EncryptedOutputCacheStore;
 
-use super::{OptionalRangeQuery, UnsupportedFeature};
+use super::OptionalRangeQuery;
+
+/// Response containing encrypted outputs.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EncryptedOutputsCacheResponse {
+    encrypted_outputs: Vec<Vec<u8>>,
+    last_queried_block: u64,
+}
+
 /// Handles encrypted outputs data requests for evm
 ///
 /// Returns a Result with the `EncryptedOutputDataResponse` on success
 ///
 /// # Arguments
 ///
-/// * `store` - [Sled](https://sled.rs)-based database store
 /// * `chain_id` - An U256 representing the chain id of the chain to query
 /// * `contract` - An address of the contract to query
 /// * `query_range` - An optional range query
-/// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_encrypted_outputs_cache_evm(
-    store: Arc<webb_relayer_store::sled::SledStore>,
-    chain_id: u32,
-    contract: Address,
-    query_range: OptionalRangeQuery,
-    ctx: Arc<RelayerContext>,
-) -> Result<impl warp::Reply, Infallible> {
+    State(ctx): State<Arc<RelayerContext>>,
+    Path((chain_id, contract)): Path<(u32, Address)>,
+    Query(query_range): Query<OptionalRangeQuery>,
+) -> Result<Json<EncryptedOutputsCacheResponse>, HandlerError> {
     let config = ctx.config.clone();
-
-    #[derive(Debug, Serialize)]
-    #[serde(rename_all = "camelCase")]
-    struct EncryptedOutputsCacheResponse {
-        encrypted_outputs: Vec<Vec<u8>>,
-        last_queried_block: u64,
-    }
 
     // check if data query is enabled for relayer
     if !config.features.data_query {
         tracing::warn!("Data query is not enabled for relayer.");
-        return Ok(warp::reply::with_status(
-            warp::reply::json(&UnsupportedFeature {
-                message: "Data query is not enabled for relayer.".to_string(),
-            }),
-            warp::http::StatusCode::FORBIDDEN,
+        return Err(HandlerError(
+            StatusCode::FORBIDDEN,
+            "Data query is not enabled for relayer.".to_string(),
         ));
     }
 
@@ -62,12 +62,10 @@ pub async fn handle_encrypted_outputs_cache_evm(
     let chain = match ctx.config.evm.get(&chain_id.to_string()) {
         Some(v) => v,
         None => {
-            tracing::warn!("Unsupported Chain: {}", chain_id);
-            return Ok(warp::reply::with_status(
-                warp::reply::json(&UnsupportedFeature {
-                    message: format!("Unsupported Chain: {chain_id}"),
-                }),
-                warp::http::StatusCode::BAD_REQUEST,
+            tracing::warn!("Unsupported Chain: {chain_id}");
+            return Err(HandlerError(
+                StatusCode::BAD_REQUEST,
+                format!("Unsupported Chain: {chain_id}"),
             ));
         }
     };
@@ -90,32 +88,22 @@ pub async fn handle_encrypted_outputs_cache_evm(
         Some(config) => config,
         None => {
             tracing::warn!(
-                "Unsupported Contract: {:?} for chaind : {}",
-                contract,
-                chain_id
+                "Unsupported Contract: {contract} for chaind : {chain_id}",
             );
-            return Ok(warp::reply::with_status(
-                warp::reply::json(&UnsupportedFeature {
-                    message: format!(
-                        "Unsupported Contract: {} for chaind : {}",
-                        contract, chain_id
-                    ),
-                }),
-                warp::http::StatusCode::BAD_REQUEST,
+            return Err(HandlerError(
+                StatusCode::BAD_REQUEST,
+                format!(
+                    "Unsupported Contract: {contract} for chaind : {chain_id}"
+                ),
             ));
         }
     };
     // check if data query is enabled for contract
     if !event_watcher_config.enable_data_query {
         tracing::warn!("Enbable data query for contract : ({})", contract);
-        return Ok(warp::reply::with_status(
-            warp::reply::json(&UnsupportedFeature {
-                message: format!(
-                    "Enbable data query for contract : ({})",
-                    contract
-                ),
-            }),
-            warp::http::StatusCode::FORBIDDEN,
+        return Err(HandlerError(
+            StatusCode::FORBIDDEN,
+            format!("Enbable data query for contract : ({contract})"),
         ));
     }
     // create history store key
@@ -124,18 +112,17 @@ pub async fn handle_encrypted_outputs_cache_evm(
     let src_typed_chain_id = TypedChainId::Evm(chain_id);
     let history_store_key =
         ResourceId::new(src_target_system, src_typed_chain_id);
-    let encrypted_output = store
+    let encrypted_output = ctx
+        .store()
         .get_encrypted_output_with_range(history_store_key, query_range.into())
         .unwrap();
-    let last_queried_block = store
+    let last_queried_block = ctx
+        .store()
         .get_last_deposit_block_number_for_encrypted_output(history_store_key)
         .unwrap();
 
-    Ok(warp::reply::with_status(
-        warp::reply::json(&EncryptedOutputsCacheResponse {
-            encrypted_outputs: encrypted_output,
-            last_queried_block,
-        }),
-        warp::http::StatusCode::OK,
-    ))
+    Ok(Json(EncryptedOutputsCacheResponse {
+        encrypted_outputs: encrypted_output,
+        last_queried_block,
+    }))
 }

@@ -10,3 +10,4 @@ store/
 .cargo/
 .DS_Store
 .vscode/
+.idea/

@@ -5,6 +5,8 @@ import { EventsWatcher } from './webbRelayer';
 export const defaultEventsWatcherValue: EventsWatcher = {
   enabled: true,
   pollingInterval: 3000,
+  printProgressInterval: 7000,
+  syncBlocksFrom: 1
 };
 
 // Pad hexString with zero to make it of length 64.
