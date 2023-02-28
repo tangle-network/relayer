@@ -40,9 +40,6 @@ pub async fn ignite(ctx: &RelayerContext) -> crate::Result<()> {
             .replace("ETH1_INFURA_API_KEY", &api_key_string);
 
         let chain_name = &chain_config.name;
-        //let chain_id = U256::from(chain_config.chain_id);
-        //let provider = ctx.evm_provider(&chain_id.to_string()).await?;
-        //let _client = Arc::new(provider);
         let poller_config = BlockPollerConfig::default();
         tracing::debug!(
             "Starting Background Services for ({}) chain ({:?})",
@@ -77,20 +74,20 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // The configuration is validated and configured from the given directory
     let config = load_config(args.config_dir.clone())?;
     tracing::trace!("Loaded config.. {:#?}", config);
+    // persistent storage for the relayer
+    let store = create_store(&args).await?;
     // The RelayerContext takes a configuration, and populates objects that are needed
     // throughout the lifetime of the relayer. Items such as wallets and providers, as well
     // as a convenient place to access the configuration.
-    let ctx = RelayerContext::new(config);
-    // persistent storage for the relayer
-    let store = create_store(&args).await?;
+    let ctx = RelayerContext::new(config, store);
     tracing::trace!("Created persistent storage..");
     // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
-    let (addr, server) =
-        webb_relayer::service::build_web_services(ctx.clone(), store.clone())?;
-    tracing::info!("Starting the server on {}", addr);
+    let server_handle =
+        tokio::spawn(webb_relayer::service::build_web_services(ctx.clone()));
+
     // start the server.
-    let server_handle = tokio::spawn(server);
+    //let server_handle = tokio::spawn(server);
     // start all background services.
     // this does not block, will fire the services on background tasks.
     ignite(&ctx).await?;
@@ -114,8 +111,6 @@ async fn main(args: Opts) -> anyhow::Result<()> {
         tracing::warn!("Shutting down...");
         // send shutdown signal to all of the application.
         ctx.shutdown();
-        // also abort the server task
-        server_handle.abort();
         std::thread::sleep(std::time::Duration::from_millis(300));
         tracing::info!("Clean Exit ..");
     };
@@ -132,6 +127,10 @@ async fn main(args: Opts) -> anyhow::Result<()> {
             tracing::warn!("Quitting ...");
             shutdown();
         },
+        _ = server_handle => {
+            tracing::warn!("Relayer axum server stopped");
+            shutdown();
+        }
     }
     Ok(())
 }

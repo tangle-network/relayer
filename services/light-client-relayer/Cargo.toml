@@ -14,14 +14,10 @@ path = "src/main.rs"
 required-features = ["cli"]
 
 [dependencies]
-# eth-rpc-client = { package = "eth_rpc_client", git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
-# eth2-pallet-init = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
-# eth2_to_substrate_relay = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
-# eth-types = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
-eth-types = { path = "../../../pallet-eth2-light-client/crates/eth-types" }
-eth_rpc_client = { path = "../../../pallet-eth2-light-client/crates/eth_rpc_client" }
-eth2-pallet-init = { path = "../../../pallet-eth2-light-client/crates/eth2-pallet-init" }
-eth2_to_substrate_relay = { path = "../../../pallet-eth2-light-client/eth2substrate-block-relay-rs" }
+eth-types = { workspace = true }
+eth-rpc-client = { workspace = true }
+eth2-pallet-init = { workspace = true }
+eth2_to_substrate_relay = { workspace = true }
 webb-proposal-signing-backends = { path = "../../crates/proposal-signing-backends" }
 webb-relayer-types = { path = "../../crates/relayer-types" }
 webb-relayer-tx-relay = { path = "../../crates/tx-relay" }

@@ -182,7 +182,7 @@ where
         let is_signature_valid = validate_ecdsa_signature(
             proposal_data.as_slice(),
             signature.as_slice(),
-            current_maintainer.0.as_slice(),
+            current_maintainer.as_slice(),
         )
         .unwrap_or(false);
 
@@ -211,8 +211,6 @@ where
         // Enqueue transaction call data in protocol-substrate transaction queue
         let execute_proposal_call = ExecuteProposal {
             src_id: typed_chain_id.chain_id(),
-            proposal_data: BoundedVec(proposal_data.clone()),
-            signature: BoundedVec(signature.clone()),
             proposal_data: BoundedVec(proposal_data.clone()),
             signature: BoundedVec(signature.clone()),
         };
@@ -269,9 +267,9 @@ where
         // 2. check if the nonce is greater than the current nonce.
         // 3. ~check if the signature is valid.~
 
-        if new_maintainer == current_maintainer.0 {
+        if new_maintainer == current_maintainer {
             tracing::warn!(
-                current_maintainer =  %hex::encode(&current_maintainer.0),
+                current_maintainer =  %hex::encode(&current_maintainer),
                 new_maintainer = %hex::encode(&new_maintainer),
                 %nonce,
                 signature = %hex::encode(&signature),
@@ -308,8 +306,6 @@ where
         );
 
         let set_maintainer_call = SetMaintainer {
-            message: BoundedVec(new_maintainer.clone()),
-            signature: BoundedVec(signature.clone()),
             message: BoundedVec(new_maintainer.clone()),
             signature: BoundedVec(signature.clone()),
         };
