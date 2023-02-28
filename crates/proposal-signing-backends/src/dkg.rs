@@ -60,7 +60,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         }
         let resource_id_addrs = RuntimeApi::storage()
             .dkg_proposals()
-            .resources(&ResourceId(resource_id.into_bytes()));
+            .resources(ResourceId(resource_id.into_bytes()));
         let maybe_resource_id = self
             .client
             .storage()
