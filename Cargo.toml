@@ -13,3 +13,6 @@ members = [
     "event-watchers/*",
     "services/*",
 ]
+
+[patch.crates-io]
+webb = { git = "https://github.com/webb-tools/webb-rs.git" }
