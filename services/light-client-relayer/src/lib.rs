@@ -1,7 +1,6 @@
 use crate::light_client::LightClientPoller;
 
 use eth2_to_substrate_relay::config::Config;
-use eth2_to_substrate_relay::config_for_tests::ConfigForTests;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::Result;
@@ -17,10 +16,6 @@ pub struct LightClientWatcher;
 impl LightClientPoller for LightClientWatcher {
     const TAG: &'static str = "Block Watcher";
     type Store = SledStore;
-}
-
-fn get_test_config() -> ConfigForTests {
-    ConfigForTests::load_from_toml("config_for_tests.toml".try_into().unwrap())
 }
 
 /// Start the block poller service which polls ETH blocks

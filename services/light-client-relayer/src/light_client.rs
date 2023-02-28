@@ -82,15 +82,16 @@ pub trait LightClientPoller {
         let path_to_suri = &config.path_to_signer_secret_key;
         let suri = std::fs::read_to_string(path_to_suri)?;
         let suri = suri.trim();
-        
+
         let typed_chain_id = get_typed_chain_id(&config.clone().into());
         let mut eth_client_contract =
-            EthClientPallet::new_with_suri_key(api, suri, typed_chain_id).map_err(|err| {
-                std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    format!("{err:?}"),
-                )
-            })?;
+            EthClientPallet::new_with_suri_key(api, suri, typed_chain_id)
+                .map_err(|err| {
+                    std::io::Error::new(
+                        std::io::ErrorKind::Other,
+                        format!("{err:?}"),
+                    )
+                })?;
 
         let is_initialized = eth_client_contract
             .is_initialized(typed_chain_id)
@@ -119,7 +120,7 @@ pub trait LightClientPoller {
         // Step 3: run relay
         relay.run(None).await;
 
-        panic!("Relay finished execution");
+        tracing::warn!("Finished running the relayer ...");
         Ok(())
     }
 }

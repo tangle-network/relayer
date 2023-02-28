@@ -3,8 +3,6 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
-use ethereum_types::U256;
-use std::sync::Arc;
 use tokio::signal::unix;
 use webb_light_client_relayer::start_light_client_service;
 
@@ -35,7 +33,11 @@ pub async fn ignite(ctx: &RelayerContext) -> crate::Result<()> {
             continue;
         }
 
-        let chain_config = chain_config.clone();
+        let mut chain_config = chain_config.clone();
+        let api_key_string = std::env::var("ETH1_INFURA_API_KEY").unwrap();
+        chain_config.eth1_endpoint = chain_config
+            .eth1_endpoint
+            .replace("ETH1_INFURA_API_KEY", &api_key_string);
 
         let chain_name = &chain_config.name;
         //let chain_id = U256::from(chain_config.chain_id);

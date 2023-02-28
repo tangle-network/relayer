@@ -1,9 +1,9 @@
-[eth2.testnet]
+[eth2.mainnet]
 enabled = true
 name = "testnet config"
 chain_id = 0
 beacon_endpoint = "https://lodestar-mainnet.chainsafe.io"
-eth1_endpoint = "https://mainnet.infura.io/v3/eb55627f53de4592a75fd4a5b4289a92"
+eth1_endpoint = "https://mainnet.infura.io/v3/ETH1_INFURA_API_KEY"
 substrate_endpoint = "localhost:9944"
 signer_account_id = "5Dqf9U5dgQ9GLqdfaxXGjpZf9af1sCV8UrnpRgqJPbe3wCwX"
 path_to_signer_secret_key = "/tmp/empty/secret_key"
