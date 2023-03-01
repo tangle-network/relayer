@@ -45,7 +45,7 @@ pub trait LightClientHandlerWithRetry: LightClientHandler {
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
     ) -> crate::Result<()> {
         let wrapped_task = || {
-            self.handle_interval(chain_id.clone(), store.clone())
+            self.handle_interval(chain_id, store.clone())
                 .map_err(backoff::Error::transient)
         };
         backoff::future::retry(backoff, wrapped_task).await?;
