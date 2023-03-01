@@ -59,10 +59,10 @@ glob = "^0.3"
 serde_path_to_error = "0.1.9"
 
 # eth2 light client crates
-eth-rpc-client = { package = "eth_rpc_client", git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
-eth2-pallet-init = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
-eth2_to_substrate_relay = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
-eth-types = { git = "https://github.com/webb-tools/pallet-eth2-light-client", branch = "thomas/prepare_eth2_substrate_relayer" }
+eth-rpc-client = { package = "eth_rpc_client", git = "https://github.com/webb-tools/pallet-eth2-light-client" }
+eth2-pallet-init = { git = "https://github.com/webb-tools/pallet-eth2-light-client" }
+eth2_to_substrate_relay = { git = "https://github.com/webb-tools/pallet-eth2-light-client" }
+eth-types = { git = "https://github.com/webb-tools/pallet-eth2-light-client" }
 
 [profile.release]
 strip = "symbols"
