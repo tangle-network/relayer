@@ -1,55 +1,49 @@
 use futures::StreamExt;
-use hex::FromHex;
 use webb::substrate::dkg_runtime::api as RuntimeApi;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::ResourceId as DkgResourceId;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId as DkgTypedChainId;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce as DkgNonce;
+use webb::substrate::subxt::ext::sp_core::bytes::to_hex;
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair;
 use webb::substrate::subxt::ext::sp_core::Pair as _;
 use webb::substrate::subxt::tx::{PairSigner, TxProgress, TxStatus};
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use webb_proposals::evm::AnchorUpdateProposal;
+use webb_proposals::ResourceId;
 use webb_proposals::{FunctionSignature, Nonce, ProposalHeader};
-use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 
 #[tokio::test]
 async fn submit_anchor_update_proposal() {
     let api = OnlineClient::<PolkadotConfig>::new().await.unwrap();
 
-    let resource_id = ResourceId::new(
-        TargetSystem::ContractAddress(
-            <[u8; 20]>::from_hex("d30c8839c1145609e564b986f667b273ddcb8496")
-                .unwrap(),
-        ),
-        TypedChainId::Evm(5001),
-    );
-    assert_eq!(
-        resource_id.0,
-        <[u8; 32]>::from_hex(
-            "000000000000d30c8839c1145609e564b986f667b273ddcb8496010000001389"
-        )
+    // retrieve resource ids from bridge registry
+    let storage = RuntimeApi::storage().bridge_registry();
+    let next_bridge_index = storage.next_bridge_index();
+    let next_bridge_index = api
+        .storage()
+        .fetch(&next_bridge_index, None)
+        .await
         .unwrap()
-    );
-
-    let src_resource_id = ResourceId::new(
-        TargetSystem::ContractAddress(
-            <[u8; 20]>::from_hex("e69a847cd5bc0c9480ada0b339d7f0a8cac2b667")
-                .unwrap(),
-        ),
-        TypedChainId::Evm(5002),
-    );
-    assert_eq!(
-        src_resource_id.0,
-        <[u8; 32]>::from_hex(
-            "000000000000e69a847cd5bc0c9480ada0b339d7f0a8cac2b66701000000138a"
-        )
-        .unwrap()
-    );
+        .unwrap();
+    let bridges = storage.bridges(next_bridge_index - 1);
+    let bridges = api.storage().fetch(&bridges, None).await.unwrap().unwrap();
+    let resource_id = ResourceId(bridges.resource_ids.0[1].0);
+    let src_resource_id = ResourceId(bridges.resource_ids.0[0].0);
 
     // print resource IDs
     println!("Resource ID: {}", hex::encode(resource_id.0));
     println!("Source Resource ID: {}", hex::encode(src_resource_id.0));
 
+    assert_eq!(
+        to_hex(&resource_id.0, false),
+        "0x000000000000d30c8839c1145609e564b986f667b273ddcb8496010000001389"
+    );
+    assert_eq!(
+        to_hex(&src_resource_id.0, false),
+        "0x000000000000e69a847cd5bc0c9480ada0b339d7f0a8cac2b66701000000138a"
+    );
+
+    let tx_api = RuntimeApi::tx().dkg_proposals();
     let sudo_account: PairSigner<PolkadotConfig, Pair> =
         PairSigner::new(Pair::from_string("//Alice", None).unwrap());
     let account_nonce = api
@@ -58,8 +52,7 @@ async fn submit_anchor_update_proposal() {
         .await
         .unwrap();
 
-    let tx_api = RuntimeApi::tx().dkg_proposals();
-
+    /*
     println!("register resource 1");
     let register_resource1 =
         tx_api.set_resource(DkgResourceId(resource_id.into_bytes()), vec![]);
@@ -79,6 +72,7 @@ async fn submit_anchor_update_proposal() {
         .await
         .unwrap();
     watch_events(&mut progress).await;
+    */
 
     // following code runs in a loop in original code
     {
@@ -106,15 +100,6 @@ async fn submit_anchor_update_proposal() {
             anchor_update_proposal.to_vec(),
         );
 
-        // TODO: gives error "Resource ID provided isn't mapped to anything"
-        // So, there is two ways to solve this:
-        //
-        // 1. Replicate the same code and use dkgProposalHandler.forceSubmitUnsignedProposal call
-        //    with sudo.
-        // 2. Before running the script loop, you use sudo to register these resources, using
-        //    dkg_proposals pallet, there is a method that you can call as sudo to register
-        //    these resources, which you will find using PolkadotUI
-        //    -> dkgProposals.setResource
         let mut progress = api
             .tx()
             .sign_and_submit_then_watch_default(&xt, &sudo_account)
@@ -158,7 +143,7 @@ async fn watch_events(
                 }
                 assert!(maybe_success.is_ok());
             }
-            _ => assert!(false),
+            _ => unreachable!(),
         }
     }
 }
