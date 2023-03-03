@@ -150,7 +150,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     }
 
     let gas_amount =
-        client.estimate_gas(&call.tx, None).await.map_err(|e| {
+        client.estimate_gas(&call.tx).await.map_err(|e| {
             Network(NetworkStatus::Failed {
                 reason: e.to_string(),
             })
