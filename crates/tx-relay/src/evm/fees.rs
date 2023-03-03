@@ -136,7 +136,7 @@ async fn generate_fee_info(
     // Fetch native gas price estimate from etherscan.io, using "average" value
     let gas_oracle = ctx.etherscan_client().gas_oracle().await?;
     let gas_price_gwei = U256::from(gas_oracle.propose_gas_price);
-    let gas_price = parse_units(gas_price_gwei, "gwei")?.into();
+    let gas_price = parse_units(gas_price_gwei, "gwei")?;
 
     let estimated_fee = calculate_transaction_fee(
         gas_price,
@@ -149,13 +149,11 @@ async fn generate_fee_info(
 
     // Calculate the exchange rate from wrapped token to native token which is used for the refund.
     let refund_exchange_rate =
-        parse_units(native_token_price / wrapped_token_price, wrapped_token.1)?
-            .into();
+        parse_units(native_token_price / wrapped_token_price, wrapped_token.1)?;
 
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
     let max_refund =
-        parse_units(MAX_REFUND_USD / native_token_price, native_token.1)?
-            .into();
+        parse_units(MAX_REFUND_USD / native_token_price, native_token.1)?;
 
     Ok(FeeInfo {
         estimated_fee,
@@ -199,7 +197,7 @@ async fn calculate_transaction_fee(
     // Step 5: Convert the result to wei and return it.
     let fee_with_profit =
         parse_units(total_fee_tokens, wrapped_token_decimals)?;
-    Ok(fee_with_profit.into())
+    Ok(fee_with_profit)
 }
 
 /// Retrieves the token name of a given anchor contract. Wrapper prefixes are stripped in order
