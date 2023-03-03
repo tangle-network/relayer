@@ -27,9 +27,16 @@ native-tls = { workspace = true }
 webb-proposals = { workspace = true }
 arkworks-native-gadgets = { version = "1.2.0", default-features = false }
 ark-bls12-381 = { version = "^0.3.0", default-features = false, features = ["curve"] }
-
+ark-bn254 = { version = "^0.3.0", default-features = true, features = ["curve"] }
+ark-ff = { version = "^0.3.0", default-features = true }
+ark-std = { version = "^0.3.0", default-features = false }
+arkworks-utils = { version = "^1.0.1", default-features = false }
+arkworks-setups = { version = "1.2.1", features = ["r1cs"], default-features = false }
 tracing-test = "0.2"
 sled = { version = "^0.34" }
+
+[dev-dependencies]
+hex = "0.4"
 
 [features]
 default = ["std", "evm", "substrate"]
