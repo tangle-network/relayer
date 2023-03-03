@@ -13,9 +13,8 @@
 // limitations under the License.
 
 use tokio::sync::Mutex;
-use webb::evm::{
-    contract::protocol_solidity::VAnchorContract,
-    ethers::prelude::k256::elliptic_curve::consts::U56,
+use webb::evm::contract::protocol_solidity::{
+    VAnchorContract, VAnchorContractEvents,
 };
 use webb_relayer_utils::retry;
 
@@ -118,6 +117,11 @@ pub trait EventWatcher {
                     "Latest block number: #{}",
                     current_block_number
                 );
+                let block = store.get_last_block_number(
+                    history_store_key,
+                    contract.deployed_at().as_u64(),
+                )?;
+                tracing::trace!("Last saved block number: #{}", block);
 
                 let latest_merkel_root =
                     store.get_latest_merkle_root(history_store_key)?;
@@ -133,34 +137,71 @@ pub trait EventWatcher {
 
                 if latest_merkel_root == on_chain_root.to_vec() {
                     tracing::info!(
-                        "Merkle roots matched with on chain value: {:?}",
-                        latest_merkel_root
+                        "Computed merkle roots matches with on chain merkle root"
                     );
                 } else {
                     tracing::info!("Fast sync blocks");
-                    let events_filter = contract
-                        .event_with_filter::<Self::Events>(Default::default())
-                        .from_block(contract.deployed_at().as_u64())
-                        .to_block(current_block_number);
-                    let found_events = events_filter
-                        .query_with_meta()
-                        .map_err(Into::into)
-                        .map_err(backoff::Error::transient)
-                        .await?;
-                    let levels = anchor_contract
-                        .get_levels()
-                        .call()
-                        .map_err(Into::into)
-                        .map_err(backoff::Error::transient)
-                        .await?;
+                    let interval = 1000;
+                    let contract_deployed_at = contract.deployed_at().as_u64();
+                    let mut relayer_leaves: Vec<[u8; 32]> = Vec::new();
+                    for block_no in (contract_deployed_at
+                        ..=current_block_number)
+                        .step_by(interval)
+                    {
+                        let from_block = block_no as u64;
+                        let to_block = block_no + interval as u64 - 1;
+                        tracing::trace!(
+                            "Fast sync blocks from #{} to #{}",
+                            from_block,
+                            to_block
+                        );
+                        let events_filter = contract
+                            .event_with_filter::<VAnchorContractEvents>(
+                                Default::default(),
+                            )
+                            .from_block(from_block)
+                            .to_block(to_block);
+                        let found_events = events_filter
+                            .query_with_meta()
+                            .map_err(Into::into)
+                            .map_err(backoff::Error::transient)
+                            .await?;
+                        for (event, _log) in found_events {
+                            match event {
+                                VAnchorContractEvents::NewCommitmentFilter(
+                                    deposit,
+                                ) => {
+                                    let commitment: [u8; 32] =
+                                        deposit.commitment.into();
+                                    relayer_leaves.push(commitment);
+                                }
+                                _ => {
+                                    tracing::trace!(
+                                        "Unhandled event {:?}",
+                                        event
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    tracing::info!("Fast sync completed");
 
-                    // create merkle tree
+                    // compute root using leaves fetched from blocks
+                    let computed_root = compute_merkle_root(relayer_leaves);
+                    if computed_root == on_chain_root {
+                        // save computed merkle root
+                        store.set_latest_merkle_root(
+                            history_store_key,
+                            computed_root,
+                        );
+                        // TODO!
+                        // save last processed block number
+                        // clear cache
+                        // write cache
+                        // relay roots
+                        continue;
+                    }
                 }
-
-                let block = store.get_last_block_number(
-                    history_store_key,
-                    contract.deployed_at().as_u64(),
-                )?;
 
                 // latest finalized block after n block_confirmations
                 let latest_finalized_block =

@@ -43,3 +43,38 @@ pub use event_watcher::*;
 /// Bridge watching traits
 mod bridge_watcher;
 pub use bridge_watcher::*;
+
+use ark_bn254::Fr as Bn254Fr;
+use ark_ff::{BigInteger, PrimeField};
+use ark_std::collections::BTreeMap;
+use arkworks_native_gadgets::{
+    merkle_tree::SparseMerkleTree,
+    poseidon::{FieldHasher, Poseidon},
+};
+use arkworks_setups::{common::setup_params, Curve};
+use arkworks_utils::{bytes_vec_to_f, parse_vec};
+
+fn compute_merkle_root(relayer_leaves: Vec<[u8; 32]>) -> Vec<u8> {
+    let params = setup_params::<Bn254Fr>(Curve::Bn254, 5, 3);
+    let poseidon = Poseidon::<Bn254Fr>::new(params);
+    let leaves: Vec<Bn254Fr> = relayer_leaves
+        .iter()
+        .map(|leaf| Bn254Fr::from_be_bytes_mod_order(leaf))
+        .collect();
+    let pairs: BTreeMap<u32, Bn254Fr> = leaves
+        .iter()
+        .enumerate()
+        .map(|(i, l)| (i as u32, *l))
+        .collect();
+    // create merkle tree
+    type merkle_tree = SparseMerkleTree<Bn254Fr, Poseidon<Bn254Fr>, 30>;
+    let default_leaf_hex = vec![
+        "0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c",
+    ];
+    let default_leaf_scalar: Vec<Bn254Fr> =
+        bytes_vec_to_f(&parse_vec(default_leaf_hex).unwrap());
+    let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_be();
+    let smt = merkle_tree::new(&pairs, &poseidon, &default_leaf_vec).unwrap();
+    let root = smt.root().into_repr().to_bytes_be();
+    return root;
+}

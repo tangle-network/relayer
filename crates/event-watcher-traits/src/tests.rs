@@ -186,8 +186,13 @@ fn test_merkle_root() {
         .map(|(i, l)| (i as u32, *l))
         .collect();
     type SMT = SparseMerkleTree<Bn254Fr, Poseidon<Bn254Fr>, 30>;
-    let default_leaf = Bn254Fr::from(0u64).into_repr().to_bytes_be();
-    let smt = SMT::new(&pairs, &poseidon, &default_leaf).unwrap();
+    let default_leaf_hex = vec![
+        "0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c",
+    ];
+    let default_leaf_scalar: Vec<Bn254Fr> =
+        bytes_vec_to_f(&parse_vec(default_leaf_hex).unwrap());
+    let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_be();
+    let smt = SMT::new(&pairs, &poseidon, &default_leaf_vec).unwrap();
     let root = smt.root().into_repr().to_bytes_be();
     let hex_root = hex::encode(root);
     let expected_root =
