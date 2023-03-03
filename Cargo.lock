@@ -160,12 +160,11 @@ dependencies = [
 
 [[package]]
 name = "async-lock"
-version = "2.6.0"
+version = "2.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8101efe8695a6c17e02911402145357e718ac92d3ff88ae8419e84b1707b685"
+checksum = "fa24f727524730b077666307f2734b4a1a1c57acb79193127dcc8914d5242dd7"
 dependencies = [
  "event-listener",
- "futures-lite",
 ]
 
 [[package]]
@@ -215,18 +214,6 @@ dependencies = [
 
 [[package]]
 name = "auto_impl"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7862e21c893d65a1650125d157eaeec691439379a1cee17ee49031b79236ada4"
-dependencies = [
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
-name = "auto_impl"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a8c1df849285fbacd587de7818cc7d13be6cd2cbcd47a04fb1801b0e2706e33"
@@ -271,7 +258,7 @@ dependencies = [
  "serde_urlencoded 0.7.1",
  "sha1",
  "sync_wrapper",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tokio-tungstenite 0.18.0",
  "tower",
  "tower-http 0.4.0",
@@ -318,7 +305,7 @@ dependencies = [
  "instant",
  "pin-project-lite 0.2.9",
  "rand 0.8.5",
- "tokio 1.25.0",
+ "tokio 1.26.0",
 ]
 
 [[package]]
@@ -524,18 +511,18 @@ dependencies = [
 [[package]]
 name = "bls"
 version = "0.2.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
- "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "eth2_serde_utils 0.1.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
+ "eth2_serde_utils 0.1.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
+ "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "ethereum-types 0.14.1",
  "hex",
  "milagro_bls",
  "rand 0.7.3",
  "rand_chacha 0.3.1",
  "serde",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "zeroize",
 ]
 
@@ -916,7 +903,7 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
- "tokio 1.25.0",
+ "tokio 1.26.0",
 ]
 
 [[package]]
@@ -1019,21 +1006,21 @@ dependencies = [
 [[package]]
 name = "consensus_types"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "bitvec 1.0.1",
  "derive_more",
  "eth-types",
  "ethereum-types 0.14.1",
  "hex",
- "merkle_proof 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "merkle_proof 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "parity-scale-codec",
  "rlp",
  "rlp-derive",
  "scale-info",
  "serde",
  "tiny-keccak",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
 ]
 
 [[package]]
@@ -1637,6 +1624,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "enr"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "492a7e5fc2504d5fdce8e124d3e263b244a68b283cac67a69eda0cd43e0aebad"
+dependencies = [
+ "base64 0.13.1",
+ "bs58",
+ "bytes 1.4.0",
+ "hex",
+ "k256",
+ "log",
+ "rand 0.8.5",
+ "rlp",
+ "serde",
+ "sha3",
+ "zeroize",
+]
+
+[[package]]
 name = "env_logger"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1723,11 +1729,11 @@ dependencies = [
 [[package]]
 name = "eth-types"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "derive_more",
- "eth2_serde_utils 0.1.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "eth2_serde_utils 0.1.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
+ "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "ethereum-types 0.14.1",
  "hex",
  "parity-scale-codec",
@@ -1736,14 +1742,14 @@ dependencies = [
  "scale-info",
  "serde",
  "tiny-keccak",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "tree_hash_derive 0.4.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
+ "tree_hash_derive 0.4.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
 ]
 
 [[package]]
 name = "eth2-pallet-init"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "async-trait",
  "clap 3.2.23",
@@ -1751,7 +1757,7 @@ dependencies = [
  "eth-types",
  "eth_rpc_client",
  "log",
- "merkle_proof 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "merkle_proof 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "parity-scale-codec",
  "reqwest",
  "scale-info",
@@ -1760,9 +1766,9 @@ dependencies = [
  "sp-core 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.36)",
  "sp-keyring",
  "subxt",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "toml",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "webb",
  "webb-proposals 0.5.5",
  "webb-relayer-types 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
@@ -1783,7 +1789,7 @@ dependencies = [
 [[package]]
 name = "eth2_hashing"
 version = "0.3.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "lazy_static",
  "ring",
@@ -1820,7 +1826,7 @@ dependencies = [
 [[package]]
 name = "eth2_serde_utils"
 version = "0.1.1"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "ethereum-types 0.14.1",
  "hex",
@@ -1841,7 +1847,7 @@ dependencies = [
 [[package]]
 name = "eth2_ssz"
 version = "0.4.1"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "ethereum-types 0.14.1",
  "itertools",
@@ -1877,7 +1883,7 @@ dependencies = [
 [[package]]
 name = "eth2_to_substrate_relay"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "async-std",
  "async-trait",
@@ -1887,8 +1893,8 @@ dependencies = [
  "env_logger",
  "eth-types",
  "eth2-pallet-init",
- "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
- "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
+ "eth2_ssz 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "eth_rpc_client",
  "ethereum-types 0.14.1",
  "finality-update-verify",
@@ -1896,7 +1902,7 @@ dependencies = [
  "hex",
  "lazy_static",
  "log",
- "merkle_proof 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "merkle_proof 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "primitive-types 0.12.1",
  "prometheus 0.9.0",
  "reqwest",
@@ -1905,9 +1911,9 @@ dependencies = [
  "sp-core 7.0.0 (git+https://github.com/paritytech/substrate.git?branch=polkadot-v0.9.36)",
  "sp-keyring",
  "thread",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "toml",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "types",
  "warp",
  "webb",
@@ -1918,7 +1924,7 @@ dependencies = [
 [[package]]
 name = "eth_rpc_client"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "async-std",
  "atomic_refcell",
@@ -1943,7 +1949,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thread",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "toml",
  "tree_hash 0.4.1 (git+https://github.com/webb-tools/lighthouse.git?branch=develop)",
  "types",
@@ -2059,17 +2065,17 @@ dependencies = [
 
 [[package]]
 name = "ethers"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11f26f9d8d80da18ca72aca51804c65eb2153093af3bec74fd5ce32aa0c1f665"
+checksum = "6b8e48b737267808f857d9db81d1d829b1a072b488dcaef6df0897aad7de9bca"
 dependencies = [
- "ethers-addressbook 1.0.2",
- "ethers-contract 1.0.2",
- "ethers-core 1.0.2",
- "ethers-etherscan 1.0.2",
- "ethers-middleware 1.0.2",
- "ethers-providers 1.0.2",
- "ethers-signers 1.0.2",
+ "ethers-addressbook 1.5.0",
+ "ethers-contract 1.5.0",
+ "ethers-core 1.5.0",
+ "ethers-etherscan 1.5.0",
+ "ethers-middleware 1.5.0",
+ "ethers-providers 1.5.0",
+ "ethers-signers 1.5.0",
  "ethers-solc",
 ]
 
@@ -2087,11 +2093,11 @@ dependencies = [
 
 [[package]]
 name = "ethers-addressbook"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe4be54dd2260945d784e06ccdeb5ad573e8f1541838cee13a1ab885485eaa0b"
+checksum = "a6fef0375eef9f126f5c9fa41a4d1f8cc109e41160f2757f74e1d0b485fd069b"
 dependencies = [
- "ethers-core 1.0.2",
+ "ethers-core 1.5.0",
  "once_cell",
  "serde",
  "serde_json",
@@ -2118,14 +2124,14 @@ dependencies = [
 
 [[package]]
 name = "ethers-contract"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e9c3c3e119a89f0a9a1e539e7faecea815f74ddcf7c90d0b00d1f524db2fdc9c"
+checksum = "6fc3d7048cfc56615edf05cdfb38a38c8bc6108e2f51a0f2959a9397bd271b3c"
 dependencies = [
- "ethers-contract-abigen 1.0.2",
- "ethers-contract-derive 1.0.2",
- "ethers-core 1.0.2",
- "ethers-providers 1.0.2",
+ "ethers-contract-abigen 1.5.0",
+ "ethers-contract-derive 1.5.0",
+ "ethers-core 1.5.0",
+ "ethers-providers 1.5.0",
  "futures-util",
  "hex",
  "once_cell",
@@ -2160,17 +2166,19 @@ dependencies = [
 
 [[package]]
 name = "ethers-contract-abigen"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d4e5ad46aede34901f71afdb7bb555710ed9613d88d644245c657dc371aa228"
+checksum = "651115f37eb5a2c91289c184174f67bb9053c052b2189e3f162044e84ac5e505"
 dependencies = [
  "Inflector",
  "cfg-if 1.0.0",
  "dunce",
- "ethers-core 1.0.2",
+ "ethers-core 1.5.0",
+ "ethers-etherscan 1.5.0",
  "eyre",
  "getrandom 0.2.8",
  "hex",
+ "prettyplease",
  "proc-macro2",
  "quote",
  "regex",
@@ -2178,6 +2186,7 @@ dependencies = [
  "serde",
  "serde_json",
  "syn",
+ "tokio 1.26.0",
  "toml",
  "url",
  "walkdir",
@@ -2200,12 +2209,13 @@ dependencies = [
 
 [[package]]
 name = "ethers-contract-derive"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f192e8e4cf2b038318aae01e94e7644e0659a76219e94bcd3203df744341d61f"
+checksum = "96b3385c9daa450bbcef5da438ed99e9361019f1242f7c3f635f132ecc961cd3"
 dependencies = [
- "ethers-contract-abigen 1.0.2",
- "ethers-core 1.0.2",
+ "ethers-contract-abigen 1.5.0",
+ "ethers-core 1.5.0",
+ "eyre",
  "hex",
  "proc-macro2",
  "quote",
@@ -2247,9 +2257,9 @@ dependencies = [
 
 [[package]]
 name = "ethers-core"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ade3e9c97727343984e1ceada4fdab11142d2ee3472d2c67027d56b1251d4f15"
+checksum = "94573efbaddb420037ffc2be6540d86ec17efd715ae8c1b4792ac6d6865b157f"
 dependencies = [
  "arrayvec 0.7.2",
  "bytes 1.4.0",
@@ -2259,8 +2269,10 @@ dependencies = [
  "elliptic-curve",
  "ethabi 18.0.0",
  "generic-array 0.14.6",
+ "getrandom 0.2.8",
  "hex",
  "k256",
+ "num_enum",
  "once_cell",
  "open-fastrlp",
  "proc-macro2",
@@ -2271,6 +2283,7 @@ dependencies = [
  "serde_json",
  "strum",
  "syn",
+ "tempfile",
  "thiserror",
  "tiny-keccak",
  "unicode-xid",
@@ -2295,11 +2308,12 @@ dependencies = [
 
 [[package]]
 name = "ethers-etherscan"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a9713f525348e5dde025d09b0a4217429f8074e8ff22c886263cc191e87d8216"
+checksum = "cb663dde0a44aba855cc9b7d3ec17ea9ffb3659914933a170a46954896edb339"
 dependencies = [
- "ethers-core 1.0.2",
+ "ethers-core 1.5.0",
+ "ethers-solc",
  "getrandom 0.2.8",
  "reqwest",
  "semver",
@@ -2329,7 +2343,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "tracing-futures",
  "url",
@@ -2337,17 +2351,17 @@ dependencies = [
 
 [[package]]
 name = "ethers-middleware"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e71df7391b0a9a51208ffb5c7f2d068900e99d6b3128d3a4849d138f194778b7"
+checksum = "5d2b2e125feb05c17909919c30385b012ce33330c1522426c116929063b9f924"
 dependencies = [
  "async-trait",
- "auto_impl 0.5.0",
- "ethers-contract 1.0.2",
- "ethers-core 1.0.2",
- "ethers-etherscan 1.0.2",
- "ethers-providers 1.0.2",
- "ethers-signers 1.0.2",
+ "auto_impl",
+ "ethers-contract 1.5.0",
+ "ethers-core 1.5.0",
+ "ethers-etherscan 1.5.0",
+ "ethers-providers 1.5.0",
+ "ethers-signers 1.5.0",
  "futures-locks",
  "futures-util",
  "instant",
@@ -2355,7 +2369,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "tracing-futures",
  "url",
@@ -2368,7 +2382,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e46482e4d1e79b20c338fd9db9e166184eb387f0a4e7c05c5b5c0aa2e8c8900c"
 dependencies = [
  "async-trait",
- "auto_impl 1.0.1",
+ "auto_impl",
  "base64 0.13.1",
  "ethers-core 0.17.0",
  "futures-core",
@@ -2385,7 +2399,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "tracing-futures",
  "url",
@@ -2398,14 +2412,15 @@ dependencies = [
 
 [[package]]
 name = "ethers-providers"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1a9e0597aa6b2fdc810ff58bc95e4eeaa2c219b3e615ed025106ecb027407d8"
+checksum = "585c96fbae569931aa0fab963a010d4c98d2757028ec840809b98032d9543d18"
 dependencies = [
  "async-trait",
- "auto_impl 1.0.1",
- "base64 0.13.1",
- "ethers-core 1.0.2",
+ "auto_impl",
+ "base64 0.21.0",
+ "enr",
+ "ethers-core 1.5.0",
  "futures-core",
  "futures-timer",
  "futures-util",
@@ -2420,8 +2435,8 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 1.25.0",
- "tokio-tungstenite 0.17.2",
+ "tokio 1.26.0",
+ "tokio-tungstenite 0.18.0",
  "tracing",
  "tracing-futures",
  "url",
@@ -2452,31 +2467,32 @@ dependencies = [
 
 [[package]]
 name = "ethers-signers"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3f41ced186867f64773db2e55ffdd92959e094072a1d09a5e5e831d443204f98"
+checksum = "52b8308a63f1c00ecf001a75c9b192499d87324c310c6fd9e772d20bdfbf366b"
 dependencies = [
  "async-trait",
  "coins-bip32",
  "coins-bip39",
  "elliptic-curve",
  "eth-keystore 0.5.0",
- "ethers-core 1.0.2",
+ "ethers-core 1.5.0",
  "hex",
  "rand 0.8.5",
  "sha2 0.10.6",
  "thiserror",
+ "tracing",
 ]
 
 [[package]]
 name = "ethers-solc"
-version = "1.0.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cbe9c0a6d296c57191e5f8a613a3b5e816812c28f4a28d6178a17c21db903d77"
+checksum = "9482f0e65b8e09e3d3e86a1ea5e558a8b5e7da3597a97fc588ff4a0bdaf0e148"
 dependencies = [
  "cfg-if 1.0.0",
  "dunce",
- "ethers-core 1.0.2",
+ "ethers-core 1.5.0",
  "getrandom 0.2.8",
  "glob",
  "hex",
@@ -2494,7 +2510,7 @@ dependencies = [
  "svm-rs",
  "thiserror",
  "tiny-keccak",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "walkdir",
  "yansi",
@@ -2550,7 +2566,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "089263294bb1c38ac73649a6ad563dd9a5142c8dc0482be15b8b9acb22a1611e"
 dependencies = [
  "arrayvec 0.7.2",
- "auto_impl 1.0.1",
+ "auto_impl",
  "bytes 1.4.0",
  "ethereum-types 0.13.1",
  "fastrlp-derive",
@@ -2581,14 +2597,14 @@ dependencies = [
 [[package]]
 name = "finality-update-verify"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "bitvec 1.0.1",
- "bls 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "bls 0.2.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "consensus_types",
  "eth-types",
  "serde",
- "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
 ]
 
 [[package]]
@@ -2765,21 +2781,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bfb8371b6fb2aeb2d280374607aeabfc99d95c72edfe51692e42d3d7f0d08531"
 
 [[package]]
-name = "futures-lite"
-version = "1.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7694489acd39452c77daa48516b894c153f192c3578d5a839b62c58099fcbf48"
-dependencies = [
- "fastrand",
- "futures-core",
- "futures-io",
- "memchr",
- "parking",
- "pin-project-lite 0.2.9",
- "waker-fn",
-]
-
-[[package]]
 name = "futures-locks"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2787,7 +2788,7 @@ checksum = "45ec6fe3675af967e67c5536c0b9d44e34e6c52f86bedc4ea49c5317b8e94d06"
 dependencies = [
  "futures-channel",
  "futures-task",
- "tokio 1.25.0",
+ "tokio 1.26.0",
 ]
 
 [[package]]
@@ -2958,7 +2959,7 @@ dependencies = [
  "http",
  "indexmap",
  "slab",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tokio-util 0.7.7",
  "tracing",
 ]
@@ -3240,7 +3241,7 @@ dependencies = [
  "itoa 1.0.5",
  "pin-project-lite 0.2.9",
  "socket2 0.4.7",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tower-service",
  "tracing",
  "want",
@@ -3257,7 +3258,7 @@ dependencies = [
  "log",
  "rustls",
  "rustls-native-certs",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tokio-rustls",
  "webpki-roots",
 ]
@@ -3271,7 +3272,7 @@ dependencies = [
  "bytes 1.4.0",
  "hyper 0.14.24",
  "native-tls",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tokio-native-tls",
 ]
 
@@ -3534,7 +3535,7 @@ dependencies = [
  "rustls-native-certs",
  "soketto",
  "thiserror",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tokio-rustls",
  "tokio-util 0.7.7",
  "tracing",
@@ -3560,7 +3561,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
 ]
 
@@ -3579,7 +3580,7 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
 ]
 
@@ -3920,12 +3921,12 @@ dependencies = [
 [[package]]
 name = "merkle_proof"
 version = "0.2.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
- "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "ethereum-types 0.14.1",
  "lazy_static",
- "safe_arith 0.1.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "safe_arith 0.1.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
 ]
 
 [[package]]
@@ -4174,6 +4175,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "num_enum"
+version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f646caf906c20226733ed5b1374287eb97e3c2a5c227ce668c1f2ce20ae57c9"
+dependencies = [
+ "num_enum_derive",
+]
+
+[[package]]
+name = "num_enum_derive"
+version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcbff9bc912032c62bf65ef1d5aea88983b420f4f839db1e9b0c281a25c9c799"
+dependencies = [
+ "proc-macro-crate 1.3.1",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "number_prefix"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4225,7 +4247,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "786393f80485445794f6043fd3138854dd109cc6c4bd1a6383db304c9ce9b9ce"
 dependencies = [
  "arrayvec 0.7.2",
- "auto_impl 1.0.1",
+ "auto_impl",
  "bytes 1.4.0",
  "ethereum-types 0.14.1",
  "open-fastrlp-derive",
@@ -4368,12 +4390,6 @@ name = "parity-wasm"
 version = "0.45.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e1ad0aff30c1da14b1254fcb2af73e1fa9a28670e584a626f53a369d0e157304"
-
-[[package]]
-name = "parking"
-version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "427c3892f9e783d91cc128285287e70a59e206ca452770ece88a76f7a3eddd72"
 
 [[package]]
 name = "parking_lot"
@@ -4557,34 +4573,32 @@ dependencies = [
 
 [[package]]
 name = "phf"
-version = "0.10.1"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fabbf1ead8a5bcbc20f5f8b939ee3f5b0f6f281b6ad3468b84656b658b455259"
+checksum = "928c6535de93548188ef63bb7c4036bd415cd8f36ad25af44b9789b2ee72a48c"
 dependencies = [
  "phf_macros",
- "phf_shared",
- "proc-macro-hack",
+ "phf_shared 0.11.1",
 ]
 
 [[package]]
 name = "phf_generator"
-version = "0.10.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d5285893bb5eb82e6aaf5d59ee909a06a16737a8970984dd7746ba9283498d6"
+checksum = "b1181c94580fa345f50f19d738aaa39c0ed30a600d95cb2d3e23f94266f14fbf"
 dependencies = [
- "phf_shared",
+ "phf_shared 0.11.1",
  "rand 0.8.5",
 ]
 
 [[package]]
 name = "phf_macros"
-version = "0.10.0"
+version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "58fdf3184dd560f160dd73922bea2d5cd6e8f064bf4b13110abd81b03697b4e0"
+checksum = "92aacdc5f16768709a569e913f7451034034178b05bdc8acda226659a3dccc66"
 dependencies = [
  "phf_generator",
- "phf_shared",
- "proc-macro-hack",
+ "phf_shared 0.11.1",
  "proc-macro2",
  "quote",
  "syn",
@@ -4595,6 +4609,15 @@ name = "phf_shared"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b6796ad771acdc0123d2a88dc428b5e38ef24456743ddb1744ed628f9815c096"
+dependencies = [
+ "siphasher",
+]
+
+[[package]]
+name = "phf_shared"
+version = "0.11.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1fb5f6f826b772a8d4c0394209441e7d37cbbb967ae9c7e0e8134365c9ee676"
 dependencies = [
  "siphasher",
 ]
@@ -4692,6 +4715,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "925383efa346730478fb4838dbe9137d2a47675ad789c546d150a6e1dd4ab31c"
 
 [[package]]
+name = "prettyplease"
+version = "0.1.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e97e3215779627f01ee256d2fad52f3d95e8e1c11e9fc6fd08f7cd455d5d5c78"
+dependencies = [
+ "proc-macro2",
+ "syn",
+]
+
+[[package]]
 name = "primitive-types"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4760,12 +4793,6 @@ dependencies = [
  "quote",
  "version_check",
 ]
-
-[[package]]
-name = "proc-macro-hack"
-version = "0.5.20+deprecated"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc375e1527247fe1a97d8b7156678dfe7c1af2fc075c9a4db3690ecd2a148068"
 
 [[package]]
 name = "proc-macro2"
@@ -5100,7 +5127,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tokio-native-tls",
  "tokio-rustls",
  "tower-service",
@@ -5340,7 +5367,7 @@ source = "git+https://github.com/webb-tools/lighthouse.git?branch=develop#913b28
 [[package]]
 name = "safe_arith"
 version = "0.1.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 
 [[package]]
 name = "safemem"
@@ -5773,17 +5800,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha-1"
-version = "0.10.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f5058ada175748e33390e40e872bd0fe59a19f265d0158daa551c5a88a76009c"
-dependencies = [
- "cfg-if 1.0.0",
- "cpufeatures",
- "digest 0.10.6",
-]
-
-[[package]]
 name = "sha1"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5950,14 +5966,14 @@ dependencies = [
  "httparse",
  "log",
  "rand 0.8.5",
- "sha-1 0.9.8",
+ "sha-1",
 ]
 
 [[package]]
 name = "solang-parser"
-version = "0.1.18"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac8ac4bfef383f368bd9bb045107a501cd9cd0b64ad1983e1b7e839d6a44ecad"
+checksum = "58feb14d4002859db0b744b0915840bae403b8a5675efded3e8adddb6beb85b2"
 dependencies = [
  "itertools",
  "lalrpop",
@@ -6518,7 +6534,7 @@ dependencies = [
  "new_debug_unreachable",
  "once_cell",
  "parking_lot 0.12.1",
- "phf_shared",
+ "phf_shared 0.10.0",
  "precomputed-hash",
 ]
 
@@ -6646,7 +6662,7 @@ dependencies = [
  "scale-info",
  "subxt-metadata",
  "syn",
- "tokio 1.25.0",
+ "tokio 1.26.0",
 ]
 
 [[package]]
@@ -6712,7 +6728,7 @@ dependencies = [
  "sha2 0.9.9",
  "tempfile",
  "thiserror",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "url",
  "zip",
@@ -6988,9 +7004,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.25.0"
+version = "1.26.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8e00990ebabbe4c14c08aca901caed183ecd5c09562a12c824bb53d3c3fd3af"
+checksum = "03201d01c3c27a29c8a5cee5b55a93ddae1ccf6f08f65365c2c918f8c1b76f64"
 dependencies = [
  "autocfg",
  "bytes 1.4.0",
@@ -7003,7 +7019,7 @@ dependencies = [
  "signal-hook-registry",
  "socket2 0.4.7",
  "tokio-macros",
- "windows-sys 0.42.0",
+ "windows-sys 0.45.0",
 ]
 
 [[package]]
@@ -7024,7 +7040,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
 dependencies = [
  "native-tls",
- "tokio 1.25.0",
+ "tokio 1.26.0",
 ]
 
 [[package]]
@@ -7034,7 +7050,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c43ee83903113e03984cb9e5cebe6c04a5116269e900e3ddba8f068a62adda59"
 dependencies = [
  "rustls",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "webpki",
 ]
 
@@ -7046,7 +7062,7 @@ checksum = "8fb52b74f05dbf495a8fba459fdc331812b96aa086d9eb78101fa0d4569c3313"
 dependencies = [
  "futures-core",
  "pin-project-lite 0.2.9",
- "tokio 1.25.0",
+ "tokio 1.26.0",
 ]
 
 [[package]]
@@ -7064,30 +7080,18 @@ dependencies = [
 
 [[package]]
 name = "tokio-tungstenite"
-version = "0.17.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f714dd15bead90401d77e04243611caec13726c2408afd5b31901dfcdcb3b181"
-dependencies = [
- "futures-util",
- "log",
- "rustls",
- "tokio 1.25.0",
- "tokio-rustls",
- "tungstenite 0.17.3",
- "webpki",
- "webpki-roots",
-]
-
-[[package]]
-name = "tokio-tungstenite"
 version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "54319c93411147bced34cb5609a80e0a8e44c5999c93903a81cd866630ec0bfd"
 dependencies = [
  "futures-util",
  "log",
- "tokio 1.25.0",
+ "rustls",
+ "tokio 1.26.0",
+ "tokio-rustls",
  "tungstenite 0.18.0",
+ "webpki",
+ "webpki-roots",
 ]
 
 [[package]]
@@ -7115,7 +7119,7 @@ dependencies = [
  "futures-io",
  "futures-sink",
  "pin-project-lite 0.2.9",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
 ]
 
@@ -7155,7 +7159,7 @@ dependencies = [
  "futures-util",
  "pin-project 1.0.12",
  "pin-project-lite 0.2.9",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tower-layer",
  "tower-service",
  "tracing",
@@ -7356,9 +7360,9 @@ dependencies = [
 [[package]]
 name = "tree_hash"
 version = "0.4.1"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
- "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer)",
+ "eth2_hashing 0.3.0 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "ethereum-types 0.14.1",
  "smallvec",
 ]
@@ -7376,7 +7380,7 @@ dependencies = [
 [[package]]
 name = "tree_hash_derive"
 version = "0.4.0"
-source = "git+https://github.com/webb-tools/pallet-eth2-light-client?branch=thomas/prepare_eth2_substrate_relayer#7bce8b687ad4f4fbc3f81c9874559e7045d36487"
+source = "git+https://github.com/webb-tools/pallet-eth2-light-client#98594ee90e02d324e1196cb5bd1ec47c1f93387d"
 dependencies = [
  "darling 0.13.4",
  "quote",
@@ -7425,30 +7429,9 @@ dependencies = [
  "input_buffer",
  "log",
  "rand 0.7.3",
- "sha-1 0.9.8",
+ "sha-1",
  "url",
  "utf-8",
-]
-
-[[package]]
-name = "tungstenite"
-version = "0.17.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e27992fd6a8c29ee7eef28fc78349aa244134e10ad447ce3b9f0ac0ed0fa4ce0"
-dependencies = [
- "base64 0.13.1",
- "byteorder",
- "bytes 1.4.0",
- "http",
- "httparse",
- "log",
- "rand 0.8.5",
- "rustls",
- "sha-1 0.10.1",
- "thiserror",
- "url",
- "utf-8",
- "webpki",
 ]
 
 [[package]]
@@ -7464,10 +7447,12 @@ dependencies = [
  "httparse",
  "log",
  "rand 0.8.5",
+ "rustls",
  "sha1",
  "thiserror",
  "url",
  "utf-8",
+ "webpki",
 ]
 
 [[package]]
@@ -7687,12 +7672,6 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
-
-[[package]]
-name = "waker-fn"
-version = "1.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d5b2c62b4012a3e1eca5a7e077d13b3bf498c4073e33ccd58626607748ceeca"
 
 [[package]]
 name = "walkdir"
@@ -8023,7 +8002,7 @@ source = "git+https://github.com/webb-tools/webb-rs.git#ee6cd26cd4171af68963d542
 dependencies = [
  "async-trait",
  "ethers 0.17.0",
- "ethers 1.0.2",
+ "ethers 1.5.0",
  "hex",
  "parity-scale-codec",
  "rand 0.8.5",
@@ -8048,7 +8027,7 @@ dependencies = [
  "paw",
  "serde_json",
  "tempfile",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "webb",
  "webb-relayer",
@@ -8067,7 +8046,7 @@ dependencies = [
  "futures",
  "native-tls",
  "sled",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "tracing-test",
  "webb",
@@ -8087,7 +8066,7 @@ dependencies = [
  "hex",
  "native-tls",
  "sled",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "webb",
  "webb-event-watcher-traits",
@@ -8107,7 +8086,7 @@ dependencies = [
  "native-tls",
  "serde_json",
  "sled",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "webb",
  "webb-event-watcher-traits",
@@ -8127,7 +8106,7 @@ dependencies = [
  "libsecp256k1",
  "native-tls",
  "sled",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "webb",
  "webb-event-watcher-traits",
@@ -8160,7 +8139,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "thiserror",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "webb",
  "webb-proposal-signing-backends",
@@ -8187,7 +8166,7 @@ dependencies = [
  "hex",
  "native-tls",
  "sled",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "typed-builder 0.12.0",
  "webb",
@@ -8239,7 +8218,7 @@ dependencies = [
  "serde_json",
  "sled",
  "tempfile",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tower-http 0.3.5",
  "tracing",
  "url",
@@ -8288,9 +8267,9 @@ name = "webb-relayer-context"
 version = "0.1.0"
 dependencies = [
  "coingecko",
- "ethers 1.0.2",
+ "ethers 1.5.0",
  "native-tls",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "webb",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -8303,7 +8282,7 @@ version = "0.1.0"
 dependencies = [
  "native-tls",
  "serde",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "webb",
  "webb-relayer-tx-relay-utils",
 ]
@@ -8319,7 +8298,7 @@ dependencies = [
  "native-tls",
  "serde",
  "serde_json",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tokio-stream",
  "tracing",
  "webb",
@@ -8359,7 +8338,7 @@ dependencies = [
  "native-tls",
  "rand 0.8.5",
  "sled",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "webb",
  "webb-relayer-context",
@@ -8378,7 +8357,7 @@ dependencies = [
  "native-tls",
  "once_cell",
  "serde",
- "tokio 1.25.0",
+ "tokio 1.26.0",
  "tracing",
  "webb",
  "webb-proposals 0.5.4",
