@@ -6323,7 +6323,7 @@ dependencies = [
  "async-trait",
  "backoff",
  "dotenv",
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "futures",
  "paw",
  "serde_json",
@@ -6363,7 +6363,7 @@ name = "webb-ew-dkg"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "hex",
  "native-tls",
  "sled",
@@ -6382,7 +6382,7 @@ name = "webb-ew-evm"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "hex",
  "native-tls",
  "serde_json",
@@ -6424,7 +6424,7 @@ name = "webb-proposal-signing-backends"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "futures",
  "hex",
  "native-tls",
@@ -6461,7 +6461,7 @@ dependencies = [
  "axum",
  "config",
  "dotenv",
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "native-tls",
  "paw",
  "serde_json",
@@ -6493,7 +6493,7 @@ dependencies = [
  "anyhow",
  "config",
  "directories-next",
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "glob",
  "native-tls",
  "serde",
@@ -6541,7 +6541,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "axum-client-ip",
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "futures",
  "native-tls",
  "serde",
@@ -6581,7 +6581,7 @@ name = "webb-relayer-tx-queue"
 version = "0.1.0"
 dependencies = [
  "backoff",
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "futures",
  "native-tls",
  "rand 0.8.5",
@@ -6600,7 +6600,7 @@ name = "webb-relayer-tx-relay"
 version = "0.1.0"
 dependencies = [
  "chrono",
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "futures",
  "native-tls",
  "once_cell",
@@ -6627,7 +6627,7 @@ dependencies = [
 name = "webb-relayer-types"
 version = "0.1.0"
 dependencies = [
- "ethereum-types 0.14.1",
+ "ethereum-types 0.13.1",
  "native-tls",
  "serde",
  "tiny-bip39 1.0.0",
