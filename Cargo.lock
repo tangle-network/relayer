@@ -6298,13 +6298,12 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.5.14"
+version = "0.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f4b44033927362d0172cfe15bc797bf1ef7fde5f5bdd79b810f0427e692302f"
+checksum = "de2c59bad18b6a5bc7b5c240f20c592646b55ccdfee19e279633391296f19172"
 dependencies = [
  "async-trait",
  "ethers 0.17.0",
- "ethers 1.0.2",
  "hex",
  "parity-scale-codec",
  "rand 0.8.5",
