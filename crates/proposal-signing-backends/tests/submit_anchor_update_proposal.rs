@@ -1,9 +1,12 @@
 use futures::StreamExt;
 use hex::FromHex;
 use webb::substrate::dkg_runtime::api as RuntimeApi;
+use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::ResourceId as DkgResourceId;
+use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId as DkgTypedChainId;
+use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce as DkgNonce;
 use webb::substrate::subxt::ext::sp_core::sr25519::Pair;
 use webb::substrate::subxt::ext::sp_core::Pair as _;
-use webb::substrate::subxt::tx::{PairSigner, TxStatus};
+use webb::substrate::subxt::tx::{PairSigner, TxProgress, TxStatus};
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use webb_proposals::evm::AnchorUpdateProposal;
 use webb_proposals::{FunctionSignature, Nonce, ProposalHeader};
@@ -55,6 +58,28 @@ async fn submit_anchor_update_proposal() {
         .await
         .unwrap();
 
+    let tx_api = RuntimeApi::tx().dkg_proposals();
+
+    println!("register resource 1");
+    let register_resource1 =
+        tx_api.set_resource(DkgResourceId(resource_id.into_bytes()), vec![]);
+    let mut progress = api
+        .tx()
+        .sign_and_submit_then_watch_default(&register_resource1, &sudo_account)
+        .await
+        .unwrap();
+    watch_events(&mut progress).await;
+
+    println!("register resource 2");
+    let register_resource2 = tx_api
+        .set_resource(DkgResourceId(src_resource_id.into_bytes()), vec![]);
+    let mut progress = api
+        .tx()
+        .sign_and_submit_then_watch_default(&register_resource2, &sudo_account)
+        .await
+        .unwrap();
+    watch_events(&mut progress).await;
+
     // following code runs in a loop in original code
     {
         let proposal_header = ProposalHeader::new(
@@ -74,51 +99,66 @@ async fn submit_anchor_update_proposal() {
         );
         assert_eq!(104, anchor_update_proposal.len());
 
-        let tx_api = RuntimeApi::tx().dkg_proposals();
         let xt = tx_api.acknowledge_proposal(
-            webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce(account_nonce),
-            webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId::Evm(5001),
-            webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::ResourceId(resource_id.into_bytes()),
+            DkgNonce(account_nonce),
+            DkgTypedChainId::Evm(5001),
+            DkgResourceId(resource_id.into_bytes()),
             anchor_update_proposal.to_vec(),
         );
+
+        // TODO: gives error "Resource ID provided isn't mapped to anything"
+        // So, there is two ways to solve this:
+        //
+        // 1. Replicate the same code and use dkgProposalHandler.forceSubmitUnsignedProposal call
+        //    with sudo.
+        // 2. Before running the script loop, you use sudo to register these resources, using
+        //    dkg_proposals pallet, there is a method that you can call as sudo to register
+        //    these resources, which you will find using PolkadotUI
+        //    -> dkgProposals.setResource
         let mut progress = api
             .tx()
             .sign_and_submit_then_watch_default(&xt, &sudo_account)
             .await
             .unwrap();
-        while let Some(event) = progress.next().await {
-            let e = match event {
-                Ok(e) => e,
-                Err(err) => {
-                    println!("failed to watch for tx events: {err}");
-                    return;
-                }
-            };
+        watch_events(&mut progress).await
+    }
+}
 
-            match e {
-                TxStatus::Ready => {
-                    println!("tx ready");
-                }
-                TxStatus::Broadcast(_) => {
-                    println!("tx broadcast");
-                }
-                TxStatus::InBlock(_) => {
-                    println!("tx in block");
-                }
-                TxStatus::Finalized(v) => {
-                    let maybe_success = v.wait_for_success().await;
-                    match &maybe_success {
-                        Ok(_events) => {
-                            println!("tx finalized");
-                        }
-                        Err(err) => {
-                            println!("tx failed: {err}");
-                        }
-                    }
-                    assert!(maybe_success.is_ok());
-                }
-                _ => assert!(false)
+async fn watch_events(
+    progress: &mut TxProgress<PolkadotConfig, OnlineClient<PolkadotConfig>>,
+) {
+    while let Some(event) = progress.next().await {
+        let e = match event {
+            Ok(e) => e,
+            Err(err) => {
+                println!("failed to watch for tx events: {err}");
+                return;
             }
+        };
+
+        match e {
+            TxStatus::Ready => {
+                println!("tx ready");
+            }
+            TxStatus::Broadcast(_) => {
+                println!("tx broadcast");
+            }
+            TxStatus::InBlock(_) => {
+                println!("tx in block");
+            }
+            TxStatus::Finalized(v) => {
+                let maybe_success = v.wait_for_success().await;
+                match &maybe_success {
+                    Ok(_events) => {
+                        println!("tx finalized");
+                    }
+                    Err(err) => {
+                        println!("tx failed: {err}");
+                    }
+                }
+                assert!(maybe_success.is_ok());
+            }
+            _ => assert!(false),
         }
     }
 }
