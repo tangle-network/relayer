@@ -149,12 +149,11 @@ pub async fn handle_vanchor_relay_tx<'a>(
         call = call.value(cmd.ext_data.refund);
     }
 
-    let gas_amount =
-        client.estimate_gas(&call.tx, None).await.map_err(|e| {
-            Network(NetworkStatus::Failed {
-                reason: e.to_string(),
-            })
-        })?;
+    let gas_amount = client.estimate_gas(&call.tx).await.map_err(|e| {
+        Network(NetworkStatus::Failed {
+            reason: e.to_string(),
+        })
+    })?;
     let typed_chain_id = TypedChainId::Evm(chain.chain_id);
     let fee_info = get_fee_info(
         typed_chain_id,
