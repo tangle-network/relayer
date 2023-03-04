@@ -17,6 +17,15 @@ webb-relayer-store = { workspace = true }
 webb-relayer-config = { workspace = true }
 webb-relayer-utils = { workspace = true }
 
+
+arkworks-native-gadgets = { version = "1.2.0", default-features = false }
+ark-bls12-381 = { version = "^0.3.0", default-features = false, features = ["curve"] }
+ark-bn254 = { version = "^0.3.0", default-features = true, features = ["curve"] }
+ark-ff = { version = "^0.3.0", default-features = true }
+ark-std = { version = "^0.3.0", default-features = false }
+arkworks-utils = { version = "^1.0.1", default-features = false }
+arkworks-setups = { version = "1.2.1", features = ["r1cs"], default-features = false }
+
 async-trait = { workspace = true }
 tracing = { workspace = true }
 sled = { workspace = true }

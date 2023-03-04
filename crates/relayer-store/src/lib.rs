@@ -216,19 +216,6 @@ pub trait HistoryStore: Clone + Send + Sync {
     ) -> crate::Result<u64> {
         self.get_last_block_number(key, 1u64)
     }
-
-    /// Get latest merkle root saved on relayer for given key
-    fn get_latest_merkle_root<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-    ) -> crate::Result<Vec<u8>>;
-
-    /// Set latest merkle root for the given key.
-    fn set_latest_merkle_root<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        merkle_root: Vec<u8>,
-    ) -> crate::Result<()>;
 }
 
 /// A Simple Event Store, that does not store the events, instead it store the hash of the event as the key
@@ -254,6 +241,12 @@ pub trait EventHashStore: Send + Sync + Clone {
 pub trait LeafCacheStore: HistoryStore {
     /// The Output type which is the leaf.
     type Output: IntoIterator<Item = Vec<u8>>;
+
+    /// Clear leaf cache on relayer
+    fn clear_leaves_cache<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<()>;
 
     /// Get all the leaves for the given key.
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(

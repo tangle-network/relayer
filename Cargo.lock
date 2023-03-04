@@ -6690,17 +6690,9 @@ dependencies = [
 name = "webb-event-watcher-traits"
 version = "0.1.0"
 dependencies = [
- "ark-bls12-381",
- "ark-bn254",
- "ark-ff",
- "ark-std",
- "arkworks-native-gadgets",
- "arkworks-setups",
- "arkworks-utils",
  "async-trait",
  "backoff",
  "futures",
- "hex",
  "native-tls",
  "sled",
  "tokio",
@@ -6737,6 +6729,13 @@ dependencies = [
 name = "webb-ew-evm"
 version = "0.1.0"
 dependencies = [
+ "ark-bls12-381",
+ "ark-bn254",
+ "ark-ff",
+ "ark-std",
+ "arkworks-native-gadgets",
+ "arkworks-setups",
+ "arkworks-utils",
  "async-trait",
  "ethereum-types 0.14.1",
  "hex",

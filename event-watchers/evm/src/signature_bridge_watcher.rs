@@ -111,6 +111,18 @@ impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
     type Events = SignatureBridgeContractEvents;
 
     type Store = SledStore;
+
+    async fn can_handle_events(
+        &self,
+        events: Self::Events,
+        _wrapper: &Self::Contract,
+    ) -> webb_relayer_utils::Result<bool> {
+        use SignatureBridgeContractEvents::*;
+        let has_event =
+            matches!(events, GovernanceOwnershipTransferredFilter(_));
+        Ok(has_event)
+    }
+
     #[tracing::instrument(
         skip_all,
         fields(event_type = ?e.0),

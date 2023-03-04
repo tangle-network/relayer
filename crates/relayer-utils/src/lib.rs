@@ -144,6 +144,8 @@ pub enum Error {
     /// a backgorund task failed and stopped Abnormally.
     #[error("Task Stopped Apnormally")]
     TaskStoppedAbnormally,
+    #[error("Restarting relayer")]
+    RestartRelayer,
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.

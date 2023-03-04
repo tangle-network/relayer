@@ -98,37 +98,24 @@ impl HistoryStore for SledStore {
             None => Ok(default_block_number),
         }
     }
-
-    #[tracing::instrument(skip(self))]
-    fn set_latest_merkle_root<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        merkle_root: Vec<u8>,
-    ) -> crate::Result<()> {
-        let tree = self.db.open_tree("merkle_root")?;
-        let key: HistoryStoreKey = key.into();
-        tree.insert(key.to_bytes(), merkle_root.as_slice())?;
-        Ok(())
-    }
-
-    #[tracing::instrument(skip(self))]
-    fn get_latest_merkle_root<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-    ) -> crate::Result<Vec<u8>> {
-        let tree = self.db.open_tree("merkle_root")?;
-        let key: HistoryStoreKey = key.into();
-        let val = tree.get(key.to_bytes())?;
-        let root = match val {
-            Some(v) => v.to_vec(),
-            None => Vec::new(),
-        };
-        Ok(root)
-    }
 }
 
 impl LeafCacheStore for SledStore {
     type Output = Vec<Vec<u8>>;
+
+    #[tracing::instrument(skip(self))]
+    fn clear_leaves_cache<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<()> {
+        let key: HistoryStoreKey = key.into();
+        self.db.drop_tree(format!(
+            "leaves/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
+        Ok(())
+    }
 
     #[tracing::instrument(skip(self))]
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(

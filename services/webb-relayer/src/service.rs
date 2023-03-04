@@ -23,6 +23,7 @@
 
 use axum::routing::get;
 use axum::Router;
+use ethereum_types::U256;
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -639,6 +640,10 @@ async fn start_evm_vanchor_events_watcher(
     let contract_address = config.common.address;
     let my_ctx = ctx.clone();
     let my_config = config.clone();
+    let default_leaf: U256 = wrapper.contract.get_zero_hash(0).call().await?;
+
+    let mut default_leaf_bytes = [0u8; 32];
+    default_leaf.to_big_endian(&mut default_leaf_bytes);
     let task = async move {
         tracing::debug!(
             "VAnchor events watcher for ({}) Started.",
@@ -656,7 +661,10 @@ async fn start_evm_vanchor_events_watcher(
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
                 let deposit_handler = VAnchorDepositHandler::new(backend);
-                let leaves_handler = VAnchorLeavesHandler::default();
+                let leaves_handler = VAnchorLeavesHandler::new(
+                    store.clone(),
+                    default_leaf_bytes.to_vec(),
+                );
                 let encrypted_output_handler =
                     VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
@@ -687,7 +695,10 @@ async fn start_evm_vanchor_events_watcher(
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
                 let deposit_handler = VAnchorDepositHandler::new(backend);
-                let leaves_handler = VAnchorLeavesHandler::default();
+                let leaves_handler = VAnchorLeavesHandler::new(
+                    store.clone(),
+                    default_leaf_bytes.to_vec(),
+                );
                 let encrypted_output_handler =
                     VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
@@ -717,7 +728,10 @@ async fn start_evm_vanchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::None => {
-                let leaves_handler = VAnchorLeavesHandler::default();
+                let leaves_handler = VAnchorLeavesHandler::new(
+                    store.clone(),
+                    default_leaf_bytes.to_vec(),
+                );
                 let encrypted_output_handler =
                     VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(

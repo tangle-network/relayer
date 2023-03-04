@@ -31,7 +31,6 @@ pub struct InMemoryStore {
     _store: Arc<RwLock<MemStore>>,
     store_for_vec: Arc<RwLock<MemStoreForVec>>,
     last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
-    latest_merkle_root: Arc<RwLock<HashMap<HistoryStoreKey, Vec<u8>>>>,
 }
 
 impl std::fmt::Debug for InMemoryStore {
@@ -74,31 +73,20 @@ impl HistoryStore for InMemoryStore {
     ) -> crate::Result<u64> {
         self.get_last_block_number(key, 1u64)
     }
-
-    #[tracing::instrument(skip(self))]
-    fn get_latest_merkle_root<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-    ) -> crate::Result<Vec<u8>> {
-        let guard = self.latest_merkle_root.read();
-        let val = guard.get(&key.into()).cloned().unwrap_or_default();
-        Ok(val)
-    }
-
-    #[tracing::instrument(skip(self))]
-    fn set_latest_merkle_root<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        merkle_root: Vec<u8>,
-    ) -> crate::Result<()> {
-        let mut guard = self.latest_merkle_root.write();
-        guard.insert(key.into(), merkle_root);
-        Ok(())
-    }
 }
 
 impl LeafCacheStore for InMemoryStore {
     type Output = Vec<Vec<u8>>;
+
+    #[tracing::instrument(skip(self))]
+    fn clear_leaves_cache<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<()> {
+        let mut guard = self.store_for_vec.write();
+        guard.clear();
+        Ok(())
+    }
 
     #[tracing::instrument(skip(self))]
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
