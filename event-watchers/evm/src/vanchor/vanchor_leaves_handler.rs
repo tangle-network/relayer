@@ -79,23 +79,28 @@ impl EventHandler for VAnchorLeavesHandler {
         // 3. Check if computed root is known root on contract
         // 4. If it fails to validate we restart syncing events
         match events {
-            NewCommitmentFilter(data) => {
-                let commitment: [u8; 32] = data.commitment.into();
+            NewCommitmentFilter(event_data) => {
+                let leaf_index = event_data.leaf_index.as_u32();
+                let commitment: [u8; 32] = event_data.commitment.into();
+
                 let leaf: Bn254Fr =
                     Bn254Fr::from_be_bytes_mod_order(commitment.as_slice());
                 let mut batch: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
                 let params = setup_params::<Bn254Fr>(Curve::Bn254, 5, 3);
                 let poseidon = Poseidon::<Bn254Fr>::new(params);
-                batch.insert(data.leaf_index.as_u32(), leaf);
+                batch.insert(leaf_index, leaf);
                 let mut mt = self.mt.lock().await;
-                if mt.insert_batch(&batch, &poseidon).is_err() {
-                    return Ok(true);
-                }
+                mt.insert_batch(&batch, &poseidon)?;
                 let root_bytes = mt.root().into_repr().to_bytes_be();
                 let root: U256 = U256::from_big_endian(root_bytes.as_slice());
                 let is_known_root =
                     wrapper.contract.is_known_root(root).call().await?;
+                tracing::trace!("Is known root: {:?}", is_known_root);
+                if event_data.leaf_index.as_u32() % 2 == 0 {
+                    return Ok(true);
+                }
                 if !is_known_root {
+                    tracing::info!("Invalid merkle root .. Restarting");
                     // In case of invalid merkle root, relayer should clear its storage and restart syncing.
                     // 1. We define history store key which will be used to access storage.
                     let chain_id =
@@ -108,10 +113,13 @@ impl EventHandler for VAnchorLeavesHandler {
                         ResourceId::new(target_system, typed_chain_id);
 
                     // 2. Clear merkle tree on relayer.
+                    tracing::info!("Clear merkle tree...!");
                     mt.tree.clear();
                     // 3. Clear LeafStore cache on relayer.
+                    tracing::info!("Clear local leaves cache...!");
                     self.storage.clear_leaves_cache(history_store_key)?;
                     // 4. Reset last block no processed by leaf handler.
+                    tracing::info!("Clear last deposit block number...!");
                     self.storage.insert_last_deposit_block_number(
                         history_store_key,
                         0,
@@ -119,11 +127,14 @@ impl EventHandler for VAnchorLeavesHandler {
 
                     // 5. Reset last saved block number by event watcher.
                     //    Relayer will restart syncing from block number contract was deployed at.
+                    tracing::info!(
+                        "Reset block number to contract deployed at...!"
+                    );
                     self.storage.set_last_block_number(
                         history_store_key,
                         wrapper.config.common.deployed_at,
                     )?;
-                    return Ok(false);
+                    return Ok(true);
                 }
                 return Ok(true);
             }

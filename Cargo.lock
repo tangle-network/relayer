@@ -6995,6 +6995,7 @@ dependencies = [
 name = "webb-relayer-utils"
 version = "0.1.0"
 dependencies = [
+ "ark-std",
  "axum",
  "backoff",
  "config",
