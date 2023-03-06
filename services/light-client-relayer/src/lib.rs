@@ -34,9 +34,6 @@ pub fn start_light_client_service(
         );
 
         let light_client_watcher = LightClientWatcher::default();
-        /*let light_client_watcher_task =
-        light_client_watcher.run(client, store, poller_config);*/
-        //let config_for_tests = get_test_config();
         let light_client_watcher_task = light_client_watcher.run(config);
         tokio::select! {
             res = light_client_watcher_task => {

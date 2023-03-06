@@ -74,22 +74,20 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // The configuration is validated and configured from the given directory
     let config = load_config(args.config_dir.clone())?;
     tracing::trace!("Loaded config.. {:#?}", config);
-    // persistent storage for the relayer
+    // Persistent storage for the relayer
     let store = create_store(&args).await?;
     // The RelayerContext takes a configuration, and populates objects that are needed
     // throughout the lifetime of the relayer. Items such as wallets and providers, as well
     // as a convenient place to access the configuration.
     let ctx = RelayerContext::new(config, store);
     tracing::trace!("Created persistent storage..");
-    // the build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
+    // The build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer
     let server_handle =
         tokio::spawn(webb_relayer::service::build_web_services(ctx.clone()));
 
-    // start the server.
-    //let server_handle = tokio::spawn(server);
-    // start all background services.
-    // this does not block, will fire the services on background tasks.
+    // Start all background services.
+    // This does not block, as it will fire the services on background tasks.
     ignite(&ctx).await?;
     tracing::event!(
         target: webb_relayer_utils::probe::TARGET,
