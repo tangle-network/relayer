@@ -1,10 +1,13 @@
-name: check
+name: Tests
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [ main ] 
+    branches:
+      - develop
 
   workflow_dispatch:
 env:
