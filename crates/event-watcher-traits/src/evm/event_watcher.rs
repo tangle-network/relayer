@@ -237,7 +237,6 @@ pub trait EventWatcher {
         Ok(())
     }
 }
-
 /// A trait that defines a handler for a specific set of event types.
 ///
 /// The handlers are implemented separately from the watchers, so that we can have
@@ -268,6 +267,13 @@ pub trait EventHandler {
         (event, log): (Self::Events, contract::LogMeta),
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()>;
+
+    /// Whether any of the events could be handled by the handler
+    async fn can_handle_events(
+        &self,
+        event: Self::Events,
+        wrapper: &Self::Contract,
+    ) -> webb_relayer_utils::Result<bool>;
 }
 
 /// An Auxiliary trait to handle events with retry logic.
@@ -293,6 +299,10 @@ pub trait EventHandlerWithRetry: EventHandler {
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
+        if !self.can_handle_events(event.clone(), contract).await? {
+            return Ok(());
+        };
+
         let wrapped_task = || {
             self.handle_event(
                 store.clone(),

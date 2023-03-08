@@ -306,7 +306,7 @@ async function vanchorWithdraw(
 
   // Configure a new proving manager with direct call
   const provingManager = new ArkworksProvingManager(null);
-  const assetId = new Uint8Array([254, 255, 255, 255]);
+  const assetId = new Uint8Array([ 0, 0, 0, 0 ]); // WEBB native token asset Id.
 
   const address = recipient;
   const fee = 0;
@@ -364,7 +364,7 @@ async function vanchorWithdraw(
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };
-  let proofData = {
+  const proofData = {
     proof: `0x${data.proof}`,
     publicAmount: data.publicAmount,
     roots: rootsSet,
@@ -465,7 +465,7 @@ async function vanchorDeposit(
 
   const rootsSet = [hexToU8a(root), hexToU8a(neighborRoots[0])];
   const decodedAddress = decodeAddress(address);
-  const assetId = new Uint8Array([254, 255, 255, 255]);
+  const assetId = new Uint8Array([ 0, 0, 0, 0 ]); // WEBB native token asset Id.
   const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
   const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
   const LeafId = {
