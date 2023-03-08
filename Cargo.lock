@@ -8169,7 +8169,7 @@ dependencies = [
 [[package]]
 name = "webb"
 version = "0.5.17"
-source = "git+https://github.com/webb-tools/webb-rs.git?branch=felix/relayer-anvil#228f2998da21099bcd2c637025a994c8cbd15bec"
+source = "git+https://github.com/webb-tools/webb-rs.git?branch=felix/relayer-anvil#7b20449228ed9b46d0af652d935a2749d708e377"
 dependencies = [
  "async-trait",
  "ethers 2.0.0",
