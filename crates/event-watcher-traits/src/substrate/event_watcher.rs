@@ -13,9 +13,9 @@
 // limitations under the License.
 
 use tokio::sync::Mutex;
+use webb::substrate::subxt::config::Header;
 use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_utils::{metric, retry};
-use webb::substrate::subxt::config::Header;
 
 use super::*;
 

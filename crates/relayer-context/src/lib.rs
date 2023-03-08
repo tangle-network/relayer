@@ -28,9 +28,9 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 
 #[cfg(feature = "substrate")]
-use webb::substrate::subxt;
-#[cfg(feature = "substrate")]
 use sp_core::sr25519::Pair as Sr25519Pair;
+#[cfg(feature = "substrate")]
+use webb::substrate::subxt;
 
 use coingecko::CoinGeckoClient;
 use webb_relayer_store::SledStore;

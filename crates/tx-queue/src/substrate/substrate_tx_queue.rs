@@ -23,15 +23,11 @@ use webb_relayer_store::QueueStore;
 use std::sync::Arc;
 use std::time::Duration;
 
+use sp_core::sr25519;
+use sp_runtime::traits::{IdentifyAccount, Verify};
 use std::marker::PhantomData;
 use webb::substrate::subxt;
-use sp_core::sr25519;
-use sp_runtime::traits::{
-    IdentifyAccount, Verify,
-};
-use webb::substrate::subxt::{
-    config::ExtrinsicParams, tx::PairSigner,
-};
+use webb::substrate::subxt::{config::ExtrinsicParams, tx::PairSigner};
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 
 /// The SubstrateTxQueue stores transaction call params in bytes so the relayer can process them later.
