@@ -144,7 +144,19 @@ pub enum Error {
     /// a backgorund task failed and stopped Abnormally.
     #[error("Task Stopped Apnormally")]
     TaskStoppedAbnormally,
+    /// Restart relayer.
+    #[error("Restarting Relayer")]
+    RestartRelayer,
+    /// Arkworks Errors.
+    #[error("{}", _0)]
+    ArkworksError(String),
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.
 pub type Result<T> = std::result::Result<T, Error>;
+
+impl From<Box<dyn ark_std::error::Error>> for Error {
+    fn from(error: Box<dyn ark_std::error::Error>) -> Self {
+        Error::ArkworksError(format!("{}", error))
+    }
+}

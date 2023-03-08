@@ -25,7 +25,6 @@ webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true }
 webb-proposals = { workspace = true }
-
 tracing-test = "0.2"
 sled = { version = "^0.34" }
 

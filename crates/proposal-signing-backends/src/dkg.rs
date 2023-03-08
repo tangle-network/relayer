@@ -4,8 +4,8 @@ use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
-use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
-use webb_proposals::{ProposalTrait};
+use sp_core::sr25519::Pair as Sr25519Pair;
+use webb_proposals::ProposalTrait;
 use webb::substrate::scale::{Encode, Decode};
 use webb_relayer_utils::metric;
 use webb::substrate::subxt::tx::{PairSigner, TxStatus as TransactionStatus};
@@ -51,7 +51,9 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         let maybe_whitelisted = self
             .client
             .storage()
-            .fetch(&chain_nonce_addrs, None)
+            .at(None)
+            .await?
+            .fetch(&chain_nonce_addrs)
             .await?;
 
         if maybe_whitelisted.is_none() {
@@ -64,7 +66,9 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         let maybe_resource_id = self
             .client
             .storage()
-            .fetch(&resource_id_addrs, None)
+            .at(None)
+            .await?
+            .fetch(&resource_id_addrs)
             .await?;
         if maybe_resource_id.is_none() {
             tracing::warn!(

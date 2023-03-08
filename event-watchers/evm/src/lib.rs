@@ -32,6 +32,9 @@ pub mod open_vanchor;
 #[doc(hidden)]
 pub mod vanchor;
 
+#[cfg(test)]
+mod tests;
+
 use webb_event_watcher_traits::evm::{EventWatcher, WatchableContract};
 use webb_relayer_store::SledStore;
 

@@ -242,6 +242,12 @@ pub trait LeafCacheStore: HistoryStore {
     /// The Output type which is the leaf.
     type Output: IntoIterator<Item = Vec<u8>>;
 
+    /// Clear leaf cache on relayer
+    fn clear_leaves_cache<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<()>;
+
     /// Get all the leaves for the given key.
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,

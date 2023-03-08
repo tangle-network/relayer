@@ -19,4 +19,5 @@ webb = { workspace = true }
 native-tls = { workspace = true }
 ethereum-types = { workspace = true }
 
+sp-core = { workspace = true }
 tiny-bip39 = "1.0.0"

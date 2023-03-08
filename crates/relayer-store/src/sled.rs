@@ -104,6 +104,20 @@ impl LeafCacheStore for SledStore {
     type Output = Vec<Vec<u8>>;
 
     #[tracing::instrument(skip(self))]
+    fn clear_leaves_cache<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<()> {
+        let key: HistoryStoreKey = key.into();
+        self.db.drop_tree(format!(
+            "leaves/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
+        Ok(())
+    }
+
+    #[tracing::instrument(skip(self))]
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,

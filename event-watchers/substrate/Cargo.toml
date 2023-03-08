@@ -24,6 +24,7 @@ sled = { workspace = true }
 tokio = { workspace = true }
 hex = { workspace = true }
 webb = { workspace = true }
+sp-core = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true, optional = true }
 webb-proposals = { workspace = true }
