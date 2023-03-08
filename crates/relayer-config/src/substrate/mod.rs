@@ -1,5 +1,5 @@
 use super::*;
-use webb::substrate::subxt::ext::sp_core::sr25519::Public;
+use sp_core::sr25519::Public;
 use webb_relayer_types::{rpc_url::RpcUrl, suri::Suri};
 
 use crate::{

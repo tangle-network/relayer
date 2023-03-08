@@ -90,8 +90,12 @@ where
             let tree_addrs = RuntimeApi::storage()
                 .merkle_tree_bn254()
                 .trees(event.tree_id);
-            let tree =
-                client.storage().fetch(&tree_addrs, Some(at_hash)).await?;
+            let tree = client
+                .storage()
+                .at(Some(at_hash))
+                .await?
+                .fetch(&tree_addrs)
+                .await?;
 
             let tree = match tree {
                 Some(t) => t,

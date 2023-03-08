@@ -21,7 +21,7 @@ use std::time::Duration;
 use webb::substrate::subxt::{
     self,
     client::{OfflineClientT, OnlineClientT},
-    ext::sp_runtime::traits::Header,
+    config::Header,
 };
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
@@ -40,4 +40,4 @@ mod bridge_watcher;
 pub use bridge_watcher::*;
 
 /// Type alias for Substrate block number.
-pub type BlockNumberOf<T> = <T as subxt::Config>::BlockNumber;
+pub type BlockNumberOf<T> = <<T as subxt::Config>::Hasher as Header>::Number;
