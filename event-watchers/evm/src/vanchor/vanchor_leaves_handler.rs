@@ -100,7 +100,7 @@ impl EventHandler for VAnchorLeavesHandler {
                     return Ok(true);
                 }
                 if !is_known_root {
-                    tracing::info!("Invalid merkle root .. Restarting");
+                    tracing::warn!("Invalid merkle root .. Restarting");
                     // In case of invalid merkle root, relayer should clear its storage and restart syncing.
                     // 1. We define history store key which will be used to access storage.
                     let chain_id =
@@ -113,13 +113,13 @@ impl EventHandler for VAnchorLeavesHandler {
                         ResourceId::new(target_system, typed_chain_id);
 
                     // 2. Clear merkle tree on relayer.
-                    tracing::info!("Clear merkle tree...!");
+                    tracing::warn!("Clear merkle tree...!");
                     mt.tree.clear();
                     // 3. Clear LeafStore cache on relayer.
-                    tracing::info!("Clear local leaves cache...!");
+                    tracing::warn!("Clear local leaves cache...!");
                     self.storage.clear_leaves_cache(history_store_key)?;
                     // 4. Reset last block no processed by leaf handler.
-                    tracing::info!("Clear last deposit block number...!");
+                    tracing::warn!("Clear last deposit block number...!");
                     self.storage.insert_last_deposit_block_number(
                         history_store_key,
                         0,
@@ -127,7 +127,7 @@ impl EventHandler for VAnchorLeavesHandler {
 
                     // 5. Reset last saved block number by event watcher.
                     //    Relayer will restart syncing from block number contract was deployed at.
-                    tracing::info!(
+                    tracing::warn!(
                         "Reset block number to contract deployed at...!"
                     );
                     self.storage.set_last_block_number(
