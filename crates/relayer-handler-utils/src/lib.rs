@@ -22,7 +22,7 @@ use webb::evm::ethers::prelude::{ContractError, I256};
 use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::types::Bytes;
 use webb::evm::ethers::types::{H256, U256};
-use webb::substrate::subxt::ext::sp_runtime::AccountId32;
+use webb::substrate::subxt::utils::AccountId32;
 use webb_relayer_tx_relay_utils::{
     MixerRelayTransaction, VAnchorRelayTransaction,
 };

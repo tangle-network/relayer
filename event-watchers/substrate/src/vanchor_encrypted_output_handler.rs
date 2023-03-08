@@ -64,7 +64,9 @@ impl EventHandler<SubstrateConfig> for SubstrateVAnchorEncryptedOutputHandler {
                 .next_leaf_index(event.tree_id);
             let next_leaf_index = client
                 .storage()
-                .fetch(&next_leaf_index_addr, Some(at_hash))
+                .at(Some(at_hash))
+                .await?
+                .fetch(&next_leaf_index_addr)
                 .await?
                 .unwrap();
 

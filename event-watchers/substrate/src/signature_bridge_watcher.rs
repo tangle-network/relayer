@@ -15,9 +15,9 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
+use sp_core::hashing::keccak_256;
 use webb::substrate::subxt::config::SubstrateConfig;
 use webb::substrate::subxt::events::StaticEvent;
-use webb::substrate::subxt::ext::sp_core::hashing::keccak_256;
 
 use webb::substrate::subxt::{self, dynamic::Value, OnlineClient};
 
@@ -172,7 +172,9 @@ where
 
         let current_maintainer = api
             .storage()
-            .fetch(&current_maintainer_addrs, None)
+            .at(None)
+            .await?
+            .fetch(&current_maintainer_addrs)
             .await?
             .unwrap()
             .0;
@@ -257,7 +259,9 @@ where
 
         let current_maintainer = api
             .storage()
-            .fetch(&current_maintainer_addrs, None)
+            .at(None)
+            .await?
+            .fetch(&current_maintainer_addrs)
             .await?
             .unwrap()
             .0;
@@ -279,8 +283,13 @@ where
         let current_nonce =
             RuntimeApi::storage().signature_bridge().maintainer_nonce();
 
-        let current_nonce =
-            api.storage().fetch(&current_nonce, None).await?.unwrap();
+        let current_nonce = api
+            .storage()
+            .at(None)
+            .await?
+            .fetch(&current_nonce)
+            .await?
+            .unwrap();
 
         if nonce <= current_nonce {
             tracing::warn!(
