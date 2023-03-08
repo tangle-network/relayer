@@ -325,7 +325,7 @@ async function vanchorDeposit(
   const extAmount = currencyToUnitI128(10);
   const fee = 0;
   const refund = 0;
-  const assetId = new Uint8Array([254, 255, 255, 255]);
+  const assetId = new Uint8Array([ 0, 0, 0, 0 ]); // WEBB native token asset Id.
   // Empty leaves
   leavesMap[outputChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);
