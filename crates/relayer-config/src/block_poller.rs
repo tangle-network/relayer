@@ -25,3 +25,15 @@ pub struct BlockPollerConfig {
     #[serde(default)]
     pub light_client_rpc_url: Option<RpcUrl>,
 }
+
+impl Default for BlockPollerConfig {
+    fn default() -> Self {
+        Self {
+            start_block: None,
+            polling_interval: 6000,
+            max_blocks_per_step: max_blocks_per_step_default(),
+            print_progress_interval: print_progress_interval_default(),
+            light_client_rpc_url: None,
+        }
+    }
+}

@@ -35,6 +35,7 @@ use std::borrow::Cow;
 use webb::substrate::scale::Encode;
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb_relayer_utils::metric;
+
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
 /// A MaintainerSetEvent handler handles `MaintainerSet` events and signals signature bridge watcher
