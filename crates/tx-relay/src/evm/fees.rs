@@ -139,7 +139,7 @@ async fn generate_fee_info(
     let gas_price: U256 = parse_units(gas_price_gwei, "gwei")?.into();
 
     let estimated_fee = calculate_transaction_fee(
-        gas_price.into(),
+        gas_price,
         gas_amount,
         native_token_price,
         wrapped_token_price,
@@ -159,9 +159,9 @@ async fn generate_fee_info(
 
     Ok(FeeInfo {
         estimated_fee,
-        gas_price: gas_price.into(),
-        refund_exchange_rate: refund_exchange_rate.into(),
-        max_refund: max_refund.into(),
+        gas_price,
+        refund_exchange_rate,
+        max_refund,
         timestamp: Utc::now(),
         native_token_price,
         wrapped_token_price,
