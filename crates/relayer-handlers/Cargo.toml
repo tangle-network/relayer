@@ -18,6 +18,7 @@ webb-relayer-config = { path = "../relayer-config" }
 webb-relayer-context = { path = "../relayer-context" }
 webb-relayer-utils = { path = "../relayer-utils" }
 
+sp-core ={ workspace = true }
 tracing = { workspace = true }
 futures = { workspace = true }
 serde = { workspace = true }

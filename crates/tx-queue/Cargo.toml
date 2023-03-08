@@ -16,6 +16,8 @@ webb-relayer-store = { workspace = true }
 webb-relayer-context = { workspace = true }
 webb-relayer-utils = { workspace = true }
 
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
 tracing = { workspace = true }
 sled = { workspace = true }
 futures = { workspace = true }

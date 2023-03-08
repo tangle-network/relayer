@@ -30,6 +30,10 @@ webb-relayer-handler-utils = { path = "crates/relayer-handler-utils" }
 webb-relayer-types = { path = "crates/relayer-types" }
 webb-relayer = { path = "services/webb-relayer" }
 
+sp-core = { version = "16.0.0" }
+sp-keyring = { version = "20.0.0" }
+sp-runtime = { version = "20.0.0" }
+
 anyhow = "^1"
 tracing = { version = "^0.1", features = ["log"] }
 url = { version = "^2.3", features = ["serde"] }
@@ -54,6 +58,7 @@ libsecp256k1 = "0.7.1"
 serde = { version = "^1", default-features = false, features = ["derive"] }
 glob = "^0.3"
 serde_path_to_error = "0.1.9"
+tiny-bip39 = "1.0.0"
 
 [profile.release]
 strip = "symbols"

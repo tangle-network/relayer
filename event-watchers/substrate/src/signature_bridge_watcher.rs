@@ -14,20 +14,22 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::subxt::ext::sp_core::hashing::keccak_256;
+
+use webb::substrate::subxt::config::SubstrateConfig;
+use webb::substrate::subxt::events::StaticEvent;
+use sp_core::hashing::keccak_256;
+
 use webb::substrate::subxt::{self, dynamic::Value, OnlineClient};
 
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
-use webb_event_watcher_traits::substrate::{BlockNumberOf, SubstrateBridgeWatcher};
+use webb_event_watcher_traits::substrate::{SubstrateBridgeWatcher, EventHandler};
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_relayer_store::sled::{SledQueueKey,SledStore};
 use webb_relayer_store::{BridgeCommand, QueueStore};
-use webb::substrate::{
-    protocol_substrate_runtime,
-};
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+
 use webb::evm::ethers::utils;
-use webb::substrate::protocol_substrate_runtime::api::signature_bridge;
+use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::protocol_substrate_runtime::api::signature_bridge::events::MaintainerSet;
 
 use std::borrow::Cow;
 use webb::substrate::scale::Encode;
@@ -35,46 +37,50 @@ use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb_relayer_utils::metric;
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
-/// A SignatureBridge contract events & commands watcher.
+/// A MaintainerSetEvent handler handles `MaintainerSet` events and signals signature bridge watcher
+/// to remove pending tx trying to do governor transfer.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct SubstrateBridgeEventWatcher;
+pub struct MaintainerSetEventHandler;
 
 #[async_trait::async_trait]
-impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
-    const TAG: &'static str = "Substrate bridge pallet Watcher";
-
-    const PALLET_NAME: &'static str = "SignatureBridge";
-
-    type RuntimeConfig = subxt::SubstrateConfig;
-
-    type Client = OnlineClient<Self::RuntimeConfig>;
-
-    type Event = protocol_substrate_runtime::api::Event;
-
-    type FilteredEvent = signature_bridge::events::MaintainerSet;
+impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
+    type Client = OnlineClient<SubstrateConfig>;
 
     type Store = SledStore;
 
-    async fn handle_event(
+    async fn can_handle_events(
+        &self,
+        events: subxt::events::Events<SubstrateConfig>,
+    ) -> webb_relayer_utils::Result<bool> {
+        let has_event = events.has::<MaintainerSet>()?;
+        Ok(has_event)
+    }
+
+    async fn handle_events(
         &self,
         _store: Arc<Self::Store>,
-        _api: Arc<Self::Client>,
-        (event, _block_number): (Self::FilteredEvent, BlockNumberOf<Self>),
+        _client: Arc<Self::Client>,
+        (events, _block_number): (subxt::events::Events<SubstrateConfig>, u64),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // todo
         // if the ownership is transferred to the new owner, we need to
         // to check our txqueue and remove any pending tx that was trying to
         // do this transfer.
-        tracing::event!(
-            target: webb_relayer_utils::probe::TARGET,
-            tracing::Level::DEBUG,
-            kind = %webb_relayer_utils::probe::Kind::SignatureBridge,
-            call = "pallet_signature_bridge:: set_maintainer",
-            msg = "Maintainer set",
-            new_maintainer = ?event.new_maintainer,
-            old_maintainer = ?event.old_maintainer,
-        );
+        let maintainer_set_events =
+            events.find::<MaintainerSet>().flatten().collect::<Vec<_>>();
+
+        for event in maintainer_set_events {
+            tracing::event!(
+                target: webb_relayer_utils::probe::TARGET,
+                tracing::Level::DEBUG,
+                kind = %webb_relayer_utils::probe::Kind::SignatureBridge,
+                call = "pallet_signature_bridge:: set_maintainer",
+                msg = "Maintainer set",
+                new_maintainer = ?event.new_maintainer,
+                old_maintainer = ?event.old_maintainer,
+            );
+        }
 
         // mark this event as processed.
         // let events_bytes = &event.encode();
@@ -84,14 +90,25 @@ impl SubstrateEventWatcher for SubstrateBridgeEventWatcher {
     }
 }
 
+/// A SignatureBridge watcher watches for signature bridge events and bridge commands.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct SubstrateBridgeEventWatcher;
+
+impl SubstrateEventWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
+    const TAG: &'static str = "Substrate bridge pallet Watcher";
+    const PALLET_NAME: &'static str = MaintainerSet::PALLET;
+    type Client = OnlineClient<SubstrateConfig>;
+    type Store = SledStore;
+}
+
 #[async_trait::async_trait]
-impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
+impl SubstrateBridgeWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
     #[tracing::instrument(skip_all)]
     async fn handle_cmd(
         &self,
         chain_id: u32,
         store: Arc<Self::Store>,
-        api: Arc<Self::Client>,
+        client: Arc<Self::Client>,
         cmd: BridgeCommand,
     ) -> webb_relayer_utils::Result<()> {
         use BridgeCommand::*;
@@ -101,7 +118,7 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
                 self.execute_proposal_with_signature(
                     chain_id,
                     store,
-                    api.clone(),
+                    client.clone(),
                     (data, signature),
                 )
                 .await?
@@ -114,7 +131,7 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
                 self.transfer_ownership_with_signature(
                     chain_id,
                     store,
-                    api.clone(),
+                    client.clone(),
                     (public_key, nonce, signature),
                 )
                 .await?
@@ -126,14 +143,14 @@ impl SubstrateBridgeWatcher for SubstrateBridgeEventWatcher {
 
 impl SubstrateBridgeEventWatcher
 where
-    Self: SubstrateBridgeWatcher,
+    Self: SubstrateBridgeWatcher<SubstrateConfig>,
 {
     #[tracing::instrument(skip_all)]
     async fn execute_proposal_with_signature(
         &self,
         chain_id: u32,
-        store: Arc<<Self as SubstrateEventWatcher>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher>::Client>,
+        store: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Store>,
+        api: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Client>,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let proposal_data_hex = hex::encode(&proposal_data);
@@ -155,7 +172,9 @@ where
 
         let current_maintainer = api
             .storage()
-            .fetch(&current_maintainer_addrs, None)
+            .at(None)
+            .await?
+            .fetch(&current_maintainer_addrs)
             .await?
             .unwrap()
             .0;
@@ -229,8 +248,8 @@ where
     async fn transfer_ownership_with_signature(
         &self,
         chain_id: u32,
-        store: Arc<<Self as SubstrateEventWatcher>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher>::Client>,
+        store: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Store>,
+        api: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Client>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let new_maintainer = public_key.clone();
@@ -240,7 +259,9 @@ where
 
         let current_maintainer = api
             .storage()
-            .fetch(&current_maintainer_addrs, None)
+            .at(None)
+            .await?
+            .fetch(&current_maintainer_addrs)
             .await?
             .unwrap()
             .0;
@@ -263,7 +284,7 @@ where
             RuntimeApi::storage().signature_bridge().maintainer_nonce();
 
         let current_nonce =
-            api.storage().fetch(&current_nonce, None).await?.unwrap();
+            api.storage().at(None).await?.fetch(&current_nonce).await?.unwrap();
 
         if nonce <= current_nonce {
             tracing::warn!(

@@ -14,9 +14,9 @@ repository = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
 serde = { workspace = true }
+sp-core ={ workspace = true }
 webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true }
 ethereum-types = { workspace = true }
-
-tiny-bip39 = "1.0.0"
+tiny-bip39 = { workspace = true }

@@ -18,7 +18,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::OpenVAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
-use webb_event_watcher_traits::EventHandler;
+use webb_event_watcher_traits::evm::EventHandler;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, LeafCacheStore};

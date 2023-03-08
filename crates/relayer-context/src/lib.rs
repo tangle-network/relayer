@@ -30,7 +30,7 @@ use webb::evm::ethers::prelude::*;
 #[cfg(feature = "substrate")]
 use webb::substrate::subxt;
 #[cfg(feature = "substrate")]
-use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
+use sp_core::sr25519::Pair as Sr25519Pair;
 
 use coingecko::CoinGeckoClient;
 use webb_relayer_store::SledStore;

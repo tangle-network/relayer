@@ -1,7 +1,7 @@
 use super::*;
 use crate::substrate::handle_substrate_tx;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
-use webb::substrate::subxt::ext::sp_runtime::AccountId32;
+use webb::substrate::subxt::utils::AccountId32;
 use webb::substrate::{
     protocol_substrate_runtime::api::runtime_types::{
         webb_primitives::runtime::Element, webb_primitives::types::vanchor,
@@ -12,7 +12,7 @@ use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handler_utils::SubstrateVAchorCommand;
+use webb_relayer_handler_utils::SubstrateVAnchorCommand;
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for Substrate Anchor commands
@@ -24,7 +24,7 @@ use webb_relayer_utils::metric::Metrics;
 /// * `stream` - The stream to write the response to
 pub async fn handle_substrate_vanchor_relay_tx<'a>(
     ctx: RelayerContext,
-    cmd: SubstrateVAchorCommand,
+    cmd: SubstrateVAnchorCommand,
     stream: CommandStream,
 ) -> Result<(), CommandResponse> {
     use CommandResponse::*;

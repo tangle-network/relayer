@@ -8,9 +8,9 @@ use webb::{
         prelude::k256::SecretKey,
         signers::{LocalWallet, Signer},
     },
-    substrate::subxt::ext::sp_core::Pair,
 };
 use webb_relayer_context::RelayerContext;
+use sp_core::crypto::Pair;
 
 /// Relayer config data
 #[derive(Debug, Serialize)]

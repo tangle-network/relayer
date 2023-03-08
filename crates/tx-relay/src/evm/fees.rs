@@ -136,10 +136,10 @@ async fn generate_fee_info(
     // Fetch native gas price estimate from etherscan.io, using "average" value
     let gas_oracle = ctx.etherscan_client().gas_oracle().await?;
     let gas_price_gwei = U256::from(gas_oracle.propose_gas_price);
-    let gas_price = parse_units(gas_price_gwei, "gwei")?.into();
+    let gas_price = parse_units(gas_price_gwei, "gwei")?;
 
     let estimated_fee = calculate_transaction_fee(
-        gas_price,
+        gas_price.into(),
         gas_amount,
         native_token_price,
         wrapped_token_price,
@@ -149,19 +149,17 @@ async fn generate_fee_info(
 
     // Calculate the exchange rate from wrapped token to native token which is used for the refund.
     let refund_exchange_rate =
-        parse_units(native_token_price / wrapped_token_price, wrapped_token.1)?
-            .into();
+        parse_units(native_token_price / wrapped_token_price, wrapped_token.1)?;
 
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
     let max_refund =
-        parse_units(MAX_REFUND_USD / native_token_price, native_token.1)?
-            .into();
+        parse_units(MAX_REFUND_USD / native_token_price, native_token.1)?;
 
     Ok(FeeInfo {
         estimated_fee,
-        gas_price,
-        refund_exchange_rate,
-        max_refund,
+        gas_price: gas_price.into(),
+        refund_exchange_rate: refund_exchange_rate.into(),
+        max_refund: max_refund.into(),
         timestamp: Utc::now(),
         native_token_price,
         wrapped_token_price,

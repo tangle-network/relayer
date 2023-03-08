@@ -14,7 +14,7 @@ repository = { workspace = true }
 webb-relayer-store = { path = "../relayer-store" }
 webb-relayer-types = { path = "../relayer-types" }
 webb-relayer-utils = { path = "../relayer-utils" }
-
+sp-core = { workspace = true }
 anyhow = { workspace = true, optional = true }
 tracing = { workspace = true }
 url = { workspace = true }

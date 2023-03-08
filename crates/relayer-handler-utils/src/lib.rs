@@ -22,7 +22,7 @@ use webb::evm::ethers::prelude::{ContractError, I256};
 use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::types::Bytes;
 use webb::evm::ethers::types::{H256, U256};
-use webb::substrate::subxt::ext::sp_runtime::AccountId32;
+use webb::substrate::subxt::utils::AccountId32;
 use webb_relayer_tx_relay_utils::{
     MixerRelayTransaction, VAnchorRelayTransaction,
 };
@@ -80,7 +80,7 @@ pub enum SubstrateCommandType {
     /// Webb Mixer.
     Mixer(SubstrateMixerCommand),
     /// Webb Variable Anchors.
-    VAnchor(SubstrateVAchorCommand),
+    VAnchor(SubstrateVAnchorCommand),
 }
 
 /// Enumerates the command responses
@@ -177,7 +177,7 @@ type T = u32; // Substrate assetId
 /// The command type for Substrate mixer txes
 pub type SubstrateMixerCommand = MixerRelayTransaction<Id, P, E, I, B>;
 /// The command type for Substrate vanchor txes
-pub type SubstrateVAchorCommand =
+pub type SubstrateVAnchorCommand =
     VAnchorRelayTransaction<Id, P, R, E, I, B, A, T>;
 
 /// A helper function to extract the error code and the reason from EVM errors.

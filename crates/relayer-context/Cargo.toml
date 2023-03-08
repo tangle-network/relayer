@@ -15,6 +15,7 @@ webb-relayer-config = { path = "../relayer-config"}
 webb-relayer-utils = { path = "../relayer-utils"}
 webb-relayer-store = { path = "../relayer-store" }
 
+sp-core = { workspace = true, optional = true }
 tokio = { workspace = true }
 webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
@@ -27,4 +28,4 @@ ethers = {version = "1.0.2", features = ["rustls"] }
 default = ["std", "evm", "substrate"]
 std = []
 evm = []
-substrate = []
+substrate = ["sp-core"]

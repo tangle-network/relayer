@@ -18,6 +18,7 @@ webb-relayer-store = { workspace = true }
 webb-relayer-config = { workspace = true }
 webb-relayer-utils = { workspace = true }
 
+sp-core ={ workspace = true }
 async-trait = { workspace = true }
 tracing = { workspace = true }
 sled = { workspace = true }

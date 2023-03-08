@@ -26,7 +26,8 @@ webb = { workspace = true }
 native-tls = { workspace = true, optional = true }
 webb-proposals = { workspace = true }
 ethereum-types = { workspace = true }
-
+sp-core = { workspace = true }
+sp-keyring = { workspace = true }
 typed-builder = "0.12.0"
 
 [features]
