@@ -31,7 +31,7 @@ once_cell = "1.17.0"
 chrono = {version = "0.4.23", features = ["serde"] }
 
 [dev-dependencies]
-anvil = { git = "https://github.com/foundry-rs/foundry.git" }
+anvil = { path = "../../../foundry/anvil" }
 ethers = { git = "https://github.com/gakonst/ethers-rs" }
 env_logger = "0.10.0"
 
