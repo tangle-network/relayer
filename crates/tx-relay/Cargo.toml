@@ -15,7 +15,7 @@ webb-relayer-handler-utils = { workspace = true }
 webb-relayer-config = { workspace = true }
 webb-relayer-context = { workspace = true }
 webb-relayer-utils = { workspace = true }
-sp-core ={ workspace = true }
+sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 tracing = { workspace = true }
 futures = { workspace = true }

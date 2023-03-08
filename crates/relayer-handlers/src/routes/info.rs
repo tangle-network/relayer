@@ -3,7 +3,7 @@ use axum::Json;
 use std::sync::Arc;
 
 use serde::Serialize;
-use sp_core::crypto::Pair;
+use sp_core::Pair;
 use webb::evm::ethers::{
     prelude::k256::SecretKey,
     signers::{LocalWallet, Signer},

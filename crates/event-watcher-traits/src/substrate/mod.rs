@@ -40,4 +40,4 @@ mod bridge_watcher;
 pub use bridge_watcher::*;
 
 /// Type alias for Substrate block number.
-pub type BlockNumberOf<T> = <<T as subxt::Config>::Header as Header>::Number;
+pub type BlockNumberOf<T> = <<T as subxt::Config>::Hasher as Header>::Number;

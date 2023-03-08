@@ -16,14 +16,14 @@ webb-relayer-store = { workspace = true }
 webb-relayer-context = { workspace = true }
 webb-relayer-utils = { workspace = true }
 
-sp-core = { workspace = true }
-sp-runtime = { workspace = true }
 tracing = { workspace = true }
 sled = { workspace = true }
 futures = { workspace = true }
 backoff = { workspace = true }
 tokio = { workspace = true }
 webb = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true, optional = true }
 ethereum-types = { workspace = true }

@@ -15,7 +15,7 @@
 use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
-use webb::substrate::subxt::tx::TxStatus;
+use webb::substrate::subxt::config::ExtrinsicParams;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::QueueStore;
@@ -26,7 +26,7 @@ use std::time::Duration;
 use sp_core::sr25519;
 use std::marker::PhantomData;
 use webb::substrate::subxt;
-use webb::substrate::subxt::{config::ExtrinsicParams, tx::PairSigner};
+use webb::substrate::subxt::tx::{PairSigner, TxStatus};
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 
 /// The SubstrateTxQueue stores transaction call params in bytes so the relayer can process them later.
@@ -74,8 +74,7 @@ where
         <<X>::ExtrinsicParams as ExtrinsicParams<<X>::Index, <X>::Hash>>::OtherParams:Default,
         <X>::Signature: From<sr25519::Signature>,
         <X>::Address: From<<X>::AccountId>,
-        <X as webb::substrate::subxt::Config>::AccountId: std::convert::From<sp_core::crypto::AccountId32>,
-
+        <X as subxt::Config>::AccountId: From<sp_runtime::AccountId32>
     {
         let chain_config = self
             .ctx
