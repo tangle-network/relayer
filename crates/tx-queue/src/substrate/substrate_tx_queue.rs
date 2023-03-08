@@ -24,7 +24,6 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use sp_core::sr25519;
-use sp_runtime::traits::{IdentifyAccount, Verify};
 use std::marker::PhantomData;
 use webb::substrate::subxt;
 use webb::substrate::subxt::{config::ExtrinsicParams, tx::PairSigner};
@@ -75,8 +74,7 @@ where
         <<X>::ExtrinsicParams as ExtrinsicParams<<X>::Index, <X>::Hash>>::OtherParams:Default,
         <X>::Signature: From<sr25519::Signature>,
         <X>::Address: From<<X>::AccountId>,
-        <X as webb::substrate::subxt::Config>::Signature: Verify,
-        <<X>::Signature as Verify>::Signer: From<sr25519::Public> + IdentifyAccount<AccountId = <X>::AccountId>,
+        <X as webb::substrate::subxt::Config>::AccountId: std::convert::From<sp_core::crypto::AccountId32>,
 
     {
         let chain_config = self
