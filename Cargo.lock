@@ -5032,7 +5032,7 @@ dependencies = [
  "array-bytes",
  "base58 0.2.0",
  "bitflags",
- "blake2",
+ "blake2 0.10.6",
  "bounded-collections",
  "dyn-clonable",
  "ed25519-zebra",
@@ -5464,7 +5464,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "54639dba6a113584083968b6a8f457dedae612abe1bd214762101ca29f12e332"
 dependencies = [
  "base58 0.2.0",
- "blake2",
+ "blake2 0.10.6",
  "derivative",
  "frame-metadata",
  "futures",
