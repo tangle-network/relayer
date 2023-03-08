@@ -62,7 +62,9 @@ impl EventHandler<SubstrateConfig> for SubstrateVAnchorLeavesHandler {
                 .next_leaf_index(event.tree_id);
             let next_leaf_index = api
                 .storage()
-                .fetch(&next_leaf_index_addr, Some(at_hash))
+                .at(Some(at_hash))
+                .await?
+                .fetch(&next_leaf_index_addr)
                 .await?
                 .unwrap();
             // fetch chain_id

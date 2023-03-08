@@ -1,7 +1,7 @@
 use super::*;
 use crate::substrate::handle_substrate_tx;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
-use webb::substrate::subxt::ext::sp_runtime::AccountId32;
+use webb::substrate::subxt::utils::AccountId32;
 use webb::substrate::{
     protocol_substrate_runtime::api::runtime_types::{
         webb_primitives::runtime::Element, webb_primitives::types::vanchor,

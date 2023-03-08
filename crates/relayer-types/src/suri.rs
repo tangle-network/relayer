@@ -1,6 +1,6 @@
 use serde::Deserialize;
-use webb::substrate::subxt::ext::sp_core::sr25519::Pair as Sr25519Pair;
-use webb::substrate::subxt::ext::sp_core::Pair;
+use sp_core::sr25519::Pair as Sr25519Pair;
+use sp_core::Pair;
 
 /// [`Substrate Uri`](https://polkadot.js.org/docs/keyring/start/suri/)
 #[derive(Clone)]

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use tokio::sync::Mutex;
+use webb::substrate::subxt::config::Header;
 use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_utils::{metric, retry};
 
@@ -195,8 +196,7 @@ where
                     continue;
                 };
                 // current finalized block number
-                let current_block_number: u64 =
-                    (*latest_header.number()).into();
+                let current_block_number: u64 = latest_header.number().into();
 
                 tracing::trace!(
                     "Latest block number: #{}",

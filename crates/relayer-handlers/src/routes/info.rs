@@ -3,12 +3,10 @@ use axum::Json;
 use std::sync::Arc;
 
 use serde::Serialize;
-use webb::{
-    evm::ethers::{
-        prelude::k256::SecretKey,
-        signers::{LocalWallet, Signer},
-    },
-    substrate::subxt::ext::sp_core::Pair,
+use sp_core::Pair;
+use webb::evm::ethers::{
+    prelude::k256::SecretKey,
+    signers::{LocalWallet, Signer},
 };
 use webb_relayer_context::RelayerContext;
 
