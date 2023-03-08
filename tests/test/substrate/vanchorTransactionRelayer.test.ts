@@ -189,7 +189,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const decodedAddress = decodeAddress(address);
     const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
     const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
-    const assetId = new Uint8Array([254, 255, 255, 255]);
+    const assetId = new Uint8Array([ 0, 0, 0, 0 ]); // WEBB native token asset Id.
     const dummyLeafId: LeafIdentifier = {
       index: 0,
       typedChainId: Number(outputChainId.toString()),
