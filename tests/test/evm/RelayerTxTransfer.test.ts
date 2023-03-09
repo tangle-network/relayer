@@ -238,40 +238,13 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    
-    const randomKeypair = new Keypair();
-    
-    const depositUtxo = await CircomUtxo.generateUtxo({
-      curve: 'Bn254',
-      backend: 'Circom',
-      amount: ethers.utils.parseEther('10').toString(),
-      originChainId: localChain1.chainId.toString(),
-      chainId: localChain2.chainId.toString(),
-      keypair: randomKeypair,
-    });
-    console.log("Register and make deposit");
-    // Step 1. Register account and make a deposit to vanchor pool
-    await vanchor1.registerAndTransact(
-        govWallet1.address,
-        randomKeypair.toString(),
-        [],
-        [depositUtxo],
-        0,
-        0,
-        '0',
-        relayerWallet1.address,
+
+    const token = await Tokens.MintableToken.tokenFromAddress(
         tokenAddress,
-        {}
+        govWallet1
       );
-    // now we wait for the relayer to see the transaction
-    await webbRelayer.waitForEvent({
-      kind: 'leaves_store',
-      event: {
-        leaf_index: '1',
-      },
-    });
-    console.log("Register recipient account");
-    // Step 2. Register recipient account(Bob)
+    
+    // Step 1. Register recipient account(Bob)
     const bobKey = u8aToHex(ethers.utils.randomBytes(32));
     const bobWallet = new ethers.Wallet(bobKey, localChain1.provider());
     const bobKeypair = new Keypair();
@@ -281,7 +254,7 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       });
 
     let receipt = await tx.wait();
-    // Step 3. Sender queries on chain data for keypair information of recipient
+    // Step 2. Sender queries on chain data for keypair information of recipient
     // In this test, simply take the data from the previous transaction receipt.
     
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -289,17 +262,16 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
     const registeredKeydata: string = receipt.events[0].args.key;
     const bobPublicKeypair = Keypair.fromString(registeredKeydata);
     
-    // Step 4. Generate a UTXO that is only spendable by recipient(Bob)
+    // Step 3. Generate a UTXO that is only spendable by recipient(Bob)
     const transferUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: ethers.utils.parseEther('10').toString(),
       originChainId: localChain1.chainId.toString(),
-      chainId: localChain2.chainId.toString(),
+      chainId: localChain1.chainId.toString(),
       keypair: bobPublicKeypair,
     });
     
-    console.log("Insert Transfer Utxo");
     // insert utxo into tree
     receipt = (await vanchor1.transact(
       [],
@@ -309,7 +281,9 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       '0',
       relayerWallet1.address,
       tokenAddress,
-      {}
+      {
+       
+      }
     )) as ethers.ContractReceipt;
 
     // Bob queries encrypted commitments on chain
@@ -325,7 +299,7 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
           // In order to properly calculate the nullifier, an index is required.
           decryptedUtxo.setIndex(index);
           decryptedUtxo.setOriginChainId(localChain1.chainId.toString());
-          const alreadySpent = await vanchor2.contract.isSpent(
+          const alreadySpent = await vanchor1.contract.isSpent(
             toFixedHex('0x' + decryptedUtxo.nullifier)
           );
           if (!alreadySpent) {
@@ -343,10 +317,8 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
 
     // fetch the inserted leaves
     const leaves = vanchor1.tree.elements().map((leaf) => hexToU8a(leaf.toHexString()));
-    const leaves2 = vanchor2.tree.elements().map((leaf) => hexToU8a(leaf.toHexString()));
-    console.log("Recipient tries to spend Utxo");
     // Bob uses the parsed utxos to issue a withdraw
-    receipt = (await vanchor2.transact(
+    receipt = (await vanchor1.transact(
       spendableUtxos,
       [],
       0,
@@ -356,11 +328,15 @@ describe.only('Vanchor Private Tx relaying with mocked governor', function () {
       tokenAddress,
       {
         [localChain1.chainId.toString()]: leaves,
-        [localChain2.chainId.toString()]: leaves2,
 
       }
     )) as ethers.ContractReceipt;
-    
+
+
+    const bobBalanceAfter = await token.getBalance(bobWallet.address);
+
+    console.log("Balance after ", bobBalanceAfter);
+
 
   });
 
