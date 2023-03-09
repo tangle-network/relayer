@@ -66,10 +66,27 @@ impl HistoryStore for InMemoryStore {
         *val = block_number;
         Ok(old)
     }
+
+    fn get_last_block_number_or_default<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<u64> {
+        self.get_last_block_number(key, 1u64)
+    }
 }
 
 impl LeafCacheStore for InMemoryStore {
     type Output = Vec<Vec<u8>>;
+
+    #[tracing::instrument(skip(self))]
+    fn clear_leaves_cache<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<()> {
+        let mut guard = self.store_for_vec.write();
+        guard.clear();
+        Ok(())
+    }
 
     #[tracing::instrument(skip(self))]
     fn get_leaves<K: Into<HistoryStoreKey> + Debug>(

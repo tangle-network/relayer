@@ -55,6 +55,16 @@ where
 
     type Store = SledStore;
 
+    async fn can_handle_events(
+        &self,
+        events: Self::Events,
+        _wrapper: &Self::Contract,
+    ) -> webb_relayer_utils::Result<bool> {
+        use VAnchorContractEvents::*;
+        let has_event = matches!(events, NewCommitmentFilter(_));
+        Ok(has_event)
+    }
+
     #[tracing::instrument(skip_all)]
     async fn handle_event(
         &self,
