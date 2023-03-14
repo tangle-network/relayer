@@ -1,0 +1,79 @@
+# The port that the Relayer API service will listen on
+#
+# default: 9955
+# env: WEBB_PORT
+port = 9955
+
+# Controls what features are enabled in the relayer system
+[features]
+# Enables the Governance Relayer Feature
+# default: false
+# env: WEBB_FEATURES_GOVERNANCE_RELAY
+# See: https://docs.webb.tools/docs/relayer/overview/#data-proposing-and-signature-relaying
+governance-relay = false
+# Enables the Data Query Feature (Oracle)
+# default: false
+# env: WEBB_FEATURES_DATA_QUERY
+# See: https://docs.webb.tools/docs/relayer/overview/#data-querying
+data-query = true
+# Enables the Private Transaction Relayer Feature
+# default: false
+# env: WEBB_FEATURES_PRIVATE_TX_RELAY
+# See: https://docs.webb.tools/docs/relayer/overview/#private-transaction-relaying
+private-tx-relay = true
+
+## The Next Section is where we define the networks and the contracts that the relayer will be interacting with.
+
+# The following block defines an EVM network (in this case, Goerli) that the relayer will connect to.
+[evm.goerli]
+name = "goerli"
+# Http(s) Endpoint for quick Req/Res
+# env: WEBB_EVM_GOERLI_HTTP_ENDPOINT
+http-endpoint = "https://rpc.ankr.com/eth_goerli"
+# Websocket Endpoint for long living connections
+# env: WEBB_EVM_GOERLI_WS_ENDPOINT
+ws-endpoint = "wss://rpc.ankr.com/eth_goerli"
+# chain specific id from evm opcode
+# env: WEBB_EVM_GOERLI_CHAIN_ID
+chain-id = 5
+# Value to indicate that the relayer should enable services for this chain
+# default: true
+# env: WEBB_EVM_GOERLI_ENABLED
+enabled = true
+# The number of block confirmations that the relayer should wait before processing a block
+# default: 0
+# env: WEBB_EVM_GOERLI_BLOCK_CONFIRMATIONS
+block-confirmations = 2
+# The Private Key of this account on this network
+# the format is more dynamic here:
+# 1. if it starts with '0x' then this would be raw (64 bytes) hex encoded
+#    private key.
+#    Example: 0x8917174396171783496173419137618235192359106130478137647163400318
+#
+# 2. if it starts with '$' then it would be considered as an Enviroment variable
+#    of a hex-encoded private key.
+#    Example: $GOERLI_PRIVATE_KEY
+#
+# 3. if it doesn't contains special characters and has 12 or 24 words in it
+#    then we should process it as a mnemonic string: 'word two three four ...'
+#
+# env: WEBB_EVM_GOERLI_PRIVATE_KEY
+# Note: This value is optional if you are using the relayer as a data-query service only.
+private-key = "$PRIVATE_KEY"
+
+# Block which represents the configuration for a supported contract on the network
+[[evm.goerli.contracts]]
+# The contract can be one of these values
+# - VAnchor (Variable Anchor)
+# - SignatureBridge
+contract = "VAnchor"
+# The address of the contract
+address = "0x9678647b9fcb0039652a16dba688bd067d6e5077"
+# The deployed block number of the contract. When a relayer does not have information for
+# this contract in its store, it will start to sync and query for relevant historical data
+# starting at this block number
+deployed-at = 8648487
+# Configuration for the events watcher of this contract. The events-watcher can be switched on/off
+# and the polling interval specifies the period of time (in ms) that the events-watcher thread
+# will wait before issuing another query for new events.
+events-watcher = { enabled = true, polling-interval = 15000 }
