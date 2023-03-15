@@ -46,7 +46,7 @@ pub trait BridgeRegistryBackend {
     ///
     /// The passed resource must belong to a bridge that is registered with DKG, otherwise an error
     /// is returned.
-    async fn resource_to_bridge_id(
+    async fn resource_to_bridge_index(
         &self,
         resource_id: &ResourceId,
     ) -> webb_relayer_utils::Result<u32>;
