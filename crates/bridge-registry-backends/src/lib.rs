@@ -42,7 +42,7 @@ pub trait BridgeRegistryBackend {
     /// last bridge + 1.
     async fn next_bridge_index(&self) -> webb_relayer_utils::Result<u32>;
 
-    /// Retrieves the bridge ID which a given resource is attached to.
+    /// Retrieves the bridge index which a given resource is attached to.
     ///
     /// The passed resource must belong to a bridge that is registered with DKG, otherwise an error
     /// is returned.
