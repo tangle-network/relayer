@@ -13,6 +13,9 @@ use webb_proposals::evm::AnchorUpdateProposal;
 use webb_proposals::ResourceId;
 use webb_proposals::{FunctionSignature, Nonce, ProposalHeader};
 
+/// Rust reimplementation of DKG submit proposal test
+///
+/// <https://github.com/webb-tools/dkg-substrate/blob/master/dkg-test-suite/scripts/submitProposals.ts>
 #[tokio::test]
 async fn submit_anchor_update_proposal() {
     let api = OnlineClient::<PolkadotConfig>::new().await.unwrap();
