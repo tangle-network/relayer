@@ -50,7 +50,7 @@ how to use them.
 
 The global configuration file is used to configure the relayer. It is usually located at a file called `main.toml` in the `config` directory.
 
-#### Global Configuration: port
+#### [port](#global-configuration-port)
 
 The port on which the relayer will listen for incoming connections.
 
@@ -64,7 +64,7 @@ The port on which the relayer will listen for incoming connections.
 port = 9955
 ```
 
-#### Global Configuration: features
+#### [features](#global-configuration-features)
 
 The features section is used to enable or disable the relayer features.
 
@@ -81,7 +81,7 @@ data-query = true
 private-tx-relay = true
 ```
 
-##### Global Configuration: features: governance-relay
+##### [governance-relay](#global-configuration-features-governance-relay)
 
 Enable or disable the governance-relay feature. Enabling this feature will allow the relayer to relay proposals and votes on them
 between the chains.
@@ -97,7 +97,7 @@ between the chains.
 governance-relay = true
 ```
 
-##### Global Configuration: features: data-query
+##### [data-query](#global-configuration-features-data-query)
 
 Enable or disable the data-query feature. Enabling this feature will allow the relayer to work as a data query oracle.
 
@@ -112,7 +112,7 @@ Enable or disable the data-query feature. Enabling this feature will allow the r
 data-query = true
 ```
 
-##### Global Configuration: features: private-tx-relay
+##### [private-tx-relay](#global-configuration-features-private-tx-relay)
 
 Enable or disable the private-tx-relay feature. Enabling this feature will allow the relayer to relay private transactions, to preserve the privacy of the transactions.
 
@@ -131,7 +131,7 @@ private-tx-relay = true
 
 The EVM chain configuration file is used to configure the relayer to work with a specific EVM chain. It is usually located at a file called `evm/<chain-name>.toml` in the `config` directory.
 
-#### EVM Chain Configuration: name
+#### [name](#evm-chain-configuration-name)
 
 The name of the chain. This name will be used to identify the chain in the relayer.
 
