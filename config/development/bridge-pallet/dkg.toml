@@ -1,0 +1,15 @@
+[substrate.localdkg]
+name = "localdkg"
+http-endpoint = "$LOCAL_DKG_HTTP_URL"
+ws-endpoint = "$LOCAL_DKG_WS_URL"
+chain-id = 5
+runtime = "DKG"
+suri = "$LOCAL_DKG_SURI"
+
+[[substrate.localdkg.pallets]]
+pallet = "DKGProposalHandler"
+events-watcher = { enabled = true, polling-interval = 6000, print-progress-interval = 60000 }
+
+[[substrate.localdkg.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true, polling-interval = 6000, print-progress-interval = 60000 }

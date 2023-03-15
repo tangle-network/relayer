@@ -18,6 +18,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::OpenVAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::evm::EventHandler;
 use webb_proposal_signing_backends::{
     proposal_handler, ProposalSigningBackend,
@@ -28,25 +29,32 @@ use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
-pub struct OpenVAnchorDepositHandler<B> {
+pub struct OpenVAnchorDepositHandler<B, C> {
     proposal_signing_backend: B,
+    bridge_registry_backend: C,
 }
 
-impl<B> OpenVAnchorDepositHandler<B>
+impl<B, C> OpenVAnchorDepositHandler<B, C>
 where
     B: ProposalSigningBackend,
+    C: BridgeRegistryBackend,
 {
-    pub fn new(proposal_signing_backend: B) -> Self {
+    pub fn new(
+        proposal_signing_backend: B,
+        bridge_registry_backend: C,
+    ) -> Self {
         Self {
             proposal_signing_backend,
+            bridge_registry_backend,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl<B> EventHandler for OpenVAnchorDepositHandler<B>
+impl<B, C> EventHandler for OpenVAnchorDepositHandler<B, C>
 where
     B: ProposalSigningBackend + Send + Sync,
+    C: BridgeRegistryBackend + Send + Sync,
 {
     type Contract = OpenVAnchorContractWrapper<HttpProvider>;
 
@@ -105,16 +113,10 @@ where
         let src_resource_id =
             webb_proposals::ResourceId::new(src_target_system, src_chain_id);
 
-        let linked_anchors = match &wrapper.config.linked_anchors {
-            Some(anchors) => anchors,
-            None => {
-                tracing::error!(
-                    "Linked anchors not configured for : ({})",
-                    chain_id
-                );
-                return Ok(());
-            }
-        };
+        let linked_anchors = self
+            .bridge_registry_backend
+            .config_or_dkg_bridges(&wrapper.config.linked_anchors)
+            .await?;
 
         for linked_anchor in linked_anchors {
             let target_resource_id = match linked_anchor {

@@ -1,0 +1,35 @@
+[package]
+name = "webb-bridge-registry-backends"
+version = "0.1.0"
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+
+[dependencies]
+webb-relayer-types = { path = "../relayer-types" }
+webb-relayer-store = { path = "../relayer-store" }
+webb-relayer-utils = { path = "../relayer-utils" }
+webb-relayer-config = { path = "../relayer-config" }
+
+async-trait = { workspace = true }
+tracing = { workspace = true }
+sled = { workspace = true }
+futures = { workspace = true }
+tokio = { workspace = true }
+hex = { workspace = true }
+webb = { workspace = true }
+# Used by ethers (but we need it to be vendored with the lib).
+native-tls = { workspace = true, optional = true }
+webb-proposals = { workspace = true }
+ethereum-types = { workspace = true }
+sp-core = { workspace = true }
+
+typed-builder = "0.12.0"
+hex-literal = "0.3.4"
+
+[features]
+default = ["std"]
+std = []

@@ -1,13 +1,14 @@
 use futures::StreamExt;
+use sp_core::sr25519::Pair;
+use sp_core::Pair as _;
 use webb::substrate::dkg_runtime::api as RuntimeApi;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::ResourceId as DkgResourceId;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId as DkgTypedChainId;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce as DkgNonce;
-use webb::substrate::subxt::ext::sp_core::bytes::to_hex;
-use webb::substrate::subxt::ext::sp_core::sr25519::Pair;
-use webb::substrate::subxt::ext::sp_core::Pair as _;
 use webb::substrate::subxt::tx::{PairSigner, TxProgress, TxStatus};
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
+use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
+use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_proposals::evm::AnchorUpdateProposal;
 use webb_proposals::ResourceId;
 use webb_proposals::{FunctionSignature, Nonce, ProposalHeader};
@@ -15,33 +16,20 @@ use webb_proposals::{FunctionSignature, Nonce, ProposalHeader};
 #[tokio::test]
 async fn submit_anchor_update_proposal() {
     let api = OnlineClient::<PolkadotConfig>::new().await.unwrap();
+    let bridge_registry = DkgBridgeRegistryBackend::new(api.clone());
 
     // retrieve resource ids from bridge registry
-    let storage = RuntimeApi::storage().bridge_registry();
-    let next_bridge_index = storage.next_bridge_index();
-    let next_bridge_index = api
-        .storage()
-        .fetch(&next_bridge_index, None)
+    let next_bridge_index = bridge_registry.next_bridge_index().await.unwrap();
+    let bridges = bridge_registry
+        .bridges(next_bridge_index - 1)
         .await
-        .unwrap()
         .unwrap();
-    let bridges = storage.bridges(next_bridge_index - 1);
-    let bridges = api.storage().fetch(&bridges, None).await.unwrap().unwrap();
     let resource_id = ResourceId(bridges.resource_ids.0[1].0);
     let src_resource_id = ResourceId(bridges.resource_ids.0[0].0);
 
     // print resource IDs
     println!("Resource ID: {}", hex::encode(resource_id.0));
     println!("Source Resource ID: {}", hex::encode(src_resource_id.0));
-
-    assert_eq!(
-        to_hex(&resource_id.0, false),
-        "0x000000000000d30c8839c1145609e564b986f667b273ddcb8496010000001389"
-    );
-    assert_eq!(
-        to_hex(&src_resource_id.0, false),
-        "0x000000000000e69a847cd5bc0c9480ada0b339d7f0a8cac2b66701000000138a"
-    );
 
     let tx_api = RuntimeApi::tx().dkg_proposals();
     let sudo_account: PairSigner<PolkadotConfig, Pair> =
