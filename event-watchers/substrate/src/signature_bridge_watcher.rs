@@ -314,8 +314,11 @@ where
             signature = %hex::encode(&signature),
         );
 
+        let mut message = nonce.to_be_bytes().to_vec();
+        message.extend_from_slice(&new_maintainer);
+
         let set_maintainer_call = SetMaintainer {
-            message: BoundedVec(new_maintainer.clone()),
+            message: BoundedVec(message.clone()),
             signature: BoundedVec(signature.clone()),
         };
 
@@ -324,7 +327,7 @@ where
             pallet_name: Cow::Borrowed("SignatureBridge"),
             call_name: Cow::Borrowed("set_maintainer"),
             fields: vec![
-                Value::from_bytes(new_maintainer),
+                Value::from_bytes(message),
                 Value::from_bytes(signature),
             ],
         };
