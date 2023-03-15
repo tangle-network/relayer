@@ -46,6 +46,38 @@ following section we will describe the different configuration entries and how t
       - [address](#address-1)
       - [pallet](#pallet)
       - [tree-id](#tree-id)
+- [Substrate Node Configuration](#substrate-node-configuration)
+  - [name](#name-1)
+  - [chain-id](#chain-id-2)
+  - [http-endpoint](#http-endpoint-1)
+  - [ws-endpoint](#ws-endpoint-1)
+  - [enabled](#enabled-2)
+  - [explorer](#explorer-1)
+  - [suri](#suri)
+  - [beneficiary](#beneficiary-1)
+  - [runtime](#runtime)
+  - [tx-queue](#tx-queue-1)
+    - [max-sleep-interval](#max-sleep-interval-1)
+  - [pallets](#pallets)
+    - [pallet](#pallet-1)
+    - [events-watcher](#events-watcher-1)
+      - [enabled](#enabled-3)
+      - [polling-interval](#polling-interval-1)
+      - [max-blocks-per-step](#max-blocks-per-step-1)
+      - [sync-blocks-from](#sync-blocks-from-1)
+      - [print-progress-interval](#print-progress-interval-1)
+      - [enable-data-query](#enable-data-query-1)
+    - [proposal-signing-backend](#proposal-signing-backend-1)
+      - [type](#type)
+      - [node](#node)
+      - [private-key](#private-key-1)
+    - [linked-anchors](#linked-anchors)
+      - [type](#type-1)
+      - [resource-id](#resource-id)
+      - [chain-id](#chain-id-2)
+      - [address](#address-1)
+      - [pallet](#pallet-1)
+      - [tree-id](#tree-id)
 
 ### Global Configuration
 
@@ -600,6 +632,8 @@ which is only available when the [type](#type) is `VAnchor`. This configration v
 Linked Anchors, that are defined in a human-readable format (or raw format), nonetheless, the
 relayer will convert them to a raw format before using them.
 
+- Required: `false`
+- Default: `null` (defaults to an empty list)
 - Avilable configuration values:
 
 ```toml
@@ -718,4 +752,373 @@ type = "VAnchor"
 linked-anchors = [
   { type = "Raw", resource-id = "0x..." },
 ]
+```
+
+### Substrate Node Configuration
+
+The Substrate Node configuration file is used to configure the relayer to work with a specific
+Substrate Node. It is usually located at a file called `substrate/<node-name>.toml` in the `config`
+directory.
+
+The value of this configration is a table, and the name of the table is the name of the node, for
+example:
+
+```toml
+[substrate.tangle]
+chain-id = 1080
+name = "tangle"
+# ...
+```
+
+So, in general it is `[substrate.<node-name>]`, where `<node-name>` is the name of the network. The
+following sections describe the different configuration entries and how to use them.
+
+#### name
+
+The name of the Substrate node.
+
+- Type: `string`
+- Required: `true`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_NAME`
+- Example:
+
+```toml
+[substrate.tangle]
+name = "tangle"
+```
+
+#### chain-id
+
+The chain-id of the Substrate node.
+
+- Type: `number`
+- Required: `true`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_CHAIN_ID`
+- Example:
+
+```toml
+[substrate.tangle]
+chain-id = 1080
+```
+
+#### http-endpoint
+
+The RPC endpoint of the Substrate node.
+
+- Type: `string`
+- Required: `true`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_HTTP_ENDPOINT`
+- Example:
+
+```toml
+[substrate.tangle]
+http-endpoint = "http://localhost:9933"
+```
+
+#### ws-endpoint
+
+The RPC WebSocket endpoint of the Substrate node.
+
+- Type: `string`
+- Required: `true`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_WS_ENDPOINT`
+- Example:
+
+```toml
+[substrate.tangle]
+ws-endpoint = "ws://localhost:9944"
+```
+
+#### runtime
+
+The runtime of the running substrate node. These are predifined in the relayer, with each having
+different types of Options.
+
+- Type: `string`
+- Required: `true`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_RUNTIME`
+- Possible values:
+  - `DKG` (that is, `dkg-substrate`)
+  - `WebbProtocol` (also known as `protocol-substrate`)
+- Example:
+
+```toml
+[substrate.tangle]
+runtime = "WebbProtocol"
+```
+
+#### enabled
+
+Whether the Substrate node is enabled or not. If it is not enabled, the relayer will not try to add
+it to the list of available nodes.
+
+- Type: `bool`
+- Required: `false`
+- Default: `true`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_ENABLED`
+- Example:
+
+```toml
+[substrate.tangle]
+enabled = true
+```
+
+#### explorer
+
+The explorer of the Substrate Network. This is used to display clickable links to the explorer in
+the logs.
+
+- Type: `string`
+- Required: `false`
+- Default: `null`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_EXPLORER`
+- Example:
+
+```toml
+[substrate.tangle]
+explorer = "https://tangle-explorer.webb.tools"
+```
+
+#### suri
+
+SURI stands for "secret URI". It is a mnemonic phrase that can be used to generate a private key.
+This is used to sign extrinsics. we will refer to this as the "s" for now, The value is a string
+(`s`) that we will try to interpret the string in order to generate a key Pair. in the case that the
+pair can be expressed as a direct derivation from a seed (some cases, such as Sr25519 derivations
+with path components, cannot).
+
+This takes a helper function to do the key generation from a phrase, password and junction iterator.
+
+- If `s` begins with a `$` character it is interpreted as an environment variable.
+- If `s` is a possibly `0x` prefixed 64-digit hex string, then it will be interpreted directly as a
+  `MiniSecretKey` (aka "seed" in `subkey`).
+- If `s` is a valid BIP-39 key phrase of 12, 15, 18, 21 or 24 words, then the key will be derived
+  from it. In this case:
+  - the phrase may be followed by one or more items delimited by `/` characters.
+  - the path may be followed by `///`, in which case everything after the `///` is treated as a
+    password.
+- If `s` begins with a `/` character it is prefixed with the Substrate public `DEV_PHRASE` and
+  interpreted as above.
+
+In this case they are interpreted as HDKD junctions; purely numeric items are interpreted as
+integers, non-numeric items as strings. Junctions prefixed with `/` are interpreted as soft
+junctions, and with `//` as hard junctions.
+
+There is no correspondence mapping between SURI strings and the keys they represent. Two different
+non-identical strings can actually lead to the same secret being derived. Notably, integer junction
+indices may be legally prefixed with arbitrary number of zeros. Similarly an empty password (ending
+the SURI with `///`) is perfectly valid and will generally be equivalent to no password at all.
+
+The value of this string could also start with `$` to indicate that it is an environment variable,
+in which case the value of the environment variable will be used.
+
+> **Warning**: This is a sensitive value, and should be kept secret. It is recommended to use an
+> environment variable to store the value of this string.
+
+- Type: `string`
+- Required: `true`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_SURI`
+- Example:
+
+```toml
+[substrate.tangle]
+suri = "$TANGLE_SURI"
+```
+
+#### beneficiary
+
+The beneficiary is the address that will receive the fees from the transactions. This is optional,
+and will default to the address derived from the `suri` if not provided.
+
+- Type: `string`
+- Required: `false`
+- Default: `null`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_BENEFICIARY`
+- Example:
+
+```toml
+[substrate.tangle]
+beneficiary = "5FZ2Wfjy5rZ7g5j7Y9Zwv5Z4Z3Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9"
+```
+
+#### Tx Queue
+
+The transaction queue is a queue of transactions that are waiting to be sent to the Substrate node.
+
+##### max-sleep-interval
+
+The maximum sleep interval between sending transactions to the Substrate node.
+
+- Type: `number`
+- Required: `false`
+- Default: `10000ms`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_TRANSACTION_QUEUE_MAX_SLEEP_INTERVAL`
+- Example:
+
+```toml
+[substrate.tangle]
+tx-queue = { max-sleep-interval = 10000 }
+```
+
+#### Pallets
+
+The pallets are the different pallets that are used by the relayer. Each will define its own
+configration which will eventually be used by the relayer to start a different service for each
+pallet.
+
+There are currently 5 different pallets that are supported by the relayer:
+
+- `DKG`
+- `DkgProposals`
+- `DkgProposalHandler`
+- `SignatureBridge`
+- `VAnchorBn254`
+
+- Type: `table`
+- Required: `false`
+- Default: `null` (empty table)
+- Example:
+
+```toml
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+
+[[substrate.tangle.pallets]]
+pallet = "DkgProposals"
+# ...
+```
+
+##### pallet
+
+The type of the pallet. This is used to determine which pallet to use.
+
+- Type: `string`
+- Required: `true`
+- Possible values:
+  - `DKG`
+  - `DkgProposals`
+  - `DkgProposalHandler`
+  - `SignatureBridge`
+  - `VAnchorBn254`
+- Example:
+
+```toml
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+```
+
+##### events-watcher
+
+The events watcher is used to watch for events emitted by the pallet.
+
+- Type: `table`
+- Required: `false`
+- Default: `null` (empty table)
+- Example:
+
+```toml
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true }
+```
+
+###### enabled
+
+Whether the events watcher is enabled or not. If it is not enabled, the relayer will not try to
+watch events emitted by the pallet.
+
+- Type: `bool`
+- Required: `false`
+- Default: `true`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_ENABLED`
+- Example:
+
+```toml
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true }
+```
+
+##### enable-data-query
+
+Whether the data query is enabled or not. If it is not enabled, the relayer will not try to query
+the data from the pallet.
+
+- Type: `bool`
+- Required: `false`
+- Default: `true`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_ENABLE_DATA_QUERY`
+- Example:
+
+```toml
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true, enable-data-query = true }
+```
+
+##### polling-interval
+
+The polling interval is the interval at which the relayer will poll the Substrate node for new
+blocks.
+
+- Type: `number`
+- Required: `false`
+- Default: `6000ms`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_POLLING_INTERVAL`
+- Example:
+
+```toml
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true, polling-interval = 6000 }
+```
+
+##### max-blocks-per-step
+
+The maximum number of blocks to process per step.
+
+- Type: `number`
+- Required: `false`
+- Default: `100`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_MAX_BLOCKS_PER_STEP`
+- Example:
+
+```toml
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true, max-blocks-per-step = 100 }
+```
+
+##### sync-blocks-from
+
+The block number from which to start syncing events from. This is useful if you want to start the
+relayer from a specific block instead of block zero.
+
+- Type: `number`
+- Required: `false`
+- Default: `0`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_SYNC_BLOCKS_FROM`
+- Example:
+
+```toml
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true, sync-blocks-from = 42069 }
+```
+
+##### print-progress-interval
+
+The interval at which the relayer will print the progress of the syncing process. Useful for
+debugging.
+
+- Type: `number`
+- Required: `false`
+- Default: `12000ms`
+- env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_PRINT_PROGRESS_INTERVAL`
+- Example:
+
+```toml
+[[substrate.tangle.pallets]]
+pallet = "DKG"
+events-watcher = { enabled = true, print-progress-interval = 12000 }
 ```
