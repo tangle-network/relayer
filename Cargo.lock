@@ -8042,16 +8042,12 @@ dependencies = [
  "hex",
  "hex-literal",
  "native-tls",
- "sled",
  "sp-core",
  "tokio 1.26.0",
- "tracing",
  "typed-builder 0.12.0",
  "webb 0.5.20",
  "webb-proposals",
  "webb-relayer-config",
- "webb-relayer-store",
- "webb-relayer-types 0.1.0",
  "webb-relayer-utils 0.1.0",
 ]
 

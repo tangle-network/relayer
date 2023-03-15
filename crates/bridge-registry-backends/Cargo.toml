@@ -9,14 +9,10 @@ homepage = { workspace = true }
 repository = { workspace = true }
 
 [dependencies]
-webb-relayer-types = { path = "../relayer-types" }
-webb-relayer-store = { path = "../relayer-store" }
 webb-relayer-utils = { path = "../relayer-utils" }
 webb-relayer-config = { path = "../relayer-config" }
 
 async-trait = { workspace = true }
-tracing = { workspace = true }
-sled = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true }
 hex = { workspace = true }

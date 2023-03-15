@@ -40,28 +40,6 @@ async fn submit_anchor_update_proposal() {
         .await
         .unwrap();
 
-    /*
-    println!("register resource 1");
-    let register_resource1 =
-        tx_api.set_resource(DkgResourceId(resource_id.into_bytes()), vec![]);
-    let mut progress = api
-        .tx()
-        .sign_and_submit_then_watch_default(&register_resource1, &sudo_account)
-        .await
-        .unwrap();
-    watch_events(&mut progress).await;
-
-    println!("register resource 2");
-    let register_resource2 = tx_api
-        .set_resource(DkgResourceId(src_resource_id.into_bytes()), vec![]);
-    let mut progress = api
-        .tx()
-        .sign_and_submit_then_watch_default(&register_resource2, &sudo_account)
-        .await
-        .unwrap();
-    watch_events(&mut progress).await;
-    */
-
     // following code runs in a loop in original code
     {
         let proposal_header = ProposalHeader::new(

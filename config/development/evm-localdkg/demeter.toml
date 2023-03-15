@@ -36,7 +36,6 @@ enabled = true
 # - VAnchor (Variable Anchor)
 # - SignatureBridge
 contract = "VAnchor"
-type = "VAnchor"
 # The address of the contract
 address = "0x6595b34ED0a270B10a586FC1EA22030A95386f1e"
 # The deployed block number of the contract. When a relayer does not have information for
@@ -62,7 +61,6 @@ proposal-signing-backend = { type = "DKGNode", node = "5" }
 
 [[evm.demeter.contracts]]
 contract = "SignatureBridge"
-type = "SignatureBridge"
 address = "0x2946259E0334f33A064106302415aD3391BeD384"
 deployed-at = 1
 events-watcher = { enabled = true, polling-interval = 10000, print-progress-interval = 0 }

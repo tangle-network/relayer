@@ -31,6 +31,7 @@ use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb::evm::ethers::providers;
+use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
 use webb_ew_dkg::DKGMetadataWatcher;
 use webb_ew_dkg::DKGProposalHandlerWatcher;
 use webb_ew_dkg::DKGPublicKeyChangedHandler;
@@ -41,7 +42,7 @@ use webb_ew_substrate::SubstrateVAnchorEventWatcher;
 
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
-use webb_bridge_registry_backends::BridgeRegistryBackend;
+use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
 use webb_event_watcher_traits::evm::{BridgeWatcher, EventWatcher};
 use webb_event_watcher_traits::substrate::SubstrateBridgeWatcher;
 use webb_event_watcher_traits::SubstrateEventWatcher;
@@ -77,8 +78,6 @@ use webb_relayer_handlers::{
     handle_fee_info, handle_socket_info, websocket_handler,
 };
 
-use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
-use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
 use webb_relayer_handlers::routes::info::handle_relayer_info;
 use webb_relayer_handlers::routes::leaves::{
     handle_leaves_cache_evm, handle_leaves_cache_substrate,
@@ -361,16 +360,13 @@ pub fn start_substrate_vanchor_event_watcher(
         )
         .await?;
         match proposal_signing_backend {
-            ProposalSigningBackendSelector::Dkg((
-                proposal_signing,
-                bridge_registry,
-            )) => {
-                let linked_anchors = bridge_registry
-                    .config_or_dkg_bridges(&my_config.linked_anchors)
-                    .await?;
+            ProposalSigningBackendSelector::Dkg(backend) => {
+                // its safe to use unwrap on linked_anchors here
+                // since this option is always going to return Some(value).
+                // linked_anchors are validated in make_proposal_signing_backend() method
                 let deposit_handler = SubstrateVAnchorDepositHandler::new(
-                    proposal_signing,
-                    linked_anchors,
+                    backend,
+                    my_config.linked_anchors.unwrap(),
                 );
                 let leaves_handler = SubstrateVAnchorLeavesHandler::default();
                 let encrypted_output_handler =
@@ -406,17 +402,12 @@ pub fn start_substrate_vanchor_event_watcher(
                     },
                 }
             }
-            ProposalSigningBackendSelector::Mocked((
-                proposal_signing,
-                bridge_registry,
-            )) => {
+            ProposalSigningBackendSelector::Mocked(backend) => {
                 // its safe to use unwrap on linked_anchors here
                 // since this option is always going to return Some(value).
                 let deposit_handler = SubstrateVAnchorDepositHandler::new(
-                    proposal_signing,
-                    bridge_registry
-                        .config_or_dkg_bridges(&my_config.linked_anchors)
-                        .await?,
+                    backend,
+                    my_config.linked_anchors.unwrap(),
                 );
                 let leaves_handler = SubstrateVAnchorLeavesHandler::default();
                 let encrypted_output_handler =
@@ -661,7 +652,7 @@ async fn start_evm_vanchor_events_watcher(
             contract_address,
         );
         let contract_watcher = VAnchorContractWatcher::default();
-        let dkg_backends = make_dkg_backends(
+        let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
             chain_id,
@@ -669,15 +660,13 @@ async fn start_evm_vanchor_events_watcher(
             my_config.proposal_signing_backend,
         )
         .await?;
-        match dkg_backends {
-            ProposalSigningBackendSelector::Dkg((
-                proposal_signing,
-                bridge_registry,
-            )) => {
-                let deposit_handler = VAnchorDepositHandler::new(
-                    proposal_signing,
-                    bridge_registry,
+        match proposal_signing_backend {
+            ProposalSigningBackendSelector::Dkg(backend) => {
+                let bridge_registry = DkgBridgeRegistryBackend::new(
+                    OnlineClient::<PolkadotConfig>::new().await?,
                 );
+                let deposit_handler =
+                    VAnchorDepositHandler::new(backend, bridge_registry);
                 let leaves_handler = VAnchorLeavesHandler::new(
                     store.clone(),
                     default_leaf_bytes.to_vec(),
@@ -710,14 +699,11 @@ async fn start_evm_vanchor_events_watcher(
                     },
                 }
             }
-            ProposalSigningBackendSelector::Mocked((
-                proposal_signing,
-                bridge_registry,
-            )) => {
-                let deposit_handler = VAnchorDepositHandler::new(
-                    proposal_signing,
-                    bridge_registry,
-                );
+            ProposalSigningBackendSelector::Mocked(backend) => {
+                let bridge_registry =
+                    MockedBridgeRegistryBackend::builder().build();
+                let deposit_handler =
+                    VAnchorDepositHandler::new(backend, bridge_registry);
                 let leaves_handler = VAnchorLeavesHandler::new(
                     store.clone(),
                     default_leaf_bytes.to_vec(),
@@ -830,7 +816,7 @@ pub async fn start_evm_open_vanchor_events_watcher(
             contract_address,
         );
         let contract_watcher = OpenVAnchorContractWatcher::default();
-        let dkg_backends = make_dkg_backends(
+        let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
             chain_id,
@@ -838,15 +824,13 @@ pub async fn start_evm_open_vanchor_events_watcher(
             my_config.proposal_signing_backend,
         )
         .await?;
-        match dkg_backends {
-            ProposalSigningBackendSelector::Dkg((
-                proposal_signing,
-                bridge_registry,
-            )) => {
-                let deposit_handler = OpenVAnchorDepositHandler::new(
-                    proposal_signing,
-                    bridge_registry,
+        match proposal_signing_backend {
+            ProposalSigningBackendSelector::Dkg(backend) => {
+                let bridge_registry = DkgBridgeRegistryBackend::new(
+                    OnlineClient::<PolkadotConfig>::new().await?,
                 );
+                let deposit_handler =
+                    OpenVAnchorDepositHandler::new(backend, bridge_registry);
                 let leaves_handler = OpenVAnchorLeavesHandler::default();
 
                 let vanchor_watcher_task = contract_watcher.run(
@@ -871,14 +855,11 @@ pub async fn start_evm_open_vanchor_events_watcher(
                     },
                 }
             }
-            ProposalSigningBackendSelector::Mocked((
-                proposal_signing,
-                bridge_registry,
-            )) => {
-                let deposit_handler = OpenVAnchorDepositHandler::new(
-                    proposal_signing,
-                    bridge_registry,
-                );
+            ProposalSigningBackendSelector::Mocked(backend) => {
+                let bridge_registry =
+                    MockedBridgeRegistryBackend::builder().build();
+                let deposit_handler =
+                    OpenVAnchorDepositHandler::new(backend, bridge_registry);
                 let leaves_handler = OpenVAnchorLeavesHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
@@ -1215,17 +1196,12 @@ pub enum ProposalSigningBackendSelector {
     /// None
     None,
     /// Mocked
-    Mocked(
-        (
-            MockedProposalSigningBackend<SledStore>,
-            MockedBridgeRegistryBackend,
-        ),
-    ),
+    Mocked(MockedProposalSigningBackend<SledStore>),
     /// Dkg
-    Dkg((DkgProposalSigningBackend, DkgBridgeRegistryBackend)),
+    Dkg(DkgProposalSigningBackend),
 }
 /// utility to configure proposal signing backend
-pub async fn make_dkg_backends(
+pub async fn make_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
     chain_id: u32,
@@ -1237,9 +1213,22 @@ pub async fn make_dkg_backends(
         tracing::warn!("Governance relaying is not enabled for relayer");
         return Ok(ProposalSigningBackendSelector::None);
     }
-    let bridge_registry = DkgBridgeRegistryBackend::new(
-        OnlineClient::<PolkadotConfig>::new().await.unwrap(),
-    );
+
+    // We do this by checking if linked anchors are provided.
+    let linked_anchors = match linked_anchors {
+        Some(anchors) => {
+            if anchors.is_empty() {
+                tracing::warn!("Misconfigured Network: Linked anchors cannot be empty for governance relaying");
+                return Ok(ProposalSigningBackendSelector::None);
+            } else {
+                anchors
+            }
+        }
+        None => {
+            tracing::warn!("Misconfigured Network: Linked anchors must be configured for governance relaying");
+            return Ok(ProposalSigningBackendSelector::None);
+        }
+    };
 
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
@@ -1250,15 +1239,12 @@ pub async fn make_dkg_backends(
             let dkg_client =
                 ctx.substrate_provider::<PolkadotConfig>(&c.node).await?;
             let pair = ctx.substrate_wallet(&c.node).await?;
-            let proposal_signing = DkgProposalSigningBackend::new(
+            let backend = DkgProposalSigningBackend::new(
                 dkg_client,
                 PairSigner::new(pair),
                 typed_chain_id,
             );
-            Ok(ProposalSigningBackendSelector::Dkg((
-                proposal_signing,
-                bridge_registry,
-            )))
+            Ok(ProposalSigningBackendSelector::Dkg(backend))
         }
         Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
@@ -1266,9 +1252,6 @@ pub async fn make_dkg_backends(
             // get only the linked chains to that anchor.
             let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
                 HashSet::new();
-            let linked_anchors = bridge_registry
-                .config_or_dkg_bridges(&linked_anchors)
-                .await?;
             linked_anchors.iter().for_each(|anchor| {
                 // using chain_id to ensure that we have only one signature bridge
                 let resource_id = match anchor {
@@ -1280,17 +1263,12 @@ pub async fn make_dkg_backends(
                 };
                 signature_bridges.insert(resource_id);
             });
-            let proposal_signing = MockedProposalSigningBackend::builder()
+            let backend = MockedProposalSigningBackend::builder()
                 .store(store.clone())
                 .private_key(mocked.private_key)
                 .signature_bridges(signature_bridges)
                 .build();
-            let bridge_registry =
-                MockedBridgeRegistryBackend::builder().build();
-            Ok(ProposalSigningBackendSelector::Mocked((
-                proposal_signing,
-                bridge_registry,
-            )))
+            Ok(ProposalSigningBackendSelector::Mocked(backend))
         }
         None => {
             tracing::warn!("Misconfigured Network: Proposal signing backend must be configured for governance relaying");
@@ -1312,10 +1290,6 @@ pub async fn make_substrate_proposal_signing_backend(
         tracing::warn!("Governance relaying is not enabled for relayer");
         return Ok(ProposalSigningBackendSelector::None);
     }
-    let bridge_registry = DkgBridgeRegistryBackend::new(
-        OnlineClient::<PolkadotConfig>::new().await.unwrap(),
-    );
-
     // check if linked anchors are provided.
     let linked_anchors = match linked_anchors {
         Some(anchors) => {
@@ -1341,15 +1315,12 @@ pub async fn make_substrate_proposal_signing_backend(
             let dkg_client =
                 ctx.substrate_provider::<PolkadotConfig>(&c.node).await?;
             let pair = ctx.substrate_wallet(&c.node).await?;
-            let proposal_signing = DkgProposalSigningBackend::new(
+            let backend = DkgProposalSigningBackend::new(
                 dkg_client,
                 PairSigner::new(pair),
                 typed_chain_id,
             );
-            Ok(ProposalSigningBackendSelector::Dkg((
-                proposal_signing,
-                bridge_registry,
-            )))
+            Ok(ProposalSigningBackendSelector::Dkg(backend))
         }
         Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
@@ -1357,9 +1328,6 @@ pub async fn make_substrate_proposal_signing_backend(
             // get only the linked chains to that anchor.
             let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
                 HashSet::new();
-            let linked_anchors = bridge_registry
-                .config_or_dkg_bridges(&Some(linked_anchors))
-                .await?;
             linked_anchors.iter().for_each(|anchor| {
                 // using chain_id to ensure that we have only one signature bridge
                 let resource_id = match anchor {
@@ -1372,17 +1340,12 @@ pub async fn make_substrate_proposal_signing_backend(
                 signature_bridges.insert(resource_id);
             });
 
-            let proposal_signing = MockedProposalSigningBackend::builder()
+            let backend = MockedProposalSigningBackend::builder()
                 .store(store.clone())
                 .private_key(mocked.private_key)
                 .signature_bridges(signature_bridges)
                 .build();
-            let bridge_registry =
-                MockedBridgeRegistryBackend::builder().build();
-            Ok(ProposalSigningBackendSelector::Mocked((
-                proposal_signing,
-                bridge_registry,
-            )))
+            Ok(ProposalSigningBackendSelector::Mocked(backend))
         }
         None => {
             tracing::warn!("Misconfigured Network: Proposal signing backend must be configured for governance relaying");

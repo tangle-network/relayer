@@ -135,7 +135,10 @@ where
 
         let linked_anchors = self
             .bridge_registry_backend
-            .config_or_dkg_bridges(&wrapper.config.linked_anchors)
+            .config_or_dkg_bridges(
+                &wrapper.config.linked_anchors,
+                &src_resource_id,
+            )
             .await?;
         for linked_anchor in linked_anchors {
             let target_resource_id = match linked_anchor {
