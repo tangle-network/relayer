@@ -359,19 +359,19 @@ Here is an example of the configuration for the contracts:
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 address = "0x8eB24319393716668D768dCEC29356ae9CfFe285"
 deployed-at = 3123412
 # ...
 
 [[evm.ethereum.contracts]]
-type = "SignatureBridge"
+contract = "SignatureBridge"
 address = "0xd8dA6BF26964aF9D7eEd9e03E03517D3faA9d045"
 deployed-at = 3123413
 # ...
 ```
 
-##### type
+##### contract
 
 The type of the contract. This is used to identify the contract, and the relayer will use this to
 determine which contract to use for a specific operation. Each contract type has its own
@@ -388,7 +388,7 @@ configuration, and different internally service that will handle the contract op
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 ```
 
 ##### address
@@ -402,7 +402,7 @@ The address of the contract on the configured chain.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 address = "0x8eB24319393716668D768dCEC29356ae9CfFe285"
 ```
 
@@ -418,7 +418,7 @@ start scanning for events from.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 deployed-at = 3123412
 ```
 
@@ -431,7 +431,7 @@ configration values to determine how the relayer will poll the events from that 
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 events-watcher = { enabled = true, poll-interval = 12000 }
 ```
 
@@ -447,7 +447,7 @@ Enable or disable the events watcher for this contract.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 events-watcher = { enabled = true }
 ```
 
@@ -464,7 +464,7 @@ like the leaves for example.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 events-watcher = { enable-data-query = true }
 ```
 
@@ -480,7 +480,7 @@ The interval at which the relayer will poll for events from the contract.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 events-watcher = { poll-interval = 12000 }
 ```
 
@@ -498,7 +498,7 @@ relayer will sync the chain.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 events-watcher = { max-blocks-per-step = 500 }
 ```
 
@@ -518,7 +518,7 @@ value here.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 events-watcher = { sync-blocks-from = 3123412 }
 ```
 
@@ -535,7 +535,7 @@ show the user the progress of the syncing process which could be useful for debu
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 events-watcher = { print-progress-interval = 60000 }
 ```
 
@@ -559,7 +559,7 @@ The type of the proposal signing backend to use.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 proposal-signing-backend = { type = "Mocked", private-key = "0x..." }
 ```
 
@@ -575,7 +575,7 @@ should not be used in production environment.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 proposal-signing-backend = { type = "Mocked", private-key = "0x..." }
 ```
 
@@ -592,7 +592,7 @@ The private key to use for signing the proposals. Only used by the mocked propos
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 proposal-signing-backend = { type = "Mocked", private-key = "0x..." }
 ```
 
@@ -604,7 +604,7 @@ The DKG proposal signing backend is used for signing the proposals using the DKG
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 proposal-signing-backend = { type = "Dkg", node = "1080" }
 ```
 
@@ -621,7 +621,7 @@ The node's chain-id to use for signing the proposals. Only used by the DKG propo
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 proposal-signing-backend = { type = "Dkg", node = "1080" }
 ```
 
@@ -638,7 +638,7 @@ relayer will convert them to a raw format before using them.
 
 ```toml
 [[evm.ethereum.contracts]]
-type = "VAnchor"
+contract = "VAnchor"
 linked-anchors = [
   { type = "Evm", chain-id = 1, address = "0x..." },
   { type = "Substrate", chain-id = 1080, pallet = 42, tree-id = 4 },
