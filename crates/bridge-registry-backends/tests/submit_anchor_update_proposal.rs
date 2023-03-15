@@ -26,7 +26,7 @@ async fn submit_anchor_update_proposal() {
     let bridges = bridge_registry
         .bridges(next_bridge_index - 1)
         .await
-        .unwrap();
+        .unwrap().unwrap();
     let resource_id = ResourceId(bridges.resource_ids.0[1].0);
     let src_resource_id = ResourceId(bridges.resource_ids.0[0].0);
 
