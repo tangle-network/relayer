@@ -27,15 +27,9 @@ Then, you can run the following commands:
 cp config/development/<config>/.env.example .env
 ```
 
-Compile the relayer crates and Relayer CLI:
+You will also need to follow these steps:
 
-```bash
-cargo build -p webb-relayer --features cli
-```
-
-You will also need the following scripts:
-
-- [LocalEvmVBridge.ts](https://github.com/webb-tools/protocol-solidity/blob/a56f5cd325e7f6b59d2eeae8597836dfae012da5/scripts/evm/deployments/LocalEvmVBridge.ts)
+- [Running Local Bridge](https://github.com/webb-tools/webb-dapp/tree/develop/apps/bridge-dapp#run-local-webb-relayer-and-local-network-alongside-hubble-bridge)
 - [Local Standalone Tangle Network\*](https://github.com/webb-tools/tangle/tree/main/scripts#run-a-standalone-tangle-network)
 
 * Note: The Tangle Network is only Required for the EVM Local <> Tangle configuration and is not required for the EVM Blanknet configuration.
@@ -43,7 +37,7 @@ You will also need the following scripts:
 After that, you can run the relayer:
 
 ```bash
-./target/debug/webb-relayer -vvv --tmp --config config/development/<config>
+cargo run --bin webb-relayer -- -vvv --tmp --config config/development/<config>
 ```
 
 ## Production Configuration
@@ -52,6 +46,5 @@ This Repository does not contain any production ready configration, but they are
 
 However, you can take a look at the following configrations:
 
-1. [exclusive-startegies](../exclusive-strategies/) - These are a set of configrations that are used for the exclusive strategies of different roles that you can use the relayer for.
-2. [full-support](../full-support/) - Shows you how you can combine the different strategies to support all the roles that you can use the relayer for.
-3. [example](../example/) - This is a very simple and minimal configuration for starting a Private Transaction Relayer over the Gorli Testnet.
+1. [exclusive-startegies](../exclusive-strategies/) - These are a set of configurations that are used for the exclusive strategies of different roles that you can use the relayer for.
+2. [example](../example/) - This is a very simple and minimal configuration for starting a Private Transaction Relayer over the Gorli Testnet.
