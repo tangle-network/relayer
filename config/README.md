@@ -150,8 +150,7 @@ data-query = true
 
 ##### private-tx-relay
 
-Enable or disable the private-tx-relay feature. Enabling this feature will allow the relayer to
-relay private transactions, to preserve the privacy of the transactions.
+Enable or disable the private-tx-relay feature. When enabled, the relayer will be able to relay private transactions.
 
 - Type: `bool`
 - Required: `false`
@@ -236,22 +235,15 @@ ws-endpoint = "wss://mainnet.infura.io/ws/v3/<project-id>"
 
 #### private-key
 
-The Private Key of this account on this network, used for signing transactions. the format is more
-dynamic here:
+The private key configuration specifies the private key of the account on the EVM chain used for signing transactions. The format of the private key depends on its value:
 
-1.if it starts with '0x' then this would be raw (64 bytes) hex encoded private key. Example:
-`0x8917174396171783496173419137618235192359106130478137647163400318`
+If the private key starts with `0x`, it is considered a raw (64 bytes) hex-encoded private key. Example: `0x8917174396171783496173419137618235192359106130478137647163400318`.
 
-2.if it starts with
-'$' then it would be considered as an Enviroment variable of a hex-encoded private key.
-  Example: `$MAINNET_PRIVATE_KEY`
+If the private key starts with `$`, it is considered an environment variable containing a hex-encoded private key. Example: `$MAINNET_PRIVATE_KEY`.
 
-3.if it starts with '> ' then it would be considered as a command that the relayer would execute and
-the output of this command would be the hex encoded private key. Example:
-`> ./getKey.sh mainnet-privatekey`
+If the private key starts with '> ', it is considered a command that the relayer will execute to obtain the hex-encoded private key. Example: > `./getKey.sh mainnet-privatekey`.
 
-4.if it doesn't contains special characters and has 12 or 24 words in it then we should process it
-as a mnemonic string: 'word two three four ...'
+If the private key doesn't contain special characters and has 12 or 24 words, it is considered a mnemonic string. The words should be separated by spaces, and the string should not be enclosed in quotes or any other characters.
 
 - Type: `string`
 - Required:
@@ -316,7 +308,7 @@ explorer = "https://etherscan.io"
 
 The address of the beneficiary account on this chain. This is used to receive the fees from relaying
 transactions. It is optional, and if not provided, the relayer will use the account address of the
-proivided [private-key](#private-key) for this chain.
+provided [private-key](#private-key) for this chain.
 
 - Type: `string`
 - Required: `false`
@@ -336,8 +328,7 @@ uses a database to store the transactions, and the configuration for the databas
 
 ##### max-sleep-interval
 
-The maximum time to sleep between sending transactions. This to control the rate at which the
-relayer sends transactions to the chain.
+The maximum time to sleep between sending transactions. This controls the rate at which the relayer sends transactions to the chain.
 
 - Type: `number`
 - Required: `false`
@@ -375,7 +366,7 @@ deployed-at = 3123413
 
 The type of the contract. This is used to identify the contract, and the relayer will use this to
 determine which contract to use for a specific operation. Each contract type has its own
-configuration, and different internally service that will handle the contract operations.
+configuration, and different internal service that will handle the contract operations.
 
 - Type: `enum`
 - Possible values:
@@ -408,8 +399,7 @@ address = "0x8eB24319393716668D768dCEC29356ae9CfFe285"
 
 ##### deployed-at
 
-The block number at which the contract was deployed. This is used to determine the block number to
-start scanning for events from.
+The block number at which the contract was deployed. This is used to determine the starting block number for scanning events.
 
 - Type: `number`
 - Required: `true`
@@ -453,8 +443,7 @@ events-watcher = { enabled = true }
 
 ###### enable-data-query
 
-Enable or disable the data query for this contract. This is used to query the contract's events,
-like the leaves for example.
+Enable or disable the data query for this contract. When enabled, it allows the relayer to query the contract's events, such as the leaves.
 
 - Type: `bool`
 - Required: `false`
@@ -486,9 +475,7 @@ events-watcher = { poll-interval = 12000 }
 
 ##### max-blocks-per-step
 
-The maximum number of blocks to scan for events in a single step. This is used to control the rate
-at which the relayer scans for events from that contract. which also controls the speed at which the
-relayer will sync the chain.
+The maximum number of blocks to scan for events in a single step. This controls the rate at which the relayer scans for events from the contract, and also affects the speed at which the relayer synchronizes with the chain.
 
 - Type: `number`
 - Required: `false`
@@ -504,11 +491,7 @@ events-watcher = { max-blocks-per-step = 500 }
 
 ##### sync-blocks-from
 
-The block number to start scanning for events from. This similar to the [deployed-at](#deployed-at)
-configuration value, but this is used to override the value of the [deployed-at](#deployed-at)
-configuration value However, this is only used when the relayer is syncing the chain for the first
-time, and the relayer will use the [deployed-at](#deployed-at) configuration value as the default
-value here.
+The block number to start scanning for events from. This value can override the [deployed-block](#deployed-at) configuration value but is only used during the initial synchronization of the chain. If not specified, the relayer uses the [deployed-block](#deployed-at) configuration value as the default starting block number.
 
 - Type: `number`
 - Required: `false`
@@ -543,7 +526,7 @@ events-watcher = { print-progress-interval = 60000 }
 
 A Proposal Signing backend is used for signing proposals that the relayer will submit to be signed
 and later executed on the target chain. Currently, there are two types of proposal signing backends,
-the Moked one, and the DKG based one.
+the Mocked one, and the DKG based one.
 
 ###### type
 
@@ -571,7 +554,7 @@ The mocked proposal signing backend is used for testing purposes, and it is most
 local and integration tests. This backend will sign the proposals with a mocked keypair; hence
 should not be used in production environment.
 
-- Avilable configuration values:
+- Available configuration values:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -600,7 +583,7 @@ proposal-signing-backend = { type = "Mocked", private-key = "0x..." }
 
 The DKG proposal signing backend is used for signing the proposals using the DKG configured node.
 
-- Avilable configuration values:
+- Available configuration values:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -627,14 +610,13 @@ proposal-signing-backend = { type = "Dkg", node = "1080" }
 
 ##### Linked Anchors
 
-The Linked Anchors configuration is used to define the linked anchors for this VAnchor contract.
-which is only available when the [type](#type) is `VAnchor`. This configration value is a list of
-Linked Anchors, that are defined in a human-readable format (or raw format), nonetheless, the
-relayer will convert them to a raw format before using them.
+The Linked Anchors configuration is used to define the linked anchors for the VAnchor contract. This configuration is only available when the [type](#type) is set to `VAnchor`.
+
+The configuration value is a list of Linked Anchors, defined in a human-readable format. However, the relayer will convert them to a raw format before using them.
 
 - Required: `false`
 - Default: `null` (defaults to an empty list)
-- Avilable configuration values:
+- Available configuration values:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -756,12 +738,9 @@ linked-anchors = [
 
 ### Substrate Node Configuration
 
-The Substrate Node configuration file is used to configure the relayer to work with a specific
-Substrate Node. It is usually located at a file called `substrate/<node-name>.toml` in the `config`
-directory.
+The Substrate Node configuration file is used to specify the configuration settings required for the relayer to work with a specific Substrate Node. The file is typically located in the `config` directory and named `substrate/<node-name>.toml`.
 
-The value of this configration is a table, and the name of the table is the name of the node, for
-example:
+The configuration value is a table, and its name corresponds to the name of the node. For example:
 
 ```toml
 [substrate.tangle]
@@ -770,8 +749,7 @@ name = "tangle"
 # ...
 ```
 
-So, in general it is `[substrate.<node-name>]`, where `<node-name>` is the name of the network. The
-following sections describe the different configuration entries and how to use them.
+In general, the configuration table for a node is identified as `[substrate.<node-name>]`, where `<node-name>` is the name of the network. The following sections outline the different configuration entries and how to use them.
 
 #### name
 
@@ -831,7 +809,7 @@ ws-endpoint = "ws://localhost:9944"
 
 #### runtime
 
-The runtime of the running substrate node. These are predifined in the relayer, with each having
+The runtime of the running substrate node. These are predefined in the relayer, with each having
 different types of Options.
 
 - Type: `string`
@@ -882,10 +860,10 @@ explorer = "https://tangle-explorer.webb.tools"
 #### suri
 
 SURI stands for "secret URI". It is a mnemonic phrase that can be used to generate a private key.
-This is used to sign extrinsics. we will refer to this as the "s" for now, The value is a string
-(`s`) that we will try to interpret the string in order to generate a key Pair. in the case that the
+This is used to sign extrinsics. We will refer to this as the "s" for now. The value is a string
+(`s`) that we will try to interpret the string in order to generate a key pair. In the case that the
 pair can be expressed as a direct derivation from a seed (some cases, such as Sr25519 derivations
-with path components, cannot).
+with path components cannot).
 
 This takes a helper function to do the key generation from a phrase, password and junction iterator.
 
