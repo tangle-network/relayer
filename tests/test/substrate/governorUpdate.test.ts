@@ -33,13 +33,13 @@ import { UsageMode } from '@webb-tools/test-utils';
 import {
   defaultEventsWatcherValue,
 } from '../../lib/utils.js';
-import { LocalDkg } from 'lib/localDkg.js';
-import { timeout } from 'lib/timeout.js';
+import { LocalDkg } from '../../lib/localDkg.js';
+import { timeout } from '../../lib/timeout.js';
 import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import * as TinySecp256k1 from 'tiny-secp256k1';
 import { ethers } from 'ethers';
 
-describe('Substrate SignatureBridge Governor Update', function () {
+describe.only('Substrate SignatureBridge Governor Update', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -155,7 +155,7 @@ describe('Substrate SignatureBridge Governor Update', function () {
     const refreshNonce = await dkgApi.query.dkg.refreshNonce();
 
     // force set maintainer
-    const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(dkgPublicKey!);
+    const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(refreshNonce, dkgPublicKey!);
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
 
     // now start the relayer

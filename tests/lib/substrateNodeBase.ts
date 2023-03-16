@@ -15,22 +15,11 @@
  *
  */
 
-import fs from 'fs';
-import getPort, { portNumbers } from 'get-port';
+import { options, rpcProperties } from '@webb-tools/api';
 import { ChildProcess, execSync } from 'child_process';
+
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
-import {
-  EventsWatcher,
-  FeaturesConfig,
-  LinkedAnchor,
-  NodeInfo,
-  Pallet,
-  ProposalSigningBackend,
-  SubstrateLinkedAnchor,
-} from './webbRelayer.js';
-import { ConvertToKebabCase } from './tsHacks.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import { options } from '@webb-tools/api';
 
 export type DockerMode = {
   mode: 'docker';
@@ -47,17 +36,16 @@ export type UsageMode = DockerMode | HostMode;
 export type LocalNodeOpts = {
   name: string;
   ports:
-    | {
-        ws: number;
-        http: number;
-        p2p: number;
-      }
-    | 'auto';
+  | {
+    ws: number;
+    http: number;
+    p2p: number;
+  }
+  | 'auto';
   authority: 'alice' | 'bob' | 'charlie';
   usageMode: UsageMode;
   enableLogging?: boolean;
   isManual?: boolean; // for manual connection to the substrate node using 9944
-  enabledPallets?: Pallet[];
 };
 
 export type SubstrateEvent = {
@@ -65,46 +53,38 @@ export type SubstrateEvent = {
   method: string;
 };
 
-export type ExportedConfigOptions = {
-  suri: string;
-  proposalSigningBackend?: ProposalSigningBackend;
-  linkedAnchors?: LinkedAnchor[];
-  features?: FeaturesConfig;
-  chainId: number;
-};
-
-// Default Events watcher for the pallets.
-export const defaultEventsWatcherValue: EventsWatcher = {
-  enabled: true,
-  pollingInterval: 3000,
-};
-
 export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   #api: ApiPromise | null = null;
-  constructor(
+  constructor (
     protected readonly opts: LocalNodeOpts,
-    private readonly proc?: ChildProcess
+    protected readonly proc?: ChildProcess
   ) {}
 
-  public get name(): string {
+  public get name (): string {
     return this.opts.name;
   }
 
-  public static async makePorts(
+  public static async makePorts (
     opts: LocalNodeOpts
   ): Promise<{ ws: number; http: number; p2p: number }> {
+    // Dynamic import used for commonjs compatibility
+    const getPort = await import('get-port');
+    const { portNumbers } = getPort;
+
     return opts.ports === 'auto'
       ? {
-          ws: await getPort({ port: portNumbers(9944, 9999) }),
-          http: await getPort({ port: portNumbers(9933, 9999) }),
-          p2p: await getPort({ port: portNumbers(30333, 30399) }),
-        }
+        http: await getPort.default({ port: portNumbers(9933, 9999) }),
+        p2p: await getPort.default({ port: portNumbers(30333, 30399) }),
+        ws: await getPort.default({ port: portNumbers(9944, 9999) })
+
+      }
       : (opts.ports as { ws: number; http: number; p2p: number });
   }
 
-  public async api(): Promise<ApiPromise> {
+  public async api (): Promise<ApiPromise> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     const host = '127.0.0.1';
+
     if (this.opts.isManual) {
       return await createApiPromise(`ws://${host}:${ports.ws}`);
     }
@@ -112,42 +92,52 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     if (this.#api) {
       return this.#api;
     }
+
     this.#api = await createApiPromise(`ws://${host}:${ports.ws}`);
+
     return this.#api;
   }
 
-  public async stop(): Promise<void> {
+  public async stop (): Promise<void> {
     await this.#api?.disconnect();
     this.#api = null;
-    if (this.proc) this.proc.kill('SIGINT');
+
+    if (this.proc) {
+      this.proc.kill('SIGINT');
+    }
   }
 
-  public async waitForEvent(typedEvent: TypedEvent): Promise<void> {
+  public async waitForEvent (typedEvent: TypedEvent): Promise<void> {
     const api = await this.api();
-    return new Promise((resolve, _reject) => {
+
+    return new Promise((resolve, reject) => {
       // Subscribe to system events via storage
-      api.query.system!.events((events: any[]) => {
+      const unsub: any = api.query.system.events((events: any[]) => {
         // Loop through the Vec<EventRecord>
         events.forEach((record: any) => {
           const { event } = record;
+
           if (
             event.section === typedEvent.section &&
             event.method === typedEvent.method
           ) {
+            // Unsubscribe from the storage
+            unsub();
             // Resolve the promise
             resolve();
           }
         });
-      });
+      }).catch((e) => reject(e));
     });
   }
 
-  public async executeTransaction(
+  public async executeTransaction (
     tx: SubmittableExtrinsic<'promise'>
   ): Promise<string> {
     const api = await this.api();
+
     return new Promise((resolve, reject) => {
-      tx.send(({ status, dispatchError }) => {
+      tx.send(({ dispatchError, status }) => {
         // status would still be set, but in the case of error we can shortcut
         // to just check it (so an error would indicate InBlock or Finalized)
         if (dispatchError) {
@@ -155,226 +145,82 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
             // for module errors, we have the section indexed, lookup
             const decoded = api.registry.findMetaError(dispatchError.asModule);
             const { docs, name, section } = decoded;
-            reject(`${section}.${name}: ${docs.join(' ')}`);
+
+            reject(new Error(`${section}.${name}: ${docs.join(' ')}`));
           } else {
             // Other, CannotLookup, BadOrigin, no extra info
             reject(dispatchError.toString());
           }
         }
+
         if (status.isFinalized && !dispatchError) {
           resolve(status.asFinalized.toString());
         }
-      });
+      }).catch((e) => reject(e));
     });
   }
 
-  public async sudoExecuteTransaction(
+  public async sudoExecuteTransaction (
     tx: SubmittableExtrinsic<'promise'>
   ): Promise<string> {
     const api = await this.api();
     const keyring = new Keyring({ type: 'sr25519' });
-    const sudoKey = keyring.addFromUri(`//Alice`);
-    const sudoCall = api.tx.sudo!.sudo!(tx.toU8a());
+    const sudoKey = keyring.addFromUri('//Alice');
+    const sudoCall = api.tx.sudo.sudo(tx);
+
     return new Promise((resolve, reject) => {
       sudoCall.signAndSend(
         sudoKey,
         { nonce: -1 },
-        ({ status, dispatchError }) => {
-          // status would still be set, but in the case of error we can shortcut
-          // to just check it (so an error would indicate InBlock or Finalized)
+        ({ dispatchError, status }) => {
+        // status would still be set, but in the case of error we can shortcut
+        // to just check it (so an error would indicate InBlock or Finalized)
           if (dispatchError) {
             if (dispatchError.isModule) {
-              // for module errors, we have the section indexed, lookup
+            // for module errors, we have the section indexed, lookup
               const decoded = api.registry.findMetaError(
                 dispatchError.asModule
               );
               const { docs, name, section } = decoded;
-              reject(`${section}.${name}: ${docs.join(' ')}`);
+
+              reject(new Error(`${section}.${name}: ${docs.join(' ')}`));
             } else {
-              // Other, CannotLookup, BadOrigin, no extra info
+            // Other, CannotLookup, BadOrigin, no extra info
               reject(dispatchError.toString());
             }
           }
+
           if (status.isFinalized && !dispatchError) {
             resolve(status.asFinalized.toString());
           }
         }
-      );
+      ).catch((e) => reject(e));
     });
   }
 
-  abstract exportConfig(opts: ExportedConfigOptions): Promise<FullNodeInfo>;
-
-  public async writeConfig(
-    path: string,
-    opts: ExportedConfigOptions
-  ): Promise<void> {
-    const config = await this.exportConfig(opts);
-    // don't mind my typescript typing here XD
-    type ConvertedLinkedAnchor = ConvertToKebabCase<LinkedAnchor>;
-    type ConvertedPallet = Omit<
-      ConvertToKebabCase<Pallet>,
-      'events-watcher' | 'proposal-signing-backend' | 'linked-anchors'
-    > & {
-      'events-watcher': ConvertToKebabCase<EventsWatcher>;
-      'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
-      'linked-anchors'?: ConvertedLinkedAnchor[];
-    };
-    type ConvertedConfig = Omit<
-      ConvertToKebabCase<typeof config>,
-      'pallets'
-    > & {
-      pallets: ConvertedPallet[];
-    };
-    type FullConfigFile = {
-      substrate: {
-        [key: string]: ConvertedConfig;
-      };
-      features?: ConvertToKebabCase<FeaturesConfig>;
-    };
-    const convertedConfig: ConvertedConfig = {
-      name: config.name,
-      enabled: config.enabled,
-      'http-endpoint': config.httpEndpoint,
-      'ws-endpoint': config.wsEndpoint,
-      'chain-id': config.chainId,
-      runtime: config.runtime,
-      suri: config.suri,
-      pallets: config.pallets.map((c: Pallet) => {
-        const convertedPallet: ConvertedPallet = {
-          pallet: c.pallet,
-          'events-watcher': {
-            enabled: c.eventsWatcher.enabled,
-            'polling-interval': c.eventsWatcher.pollingInterval,
-          },
-          'proposal-signing-backend':
-            c.proposalSigningBackend?.type === 'Mocked'
-              ? {
-                  type: 'Mocked',
-                  'private-key': c.proposalSigningBackend?.privateKey,
-                }
-              : c.proposalSigningBackend?.type === 'DKGNode'
-              ? {
-                  type: 'DKGNode',
-                  node: c.proposalSigningBackend?.node,
-                }
-              : undefined,
-
-          'linked-anchors': c.linkedAnchors?.map((anchor: LinkedAnchor) =>
-            anchor.type === 'Evm'
-              ? {
-                  'chain-id': anchor.chainId,
-                  type: 'Evm',
-                  address: anchor.address,
-                }
-              : anchor.type === 'Substrate'
-              ? {
-                  type: 'Substrate',
-                  'chain-id': anchor.chainId,
-                  'tree-id': anchor.treeId,
-                  pallet: anchor.pallet,
-                }
-              : {
-                  type: 'Raw',
-                  'resource-id': anchor.resourceId,
-                }
-          ),
-        };
-        return convertedPallet;
-      }),
-    };
-    const fullConfigFile: FullConfigFile = {
-      substrate: {
-        [this.opts.name]: convertedConfig,
-      },
-      features: {
-        'data-query': opts.features?.dataQuery ?? true,
-        'governance-relay': opts.features?.governanceRelay ?? true,
-        'private-tx-relay': opts.features?.privateTxRelay ?? true,
-      },
-    };
-    const configString = JSON.stringify(fullConfigFile, null, 2);
-    fs.writeFileSync(path, configString);
-    console.log(configString);
-  }
-
-  protected static checkIfDkgImageExists(image: string): boolean {
+  protected static checkIfImageExists (image: string): boolean {
     const result = execSync('docker images', { encoding: 'utf8' });
+
     return result.includes(image);
   }
 
-  protected static pullDkgImage(opts: {
-    frocePull: boolean;
+  protected static pullImage (opts: {
+    forcePull: boolean;
     image: string;
   }): void {
-    if (!this.checkIfDkgImageExists(opts.image) || opts.frocePull) {
+    if (!this.checkIfImageExists(opts.image) || opts.forcePull) {
       execSync(`docker pull ${opts.image}`, {
-        encoding: 'utf8',
+        encoding: 'utf8'
       });
     }
   }
 }
 
-async function createApiPromise(endpoint: string) {
+export async function createApiPromise (endpoint: string) {
   return ApiPromise.create(
     options({
       provider: new WsProvider(endpoint) as any,
-      rpc: {
-        mt: {
-          getLeaves: {
-            description: 'Query for the tree leaves',
-            params: [
-              {
-                name: 'tree_id',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'from',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'to',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'at',
-                type: 'Hash',
-                isOptional: true,
-              },
-            ],
-            type: 'Vec<[u8; 32]>',
-          },
-        },
-        lt: {
-          getNeighborRoots: {
-            description: 'Query for the neighbor roots',
-            params: [
-              {
-                name: 'tree_id',
-                type: 'u32',
-                isOptional: false,
-              },
-              {
-                name: 'at',
-                type: 'Hash',
-                isOptional: true,
-              },
-            ],
-            type: 'Vec<[u8; 32]>',
-          },
-        },
-      },
+      rpc: rpcProperties
     })
   );
 }
-
-export type FullNodeInfo = NodeInfo & {
-  name: string;
-  httpEndpoint: string;
-  wsEndpoint: string;
-  suri: string;
-  chainId: number;
-};
