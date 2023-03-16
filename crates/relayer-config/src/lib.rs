@@ -190,3 +190,54 @@ impl Default for TxQueueConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_config_files_are_correct() {
+        // This test is to make sure that all the config files are correct.
+        // This walks all the directories inside the root of the config directory
+        // and tries to parse the config file(s) inside it.
+
+        let git_root = std::process::Command::new("git")
+            .args(["rev-parse", "--show-toplevel"])
+            .output()
+            .expect("Failed to get git root")
+            .stdout;
+        let git_root = std::str::from_utf8(&git_root)
+            .expect("Failed to parse git root")
+            .trim();
+        let config_dir = std::path::Path::new(git_root).join("config");
+        let config_dirs =
+            glob::glob(config_dir.join("**").join("**").to_str().unwrap())
+                .expect("Failed to read config directory")
+                .filter_map(|p| p.ok())
+                .filter(|p| p.is_dir())
+                .collect::<Vec<_>>();
+        assert!(
+            !config_dirs.is_empty(),
+            "No config directories found in the config directory"
+        );
+        let cwd =
+            std::env::current_dir().expect("Failed to get current directory");
+        // For each config directory, we try to parse the config file(s) inside it.
+        for config_subdir in config_dirs {
+            std::env::set_current_dir(&config_subdir)
+                .expect("Failed to set current directory");
+            // Load the example dot env file.
+            let _ = dotenv::from_filename(".env.example");
+            if let Err(e) = utils::load(&config_subdir) {
+                panic!("Failed to parse config file in directory: {config_subdir:?} with error: {e}");
+            }
+
+            dotenv::vars().for_each(|(k, _)| {
+                std::env::remove_var(k);
+            });
+
+            std::env::set_current_dir(&cwd)
+                .expect("Failed to set current directory");
+        }
+    }
+}
