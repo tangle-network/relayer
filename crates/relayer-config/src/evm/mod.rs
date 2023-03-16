@@ -25,7 +25,7 @@ pub struct EvmChainConfig {
     #[serde(skip_serializing)]
     pub ws_endpoint: RpcUrl,
     /// Block confirmations
-    #[serde(skip_serializing)]
+    #[serde(skip_serializing, default)]
     pub block_confirmations: u32,
     /// Block Explorer for this chain.
     ///
