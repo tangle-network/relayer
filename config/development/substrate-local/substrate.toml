@@ -2,6 +2,7 @@ port = 9955
 
 [substrate.local]
 name = "local"
+chain-id = 1080
 enabled = true
 http-endpoint = "http://localhost:9933"
 ws-endpoint = "ws://localhost:9944"

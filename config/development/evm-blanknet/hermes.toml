@@ -3,9 +3,9 @@
 # The name that the chain is indexed on, for linkable anchors
 name = "hermes"
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "$HERMES_HTTP_URL"
+http-endpoint = "http://localhost:5001"
 # Websocket Endpoint for long living connections
-ws-endpoint = "$HERMES_WS_URL"
+ws-endpoint = "ws://localhost:5001"
 # chain specific id from evm opcode
 chain-id = 5001
 # The Private Key of this account on this network

@@ -3,9 +3,9 @@
 # The name that the chain is indexed on, for linkable anchors
 name = "demeter"
 # Http(s) Endpoint for quick Req/Res
-http-endpoint = "$DEMETER_HTTP_URL"
+http-endpoint = "http://localhost:5003"
 # Websocket Endpoint for long living connections
-ws-endpoint = "$DEMETER_WS_URL"
+ws-endpoint = "ws://localhost:5003"
 # chain specific id from evm opcode
 chain-id = 5003
 # The Private Key of this account on this network
