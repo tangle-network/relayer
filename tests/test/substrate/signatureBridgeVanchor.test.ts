@@ -131,7 +131,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     });
 
     // force set maintainer
-    const refreshNonce = await api.query.dkg.refreshNonce();
+    const refreshNonce = 0;
     const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
       refreshNonce,
       `0x${uncompressedKey}`
