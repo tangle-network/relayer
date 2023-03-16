@@ -28,6 +28,7 @@ use webb::substrate::dkg_runtime::api::runtime_types::pallet_bridge_registry::ty
 use webb_proposals::ResourceId;
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_config::anchor::RawResourceId;
+use webb_relayer_utils::Error;
 
 #[doc(hidden)]
 pub mod dkg;
@@ -49,7 +50,7 @@ pub trait BridgeRegistryBackend {
     async fn resource_to_bridge_index(
         &self,
         resource_id: &ResourceId,
-    ) -> webb_relayer_utils::Result<u32>;
+    ) -> Option<u32>;
 
     /// Returns bridge with the given index, if any.
     async fn bridges(
@@ -73,8 +74,10 @@ pub trait BridgeRegistryBackend {
         match anchors {
             Some(a) => Ok(a.clone()),
             None => {
-                let next_bridge_index =
-                    self.resource_to_bridge_id(linked_anchor).await?;
+                let next_bridge_index = self
+                    .resource_to_bridge_index(linked_anchor)
+                    .await
+                    .ok_or(Error::BridgeNotRegistered(linked_anchor.clone()))?;
                 let bridges = self.bridges(next_bridge_index).await?.unwrap();
                 Ok(bridges
                     .resource_ids

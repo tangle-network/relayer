@@ -15,11 +15,11 @@ impl BridgeRegistryBackend for MockedBridgeRegistryBackend {
         Ok(2)
     }
 
-    async fn resource_to_bridge_id(
+    async fn resource_to_bridge_index(
         &self,
         _resource_id: &webb_proposals::ResourceId,
-    ) -> webb_relayer_utils::Result<u32> {
-        Ok(1)
+    ) -> Option<u32> {
+        Some(1)
     }
 
     async fn bridges(

@@ -17,6 +17,7 @@ use webb_proposals::{FunctionSignature, Nonce, ProposalHeader};
 ///
 /// <https://github.com/webb-tools/dkg-substrate/blob/master/dkg-test-suite/scripts/submitProposals.ts>
 #[tokio::test]
+#[ignore = "requires running dkg-substrate standalone node"]
 async fn submit_anchor_update_proposal() {
     let api = OnlineClient::<PolkadotConfig>::new().await.unwrap();
     let bridge_registry = DkgBridgeRegistryBackend::new(api.clone());
@@ -26,7 +27,8 @@ async fn submit_anchor_update_proposal() {
     let bridges = bridge_registry
         .bridges(next_bridge_index - 1)
         .await
-        .unwrap().unwrap();
+        .unwrap()
+        .unwrap();
     let resource_id = ResourceId(bridges.resource_ids.0[1].0);
     let src_resource_id = ResourceId(bridges.resource_ids.0[0].0);
 

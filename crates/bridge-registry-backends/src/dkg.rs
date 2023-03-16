@@ -31,19 +31,19 @@ impl super::BridgeRegistryBackend for DkgBridgeRegistryBackend {
     async fn resource_to_bridge_index(
         &self,
         resource_id: &ResourceId,
-    ) -> webb_relayer_utils::Result<u32> {
+    ) -> Option<u32> {
         let resource_id2 = webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::ResourceId(resource_id.0);
         let storage = RuntimeApi::storage().bridge_registry();
         let resource_to_bridge_index =
             storage.resource_to_bridge_index(resource_id2);
-        Ok(self
-            .client
+        self.client
             .storage()
             .at(None)
-            .await?
+            .await
+            .ok()?
             .fetch(&resource_to_bridge_index)
-            .await?
-            .unwrap_or(1))
+            .await
+            .ok()?
     }
 
     async fn bridges(
