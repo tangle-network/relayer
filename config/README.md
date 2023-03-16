@@ -119,7 +119,7 @@ private-tx-relay = true
 ##### governance-relay
 
 Enable or disable the governance-relay feature. Enabling this feature will allow the relayer to
-relay proposals and votes on them between the chains.
+relay proposals and vote on them between the chains.
 
 - Type: `bool`
 - Required: `false`

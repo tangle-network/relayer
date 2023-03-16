@@ -8,7 +8,7 @@ The EVM Blanknet is a private Ethereum network that is used for development and 
 
 ## EVM Local <> Tangle
 
-The EVM Local <> Tangle is a private Ethereum network that is used for development and testing. It is configured in the `evm-local-tangle` directory. This configration starts a 3 chains [Athena, Hermes, and Demeter] each chain will contain the deplpyed contracts and the deployed Anchors will be linked to each other. in addition to that, there is a configured Tangle network that will be used for signing proposals.
+The EVM Local <> Tangle is a private Ethereum network that is used for development and testing. It is configured in the `evm-local-tangle` directory. This configration starts a 3 chains [Athena, Hermes, and Demeter] each chain will contain the deployed contracts and the deployed Anchors will be linked to each other. in addition to that, there is a configured Tangle network that will be used for signing proposals.
 
 ## Substrate Local
 
