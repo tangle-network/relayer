@@ -77,7 +77,7 @@ pub trait BridgeRegistryBackend {
                 let next_bridge_index = self
                     .resource_to_bridge_index(linked_anchor)
                     .await
-                    .ok_or(Error::BridgeNotRegistered(linked_anchor.clone()))?;
+                    .ok_or(Error::BridgeNotRegistered(*linked_anchor))?;
                 let bridges = self.bridges(next_bridge_index).await?.unwrap();
                 Ok(bridges
                     .resource_ids
