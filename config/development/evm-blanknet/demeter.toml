@@ -57,7 +57,6 @@ linked-anchors = [
 # the signed proposals to the configured SignatureBridge of the relevant chains.
 
 proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_KEY" }
-# proposal-signing-backend = { type = "DKGNode", node = "5" }
 
 [[evm.demeter.contracts]]
 contract = "SignatureBridge"
