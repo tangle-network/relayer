@@ -92,7 +92,8 @@ The port on which the relayer will listen for incoming connections.
 - Required: `false`
 - Default: `9955`
 - env: `WEBB_PORT`
-- Example:
+
+Example:
 
 ```toml
 port = 9955
@@ -107,7 +108,8 @@ The features section is used to enable or disable the relayer features.
 - Default: `{ governance-relay = true, data-query = true, private-tx-relay = true }`
 - env: `WEBB_FEATURES_GOVERNANCE_RELAY`, `WEBB_FEATURES_DATA_QUERY`,
   `WEBB_FEATURES_PRIVATE_TX_RELAY`
-- Example:
+
+Example:
 
 ```toml
 [features]
@@ -125,7 +127,8 @@ relay proposals and vote on them between the chains.
 - Required: `false`
 - Default: `true`
 - env: `WEBB_FEATURES_GOVERNANCE_RELAY`
-- Example:
+
+Example:
 
 ```toml
 [features]
@@ -141,7 +144,8 @@ data query oracle.
 - Required: `false`
 - Default: `true`
 - env: `WEBB_FEATURES_DATA_QUERY`
-- Example:
+
+Example:
 
 ```toml
 [features]
@@ -150,13 +154,15 @@ data-query = true
 
 ##### private-tx-relay
 
-Enable or disable the private-tx-relay feature. When enabled, the relayer will be able to relay private transactions.
+Enable or disable the private-tx-relay feature. When enabled, the relayer will be able to relay
+private transactions.
 
 - Type: `bool`
 - Required: `false`
 - Default: `true`
 - env: `WEBB_FEATURES_PRIVATE_TX_RELAY`
-- Example:
+
+Example:
 
 ```toml
 [features]
@@ -188,7 +194,8 @@ The name of the chain. This name will be used to identify the chain in the relay
 - Type: `string`
 - Required: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_NAME`
-- Example:
+
+Example:
 
 ```toml
 name = "ethereum"
@@ -201,7 +208,8 @@ The chain id of the chain. This id will be used to identify the chain in the rel
 - Type: `number`
 - Required: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_CHAIN_ID`
-- Example:
+
+Example:
 
 ```toml
 chain-id = 1
@@ -214,7 +222,8 @@ The HTTP(s) RPC endpoint for this chain, used for watching events, and sending t
 - Type: `string`
 - Required: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_HTTP_ENDPOINT`
-- Example:
+
+Example:
 
 ```toml
 http-endpoint = "https://mainnet.infura.io/v3/<project-id>"
@@ -227,7 +236,8 @@ The WebSocket RPC endpoint for this chain, used for watching events, and sending
 - Type: `string`
 - Required: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_WS_ENDPOINT`
-- Example:
+
+Example:
 
 ```toml
 ws-endpoint = "wss://mainnet.infura.io/ws/v3/<project-id>"
@@ -235,15 +245,21 @@ ws-endpoint = "wss://mainnet.infura.io/ws/v3/<project-id>"
 
 #### private-key
 
-The private key configuration specifies the private key of the account on the EVM chain used for signing transactions. The format of the private key depends on its value:
+The private key configuration specifies the private key of the account on the EVM chain used for
+signing transactions. The format of the private key depends on its value:
 
-If the private key starts with `0x`, it is considered a raw (64 bytes) hex-encoded private key. Example: `0x8917174396171783496173419137618235192359106130478137647163400318`.
+If the private key starts with `0x`, it is considered a raw (64 bytes) hex-encoded private key.
+Example: `0x8917174396171783496173419137618235192359106130478137647163400318`.
 
-If the private key starts with `$`, it is considered an environment variable containing a hex-encoded private key. Example: `$MAINNET_PRIVATE_KEY`.
+If the private key starts with `$`, it is considered an environment variable containing a
+hex-encoded private key. Example: `$MAINNET_PRIVATE_KEY`.
 
-If the private key starts with '> ', it is considered a command that the relayer will execute to obtain the hex-encoded private key. Example: > `./getKey.sh mainnet-privatekey`.
+If the private key starts with '> ', it is considered a command that the relayer will execute to
+obtain the hex-encoded private key. Example: > `./getKey.sh mainnet-privatekey`.
 
-If the private key doesn't contain special characters and has 12 or 24 words, it is considered a mnemonic string. The words should be separated by spaces, and the string should not be enclosed in quotes or any other characters.
+If the private key doesn't contain special characters and has 12 or 24 words, it is considered a
+mnemonic string. The words should be separated by spaces, and the string should not be enclosed in
+quotes or any other characters.
 
 - Type: `string`
 - Required:
@@ -251,7 +267,8 @@ If the private key doesn't contain special characters and has 12 or 24 words, it
   - `true` if `features.private-tx-relay` is `true`
   - `false` otherwise
 - env: `WEBB_EVM_<CHAIN_NAME>_PRIVATE_KEY`
-- Example:
+
+Example:
 
 ```toml
 private-key = "0x8917174396171783496173419137618235192359106130478137647163400318"
@@ -268,7 +285,8 @@ The number of block confirmations to wait before processing an event.
 - Required: `false`
 - Default: `0`
 - env: `WEBB_EVM_<CHAIN_NAME>_BLOCK_CONFIRMATIONS`
-- Example:
+
+Example:
 
 ```toml
 block-confirmations = 5
@@ -283,7 +301,8 @@ chain while loading the configuration files.
 - Required: `false`
 - Default: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_ENABLED`
-- Example:
+
+Example:
 
 ```toml
 enabled = true
@@ -298,7 +317,8 @@ for debugging.
 - Required: `false`
 - Default: `null`
 - env: `WEBB_EVM_<CHAIN_NAME>_EXPLORER`
-- Example:
+
+Example:
 
 ```toml
 explorer = "https://etherscan.io"
@@ -314,7 +334,8 @@ provided [private-key](#private-key) for this chain.
 - Required: `false`
 - Default: `null`
 - env: `WEBB_EVM_<CHAIN_NAME>_BENEFICIARY`
-- Example:
+
+Example:
 
 ```toml
 beneficiary = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
@@ -328,13 +349,15 @@ uses a database to store the transactions, and the configuration for the databas
 
 ##### max-sleep-interval
 
-The maximum time to sleep between sending transactions. This controls the rate at which the relayer sends transactions to the chain.
+The maximum time to sleep between sending transactions. This controls the rate at which the relayer
+sends transactions to the chain.
 
 - Type: `number`
 - Required: `false`
 - Default: `10000ms`
 - env: `WEBB_EVM_<CHAIN_NAME>_TX_QUEUE_MAX_SLEEP_INTERVAL`
-- Example:
+
+Example:
 
 ```toml
 tx-queue = { max-sleep-interval = 5000 }
@@ -375,7 +398,8 @@ configuration, and different internal service that will handle the contract oper
   - `SignatureBridge`
 - Required: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_CONTRACT`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -389,7 +413,8 @@ The address of the contract on the configured chain.
 - Type: `string`
 - Required: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_ADDRESS`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -399,12 +424,14 @@ address = "0x8eB24319393716668D768dCEC29356ae9CfFe285"
 
 ##### deployed-at
 
-The block number at which the contract was deployed. This is used to determine the starting block number for scanning events.
+The block number at which the contract was deployed. This is used to determine the starting block
+number for scanning events.
 
 - Type: `number`
 - Required: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_DEPLOYED_AT`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -417,7 +444,7 @@ deployed-at = 3123412
 The events watcher is used to watch for events emitted by the contracts. The relayer uses this
 configration values to determine how the relayer will poll the events from that contract.
 
-- Example:
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -433,7 +460,8 @@ Enable or disable the events watcher for this contract.
 - Required: `false`
 - Default: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_EVENTS_WATCHER_ENABLED`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -443,13 +471,15 @@ events-watcher = { enabled = true }
 
 ###### enable-data-query
 
-Enable or disable the data query for this contract. When enabled, it allows the relayer to query the contract's events, such as the leaves.
+Enable or disable the data query for this contract. When enabled, it allows the relayer to query the
+contract's events, such as the leaves.
 
 - Type: `bool`
 - Required: `false`
 - Default: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_EVENTS_WATCHER_ENABLE_DATA_QUERY`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -465,7 +495,8 @@ The interval at which the relayer will poll for events from the contract.
 - Required: `false`
 - Default: `7000ms`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_EVENTS_WATCHER_POLL_INTERVAL`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -475,13 +506,16 @@ events-watcher = { poll-interval = 12000 }
 
 ##### max-blocks-per-step
 
-The maximum number of blocks to scan for events in a single step. This controls the rate at which the relayer scans for events from the contract, and also affects the speed at which the relayer synchronizes with the chain.
+The maximum number of blocks to scan for events in a single step. This controls the rate at which
+the relayer scans for events from the contract, and also affects the speed at which the relayer
+synchronizes with the chain.
 
 - Type: `number`
 - Required: `false`
 - Default: `100`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_MAX_BLOCKS_PER_STEP`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -491,13 +525,17 @@ events-watcher = { max-blocks-per-step = 500 }
 
 ##### sync-blocks-from
 
-The block number to start scanning for events from. This value can override the [deployed-block](#deployed-at) configuration value but is only used during the initial synchronization of the chain. If not specified, the relayer uses the [deployed-block](#deployed-at) configuration value as the default starting block number.
+The block number to start scanning for events from. This value can override the
+[deployed-block](#deployed-at) configuration value but is only used during the initial
+synchronization of the chain. If not specified, the relayer uses the [deployed-block](#deployed-at)
+configuration value as the default starting block number.
 
 - Type: `number`
 - Required: `false`
 - Default: `null` (_will use the value of the [deployed-at](#deployed-at) configuration value_)
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_SYNC_BLOCKS_FROM`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -514,7 +552,8 @@ show the user the progress of the syncing process which could be useful for debu
 - Required: `false`
 - Default: `30000ms`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_PRINT_PROGRESS_INTERVAL`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -538,7 +577,8 @@ The type of the proposal signing backend to use.
   - `Mocked`
   - `Dkg`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_PROPOSAL_SIGNING_BACKEND_TYPE`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -571,7 +611,8 @@ The private key to use for signing the proposals. Only used by the mocked propos
   - `true` if the [type](#type) is `Mocked`
   - `false` otherwise
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_PROPOSAL_SIGNING_BACKEND_PRIVATE_KEY`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -600,7 +641,8 @@ The node's chain-id to use for signing the proposals. Only used by the DKG propo
   - `true` if the [type](#type) is `Dkg`
   - `false` otherwise
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_PROPOSAL_SIGNING_BACKEND_NODE`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -610,9 +652,11 @@ proposal-signing-backend = { type = "Dkg", node = "1080" }
 
 ##### Linked Anchors
 
-The Linked Anchors configuration is used to define the linked anchors for the VAnchor contract. This configuration is only available when the [type](#type) is set to `VAnchor`.
+The Linked Anchors configuration is used to define the linked anchors for the VAnchor contract. This
+configuration is only available when the [type](#type) is set to `VAnchor`.
 
-The configuration value is a list of Linked Anchors, defined in a human-readable format. However, the relayer will convert them to a raw format before using them.
+The configuration value is a list of Linked Anchors, defined in a human-readable format. However,
+the relayer will convert them to a raw format before using them.
 
 - Required: `false`
 - Default: `null` (defaults to an empty list)
@@ -649,7 +693,8 @@ The chain-id of the linked anchor definition. Only used by the `Evm` and `Substr
   - `true` if the [type](#type) is `Evm` or `Substrate`
   - `false` otherwise
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_LINKED_ANCHORS_<INDEX>_CHAIN_ID`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -669,7 +714,8 @@ The address of the linked anchor definition. Only used by the `Evm` type.
   - `true` if the [type](#type) is `Evm`
   - `false` otherwise
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_LINKED_ANCHORS_<INDEX>_ADDRESS`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -688,7 +734,8 @@ The pallet of the linked anchor definition. Only used by the `Substrate` type.
   - `true` if the [type](#type) is `Substrate`
   - `false` otherwise
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_LINKED_ANCHORS_<INDEX>_PALLET`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -707,7 +754,8 @@ The tree-id of the linked anchor definition. Only used by the `Substrate` type.
   - `true` if the [type](#type) is `Substrate`
   - `false` otherwise
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_LINKED_ANCHORS_<INDEX>_TREE_ID`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -726,7 +774,8 @@ The resource-id of the linked anchor definition. Only used by the `Raw` type.
   - `true` if the [type](#type) is `Raw`
   - `false` otherwise
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_LINKED_ANCHORS_<INDEX>_RESOURCE_ID`
-- Example:
+
+Example:
 
 ```toml
 [[evm.ethereum.contracts]]
@@ -738,7 +787,9 @@ linked-anchors = [
 
 ### Substrate Node Configuration
 
-The Substrate Node configuration file is used to specify the configuration settings required for the relayer to work with a specific Substrate Node. The file is typically located in the `config` directory and named `substrate/<node-name>.toml`.
+The Substrate Node configuration file is used to specify the configuration settings required for the
+relayer to work with a specific Substrate Node. The file is typically located in the `config`
+directory and named `substrate/<node-name>.toml`.
 
 The configuration value is a table, and its name corresponds to the name of the node. For example:
 
@@ -749,7 +800,9 @@ name = "tangle"
 # ...
 ```
 
-In general, the configuration table for a node is identified as `[substrate.<node-name>]`, where `<node-name>` is the name of the network. The following sections outline the different configuration entries and how to use them.
+In general, the configuration table for a node is identified as `[substrate.<node-name>]`, where
+`<node-name>` is the name of the network. The following sections outline the different configuration
+entries and how to use them.
 
 #### name
 
@@ -758,7 +811,8 @@ The name of the Substrate node.
 - Type: `string`
 - Required: `true`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_NAME`
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -772,7 +826,8 @@ The chain-id of the Substrate node.
 - Type: `number`
 - Required: `true`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_CHAIN_ID`
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -786,7 +841,8 @@ The RPC endpoint of the Substrate node.
 - Type: `string`
 - Required: `true`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_HTTP_ENDPOINT`
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -800,7 +856,8 @@ The RPC WebSocket endpoint of the Substrate node.
 - Type: `string`
 - Required: `true`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_WS_ENDPOINT`
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -818,7 +875,8 @@ different types of Options.
 - Possible values:
   - `DKG` (that is, `dkg-substrate`)
   - `WebbProtocol` (also known as `protocol-substrate`)
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -834,7 +892,8 @@ it to the list of available nodes.
 - Required: `false`
 - Default: `true`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_ENABLED`
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -850,7 +909,8 @@ the logs.
 - Required: `false`
 - Default: `null`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_EXPLORER`
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -896,7 +956,8 @@ in which case the value of the environment variable will be used.
 - Type: `string`
 - Required: `true`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_SURI`
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -912,7 +973,8 @@ and will default to the address derived from the `suri` if not provided.
 - Required: `false`
 - Default: `null`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_BENEFICIARY`
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -931,7 +993,8 @@ The maximum sleep interval between sending transactions to the Substrate node.
 - Required: `false`
 - Default: `10000ms`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_TRANSACTION_QUEUE_MAX_SLEEP_INTERVAL`
-- Example:
+
+Example:
 
 ```toml
 [substrate.tangle]
@@ -955,7 +1018,8 @@ There are currently 5 different pallets that are supported by the relayer:
 - Type: `table`
 - Required: `false`
 - Default: `null` (empty table)
-- Example:
+
+Example:
 
 ```toml
 [[substrate.tangle.pallets]]
@@ -978,7 +1042,8 @@ The type of the pallet. This is used to determine which pallet to use.
   - `DkgProposalHandler`
   - `SignatureBridge`
   - `VAnchorBn254`
-- Example:
+
+Example:
 
 ```toml
 [[substrate.tangle.pallets]]
@@ -992,7 +1057,8 @@ The events watcher is used to watch for events emitted by the pallet.
 - Type: `table`
 - Required: `false`
 - Default: `null` (empty table)
-- Example:
+
+Example:
 
 ```toml
 [[substrate.tangle.pallets]]
@@ -1009,7 +1075,8 @@ watch events emitted by the pallet.
 - Required: `false`
 - Default: `true`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_ENABLED`
-- Example:
+
+Example:
 
 ```toml
 [[substrate.tangle.pallets]]
@@ -1026,7 +1093,8 @@ the data from the pallet.
 - Required: `false`
 - Default: `true`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_ENABLE_DATA_QUERY`
-- Example:
+
+Example:
 
 ```toml
 [[substrate.tangle.pallets]]
@@ -1043,7 +1111,8 @@ blocks.
 - Required: `false`
 - Default: `6000ms`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_POLLING_INTERVAL`
-- Example:
+
+Example:
 
 ```toml
 [[substrate.tangle.pallets]]
@@ -1059,7 +1128,8 @@ The maximum number of blocks to process per step.
 - Required: `false`
 - Default: `100`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_MAX_BLOCKS_PER_STEP`
-- Example:
+
+Example:
 
 ```toml
 [[substrate.tangle.pallets]]
@@ -1076,7 +1146,8 @@ relayer from a specific block instead of block zero.
 - Required: `false`
 - Default: `0`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_SYNC_BLOCKS_FROM`
-- Example:
+
+Example:
 
 ```toml
 [[substrate.tangle.pallets]]
@@ -1093,7 +1164,8 @@ debugging.
 - Required: `false`
 - Default: `12000ms`
 - env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_PRINT_PROGRESS_INTERVAL`
-- Example:
+
+Example:
 
 ```toml
 [[substrate.tangle.pallets]]
