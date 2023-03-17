@@ -8196,6 +8196,7 @@ dependencies = [
  "anyhow",
  "config",
  "directories-next",
+ "dotenv",
  "eth2_to_substrate_relay",
  "ethereum-types 0.14.1",
  "glob",

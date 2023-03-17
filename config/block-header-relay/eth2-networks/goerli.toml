@@ -1,5 +1,5 @@
 [evm.goerli]
-enabled=true
+enabled = true
 # The name that the chain is indexed on, for linkable anchors
 name = "goerli-testnet"
 # Http(s) Endpoint for quick Req/Res
@@ -8,6 +8,7 @@ http-endpoint = "$GOERLI_HTTP_URL"
 ws-endpoint = "$GOERLI_WS_URL"
 # chain specific id from evm opcode
 chain-id = 5002
+block-confirmations = 10
 
 [evm.goerli.block-poller]
 # The starting block to listen at.

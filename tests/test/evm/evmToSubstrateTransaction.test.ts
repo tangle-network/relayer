@@ -207,7 +207,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     // 2. We need to whitelist chain Id
 
     // force set maintainer
-    const refreshNonce = 0 ;
+    const refreshNonce = 0;
     const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
       refreshNonce,
       `0x${uncompressedKey}`

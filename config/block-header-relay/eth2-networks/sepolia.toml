@@ -1,5 +1,5 @@
 [evm.sepolia]
-enabled=true
+enabled = true
 # The name that the chain is indexed on, for linkable anchors
 name = "sepolia-testnet"
 # Http(s) Endpoint for quick Req/Res
@@ -8,6 +8,7 @@ http-endpoint = "$SEPOLIA_HTTP_URL"
 ws-endpoint = "$SEPOLIA_WS_URL"
 # chain specific id from evm opcode
 chain-id = 11155111
+block-confirmations = 10
 
 [evm.sepolia.block-poller]
 # The starting block to listen at.
