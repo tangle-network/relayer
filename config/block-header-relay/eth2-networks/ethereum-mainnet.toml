@@ -1,5 +1,5 @@
 [evm.mainnet]
-enabled=false
+enabled = false
 # The name that the chain is indexed on, for linkable anchors
 name = "ethereum-mainnet"
 # Http(s) Endpoint for quick Req/Res
@@ -8,6 +8,8 @@ http-endpoint = "$ETHEREUM_MAINNET_HTTP_URL"
 ws-endpoint = "$ETHEREUM_MAINNET_WS_URL"
 # chain specific id from evm opcode
 chain-id = 1
+
+block-confirmations = 10
 
 [evm.mainnet.block-poller]
 # The starting block to listen at.
