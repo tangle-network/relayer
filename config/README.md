@@ -174,7 +174,7 @@ private-tx-relay = true
 The EVM chain configuration file is used to configure the relayer to work with a specific EVM chain.
 It is usually located at a file called `evm/<chain-name>.toml` in the `config` directory.
 
-The value of this configration is a table, and the name of the table is the name of the chain, for
+The value of this configuration is a table, and the name of the table is the name of the chain, for
 example:
 
 ```toml
@@ -442,7 +442,7 @@ deployed-at = 3123412
 ##### Events Watcher
 
 The events watcher is used to watch for events emitted by the contracts. The relayer uses this
-configration values to determine how the relayer will poll the events from that contract.
+configuration values to determine how the relayer will poll the events from that contract.
 
 Example:
 
@@ -1004,7 +1004,7 @@ tx-queue = { max-sleep-interval = 10000 }
 #### Pallets
 
 The pallets are the different pallets that are used by the relayer. Each will define its own
-configration which will eventually be used by the relayer to start a different service for each
+configuration which will eventually be used by the relayer to start a different service for each
 pallet.
 
 There are currently 5 different pallets that are supported by the relayer:
