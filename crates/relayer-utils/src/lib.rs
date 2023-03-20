@@ -150,6 +150,12 @@ pub enum Error {
     /// Arkworks Errors.
     #[error("{}", _0)]
     ArkworksError(String),
+    /// Etherscan api configuration not found.
+    #[error("Etherscan api configuration not found for chain : {}", chain_id)]
+    EtherscanConfigNotFound {
+        /// The chain id of the node.
+        chain_id: String,
+    },
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.

@@ -134,7 +134,10 @@ async fn generate_fee_info(
     let wrapped_token_price = prices[&wrapped_token.0].usd.unwrap();
 
     // Fetch native gas price estimate from etherscan.io, using "average" value
-    let gas_oracle = ctx.etherscan_client().gas_oracle().await?;
+    let gas_oracle = ctx
+        .etherscan_client(chain_id.underlying_chain_id())?
+        .gas_oracle()
+        .await?;
     let gas_price_gwei = U256::from(gas_oracle.propose_gas_price);
     let gas_price = parse_units(gas_price_gwei, "gwei")?.into();
 

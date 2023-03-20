@@ -49,6 +49,8 @@ use evm::EvmChainConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use substrate::SubstrateConfig;
+use webb::evm::ethers::types::Chain;
+use webb_relayer_types::etherscan_api::EtherscanApiKey;
 
 /// The default port the relayer will listen on. Defaults to 9955.
 const fn default_port() -> u16 {
@@ -80,6 +82,8 @@ pub struct WebbRelayerConfig {
     /// default to 9955
     #[serde(default = "default_port", skip_serializing)]
     pub port: u16,
+    /// Etherscan API key configuration for evm based chains.
+    pub evm_etherscan: HashMap<Chain, EtherscanApiConfig>,
     /// EVM based networks and the configuration.
     ///
     /// a map between chain name and its configuration.
@@ -172,6 +176,16 @@ impl Default for FeaturesConfig {
             private_tx_relay: true,
         }
     }
+}
+
+/// Configuration to add etherscan API key
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct EtherscanApiConfig {
+    /// Chain Id
+    pub chain_id: u32,
+    /// A wrapper type around the `String` to allow reading it from the env.
+    pub api_key: EtherscanApiKey,
 }
 
 /// TxQueueConfig is the configuration for the TxQueue.
