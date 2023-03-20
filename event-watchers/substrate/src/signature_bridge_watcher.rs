@@ -323,6 +323,7 @@ where
         };
 
         // webb dynamic payload
+        tracing::debug!("DKG Message Payload : {:?}", message);
         let set_maintainer_tx = WebbDynamicTxPayload {
             pallet_name: Cow::Borrowed("SignatureBridge"),
             call_name: Cow::Borrowed("set_maintainer"),

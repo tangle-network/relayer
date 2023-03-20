@@ -18,7 +18,7 @@
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import '@webb-tools/protocol-substrate-types';
-import { assert, expect } from 'chai';
+import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -35,11 +35,8 @@ import {
 } from '../../lib/utils.js';
 import { LocalDkg } from '../../lib/localDkg.js';
 import { timeout } from '../../lib/timeout.js';
-import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
-import * as TinySecp256k1 from 'tiny-secp256k1';
-import { ethers } from 'ethers';
 
-describe.only('Substrate SignatureBridge Governor Update', function () {
+describe('Substrate SignatureBridge Governor Update', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -50,61 +47,57 @@ describe.only('Substrate SignatureBridge Governor Update', function () {
   let dkgNode3: LocalDkg;
 
   let webbRelayer: WebbRelayer;
-  const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
   before(async () => {
-    const usageMode: UsageMode = isCi
-      ? { mode: 'docker', forcePullImage: false }
+    const usageModeDkg: UsageMode = isCi
+      ? { mode: 'host', nodePath: 'dkg-standalone-node' }
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../dkg-substrate/target/release/dkg-standalone-node'
           ),
-        };
-    const enabledPallets: Pallet[] = [
+      };
+    
+    const dkgEnabledPallets: Pallet[] = [
       {
-        pallet: 'VAnchorBn254',
-        eventsWatcher: defaultEventsWatcherValue,
+          pallet: 'DKGProposalHandler',
+          eventsWatcher: defaultEventsWatcherValue,
       },
-    ];
+      {
+          pallet: 'DKG',
+          eventsWatcher: defaultEventsWatcherValue,
+      },
+      ];
 
     // Step 1. We initialize DKG nodes.
     dkgNode1 = await LocalDkg.start({
         name: 'dkg-alice',
         authority: 'alice',
-        usageMode,
+        usageMode: usageModeDkg,
         ports: 'auto',
+        enableLogging: false,
       });
   
     dkgNode2 = await LocalDkg.start({
         name: 'dkg-bob',
         authority: 'bob',
-        usageMode,
+        usageMode: usageModeDkg,
         ports: 'auto',
+        enableLogging: false,
       });
   
     dkgNode3 = await LocalDkg.start({
         name: 'dkg-charlie',
         authority: 'charlie',
-        usageMode,
+        usageMode: usageModeDkg,
         ports: 'auto',
         enableLogging: false,
       });
 
-    const dkgEnabledPallets: Pallet[] = [
-    {
-        pallet: 'DKGProposalHandler',
-        eventsWatcher: defaultEventsWatcherValue,
-    },
-    {
-        pallet: 'DKG',
-        eventsWatcher: defaultEventsWatcherValue,
-    },
-    ];
     // Wait until we are ready and connected
     const dkgApi = await dkgNode3.api();
     await dkgApi.isReady;
-
+    console.log("dkg node ready");
     const dkgNodeChainId = await dkgNode3.getChainId();
    
     await dkgNode3.writeConfig(`${tmpDirPath}/${dkgNode3.name}.json`, {
@@ -116,8 +109,24 @@ describe.only('Substrate SignatureBridge Governor Update', function () {
     // Step 2. We need to wait until the public key is on chain.
     await dkgNode3.waitForEvent({
     section: 'dkg',
-    method: 'PublicKeySubmitted',
+    method: 'PublicKeySignatureChanged',
     });
+
+
+    const usageMode: UsageMode = isCi
+      ? { mode: 'docker', forcePullImage: false }
+      : {
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../protocol-substrate/target/release/webb-standalone-node'
+          ),
+        };
+    const enabledPallets: Pallet[] = [
+      {
+        pallet: 'SignatureBridge',
+        eventsWatcher: defaultEventsWatcherValue,
+      },
+    ];
   
     // Step 3. We start protocol-substrate nodes.
     aliceNode = await LocalProtocolSubstrate.start({
@@ -138,7 +147,7 @@ describe.only('Substrate SignatureBridge Governor Update', function () {
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
-
+    console.log("substrate node ready");
     const chainId = await aliceNode.getChainId();
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
@@ -166,7 +175,7 @@ describe.only('Substrate SignatureBridge Governor Update', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -174,8 +183,8 @@ describe.only('Substrate SignatureBridge Governor Update', function () {
   it('ownership should be transfered when the DKG rotates', async () => {
      // Now we just need to force the DKG to rotate/refresh.
      const dkgApi = await dkgNode3.api();
-     const forceIncrementNonce = dkgApi.tx.dkg.manualIncrementNonce();
-     const forceRefresh = dkgApi.tx.dkg.manualRefresh();
+     const forceIncrementNonce = dkgApi.tx.dkg?.manualIncrementNonce?.();
+     const forceRefresh = dkgApi.tx.dkg?.manualRefresh?.();
      await timeout(
         dkgNode3.sudoExecuteTransaction(forceIncrementNonce),
        30_000
@@ -198,12 +207,7 @@ describe.only('Substrate SignatureBridge Governor Update', function () {
 
     const api = await aliceNode.api();
     const maintainer = await api.query.signatureBridge.maintainer();
-    const tinysecp: TinySecp256k1Interface = TinySecp256k1;
-    const ECPair: ECPairAPI = ECPairFactory(tinysecp);
-    const aliceMainatinerPubKey = ECPair.fromPublicKey(Buffer.from(maintainer),{
-        compressed: false,
-      }).publicKey.toString('hex');
-    
+    const aliceMainatinerPubKey = u8aToHex(maintainer);
     expect(dkgPublicKey).to.eq(aliceMainatinerPubKey);
   });
 

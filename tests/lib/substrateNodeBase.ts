@@ -110,24 +110,19 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   public async waitForEvent (typedEvent: TypedEvent): Promise<void> {
     const api = await this.api();
 
-    return new Promise((resolve, reject) => {
-      // Subscribe to system events via storage
-      const unsub: any = api.query.system.events((events: any[]) => {
-        // Loop through the Vec<EventRecord>
-        events.forEach((record: any) => {
+    return new Promise<void>((resolve) => {
+      api.query.system.events((events) => {
+        events.forEach((record) => {
           const { event } = record;
-
           if (
             event.section === typedEvent.section &&
             event.method === typedEvent.method
           ) {
-            // Unsubscribe from the storage
-            unsub();
-            // Resolve the promise
             resolve();
           }
+    
         });
-      }).catch((e) => reject(e));
+      });
     });
   }
 

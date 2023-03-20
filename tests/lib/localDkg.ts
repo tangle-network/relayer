@@ -102,6 +102,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
     } else {
       startArgs.push(
         '--tmp',
+        '--chain=local',
         '--rpc-cors',
         'all',
         '--rpc-methods=unsafe',
@@ -144,7 +145,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
   // get chainId
   public async getChainId(): Promise<number> {
     const api = await super.api();
-    const chainId = api.consts.dkgProposals.chainIdentifier.toNumber();
+    const chainId = api.consts?.dkgProposals?.chainIdentifier?.toNumber();
     return chainId;
   }
 
