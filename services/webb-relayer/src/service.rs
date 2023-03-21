@@ -1214,22 +1214,6 @@ pub async fn make_proposal_signing_backend(
         return Ok(ProposalSigningBackendSelector::None);
     }
 
-    // We do this by checking if linked anchors are provided.
-    let linked_anchors = match linked_anchors {
-        Some(anchors) => {
-            if anchors.is_empty() {
-                tracing::warn!("Misconfigured Network: Linked anchors cannot be empty for governance relaying");
-                return Ok(ProposalSigningBackendSelector::None);
-            } else {
-                anchors
-            }
-        }
-        None => {
-            tracing::warn!("Misconfigured Network: Linked anchors must be configured for governance relaying");
-            return Ok(ProposalSigningBackendSelector::None);
-        }
-    };
-
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
         Some(ProposalSigningBackendConfig::DkgNode(c)) => {
@@ -1252,6 +1236,22 @@ pub async fn make_proposal_signing_backend(
             // get only the linked chains to that anchor.
             let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
                 HashSet::new();
+
+            // Check if linked anchors are provided.
+            let linked_anchors = match linked_anchors {
+                Some(anchors) => {
+                    if anchors.is_empty() {
+                        tracing::warn!("Misconfigured Network: Linked anchors cannot be empty for governance relaying");
+                        return Ok(ProposalSigningBackendSelector::None);
+                    } else {
+                        anchors
+                    }
+                }
+                None => {
+                    tracing::warn!("Misconfigured Network: Linked anchors must be configured for governance relaying");
+                    return Ok(ProposalSigningBackendSelector::None);
+                }
+            };
             linked_anchors.iter().for_each(|anchor| {
                 // using chain_id to ensure that we have only one signature bridge
                 let resource_id = match anchor {
