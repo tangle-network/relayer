@@ -19,7 +19,13 @@
 
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import { CircomUtxo, Keypair, parseTypedChainId, toFixedHex, Utxo } from '@webb-tools/sdk-core';
+import {
+  CircomUtxo,
+  Keypair,
+  parseTypedChainId,
+  toFixedHex,
+  Utxo,
+} from '@webb-tools/sdk-core';
 
 import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
@@ -83,7 +89,7 @@ describe.skip('Relayer transfer assets', function () {
 
     govWallet1 = new ethers.Wallet(govPk, localChain1.provider());
     relayerWallet1 = new ethers.Wallet(relayerPk, localChain1.provider());
-    
+
     // Deploy the token.
     const wrappedToken1 = await localChain1.deployToken(
       'Wrapped Ethereum',
@@ -94,7 +100,7 @@ describe.skip('Relayer transfer assets', function () {
       'WEBB',
       govWallet1
     );
-    
+
     signatureVBridge = await localChain1.deploySignatureVBridge(
       localChain1,
       wrappedToken1,
@@ -111,7 +117,7 @@ describe.skip('Relayer transfer assets', function () {
       withdrawConfig: defaultWithdrawConfigValue,
       relayerWallet: relayerWallet1,
     });
-    
+
     // get the vanhor on localchain1
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
@@ -157,38 +163,38 @@ describe.skip('Relayer transfer assets', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should be able to transfer Utxo', async() => {
+  it('should be able to transfer Utxo', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
-    
+
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
 
     const token = await Tokens.MintableToken.tokenFromAddress(
-        tokenAddress,
-        govWallet1
-      );
-    
+      tokenAddress,
+      govWallet1
+    );
+
     // Step 1. Register recipient account(Bob)
     const bobKey = u8aToHex(ethers.utils.randomBytes(32));
     const bobWallet = new ethers.Wallet(bobKey, localChain1.provider());
     const bobKeypair = new Keypair();
     const tx = await vanchor1.contract.register({
-        owner: govWallet1.address,
-        keyData: bobKeypair.toString(),
-      });
+      owner: govWallet1.address,
+      keyData: bobKeypair.toString(),
+    });
 
     let receipt = await tx.wait();
     // Step 2. Sender queries on chain data for keypair information of recipient
     // In this test, simply take the data from the previous transaction receipt.
-    
+
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     //@ts-ignore
     const registeredKeydata: string = receipt.events[0].args.key;
     const bobPublicKeypair = Keypair.fromString(registeredKeydata);
-    
+
     // Step 3. Generate a UTXO that is only spendable by recipient(Bob)
     const transferUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
@@ -198,7 +204,7 @@ describe.skip('Relayer transfer assets', function () {
       chainId: localChain1.chainId.toString(),
       keypair: bobPublicKeypair,
     });
-    
+
     // insert utxo into tree
     receipt = (await vanchor1.transact(
       [],
@@ -208,16 +214,16 @@ describe.skip('Relayer transfer assets', function () {
       '0',
       relayerWallet1.address,
       tokenAddress,
-      {
-       
-      }
+      {}
     )) as ethers.ContractReceipt;
 
     // Step 4. Recipient (Bob) queries encrypted commitments on chain.
     // In this test, simply take the data from the previous transaction receipt.
-    const encryptedCommitments: string[] = receipt.events?.filter((event) => event.event === 'NewCommitment')
-    .sort((a, b) => a.args?.index - b.args?.index)
-    .map((e) => e.args?.encryptedOutput) ?? [];
+    const encryptedCommitments: string[] =
+      receipt.events
+        ?.filter((event) => event.event === 'NewCommitment')
+        .sort((a, b) => a.args?.index - b.args?.index)
+        .map((e) => e.args?.encryptedOutput) ?? [];
 
     // Attempt to decrypt the encrypted commitments with bob's keypair
     const utxos = await Promise.all(
@@ -240,37 +246,41 @@ describe.skip('Relayer transfer assets', function () {
         }
       })
     );
-    
-    const spendableUtxos = utxos.filter((utxo): utxo is Utxo => utxo !== undefined);
+
+    const spendableUtxos = utxos.filter(
+      (utxo): utxo is Utxo => utxo !== undefined
+    );
     const bobBalanceBefore = await token.getBalance(bobWallet.address);
-    console.log("Balance before ", bobBalanceBefore);
+    console.log('Balance before ', bobBalanceBefore);
 
     // Step 5. Get Estimated Fee
     const dummyOutput = await CircomUtxo.generateUtxo({
-        curve: 'Bn254',
-        backend: 'Circom',
-        amount: '0',
-        chainId: localChain1.chainId.toString(),
-        keypair: bobKeypair,
-      });
-    
+      curve: 'Bn254',
+      backend: 'Circom',
+      amount: '0',
+      chainId: localChain1.chainId.toString(),
+      keypair: bobKeypair,
+    });
+
     // fetch the inserted leaves
-    const leaves = vanchor1.tree.elements().map((leaf) => hexToU8a(leaf.toHexString()));
+    const leaves = vanchor1.tree
+      .elements()
+      .map((leaf) => hexToU8a(leaf.toHexString()));
     const outputData = await vanchor1.setupTransaction(
-        spendableUtxos,
-        [dummyOutput, dummyOutput],
-        0,
-        0,
-        bobWallet.address,
-        relayerWallet1.address,
-        tokenAddress,
-        {
-            [localChain1.chainId.toString()]: leaves,
-        }
-      );
+      spendableUtxos,
+      [dummyOutput, dummyOutput],
+      0,
+      0,
+      bobWallet.address,
+      relayerWallet1.address,
+      tokenAddress,
+      {
+        [localChain1.chainId.toString()]: leaves,
+      }
+    );
 
     const gas_amount = await vanchor1.contract.estimateGas.transact(
-       outputData.publicInputs.proof,
+      outputData.publicInputs.proof,
       '0x0000000000000000000000000000000000000000000000000000000000000000',
       outputData.extData,
       outputData.publicInputs,
@@ -291,20 +301,20 @@ describe.skip('Relayer transfer assets', function () {
       parseEther((maxRefund * refundExchangeRate).toString())
     );
     const totalFee = refundAmount.add(feeInfo.estimatedFee);
-    
+
     // Step 6. Use relayer to make transfer
     const { extData, publicInputs } = await vanchor1.setupTransaction(
-        spendableUtxos,
-        [dummyOutput, dummyOutput],
-        totalFee,
-        refundAmount,
-        bobWallet.address,
-        relayerWallet1.address,
-        tokenAddress,
-        {
-            [localChain1.chainId.toString()]: leaves,
-        }
-      );
+      spendableUtxos,
+      [dummyOutput, dummyOutput],
+      totalFee,
+      refundAmount,
+      bobWallet.address,
+      relayerWallet1.address,
+      tokenAddress,
+      {
+        [localChain1.chainId.toString()]: leaves,
+      }
+    );
 
     await webbRelayer.vanchorWithdraw(
       localChain1.underlyingChainId,
@@ -323,9 +333,8 @@ describe.skip('Relayer transfer assets', function () {
     });
     // Step 7. Check recipient(Bob) balance. This account is used to receive funds after withdrawal
     const bobBalanceAfter = await token.getBalance(bobWallet.address);
-    console.log("Balance after ", bobBalanceAfter);
-    expect(bobBalanceAfter.toBigInt() > bobBalanceBefore.toBigInt()).to
-    .be.true;
+    console.log('Balance after ', bobBalanceAfter);
+    expect(bobBalanceAfter.toBigInt() > bobBalanceBefore.toBigInt()).to.be.true;
   });
 
   after(async () => {

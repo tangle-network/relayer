@@ -36,12 +36,12 @@ export type UsageMode = DockerMode | HostMode;
 export type LocalNodeOpts = {
   name: string;
   ports:
-  | {
-    ws: number;
-    http: number;
-    p2p: number;
-  }
-  | 'auto';
+    | {
+        ws: number;
+        http: number;
+        p2p: number;
+      }
+    | 'auto';
   authority: 'alice' | 'bob' | 'charlie';
   usageMode: UsageMode;
   enableLogging?: boolean;
@@ -55,16 +55,16 @@ export type SubstrateEvent = {
 
 export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   #api: ApiPromise | null = null;
-  constructor (
+  constructor(
     protected readonly opts: LocalNodeOpts,
     protected readonly proc?: ChildProcess
   ) {}
 
-  public get name (): string {
+  public get name(): string {
     return this.opts.name;
   }
 
-  public static async makePorts (
+  public static async makePorts(
     opts: LocalNodeOpts
   ): Promise<{ ws: number; http: number; p2p: number }> {
     // Dynamic import used for commonjs compatibility
@@ -73,15 +73,14 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
 
     return opts.ports === 'auto'
       ? {
-        http: await getPort.default({ port: portNumbers(9933, 9999) }),
-        p2p: await getPort.default({ port: portNumbers(30333, 30399) }),
-        ws: await getPort.default({ port: portNumbers(9944, 9999) })
-
-      }
+          http: await getPort.default({ port: portNumbers(9933, 9999) }),
+          p2p: await getPort.default({ port: portNumbers(30333, 30399) }),
+          ws: await getPort.default({ port: portNumbers(9944, 9999) }),
+        }
       : (opts.ports as { ws: number; http: number; p2p: number });
   }
 
-  public async api (): Promise<ApiPromise> {
+  public async api(): Promise<ApiPromise> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
     const host = '127.0.0.1';
 
@@ -98,7 +97,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     return this.#api;
   }
 
-  public async stop (): Promise<void> {
+  public async stop(): Promise<void> {
     await this.#api?.disconnect();
     this.#api = null;
 
@@ -107,7 +106,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     }
   }
 
-  public async waitForEvent (typedEvent: TypedEvent): Promise<void> {
+  public async waitForEvent(typedEvent: TypedEvent): Promise<void> {
     const api = await this.api();
 
     return new Promise<void>((resolve) => {
@@ -120,13 +119,12 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
           ) {
             resolve();
           }
-    
         });
       });
     });
   }
 
-  public async executeTransaction (
+  public async executeTransaction(
     tx: SubmittableExtrinsic<'promise'>
   ): Promise<string> {
     const api = await this.api();
@@ -155,7 +153,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     });
   }
 
-  public async sudoExecuteTransaction (
+  public async sudoExecuteTransaction(
     tx: SubmittableExtrinsic<'promise'>
   ): Promise<string> {
     const api = await this.api();
@@ -164,15 +162,13 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     const sudoCall = api.tx.sudo.sudo(tx);
 
     return new Promise((resolve, reject) => {
-      sudoCall.signAndSend(
-        sudoKey,
-        { nonce: -1 },
-        ({ dispatchError, status }) => {
-        // status would still be set, but in the case of error we can shortcut
-        // to just check it (so an error would indicate InBlock or Finalized)
+      sudoCall
+        .signAndSend(sudoKey, { nonce: -1 }, ({ dispatchError, status }) => {
+          // status would still be set, but in the case of error we can shortcut
+          // to just check it (so an error would indicate InBlock or Finalized)
           if (dispatchError) {
             if (dispatchError.isModule) {
-            // for module errors, we have the section indexed, lookup
+              // for module errors, we have the section indexed, lookup
               const decoded = api.registry.findMetaError(
                 dispatchError.asModule
               );
@@ -180,7 +176,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
 
               reject(new Error(`${section}.${name}: ${docs.join(' ')}`));
             } else {
-            // Other, CannotLookup, BadOrigin, no extra info
+              // Other, CannotLookup, BadOrigin, no extra info
               reject(dispatchError.toString());
             }
           }
@@ -188,34 +184,34 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
           if (status.isFinalized && !dispatchError) {
             resolve(status.asFinalized.toString());
           }
-        }
-      ).catch((e) => reject(e));
+        })
+        .catch((e) => reject(e));
     });
   }
 
-  protected static checkIfImageExists (image: string): boolean {
+  protected static checkIfImageExists(image: string): boolean {
     const result = execSync('docker images', { encoding: 'utf8' });
 
     return result.includes(image);
   }
 
-  protected static pullImage (opts: {
+  protected static pullImage(opts: {
     forcePull: boolean;
     image: string;
   }): void {
     if (!this.checkIfImageExists(opts.image) || opts.forcePull) {
       execSync(`docker pull ${opts.image}`, {
-        encoding: 'utf8'
+        encoding: 'utf8',
       });
     }
   }
 }
 
-export async function createApiPromise (endpoint: string) {
+export async function createApiPromise(endpoint: string) {
   return ApiPromise.create(
     options({
       provider: new WsProvider(endpoint) as any,
-      rpc: rpcProperties
+      rpc: rpcProperties,
     })
   );
 }

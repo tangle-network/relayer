@@ -459,7 +459,7 @@ async function vanchorWithdraw(
   // Configure a new proving manager with direct call
   const provingManager = new ArkworksProvingManager(null);
   const leavesMap = {};
-  const assetId = new Uint8Array([ 0, 0, 0, 0 ]); // WEBB native token asset Id.
+  const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
   const address = account.address;
   const extAmount = currencyToUnitI128(10);
   const fee = 0;

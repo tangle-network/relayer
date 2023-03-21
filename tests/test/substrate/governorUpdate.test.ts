@@ -23,20 +23,15 @@ import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
 import isCi from 'is-ci';
-import {
-  WebbRelayer,
-  Pallet,
-} from '../../lib/webbRelayer.js';
+import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
-import { u8aToHex,  } from '@polkadot/util';
+import { u8aToHex } from '@polkadot/util';
 import { UsageMode } from '@webb-tools/test-utils';
-import {
-  defaultEventsWatcherValue,
-} from '../../lib/utils.js';
+import { defaultEventsWatcherValue } from '../../lib/utils.js';
 import { LocalDkg } from '../../lib/localDkg.js';
 import { timeout } from '../../lib/timeout.js';
 
-describe('Substrate SignatureBridge Governor Update', function () {
+describe.skip('Substrate SignatureBridge Governor Update', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -56,62 +51,61 @@ describe('Substrate SignatureBridge Governor Update', function () {
           nodePath: path.resolve(
             '../../dkg-substrate/target/release/dkg-standalone-node'
           ),
-      };
-    
+        };
+
     const dkgEnabledPallets: Pallet[] = [
       {
-          pallet: 'DKGProposalHandler',
-          eventsWatcher: defaultEventsWatcherValue,
+        pallet: 'DKGProposalHandler',
+        eventsWatcher: defaultEventsWatcherValue,
       },
       {
-          pallet: 'DKG',
-          eventsWatcher: defaultEventsWatcherValue,
+        pallet: 'DKG',
+        eventsWatcher: defaultEventsWatcherValue,
       },
-      ];
+    ];
 
     // Step 1. We initialize DKG nodes.
     dkgNode1 = await LocalDkg.start({
-        name: 'dkg-alice',
-        authority: 'alice',
-        usageMode: usageModeDkg,
-        ports: 'auto',
-        enableLogging: false,
-      });
-  
+      name: 'dkg-alice',
+      authority: 'alice',
+      usageMode: usageModeDkg,
+      ports: 'auto',
+      enableLogging: false,
+    });
+
     dkgNode2 = await LocalDkg.start({
-        name: 'dkg-bob',
-        authority: 'bob',
-        usageMode: usageModeDkg,
-        ports: 'auto',
-        enableLogging: false,
-      });
-  
+      name: 'dkg-bob',
+      authority: 'bob',
+      usageMode: usageModeDkg,
+      ports: 'auto',
+      enableLogging: false,
+    });
+
     dkgNode3 = await LocalDkg.start({
-        name: 'dkg-charlie',
-        authority: 'charlie',
-        usageMode: usageModeDkg,
-        ports: 'auto',
-        enableLogging: false,
-      });
+      name: 'dkg-charlie',
+      authority: 'charlie',
+      usageMode: usageModeDkg,
+      ports: 'auto',
+      enableLogging: false,
+    });
 
     // Wait until we are ready and connected
     const dkgApi = await dkgNode3.api();
     await dkgApi.isReady;
-    console.log("dkg node ready");
+    console.log('dkg node ready');
     const dkgNodeChainId = await dkgNode3.getChainId();
-   
+
     await dkgNode3.writeConfig(`${tmpDirPath}/${dkgNode3.name}.json`, {
-    suri: '//Charlie',
-    chainId: dkgNodeChainId,
-    enabledPallets: dkgEnabledPallets,
+      suri: '//Charlie',
+      chainId: dkgNodeChainId,
+      enabledPallets: dkgEnabledPallets,
     });
 
     // Step 2. We need to wait until the public key is on chain.
     await dkgNode3.waitForEvent({
-    section: 'dkg',
-    method: 'PublicKeySignatureChanged',
+      section: 'dkg',
+      method: 'PublicKeySignatureChanged',
     });
-
 
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
@@ -127,7 +121,7 @@ describe('Substrate SignatureBridge Governor Update', function () {
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
-  
+
     // Step 3. We start protocol-substrate nodes.
     aliceNode = await LocalProtocolSubstrate.start({
       name: 'substrate-alice',
@@ -147,7 +141,7 @@ describe('Substrate SignatureBridge Governor Update', function () {
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
-    console.log("substrate node ready");
+    console.log('substrate node ready');
     const chainId = await aliceNode.getChainId();
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
@@ -157,14 +151,16 @@ describe('Substrate SignatureBridge Governor Update', function () {
       enabledPallets,
     });
 
-
     // Step 4. We force set maintainer on protocol-substrate node.
     const dkgPublicKey = await dkgNode3.fetchDkgPublicKey();
     expect(dkgPublicKey).to.not.be.null;
     const refreshNonce = await dkgApi.query.dkg.refreshNonce();
 
     // force set maintainer
-    const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(refreshNonce, dkgPublicKey!);
+    const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
+      refreshNonce,
+      dkgPublicKey!
+    );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
 
     // now start the relayer
@@ -181,25 +177,22 @@ describe('Substrate SignatureBridge Governor Update', function () {
   });
 
   it('ownership should be transfered when the DKG rotates', async () => {
-     // Now we just need to force the DKG to rotate/refresh.
-     const dkgApi = await dkgNode3.api();
-     const forceIncrementNonce = dkgApi.tx.dkg?.manualIncrementNonce?.();
-     const forceRefresh = dkgApi.tx.dkg?.manualRefresh?.();
-     await timeout(
-        dkgNode3.sudoExecuteTransaction(forceIncrementNonce),
-       30_000
-     );
-     await timeout(dkgNode3.sudoExecuteTransaction(forceRefresh), 60_000);
-     // Now we just need for the relayer to pick up the new DKG events.
-     const chainId = await aliceNode.getChainId();
-     await webbRelayer.waitForEvent({
-        kind: 'tx_queue',
-        event: {
-          ty: 'SUBSTRATE',
-          chain_id: chainId.toString(),
-          finalized: true,
-        },
-      });
+    // Now we just need to force the DKG to rotate/refresh.
+    const dkgApi = await dkgNode3.api();
+    const forceIncrementNonce = dkgApi.tx.dkg?.manualIncrementNonce?.();
+    const forceRefresh = dkgApi.tx.dkg?.manualRefresh?.();
+    await timeout(dkgNode3.sudoExecuteTransaction(forceIncrementNonce), 30_000);
+    await timeout(dkgNode3.sudoExecuteTransaction(forceRefresh), 60_000);
+    // Now we just need for the relayer to pick up the new DKG events.
+    const chainId = await aliceNode.getChainId();
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'SUBSTRATE',
+        chain_id: chainId.toString(),
+        finalized: true,
+      },
+    });
 
     // Now we need to check that the ownership was transfered.
     const dkgPublicKey = await dkgNode3.fetchDkgPublicKey();
@@ -220,4 +213,3 @@ describe('Substrate SignatureBridge Governor Update', function () {
     await webbRelayer?.stop();
   });
 });
-

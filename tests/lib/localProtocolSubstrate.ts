@@ -178,8 +178,8 @@ export class LocalProtocolSubstrate extends BaseLocalSubstrate {
           'events-watcher': {
             enabled: c.eventsWatcher.enabled,
             'polling-interval': c.eventsWatcher.pollingInterval,
-            'print-progress-interval' : c.eventsWatcher.printProgressInterval,
-            'sync-blocks-from': c.eventsWatcher.syncBlocksFrom
+            'print-progress-interval': c.eventsWatcher.printProgressInterval,
+            'sync-blocks-from': c.eventsWatcher.syncBlocksFrom,
           },
           'proposal-signing-backend':
             c.proposalSigningBackend?.type === 'Mocked'

@@ -510,7 +510,7 @@ async function vanchorDeposit(
 
   const rootsSet = [hexToU8a(root), hexToU8a(neighborRoots[0])];
   const decodedAddress = decodeAddress(address);
-  const assetId = new Uint8Array([ 0, 0, 0, 0 ]); // WEBB native token asset Id.
+  const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
   const { encrypted: comEnc1 } = naclEncrypt(output1.commitment, secret);
   const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
   const LeafId = {
