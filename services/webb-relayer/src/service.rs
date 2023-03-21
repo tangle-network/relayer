@@ -31,6 +31,7 @@ use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb::evm::ethers::providers;
+use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
 use webb_ew_dkg::DKGMetadataWatcher;
 use webb_ew_dkg::DKGProposalHandlerWatcher;
 use webb_ew_dkg::DKGPublicKeyChangedHandler;
@@ -41,6 +42,7 @@ use webb_ew_substrate::SubstrateVAnchorEventWatcher;
 
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
+use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
 use webb_event_watcher_traits::evm::{BridgeWatcher, EventWatcher};
 use webb_event_watcher_traits::substrate::SubstrateBridgeWatcher;
 use webb_event_watcher_traits::SubstrateEventWatcher;
@@ -660,7 +662,11 @@ async fn start_evm_vanchor_events_watcher(
         .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
-                let deposit_handler = VAnchorDepositHandler::new(backend);
+                let bridge_registry = DkgBridgeRegistryBackend::new(
+                    OnlineClient::<PolkadotConfig>::new().await?,
+                );
+                let deposit_handler =
+                    VAnchorDepositHandler::new(backend, bridge_registry);
                 let leaves_handler = VAnchorLeavesHandler::new(
                     store.clone(),
                     default_leaf_bytes.to_vec(),
@@ -694,7 +700,10 @@ async fn start_evm_vanchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
-                let deposit_handler = VAnchorDepositHandler::new(backend);
+                let bridge_registry =
+                    MockedBridgeRegistryBackend::builder().build();
+                let deposit_handler =
+                    VAnchorDepositHandler::new(backend, bridge_registry);
                 let leaves_handler = VAnchorLeavesHandler::new(
                     store.clone(),
                     default_leaf_bytes.to_vec(),
@@ -817,7 +826,11 @@ pub async fn start_evm_open_vanchor_events_watcher(
         .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
-                let deposit_handler = OpenVAnchorDepositHandler::new(backend);
+                let bridge_registry = DkgBridgeRegistryBackend::new(
+                    OnlineClient::<PolkadotConfig>::new().await?,
+                );
+                let deposit_handler =
+                    OpenVAnchorDepositHandler::new(backend, bridge_registry);
                 let leaves_handler = OpenVAnchorLeavesHandler::default();
 
                 let vanchor_watcher_task = contract_watcher.run(
@@ -843,7 +856,10 @@ pub async fn start_evm_open_vanchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
-                let deposit_handler = OpenVAnchorDepositHandler::new(backend);
+                let bridge_registry =
+                    MockedBridgeRegistryBackend::builder().build();
+                let deposit_handler =
+                    OpenVAnchorDepositHandler::new(backend, bridge_registry);
                 let leaves_handler = OpenVAnchorLeavesHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
@@ -1198,22 +1214,6 @@ pub async fn make_proposal_signing_backend(
         return Ok(ProposalSigningBackendSelector::None);
     }
 
-    // We do this by checking if linked anchors are provided.
-    let linked_anchors = match linked_anchors {
-        Some(anchors) => {
-            if anchors.is_empty() {
-                tracing::warn!("Misconfigured Network: Linked anchors cannot be empty for governance relaying");
-                return Ok(ProposalSigningBackendSelector::None);
-            } else {
-                anchors
-            }
-        }
-        None => {
-            tracing::warn!("Misconfigured Network: Linked anchors must be configured for governance relaying");
-            return Ok(ProposalSigningBackendSelector::None);
-        }
-    };
-
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
         Some(ProposalSigningBackendConfig::DkgNode(c)) => {
@@ -1236,6 +1236,22 @@ pub async fn make_proposal_signing_backend(
             // get only the linked chains to that anchor.
             let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
                 HashSet::new();
+
+            // Check if linked anchors are provided.
+            let linked_anchors = match linked_anchors {
+                Some(anchors) => {
+                    if anchors.is_empty() {
+                        tracing::warn!("Misconfigured Network: Linked anchors cannot be empty for governance relaying");
+                        return Ok(ProposalSigningBackendSelector::None);
+                    } else {
+                        anchors
+                    }
+                }
+                None => {
+                    tracing::warn!("Misconfigured Network: Linked anchors must be configured for governance relaying");
+                    return Ok(ProposalSigningBackendSelector::None);
+                }
+            };
             linked_anchors.iter().for_each(|anchor| {
                 // using chain_id to ensure that we have only one signature bridge
                 let resource_id = match anchor {

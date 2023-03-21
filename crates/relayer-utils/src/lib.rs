@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use webb::{evm::ethers, substrate::subxt};
+use webb_proposals::ResourceId;
 
 pub mod clickable_link;
 
@@ -150,6 +151,8 @@ pub enum Error {
     /// Arkworks Errors.
     #[error("{}", _0)]
     ArkworksError(String),
+    #[error("No bridge registered with DKG for resource id {:?}", _0)]
+    BridgeNotRegistered(ResourceId),
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.
