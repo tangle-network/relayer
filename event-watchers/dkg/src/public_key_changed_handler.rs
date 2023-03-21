@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use ethereum_types::U256;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api::dkg;
@@ -75,11 +74,22 @@ impl EventHandler<PolkadotConfig> for DKGPublicKeyChangedHandler {
                 %block_number,
                 "DKG Public Key Changed",
             );
-            let bridge_keys = self
-                .webb_config
-                .evm
-                .values()
-                .map(|c| BridgeKey::new(U256::from(c.chain_id)));
+            let mut bridge_keys = Vec::new();
+            // get evm bridges
+            for (_, config) in self.webb_config.evm.iter() {
+                let typed_chain_id =
+                    webb_proposals::TypedChainId::Evm(config.chain_id);
+                let bridge_key = BridgeKey::new(typed_chain_id);
+                bridge_keys.push(bridge_key);
+            }
+            // get substrate bridges
+            for (_, config) in self.webb_config.substrate.iter() {
+                let typed_chain_id =
+                    webb_proposals::TypedChainId::Substrate(config.chain_id);
+                let bridge_key = BridgeKey::new(typed_chain_id);
+                bridge_keys.push(bridge_key);
+            }
+
             // now we just signal every signature bridge to transfer the ownership.
             for bridge_key in bridge_keys {
                 tracing::debug!(

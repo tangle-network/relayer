@@ -53,8 +53,9 @@ where
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
 
         let task = || async {
-            let my_chain_id = webb_proposals::TypedChainId::Substrate(chain_id);
-            let bridge_key = BridgeKey::new(my_chain_id);
+            let typed_chain_id =
+                webb_proposals::TypedChainId::Substrate(chain_id);
+            let bridge_key = BridgeKey::new(typed_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
                 let result = match store.dequeue_item(key)? {

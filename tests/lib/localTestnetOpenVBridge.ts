@@ -20,8 +20,6 @@ import { Utility, VBridge } from '@webb-tools/protocol-solidity';
 import { DeployerConfig, GovernorConfig } from '@webb-tools/interfaces';
 import { MintableToken } from '@webb-tools/tokens';
 import { FungibleTokenWrapper } from '@webb-tools/tokens';
-import { LocalEvmChain } from '@webb-tools/test-utils';
-import child from 'child_process';
 import {
   ChainInfo,
   Contract,
@@ -33,6 +31,7 @@ import {
   WithdrawConfig,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
+import { LocalEvmChain } from '@webb-tools/evm-test-utils';
 
 export type GanacheAccounts = {
   balance: string;
