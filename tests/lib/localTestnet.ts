@@ -25,7 +25,7 @@ import {
 } from '@webb-tools/interfaces';
 import { FungibleTokenWrapper, MintableToken } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
-import { LocalEvmChain } from '@webb-tools/test-utils';
+
 import path from 'path';
 import child from 'child_process';
 import {
@@ -41,6 +41,7 @@ import { ConvertToKebabCase } from './tsHacks';
 import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { TokenConfig } from '@webb-tools/vbridge/lib/VBridge';
+import { LocalEvmChain } from '@webb-tools/evm-test-utils';
 
 export type GanacheAccounts = {
   balance: string;

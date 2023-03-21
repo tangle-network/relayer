@@ -219,13 +219,14 @@ where
                                     status = "Broadcast",
                                 );
                             }
-                            TransactionStatus::InBlock(_) => {
+                            TransactionStatus::InBlock(data) => {
                                 tracing::event!(
                                     target: webb_relayer_utils::probe::TARGET,
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id,
+                                    block_hash = ?data.block_hash(),
                                     status = "InBlock",
                                 );
                             }

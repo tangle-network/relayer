@@ -438,7 +438,7 @@ async function vanchorWithdraw(
   const pk_hex = fs.readFileSync(pkPath).toString('hex');
   const pk = hexToU8a(pk_hex);
 
-  let note1 = depositNote;
+  const note1 = depositNote;
   const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(publicAmountUint);
   const notes = [note1, note2];
@@ -459,7 +459,7 @@ async function vanchorWithdraw(
   // Configure a new proving manager with direct call
   const provingManager = new ArkworksProvingManager(null);
   const leavesMap = {};
-  const assetId = new Uint8Array([ 0, 0, 0, 0 ]); // WEBB native token asset Id.
+  const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
   const address = account.address;
   const extAmount = currencyToUnitI128(10);
   const fee = 0;
@@ -515,7 +515,7 @@ async function vanchorWithdraw(
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };
-  let vanchorProofData = {
+  const vanchorProofData = {
     proof: `0x${data.proof}`,
     publicAmount: data.publicAmount,
     roots: rootsSet,
@@ -525,7 +525,7 @@ async function vanchorWithdraw(
   };
 
   // now we call the vanchor transact to withdraw on substrate
-  let transactCall = api.tx.vAnchorBn254!.transact!(
+  const transactCall = api.tx.vAnchorBn254!.transact!(
     treeId,
     vanchorProofData,
     extData

@@ -24,7 +24,7 @@ import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import isCI from 'is-ci';
 import * as TinySecp256k1 from 'tiny-secp256k1';
 
-import { LocalNodeOpts, SubstrateNodeBase } from '@webb-tools/test-utils';
+import { LocalNodeOpts } from '@webb-tools/test-utils';
 import {
   EventsWatcher,
   LinkedAnchor,
@@ -33,6 +33,7 @@ import {
   ProposalSigningBackend,
 } from './webbRelayer.js';
 import { ConvertToKebabCase } from './tsHacks.js';
+import { SubstrateNodeBase } from './substrateNodeBase.js';
 
 type ExportedConfigOptions = {
   suri: string;
@@ -101,6 +102,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
     } else {
       startArgs.push(
         '--tmp',
+        '--chain=local',
         '--rpc-cors',
         'all',
         '--rpc-methods=unsafe',
@@ -143,7 +145,7 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
   // get chainId
   public async getChainId(): Promise<number> {
     const api = await super.api();
-    const chainId = (await api.consts.dkgProposals.chainIdentifier).toNumber();
+    const chainId = api.consts?.dkgProposals?.chainIdentifier?.toNumber();
     return chainId;
   }
 
@@ -194,8 +196,8 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
           'events-watcher': {
             enabled: c.eventsWatcher.enabled,
             'polling-interval': c.eventsWatcher.pollingInterval,
-            'print-progress-interval' : c.eventsWatcher.printProgressInterval,
-            'sync-blocks-from': c.eventsWatcher.syncBlocksFrom
+            'print-progress-interval': c.eventsWatcher.printProgressInterval,
+            'sync-blocks-from': c.eventsWatcher.syncBlocksFrom,
           },
         };
         return convertedPallet;

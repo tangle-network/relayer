@@ -62,7 +62,9 @@ where
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
                 .await?;
-            let bridge_key = BridgeKey::new(my_chain_id);
+            let typed_chain_id =
+                webb_proposals::TypedChainId::Evm(my_chain_id.as_u32());
+            let bridge_key = BridgeKey::new(typed_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
                 let result = match store.dequeue_item(key)? {
