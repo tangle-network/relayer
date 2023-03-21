@@ -37,10 +37,13 @@ use webb_relayer_handler_utils::{
     Command, CommandResponse, CommandStream, EvmCommandType,
     IpInformationResponse, SubstrateCommandType,
 };
-use webb_relayer_tx_relay::evm::fees::{get_fee_info, FeeInfo};
+use webb_relayer_tx_relay::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 
 use crate::routes::HandlerError;
 use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
+use webb_relayer_tx_relay::substrate::fees::{
+    get_substrate_fee_info, SubstrateFeeInfo,
+};
 use webb_relayer_tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
 
@@ -202,13 +205,25 @@ pub async fn handle_cmd(
 /// * `vanchor` - Address of the smart contract
 /// * `gas_amount` - How much gas the transaction needs. Don't use U256 here because it
 ///                  gets parsed incorrectly.
-pub async fn handle_fee_info(
+pub async fn handle_evm_fee_info(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, vanchor, gas_amount)): Path<(u64, Address, u64)>,
-) -> Result<Json<FeeInfo>, HandlerError> {
+) -> Result<Json<EvmFeeInfo>, HandlerError> {
     let chain_id = TypedChainId::from(chain_id);
     let gas_amount = U256::from(gas_amount);
-    get_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
+    get_evm_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
+        .await
+        .map(Json)
+        .map_err(|e| {
+            HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })
+}
+pub async fn handle_substrate_fee_info(
+    State(ctx): State<Arc<RelayerContext>>,
+    Path(chain_id): Path<u64>,
+) -> Result<Json<SubstrateFeeInfo>, HandlerError> {
+    let chain_id = TypedChainId::from(chain_id);
+    get_substrate_fee_info(chain_id, ctx.as_ref())
         .await
         .map(Json)
         .map_err(|e| {

@@ -33,7 +33,7 @@ import { LocalChain } from '../../lib/localTestnet.js';
 import {
   defaultWithdrawConfigValue,
   EnabledContracts,
-  FeeInfo,
+  EvmFeeInfo,
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
@@ -287,13 +287,13 @@ describe.skip('Relayer transfer assets', function () {
       outputData.extData
     );
 
-    const feeInfoResponse = await webbRelayer.getFeeInfo(
+    const feeInfoResponse = await webbRelayer.getEvmFeeInfo(
       localChain1.chainId,
       vanchor1.getAddress(),
       gas_amount
     );
     expect(feeInfoResponse.status).equal(200);
-    const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
+    const feeInfo = await (feeInfoResponse.json() as Promise<EvmFeeInfo>);
     console.log(feeInfo);
     const maxRefund = Number(formatEther(feeInfo.maxRefund));
     const refundExchangeRate = Number(formatEther(feeInfo.refundExchangeRate));

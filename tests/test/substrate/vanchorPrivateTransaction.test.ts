@@ -30,6 +30,7 @@ import {
   Pallet,
   SubstrateVAnchorExtData,
   SubstrateVAnchorProofData,
+  SubstrateFeeInfo,
 } from '../../lib/webbRelayer.js';
 import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 
@@ -117,7 +118,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should withdraw using private transaction ', async () => {
+  it.only('should withdraw using private transaction ', async () => {
     const api = await aliceNode.api();
     // 1. Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
@@ -156,6 +157,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     // Bob's balance after withdrawal
     const bobBalanceBefore = await api.query.system.account(account.address);
 
+    // TODO: this should probably use fee
     const vanchorData = await vanchorWithdraw(
       typedSourceChainId.toString(),
       typedSourceChainId.toString(),
@@ -197,6 +199,16 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
         Array.from(hexToU8a(com))
       ),
     };
+    const feeInfoResponse = await webbRelayer.getSubstrateFeeInfo(
+      substrateChainId
+    );
+    expect(feeInfoResponse.status).equal(200);
+    const feeInfo = await (feeInfoResponse.json() as Promise<SubstrateFeeInfo>);
+    console.log(feeInfo);
+
+    const info = api.tx.vAnchorBn254.transact(treeId, substrateProofData, 
+      substrateExtData).paymentInfo(account);
+    console.log(info);
 
     // now we withdraw using private transaction
     await webbRelayer.substrateVAnchorWithdraw(

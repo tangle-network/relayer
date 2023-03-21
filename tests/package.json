@@ -42,7 +42,7 @@
     "@webb-tools/api-derive": "0.1.4-121",
     "@webb-tools/sdk-core": "0.1.4-121",
     "@webb-tools/test-utils": "0.1.4-121",
-    "@webb-tools/protocol-substrate-types": "0.0.5",
+    "@webb-tools/protocol-substrate-types": "0.0.6",
     "@webb-tools/dkg-substrate-types": "0.0.1",
     "JSONStream": "^1.3.5",
     "async-retry": "^1.3.3",

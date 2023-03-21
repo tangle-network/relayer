@@ -219,13 +219,21 @@ export class WebbRelayer {
     const response = await fetch(endpoint);
     return response;
   }
-  // API to fetch metrics for particular resource
-  public async getFeeInfo(
+  
+  public async getEvmFeeInfo(
     chainId: number,
     vanchor: string,
     gas_amount: BigNumber
   ) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/${chainId}/${vanchor}/${gas_amount}`;
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/evm/${chainId}/${vanchor}/${gas_amount}`;
+    const response = await fetch(endpoint);
+    return response;
+  }
+  
+  public async getSubstrateFeeInfo(
+    chainId: number,
+  ) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/substrate/${chainId}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -633,12 +641,16 @@ export interface ChainInfo {
   blockConfirmations: number;
 }
 
-export interface FeeInfo {
+export interface EvmFeeInfo {
   estimatedFee: BigNumber;
   gasPrice: BigNumber;
   refundExchangeRate: BigNumber;
   maxRefund: BigNumber;
   timestamp: string;
+}
+
+export interface SubstrateFeeInfo {
+  
 }
 
 export interface Contract {

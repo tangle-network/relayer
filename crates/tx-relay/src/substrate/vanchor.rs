@@ -17,6 +17,8 @@ use webb_relayer_utils::metric::Metrics;
 
 /// Handler for Substrate Anchor commands
 ///
+/// TODO: add fee here
+///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration

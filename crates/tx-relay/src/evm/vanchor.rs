@@ -1,5 +1,5 @@
 use super::*;
-use crate::evm::fees::{get_fee_info, FeeInfo};
+use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
@@ -156,7 +156,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
             })
         })?;
     let typed_chain_id = TypedChainId::Evm(chain.chain_id);
-    let fee_info = get_fee_info(
+    let fee_info = get_evm_fee_info(
         typed_chain_id,
         contract_config.common.address,
         gas_amount,
@@ -224,7 +224,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
 fn calculate_wrapped_refund_amount(
     refund: U256,
-    fee_info: &FeeInfo,
+    fee_info: &EvmFeeInfo,
 ) -> webb_relayer_utils::Result<U256> {
     let refund_exchange_rate: f32 =
         format_units(fee_info.refund_exchange_rate, "ether")?.parse()?;

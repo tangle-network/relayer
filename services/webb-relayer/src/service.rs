@@ -73,7 +73,8 @@ use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOut
 use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::{
-    handle_fee_info, handle_socket_info, websocket_handler,
+    handle_evm_fee_info, handle_socket_info, handle_substrate_fee_info,
+    websocket_handler,
 };
 
 use webb_relayer_handlers::routes::info::handle_relayer_info;
@@ -126,8 +127,12 @@ pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
             get(metric::handle_substrate_metric_info),
         )
         .route(
-            "/fee_info/:chain_id/:vanchor/:gas_amount",
-            get(handle_fee_info),
+            "/fee_info/evm/:chain_id/:vanchor/:gas_amount",
+            get(handle_evm_fee_info),
+        )
+        .route(
+            "/fee_info/substrate/:chain_id",
+            get(handle_substrate_fee_info),
         );
 
     let app = Router::new()

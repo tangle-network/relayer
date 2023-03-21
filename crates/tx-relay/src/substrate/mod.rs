@@ -8,6 +8,7 @@ use webb_relayer_handler_utils::{
     CommandResponse, CommandStream, WithdrawStatus,
 };
 
+pub mod fees;
 /// Substrate Mixer Transactional Relayer.
 pub mod mixer;
 /// Substrate Variable Anchor Transactional Relayer.

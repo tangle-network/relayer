@@ -26,13 +26,14 @@ const TRANSACTION_PROFIT_USD: f64 = 5.;
 
 /// Cache for previously generated fee info. Key consists of the VAnchor address and chain id.
 /// Entries are valid as long as `timestamp` is no older than `FEE_CACHE_TIME`.
-static FEE_INFO_CACHED: Lazy<Mutex<HashMap<(Address, TypedChainId), FeeInfo>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+static FEE_INFO_CACHED: Lazy<
+    Mutex<HashMap<(Address, TypedChainId), EvmFeeInfo>>,
+> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// Return value of fee_info API call. Contains information about relay transaction fee and refunds.
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct FeeInfo {
+pub struct EvmFeeInfo {
     /// Estimated fee for an average relay transaction, in `wrappedToken`. This is only for
     /// display to the user
     pub estimated_fee: U256,
@@ -59,12 +60,12 @@ pub struct FeeInfo {
 ///
 /// If fee info was recently requested, the cached value is used. Otherwise it is regenerated
 /// based on the current exchange rate and estimated gas price.
-pub async fn get_fee_info(
+pub async fn get_evm_fee_info(
     chain_id: TypedChainId,
     vanchor: Address,
     gas_amount: U256,
     ctx: &RelayerContext,
-) -> Result<FeeInfo> {
+) -> Result<EvmFeeInfo> {
     // Retrieve cached fee info item
     let fee_info_cached = {
         let mut lock = FEE_INFO_CACHED.lock().unwrap();
@@ -112,7 +113,7 @@ async fn generate_fee_info(
     vanchor: Address,
     gas_amount: U256,
     ctx: &RelayerContext,
-) -> Result<FeeInfo> {
+) -> Result<EvmFeeInfo> {
     // Get token names
     let native_token = get_native_token_name_and_decimals(chain_id)?;
     let wrapped_token =
@@ -157,7 +158,7 @@ async fn generate_fee_info(
         parse_units(MAX_REFUND_USD / native_token_price, native_token.1)?
             .into();
 
-    Ok(FeeInfo {
+    Ok(EvmFeeInfo {
         estimated_fee,
         gas_price,
         refund_exchange_rate,

@@ -10,6 +10,8 @@ use webb_relayer_handler_utils::SubstrateMixerCommand;
 
 /// Handler for Substrate Mixer commands
 ///
+/// TODO: dont change anything here
+///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
