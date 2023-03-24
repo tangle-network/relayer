@@ -1,6 +1,12 @@
 use super::*;
+use crate::substrate::fees::{get_substrate_fee_info, RpcFeeDetailsResponse};
 use crate::substrate::handle_substrate_tx;
+use sp_core::crypto::Pair;
+use std::ops::Deref;
+use webb::evm::ethers::utils::__serde_json::Value;
+use webb::evm::ethers::utils::hex;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::subxt::rpc::RpcParams;
 use webb::substrate::subxt::utils::AccountId32;
 use webb::substrate::{
     protocol_substrate_runtime::api::runtime_types::{
@@ -16,8 +22,6 @@ use webb_relayer_handler_utils::SubstrateVAchorCommand;
 use webb_relayer_utils::metric::Metrics;
 
 /// Handler for Substrate Anchor commands
-///
-/// TODO: add fee here
 ///
 /// # Arguments
 ///
@@ -76,17 +80,60 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             Error(format!("Misconfigured Network {:?}: {e}", cmd.chain_id))
         })?;
 
-    let signer = PairSigner::new(pair);
+    let signer = PairSigner::new(pair.clone());
 
+    // TODO: add refund
     let transact_tx = RuntimeApi::tx().v_anchor_bn254().transact(
         cmd.id,
         proof_elements,
         ext_data_elements,
     );
-    let transact_tx_hash = client
+
+    let mut params = RpcParams::new();
+    let signed = client
         .tx()
-        .sign_and_submit_then_watch_default(&transact_tx, &signer)
-        .await;
+        .create_signed(&transact_tx, &signer, Default::default())
+        .await
+        .unwrap();
+    params.push(hex::encode(signed.encoded())).unwrap();
+    let payment_info = client
+        .rpc()
+        .request::<RpcFeeDetailsResponse>("payment_queryInfo", params)
+        .await
+        .unwrap();
+    dbg!(&payment_info);
+    let fee_info =
+        get_substrate_fee_info(requested_chain, payment_info.partial_fee, &ctx)
+            .await;
+
+    // TODO: check refund amount <= relayer wallet balance
+    let mut params = RpcParams::new();
+    params.push(hex::encode(pair.public().deref())).unwrap();
+    //let balance = client.storage().at(None).await.unwrap().
+
+    // validate refund amount
+    if cmd.ext_data.refund > fee_info.max_refund {
+        // TODO: use error enum for these messages so they dont have to be duplicated between
+        //       evm/substrate
+        let msg = format!(
+            "User requested a refund which is higher than the maximum of {}",
+            fee_info.max_refund
+        );
+        return Err(Error(msg));
+    }
+
+    // Check that transaction fee is enough to cover network fee and relayer fee
+    // TODO: refund needs to be converted from wrapped token to native token once there
+    //       is an exchange rate
+    if cmd.ext_data.fee < fee_info.estimated_fee + cmd.ext_data.refund {
+        let msg = format!(
+            "User sent a fee that is too low {} but expected {}",
+            cmd.ext_data.fee, fee_info.estimated_fee
+        );
+        return Err(Error(msg));
+    }
+
+    let transact_tx_hash = signed.submit_and_watch().await;
 
     let event_stream = transact_tx_hash
         .map_err(|e| Error(format!("Error while sending Tx: {e}")))?;

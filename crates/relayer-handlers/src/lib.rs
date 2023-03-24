@@ -220,13 +220,9 @@ pub async fn handle_evm_fee_info(
 }
 pub async fn handle_substrate_fee_info(
     State(ctx): State<Arc<RelayerContext>>,
-    Path(chain_id): Path<u64>,
+    Path((chain_id, estimated_tx_fees)): Path<(u64, u128)>,
 ) -> Result<Json<SubstrateFeeInfo>, HandlerError> {
-    let chain_id = TypedChainId::from(chain_id);
-    get_substrate_fee_info(chain_id, ctx.as_ref())
-        .await
-        .map(Json)
-        .map_err(|e| {
-            HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
-        })
+    Ok(Json(
+        get_substrate_fee_info(chain_id, estimated_tx_fees, ctx.as_ref()).await,
+    ))
 }

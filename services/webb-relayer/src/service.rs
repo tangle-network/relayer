@@ -133,7 +133,7 @@ pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
             get(handle_evm_fee_info),
         )
         .route(
-            "/fee_info/substrate/:chain_id",
+            "/fee_info/substrate/:chain_id/:estimated_tx_fees",
             get(handle_substrate_fee_info),
         );
 

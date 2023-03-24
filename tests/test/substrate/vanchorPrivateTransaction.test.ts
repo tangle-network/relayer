@@ -113,7 +113,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -157,13 +157,24 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     // Bob's balance after withdrawal
     const bobBalanceBefore = await api.query.system.account(account.address);
 
-    // TODO: this should probably use fee
+    // get refund amount
+    const feeInfoResponse1 = await webbRelayer.getSubstrateFeeInfo(
+      substrateChainId,
+      0
+    );
+    expect(feeInfoResponse1.status).equal(200);
+    const feeInfo1 =
+      await (feeInfoResponse1.json() as Promise<SubstrateFeeInfo>);
+
     const vanchorData = await vanchorWithdraw(
       typedSourceChainId.toString(),
       typedSourceChainId.toString(),
       account.address,
       data.depositUtxos,
       treeId,
+      // TODO: need to convert this once there is exchange rate between native
+      //       token and wrapped token
+      feeInfo1.maxRefund,
       api
     );
     // Now we construct payload for substrate private transaction.
@@ -199,16 +210,20 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
         Array.from(hexToU8a(com))
       ),
     };
-    const feeInfoResponse = await webbRelayer.getSubstrateFeeInfo(
-      substrateChainId
-    );
-    expect(feeInfoResponse.status).equal(200);
-    const feeInfo = await (feeInfoResponse.json() as Promise<SubstrateFeeInfo>);
-    console.log(feeInfo);
 
-    const info = api.tx.vAnchorBn254.transact(treeId, substrateProofData, 
-      substrateExtData).paymentInfo(account);
-    console.log(info);
+    // TODO: not working yet, value hardcoded for now
+    //const info = api.tx.vAnchorBn254.transact(treeId, substrateProofData,
+    //  substrateExtData).paymentInfo(account);
+    //console.log(info);
+    const partialFee = 10958835753;
+    const feeInfoResponse2 = await webbRelayer.getSubstrateFeeInfo(
+      substrateChainId,
+      partialFee
+    );
+    expect(feeInfoResponse2.status).equal(200);
+    const feeInfo2 =
+      await (feeInfoResponse2.json() as Promise<SubstrateFeeInfo>);
+    console.log(feeInfo2);
 
     // now we withdraw using private transaction
     await webbRelayer.substrateVAnchorWithdraw(
@@ -247,7 +262,13 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
 
 function currencyToUnitI128(currencyAmount: number) {
   const bn = BigNumber.from(currencyAmount);
-  return bn.mul(1_000_000_000_000);
+  // TODO: still needs fixing, this originally assumed 12 token decimals
+  console.log(bn);
+  const decimals = BigNumber.from(10).mul(18);
+  console.log(decimals);
+  const x = bn.mul(decimals);
+  console.log(x);
+  return x;
 }
 
 function createAccount(accountId: string): any {
@@ -263,6 +284,7 @@ async function vanchorWithdraw(
   recipient: string,
   depositUtxos: [Utxo, Utxo],
   treeId: number,
+  refund: BigNumber,
   api: ApiPromise
 ): Promise<{ extData: any; proofData: any }> {
   const secret = randomAsU8a();
@@ -306,7 +328,8 @@ async function vanchorWithdraw(
   const output1 = await Utxo.generateUtxo({
     curve: 'Bn254',
     backend: 'Arkworks',
-    amount: '0',
+    // TODO: is this correct?
+    amount: refund.toString(),
     chainId: typedSourceChainId,
   });
   const output2 = await Utxo.generateUtxo({
@@ -322,11 +345,13 @@ async function vanchorWithdraw(
 
   const address = recipient;
   const fee = 0;
-  const refund = 0;
+  console.log("refund: ", refund);
   const withdrawAmount = depositUtxos.reduce((acc, utxo) => {
     return Number(utxo.amount) + acc;
   }, 0);
+  console.log("withdrawAmount: ", withdrawAmount);
   const extAmount = -withdrawAmount;
+  console.log("extAmount: ", extAmount);
 
   const publicAmount = -withdrawAmount;
 

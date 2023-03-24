@@ -1,8 +1,10 @@
+use crate::{MAX_REFUND_USD, TRANSACTION_PROFIT_USD};
 use chrono::DateTime;
 use chrono::Duration;
 use chrono::Utc;
 use once_cell::sync::Lazy;
 use serde::Serialize;
+use std::cmp::min;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
@@ -11,18 +13,18 @@ use webb::evm::contract::protocol_solidity::{
 };
 use webb::evm::ethers::middleware::SignerMiddleware;
 use webb::evm::ethers::prelude::U256;
+use webb::evm::ethers::providers::Middleware;
+use webb::evm::ethers::signers::Signer;
 use webb::evm::ethers::types::Address;
 use webb::evm::ethers::utils::{format_units, parse_units};
 use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
+use webb_relayer_handler_utils::CommandResponse::{Error, Network};
+use webb_relayer_handler_utils::{CommandResponse, NetworkStatus};
 use webb_relayer_utils::Result;
 
-/// Maximum refund amount per relay transaction in USD.
-const MAX_REFUND_USD: f64 = 5.;
 /// Amount of time for which a `FeeInfo` is valid after creation
 static FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
-/// Amount of profit that the relay should make with each transaction (in USD).
-const TRANSACTION_PROFIT_USD: f64 = 5.;
 
 /// Cache for previously generated fee info. Key consists of the VAnchor address and chain id.
 /// Entries are valid as long as `timestamp` is no older than `FEE_CACHE_TIME`.
@@ -154,9 +156,13 @@ async fn generate_fee_info(
             .into();
 
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
+    // Ensuring that refund <= relayer balance
+    let relayer_balance =
+        relayer_balance(chain_id.chain_id(), ctx).await.unwrap();
     let max_refund =
         parse_units(MAX_REFUND_USD / native_token_price, native_token.1)?
             .into();
+    let max_refund = min(relayer_balance, max_refund);
 
     Ok(EvmFeeInfo {
         estimated_fee,
@@ -168,6 +174,28 @@ async fn generate_fee_info(
         wrapped_token_price,
         wrapped_token_decimals: wrapped_token.1,
     })
+}
+
+pub(super) async fn relayer_balance(
+    chain_id: u64,
+    ctx: &RelayerContext,
+) -> std::result::Result<U256, CommandResponse> {
+    let wallet = ctx.evm_wallet(&chain_id.to_string()).await.map_err(|e| {
+        Error(format!("Misconfigured Network: {:?}, {e}", chain_id))
+    })?;
+    let provider =
+        ctx.evm_provider(&chain_id.to_string()).await.map_err(|e| {
+            Network(NetworkStatus::Failed {
+                reason: e.to_string(),
+            })
+        })?;
+    let relayer_balance = provider
+        .get_balance(wallet.address(), None)
+        .await
+        .map_err(|e| {
+            Error(format!("Failed to retrieve relayer balance: {e}"))
+        })?;
+    Ok(relayer_balance)
 }
 
 /// Pull USD prices of base token from coingecko.com, and use this to calculate the transaction

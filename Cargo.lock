@@ -8376,6 +8376,7 @@ dependencies = [
  "native-tls",
  "once_cell",
  "serde",
+ "sp-core",
  "tokio 1.26.0",
  "tracing",
  "webb 0.5.20",

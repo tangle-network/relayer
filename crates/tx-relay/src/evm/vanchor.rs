@@ -1,5 +1,5 @@
 use super::*;
-use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
+use crate::evm::fees::{get_evm_fee_info, relayer_balance, EvmFeeInfo};
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
@@ -89,12 +89,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let _ = stream.send(Network(NetworkStatus::Connected)).await;
 
     // ensure that relayer has enough balance for refund
-    let relayer_balance = provider
-        .get_balance(wallet.address(), None)
-        .await
-        .map_err(|e| {
-            Error(format!("Failed to retrieve relayer balance: {e}"))
-        })?;
+    let relayer_balance = relayer_balance(requested_chain, &ctx).await?;
     if cmd.ext_data.refund > relayer_balance {
         return Err(Error(
             "Requested refund is higher than relayer balance".to_string(),

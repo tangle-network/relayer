@@ -219,7 +219,7 @@ export class WebbRelayer {
     const response = await fetch(endpoint);
     return response;
   }
-  
+
   public async getEvmFeeInfo(
     chainId: number,
     vanchor: string,
@@ -229,11 +229,9 @@ export class WebbRelayer {
     const response = await fetch(endpoint);
     return response;
   }
-  
-  public async getSubstrateFeeInfo(
-    chainId: number,
-  ) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/substrate/${chainId}`;
+
+  public async getSubstrateFeeInfo(chainId: number, partialFee: number) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/substrate/${chainId}/${partialFee}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -650,7 +648,10 @@ export interface EvmFeeInfo {
 }
 
 export interface SubstrateFeeInfo {
-  
+  estimatedFee: BigNumber;
+  refundExchangeRate: BigNumber;
+  maxRefund: BigNumber;
+  timestamp: string;
 }
 
 export interface Contract {
