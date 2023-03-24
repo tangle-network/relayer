@@ -6,4 +6,4 @@ smart-anchor-updates-retries = 3
 
 [evm-etherscan.mainnet]
 chain-id = 5001
-api-key = "$ETHERSCAN_MAINNET_API_KEY"
+api-key = "$ETHERSCAN_API_KEY"
