@@ -83,6 +83,7 @@ pub struct WebbRelayerConfig {
     #[serde(default = "default_port", skip_serializing)]
     pub port: u16,
     /// Etherscan API key configuration for evm based chains.
+    #[serde(default)]
     pub evm_etherscan: HashMap<Chain, EtherscanApiConfig>,
     /// EVM based networks and the configuration.
     ///
