@@ -12,6 +12,10 @@ following section we will describe the different configuration entries and how t
     - [governance-relay](#governance-relay)
     - [data-query](#data-query)
     - [private-tx-relay](#private-tx-relay)
+  - [evm-etherscan](#evm-etherscan)
+    - [chain-id](#chain-id)
+    - [api-key](#api-key)
+
 - [EVM Chain Configuration](#evm-chain-configuration)
   - [name](#name)
   - [chain-id](#chain-id)
@@ -167,6 +171,24 @@ Example:
 ```toml
 [features]
 private-tx-relay = true
+```
+#### evm-etherscan
+Etherscan api configuration for chains. This config is required if [private-tx-relay](#private-tx-relay) is enabled.
+example:
+```toml
+[evm-etherscan.goerli]
+chain-id = 5
+api-key = "$ETHERSCAN_GOERLI_API_KEY"
+[evm-etherscan.polygon]
+chain-id = 137
+api-key = "$POLYGONSCAN_MAINNET_API_KEY"
+```
+
+#### api-key
+Etherscan api key, this are used to fetch gas prices from the explorer.
+example:
+```toml
+api-key = $ETHERSCAN_GOERLI_API_KEY
 ```
 
 ### EVM Chain Configuration
