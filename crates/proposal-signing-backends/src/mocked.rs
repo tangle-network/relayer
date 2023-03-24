@@ -1,4 +1,3 @@
-use ethereum_types::H256;
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -69,7 +68,7 @@ where
         let signer = self.signer(dest_chain_id)?;
         let proposal_bytes = proposal.to_vec();
         let hash = keccak256(&proposal_bytes);
-        let signature = signer.sign_hash(H256::from(hash));
+        let signature = signer.sign_hash(TxHash(hash));
         let bridge_key = BridgeKey::new(dest_chain_id);
         tracing::debug!(
             %bridge_key,

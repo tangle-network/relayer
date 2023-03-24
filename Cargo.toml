@@ -14,10 +14,8 @@ members = [
     "services/*",
 ]
 
-[patch.crates-io]
-webb = { git = "https://github.com/webb-tools/webb-rs.git" }
-
 [workspace.dependencies]
+webb-bridge-registry-backends = { path = "crates/bridge-registry-backends" }
 webb-proposal-signing-backends = { path = "crates/proposal-signing-backends" }
 webb-relayer-tx-queue = { path = "crates/tx-queue" }
 webb-relayer-handlers = { path = "crates/relayer-handlers" }
@@ -41,7 +39,7 @@ tokio = { version = "^1", features = ["full"] }
 config = { version = "0.13", default-features = false, features = ["toml", "json"] }
 serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0" }
-webb = { version = "0.5.17", default-features = false }
+webb = { git = "https://github.com/webb-tools/webb-rs.git", rev = "2bbe7b6a4f9", default-features = false }
 sp-core = { version = "16.0.0", default-features = false }
 sp-runtime = { version = "18.0.0", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
