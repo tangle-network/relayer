@@ -31,6 +31,7 @@ import { padHexString } from '../lib/utils.js';
 
 export type CommonConfig = {
   features?: FeaturesConfig;
+  evmEtherscan?: EvmEtherscanConfig;
   port: number;
 };
 
@@ -76,6 +77,9 @@ export class WebbRelayer {
     // Write the folder-wide configuration for this relayer instance
     type WrittenCommonConfig = {
       features?: ConvertToKebabCase<FeaturesConfig>;
+      'evm-etherscan'?: {
+        [key: string]: ConvertToKebabCase<EtherscanApiConfig>;
+      };
       port: number;
     };
     const commonConfigFile: WrittenCommonConfig = {
@@ -84,6 +88,14 @@ export class WebbRelayer {
         'governance-relay': opts.commonConfig.features?.governanceRelay ?? true,
         'private-tx-relay': opts.commonConfig.features?.privateTxRelay ?? true,
       },
+      'evm-etherscan': Object.fromEntries(
+        Object.entries(opts.commonConfig.evmEtherscan ?? {}).map(
+          ([key, { chainId, apiKey }]) => [
+            key,
+            { ...{ 'chain-id': chainId, 'api-key': apiKey } },
+          ]
+        )
+      ),
       port: opts.commonConfig.port,
     };
     const configString = JSON.stringify(commonConfigFile, null, 2);
@@ -590,6 +602,16 @@ export interface FeaturesConfig {
   governanceRelay?: boolean;
   privateTxRelay?: boolean;
 }
+
+export interface EtherscanApiConfig {
+  chainId: number;
+  apiKey: string;
+}
+
+export interface EvmEtherscanConfig {
+  [key: string]: EtherscanApiConfig;
+}
+
 export interface WithdrawConfig {
   withdrawFeePercentage: number;
   withdrawGaslimit: `0x${string}`;
