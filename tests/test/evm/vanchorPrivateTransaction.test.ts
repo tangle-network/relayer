@@ -19,14 +19,19 @@
 
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import { CircomUtxo, Keypair, parseTypedChainId } from '@webb-tools/sdk-core';
-
+import {
+  CircomUtxo,
+  Keypair,
+  parseTypedChainId,
+} from '@webb-tools/sdk-core';
+import dotenv from 'dotenv';
 import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain, setupVanchorEvmTx } from '../../lib/localTestnet.js';
 import {
   defaultWithdrawConfigValue,
   EnabledContracts,
+  EvmEtherscanConfig,
   FeeInfo,
   ResourceMetricResponse,
   WebbRelayer,
@@ -35,6 +40,8 @@ import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { MintableToken } from '@webb-tools/tokens';
 import { formatEther, parseEther } from 'ethers/lib/utils.js';
+
+dotenv.config({ path: '../.env' });
 
 describe('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -213,9 +220,16 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
 
+    const evmEtherscan: EvmEtherscanConfig = {
+      ['mainnet']: {
+        chainId: localChain2.underlyingChainId,
+        apiKey: process.env.ETHERSCAN_API_KEY!,
+      },
+    };
     webbRelayer = new WebbRelayer({
       commonConfig: {
         features: { dataQuery: false, governanceRelay: false },
+        evmEtherscan,
         port: relayerPort,
       },
       tmp: true,
