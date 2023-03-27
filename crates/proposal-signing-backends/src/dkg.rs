@@ -14,9 +14,9 @@ type DkgConfig = PolkadotConfig;
 type DkgClient = OnlineClient<DkgConfig>;
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
 pub struct DkgProposalSigningBackend {
-    client: DkgClient,
-    pair: PairSigner<PolkadotConfig, Sr25519Pair>,
-    typed_chain_id: webb_proposals::TypedChainId,
+    pub client: DkgClient,
+    pub pair: PairSigner<PolkadotConfig, Sr25519Pair>,
+    pub typed_chain_id: webb_proposals::TypedChainId,
 }
 
 impl DkgProposalSigningBackend {

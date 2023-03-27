@@ -667,9 +667,8 @@ async fn start_evm_vanchor_events_watcher(
         .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
-                let bridge_registry = DkgBridgeRegistryBackend::new(
-                    OnlineClient::<PolkadotConfig>::new().await?,
-                );
+                let bridge_registry =
+                    DkgBridgeRegistryBackend::new(backend.client.clone());
                 let deposit_handler =
                     VAnchorDepositHandler::new(backend, bridge_registry);
                 let leaves_handler = VAnchorLeavesHandler::new(
