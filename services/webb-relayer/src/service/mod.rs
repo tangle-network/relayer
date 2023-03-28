@@ -21,31 +21,28 @@
 //! Services are tasks which the relayer constantly runs throughout its lifetime.
 //! Services handle keeping up to date with the configured chains.
 
-use axum::routing::get;
-use axum::Router;
-use ethereum_types::U256;
 use std::collections::HashSet;
 use std::net::SocketAddr;
 use std::sync::Arc;
+
+use axum::routing::get;
+use axum::Router;
+use ethereum_types::U256;
 use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb::evm::ethers::providers;
-use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
-use webb_ew_dkg::DKGMetadataWatcher;
-use webb_ew_dkg::DKGProposalHandlerWatcher;
-use webb_ew_dkg::DKGPublicKeyChangedHandler;
-use webb_ew_dkg::ProposalSignedHandler;
-use webb_ew_substrate::MaintainerSetEventHandler;
-use webb_ew_substrate::SubstrateBridgeEventWatcher;
-use webb_ew_substrate::SubstrateVAnchorEventWatcher;
-
 use webb::substrate::subxt::config::{PolkadotConfig, SubstrateConfig};
 use webb::substrate::subxt::{tx::PairSigner, OnlineClient};
+use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
 use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
 use webb_event_watcher_traits::evm::{BridgeWatcher, EventWatcher};
 use webb_event_watcher_traits::substrate::SubstrateBridgeWatcher;
 use webb_event_watcher_traits::SubstrateEventWatcher;
+use webb_ew_dkg::DKGMetadataWatcher;
+use webb_ew_dkg::DKGProposalHandlerWatcher;
+use webb_ew_dkg::DKGPublicKeyChangedHandler;
+use webb_ew_dkg::ProposalSignedHandler;
 use webb_ew_evm::open_vanchor::{
     OpenVAnchorDepositHandler, OpenVAnchorLeavesHandler,
 };
@@ -53,14 +50,19 @@ use webb_ew_evm::signature_bridge_watcher::{
     SignatureBridgeContractWatcher, SignatureBridgeContractWrapper,
     SignatureBridgeGovernanceOwnershipTransferredHandler,
 };
+use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
 use webb_ew_evm::{
     vanchor::*, OpenVAnchorContractWatcher, OpenVAnchorContractWrapper,
     VAnchorContractWatcher, VAnchorContractWrapper,
 };
+use webb_ew_substrate::MaintainerSetEventHandler;
+use webb_ew_substrate::SubstrateBridgeEventWatcher;
+use webb_ew_substrate::SubstrateVAnchorEventWatcher;
 use webb_ew_substrate::{
     SubstrateVAnchorDepositHandler, SubstrateVAnchorEncryptedOutputHandler,
     SubstrateVAnchorLeavesHandler,
 };
+use webb_proposal_signing_backends::*;
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_config::evm::{
     Contract, SignatureBridgeContractConfig, VAnchorContractConfig,
@@ -70,24 +72,18 @@ use webb_relayer_config::substrate::{
     DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet,
     SignatureBridgePalletConfig, SubstrateRuntime, VAnchorBn254PalletConfig,
 };
-
-use webb_ew_evm::vanchor::vanchor_encrypted_outputs_handler::VAnchorEncryptedOutputHandler;
-use webb_proposal_signing_backends::*;
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handlers::{
-    handle_fee_info, handle_socket_info, websocket_handler,
-};
-
 use webb_relayer_handlers::routes::info::handle_relayer_info;
-use webb_relayer_handlers::routes::leaves::{
-    handle_leaves_cache_evm, handle_leaves_cache_substrate,
-};
-use webb_relayer_handlers::routes::{encrypted_outputs, metric};
+use webb_relayer_handlers::routes::metric;
+use webb_relayer_handlers::{handle_socket_info, websocket_handler};
 use webb_relayer_store::SledStore;
 use webb_relayer_tx_queue::{evm::TxQueue, substrate::SubstrateTxQueue};
 
-/// Type alias for providers
-pub type Client = providers::Provider<providers::Http>;
+/// EVM Specific Services
+pub mod evm;
+/// Substrate Specific Services
+pub mod substrate;
+
 /// Type alias for the DKG DefaultConfig
 pub type DkgClient = OnlineClient<PolkadotConfig>;
 /// Type alias for the WebbProtocol DefaultConfig
@@ -95,7 +91,7 @@ pub type WebbProtocolClient = OnlineClient<SubstrateConfig>;
 /// Type alias for [Sled](https://sled.rs)-based database store
 pub type Store = SledStore;
 
-/// Sets up the web socket server for the relayer,  routing (endpoint queries / requests mapped to
+/// Sets up the web socket server for the relayer, routing (endpoint queries / requests mapped to
 /// handled code) and instantiates the database store. Allows clients to interact with the relayer.
 ///
 /// # Arguments
@@ -106,31 +102,8 @@ pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
     let api = Router::new()
         .route("/ip", get(handle_socket_info))
         .route("/info", get(handle_relayer_info))
-        .route(
-            "/leaves/evm/:chain_id/:contract",
-            get(handle_leaves_cache_evm),
-        )
-        .route(
-            "/leaves/substrate/:chain_id/:tree_id/:pallet_id",
-            get(handle_leaves_cache_substrate),
-        )
-        .route(
-            "/encrypted_outputs/evm/:chain_id/:contract_address",
-            get(encrypted_outputs::handle_encrypted_outputs_cache_evm),
-        )
-        .route("/metrics", get(metric::handle_metric_info))
-        .route(
-            "/metrics/evm/:chain_id/:contract",
-            get(metric::handle_evm_metric_info),
-        )
-        .route(
-            "/metrics/substrate/:chain_id/:tree_id/:pallet_id",
-            get(metric::handle_substrate_metric_info),
-        )
-        .route(
-            "/fee_info/:chain_id/:vanchor/:gas_amount",
-            get(handle_fee_info),
-        );
+        .merge(evm::build_web_services())
+        .merge(substrate::build_web_services());
 
     let app = Router::new()
         .nest("/api/v1", api)
@@ -157,66 +130,12 @@ pub async fn ignite(
     ctx: &RelayerContext,
     store: Arc<Store>,
 ) -> crate::Result<()> {
-    tracing::debug!(
+    tracing::trace!(
         "Relayer configuration: {}",
         serde_json::to_string_pretty(&ctx.config)?
     );
 
-    // now we go through each chain, in our configuration
-    for chain_config in ctx.config.evm.values() {
-        if !chain_config.enabled {
-            continue;
-        }
-        let chain_name = &chain_config.name;
-        let chain_id = chain_config.chain_id;
-        let provider = ctx.evm_provider(&chain_id.to_string()).await?;
-        let client = Arc::new(provider);
-        tracing::debug!(
-            "Starting Background Services for ({}) chain.",
-            chain_name
-        );
-
-        for contract in &chain_config.contracts {
-            match contract {
-                Contract::VAnchor(config) => {
-                    start_evm_vanchor_events_watcher(
-                        ctx,
-                        config,
-                        chain_id,
-                        client.clone(),
-                        store.clone(),
-                    )
-                    .await?;
-                }
-                Contract::OpenVAnchor(config) => {
-                    start_evm_open_vanchor_events_watcher(
-                        ctx,
-                        config,
-                        chain_id,
-                        client.clone(),
-                        store.clone(),
-                    )
-                    .await?;
-                }
-                Contract::SignatureBridge(config) => {
-                    start_signature_bridge_events_watcher(
-                        ctx,
-                        config,
-                        client.clone(),
-                        store.clone(),
-                    )
-                    .await?;
-                }
-            }
-        }
-        // start the transaction queue after starting other tasks.
-        start_tx_queue(
-            ctx.clone(),
-            chain_config.chain_id.to_string().clone(),
-            store.clone(),
-        )?;
-    }
-    // now, we start substrate service/tasks
+    evm::ignite(ctx, store.clone()).await?;
     for (node_name, node_config) in &ctx.config.substrate {
         if !node_config.enabled {
             continue;
@@ -345,6 +264,7 @@ pub fn start_substrate_vanchor_event_watcher(
         "Substrate VAnchor events watcher for ({}) Started.",
         chain_id,
     );
+    // now, we start substrate service/tasks
 
     let my_ctx = ctx.clone();
     let my_config = config.clone();
@@ -600,380 +520,6 @@ pub fn start_dkg_pallet_watcher(
                 tracing::trace!(
                     "Stopping DKG Pallet events watcher for ({})",
                     chain_id,
-                );
-            },
-        }
-    };
-    // kick off the watcher.
-    tokio::task::spawn(task);
-    Ok(())
-}
-
-/// Starts the event watcher for EVM VAnchor events.
-///
-/// Returns Ok(()) if successful, or an error if not.
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `config` - VAnchor contract configuration
-/// * `client` - EVM Chain api client
-/// * `store` -[Sled](https://sled.rs)-based database store
-async fn start_evm_vanchor_events_watcher(
-    ctx: &RelayerContext,
-    config: &VAnchorContractConfig,
-    chain_id: u32,
-    client: Arc<Client>,
-    store: Arc<Store>,
-) -> crate::Result<()> {
-    if !config.events_watcher.enabled {
-        tracing::warn!(
-            "VAnchor events watcher is disabled for ({}).",
-            config.common.address,
-        );
-        return Ok(());
-    }
-    let wrapper = VAnchorContractWrapper::new(
-        config.clone(),
-        ctx.config.clone(), // the original config to access all networks.
-        client.clone(),
-    );
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let contract_address = config.common.address;
-    let my_ctx = ctx.clone();
-    let my_config = config.clone();
-    let default_leaf: U256 = wrapper.contract.get_zero_hash(0).call().await?;
-
-    let mut default_leaf_bytes = [0u8; 32];
-    default_leaf.to_big_endian(&mut default_leaf_bytes);
-    let task = async move {
-        tracing::debug!(
-            "VAnchor events watcher for ({}) Started.",
-            contract_address,
-        );
-        let contract_watcher = VAnchorContractWatcher::default();
-        let proposal_signing_backend = make_proposal_signing_backend(
-            &my_ctx,
-            store.clone(),
-            chain_id,
-            my_config.linked_anchors,
-            my_config.proposal_signing_backend,
-        )
-        .await?;
-        match proposal_signing_backend {
-            ProposalSigningBackendSelector::Dkg(backend) => {
-                let bridge_registry =
-                    DkgBridgeRegistryBackend::new(backend.client.clone());
-                let deposit_handler =
-                    VAnchorDepositHandler::new(backend, bridge_registry);
-                let leaves_handler = VAnchorLeavesHandler::new(
-                    store.clone(),
-                    default_leaf_bytes.to_vec(),
-                );
-                let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
-                let vanchor_watcher_task = contract_watcher.run(
-                    client,
-                    store,
-                    wrapper,
-                    vec![
-                        Box::new(deposit_handler),
-                        Box::new(leaves_handler),
-                        Box::new(encrypted_output_handler),
-                    ],
-                    &my_ctx,
-                );
-                tokio::select! {
-                    _ = vanchor_watcher_task => {
-                        tracing::warn!(
-                            "VAnchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping VAnchor watcher for ({})",
-                            contract_address,
-                        );
-                    },
-                }
-            }
-            ProposalSigningBackendSelector::Mocked(backend) => {
-                let bridge_registry =
-                    MockedBridgeRegistryBackend::builder().build();
-                let deposit_handler =
-                    VAnchorDepositHandler::new(backend, bridge_registry);
-                let leaves_handler = VAnchorLeavesHandler::new(
-                    store.clone(),
-                    default_leaf_bytes.to_vec(),
-                );
-                let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
-                let vanchor_watcher_task = contract_watcher.run(
-                    client,
-                    store,
-                    wrapper,
-                    vec![
-                        Box::new(deposit_handler),
-                        Box::new(leaves_handler),
-                        Box::new(encrypted_output_handler),
-                    ],
-                    &my_ctx,
-                );
-                tokio::select! {
-                    _ = vanchor_watcher_task => {
-                        tracing::warn!(
-                            "VAnchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping VAnchor watcher for ({})",
-                            contract_address,
-                        );
-                    },
-                }
-            }
-            ProposalSigningBackendSelector::None => {
-                let leaves_handler = VAnchorLeavesHandler::new(
-                    store.clone(),
-                    default_leaf_bytes.to_vec(),
-                );
-                let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
-                let vanchor_watcher_task = contract_watcher.run(
-                    client,
-                    store,
-                    wrapper,
-                    vec![
-                        Box::new(leaves_handler),
-                        Box::new(encrypted_output_handler),
-                    ],
-                    &my_ctx,
-                );
-                tokio::select! {
-                    _ = vanchor_watcher_task => {
-                        tracing::warn!(
-                            "VAnchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping VAnchor watcher for ({})",
-                            contract_address,
-                        );
-                    },
-                }
-            }
-        };
-
-        crate::Result::Ok(())
-    };
-    // kick off the watcher.
-    tokio::task::spawn(task);
-    Ok(())
-}
-
-/// Starts the event watcher for EVM VAnchor events.
-///
-/// Returns Ok(()) if successful, or an error if not.
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `config` - VAnchor contract configuration
-/// * `client` - EVM Chain api client
-/// * `store` -[Sled](https://sled.rs)-based database store
-pub async fn start_evm_open_vanchor_events_watcher(
-    ctx: &RelayerContext,
-    config: &VAnchorContractConfig,
-    chain_id: u32,
-    client: Arc<Client>,
-    store: Arc<Store>,
-) -> crate::Result<()> {
-    if !config.events_watcher.enabled {
-        tracing::warn!(
-            "Open VAnchor events watcher is disabled for ({}).",
-            config.common.address,
-        );
-        return Ok(());
-    }
-    let wrapper = OpenVAnchorContractWrapper::new(
-        config.clone(),
-        ctx.config.clone(), // the original config to access all networks.
-        client.clone(),
-    );
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let contract_address = config.common.address;
-    let my_ctx = ctx.clone();
-    let my_config = config.clone();
-    let task = async move {
-        tracing::debug!(
-            "Open VAnchor events watcher for ({}) Started.",
-            contract_address,
-        );
-        let contract_watcher = OpenVAnchorContractWatcher::default();
-        let proposal_signing_backend = make_proposal_signing_backend(
-            &my_ctx,
-            store.clone(),
-            chain_id,
-            my_config.linked_anchors,
-            my_config.proposal_signing_backend,
-        )
-        .await?;
-        match proposal_signing_backend {
-            ProposalSigningBackendSelector::Dkg(backend) => {
-                let bridge_registry =
-                    DkgBridgeRegistryBackend::new(backend.client.clone());
-                let deposit_handler =
-                    OpenVAnchorDepositHandler::new(backend, bridge_registry);
-                let leaves_handler = OpenVAnchorLeavesHandler::default();
-
-                let vanchor_watcher_task = contract_watcher.run(
-                    client,
-                    store,
-                    wrapper,
-                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
-                    &my_ctx,
-                );
-                tokio::select! {
-                    _ = vanchor_watcher_task => {
-                        tracing::warn!(
-                            "Open VAnchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping Open VAnchor watcher for ({})",
-                            contract_address,
-                        );
-                    },
-                }
-            }
-            ProposalSigningBackendSelector::Mocked(backend) => {
-                let bridge_registry =
-                    MockedBridgeRegistryBackend::builder().build();
-                let deposit_handler =
-                    OpenVAnchorDepositHandler::new(backend, bridge_registry);
-                let leaves_handler = OpenVAnchorLeavesHandler::default();
-                let vanchor_watcher_task = contract_watcher.run(
-                    client,
-                    store,
-                    wrapper,
-                    vec![Box::new(deposit_handler), Box::new(leaves_handler)],
-                    &my_ctx,
-                );
-                tokio::select! {
-                    _ = vanchor_watcher_task => {
-                        tracing::warn!(
-                            "Open VAnchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping Open VAnchor watcher for ({})",
-                            contract_address,
-                        );
-                    },
-                }
-            }
-            ProposalSigningBackendSelector::None => {
-                let leaves_handler = OpenVAnchorLeavesHandler::default();
-                let vanchor_watcher_task = contract_watcher.run(
-                    client,
-                    store,
-                    wrapper,
-                    vec![Box::new(leaves_handler)],
-                    &my_ctx,
-                );
-                tokio::select! {
-                    _ = vanchor_watcher_task => {
-                        tracing::warn!(
-                            "Open VAnchor watcher task stopped for ({})",
-                            contract_address,
-                        );
-                    },
-                    _ = shutdown_signal.recv() => {
-                        tracing::trace!(
-                            "Stopping Open VAnchor watcher for ({})",
-                            contract_address,
-                        );
-                    },
-                }
-            }
-        };
-
-        crate::Result::Ok(())
-    };
-    // kick off the watcher.
-    tokio::task::spawn(task);
-    Ok(())
-}
-
-/// Starts the event watcher for Signature Bridge contract.
-pub async fn start_signature_bridge_events_watcher(
-    ctx: &RelayerContext,
-    config: &SignatureBridgeContractConfig,
-    client: Arc<Client>,
-    store: Arc<Store>,
-) -> crate::Result<()> {
-    if !config.events_watcher.enabled {
-        tracing::warn!(
-            "Signature Bridge events watcher is disabled for ({}).",
-            config.common.address,
-        );
-        return Ok(());
-    }
-    let mut shutdown_signal = ctx.shutdown_signal();
-    let contract_address = config.common.address;
-    let wrapper =
-        SignatureBridgeContractWrapper::new(config.clone(), client.clone());
-    let metrics = ctx.metrics.clone();
-    let my_ctx = ctx.clone();
-    let task = async move {
-        tracing::debug!(
-            "Signature Bridge watcher for ({}) Started.",
-            contract_address
-        );
-        let bridge_contract_watcher = SignatureBridgeContractWatcher::default();
-        let governance_transfer_handler =
-            SignatureBridgeGovernanceOwnershipTransferredHandler::default();
-        let events_watcher_task = EventWatcher::run(
-            &bridge_contract_watcher,
-            client.clone(),
-            store.clone(),
-            wrapper.clone(),
-            vec![Box::new(governance_transfer_handler)],
-            &my_ctx,
-        );
-        let cmd_handler_task = BridgeWatcher::run(
-            &bridge_contract_watcher,
-            client,
-            store,
-            wrapper,
-            metrics.clone(),
-        );
-        tokio::select! {
-            _ = events_watcher_task => {
-                tracing::warn!(
-                    "signature bridge events watcher task stopped for ({})",
-                    contract_address
-                );
-            },
-            _ = cmd_handler_task => {
-                tracing::warn!(
-                    "signature bridge cmd handler task stopped for ({})",
-                    contract_address
-                );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping Signature Bridge watcher for ({})",
-                    contract_address,
                 );
             },
         }
