@@ -2,7 +2,9 @@ use crate::{MAX_REFUND_USD, TRANSACTION_PROFIT_USD};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
 use serde::{Deserializer, Serialize};
+use sp_core::U256;
 use std::str::FromStr;
+use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use webb_relayer_context::RelayerContext;
 
 const TOKEN_PRICE_USD: f64 = 0.1;
@@ -13,25 +15,35 @@ const TOKEN_DECIMALS: i32 = 18;
 pub struct SubstrateFeeInfo {
     /// Estimated fee for an average relay transaction, in `wrappedToken`. Includes network fees
     /// and relay fee.
-    pub estimated_fee: u128,
+    pub estimated_fee: U256,
     /// Exchange rate for refund from `wrappedToken` to `nativeToken`
-    pub refund_exchange_rate: u128,
+    pub refund_exchange_rate: U256,
     /// Maximum amount of `nativeToken` which can be exchanged to `wrappedToken` by relay
-    pub max_refund: u128,
+    pub max_refund: U256,
     /// Time when this FeeInfo was generated
     timestamp: DateTime<Utc>,
 }
 
 pub async fn get_substrate_fee_info(
     chain_id: u64,
-    estimated_tx_fees: u128,
+    estimated_tx_fees: U256,
     ctx: &RelayerContext,
 ) -> SubstrateFeeInfo {
-    let estimated_fee = estimated_tx_fees
-        + matic_to_wei(TRANSACTION_PROFIT_USD / TOKEN_PRICE_USD);
-    let refund_exchange_rate = matic_to_wei(1.);
+    let client = ctx
+        .substrate_provider::<PolkadotConfig>(&chain_id.to_string())
+        .await
+        .unwrap();
+    let properties = client.rpc().system_properties().await;
+    // TODO: why is this empty???
+    dbg!(properties);
+    //properties.get("tokenDecimals")
+    let estimated_fee = U256::from(
+        estimated_tx_fees
+            + native_token_to_unit(TRANSACTION_PROFIT_USD / TOKEN_PRICE_USD),
+    );
+    let refund_exchange_rate = native_token_to_unit(1.);
     // TODO: should ensure that refund <= relayer balance
-    let max_refund = matic_to_wei(MAX_REFUND_USD / TOKEN_PRICE_USD);
+    let max_refund = native_token_to_unit(MAX_REFUND_USD / TOKEN_PRICE_USD);
     SubstrateFeeInfo {
         estimated_fee,
         refund_exchange_rate,
@@ -40,26 +52,15 @@ pub async fn get_substrate_fee_info(
     }
 }
 
-/// Convert from full matic coin amount to smallest unit amount (also called wei).
+/// Convert from full wrapped token amount to smallest unit amount.
 ///
 /// It looks like subxt has no built-in functionality for this.
-fn matic_to_wei(matic: f64) -> u128 {
-    (matic * 10_f64.powi(TOKEN_DECIMALS)) as u128
+fn native_token_to_unit(matic: f64) -> U256 {
+    U256::from((matic * 10_f64.powi(TOKEN_DECIMALS)) as u128)
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(super) struct RpcFeeDetailsResponse {
-    #[serde(deserialize_with = "deserialize_number_string")]
-    pub partial_fee: u128,
-}
-
-fn deserialize_number_string<'de, D>(
-    deserializer: D,
-) -> std::result::Result<u128, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let hex: String = Deserialize::deserialize(deserializer)?;
-    Ok(u128::from_str(&hex).unwrap())
+    pub partial_fee: U256,
 }

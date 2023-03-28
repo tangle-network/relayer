@@ -640,17 +640,17 @@ export interface ChainInfo {
 }
 
 export interface EvmFeeInfo {
-  estimatedFee: BigNumber;
-  gasPrice: BigNumber;
-  refundExchangeRate: BigNumber;
-  maxRefund: BigNumber;
+  estimatedFee: string;
+  gasPrice: string;
+  refundExchangeRate: string;
+  maxRefund: string;
   timestamp: string;
 }
 
 export interface SubstrateFeeInfo {
-  estimatedFee: BigNumber;
-  refundExchangeRate: BigNumber;
-  maxRefund: BigNumber;
+  estimatedFee: string;
+  refundExchangeRate: string;
+  maxRefund: string;
   timestamp: string;
 }
 

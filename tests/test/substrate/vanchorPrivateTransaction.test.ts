@@ -134,11 +134,19 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       substrateChainId
     );
 
+    // `aliceAccount` uses Charlie for some reason
+    const aliceAccount = createAccount('//Charlie');
+    const aliceAccountBalance = await api.query.system.account(
+      aliceAccount.address
+    );
+    console.log('accountBalance: ', aliceAccountBalance.toString());
+
     // 2. Deposit amount on substrate chain.
     const data = await vanchorDeposit(
       typedSourceChainId.toString(), // source chain Id
       typedSourceChainId.toString(), // target chain Id
-      10, // public amount
+      // TODO: need to increase this but gives error about invalid public amount
+      100, // public amount
       treeId,
       api,
       aliceNode
@@ -156,6 +164,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const account = createAccount('//Bob');
     // Bob's balance after withdrawal
     const bobBalanceBefore = await api.query.system.account(account.address);
+    console.log('bobBalanceBefore: ', bobBalanceBefore);
 
     // get refund amount
     const feeInfoResponse1 = await webbRelayer.getSubstrateFeeInfo(
@@ -165,6 +174,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     expect(feeInfoResponse1.status).equal(200);
     const feeInfo1 =
       await (feeInfoResponse1.json() as Promise<SubstrateFeeInfo>);
+    console.log('fee info 1: ', feeInfo1);
 
     const vanchorData = await vanchorWithdraw(
       typedSourceChainId.toString(),
@@ -172,9 +182,10 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       account.address,
       data.depositUtxos,
       treeId,
+      BigNumber.from(feeInfo1.estimatedFee),
       // TODO: need to convert this once there is exchange rate between native
       //       token and wrapped token
-      feeInfo1.maxRefund,
+      BigNumber.from(feeInfo1.maxRefund),
       api
     );
     // Now we construct payload for substrate private transaction.
@@ -250,25 +261,20 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     //@ts-ignore
     assert(BobBalanceAfter.data.free > bobBalanceBefore.data.free);
   });
-
+  /*
   after(async () => {
     await aliceNode?.stop();
     await bobNode?.stop();
     await webbRelayer?.stop();
   });
+  */
 });
 
 // Helper methods, we can move them somewhere if we end up using them again.
 
 function currencyToUnitI128(currencyAmount: number) {
-  const bn = BigNumber.from(currencyAmount);
-  // TODO: still needs fixing, this originally assumed 12 token decimals
-  console.log(bn);
-  const decimals = BigNumber.from(10).mul(18);
-  console.log(decimals);
-  const x = bn.mul(decimals);
-  console.log(x);
-  return x;
+  const decimals = BigNumber.from(10).pow(18);
+  return BigNumber.from(currencyAmount).mul(decimals);
 }
 
 function createAccount(accountId: string): any {
@@ -284,6 +290,7 @@ async function vanchorWithdraw(
   recipient: string,
   depositUtxos: [Utxo, Utxo],
   treeId: number,
+  fee: BigNumber,
   refund: BigNumber,
   api: ApiPromise
 ): Promise<{ extData: any; proofData: any }> {
@@ -328,8 +335,7 @@ async function vanchorWithdraw(
   const output1 = await Utxo.generateUtxo({
     curve: 'Bn254',
     backend: 'Arkworks',
-    // TODO: is this correct?
-    amount: refund.toString(),
+    amount: '0',
     chainId: typedSourceChainId,
   });
   const output2 = await Utxo.generateUtxo({
@@ -344,14 +350,16 @@ async function vanchorWithdraw(
   const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
 
   const address = recipient;
-  const fee = 0;
-  console.log("refund: ", refund);
+  console.log('fee: ', fee.toString());
+  console.log('refund: ', refund.toString());
+  const fee2 = fee.add(refund);
+  console.log('fee2: ', fee2.toString());
   const withdrawAmount = depositUtxos.reduce((acc, utxo) => {
     return Number(utxo.amount) + acc;
   }, 0);
-  console.log("withdrawAmount: ", withdrawAmount);
+  console.log('withdrawAmount: ', withdrawAmount.toString());
   const extAmount = -withdrawAmount;
-  console.log("extAmount: ", extAmount);
+  console.log('extAmount: ', extAmount.toString());
 
   const publicAmount = -withdrawAmount;
 
@@ -385,7 +393,7 @@ async function vanchorWithdraw(
     relayer: decodedAddress,
     recipient: decodedAddress,
     extAmount: extAmount.toString(),
-    fee: fee.toString(),
+    fee: fee2.toString(),
     refund: String(refund),
     token: assetId,
   };
@@ -394,7 +402,7 @@ async function vanchorWithdraw(
   const extData = {
     relayer: address,
     recipient: address,
-    fee,
+    fee: fee2,
     refund: String(refund),
     token: assetId,
     extAmount: extAmount,
@@ -467,6 +475,7 @@ async function vanchorDeposit(
   const note1 = depositNote;
   const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(publicAmountUint);
+  console.log('deposit amount: ', publicAmount.toString());
   const notes = [note1, note2];
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({
@@ -487,7 +496,7 @@ async function vanchorDeposit(
   const leavesMap = {};
 
   const address = account.address;
-  const extAmount = currencyToUnitI128(10);
+  const extAmount = currencyToUnitI128(publicAmountUint);
   const fee = 0;
   const refund = 0;
   // Initially leaves will be empty
