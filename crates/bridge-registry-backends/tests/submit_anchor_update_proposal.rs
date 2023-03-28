@@ -5,6 +5,7 @@ use webb::substrate::dkg_runtime::api as RuntimeApi;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::ResourceId as DkgResourceId;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId as DkgTypedChainId;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce as DkgNonce;
+use webb::substrate::dkg_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 use webb::substrate::subxt::tx::{PairSigner, TxProgress, TxStatus};
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
@@ -68,7 +69,7 @@ async fn submit_anchor_update_proposal() {
             DkgNonce(account_nonce),
             DkgTypedChainId::Evm(5001),
             DkgResourceId(resource_id.into_bytes()),
-            anchor_update_proposal.to_vec(),
+            BoundedVec(anchor_update_proposal.to_vec()),
         );
 
         let mut progress = api

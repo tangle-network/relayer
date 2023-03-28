@@ -2,6 +2,7 @@ use std::sync::Arc;
 use futures::StreamExt;
 use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
+use webb::substrate::dkg_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use sp_core::sr25519::Pair as Sr25519Pair;
@@ -103,7 +104,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             nonce,
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
-            proposal.to_vec(),
+            BoundedVec(proposal.to_vec()),
         );
 
         // TODO: here we should have a substrate based tx queue in the background
