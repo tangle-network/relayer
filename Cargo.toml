@@ -39,7 +39,7 @@ tokio = { version = "^1", features = ["full"] }
 config = { version = "0.13", default-features = false, features = ["toml", "json"] }
 serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0" }
-webb = { git = "https://github.com/webb-tools/webb-rs.git", rev = "2bbe7b6a4f9", default-features = false }
+webb = { version="0.5.21", default-features = false }
 sp-core = { version = "16.0.0", default-features = false }
 sp-runtime = { version = "18.0.0", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
@@ -47,7 +47,7 @@ native-tls = { version = "^0.2", features = ["vendored"] }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.14.1"
 dotenv = "0.15.0"
-axum = { version = "0.6.4", features = ["ws"] }
+axum = { version = "0.6.12", features = ["ws"] }
 tempfile = "^3.3"
 async-trait = "^0.1"
 futures = { version = "^0.3", default-features = false }

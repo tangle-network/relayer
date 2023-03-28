@@ -3,7 +3,7 @@ port = 9955
 [experimental]
 smart-anchor-updates = false
 smart-anchor-updates-retries = 3
-
+# etherscan api key
 [evm-etherscan.mainnet]
 chain-id = 5001
 api-key = "$ETHERSCAN_API_KEY"

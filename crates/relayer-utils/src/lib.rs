@@ -103,6 +103,9 @@ pub enum Error {
     /// Etherscan API error
     #[error(transparent)]
     Etherscan(#[from] ethers::etherscan::errors::EtherscanError),
+    /// Ether wallet errors.
+    #[error(transparent)]
+    EtherWalletError(#[from] ethers::signers::WalletError),
     /// Ethers currency conversion error
     #[error(transparent)]
     Conversion(#[from] ethers::utils::ConversionError),
