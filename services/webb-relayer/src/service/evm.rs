@@ -20,6 +20,7 @@ use webb_ew_evm::{
     OpenVAnchorContractWatcher, OpenVAnchorContractWrapper,
     VAnchorContractWatcher, VAnchorContractWrapper,
 };
+use webb_proposals::TypedChainId;
 use webb_relayer_config::evm::{
     Contract, SignatureBridgeContractConfig, VAnchorContractConfig,
 };
@@ -28,9 +29,8 @@ use webb_relayer_handlers::handle_fee_info;
 use webb_relayer_handlers::routes::{encrypted_outputs, leaves, metric};
 use webb_relayer_tx_queue::evm::TxQueue;
 
-use super::ProposalSigningBackendSelector;
-
 use super::make_proposal_signing_backend;
+use super::ProposalSigningBackendSelector;
 
 /// Type alias for providers
 pub type Client = providers::Provider<providers::Http>;
@@ -58,11 +58,18 @@ pub fn build_web_services() -> Router<Arc<RelayerContext>> {
         )
 }
 
+/// Fires up all background services for all EVM chains configured in the config file.
+///
+/// Returns a future that resolves when all services are started successfully.
+///
+/// # Arguments
+///
+/// * `ctx` - RelayContext reference that holds the configuration
+/// * `store` -[Sled](https://sled.rs)-based database store
 pub async fn ignite(
     ctx: &RelayerContext,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
-    // now we go through each chain, in our configuration
     for chain_config in ctx.config.evm.values() {
         if !chain_config.enabled {
             continue;
@@ -165,7 +172,7 @@ async fn start_vanchor_events_watcher(
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
-            chain_id,
+            TypedChainId::Evm(chain_id),
             my_config.linked_anchors,
             my_config.proposal_signing_backend,
         )
@@ -328,7 +335,7 @@ pub async fn start_open_vanchor_events_watcher(
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
-            chain_id,
+            webb_proposals::TypedChainId::Evm(chain_id),
             my_config.linked_anchors,
             my_config.proposal_signing_backend,
         )
