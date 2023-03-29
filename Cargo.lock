@@ -8220,6 +8220,8 @@ dependencies = [
  "paw",
  "serde_json",
  "sled",
+ "sp-core",
+ "sp-runtime",
  "tempfile",
  "tokio 1.26.0",
  "tower-http",
