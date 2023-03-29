@@ -162,6 +162,8 @@ pub enum Error {
     },
     #[error("No bridge registered with DKG for resource id {:?}", _0)]
     BridgeNotRegistered(ResourceId),
+    #[error("Failed to fetch token price for token: {token}")]
+    FetchTokenPriceError { token: String },
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.
