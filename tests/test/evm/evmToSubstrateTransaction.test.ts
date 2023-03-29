@@ -77,12 +77,11 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   let signatureVBridge: VBridge.VBridge;
 
   // Mnemonic seed phrase to created governor key used for signing proposals.
-  const filePath = path.join(path.resolve('../'), 'sample_seed.txt');
-  const mnemonic = fs.readFileSync(filePath);
+  // DO NOT USE IN PRODUCTION
+  const mnemonic =
+    'point shiver hurt flight fun online hub antenna engine pave chef fantasy front interest poem accident catch load frequent praise elite pet remove used';
   const governorWallet = ethers.Wallet.fromMnemonic(mnemonic.toString());
   const GOV = governorWallet.privateKey;
-  // File path to secrets containing mnemonic seed phrase
-  const secretFile = `file:${filePath}`;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
   // slice 0x04 from public key
   const uncompressedKey = governorWallet
@@ -196,7 +195,10 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     // save the evm chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: secretFile },
+      proposalSigningBackend: {
+        type: 'Mocked',
+        privateKey: governorWallet.privateKey,
+      },
       linkedAnchors: [
         { type: 'Raw', resourceId: substrateResourceId.toString() },
       ],

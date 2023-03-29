@@ -33,6 +33,7 @@ export type CommonConfig = {
   features?: FeaturesConfig;
   evmEtherscan?: EvmEtherscanConfig;
   port: number;
+  assets?: { [key: string]: UnlistedAssetConfig };
 };
 
 /**
@@ -81,6 +82,9 @@ export class WebbRelayer {
         [key: string]: ConvertToKebabCase<EtherscanApiConfig>;
       };
       port: number;
+      assets?: {
+        [key: string]: ConvertToKebabCase<UnlistedAssetConfig>;
+      };
     };
     const commonConfigFile: WrittenCommonConfig = {
       features: {
@@ -606,6 +610,12 @@ export interface FeaturesConfig {
 export interface EtherscanApiConfig {
   chainId: number;
   apiKey: string;
+}
+
+export interface UnlistedAssetConfig {
+  name: string;
+  decimals: number;
+  price: number;
 }
 
 export interface EvmEtherscanConfig {

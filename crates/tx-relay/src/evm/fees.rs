@@ -9,7 +9,6 @@ use std::sync::{Arc, Mutex};
 use webb::evm::contract::protocol_solidity::{
     FungibleTokenWrapperContract, OpenVAnchorContract,
 };
-use webb::evm::ethers::middleware::SignerMiddleware;
 use webb::evm::ethers::prelude::U256;
 use webb::evm::ethers::types::Address;
 use webb::evm::ethers::utils::{format_units, parse_units};
@@ -114,15 +113,16 @@ async fn generate_fee_info(
     ctx: &RelayerContext,
 ) -> Result<FeeInfo> {
     // Get token names
-    let native_token = get_native_token_name_and_decimals(chain_id)?;
-    let wrapped_token =
+    let (native_token, native_token_decimals) =
+        get_native_token_name_and_decimals(chain_id)?;
+    let (wrapped_token, wrapped_token_decimals) =
         get_wrapped_token_name_and_decimals(chain_id, vanchor, ctx).await?;
 
     // Fetch USD prices for tokens from coingecko API (eg value of 1 ETH in USD).
     let prices = ctx
         .coin_gecko_client()
         .price(
-            &[native_token.0, &wrapped_token.0],
+            &[native_token, &wrapped_token],
             &["usd"],
             false,
             false,
@@ -130,9 +130,29 @@ async fn generate_fee_info(
             false,
         )
         .await?;
-    let native_token_price = prices[native_token.0].usd.unwrap();
-    let wrapped_token_price = prices[&wrapped_token.0].usd.unwrap();
+    let native_token_price = match prices.get(native_token) {
+        Some(price) => price.usd.expect("price.usd is not None"),
+        None => {
+            return Err(webb_relayer_utils::Error::FetchTokenPriceError {
+                token: native_token.into(),
+            })
+        }
+    };
+    // try to get wrapped token price from coingecko, if not found, use the price from config
+    // if not found in config, return error
+    let maybe_wrapped_token_price = prices
+        .get(&wrapped_token)
+        .and_then(|p| p.usd)
+        .or(ctx.config.assets.get(&wrapped_token).map(|a| a.price));
 
+    let wrapped_token_price = match maybe_wrapped_token_price {
+        Some(price) => price,
+        None => {
+            return Err(webb_relayer_utils::Error::FetchTokenPriceError {
+                token: wrapped_token.clone(),
+            })
+        }
+    };
     // Fetch native gas price estimate from etherscan.io, using "average" value
     let gas_oracle = ctx
         .etherscan_client(chain_id.underlying_chain_id())?
@@ -146,19 +166,23 @@ async fn generate_fee_info(
         gas_amount,
         native_token_price,
         wrapped_token_price,
-        wrapped_token.1,
+        wrapped_token_decimals,
     )
     .await?;
 
     // Calculate the exchange rate from wrapped token to native token which is used for the refund.
-    let refund_exchange_rate =
-        parse_units(native_token_price / wrapped_token_price, wrapped_token.1)?
-            .into();
+    let refund_exchange_rate = parse_units(
+        native_token_price / wrapped_token_price,
+        wrapped_token_decimals,
+    )?
+    .into();
 
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
-    let max_refund =
-        parse_units(MAX_REFUND_USD / native_token_price, native_token.1)?
-            .into();
+    let max_refund = parse_units(
+        MAX_REFUND_USD / native_token_price,
+        native_token_decimals,
+    )?
+    .into();
 
     Ok(FeeInfo {
         estimated_fee,
@@ -168,7 +192,7 @@ async fn generate_fee_info(
         timestamp: Utc::now(),
         native_token_price,
         wrapped_token_price,
-        wrapped_token_decimals: wrapped_token.1,
+        wrapped_token_decimals,
     })
 }
 
@@ -213,9 +237,8 @@ async fn get_wrapped_token_name_and_decimals(
     ctx: &RelayerContext,
 ) -> Result<(String, u32)> {
     let chain_name = chain_id.underlying_chain_id().to_string();
-    let wallet = ctx.evm_wallet(&chain_name).await?;
     let provider = ctx.evm_provider(&chain_name).await?;
-    let client = Arc::new(SignerMiddleware::new(provider, wallet));
+    let client = Arc::new(provider);
 
     let anchor_contract = OpenVAnchorContract::new(vanchor, client.clone());
     let token_address = anchor_contract.token().call().await?;
@@ -270,7 +293,11 @@ fn get_native_token_name_and_decimals(
                 }
             }
         }
-        _ => unimplemented!(),
+        _ => {
+            return Err(webb_relayer_utils::Error::ChainNotFound {
+                chain_id: chain_id.chain_id().to_string(),
+            })
+        }
     };
     let decimals = 18;
     Ok((name, decimals))

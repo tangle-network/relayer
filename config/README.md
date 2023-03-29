@@ -7,6 +7,7 @@ following section we will describe the different configuration entries and how t
 ### Index
 
 - [Global Configuration](#global-configuration)
+
   - [port](#port)
   - [features](#features)
     - [governance-relay](#governance-relay)
@@ -15,9 +16,13 @@ following section we will describe the different configuration entries and how t
   - [evm-etherscan](#evm-etherscan)
     - [chain-id](#chain-id)
     - [api-key](#api-key)
+  - [assets](#assets)
+    - [name](#name)
+    - [decimals](#decimals)
+    - [price](#price)
 
 - [EVM Chain Configuration](#evm-chain-configuration)
-  - [name](#name)
+  - [name](#name-1)
   - [chain-id](#chain-id)
   - [http-endpoint](#http-endpoint)
   - [ws-endpoint](#ws-endpoint)
@@ -51,7 +56,7 @@ following section we will describe the different configuration entries and how t
       - [pallet](#pallet)
       - [tree-id](#tree-id)
 - [Substrate Node Configuration](#substrate-node-configuration)
-  - [name](#name-1)
+  - [name](#name-2)
   - [chain-id](#chain-id-2)
   - [http-endpoint](#http-endpoint-1)
   - [ws-endpoint](#ws-endpoint-1)
@@ -172,9 +177,12 @@ Example:
 [features]
 private-tx-relay = true
 ```
+
 #### evm-etherscan
-Etherscan api configuration for chains. This config is required if [private-tx-relay](#private-tx-relay) is enabled.
-example:
+
+Etherscan api configuration for chains. This config is required if
+[private-tx-relay](#private-tx-relay) is enabled. example:
+
 ```toml
 [evm-etherscan.goerli]
 chain-id = 5
@@ -184,11 +192,84 @@ chain-id = 137
 api-key = "$POLYGONSCAN_MAINNET_API_KEY"
 ```
 
-#### api-key
-Etherscan api key, this are used to fetch gas prices from the explorer.
-example:
+##### chain-id
+
+Etherscan chain id, this are used to fetch gas prices from the explorer. example:
+
 ```toml
-api-key = $ETHERSCAN_GOERLI_API_KEY
+chain-id = 5
+```
+
+##### api-key
+
+Etherscan api key, this are used to fetch gas prices from the explorer. example:
+
+```toml
+api-key = "$ETHERSCAN_GOERLI_API_KEY"
+```
+
+#### Assets
+
+The assets section is used to configure the unlisted assets that the relayer will be able to work
+with.
+
+Unlisted assets are assets that are not listed in any exchange, and the relayer cannot get the price
+of the asset from any exchange. So, the price of the asset must be configured manually. These are
+mainly used for testing purposes and for assets that are not listed in any exchange.
+
+- Type: `table`
+- Required: `false`
+- Default: `{}`
+- env: `WEBB_ASSETS_<ASSET_NAME>_NAME`, `WEBB_ASSETS_<ASSET_NAME>_PRICE`,
+  `WEBB_ASSETS_<ASSET_NAME>_DECIMALS`
+
+Example:
+
+```toml
+[assets]
+tTNT = { name = "Test Tangle Network Token", price = 0.10, decimals = 18 }
+```
+
+##### name
+
+The name of the asset.
+
+- Type: `string`
+- Required: `true`
+- env: `WEBB_ASSETS_<ASSET_NAME>_NAME`
+
+Example:
+
+```toml
+name = "Test Tangle Network Token"
+```
+
+##### price
+
+The price of the asset in USD.
+
+- Type: `number`
+- Required: `true`
+- env: `WEBB_ASSETS_<ASSET_NAME>_PRICE`
+
+Example:
+
+```toml
+price = 0.10
+```
+
+##### decimals
+
+The number of decimals of the asset.
+
+- Type: `number`
+- Required: `true`
+- env: `WEBB_ASSETS_<ASSET_NAME>_DECIMALS`
+
+Example:
+
+```toml
+decimals = 18
 ```
 
 ### EVM Chain Configuration
