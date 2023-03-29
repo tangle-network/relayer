@@ -180,8 +180,8 @@ private-tx-relay = true
 
 #### evm-etherscan
 
-Etherscan api configuration for chains. This config is required if [private-tx-relay](#private-tx-relay) is enabled.
-example:
+Etherscan api configuration for chains. This config is required if
+[private-tx-relay](#private-tx-relay) is enabled. example:
 
 ```toml
 [evm-etherscan.goerli]
@@ -194,8 +194,7 @@ api-key = "$POLYGONSCAN_MAINNET_API_KEY"
 
 ##### chain-id
 
-Etherscan chain id, this are used to fetch gas prices from the explorer.
-example:
+Etherscan chain id, this are used to fetch gas prices from the explorer. example:
 
 ```toml
 chain-id = 5
@@ -203,8 +202,7 @@ chain-id = 5
 
 ##### api-key
 
-Etherscan api key, this are used to fetch gas prices from the explorer.
-example:
+Etherscan api key, this are used to fetch gas prices from the explorer. example:
 
 ```toml
 api-key = "$ETHERSCAN_GOERLI_API_KEY"
@@ -212,11 +210,12 @@ api-key = "$ETHERSCAN_GOERLI_API_KEY"
 
 #### Assets
 
-The assets section is used to configure the unlisted assets that the relayer will be able to work with.
+The assets section is used to configure the unlisted assets that the relayer will be able to work
+with.
 
-Unlisted assets are assets that are not listed in any exchange, and the relayer cannot get the price of
-the asset from any exchange. So, the price of the asset must be configured manually. These are mainly
-used for testing purposes and for assets that are not listed in any exchange.
+Unlisted assets are assets that are not listed in any exchange, and the relayer cannot get the price
+of the asset from any exchange. So, the price of the asset must be configured manually. These are
+mainly used for testing purposes and for assets that are not listed in any exchange.
 
 - Type: `table`
 - Required: `false`
@@ -229,6 +228,48 @@ Example:
 ```toml
 [assets]
 tTNT = { name = "Test Tangle Network Token", price = 0.10, decimals = 18 }
+```
+
+##### name
+
+The name of the asset.
+
+- Type: `string`
+- Required: `true`
+- env: `WEBB_ASSETS_<ASSET_NAME>_NAME`
+
+Example:
+
+```toml
+name = "Test Tangle Network Token"
+```
+
+##### price
+
+The price of the asset in USD.
+
+- Type: `number`
+- Required: `true`
+- env: `WEBB_ASSETS_<ASSET_NAME>_PRICE`
+
+Example:
+
+```toml
+price = 0.10
+```
+
+##### decimals
+
+The number of decimals of the asset.
+
+- Type: `number`
+- Required: `true`
+- env: `WEBB_ASSETS_<ASSET_NAME>_DECIMALS`
+
+Example:
+
+```toml
+decimals = 18
 ```
 
 ### EVM Chain Configuration
