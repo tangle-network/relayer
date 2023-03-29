@@ -212,6 +212,15 @@ pub async fn handle_fee_info(
         .await
         .map(Json)
         .map_err(|e| {
-            HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+            let status = match e {
+                webb_relayer_utils::Error::FetchTokenPriceError { .. } => {
+                    StatusCode::BAD_REQUEST
+                }
+                webb_relayer_utils::Error::EtherscanConfigNotFound {
+                    ..
+                } => StatusCode::BAD_REQUEST,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            HandlerError(status, e.to_string())
         })
 }
