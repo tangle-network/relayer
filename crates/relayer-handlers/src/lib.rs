@@ -209,13 +209,22 @@ pub async fn handle_evm_fee_info(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, vanchor, gas_amount)): Path<(u64, Address, u64)>,
 ) -> Result<Json<EvmFeeInfo>, HandlerError> {
-    let chain_id = TypedChainId::from(chain_id);
+    let chain_id = dbg!(TypedChainId::from(chain_id));
     let gas_amount = U256::from(gas_amount);
     get_evm_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
         .await
         .map(Json)
         .map_err(|e| {
-            HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+            let status = match e {
+                webb_relayer_utils::Error::FetchTokenPriceError { .. } => {
+                    StatusCode::BAD_REQUEST
+                }
+                webb_relayer_utils::Error::EtherscanConfigNotFound {
+                    ..
+                } => StatusCode::BAD_REQUEST,
+                _ => StatusCode::INTERNAL_SERVER_ERROR,
+            };
+            HandlerError(status, e.to_string())
         })
 }
 pub async fn handle_substrate_fee_info(

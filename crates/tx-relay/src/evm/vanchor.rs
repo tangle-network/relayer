@@ -89,7 +89,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let _ = stream.send(Network(NetworkStatus::Connected)).await;
 
     // ensure that relayer has enough balance for refund
-    let relayer_balance = relayer_balance(requested_chain, &ctx).await?;
+    let relayer_balance = relayer_balance(requested_chain as u32, &ctx).await?;
     if cmd.ext_data.refund > relayer_balance {
         return Err(Error(
             "Requested refund is higher than relayer balance".to_string(),

@@ -145,6 +145,32 @@ webb-relayer -vv -c ./config
 - [`SubstrateConfig`](https://webb-tools.github.io/relayer/webb_relayer/config/struct.SubstrateConfig.html)
 - [`EvmChainConfig`](https://webb-tools.github.io/relayer/webb_relayer/config/struct.EvmChainConfig.html)
 
+#### Relayer Common Configuration
+| Field                      | Description                                                                                | Optionality |
+| -------------------------- | ------------------------------------------------------------------------------------------ | ----------- |
+| `port`                 | Relayer port number | Required    |
+| `features`                  |Enable required features by setting them to `true` . All featured are enabled by default | Optional|
+| `evm-etherscan`              | Etherscan api configuration for chains, required if `private-tx` feature is enabled for relayer.       | Optional    |
+
+- `Features` Configuration
+
+```
+[features]
+governance-relay = true
+data-query = true
+private-tx-relay = true
+```
+- `Evm-etherscan` Configuration
+```
+[evm-etherscan.goerli]
+chain-id = 5
+api-key = "$ETHERSCAN_GOERLI_API_KEY"
+[evm-etherscan.polygon]
+chain-id = 137
+api-key = "$POLYGONSCAN_MAINNET_API_KEY"
+```
+
+ 
 #### Chain Configuration
 
 | Field           | Description                                                                                                                        | Optionality            |

@@ -16,9 +16,9 @@
 //! # Relayer Context Module 🕸️
 //!
 //! A module for managing the context of the relayer.
-use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::Duration;
+use std::{collections::HashMap, convert::TryFrom};
 
 use tokio::sync::{broadcast, Mutex};
 
@@ -55,8 +55,8 @@ pub struct RelayerContext {
     store: SledStore,
     /// API client for https://www.coingecko.com/
     coin_gecko_client: Arc<CoinGeckoClient>,
-    /// API client for https://etherscan.io/
-    etherscan_client: Client,
+    /// Hashmap of <ChainID, Etherscan Client>
+    etherscan_clients: HashMap<u32, Client>,
 }
 
 impl RelayerContext {
@@ -68,14 +68,20 @@ impl RelayerContext {
         let (notify_shutdown, _) = broadcast::channel(2);
         let metrics = Arc::new(Mutex::new(Metrics::new()));
         let coin_gecko_client = Arc::new(CoinGeckoClient::default());
-        let etherscan_client = Client::new_from_env(Chain::Mainnet).unwrap();
+        let mut etherscan_clients: HashMap<u32, Client> = HashMap::new();
+        for (chain, etherscan_config) in config.evm_etherscan.iter() {
+            let client =
+                Client::new(*chain, etherscan_config.api_key.to_string())
+                    .unwrap();
+            etherscan_clients.insert(etherscan_config.chain_id, client);
+        }
         Self {
             config,
             notify_shutdown,
             metrics,
             store,
             coin_gecko_client,
-            etherscan_client,
+            etherscan_clients,
         }
     }
     /// Returns a broadcast receiver handle for the shutdown signal.
@@ -187,8 +193,17 @@ impl RelayerContext {
     }
 
     /// Returns API client for https://etherscan.io/
-    pub fn etherscan_client(&self) -> &Client {
-        &self.etherscan_client
+    pub fn etherscan_client(
+        &self,
+        chain_id: u32,
+    ) -> webb_relayer_utils::Result<&Client> {
+        let client =
+            self.etherscan_clients.get(&chain_id).ok_or_else(|| {
+                webb_relayer_utils::Error::EtherscanConfigNotFound {
+                    chain_id: chain_id.to_string(),
+                }
+            })?;
+        Ok(client)
     }
 }
 

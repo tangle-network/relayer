@@ -49,6 +49,8 @@ use evm::EvmChainConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use substrate::SubstrateConfig;
+use webb::evm::ethers::types::Chain;
+use webb_relayer_types::etherscan_api::EtherscanApiKey;
 
 /// The default port the relayer will listen on. Defaults to 9955.
 const fn default_port() -> u16 {
@@ -71,6 +73,28 @@ const fn print_progress_interval_default() -> u64 {
     7_000
 }
 
+/// The default unlisted assets.
+fn default_unlisted_assets() -> HashMap<String, UnlistedAssetConfig> {
+    HashMap::from_iter([
+        (
+            String::from("tTNT"),
+            UnlistedAssetConfig {
+                name: String::from("Test Tangle Network Token"),
+                decimals: 18,
+                price: 0.10,
+            },
+        ),
+        (
+            String::from("TNT"),
+            UnlistedAssetConfig {
+                name: String::from("Tangle Network Token"),
+                decimals: 18,
+                price: 0.10,
+            },
+        ),
+    ])
+}
+
 /// WebbRelayerConfig is the configuration for the webb relayer.
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "kebab-case")]
@@ -85,6 +109,9 @@ pub struct WebbRelayerConfig {
     /// a map between chain name and its configuration.
     #[serde(default)]
     pub evm: HashMap<String, EvmChainConfig>,
+    /// Etherscan API key configuration for evm based chains.
+    #[serde(default)]
+    pub evm_etherscan: HashMap<Chain, EtherscanApiConfig>,
     /// ETH2 based networks and the configuration
     ///
     /// a map between chain name and its configuration
@@ -108,6 +135,12 @@ pub struct WebbRelayerConfig {
     /// 3. Private transaction relaying
     #[serde(default)]
     pub features: FeaturesConfig,
+
+    /// Configuration for the assets that are not listed on any exchange.
+    ///
+    /// it is a simple map between the asset symbol and its configuration.
+    #[serde(default = "default_unlisted_assets")]
+    pub assets: HashMap<String, UnlistedAssetConfig>,
 }
 
 impl WebbRelayerConfig {
@@ -164,6 +197,7 @@ pub struct FeaturesConfig {
     /// Enable private tx relaying
     pub private_tx_relay: bool,
 }
+
 impl Default for FeaturesConfig {
     fn default() -> Self {
         Self {
@@ -172,6 +206,16 @@ impl Default for FeaturesConfig {
             private_tx_relay: true,
         }
     }
+}
+
+/// Configuration to add etherscan API key
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct EtherscanApiConfig {
+    /// Chain Id
+    pub chain_id: u32,
+    /// A wrapper type around the `String` to allow reading it from the env.
+    pub api_key: EtherscanApiKey,
 }
 
 /// TxQueueConfig is the configuration for the TxQueue.
@@ -189,6 +233,18 @@ impl Default for TxQueueConfig {
             max_sleep_interval: 10_000,
         }
     }
+}
+
+/// UnlistedAssetConfig is the configuration for the assets that are not listed on any exchange.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub struct UnlistedAssetConfig {
+    /// The Price of the asset in USD.
+    pub price: f64,
+    /// The name of the asset.
+    pub name: String,
+    /// The decimals of the asset.
+    pub decimals: u8,
 }
 
 #[cfg(test)]

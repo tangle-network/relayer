@@ -103,6 +103,9 @@ pub enum Error {
     /// Etherscan API error
     #[error(transparent)]
     Etherscan(#[from] ethers::etherscan::errors::EtherscanError),
+    /// Ether wallet errors.
+    #[error(transparent)]
+    EtherWalletError(#[from] ethers::signers::WalletError),
     /// Ethers currency conversion error
     #[error(transparent)]
     Conversion(#[from] ethers::utils::ConversionError),
@@ -151,8 +154,16 @@ pub enum Error {
     /// Arkworks Errors.
     #[error("{}", _0)]
     ArkworksError(String),
+    /// Etherscan api configuration not found.
+    #[error("Etherscan api configuration not found for chain : {}", chain_id)]
+    EtherscanConfigNotFound {
+        /// The chain id of the node.
+        chain_id: String,
+    },
     #[error("No bridge registered with DKG for resource id {:?}", _0)]
     BridgeNotRegistered(ResourceId),
+    #[error("Failed to fetch token price for token: {token}")]
+    FetchTokenPriceError { token: String },
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.
