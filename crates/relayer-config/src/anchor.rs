@@ -11,6 +11,7 @@ use super::*;
 #[serde(rename_all = "kebab-case")]
 pub struct RawResourceId {
     /// Raw resource Id
+    #[serde(rename(serialize = "resourceId"))]
     pub resource_id: H256,
 }
 
