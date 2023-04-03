@@ -46,7 +46,7 @@ following section we will describe the different configuration entries and how t
       - [print-progress-interval](#print-progress-interval)
     - [proposal-signing-backend](#proposal-signing-backend)
       - [type](#type)
-      - [node](#node)
+      - [chain-id](#chain-id-1)
       - [private-key](#private-key-1)
     - [linked-anchors](#linked-anchors)
       - [type](#type-1)
@@ -76,9 +76,9 @@ following section we will describe the different configuration entries and how t
       - [sync-blocks-from](#sync-blocks-from-1)
       - [print-progress-interval](#print-progress-interval-1)
       - [enable-data-query](#enable-data-query-1)
-    - [proposal-signing-backend](#proposal-signing-backend-1)
+    - [proposal-signing-backend](#proposal-signing-backend)
       - [type](#type)
-      - [node](#node)
+      - [chain-id](#chain-id-1)
       - [private-key](#private-key-1)
     - [linked-anchors](#linked-anchors)
       - [type](#type-1)
@@ -732,10 +732,10 @@ The DKG proposal signing backend is used for signing the proposals using the DKG
 ```toml
 [[evm.ethereum.contracts]]
 contract = "VAnchor"
-proposal-signing-backend = { type = "Dkg", node = "1080" }
+proposal-signing-backend = { type = "Dkg", chain-id = 1080 }
 ```
 
-###### node
+###### chain-id
 
 The node's chain-id to use for signing the proposals. Only used by the DKG proposal signing backend.
 
@@ -743,14 +743,14 @@ The node's chain-id to use for signing the proposals. Only used by the DKG propo
 - Required:
   - `true` if the [type](#type) is `Dkg`
   - `false` otherwise
-- env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_PROPOSAL_SIGNING_BACKEND_NODE`
+- env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_PROPOSAL_SIGNING_BACKEND_CHAIN_ID`
 
 Example:
 
 ```toml
 [[evm.ethereum.contracts]]
 contract = "VAnchor"
-proposal-signing-backend = { type = "Dkg", node = "1080" }
+proposal-signing-backend = { type = "Dkg", chain-id = 1080 }
 ```
 
 ##### Linked Anchors

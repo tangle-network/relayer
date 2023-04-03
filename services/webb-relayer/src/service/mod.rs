@@ -126,9 +126,11 @@ pub async fn make_proposal_signing_backend(
             // if it is the dkg backend, we will need to connect to that node first,
             // and then use the DkgProposalSigningBackend to sign the proposal.
             let dkg_client = ctx
-                .substrate_provider::<subxt::PolkadotConfig>(&c.node)
+                .substrate_provider::<subxt::PolkadotConfig>(
+                    &c.chain_id.to_string(),
+                )
                 .await?;
-            let pair = ctx.substrate_wallet(&c.node).await?;
+            let pair = ctx.substrate_wallet(&c.chain_id.to_string()).await?;
             let backend = DkgProposalSigningBackend::new(
                 dkg_client,
                 subxt::tx::PairSigner::new(pair),

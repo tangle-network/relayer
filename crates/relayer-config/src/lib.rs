@@ -34,6 +34,8 @@ pub mod block_poller;
 /// CLI configuration
 #[cfg(feature = "cli")]
 pub mod cli;
+/// Module for all the default values.
+pub mod defaults;
 /// Event watcher configuration
 pub mod event_watcher;
 /// EVM configuration
@@ -52,57 +54,14 @@ use substrate::SubstrateConfig;
 use webb::evm::ethers::types::Chain;
 use webb_relayer_types::etherscan_api::EtherscanApiKey;
 
-/// The default port the relayer will listen on. Defaults to 9955.
-const fn default_port() -> u16 {
-    9955
-}
-/// Leaves watcher is set to `true` by default.
-const fn enable_leaves_watcher_default() -> bool {
-    true
-}
-/// Data query access is set to `true` by default.
-const fn enable_data_query_default() -> bool {
-    true
-}
-/// The maximum events per step is set to `100` by default.
-const fn max_blocks_per_step_default() -> u64 {
-    100
-}
-/// The print progress interval is set to `7_000` by default.
-const fn print_progress_interval_default() -> u64 {
-    7_000
-}
-
-/// The default unlisted assets.
-fn default_unlisted_assets() -> HashMap<String, UnlistedAssetConfig> {
-    HashMap::from_iter([
-        (
-            String::from("tTNT"),
-            UnlistedAssetConfig {
-                name: String::from("Test Tangle Network Token"),
-                decimals: 18,
-                price: 0.10,
-            },
-        ),
-        (
-            String::from("TNT"),
-            UnlistedAssetConfig {
-                name: String::from("Tangle Network Token"),
-                decimals: 18,
-                price: 0.10,
-            },
-        ),
-    ])
-}
-
 /// WebbRelayerConfig is the configuration for the webb relayer.
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct WebbRelayerConfig {
     /// WebSocket Server Port number
     ///
     /// default to 9955
-    #[serde(default = "default_port", skip_serializing)]
+    #[serde(default = "defaults::relayer_port", skip_serializing)]
     pub port: u16,
     /// EVM based networks and the configuration.
     ///
@@ -110,7 +69,7 @@ pub struct WebbRelayerConfig {
     #[serde(default)]
     pub evm: HashMap<String, EvmChainConfig>,
     /// Etherscan API key configuration for evm based chains.
-    #[serde(default)]
+    #[serde(default, skip_serializing)]
     pub evm_etherscan: HashMap<Chain, EtherscanApiConfig>,
     /// ETH2 based networks and the configuration
     ///
@@ -135,11 +94,10 @@ pub struct WebbRelayerConfig {
     /// 3. Private transaction relaying
     #[serde(default)]
     pub features: FeaturesConfig,
-
     /// Configuration for the assets that are not listed on any exchange.
     ///
     /// it is a simple map between the asset symbol and its configuration.
-    #[serde(default = "default_unlisted_assets")]
+    #[serde(default = "defaults::unlisted_assets")]
     pub assets: HashMap<String, UnlistedAssetConfig>,
 }
 
@@ -176,7 +134,7 @@ impl WebbRelayerConfig {
 
 /// ExperimentalConfig is the configuration for the Experimental Options.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct ExperimentalConfig {
     /// Enable the Smart Anchor Updates when it comes to signaling
     /// the bridge to create the proposals.
@@ -188,7 +146,7 @@ pub struct ExperimentalConfig {
 
 /// FeaturesConfig is the configuration for running relayer with option.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct FeaturesConfig {
     /// Enable data quering for leafs
     pub data_query: bool,
@@ -210,17 +168,18 @@ impl Default for FeaturesConfig {
 
 /// Configuration to add etherscan API key
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct EtherscanApiConfig {
     /// Chain Id
     pub chain_id: u32,
     /// A wrapper type around the `String` to allow reading it from the env.
+    #[serde(skip_serializing)]
     pub api_key: EtherscanApiKey,
 }
 
 /// TxQueueConfig is the configuration for the TxQueue.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct TxQueueConfig {
     /// Maximum number of milliseconds to wait before dequeuing a transaction from
     /// the queue.
@@ -237,7 +196,7 @@ impl Default for TxQueueConfig {
 
 /// UnlistedAssetConfig is the configuration for the assets that are not listed on any exchange.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct UnlistedAssetConfig {
     /// The Price of the asset in USD.
     pub price: f64,
