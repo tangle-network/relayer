@@ -7565,6 +7565,7 @@ dependencies = [
  "sp-core",
  "tokio 1.26.0",
  "webb 0.5.21",
+ "webb-price-oracle-backends",
  "webb-relayer-config",
  "webb-relayer-store",
  "webb-relayer-utils 0.1.0",

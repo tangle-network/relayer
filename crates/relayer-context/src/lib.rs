@@ -32,7 +32,9 @@ use sp_core::sr25519::Pair as Sr25519Pair;
 #[cfg(feature = "substrate")]
 use webb::substrate::subxt;
 
-use coingecko::CoinGeckoClient;
+use webb_price_oracle_backends::{
+    CachedPriceBackend, CoinGeckoBackend, PriceBackend,
+};
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric::{self, Metrics};
 
@@ -53,8 +55,8 @@ pub struct RelayerContext {
     /// Represents the metrics for the relayer
     pub metrics: Arc<Mutex<metric::Metrics>>,
     store: SledStore,
-    /// API client for https://www.coingecko.com/
-    coin_gecko_client: Arc<CoinGeckoClient>,
+    /// Price backend for fetching prices.
+    price_oracles: Vec<Box<dyn PriceBackend>>,
     /// Hashmap of <ChainID, Etherscan Client>
     etherscan_clients: HashMap<u32, Client>,
 }
@@ -67,7 +69,14 @@ impl RelayerContext {
     ) -> Self {
         let (notify_shutdown, _) = broadcast::channel(2);
         let metrics = Arc::new(Mutex::new(Metrics::new()));
-        let coin_gecko_client = Arc::new(CoinGeckoClient::default());
+        let mut price_oracles = Vec::new();
+        let coin_gecko_backend = CoinGeckoBackend::default();
+        let cached_backend = CachedPriceBackend::builder()
+            .backend(coin_gecko_backend)
+            .store(store.clone())
+            .use_cache_if_source_unavailable()
+            .build();
+        price_oracles.push(Box::new(cached_backend));
         let mut etherscan_clients: HashMap<u32, Client> = HashMap::new();
         for (chain, etherscan_config) in config.evm_etherscan.iter() {
             let client =
@@ -80,7 +89,7 @@ impl RelayerContext {
             notify_shutdown,
             metrics,
             store,
-            coin_gecko_client,
+            price_oracles,
             etherscan_clients,
         }
     }
@@ -187,9 +196,8 @@ impl RelayerContext {
         &self.store
     }
 
-    /// Returns API client for https://www.coingecko.com/
-    pub fn coin_gecko_client(&self) -> &Arc<CoinGeckoClient> {
-        &self.coin_gecko_client
+    pub fn price_oracles(&self) -> &[Box<dyn PriceBackend>] {
+        &self.price_oracles
     }
 
     /// Returns API client for https://etherscan.io/

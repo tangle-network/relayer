@@ -24,6 +24,6 @@ typed-builder = "0.12.0"
 coingecko = { version = "1.0.1", optional = true }
 
 [features]
-default = ["std", "coingecko"]
+default = ["std"]
 coingecko = ["dep:coingecko"]
 std = []

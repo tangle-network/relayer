@@ -10,6 +10,7 @@ edition = "2021"
 members = [".", "crates/*", "event-watchers/*", "services/*"]
 
 [workspace.dependencies]
+webb-price-oracle-backends = { path = "crates/price-oracle-backends" }
 webb-bridge-registry-backends = { path = "crates/bridge-registry-backends" }
 webb-proposal-signing-backends = { path = "crates/proposal-signing-backends" }
 webb-relayer-tx-queue = { path = "crates/tx-queue" }
