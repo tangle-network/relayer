@@ -110,7 +110,7 @@ pub struct WebbRelayerConfig {
     #[serde(default)]
     pub evm: HashMap<String, EvmChainConfig>,
     /// Etherscan API key configuration for evm based chains.
-    #[serde(default)]
+    #[serde(default, skip_serializing)]
     pub evm_etherscan: HashMap<Chain, EtherscanApiConfig>,
     /// ETH2 based networks and the configuration
     ///
@@ -135,7 +135,6 @@ pub struct WebbRelayerConfig {
     /// 3. Private transaction relaying
     #[serde(default)]
     pub features: FeaturesConfig,
-
     /// Configuration for the assets that are not listed on any exchange.
     ///
     /// it is a simple map between the asset symbol and its configuration.
@@ -180,9 +179,11 @@ impl WebbRelayerConfig {
 pub struct ExperimentalConfig {
     /// Enable the Smart Anchor Updates when it comes to signaling
     /// the bridge to create the proposals.
+    #[serde(rename(serialize = "smartAnchorUpdates"))]
     pub smart_anchor_updates: bool,
     /// The number of retries to check if an anchor is updated before sending our update
     /// or not, before actually sending our update.
+    #[serde(rename(serialize = "smartAnchorUpdatesRetries"))]
     pub smart_anchor_updates_retries: u32,
 }
 
@@ -191,10 +192,13 @@ pub struct ExperimentalConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct FeaturesConfig {
     /// Enable data quering for leafs
+    #[serde(rename(serialize = "dataQuery"))]
     pub data_query: bool,
     /// Enable governance relaying
+    #[serde(rename(serialize = "governanceRelay"))]
     pub governance_relay: bool,
     /// Enable private tx relaying
+    #[serde(rename(serialize = "privateTxRelay"))]
     pub private_tx_relay: bool,
 }
 
@@ -213,8 +217,10 @@ impl Default for FeaturesConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct EtherscanApiConfig {
     /// Chain Id
+    #[serde(rename(serialize = "chainId"))]
     pub chain_id: u32,
     /// A wrapper type around the `String` to allow reading it from the env.
+    #[serde(skip_serializing)]
     pub api_key: EtherscanApiKey,
 }
 
@@ -224,6 +230,7 @@ pub struct EtherscanApiConfig {
 pub struct TxQueueConfig {
     /// Maximum number of milliseconds to wait before dequeuing a transaction from
     /// the queue.
+    #[serde(rename(serialize = "maxSleepInterval"))]
     pub max_sleep_interval: u64,
 }
 
