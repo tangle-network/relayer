@@ -7,12 +7,7 @@ repository = "https://github.com/webb-tools/relayer"
 edition = "2021"
 
 [workspace]
-members = [
-    ".",
-    "crates/*",
-    "event-watchers/*",
-    "services/*",
-]
+members = [".", "crates/*", "event-watchers/*", "services/*"]
 
 [workspace.dependencies]
 webb-bridge-registry-backends = { path = "crates/bridge-registry-backends" }
@@ -22,8 +17,8 @@ webb-relayer-handlers = { path = "crates/relayer-handlers" }
 webb-relayer-store = { path = "crates/relayer-store" }
 webb-relayer-config = { path = "crates/relayer-config" }
 webb-relayer-context = { path = "crates/relayer-context" }
-webb-relayer-utils = { path = "crates/relayer-utils"}
-webb-event-watcher-traits = { path = "crates/event-watcher-traits"}
+webb-relayer-utils = { path = "crates/relayer-utils" }
+webb-event-watcher-traits = { path = "crates/event-watcher-traits" }
 webb-ew-dkg = { path = "event-watchers/dkg" }
 webb-ew-evm = { path = "event-watchers/evm" }
 webb-ew-substrate = { path = "event-watchers/substrate" }
@@ -31,6 +26,7 @@ webb-relayer-handler-utils = { path = "crates/relayer-handler-utils" }
 webb-relayer-types = { path = "crates/relayer-types" }
 webb-relayer = { path = "services/webb-relayer" }
 
+thiserror = "^1"
 anyhow = "^1"
 tracing = { version = "^0.1", features = ["log"] }
 url = { version = "^2.3", features = ["serde"] }
@@ -39,7 +35,7 @@ tokio = { version = "^1", features = ["full"] }
 config = { version = "0.13", default-features = false, features = ["toml", "json"] }
 serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0" }
-webb = { version="0.5.21", default-features = false }
+webb = { version = "0.5.21", default-features = false }
 sp-core = { version = "16.0.0", default-features = false }
 sp-runtime = { version = "18.0.0", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).

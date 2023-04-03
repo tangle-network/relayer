@@ -11,6 +11,7 @@ repository = { workspace = true }
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+thiserror = { workspace = true }
 hex = { workspace = true }
 backoff = { workspace = true }
 serde_path_to_error = { workspace = true }
@@ -28,7 +29,6 @@ config = { workspace = true }
 ark-std = { version = "^0.3.0", default-features = false }
 derive_more = { version = "0.99", default-features = false, features = ["display"] }
 prometheus = "0.13.3"
-thiserror = "^1"
 reqwest = "0.11"
 hyper = "0.14.24"
 
