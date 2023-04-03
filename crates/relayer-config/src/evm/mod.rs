@@ -69,6 +69,7 @@ pub struct EvmChainConfig {
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
     /// Block poller/listening configuration
+    #[serde(skip_serializing, default)]
     pub block_poller: Option<BlockPollerConfig>,
 }
 
@@ -77,6 +78,7 @@ pub struct EvmChainConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct EvmLinkedAnchorConfig {
     /// The chain Id
+    #[serde(rename(serialize = "chainId"))]
     pub chain_id: u32,
     /// The V-anchor Contract Address.
     pub address: Address,
