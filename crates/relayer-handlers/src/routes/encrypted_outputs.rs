@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::routes::HandlerError;
 use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
@@ -22,6 +21,7 @@ use std::{collections::HashMap, sync::Arc};
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::EncryptedOutputCacheStore;
+use webb_relayer_utils::HandlerError;
 
 use super::OptionalRangeQuery;
 
@@ -112,14 +112,15 @@ pub async fn handle_encrypted_outputs_cache_evm(
     let src_typed_chain_id = TypedChainId::Evm(chain_id);
     let history_store_key =
         ResourceId::new(src_target_system, src_typed_chain_id);
-    let encrypted_output = ctx
-        .store()
-        .get_encrypted_output_with_range(history_store_key, query_range.into())
-        .unwrap();
+    let encrypted_output = ctx.store().get_encrypted_output_with_range(
+        history_store_key,
+        query_range.into(),
+    )?;
     let last_queried_block = ctx
         .store()
-        .get_last_deposit_block_number_for_encrypted_output(history_store_key)
-        .unwrap();
+        .get_last_deposit_block_number_for_encrypted_output(
+            history_store_key,
+        )?;
 
     Ok(Json(EncryptedOutputsCacheResponse {
         encrypted_outputs: encrypted_output,

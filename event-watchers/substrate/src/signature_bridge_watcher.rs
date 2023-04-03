@@ -177,8 +177,8 @@ where
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
-            .unwrap()
-            .0;
+            .map(|m| m.0)
+            .unwrap_or_default();
 
         // Verify proposal signature
         let is_signature_valid = validate_ecdsa_signature(
@@ -264,8 +264,8 @@ where
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
-            .unwrap()
-            .0;
+            .map(|m| m.0)
+            .unwrap_or_default();
         // we need to do some checks here:
         // 1. convert the public key to address and check it is not the same as the current maintainer.
         // 2. check if the nonce is greater than the current nonce.
@@ -290,7 +290,7 @@ where
             .await?
             .fetch(&current_nonce)
             .await?
-            .unwrap();
+            .expect("fetch current nonce from storage");
 
         if nonce <= current_nonce {
             tracing::warn!(

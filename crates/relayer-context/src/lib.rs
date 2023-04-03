@@ -64,25 +64,24 @@ impl RelayerContext {
     pub fn new(
         config: webb_relayer_config::WebbRelayerConfig,
         store: SledStore,
-    ) -> Self {
+    ) -> webb_relayer_utils::Result<Self> {
         let (notify_shutdown, _) = broadcast::channel(2);
-        let metrics = Arc::new(Mutex::new(Metrics::new()));
+        let metrics = Arc::new(Mutex::new(Metrics::new()?));
         let coin_gecko_client = Arc::new(CoinGeckoClient::default());
         let mut etherscan_clients: HashMap<u32, Client> = HashMap::new();
         for (chain, etherscan_config) in config.evm_etherscan.iter() {
             let client =
-                Client::new(*chain, etherscan_config.api_key.to_string())
-                    .unwrap();
+                Client::new(*chain, etherscan_config.api_key.to_string())?;
             etherscan_clients.insert(etherscan_config.chain_id, client);
         }
-        Self {
+        Ok(Self {
             config,
             notify_shutdown,
             metrics,
             store,
             coin_gecko_client,
             etherscan_clients,
-        }
+        })
     }
     /// Returns a broadcast receiver handle for the shutdown signal.
     pub fn shutdown_signal(&self) -> Shutdown {

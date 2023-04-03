@@ -53,7 +53,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // The RelayerContext takes a configuration, and populates objects that are needed
     // throughout the lifetime of the relayer. Items such as wallets and providers, as well
     // as a convenient place to access the configuration.
-    let ctx = RelayerContext::new(config, store.clone());
+    let ctx = RelayerContext::new(config, store.clone())?;
     let metrics_clone = ctx.metrics.clone();
 
     // metric for data stored which is determined every 1 hour

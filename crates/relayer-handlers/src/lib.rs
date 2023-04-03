@@ -39,10 +39,10 @@ use webb_relayer_handler_utils::{
 };
 use webb_relayer_tx_relay::evm::fees::{get_fee_info, FeeInfo};
 
-use crate::routes::HandlerError;
 use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use webb_relayer_tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
+use webb_relayer_utils::HandlerError;
 
 /// Module handles relayer API
 pub mod routes;

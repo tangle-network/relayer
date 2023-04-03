@@ -66,7 +66,7 @@ impl EventHandler<SubstrateConfig> for SubstrateVAnchorLeavesHandler {
                 .await?
                 .fetch(&next_leaf_index_addr)
                 .await?
-                .unwrap();
+                .expect("fetch next leaf index from storage");
             // fetch chain_id
             let chain_id_addr = RuntimeApi::constants()
                 .linkable_tree_bn254()

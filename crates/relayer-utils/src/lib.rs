@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use axum::http::StatusCode;
+use axum::response::{IntoResponse, Response};
 use webb::{evm::ethers, substrate::subxt};
 use webb_proposals::ResourceId;
 
@@ -112,6 +114,8 @@ pub enum Error {
     /// Failed to convert string to float
     #[error(transparent)]
     ParseFloatError(#[from] std::num::ParseFloatError),
+    #[error(transparent)]
+    PrometheusError(#[from] prometheus::Error),
     /// Generic error.
     #[error("{}", _0)]
     Generic(&'static str),
@@ -172,5 +176,25 @@ pub type Result<T> = std::result::Result<T, Error>;
 impl From<Box<dyn ark_std::error::Error>> for Error {
     fn from(error: Box<dyn ark_std::error::Error>) -> Self {
         Error::ArkworksError(format!("{}", error))
+    }
+}
+
+impl From<Error> for HandlerError {
+    fn from(value: Error) -> Self {
+        HandlerError(StatusCode::INTERNAL_SERVER_ERROR, value.to_string())
+    }
+}
+
+/// Error type for HTTP handlers
+pub struct HandlerError(
+    /// HTTP status code for response
+    pub StatusCode,
+    /// Response message
+    pub String,
+);
+
+impl IntoResponse for HandlerError {
+    fn into_response(self) -> Response {
+        (self.0, self.1).into_response()
     }
 }
