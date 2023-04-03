@@ -15,17 +15,17 @@ pub enum ProposalSigningBackendConfig {
 
 /// DKGNodeSigningBackendConfig represents the configuration for the DKGNode signing backend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct DkgNodeProposalSigningBackendConfig {
-    /// The name of the DKG Node that this contract will use.
+    /// The chain id of the DKG Node that this contract will use.
     ///
     /// Must be defined in the config.
-    pub node: String,
+    pub chain_id: u32,
 }
 
 /// MockedSigningBackendConfig represents the configuration for the Mocked signing backend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct MockedProposalSigningBackendConfig {
     /// The private key of the current Governor.
     #[serde(skip_serializing)]
