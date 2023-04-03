@@ -79,10 +79,12 @@ pub struct SubstrateConfig {
 #[serde(rename_all = "kebab-case")]
 pub struct SubstrateLinkedAnchorConfig {
     /// chain Id
+    #[serde(rename(serialize = "chainId"))]
     pub chain_id: u32,
     /// pallet index
     pub pallet: u8,
     /// tree Id
+    #[serde(rename(serialize = "treeId"))]
     pub tree_id: u32,
 }
 
