@@ -9,7 +9,7 @@ use crate::{
 
 /// SubstrateConfig is the relayer configuration for the Substrate based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct SubstrateConfig {
     /// String that groups configuration for this chain on a human-readable name.
     pub name: String,
@@ -29,7 +29,6 @@ pub struct SubstrateConfig {
     #[serde(skip_serializing)]
     pub explorer: Option<url::Url>,
     /// chain specific id (output of ChainIdentifier constant on LinkableTree Pallet)
-    #[serde(rename(serialize = "chainId"))]
     pub chain_id: u32,
     /// Interprets the string in order to generate a key Pair. in the
     /// case that the pair can be expressed as a direct derivation from a seed (some cases, such as Sr25519 derivations
@@ -76,15 +75,13 @@ pub struct SubstrateConfig {
 
 /// Linked anchor config for Substrate based target system
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct SubstrateLinkedAnchorConfig {
     /// chain Id
-    #[serde(rename(serialize = "chainId"))]
     pub chain_id: u32,
     /// pallet index
     pub pallet: u8,
     /// tree Id
-    #[serde(rename(serialize = "treeId"))]
     pub tree_id: u32,
 }
 
@@ -117,50 +114,44 @@ pub enum SubstrateRuntime {
 
 /// DKGProposalsPalletConfig represents the configuration for the DKGProposals pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct DKGProposalsPalletConfig {
     /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }
 
 /// DKGPalletConfig represents the configuration for the DKG pallet (dkg-metadata).
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct DKGPalletConfig {
     /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }
 /// DKGProposalHandlerPalletConfig represents the configuration for the DKGProposalHandler pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct DKGProposalHandlerPalletConfig {
     /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }
 
 /// SignatureBridgePalletConfig represents the configuration for the SignatureBridge pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct SignatureBridgePalletConfig {
     /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }
 
 /// VAnchorBn254PalletConfig represents the configuration for the VAnchorBn254 pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct VAnchorBn254PalletConfig {
     /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor on this chain.
-    #[serde(rename(serialize = "linkedAnchors"), default)]
+    #[serde(default)]
     pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
 }
