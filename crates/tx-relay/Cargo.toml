@@ -27,14 +27,10 @@ ethereum-types = { workspace = true }
 serde = { workspace = true }
 
 once_cell = "1.17.0"
-chrono = {version = "0.4.23", features = ["serde"] }
+chrono = { version = "0.4.23", features = ["serde"] }
 
 [features]
 default = ["std", "evm", "substrate"]
 std = []
-evm = [
-    "webb-relayer-context/evm",
-]
-substrate = [
-    "webb-relayer-context/substrate",
-]
+evm = ["webb-relayer-context/evm"]
+substrate = ["webb-relayer-context/substrate"]
