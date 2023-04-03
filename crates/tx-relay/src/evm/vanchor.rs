@@ -1,5 +1,5 @@
 use super::*;
-use crate::evm::fees::{get_evm_fee_info, relayer_balance, EvmFeeInfo};
+use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use std::{collections::HashMap, sync::Arc};
@@ -87,14 +87,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
                 })
             })?;
     let _ = stream.send(Network(NetworkStatus::Connected)).await;
-
-    // ensure that relayer has enough balance for refund
-    let relayer_balance = relayer_balance(requested_chain as u32, &ctx).await?;
-    if cmd.ext_data.refund > relayer_balance {
-        return Err(Error(
-            "Requested refund is higher than relayer balance".to_string(),
-        ));
-    }
 
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
     let contract = VAnchorContract::new(cmd.id, client.clone());
@@ -184,7 +176,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     if cmd.ext_data.fee < adjusted_fee + wrapped_amount {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
-            cmd.ext_data.fee, fee_info.estimated_fee
+            cmd.ext_data.fee, adjusted_fee + wrapped_amount
         );
         return Err(Error(msg));
     }

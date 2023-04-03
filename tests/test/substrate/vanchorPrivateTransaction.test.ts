@@ -52,6 +52,7 @@ import {
   defaultEventsWatcherValue,
   generateVAnchorNote,
 } from '../../lib/utils.js';
+import { formatEther } from 'ethers/lib/utils.js';
 
 describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -134,18 +135,10 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       substrateChainId
     );
 
-    // `aliceAccount` uses Charlie for some reason
-    const aliceAccount = createAccount('//Charlie');
-    const aliceAccountBalance = await api.query.system.account(
-      aliceAccount.address
-    );
-    console.log('accountBalance: ', aliceAccountBalance.toString());
-
     // 2. Deposit amount on substrate chain.
     const data = await vanchorDeposit(
       typedSourceChainId.toString(), // source chain Id
       typedSourceChainId.toString(), // target chain Id
-      // TODO: need to increase this but gives error about invalid public amount
       100, // public amount
       treeId,
       api,
@@ -164,7 +157,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const account = createAccount('//Bob');
     // Bob's balance after withdrawal
     const bobBalanceBefore = await api.query.system.account(account.address);
-    console.log('bobBalanceBefore: ', bobBalanceBefore);
 
     // get refund amount
     const feeInfoResponse1 = await webbRelayer.getSubstrateFeeInfo(
@@ -261,13 +253,12 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     //@ts-ignore
     assert(BobBalanceAfter.data.free > bobBalanceBefore.data.free);
   });
-  /*
+
   after(async () => {
     await aliceNode?.stop();
     await bobNode?.stop();
     await webbRelayer?.stop();
   });
-  */
 });
 
 // Helper methods, we can move them somewhere if we end up using them again.
@@ -350,16 +341,17 @@ async function vanchorWithdraw(
   const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
 
   const address = recipient;
-  console.log('fee: ', fee.toString());
-  console.log('refund: ', refund.toString());
+  console.log('fee: ', formatEther(fee));
+  console.log('refund: ', formatEther(refund));
   const fee2 = fee.add(refund);
-  console.log('fee2: ', fee2.toString());
+  console.log('fee2: ', formatEther(fee2));
+  console.log('fee2          : ', fee2.toString());
   const withdrawAmount = depositUtxos.reduce((acc, utxo) => {
-    return Number(utxo.amount) + acc;
-  }, 0);
-  console.log('withdrawAmount: ', withdrawAmount.toString());
-  const extAmount = -withdrawAmount;
-  console.log('extAmount: ', extAmount.toString());
+    return BigNumber.from(utxo.amount).add(acc);
+  }, BigNumber.from(0));
+  console.log('withdrawAmount: ', formatEther(withdrawAmount));
+  const extAmount = withdrawAmount.mul(-1);
+  console.log('extAmount: ', formatEther(extAmount));
 
   const publicAmount = -withdrawAmount;
 

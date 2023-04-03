@@ -231,12 +231,11 @@ pub async fn handle_substrate_fee_info(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, estimated_tx_fees)): Path<(u64, u128)>,
 ) -> Result<Json<SubstrateFeeInfo>, HandlerError> {
-    Ok(Json(
-        get_substrate_fee_info(
-            chain_id,
-            estimated_tx_fees.into(),
-            ctx.as_ref(),
-        )
-        .await,
-    ))
+    get_substrate_fee_info(chain_id,
+                           estimated_tx_fees.into(), ctx.as_ref())
+        .await
+        .map(Json)
+        .map_err(|e| {
+            HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })
 }

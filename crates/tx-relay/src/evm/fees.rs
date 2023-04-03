@@ -182,6 +182,7 @@ async fn generate_fee_info(
 
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
     // Ensuring that refund <= relayer balance
+    // TODO: should also check balance when returning cached value
     let relayer_balance =
         relayer_balance(chain_id.underlying_chain_id(), ctx).await.unwrap();
     let max_refund =
@@ -201,7 +202,7 @@ async fn generate_fee_info(
     })
 }
 
-pub(super) async fn relayer_balance(
+async fn relayer_balance(
     chain_id: u32,
     ctx: &RelayerContext,
 ) -> std::result::Result<U256, CommandResponse> {

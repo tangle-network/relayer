@@ -1,11 +1,8 @@
 use super::*;
 use crate::substrate::fees::{get_substrate_fee_info, RpcFeeDetailsResponse};
 use crate::substrate::handle_substrate_tx;
-use sp_core::crypto::Pair;
 use sp_core::U256;
-use std::ops::Deref;
-use webb::evm::ethers::utils::__serde_json::Value;
-use webb::evm::ethers::utils::hex;
+use webb::evm::ethers::utils::{format_ether, hex};
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::subxt::rpc::RpcParams;
 use webb::substrate::subxt::utils::AccountId32;
@@ -104,23 +101,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     dbg!(&payment_info);
     let fee_info =
         get_substrate_fee_info(requested_chain, payment_info.partial_fee, &ctx)
-            .await;
-
-    // TODO: check refund amount <= relayer wallet balance
-    let account = RuntimeApi::storage()
-        .balances()
-        .account(signer.account_id());
-    let mut params = RpcParams::new();
-    params.push(hex::encode(pair.public().deref())).unwrap();
-    let balance = client
-        .storage()
-        .at(None)
-        .await
-        .unwrap()
-        .fetch(&account)
-        .await
-        .unwrap();
-    dbg!(balance);
+            .await.unwrap();
 
     // validate refund amount
     if U256::from(cmd.ext_data.refund) > fee_info.max_refund {
@@ -136,12 +117,12 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     // Check that transaction fee is enough to cover network fee and relayer fee
     // TODO: refund needs to be converted from wrapped token to native token once there
     //       is an exchange rate
-    if U256::from(cmd.ext_data.fee)
-        < fee_info.estimated_fee + cmd.ext_data.refund
+    if dbg!(U256::from(cmd.ext_data.fee))
+        < dbg!(fee_info.estimated_fee) + dbg!(cmd.ext_data.refund)
     {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
-            cmd.ext_data.fee, fee_info.estimated_fee
+            format_ether(cmd.ext_data.fee), format_ether(fee_info.estimated_fee + cmd.ext_data.refund)
         );
         return Err(Error(msg));
     }
