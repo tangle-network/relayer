@@ -170,7 +170,7 @@ pub trait BlockPoller {
                             // this because, for the failed events, we arleady tried to handle them
                             // many times (at this point), and there is no point in trying again.
                             let mark_as_handled =
-                                result.iter().any(|r| r.is_ok());
+                                result.iter().any(std::result::Result::is_ok);
                             // also, for all the failed event handlers, we should print what went
                             // wrong.
                             result.iter().for_each(|r| {

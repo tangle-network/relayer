@@ -150,7 +150,7 @@ pub fn postloading_process(
                     let linked_anchors: Vec<LinkedAnchorConfig> =
                         linked_anchors
                             .into_iter()
-                            .map(|anchor| anchor.into_raw_resource_id())
+                            .map(LinkedAnchorConfig::into_raw_resource_id)
                             .collect();
                     cfg.linked_anchors = Some(linked_anchors);
                 }
@@ -169,7 +169,7 @@ pub fn postloading_process(
                     let linked_anchors: Vec<LinkedAnchorConfig> =
                         linked_anchors
                             .into_iter()
-                            .map(|anchor| anchor.into_raw_resource_id())
+                            .map(LinkedAnchorConfig::into_raw_resource_id)
                             .collect();
                     cfg.linked_anchors = Some(linked_anchors);
                 }

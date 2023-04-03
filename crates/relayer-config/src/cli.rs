@@ -135,7 +135,7 @@ pub async fn create_store(
     let dirs = ProjectDirs::from(PACKAGE_ID[0], PACKAGE_ID[1], PACKAGE_ID[2])
         .context("failed to get config")?;
     let p = match opts.config_dir.as_ref() {
-        Some(p) => p.to_path_buf(),
+        Some(p) => p.clone(),
         None => dirs.data_local_dir().to_path_buf(),
     };
     let db_path = match opts.config_dir.as_ref().zip(p.parent()) {

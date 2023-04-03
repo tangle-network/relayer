@@ -1,4 +1,4 @@
-use super::*;
+use super::{CommandResponse, Middleware, WithdrawStatus};
 use crate::evm::fees::{get_fee_info, FeeInfo};
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
@@ -122,8 +122,16 @@ pub async fn handle_vanchor_relay_tx<'a>(
             .map(|v| v.to_fixed_bytes().into())
             .collect(),
         output_commitments: [
-            cmd.proof_data.output_commitments[0].to_fixed_bytes().into(),
-            cmd.proof_data.output_commitments[1].to_fixed_bytes().into(),
+            cmd.proof_data
+                .output_commitments
+                .get(0)
+                .map(|c| c.to_fixed_bytes().into())
+                .unwrap_or_default(),
+            cmd.proof_data
+                .output_commitments
+                .get(1)
+                .map(|c| c.to_fixed_bytes().into())
+                .unwrap_or_default(),
         ],
         public_amount: U256::from_big_endian(
             &cmd.proof_data.public_amount.to_fixed_bytes(),

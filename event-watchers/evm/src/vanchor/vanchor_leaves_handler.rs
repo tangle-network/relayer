@@ -51,7 +51,10 @@ impl VAnchorLeavesHandler {
         let poseidon = Poseidon::<Bn254Fr>::new(params);
         let default_leaf_scalar: Vec<Bn254Fr> =
             bytes_vec_to_f(&vec![default_leaf]);
-        let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_be();
+        let default_leaf_vec = default_leaf_scalar
+            .get(0)
+            .map(|d| d.into_repr().to_bytes_be())
+            .unwrap_or_default();
         let pairs: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
         let mt = MerkleTree::new(&pairs, &poseidon, &default_leaf_vec)?;
 

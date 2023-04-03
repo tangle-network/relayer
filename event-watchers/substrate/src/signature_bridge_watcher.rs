@@ -221,7 +221,7 @@ where
             pallet_name: Cow::Borrowed("SignatureBridge"),
             call_name: Cow::Borrowed("execute_proposal"),
             fields: vec![
-                Value::u128(typed_chain_id.chain_id() as u128),
+                Value::u128(u128::from(typed_chain_id.chain_id())),
                 Value::from_bytes(proposal_data),
                 Value::from_bytes(signature),
             ],
@@ -350,16 +350,6 @@ where
         );
         Ok(())
     }
-}
-
-pub fn parse_nonce_from_proposal_data(proposal_data: &[u8]) -> u32 {
-    let nonce_bytes = proposal_data[36..40].try_into().unwrap_or_default();
-    u32::from_be_bytes(nonce_bytes)
-}
-
-pub fn parse_call_from_proposal_data(proposal_data: &[u8]) -> Vec<u8> {
-    // Not [36..] because there are 4 byte of zero padding to match Solidity side
-    proposal_data[40..].to_vec()
 }
 
 pub fn validate_ecdsa_signature(

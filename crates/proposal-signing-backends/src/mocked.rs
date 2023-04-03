@@ -91,7 +91,7 @@ where
         self.store.enqueue_item(
             SledQueueKey::from_bridge_key(bridge_key),
             BridgeCommand::ExecuteProposalWithSignature {
-                data: proposal_bytes.to_vec(),
+                data: proposal_bytes.clone(),
                 signature: signature_bytes,
             },
         )?;
