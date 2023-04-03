@@ -32,9 +32,11 @@ use webb_relayer_utils::Result;
 /// A module for managing in-memory storage of the relayer.
 pub mod mem;
 /// A module for setting up and managing a [Sled](https://sled.rs)-based database.
+#[cfg(feature = "sled")]
 pub mod sled;
 
 /// A store that uses [`sled`](https://sled.rs) as the backend.
+#[cfg(feature = "sled")]
 pub use self::sled::SledStore;
 /// A store that uses in memory data structures as the backend.
 pub use mem::InMemoryStore;
@@ -424,4 +426,25 @@ pub trait ProposalStore {
         &self,
         data_hash: &[u8],
     ) -> crate::Result<Option<Self::Proposal>>;
+}
+
+/// A trait for Cached Token Price.
+pub trait TokenPriceCacheStore<CachedTokenPrice>
+where
+    CachedTokenPrice: Serialize + DeserializeOwned,
+{
+    /// Get the cached token price for the given token key.
+    /// If the token is not found, it will return `None`.
+    fn get_price(
+        &self,
+        token_key: &str,
+    ) -> crate::Result<Option<CachedTokenPrice>>;
+    /// Insert the cached token price for the given token key.
+    ///
+    /// **Note**: this will override the previous value.
+    fn insert_price(
+        &self,
+        token_key: &str,
+        value: CachedTokenPrice,
+    ) -> crate::Result<()>;
 }

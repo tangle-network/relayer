@@ -19,6 +19,8 @@ use std::sync::Arc;
 use parking_lot::RwLock;
 use webb::evm::ethers::types;
 
+use crate::TokenPriceCacheStore;
+
 use super::{
     EncryptedOutputCacheStore, HistoryStore, HistoryStoreKey, LeafCacheStore,
 };
@@ -31,6 +33,7 @@ pub struct InMemoryStore {
     _store: Arc<RwLock<MemStore>>,
     store_for_vec: Arc<RwLock<MemStoreForVec>>,
     last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
+    token_prices_cache: Arc<RwLock<HashMap<String, Vec<u8>>>>,
 }
 
 impl std::fmt::Debug for InMemoryStore {
@@ -215,6 +218,26 @@ impl EncryptedOutputCacheStore for InMemoryStore {
         block_number: u64,
     ) -> crate::Result<u64> {
         Ok(0u64)
+    }
+}
+
+impl<T> TokenPriceCacheStore<T> for InMemoryStore
+where
+    T: serde::Serialize + serde::de::DeserializeOwned + Clone + Debug,
+{
+    fn get_price(&self, token: &str) -> crate::Result<Option<T>> {
+        self.token_prices_cache
+            .read()
+            .get(token)
+            .map(|v| serde_json::from_slice(v))
+            .transpose()
+            .map_err(Into::into)
+    }
+
+    fn insert_price(&self, token: &str, value: T) -> crate::Result<()> {
+        let v = serde_json::to_vec(&value)?;
+        self.token_prices_cache.write().insert(token.to_string(), v);
+        Ok(())
     }
 }
 
