@@ -1,15 +1,16 @@
 <div align="center">
 <a href="https://www.webb.tools/">
 
-  ![Webb Logo](./assets/webb_banner_light.png#gh-light-mode-only)
+![Webb Logo](./assets/webb_banner_light.png#gh-light-mode-only)
 
-  ![Webb Logo](./assets/webb_banner_dark.png#gh-dark-mode-only)
-  </a>
+![Webb Logo](./assets/webb_banner_dark.png#gh-dark-mode-only)
+</a>
+
   </div>
 
-# Webb Relayer 
-[![GitHub release (latest by date)](https://img.shields.io/github/v/release/webb-tools/relayer?style=flat-square)](https://github.com/webb-tools/relayer/releases/latest) [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/webb-tools/relayer/check.yml?branch=main&style=flat-square)](https://github.com/webb-tools/relayer/actions) [![License Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0) [![Twitter](https://img.shields.io/twitter/follow/webbprotocol.svg?style=flat-square&label=Twitter&color=1DA1F2)](https://twitter.com/webbprotocol) [![Telegram](https://img.shields.io/badge/Telegram-gray?logo=telegram)](https://t.me/webbprotocol) [![Discord](https://img.shields.io/discord/833784453251596298.svg?style=flat-square&label=Discord&logo=discord)](https://discord.gg/cv8EfJu3Tn)
+# Webb Relayer
 
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/webb-tools/relayer?style=flat-square)](https://github.com/webb-tools/relayer/releases/latest) [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/webb-tools/relayer/check.yml?branch=main&style=flat-square)](https://github.com/webb-tools/relayer/actions) [![License Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0) [![Twitter](https://img.shields.io/twitter/follow/webbprotocol.svg?style=flat-square&label=Twitter&color=1DA1F2)](https://twitter.com/webbprotocol) [![Telegram](https://img.shields.io/badge/Telegram-gray?logo=telegram)](https://t.me/webbprotocol) [![Discord](https://img.shields.io/discord/833784453251596298.svg?style=flat-square&label=Discord&logo=discord)](https://discord.gg/cv8EfJu3Tn)
 
 <!-- TABLE OF CONTENTS -->
 <h2 id="table-of-contents" style=border:0!important> 📖 Table of Contents</h2>
@@ -69,10 +70,10 @@ rustup update
 
 Great! Now your Rust environment is ready! 🚀🚀
 
-Lastly, install 
+Lastly, install
 
-  - [DVC](https://dvc.org/) is used for fetching large ZK files and managing them alongside git
-  - [substrate.io](https://docs.substrate.io/main-docs/install/) may require additional dependencies
+- [DVC](https://dvc.org/) is used for fetching large ZK files and managing them alongside git
+- [substrate.io](https://docs.substrate.io/main-docs/install/) may require additional dependencies
 
 🚀🚀 Your environment is complete! 🚀🚀
 
@@ -146,11 +147,12 @@ webb-relayer -vv -c ./config
 - [`EvmChainConfig`](https://webb-tools.github.io/relayer/webb_relayer/config/struct.EvmChainConfig.html)
 
 #### Relayer Common Configuration
-| Field                      | Description                                                                                | Optionality |
-| -------------------------- | ------------------------------------------------------------------------------------------ | ----------- |
-| `port`                 | Relayer port number | Required    |
-| `features`                  |Enable required features by setting them to `true` . All featured are enabled by default | Optional|
-| `evm-etherscan`              | Etherscan api configuration for chains, required if `private-tx` feature is enabled for relayer.       | Optional    |
+
+| Field           | Description                                                                                      | Optionality |
+| --------------- | ------------------------------------------------------------------------------------------------ | ----------- |
+| `port`          | Relayer port number                                                                              | Required    |
+| `features`      | Enable required features by setting them to `true` . All featured are enabled by default         | Optional    |
+| `evm-etherscan` | Etherscan api configuration for chains, required if `private-tx` feature is enabled for relayer. | Optional    |
 
 - `Features` Configuration
 
@@ -160,7 +162,9 @@ governance-relay = true
 data-query = true
 private-tx-relay = true
 ```
+
 - `Evm-etherscan` Configuration
+
 ```
 [evm-etherscan.goerli]
 chain-id = 5
@@ -170,7 +174,6 @@ chain-id = 137
 api-key = "$POLYGONSCAN_MAINNET_API_KEY"
 ```
 
- 
 #### Chain Configuration
 
 | Field           | Description                                                                                                                        | Optionality            |
@@ -188,24 +191,23 @@ api-key = "$POLYGONSCAN_MAINNET_API_KEY"
 
 #### Contract Configuration
 
-| Field                      | Description                                                                                | Optionality |
-| -------------------------- | ------------------------------------------------------------------------------------------ | ----------- |
-| `contract`                 | Chain contract. Must be either: </br> - VAnchor </br> - SignatureBridge </br>              | Required    |
-| `address`                  | The address of this contract on this chain.                                                | Required    |
-| `deployed-at`              | The block number where this contract got deployed at.                                      | Required    |
-| `events-watcher`           | Control the events watcher for this contract.                                              | Optional    |
-| `withdraw-config`          | Config the fees and gas limits of your private transaction relayer.                        | Optional    |
-| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", node = "dkg-node" }`) | Optional    |
+| Field                      | Description                                                                              | Optionality |
+| -------------------------- | ---------------------------------------------------------------------------------------- | ----------- |
+| `contract`                 | Chain contract. Must be either: </br> - VAnchor </br> - SignatureBridge </br>            | Required    |
+| `address`                  | The address of this contract on this chain.                                              | Required    |
+| `deployed-at`              | The block number where this contract got deployed at.                                    | Required    |
+| `events-watcher`           | Control the events watcher for this contract.                                            | Optional    |
+| `withdraw-config`          | Config the fees and gas limits of your private transaction relayer.                      | Optional    |
+| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", chain-id = 1080 }`) | Optional    |
 
 #### Event Watcher Configuration
 
-| Field                      | Description                                                                                | Optionality |
-| -------------------------- | ------------------------------------------------------------------------------------------ | ----------- |
-| `enabled`                  | Boolean value. Default set to `true`                                                       | Optional    |
-| `polling-interval`         | Interval between polling next block in millisecond. Default value  is `3000ms`               | Optional    |
-| `print-progress-interval`  | Interval between printing sync progress in millisecond. Default value is `7000ms`            | Optional    |
-| `sync-blocks-from`         | Block number from which relayer will start syncing. Default will be `latest` block number    | Optional    |
-
+| Field                     | Description                                                                               | Optionality |
+| ------------------------- | ----------------------------------------------------------------------------------------- | ----------- |
+| `enabled`                 | Boolean value. Default set to `true`                                                      | Optional    |
+| `polling-interval`        | Interval between polling next block in millisecond. Default value is `3000ms`             | Optional    |
+| `print-progress-interval` | Interval between printing sync progress in millisecond. Default value is `7000ms`         | Optional    |
+| `sync-blocks-from`        | Block number from which relayer will start syncing. Default will be `latest` block number | Optional    |
 
 ### Docker 🐳
 
@@ -222,16 +224,18 @@ docker run --rm -v "<ABSOLUTE_PATH_TO_CONFIGS_DIRECTORY>:/config" --env-file .en
 This will mount a configuration files at the `/config` directory inside the container so it would allow it to read the configuration you added.
 
 #### Metrics Information
- The Metric information is being handled by prometheus and the Relayer supports the following metrics:
- 1. The number of times the `BridgeWatcher` enter backoff
- 2. The number of times the `handle_proposal` executes
- 3. The number of times the Transaction Queue enters backoff
- 4. The number of times a Proposal attempted to be queued
- 5. Total `Fees` Earned by the relayer
- 6. Total `transaction` made
- 7. Total `gas` spent
- 8. Number of `proposals` proposed
- 9. Amount of `data` stored
+
+The Metric information is being handled by prometheus and the Relayer supports the following metrics:
+
+1.  The number of times the `BridgeWatcher` enter backoff
+2.  The number of times the `handle_proposal` executes
+3.  The number of times the Transaction Queue enters backoff
+4.  The number of times a Proposal attempted to be queued
+5.  Total `Fees` Earned by the relayer
+6.  Total `transaction` made
+7.  Total `gas` spent
+8.  Number of `proposals` proposed
+9.  Amount of `data` stored
 
 <h2 id="api"> API  📡</h2>
 
@@ -303,6 +307,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 - `contract_address` Contract address of `vanchor`, applicable in case of evm based chains.
 
 ##### For evm
+
 ```
 /api/v1/leaves/{target_system}/{chain_id}/{contract_address}
 #example
@@ -310,7 +315,9 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 ```
 
 ##### For substrate
+
 > Note: Since substrate doesn't have contract address we use `tree_id`
+
 ```
 /api/v1/leaves/{target_system}/{chain_id}/{tree_id}/{pallet_id}
 #example
@@ -351,19 +358,21 @@ The relayer has 3 endpoints available to query from. They are outlined below for
   "lastQueriedBlock": 37
 }
 
-  ```
+```
 </details>
 
 **Retrieve encrypted leaves cache**
 ##### For evm
 ```
+
 /api/v1/encrypted_outputs/evm/{chain_id}/{contract_address}
 #example
 /api/v1/encrypted_outputs/evm/4/0x9d36b94f245857ec7280415140800dde7642addb
-```
+
+````
 <details>
   <summary>Expected Response</summary>
-  
+
   ```json
    {
     "encryptedOutputs": [
@@ -394,24 +403,27 @@ The relayer has 3 endpoints available to query from. They are outlined below for
     ],
     "lastQueriedBlock": 37
    }
-  
-  ```
+
+````
+
 </details>
 
 **Retrieve Metrics information**
+
 ```
 /api/v1/metrics
 ```
+
 <details>
   <summary>Expected Response</summary>
 
-  ```json
-  {
+```json
+{
   "metrics": "# HELP bridge_watcher_back_off_metric specifies how many times the bridge watcher backed off\n# TYPE bridge_watcher_back_off_metric counter\nbridge_watcher_back_off_metric 0\n# HELP gas_spent_metric The total number of gas spent\n# TYPE gas_spent_metric counter\ngas_spent_metric 0\n# HELP handle_proposal_execution_metric How many times did the function handle_proposal get executed\n# TYPE handle_proposal_execution_metric counter\nhandle_proposal_execution_metric 0\n# HELP proposal_queue_attempt_metric How many times a proposal is attempted to be queued\n# TYPE proposal_queue_attempt_metric counter\nproposal_queue_attempt_metric 0\n# HELP total_active_relayer_metric The total number of active relayers\n# TYPE total_active_relayer_metric counter\ntotal_active_relayer_metric 0\n# HELP total_fee_earned_metric The total number of fees earned\n# TYPE total_fee_earned_metric counter\ntotal_fee_earned_metric 0\n# HELP total_number_of_data_stored_metric The Total number of data stored\n# TYPE total_number_of_data_stored_metric counter\ntotal_number_of_data_stored_metric 1572864\n# HELP total_number_of_proposals_metric The total number of proposals proposed\n# TYPE total_number_of_proposals_metric counter\ntotal_number_of_proposals_metric 0\n# HELP total_transaction_made_metric The total number of transaction made\n# TYPE total_transaction_made_metric counter\ntotal_transaction_made_metric 0\n# HELP transaction_queue_back_off_metric How many times the transaction queue backed off\n# TYPE transaction_queue_back_off_metric counter\ntransaction_queue_back_off_metric 0\n"
 }
-  ```
-</details>
+```
 
+</details>
 
 **Retrieve fee information**
 
@@ -428,20 +440,22 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 <details>
   <summary>Expected Response</summary>
 
-  ```json
-  {
-      "estimatedFee": "0x476b26e0f",
-      "gasPrice": "0x11",
-      "refundExchangeRate": "0x28f",
-      "maxRefund": "0xf3e59",
-      "timestamp": "2023-01-19T06:29:49.556114073Z"
-  }
-  ```
+```json
+{
+  "estimatedFee": "0x476b26e0f",
+  "gasPrice": "0x11",
+  "refundExchangeRate": "0x28f",
+  "maxRefund": "0xf3e59",
+  "timestamp": "2023-01-19T06:29:49.556114073Z"
+}
+```
+
 </details>
 
 **Retrieve Metrics information for specific resource**
 
 ##### For evm
+
 ```
 /api/v1/metrics/{target_system}/{chain_id}/{contract_address}
 #example
@@ -449,11 +463,13 @@ The relayer has 3 endpoints available to query from. They are outlined below for
 ```
 
 ##### For substrate
+
 ```
 /api/v1/metrics/{target_system}/{chain_id}/{tree_id}/{pallet_id}
 #example
 /api/v1/metrics/substrate/4/9/44
 ```
+
 <details>
   <summary>Expected Response</summary>
   
@@ -482,7 +498,7 @@ First you will need [`protocol-substrate`](https://github.com/webb-tools/protoco
 
 Here is the basic setup you will need:
 
-1. Clone the Relayer repo `git clone https://github.com/webb-tools/relayer.git` 
+1. Clone the Relayer repo `git clone https://github.com/webb-tools/relayer.git`
 2. Clone Protocol Substrate node `https://github.com/webb-tools/protocol-substrate.git`
 3. Then fetch the submodules for the node `cd protocol-substrate && git submodule update --init`
 4. While you are there, build the standalone node `cargo build --release -p webb-standalone-node`
