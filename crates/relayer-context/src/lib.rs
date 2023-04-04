@@ -33,7 +33,8 @@ use sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::subxt;
 
 use webb_price_oracle_backends::{
-    CachedPriceBackend, CoinGeckoBackend, PriceBackend,
+    CachedPriceBackend, CoinGeckoBackend, DummyPriceBackend, PriceBackend,
+    PriceOracleMerger,
 };
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric::{self, Metrics};
@@ -56,7 +57,7 @@ pub struct RelayerContext {
     pub metrics: Arc<Mutex<metric::Metrics>>,
     store: SledStore,
     /// Price backend for fetching prices.
-    price_oracles: Vec<Box<dyn PriceBackend>>,
+    price_oracle: Arc<PriceOracleMerger>,
     /// Hashmap of <ChainID, Etherscan Client>
     etherscan_clients: HashMap<u32, Client>,
 }
@@ -69,14 +70,26 @@ impl RelayerContext {
     ) -> Self {
         let (notify_shutdown, _) = broadcast::channel(2);
         let metrics = Arc::new(Mutex::new(Metrics::new()));
-        let mut price_oracles = Vec::new();
+
+        let dummy_backend = {
+            let price_map = config
+                .assets
+                .iter()
+                .map(|(token, details)| (token.clone(), details.price))
+                .collect();
+            DummyPriceBackend::new(price_map)
+        };
         let coin_gecko_backend = CoinGeckoBackend::default();
         let cached_backend = CachedPriceBackend::builder()
             .backend(coin_gecko_backend)
             .store(store.clone())
             .use_cache_if_source_unavailable()
             .build();
-        price_oracles.push(Box::new(cached_backend));
+        let price_oracle = PriceOracleMerger::builder()
+            .merge(Box::new(dummy_backend))
+            .merge(Box::new(cached_backend))
+            .build();
+        let price_oracle = Arc::new(price_oracle);
         let mut etherscan_clients: HashMap<u32, Client> = HashMap::new();
         for (chain, etherscan_config) in config.evm_etherscan.iter() {
             let client =
@@ -89,7 +102,7 @@ impl RelayerContext {
             notify_shutdown,
             metrics,
             store,
-            price_oracles,
+            price_oracle,
             etherscan_clients,
         }
     }
@@ -140,7 +153,7 @@ impl RelayerContext {
             .private_key
             .as_ref()
             .ok_or(webb_relayer_utils::Error::MissingSecrets)?;
-        let key = SecretKey::from_be_bytes(private_key.as_bytes())?;
+        let key = SecretKey::from_bytes(private_key.as_bytes().into())?;
         let chain_id = chain_config.chain_id;
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
@@ -196,8 +209,8 @@ impl RelayerContext {
         &self.store
     }
 
-    pub fn price_oracles(&self) -> &[Box<dyn PriceBackend>] {
-        &self.price_oracles
+    pub fn price_oracle(&self) -> Arc<PriceOracleMerger> {
+        self.price_oracle.clone()
     }
 
     /// Returns API client for https://etherscan.io/
