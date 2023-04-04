@@ -12,6 +12,7 @@ use webb::evm::contract::protocol_solidity::{
 use webb::evm::ethers::prelude::U256;
 use webb::evm::ethers::types::Address;
 use webb::evm::ethers::utils::{format_units, parse_units};
+use webb_price_oracle_backends::PriceBackend;
 use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
@@ -118,41 +119,29 @@ async fn generate_fee_info(
     let (wrapped_token, wrapped_token_decimals) =
         get_wrapped_token_name_and_decimals(chain_id, vanchor, ctx).await?;
 
-    // Fetch USD prices for tokens from coingecko API (eg value of 1 ETH in USD).
+    // Fetch USD prices for tokens from the price oracle backend (eg value of 1 ETH in USD).
     let prices = ctx
-        .coin_gecko_client()
-        .price(
-            &[native_token, &wrapped_token],
-            &["usd"],
-            false,
-            false,
-            false,
-            false,
-        )
+        .price_oracle()
+        .get_prices(&[native_token, &wrapped_token])
         .await?;
+
     let native_token_price = match prices.get(native_token) {
-        Some(price) => price.usd.expect("price.usd is not None"),
+        Some(price) => *price,
         None => {
             return Err(webb_relayer_utils::Error::FetchTokenPriceError {
                 token: native_token.into(),
             })
         }
     };
-    // try to get wrapped token price from coingecko, if not found, use the price from config
-    // if not found in config, return error
-    let maybe_wrapped_token_price = prices
-        .get(&wrapped_token)
-        .and_then(|p| p.usd)
-        .or(ctx.config.assets.get(&wrapped_token).map(|a| a.price));
-
-    let wrapped_token_price = match maybe_wrapped_token_price {
-        Some(price) => price,
+    let wrapped_token_price = match prices.get(&wrapped_token) {
+        Some(price) => *price,
         None => {
             return Err(webb_relayer_utils::Error::FetchTokenPriceError {
                 token: wrapped_token.clone(),
             })
         }
     };
+
     // Fetch native gas price estimate from etherscan.io, using "average" value
     let gas_oracle = ctx
         .etherscan_client(chain_id.underlying_chain_id())?
@@ -261,6 +250,12 @@ async fn get_wrapped_token_name_and_decimals(
 /// otherwise there is no exchange rate available.
 ///
 /// https://github.com/DefiLlama/chainlist/blob/main/constants/chainIds.json
+///
+/// These token names are the ids that is supported by coingecko.com.
+/// https://api.coingecko.com/api/v3/coins/list
+///
+/// FIXME: This is a temporary solution until we have a better way to get the token name.
+/// see: https://github.com/webb-tools/relayer/issues/412
 fn get_native_token_name_and_decimals(
     chain_id: TypedChainId,
 ) -> Result<(&'static str, i32)> {
@@ -269,18 +264,23 @@ fn get_native_token_name_and_decimals(
         Evm(id) => {
             match id {
                 1 | // ethereum mainnet
+                    10 | // optimism mainnet
                     5 | // goerli testnet
+                    421611 | // arbitrum mainnet
+                    534352 | // Scroll
+                    11155111 | // sepolia testnet
+                    420 | // optimism testnet
+                    421613 | // arbitrum goerli testnet
+                    534353 | // Scroll testnet
                     5001 | // hermes testnet
                     5002 | // athena testnet
-                    5003 | // demeter testnet
-                    11155111 // sepolia testnet
+                    5003  // demeter testnet
                 => "ethereum",
-                // optimism mainnet and testnet
-                10 | 420 => "optimism",
                 // polygon mainnet and testnet
-                127 | 80001 => "polygon",
+                137 | 80001 => "matic-network",
                 // moonbeam mainnet and testnet
                 1284 | 1287 => "moonbeam",
+                43113 | 43114 => "avalanche-2",
                 _ => {
                     // Typescript tests use randomly generated chain id, so we always return
                     // "ethereum" in debug mode to make them work.
@@ -293,6 +293,20 @@ fn get_native_token_name_and_decimals(
                 }
             }
         }
+        Substrate(id) => match id {
+            1080 => "tTNT",
+            _ => {
+                // During testing, we will use the tTNT token for all substrate chains.
+                if cfg!(debug_assertions) {
+                    "tTNT"
+                } else {
+                    let chain_id = chain_id.chain_id().to_string();
+                    return Err(webb_relayer_utils::Error::ChainNotFound {
+                        chain_id,
+                    });
+                }
+            }
+        },
         _ => {
             return Err(webb_relayer_utils::Error::ChainNotFound {
                 chain_id: chain_id.chain_id().to_string(),
