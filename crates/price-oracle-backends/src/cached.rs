@@ -16,20 +16,33 @@ pub struct CachedPriceBackend<B, S> {
     backend: B,
     /// The local data store used for caching
     store: S,
-    /// The cache expiration time in seconds
+    /// The cache expiration time.
+    ///
     /// If the cache is older than this value, it will be refreshed
+    /// from the source backend.
+    ///
     /// If the value is `None`, the cache will never expire
-    /// The default value is `15 minutes`.
+    /// and will never be refreshed. **This may lead to incorrect price data.**
+    ///
+    /// Use this option only if you are sure that the source backend is always available.
+    /// Otherwise, use a reasonable value, The default value is `15 minutes`.
+    /// see [`Self::use_cache_if_source_unavailable`] and [`Self::even_if_expired`]
+    /// for fine tuning the cache behavior.
     #[builder(default = Some(Duration::from_secs(15 * 60)))]
     cache_expiration: Option<Duration>,
     /// Specifies whether the cache should be returned even if the source is unavailable
     ///
     /// If the value is `true`, the cache will be returned even if the source
-    /// backend is unavailable even if the cache is expired.
+    /// backend is unavailable unless the cache is expired.
+    ///
+    /// see [`Self::even_if_expired`] if you want to return the cache even if it is expired.
     #[builder(setter(strip_bool))]
     use_cache_if_source_unavailable: bool,
     /// Specifies whether the cache should be returned even if it is expired
     /// in case the source is unavailable.
+    ///
+    /// see [`Self::use_cache_if_source_unavailable`] if you want to return the cache
+    /// even if the source is unavailable.
     #[builder(setter(strip_bool))]
     even_if_expired: bool,
 }
