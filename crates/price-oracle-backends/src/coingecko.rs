@@ -1,14 +1,24 @@
-//! Price Backend implementation for CoinGecko
+//! Price Backend implementation for `CoinGecko`
 
 use std::sync::Arc;
 
 use futures::TryFutureExt;
 use webb_relayer_utils::Result;
 
-/// A backend for fetching prices from CoinGecko
+/// A backend for fetching prices from `CoinGecko`
 #[derive(Clone, Default)]
 pub struct CoinGeckoBackend {
     client: Arc<coingecko::CoinGeckoClient>,
+}
+
+impl CoinGeckoBackend {
+    /// Creates a new `CoinGeckoBackend` with the custom [`coingecko::CoinGeckoClient`]
+    #[must_use]
+    pub fn with_coin_gecko_client(client: coingecko::CoinGeckoClient) -> Self {
+        Self {
+            client: Arc::new(client),
+        }
+    }
 }
 
 impl std::fmt::Debug for CoinGeckoBackend {
@@ -21,24 +31,16 @@ impl std::fmt::Debug for CoinGeckoBackend {
 
 #[async_trait::async_trait]
 impl super::PriceBackend for CoinGeckoBackend {
-    async fn get_prices_vs_currency<T>(
+    async fn get_prices_vs_currency(
         &self,
-        tokens: T,
+        tokens: &[&str],
         currency: super::FiatCurrency,
-    ) -> Result<super::PricesMap>
-    where
-        T: IntoIterator + Send + Sync,
-        T::Item: AsRef<str>,
-    {
-        let token_ids = tokens
-            .into_iter()
-            .map(|token| token.as_ref().to_owned())
-            .collect::<Vec<_>>();
+    ) -> Result<super::PricesMap> {
         let prices = self
             .client
             .price(
-                &token_ids,
-                &[currency.to_string()],
+                tokens,
+                &[currency.to_string().to_lowercase()],
                 false,
                 false,
                 false,
