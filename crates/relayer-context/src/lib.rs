@@ -78,14 +78,16 @@ impl RelayerContext {
                 .collect();
             DummyPriceBackend::new(price_map)
         };
-        let coin_gecko_backend = CoinGeckoBackend::builder().build();
-        let cached_backend = CachedPriceBackend::builder()
-            .backend(coin_gecko_backend)
+        // **chef's kiss** this is so beautiful
+        let cached_coingecko_backend = CachedPriceBackend::builder()
+            .backend(CoinGeckoBackend::builder().build())
             .store(store.clone())
             .use_cache_if_source_unavailable()
+            .even_if_expired()
             .build();
+        // merge all the price oracle backends
         let price_oracle = PriceOracleMerger::builder()
-            .merge(Box::new(cached_backend))
+            .merge(Box::new(cached_coingecko_backend))
             .merge(Box::new(dummy_backend))
             .build();
         let price_oracle = Arc::new(price_oracle);
