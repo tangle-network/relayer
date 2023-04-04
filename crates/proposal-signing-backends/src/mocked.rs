@@ -35,7 +35,7 @@ where
         &self,
         chain_id: TypedChainId,
     ) -> webb_relayer_utils::Result<LocalWallet> {
-        let key = SecretKey::from_be_bytes(self.private_key.as_bytes())?;
+        let key = SecretKey::from_bytes(self.private_key.as_bytes().into())?;
         let signer = LocalWallet::from(key)
             .with_chain_id(chain_id.underlying_chain_id());
         Ok(signer)
@@ -68,7 +68,7 @@ where
         let signer = self.signer(dest_chain_id)?;
         let proposal_bytes = proposal.to_vec();
         let hash = keccak256(&proposal_bytes);
-        let signature = signer.sign_hash(TxHash(hash));
+        let signature = signer.sign_hash(TxHash(hash))?;
         let bridge_key = BridgeKey::new(dest_chain_id);
         tracing::debug!(
             %bridge_key,
