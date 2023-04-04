@@ -28,6 +28,10 @@ pub struct CachedPriceBackend<B, S> {
     /// backend is unavailable even if the cache is expired.
     #[builder(setter(strip_bool))]
     use_cache_if_source_unavailable: bool,
+    /// Specifies whether the cache should be returned even if it is expired
+    /// in case the source is unavailable.
+    #[builder(setter(strip_bool))]
+    even_if_expired: bool,
 }
 
 /// A cached price data
@@ -113,6 +117,7 @@ where
                 .backend
                 .get_prices_vs_currency(&token_ids, vs_currency)
                 .await;
+            let soruce_unavailable = result.is_err();
             let updated_prices = match result {
                 Ok(updated_prices) => updated_prices,
                 Err(err) => {
@@ -125,17 +130,35 @@ where
                 }
             };
 
-            // Update the cache
-            for (token, price) in updated_prices {
-                let token_key = format!("{token}/{vs_currency}");
-                prices.insert(token.clone(), price);
-                self.store.insert_price(
-                    &token_key,
-                    CachedPrice {
-                        price,
-                        timestamp: Utc::now().timestamp(),
-                    },
-                )?;
+            // If the source is unavailable and the cache is enabled and `even_if_expired` is enabled,
+            // return the cache
+            if soruce_unavailable
+                && self.use_cache_if_source_unavailable
+                && self.even_if_expired
+            {
+                // refetch the cache, and ignore the expiration
+                for token in tokens {
+                    let token_key = format!("{token}/{vs_currency}");
+                    if let Some(cached) = self.store.get_price(&token_key)? {
+                        prices.insert((*token).to_owned(), cached.price);
+                    }
+                }
+            }
+
+            // Update the cache, only if the source is available
+            let soruce_available = !soruce_unavailable;
+            if soruce_available {
+                for (token, price) in updated_prices {
+                    let token_key = format!("{token}/{vs_currency}");
+                    prices.insert(token.clone(), price);
+                    self.store.insert_price(
+                        &token_key,
+                        CachedPrice {
+                            price,
+                            timestamp: Utc::now().timestamp(),
+                        },
+                    )?;
+                }
             }
         }
         Ok(prices)
