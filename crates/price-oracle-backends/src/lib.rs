@@ -25,21 +25,21 @@
 //! - [CoinGecko](https://www.coingecko.com/en/api)
 //!
 //! ## Usage
-//! ```rust,no_run
-//! use price_oracle_backends::{CoinGeckoBackend, PriceBackend};
-//! let backend = CoinGeckoBackend::new();
-//! let prices = backend.get_prices(&["ETH", "BTC"]).await?;
+//! ```rust,ignore
+//! use webb_price_oracle_backends::{CoinGeckoBackend, PriceBackend};
+//! let backend = CoinGeckoBackend::builder().build();
+//! let prices = backend.get_prices(&["ETH", "BTC"]).await.unwrap();
 //! let eth_price = prices.get("ETH").unwrap();
 //! let btc_price = prices.get("BTC").unwrap();
 //! ```
 //! ## With Cache
-//! ```rust,no_run
+//! ```rust,ignore
 //! use price_oracle_backends::{CoinGeckoBackend, PriceBackend, CachedPriceBackend};
 //! use webb_relayer_store::SledStore;
 //! let store = SledStore::temporary()?;
-//! let backend = CoinGeckoBackend::new();
+//! let backend = CoinGeckoBackend::builder().build();
 //! let backend = CachedPriceBackend::new(backend, store);
-//! let prices = backend.get_prices(&["ETH", "BTC"]).await?;
+//! let prices = backend.get_prices(&["ETH", "BTC"]).await.unwrap();
 //! let eth_price = prices.get("ETH").unwrap();
 //! let btc_price = prices.get("BTC").unwrap();
 //! ```

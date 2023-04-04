@@ -511,6 +511,7 @@ checksum = "349f8ccfd9221ee7d1f3d4b33e1f8319b3a81ed8f61f2ea40b37b859794b4491"
 dependencies = [
  "async-trait",
  "axum-core",
+ "axum-macros",
  "base64 0.21.0",
  "bitflags",
  "bytes 1.4.0",
@@ -564,6 +565,18 @@ dependencies = [
  "rustversion",
  "tower-layer",
  "tower-service",
+]
+
+[[package]]
+name = "axum-macros"
+version = "0.3.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bb524613be645939e280b7279f7b017f98cf7f5ef084ec374df373530e73277"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.13",
 ]
 
 [[package]]
@@ -1079,19 +1092,6 @@ checksum = "3538270d33cc669650c4b093848450d380def10c331d38c768e34cac80576e6e"
 dependencies = [
  "termcolor",
  "unicode-width",
-]
-
-[[package]]
-name = "coingecko"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b24c2d346c689c0b8a27d4c921a35d8cac68cc266130bc82ba879155ca828da0"
-dependencies = [
- "chrono",
- "reqwest",
- "serde",
- "serde_json",
- "tokio 1.27.0",
 ]
 
 [[package]]
@@ -8128,11 +8128,13 @@ name = "webb-price-oracle-backends"
 version = "0.1.0"
 dependencies = [
  "async-trait",
+ "axum",
  "chrono",
- "coingecko",
  "futures",
  "native-tls",
+ "reqwest",
  "serde",
+ "tokio 1.27.0",
  "typed-builder 0.12.0",
  "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-relayer-store",

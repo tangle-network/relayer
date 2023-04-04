@@ -20,7 +20,7 @@ pub struct CachedPriceBackend<B, S> {
     /// If the cache is older than this value, it will be refreshed
     /// If the value is `None`, the cache will never expire
     /// The default value is `15 minutes`.
-    #[builder(default = Some(Duration::from_secs(15 * 60)), setter(strip_option))]
+    #[builder(default = Some(Duration::from_secs(15 * 60)))]
     cache_expiration: Option<Duration>,
     /// Specifies whether the cache should be returned even if the source is unavailable
     ///
@@ -99,7 +99,7 @@ where
                 if expired {
                     tokens_to_fetch.insert(token.to_owned());
                 } else {
-                    prices.insert(token_key, cached.price);
+                    prices.insert((*token).to_owned(), cached.price);
                 }
             } else {
                 // If the token is not cached, add it to the list of tokens to fetch
@@ -128,7 +128,7 @@ where
             // Update the cache
             for (token, price) in updated_prices {
                 let token_key = format!("{token}/{vs_currency}");
-                prices.insert(token_key.clone(), price);
+                prices.insert(token.clone(), price);
                 self.store.insert_price(
                     &token_key,
                     CachedPrice {
@@ -139,5 +139,36 @@ where
             }
         }
         Ok(prices)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::PriceBackend;
+
+    use super::*;
+
+    fn make_backend() -> crate::DummyPriceBackend {
+        let prices = crate::PricesMap::from_iter([
+            (String::from("tTNT"), 0.10),
+            (String::from("WETH"), 1000.0),
+            (String::from("USDC"), 1.0),
+        ]);
+        crate::DummyPriceBackend::new(prices)
+    }
+
+    fn make_store() -> webb_relayer_store::InMemoryStore {
+        webb_relayer_store::InMemoryStore::default()
+    }
+
+    #[tokio::test]
+    async fn it_works() {
+        let backend = CachedPriceBackend::builder()
+            .backend(make_backend())
+            .store(make_store())
+            .build();
+        let prices = backend.get_prices(&["USDC"]).await.unwrap();
+        assert_eq!(prices.len(), 1);
+        assert_eq!(prices.get("USDC"), Some(&1.0));
     }
 }

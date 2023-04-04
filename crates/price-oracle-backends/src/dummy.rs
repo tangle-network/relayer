@@ -25,12 +25,49 @@ impl super::PriceBackend for DummyPriceBackend {
         tokens: &[&str],
         _currency: super::FiatCurrency,
     ) -> Result<super::PricesMap> {
-        let result = self
-            .prices
+        let result = tokens
             .iter()
-            .filter(|(token, _)| tokens.contains(&token.as_str()))
-            .map(|(token, price)| (token.clone(), *price))
+            .copied()
+            .filter_map(|token| {
+                self.prices
+                    .get(token)
+                    .copied()
+                    .map(|price| (token.to_owned(), price))
+            })
             .collect();
         Ok(result)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::PriceBackend;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn it_works() {
+        let backend = DummyPriceBackend::new(
+            vec![("ETH".to_string(), 100.0), ("DOT".to_string(), 10.0)]
+                .into_iter()
+                .collect(),
+        );
+        let prices = backend.get_prices(&["ETH", "DOT"]).await.unwrap();
+        assert_eq!(prices.len(), 2);
+        assert_eq!(prices["ETH"], 100.0);
+        assert_eq!(prices["DOT"], 10.0);
+    }
+
+    #[tokio::test]
+    async fn non_existing_tokens() {
+        let backend = DummyPriceBackend::new(
+            vec![("ETH".to_string(), 100.0), ("DOT".to_string(), 10.0)]
+                .into_iter()
+                .collect(),
+        );
+        let prices = backend.get_prices(&["ETH", "DOT", "KSM"]).await.unwrap();
+        assert_eq!(prices.len(), 2);
+        assert_eq!(prices["ETH"], 100.0);
+        assert_eq!(prices["DOT"], 10.0);
     }
 }
