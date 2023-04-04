@@ -281,4 +281,83 @@ mod tests {
         assert_eq!(prices.get("ETH"), Some(&1000.0));
         assert_eq!(prices.get("BTC"), Some(&20000.0));
     }
+
+    #[tokio::test]
+    async fn should_not_work_if_the_cache_expired() {
+        let mock_server = MockServer::builder()
+            .hard_coded_prices({
+                let mut prices = crate::PricesMap::new();
+                prices.insert(String::from("ETH"), 1000.0);
+                prices.insert(String::from("BTC"), 20000.0);
+                prices
+            })
+            .build();
+        let handle = mock_server.spwan();
+        // Wait for the server to start
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let backend = handle.backend();
+        let cached_backend = crate::CachedPriceBackend::builder()
+            .backend(backend)
+            .store(webb_relayer_store::InMemoryStore::default())
+            .cache_expiration(Some(Duration::from_secs(2)))
+            .use_cache_if_source_unavailable()
+            .build();
+        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        assert_eq!(prices.get("ETH"), Some(&1000.0));
+        assert_eq!(prices.get("BTC"), Some(&20000.0));
+
+        // Simulate a server error
+        handle.simulate_server_error(true);
+        // The cache should still work
+        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        assert_eq!(prices.get("ETH"), Some(&1000.0));
+        assert_eq!(prices.get("BTC"), Some(&20000.0));
+
+        // Wait for the cache to expire
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        // The cache should not work
+        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        assert_eq!(prices.get("ETH"), None);
+        assert_eq!(prices.get("BTC"), None);
+    }
+
+    #[tokio::test]
+    async fn should_keep_working_if_cache_expired() {
+        let mock_server = MockServer::builder()
+            .hard_coded_prices({
+                let mut prices = crate::PricesMap::new();
+                prices.insert(String::from("ETH"), 1000.0);
+                prices.insert(String::from("BTC"), 20000.0);
+                prices
+            })
+            .build();
+        let handle = mock_server.spwan();
+        // Wait for the server to start
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let backend = handle.backend();
+        let cached_backend = crate::CachedPriceBackend::builder()
+            .backend(backend)
+            .store(webb_relayer_store::InMemoryStore::default())
+            .cache_expiration(Some(Duration::from_secs(2)))
+            .use_cache_if_source_unavailable()
+            .even_if_expired()
+            .build();
+        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        assert_eq!(prices.get("ETH"), Some(&1000.0));
+        assert_eq!(prices.get("BTC"), Some(&20000.0));
+
+        // Simulate a server error
+        handle.simulate_server_error(true);
+        // The cache should still work
+        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        assert_eq!(prices.get("ETH"), Some(&1000.0));
+        assert_eq!(prices.get("BTC"), Some(&20000.0));
+
+        // Wait for the cache to expire
+        tokio::time::sleep(Duration::from_secs(2)).await;
+        // The cache should still work
+        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        assert_eq!(prices.get("ETH"), Some(&1000.0));
+        assert_eq!(prices.get("BTC"), Some(&20000.0));
+    }
 }
