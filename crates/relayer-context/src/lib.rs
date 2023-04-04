@@ -33,8 +33,7 @@ use sp_core::sr25519::Pair as Sr25519Pair;
 use webb::substrate::subxt;
 
 use webb_price_oracle_backends::{
-    CachedPriceBackend, CoinGeckoBackend, DummyPriceBackend, PriceBackend,
-    PriceOracleMerger,
+    CachedPriceBackend, CoinGeckoBackend, DummyPriceBackend, PriceOracleMerger,
 };
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric::{self, Metrics};
@@ -79,15 +78,15 @@ impl RelayerContext {
                 .collect();
             DummyPriceBackend::new(price_map)
         };
-        let coin_gecko_backend = CoinGeckoBackend::default();
+        let coin_gecko_backend = CoinGeckoBackend::builder().build();
         let cached_backend = CachedPriceBackend::builder()
             .backend(coin_gecko_backend)
             .store(store.clone())
             .use_cache_if_source_unavailable()
             .build();
         let price_oracle = PriceOracleMerger::builder()
-            .merge(Box::new(dummy_backend))
             .merge(Box::new(cached_backend))
+            .merge(Box::new(dummy_backend))
             .build();
         let price_oracle = Arc::new(price_oracle);
         let mut etherscan_clients: HashMap<u32, Client> = HashMap::new();
@@ -209,6 +208,7 @@ impl RelayerContext {
         &self.store
     }
 
+    /// Returns a price oracle for fetching token prices.
     pub fn price_oracle(&self) -> Arc<PriceOracleMerger> {
         self.price_oracle.clone()
     }

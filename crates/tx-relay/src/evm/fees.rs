@@ -12,6 +12,7 @@ use webb::evm::contract::protocol_solidity::{
 use webb::evm::ethers::prelude::U256;
 use webb::evm::ethers::types::Address;
 use webb::evm::ethers::utils::{format_units, parse_units};
+use webb_price_oracle_backends::PriceBackend;
 use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
@@ -118,41 +119,29 @@ async fn generate_fee_info(
     let (wrapped_token, wrapped_token_decimals) =
         get_wrapped_token_name_and_decimals(chain_id, vanchor, ctx).await?;
 
-    // Fetch USD prices for tokens from coingecko API (eg value of 1 ETH in USD).
+    // Fetch USD prices for tokens from the price oracle backend (eg value of 1 ETH in USD).
     let prices = ctx
-        .coin_gecko_client()
-        .price(
-            &[native_token, &wrapped_token],
-            &["usd"],
-            false,
-            false,
-            false,
-            false,
-        )
+        .price_oracle()
+        .get_prices(&[native_token, &wrapped_token])
         .await?;
+
     let native_token_price = match prices.get(native_token) {
-        Some(price) => price.usd.expect("price.usd is not None"),
+        Some(price) => *price,
         None => {
             return Err(webb_relayer_utils::Error::FetchTokenPriceError {
                 token: native_token.into(),
             })
         }
     };
-    // try to get wrapped token price from coingecko, if not found, use the price from config
-    // if not found in config, return error
-    let maybe_wrapped_token_price = prices
-        .get(&wrapped_token)
-        .and_then(|p| p.usd)
-        .or(ctx.config.assets.get(&wrapped_token).map(|a| a.price));
-
-    let wrapped_token_price = match maybe_wrapped_token_price {
-        Some(price) => price,
+    let wrapped_token_price = match prices.get(&wrapped_token) {
+        Some(price) => *price,
         None => {
             return Err(webb_relayer_utils::Error::FetchTokenPriceError {
                 token: wrapped_token.clone(),
             })
         }
     };
+
     // Fetch native gas price estimate from etherscan.io, using "average" value
     let gas_oracle = ctx
         .etherscan_client(chain_id.underlying_chain_id())?

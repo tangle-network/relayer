@@ -15,6 +15,7 @@ webb-relayer-handler-utils = { workspace = true }
 webb-relayer-config = { workspace = true }
 webb-relayer-context = { workspace = true }
 webb-relayer-utils = { workspace = true }
+webb-price-oracle-backends = { workspace = true }
 
 tracing = { workspace = true }
 futures = { workspace = true }

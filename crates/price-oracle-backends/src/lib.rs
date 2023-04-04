@@ -50,7 +50,7 @@
 #![deny(unsafe_code)]
 #![warn(missing_docs)]
 
-use std::fmt::Display;
+use std::{fmt::Display, sync::Arc};
 
 use webb_relayer_utils::Result;
 
@@ -129,4 +129,28 @@ pub trait PriceBackend: Send + Sync {
         tokens: &[&str],
         vs_currency: FiatCurrency,
     ) -> Result<PricesMap>;
+}
+
+#[async_trait::async_trait]
+impl<O> PriceBackend for Arc<O>
+where
+    O: PriceBackend + ?Sized,
+{
+    async fn get_prices(&self, tokens: &[&str]) -> Result<PricesMap> {
+        PriceBackend::get_prices_vs_currency(
+            self.as_ref(),
+            tokens,
+            FiatCurrency::default(),
+        )
+        .await
+    }
+
+    async fn get_prices_vs_currency(
+        &self,
+        tokens: &[&str],
+        vs_currency: FiatCurrency,
+    ) -> Result<PricesMap> {
+        PriceBackend::get_prices_vs_currency(self.as_ref(), tokens, vs_currency)
+            .await
+    }
 }
