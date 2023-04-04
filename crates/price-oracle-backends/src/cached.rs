@@ -130,7 +130,7 @@ where
                 .backend
                 .get_prices_vs_currency(&token_ids, vs_currency)
                 .await;
-            let soruce_unavailable = result.is_err();
+            let source_unavailable = result.is_err();
             let updated_prices = match result {
                 Ok(updated_prices) => updated_prices,
                 Err(err) => {
@@ -145,7 +145,7 @@ where
 
             // If the source is unavailable and the cache is enabled and `even_if_expired` is enabled,
             // return the cache
-            if soruce_unavailable
+            if source_unavailable
                 && self.use_cache_if_source_unavailable
                 && self.even_if_expired
             {
@@ -159,8 +159,8 @@ where
             }
 
             // Update the cache, only if the source is available
-            let soruce_available = !soruce_unavailable;
-            if soruce_available {
+            let source_available = !source_unavailable;
+            if source_available {
                 for (token, price) in updated_prices {
                     let token_key = format!("{token}/{vs_currency}");
                     prices.insert(token.clone(), price);
