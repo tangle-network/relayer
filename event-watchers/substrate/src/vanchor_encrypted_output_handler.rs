@@ -68,7 +68,7 @@ impl EventHandler<SubstrateConfig> for SubstrateVAnchorEncryptedOutputHandler {
                 .await?
                 .fetch(&next_leaf_index_addr)
                 .await?
-                .ok_or(Error::ReadSubstrateStorageError);
+                .ok_or(Error::ReadSubstrateStorageError)?;
 
             // fetch chain_id
             let chain_id_addr = RuntimeApi::constants()
