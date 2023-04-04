@@ -168,6 +168,8 @@ pub enum Error {
     BridgeNotRegistered(ResourceId),
     #[error("Failed to fetch token price for token: {token}")]
     FetchTokenPriceError { token: String },
+    #[error("Failed to read a value from substrate storage")]
+    ReadSubstrateStorageError,
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.

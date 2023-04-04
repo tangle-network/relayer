@@ -34,7 +34,7 @@ use webb::substrate::protocol_substrate_runtime::api::signature_bridge::events::
 use std::borrow::Cow;
 use webb::substrate::scale::Encode;
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
-use webb_relayer_utils::metric;
+use webb_relayer_utils::{metric, Error};
 
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
@@ -177,8 +177,8 @@ where
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
-            .map(|m| m.0)
-            .unwrap_or_default();
+            .ok_or(Error::ReadSubstrateStorageError)?
+            .0;
 
         // Verify proposal signature
         let is_signature_valid = validate_ecdsa_signature(
@@ -264,8 +264,8 @@ where
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
-            .map(|m| m.0)
-            .unwrap_or_default();
+            .ok_or(Error::ReadSubstrateStorageError)?
+            .0;
         // we need to do some checks here:
         // 1. convert the public key to address and check it is not the same as the current maintainer.
         // 2. check if the nonce is greater than the current nonce.

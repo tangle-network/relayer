@@ -25,7 +25,7 @@ use webb_proposals::{
 
 use webb_relayer_store::sled::SledStore;
 use webb_relayer_store::EncryptedOutputCacheStore;
-use webb_relayer_utils::metric;
+use webb_relayer_utils::{metric, Error};
 // An Substrate VAnchor encrypted output Watcher that watches for Deposit events and save the encrypted output to the store.
 /// It serves as a cache for encrypted outputs that could be used by dApp.
 #[derive(Clone, Debug, Default)]
@@ -68,7 +68,7 @@ impl EventHandler<SubstrateConfig> for SubstrateVAnchorEncryptedOutputHandler {
                 .await?
                 .fetch(&next_leaf_index_addr)
                 .await?
-                .expect("fetch next leaf index from storage");
+                .ok_or(Error::ReadSubstrateStorageError);
 
             // fetch chain_id
             let chain_id_addr = RuntimeApi::constants()

@@ -1,4 +1,4 @@
-use super::{HttpProvider, VAnchorContractWrapper};
+use super::*;
 pub mod vanchor_deposit_handler;
 pub mod vanchor_encrypted_outputs_handler;
 pub mod vanchor_leaves_handler;
