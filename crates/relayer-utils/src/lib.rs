@@ -105,6 +105,8 @@ pub enum Error {
     /// Etherscan API error
     #[error(transparent)]
     Etherscan(#[from] ethers::etherscan::errors::EtherscanError),
+    #[error(transparent)]
+    GasOracle(#[from] ethers::middleware::gas_oracle::GasOracleError),
     /// Ether wallet errors.
     #[error(transparent)]
     EtherWalletError(#[from] ethers::signers::WalletError),

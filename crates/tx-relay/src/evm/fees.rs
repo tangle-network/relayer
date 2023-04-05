@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use webb::evm::contract::protocol_solidity::{
     FungibleTokenWrapperContract, OpenVAnchorContract,
 };
+use webb::evm::ethers::middleware::gas_oracle::GasOracle;
 use webb::evm::ethers::prelude::U256;
 use webb::evm::ethers::types::Address;
 use webb::evm::ethers::utils::{format_units, parse_units};
@@ -143,13 +144,12 @@ async fn generate_fee_info(
         }
     };
 
-    // Fetch native gas price estimate from etherscan.io, using "average" value
-    let gas_oracle = ctx
-        .etherscan_client(chain_id.underlying_chain_id())?
-        .gas_oracle()
+    // Fetch native gas price estimate from gas oracle, using "average" value
+    let gas_price = ctx
+        .gas_oracle(chain_id.underlying_chain_id())
+        .await?
+        .fetch()
         .await?;
-    let gas_price_gwei = U256::from(gas_oracle.propose_gas_price);
-    let gas_price = parse_units(gas_price_gwei, "gwei")?.into();
 
     let estimated_fee = calculate_transaction_fee(
         gas_price,

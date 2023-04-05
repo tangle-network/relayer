@@ -30,6 +30,10 @@ use webb::evm::ethers::prelude::*;
 
 #[cfg(feature = "substrate")]
 use sp_core::sr25519::Pair as Sr25519Pair;
+use webb::evm::ethers::middleware::gas_oracle::{
+    Cache as CachedGasOracle, Etherscan as EtherscanGasOracle,
+    Median as GasOracleMedian, ProviderOracle,
+};
 #[cfg(feature = "substrate")]
 use webb::substrate::subxt;
 
@@ -222,18 +226,33 @@ impl RelayerContext {
         self.price_oracle.clone()
     }
 
-    /// Returns API client for https://etherscan.io/
-    pub fn etherscan_client(
+    /// Returns a gas oracle for the given chain.
+    pub async fn gas_oracle(
         &self,
         chain_id: u32,
-    ) -> webb_relayer_utils::Result<&Client> {
-        let client =
-            self.etherscan_clients.get(&chain_id).ok_or_else(|| {
-                webb_relayer_utils::Error::EtherscanConfigNotFound {
-                    chain_id: chain_id.to_string(),
-                }
-            })?;
-        Ok(client)
+    ) -> webb_relayer_utils::Result<GasOracleMedian> {
+        let chain_provider = self.evm_provider(&chain_id.to_string()).await?;
+        let provider_gas_oracle = ProviderOracle::new(chain_provider);
+        let mut gas_oracle = GasOracleMedian::new();
+        // Give only 10% of the weight to the provider gas oracle
+        // since it is not very accurate.
+        gas_oracle.add_weighted(0.1, provider_gas_oracle);
+        // Check if we have etherscan client for this chain
+        if let Some(etherscan_client) = self.etherscan_clients.get(&chain_id) {
+            let etherscan_gas_oracle =
+                EtherscanGasOracle::new(etherscan_client.clone());
+            let cached = CachedGasOracle::new(
+                // Cache for 5 minutes to avoid hitting etherscan rate limit
+                Duration::from_secs(5 * 60),
+                etherscan_gas_oracle,
+            );
+            // Etherscan gas oracle is more accurate than the provider gas oracle
+            // so give it the remaining 90% of the weight.
+            gas_oracle.add_weighted(0.9, cached);
+        }
+        // TODO: Add more gas oracles
+
+        Ok(gas_oracle)
     }
 }
 
