@@ -1115,9 +1115,9 @@ dependencies = [
 
 [[package]]
 name = "coins-bip39"
-version = "0.8.3"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efb68f3b6c3fee83828ecd8d463f360a397c32aaeb35bd931c01e5ddf5631c69"
+checksum = "ad2a68a46b9d8cc90484f0689adc0e4c890eb215bf698ae52e5235bb88f40be7"
 dependencies = [
  "bitvec 0.17.4",
  "coins-bip32",
@@ -1591,9 +1591,9 @@ dependencies = [
 
 [[package]]
 name = "der"
-version = "0.7.1"
+version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc906908ea6458456e5eaa160a9c08543ec3d1e6f71e2235cedd660cb65f9df0"
+checksum = "19c5cb402c5c958281c7c0702edea7b780d03b86b606497ca3a10fcd3fc393ac"
 dependencies = [
  "const-oid",
  "zeroize",
@@ -1654,6 +1654,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8168378f4e5023e7218c89c891c0fd8ecdb5e5e4f18cb78f38cf245dd021e76f"
 dependencies = [
  "block-buffer 0.10.4",
+ "const-oid",
  "crypto-common",
  "subtle",
 ]
@@ -1754,14 +1755,15 @@ dependencies = [
 
 [[package]]
 name = "ecdsa"
-version = "0.16.2"
+version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "644d3b8674a5fc5b929ae435bca85c2323d85ccb013a5509c2ac9ee11a6284ba"
+checksum = "a64d2e9c561b39b2de83c0387baffecfbc62ad116c4fc8f4e5b040b8e0737d7c"
 dependencies = [
- "der 0.7.1",
- "elliptic-curve 0.13.2",
+ "der 0.7.2",
+ "digest 0.10.6",
+ "elliptic-curve 0.13.3",
  "rfc6979 0.4.0",
- "signature 2.0.0",
+ "signature 2.1.0",
 ]
 
 [[package]]
@@ -1828,9 +1830,9 @@ dependencies = [
 
 [[package]]
 name = "elliptic-curve"
-version = "0.13.2"
+version = "0.13.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6ea5a92946e8614bb585254898bb7dd1ddad241ace60c52149e3765e34cc039d"
+checksum = "22cdacd4d6ed3f9b98680b679c0e52a823b8a2c7a97358d508fe247f2180c282"
 dependencies = [
  "base16ct 0.2.0",
  "crypto-bigint 0.5.1",
@@ -1838,7 +1840,7 @@ dependencies = [
  "ff 0.13.0",
  "generic-array 0.14.7",
  "group 0.13.0",
- "pkcs8 0.10.1",
+ "pkcs8 0.10.2",
  "rand_core 0.6.4",
  "sec1 0.7.1",
  "subtle",
@@ -1987,7 +1989,7 @@ dependencies = [
  "tokio 1.27.0",
  "toml 0.5.11",
  "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.21",
  "webb-proposals",
  "webb-relayer-types 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
  "webb-relayer-utils 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
@@ -2134,7 +2136,7 @@ dependencies = [
  "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "types",
  "warp",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.21",
  "webb-proposals",
  "webb-relayer-utils 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
 ]
@@ -2268,16 +2270,16 @@ dependencies = [
 [[package]]
 name = "ethers"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
- "ethers-addressbook 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-contract 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-etherscan 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-middleware 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-providers 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-signers 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-solc 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-addressbook 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-contract 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-etherscan 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-middleware 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-providers 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-signers 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-solc 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
 ]
 
 [[package]]
@@ -2295,9 +2297,9 @@ dependencies = [
 [[package]]
 name = "ethers-addressbook"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "once_cell",
  "serde",
  "serde_json",
@@ -2325,12 +2327,12 @@ dependencies = [
 [[package]]
 name = "ethers-contract"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
- "ethers-contract-abigen 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-contract-derive 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-providers 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-contract-abigen 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-contract-derive 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-providers 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "futures-util",
  "hex",
  "once_cell",
@@ -2370,12 +2372,12 @@ dependencies = [
 [[package]]
 name = "ethers-contract-abigen"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
  "Inflector",
  "dunce",
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-etherscan 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-etherscan 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "eyre",
  "getrandom 0.2.8",
  "hex",
@@ -2410,10 +2412,10 @@ dependencies = [
 [[package]]
 name = "ethers-contract-derive"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
- "ethers-contract-abigen 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-contract-abigen 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "hex",
  "proc-macro2",
  "quote",
@@ -2431,7 +2433,7 @@ dependencies = [
  "cargo_metadata",
  "chrono",
  "convert_case 0.6.0",
- "elliptic-curve 0.13.2",
+ "elliptic-curve 0.13.3",
  "ethabi",
  "generic-array 0.14.7",
  "getrandom 0.2.8",
@@ -2456,14 +2458,14 @@ dependencies = [
 [[package]]
 name = "ethers-core"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
  "arrayvec 0.7.2",
  "bytes 1.4.0",
  "cargo_metadata",
  "chrono",
  "convert_case 0.6.0",
- "elliptic-curve 0.13.2",
+ "elliptic-curve 0.13.3",
  "ethabi",
  "generic-array 0.14.7",
  "getrandom 0.2.8",
@@ -2505,10 +2507,10 @@ dependencies = [
 [[package]]
 name = "ethers-etherscan"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-solc 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-solc 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "getrandom 0.2.8",
  "reqwest",
  "semver 1.0.17",
@@ -2548,15 +2550,15 @@ dependencies = [
 [[package]]
 name = "ethers-middleware"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
  "async-trait",
  "auto_impl",
- "ethers-contract 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-etherscan 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-providers 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
- "ethers-signers 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-contract 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-etherscan 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-providers 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
+ "ethers-signers 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "futures-channel",
  "futures-locks",
  "futures-util",
@@ -2610,14 +2612,14 @@ dependencies = [
 [[package]]
 name = "ethers-providers"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
  "async-trait",
  "auto_impl",
  "base64 0.21.0",
  "bytes 1.4.0",
  "enr",
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "futures-core",
  "futures-timer",
  "futures-util",
@@ -2651,7 +2653,7 @@ dependencies = [
  "async-trait",
  "coins-bip32",
  "coins-bip39",
- "elliptic-curve 0.13.2",
+ "elliptic-curve 0.13.3",
  "eth-keystore",
  "ethers-core 2.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex",
@@ -2664,14 +2666,14 @@ dependencies = [
 [[package]]
 name = "ethers-signers"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
  "async-trait",
  "coins-bip32",
  "coins-bip39",
- "elliptic-curve 0.13.2",
+ "elliptic-curve 0.13.3",
  "eth-keystore",
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "hex",
  "rand 0.8.5",
  "sha2 0.10.6",
@@ -2713,11 +2715,11 @@ dependencies = [
 [[package]]
 name = "ethers-solc"
 version = "2.0.2"
-source = "git+https://github.com/gakonst/ethers-rs#d80e82a561ff714d1fa10c05786bb6fe124edbf0"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
 dependencies = [
  "cfg-if 1.0.0",
  "dunce",
- "ethers-core 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "getrandom 0.2.8",
  "glob",
  "hex",
@@ -3665,13 +3667,13 @@ dependencies = [
 
 [[package]]
 name = "io-lifetimes"
-version = "1.0.9"
+version = "1.0.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09270fd4fa1111bc614ed2246c7ef56239a3063d5be0d1ec3b589c505d400aeb"
+checksum = "9c66c74d2ae7e79a5a8f7ac924adbe38ee42a859c6539ad869eb51f0b52dc220"
 dependencies = [
  "hermit-abi 0.3.1",
  "libc",
- "windows-sys 0.45.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -3839,11 +3841,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "955890845095ccf31ef83ad41a05aabb4d8cc23dc3cac5a9f5c89cf26dd0da75"
 dependencies = [
  "cfg-if 1.0.0",
- "ecdsa 0.16.2",
- "elliptic-curve 0.13.2",
+ "ecdsa 0.16.3",
+ "elliptic-curve 0.13.3",
  "once_cell",
  "sha2 0.10.6",
- "signature 2.0.0",
+ "signature 2.1.0",
 ]
 
 [[package]]
@@ -4876,12 +4878,12 @@ dependencies = [
 
 [[package]]
 name = "pkcs8"
-version = "0.10.1"
+version = "0.10.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3d2820d87d2b008616e5c27212dd9e0e694fb4c6b522de06094106813328cb49"
+checksum = "f950b2377845cebe5cf8b5165cb3cc1a5e0fa5cfa3e1f7f55707d8fd82e0a7b7"
 dependencies = [
- "der 0.7.1",
- "spki 0.7.0",
+ "der 0.7.2",
+ "spki 0.7.1",
 ]
 
 [[package]]
@@ -5712,9 +5714,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48518a2b5775ba8ca5b46596aae011caa431e6ce7e4a67ead66d92f08884220e"
 dependencies = [
  "base16ct 0.2.0",
- "der 0.7.1",
+ "der 0.7.2",
  "generic-array 0.14.7",
- "pkcs8 0.10.1",
+ "pkcs8 0.10.2",
  "subtle",
  "zeroize",
 ]
@@ -6035,9 +6037,9 @@ dependencies = [
 
 [[package]]
 name = "signature"
-version = "2.0.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fe458c98333f9c8152221191a77e2a44e8325d0193484af2e9421a53019e57d"
+checksum = "5e1788eed21689f9cf370582dfc467ef36ed9c707f073528ddafa8d83e3b8500"
 dependencies = [
  "digest 0.10.6",
  "rand_core 0.6.4",
@@ -6494,12 +6496,12 @@ dependencies = [
 
 [[package]]
 name = "spki"
-version = "0.7.0"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0445c905640145c7ea8c1993555957f65e7c46d0535b91ba501bc9bfc85522f"
+checksum = "37a5be806ab6f127c3da44b7378837ebf01dadca8510a0e572460216b228bd0e"
 dependencies = [
  "base64ct",
- "der 0.7.1",
+ "der 0.7.2",
 ]
 
 [[package]]
@@ -7940,15 +7942,18 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.5.21"
-source = "git+https://github.com/webb-tools/webb-rs#1ed2db6eaf930f94774af0293ac751707af825b0"
+version = "0.5.22"
+source = "git+https://github.com/webb-tools/webb-rs#e7f3cdcfcffcc3f4191749fa0ce0eb0d6f3b363d"
 dependencies = [
  "async-trait",
- "ethers 2.0.2 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "hex",
+ "parity-scale-codec",
  "rand 0.8.5",
+ "scale-info",
  "serde",
  "serde_json",
+ "subxt",
  "tempfile",
  "thiserror",
 ]
@@ -7968,7 +7973,7 @@ dependencies = [
  "tempfile",
  "tokio 1.27.0",
  "tracing",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-relayer",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -7989,7 +7994,7 @@ dependencies = [
  "sp-core",
  "tokio 1.27.0",
  "typed-builder 0.12.0",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-utils 0.1.0",
@@ -8007,7 +8012,7 @@ dependencies = [
  "tokio 1.27.0",
  "tracing",
  "tracing-test",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -8026,7 +8031,7 @@ dependencies = [
  "sled",
  "tokio 1.27.0",
  "tracing",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-event-watcher-traits",
  "webb-proposals",
  "webb-relayer-config",
@@ -8053,7 +8058,7 @@ dependencies = [
  "sled",
  "tokio 1.27.0",
  "tracing",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
@@ -8075,7 +8080,7 @@ dependencies = [
  "sp-core",
  "tokio 1.27.0",
  "tracing",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
  "webb-proposals",
@@ -8108,7 +8113,7 @@ dependencies = [
  "thiserror",
  "tokio 1.27.0",
  "tracing",
- "webb 0.5.21 (git+https://github.com/webb-tools/webb-rs)",
+ "webb 0.5.22",
  "webb-proposal-signing-backends",
  "webb-proposals",
  "webb-relayer",
@@ -8136,7 +8141,7 @@ dependencies = [
  "serde",
  "tokio 1.27.0",
  "typed-builder 0.12.0",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-relayer-store",
  "webb-relayer-utils 0.1.0",
 ]
@@ -8155,7 +8160,7 @@ dependencies = [
  "tokio 1.27.0",
  "tracing",
  "typed-builder 0.12.0",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types 0.1.0",
@@ -8198,7 +8203,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "url",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-ew-dkg",
@@ -8234,7 +8239,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "url",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types 0.1.0",
@@ -8248,7 +8253,7 @@ dependencies = [
  "native-tls",
  "sp-core",
  "tokio 1.27.0",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-price-oracle-backends",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -8262,7 +8267,7 @@ dependencies = [
  "native-tls",
  "serde",
  "tokio 1.27.0",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-relayer-tx-relay-utils",
 ]
 
@@ -8281,7 +8286,7 @@ dependencies = [
  "tokio 1.27.0",
  "tokio-stream",
  "tracing",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -8303,7 +8308,7 @@ dependencies = [
  "sled",
  "tempfile",
  "tracing",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-proposals",
  "webb-relayer-utils 0.1.0",
 ]
@@ -8322,7 +8327,7 @@ dependencies = [
  "sp-runtime",
  "tokio 1.27.0",
  "tracing",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-relayer-context",
  "webb-relayer-store",
  "webb-relayer-types 0.1.0",
@@ -8341,7 +8346,7 @@ dependencies = [
  "serde",
  "tokio 1.27.0",
  "tracing",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-price-oracle-backends",
  "webb-proposals",
  "webb-relayer-config",
@@ -8369,7 +8374,7 @@ dependencies = [
  "tiny-bip39",
  "tracing",
  "url",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
 ]
 
 [[package]]
@@ -8384,7 +8389,7 @@ dependencies = [
  "tiny-bip39",
  "tracing",
  "url",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.21",
 ]
 
 [[package]]
@@ -8408,7 +8413,7 @@ dependencies = [
  "sled",
  "thiserror",
  "url",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.22",
  "webb-proposals",
 ]
 
@@ -8433,7 +8438,7 @@ dependencies = [
  "sled",
  "thiserror",
  "url",
- "webb 0.5.21 (registry+https://github.com/rust-lang/crates.io-index)",
+ "webb 0.5.21",
  "webb-proposals",
 ]
 
@@ -8541,6 +8546,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "75283be5efb2831d37ea142365f009c02ec203cd29a3ebecbc093d52315b66d0"
 dependencies = [
  "windows-targets 0.42.2",
+]
+
+[[package]]
+name = "windows-sys"
+version = "0.48.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "677d2418bec65e3338edb076e806bc1ec15693c5d0104683f2efe857f61056a9"
+dependencies = [
+ "windows-targets 0.48.0",
 ]
 
 [[package]]
