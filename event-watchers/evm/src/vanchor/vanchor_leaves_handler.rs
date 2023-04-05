@@ -54,7 +54,7 @@ impl VAnchorLeavesHandler {
         let default_leaf_vec = default_leaf_scalar
             .get(0)
             .map(|d| d.into_repr().to_bytes_be())
-            .unwrap_or_default();
+            .ok_or(webb_relayer_utils::Error::ConvertLeafScalarError)?;
         let pairs: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
         let mt = MerkleTree::new(&pairs, &poseidon, &default_leaf_vec)?;
 

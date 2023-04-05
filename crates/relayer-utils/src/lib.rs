@@ -170,6 +170,8 @@ pub enum Error {
     FetchTokenPriceError { token: String },
     #[error("Failed to read a value from substrate storage")]
     ReadSubstrateStorageError,
+    #[error("Cannot convert default leaf scalar into bytes")]
+    ConvertLeafScalarError,
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.
