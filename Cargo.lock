@@ -2270,7 +2270,7 @@ dependencies = [
 [[package]]
 name = "ethers"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "ethers-addressbook 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "ethers-contract 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
@@ -2297,7 +2297,7 @@ dependencies = [
 [[package]]
 name = "ethers-addressbook"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "once_cell",
@@ -2327,7 +2327,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "ethers-contract-abigen 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "ethers-contract-derive 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
@@ -2372,7 +2372,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-abigen"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "Inflector",
  "dunce",
@@ -2412,7 +2412,7 @@ dependencies = [
 [[package]]
 name = "ethers-contract-derive"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "ethers-contract-abigen 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
@@ -2458,7 +2458,7 @@ dependencies = [
 [[package]]
 name = "ethers-core"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "arrayvec 0.7.2",
  "bytes 1.4.0",
@@ -2507,7 +2507,7 @@ dependencies = [
 [[package]]
 name = "ethers-etherscan"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "ethers-core 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
  "ethers-solc 2.0.2 (git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response)",
@@ -2550,7 +2550,7 @@ dependencies = [
 [[package]]
 name = "ethers-middleware"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2612,7 +2612,7 @@ dependencies = [
 [[package]]
 name = "ethers-providers"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2666,7 +2666,7 @@ dependencies = [
 [[package]]
 name = "ethers-signers"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "async-trait",
  "coins-bip32",
@@ -2715,7 +2715,7 @@ dependencies = [
 [[package]]
 name = "ethers-solc"
 version = "2.0.2"
-source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#4cca52f014b554b804bde9a6b87f3c5a8857665d"
+source = "git+https://github.com/shekohex/ethers-rs?branch=shekohex/etherscan-gasoracle-response#76b3f1e20fc77d38c4457147316f8acfcb2019ec"
 dependencies = [
  "cfg-if 1.0.0",
  "dunce",
