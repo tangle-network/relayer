@@ -9,6 +9,7 @@ use std::sync::{Arc, Mutex};
 use webb::evm::contract::protocol_solidity::{
     FungibleTokenWrapperContract, OpenVAnchorContract,
 };
+use webb::evm::ethers::middleware::gas_oracle::GasOracle;
 use webb::evm::ethers::prelude::U256;
 use webb::evm::ethers::types::Address;
 use webb::evm::ethers::utils::{format_units, parse_units};
@@ -77,33 +78,27 @@ pub async fn get_fee_info(
         lock.get(&(vanchor, chain_id)).cloned()
     };
 
-    match fee_info_cached {
-        // There is a cached fee info, use it
-        Some(mut fee_info) => {
-            // Need to recalculate estimated fee with the gas amount that was passed in. We use
-            // cached exchange rate so that this matches calculation on the client.
-            fee_info.estimated_fee = calculate_transaction_fee(
-                fee_info.gas_price,
-                gas_amount,
-                fee_info.native_token_price,
-                fee_info.wrapped_token_price,
-                fee_info.wrapped_token_decimals,
-            )
-            .await?;
-            Ok(fee_info)
-        }
-        // No cached fee info, generate new one
-        None => {
-            let fee_info =
-                generate_fee_info(chain_id, vanchor, gas_amount, ctx).await?;
+    if let Some(mut fee_info) = fee_info_cached {
+        // Need to recalculate estimated fee with the gas amount that was passed in. We use
+        // cached exchange rate so that this matches calculation on the client.
+        fee_info.estimated_fee = calculate_transaction_fee(
+            fee_info.gas_price,
+            gas_amount,
+            fee_info.native_token_price,
+            fee_info.wrapped_token_price,
+            fee_info.wrapped_token_decimals,
+        )?;
+        Ok(fee_info)
+    } else {
+        let fee_info =
+            generate_fee_info(chain_id, vanchor, gas_amount, ctx).await?;
 
-            // Insert newly generated fee info into cache.
-            FEE_INFO_CACHED
-                .lock()
-                .expect("lock fee info cache mutex")
-                .insert((vanchor, chain_id), fee_info.clone());
-            Ok(fee_info)
-        }
+        // Insert newly generated fee info into cache.
+        FEE_INFO_CACHED
+            .lock()
+            .expect("lock fee info cache mutex")
+            .insert((vanchor, chain_id), fee_info.clone());
+        Ok(fee_info)
     }
 }
 
@@ -134,6 +129,7 @@ async fn generate_fee_info(
             })
         }
     };
+
     let wrapped_token_price = match prices.get(&wrapped_token) {
         Some(price) => *price,
         None => {
@@ -143,13 +139,12 @@ async fn generate_fee_info(
         }
     };
 
-    // Fetch native gas price estimate from etherscan.io, using "average" value
-    let gas_oracle = ctx
-        .etherscan_client(chain_id.underlying_chain_id())?
-        .gas_oracle()
+    // Fetch native gas price estimate from gas oracle, using "average" value
+    let gas_price = ctx
+        .gas_oracle(chain_id.underlying_chain_id())
+        .await?
+        .fetch()
         .await?;
-    let gas_price_gwei = U256::from(gas_oracle.propose_gas_price);
-    let gas_price = parse_units(gas_price_gwei, "gwei")?.into();
 
     let estimated_fee = calculate_transaction_fee(
         gas_price,
@@ -157,8 +152,7 @@ async fn generate_fee_info(
         native_token_price,
         wrapped_token_price,
         wrapped_token_decimals,
-    )
-    .await?;
+    )?;
 
     // Calculate the exchange rate from wrapped token to native token which is used for the refund.
     let refund_exchange_rate = parse_units(
@@ -190,7 +184,7 @@ async fn generate_fee_info(
 /// fee in `wrappedToken` wei. This fee includes a profit for the relay of `TRANSACTION_PROFIT_USD`.
 ///
 /// The algorithm is explained at https://www.notion.so/hicommonwealth/Private-Tx-Relay-Support-v1-f5522b04d6a349aab1bbdb0dd83a7fb4#6bb2b4920e3f42d69988688c6fa54e6e
-async fn calculate_transaction_fee(
+fn calculate_transaction_fee(
     gas_price: U256,
     gas_amount: U256,
     native_token_price: f64,
