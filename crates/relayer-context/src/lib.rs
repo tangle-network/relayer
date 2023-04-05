@@ -22,6 +22,7 @@ use std::{collections::HashMap, convert::TryFrom};
 
 use tokio::sync::{broadcast, Mutex};
 
+use webb::evm::ethers;
 #[cfg(feature = "evm")]
 use webb::evm::ethers::core::k256::SecretKey;
 #[cfg(feature = "evm")]
@@ -58,7 +59,7 @@ pub struct RelayerContext {
     /// Price backend for fetching prices.
     price_oracle: Arc<PriceOracleMerger>,
     /// Hashmap of <ChainID, Etherscan Client>
-    etherscan_clients: HashMap<u32, Client>,
+    etherscan_clients: HashMap<u32, ethers::etherscan::Client>,
 }
 
 impl RelayerContext {
@@ -92,9 +93,16 @@ impl RelayerContext {
             .build();
         let price_oracle = Arc::new(price_oracle);
         let mut etherscan_clients: HashMap<u32, Client> = HashMap::new();
-        for (chain, etherscan_config) in config.evm_etherscan.iter() {
-            let client =
-                Client::new(*chain, etherscan_config.api_key.to_string())?;
+        for (chain, etherscan_config) in &config.evm_etherscan {
+            let client_builder = ethers::etherscan::Client::builder()
+                .chain(*chain)?
+                .with_api_key(etherscan_config.api_key.as_str());
+            // if the api url is set, override the default
+            let client = if let Some(ref api_url) = etherscan_config.api_url {
+                client_builder.with_api_url(api_url.as_str())?.build()?
+            } else {
+                client_builder.build()?
+            };
             etherscan_clients.insert(etherscan_config.chain_id, client);
         }
         Ok(Self {

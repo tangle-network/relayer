@@ -175,6 +175,12 @@ pub struct EtherscanApiConfig {
     /// A wrapper type around the `String` to allow reading it from the env.
     #[serde(skip_serializing)]
     pub api_key: EtherscanApiKey,
+    /// An optional URL to use for the Etherscan API instead of the default.
+    ///
+    /// This is useful for testing against a local Etherscan API.
+    /// Or in case of testnets, the Etherscan GasOracle API is not available.
+    /// So we can use the mainnet API URL to get the gas price.
+    pub api_url: Option<url::Url>,
 }
 
 /// TxQueueConfig is the configuration for the TxQueue.
