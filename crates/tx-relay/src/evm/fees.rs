@@ -25,9 +25,6 @@ static FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
 /// Amount of profit that the relay should make with each transaction (in USD).
 const TRANSACTION_PROFIT_USD: f64 = 5.;
 
-const GWEI_TO_WEI: u64 = 1_000_000_000;
-const GWEI_TO_WEI_U256: U256 = U256([GWEI_TO_WEI, 0, 0, 0]);
-
 /// Cache for previously generated fee info. Key consists of the VAnchor address and chain id.
 /// Entries are valid as long as `timestamp` is no older than `FEE_CACHE_TIME`.
 static FEE_INFO_CACHED: Lazy<Mutex<HashMap<(Address, TypedChainId), FeeInfo>>> =
