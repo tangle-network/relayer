@@ -23,7 +23,7 @@ use webb::evm::ethers;
 use super::HistoryStoreKey;
 use super::{
     EncryptedOutputCacheStore, EventHashStore, HistoryStore, LeafCacheStore,
-    ProposalStore, QueueStore,
+    ProposalStore, QueueStore, TokenPriceCacheStore,
 };
 /// SledStore is a store that stores the history of events in  a [Sled](https://sled.rs)-based database.
 #[derive(Clone)]
@@ -606,6 +606,25 @@ impl ProposalStore for SledStore {
     }
 }
 
+impl<T> TokenPriceCacheStore<T> for SledStore
+where
+    T: Serialize + DeserializeOwned,
+{
+    fn get_price(&self, token: &str) -> crate::Result<Option<T>> {
+        let tree = self.db.open_tree("token_prices")?;
+        match tree.get(token)? {
+            Some(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
+            None => Ok(None),
+        }
+    }
+
+    fn insert_price(&self, token: &str, value: T) -> crate::Result<()> {
+        let v = serde_json::to_vec(&value)?;
+        let tree = self.db.open_tree("token_prices")?;
+        tree.insert(token, v.as_slice())?;
+        Ok(())
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

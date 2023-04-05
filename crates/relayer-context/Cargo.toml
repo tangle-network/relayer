@@ -11,9 +11,10 @@ repository = { workspace = true }
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-webb-relayer-config = { path = "../relayer-config"}
-webb-relayer-utils = { path = "../relayer-utils"}
-webb-relayer-store = { path = "../relayer-store" }
+webb-relayer-config = { workspace = true }
+webb-relayer-utils = { workspace = true }
+webb-relayer-store = { workspace = true }
+webb-price-oracle-backends = { workspace = true, features = ["coingecko"] }
 
 tokio = { workspace = true }
 webb = { workspace = true }
@@ -21,8 +22,6 @@ sp-core = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true }
 
-coingecko = "1.0.1"
-ethers = {version = "1.0.2", features = ["rustls"] }
 
 [features]
 default = ["std", "evm", "substrate"]

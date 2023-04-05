@@ -32,7 +32,9 @@ use sp_core::sr25519::Pair as Sr25519Pair;
 #[cfg(feature = "substrate")]
 use webb::substrate::subxt;
 
-use coingecko::CoinGeckoClient;
+use webb_price_oracle_backends::{
+    CachedPriceBackend, CoinGeckoBackend, DummyPriceBackend, PriceOracleMerger,
+};
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric::{self, Metrics};
 
@@ -53,8 +55,8 @@ pub struct RelayerContext {
     /// Represents the metrics for the relayer
     pub metrics: Arc<Mutex<metric::Metrics>>,
     store: SledStore,
-    /// API client for https://www.coingecko.com/
-    coin_gecko_client: Arc<CoinGeckoClient>,
+    /// Price backend for fetching prices.
+    price_oracle: Arc<PriceOracleMerger>,
     /// Hashmap of <ChainID, Etherscan Client>
     etherscan_clients: HashMap<u32, Client>,
 }
@@ -67,7 +69,28 @@ impl RelayerContext {
     ) -> webb_relayer_utils::Result<Self> {
         let (notify_shutdown, _) = broadcast::channel(2);
         let metrics = Arc::new(Mutex::new(Metrics::new()?));
-        let coin_gecko_client = Arc::new(CoinGeckoClient::default());
+
+        let dummy_backend = {
+            let price_map = config
+                .assets
+                .iter()
+                .map(|(token, details)| (token.clone(), details.price))
+                .collect();
+            DummyPriceBackend::new(price_map)
+        };
+        // **chef's kiss** this is so beautiful
+        let cached_coingecko_backend = CachedPriceBackend::builder()
+            .backend(CoinGeckoBackend::builder().build())
+            .store(store.clone())
+            .use_cache_if_source_unavailable()
+            .even_if_expired()
+            .build();
+        // merge all the price oracle backends
+        let price_oracle = PriceOracleMerger::builder()
+            .merge(Box::new(cached_coingecko_backend))
+            .merge(Box::new(dummy_backend))
+            .build();
+        let price_oracle = Arc::new(price_oracle);
         let mut etherscan_clients: HashMap<u32, Client> = HashMap::new();
         for (chain, etherscan_config) in config.evm_etherscan.iter() {
             let client =
@@ -79,7 +102,7 @@ impl RelayerContext {
             notify_shutdown,
             metrics,
             store,
-            coin_gecko_client,
+            price_oracle,
             etherscan_clients,
         })
     }
@@ -130,7 +153,7 @@ impl RelayerContext {
             .private_key
             .as_ref()
             .ok_or(webb_relayer_utils::Error::MissingSecrets)?;
-        let key = SecretKey::from_be_bytes(private_key.as_bytes())?;
+        let key = SecretKey::from_bytes(private_key.as_bytes().into())?;
         let chain_id = chain_config.chain_id;
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
@@ -186,9 +209,9 @@ impl RelayerContext {
         &self.store
     }
 
-    /// Returns API client for https://www.coingecko.com/
-    pub fn coin_gecko_client(&self) -> &Arc<CoinGeckoClient> {
-        &self.coin_gecko_client
+    /// Returns a price oracle for fetching token prices.
+    pub fn price_oracle(&self) -> Arc<PriceOracleMerger> {
+        self.price_oracle.clone()
     }
 
     /// Returns API client for https://etherscan.io/

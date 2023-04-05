@@ -1,5 +1,5 @@
 [package]
-name = "webb-relayer-store"
+name = "webb-price-oracle-backends"
 version = "0.1.0"
 authors = { workspace = true }
 edition = { workspace = true }
@@ -8,25 +8,27 @@ documentation = { workspace = true }
 homepage = { workspace = true }
 repository = { workspace = true }
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
 [dependencies]
 webb-relayer-utils = { workspace = true }
-
-tracing = { workspace = true }
-sled = { workspace = true, optional = true }
+webb-relayer-store = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
 serde = { workspace = true }
-serde_json = { workspace = true }
-hex = { workspace = true }
 webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true, optional = true }
-webb-proposals = { workspace = true }
-tempfile = { workspace = true }
 
-parking_lot = "^0.12"
+chrono = { version = "0.4.23", features = ["serde"] }
+typed-builder = "0.12.0"
+# Backends for the price oracle.
+reqwest = { version = "0.11", features = ["json"], optional = true }
+
+
+[dev-dependencies]
+tokio = { workspace = true }
+axum = { workspace = true, features = ["macros"] }
 
 [features]
-default = ["std", "sled"]
+default = ["std"]
+coingecko = ["dep:reqwest"]
 std = []
-sled = ["dep:sled"]
