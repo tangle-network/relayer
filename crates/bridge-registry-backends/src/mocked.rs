@@ -26,11 +26,15 @@ impl BridgeRegistryBackend for MockedBridgeRegistryBackend {
         &self,
         _index: u32,
     ) -> webb_relayer_utils::Result<Option<BridgeMetadata>> {
+        let display = SerdeData(
+            Data::decode_all(&mut "mock bridge".as_bytes())
+                .expect("decode mock bridge data"),
+        );
         Ok(Some(BridgeMetadata {
             resource_ids: BoundedVec(vec![
                 ResourceId(hex!("0000000000000000e69a847cd5bc0c9480ada0b339d7f0a8cac2b6670000138a")),
                 ResourceId(hex!("000000000000d30c8839c1145609e564b986f667b273ddcb8496010000001389"))]),
-            info: BridgeInfo { additional: BoundedVec(vec![]), display: SerdeData(Data::decode_all(&mut "mock bridge".as_bytes()).unwrap()) },
+            info: BridgeInfo { additional: BoundedVec(vec![]), display },
         }))
     }
 }

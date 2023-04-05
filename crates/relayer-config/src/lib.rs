@@ -228,7 +228,7 @@ mod tests {
         let config_dirs =
             glob::glob(config_dir.join("**").join("**").to_str().unwrap())
                 .expect("Failed to read config directory")
-                .filter_map(|p| p.ok())
+                .filter_map(Result::ok)
                 .filter(|p| p.is_dir())
                 .collect::<Vec<_>>();
         assert!(

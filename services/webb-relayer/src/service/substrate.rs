@@ -366,7 +366,7 @@ pub fn start_substrate_vanchor_event_watcher(
                 // linked_anchors are validated in make_proposal_signing_backend() method
                 let deposit_handler = SubstrateVAnchorDepositHandler::new(
                     backend,
-                    my_config.linked_anchors.unwrap(),
+                    my_config.linked_anchors.unwrap_or_default(),
                 );
                 let leaves_handler = SubstrateVAnchorLeavesHandler::default();
                 let encrypted_output_handler =
@@ -407,7 +407,7 @@ pub fn start_substrate_vanchor_event_watcher(
                 // since this option is always going to return Some(value).
                 let deposit_handler = SubstrateVAnchorDepositHandler::new(
                     backend,
-                    my_config.linked_anchors.unwrap(),
+                    my_config.linked_anchors.unwrap_or_default(),
                 );
                 let leaves_handler = SubstrateVAnchorLeavesHandler::default();
                 let encrypted_output_handler =

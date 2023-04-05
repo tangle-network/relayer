@@ -31,7 +31,9 @@ use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb::substrate::subxt;
-use webb_proposal_signing_backends::*;
+use webb_proposal_signing_backends::{
+    DkgProposalSigningBackend, MockedProposalSigningBackend,
+};
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 
 use webb_relayer_config::signing_backend::ProposalSigningBackendConfig;

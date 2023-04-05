@@ -67,7 +67,8 @@ pub async fn get_fee_info(
 ) -> Result<FeeInfo> {
     // Retrieve cached fee info item
     let fee_info_cached = {
-        let mut lock = FEE_INFO_CACHED.lock().unwrap();
+        let mut lock =
+            FEE_INFO_CACHED.lock().expect("lock fee info cache mutex");
         // Remove all items from cache which are older than `FEE_CACHE_TIME`
         lock.retain(|_, v| {
             let fee_info_valid_time = v.timestamp.add(*FEE_CACHE_TIME);
@@ -99,7 +100,7 @@ pub async fn get_fee_info(
             // Insert newly generated fee info into cache.
             FEE_INFO_CACHED
                 .lock()
-                .unwrap()
+                .expect("lock fee info cache mutex")
                 .insert((vanchor, chain_id), fee_info.clone());
             Ok(fee_info)
         }

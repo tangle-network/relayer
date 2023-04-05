@@ -78,19 +78,21 @@ pub trait BridgeRegistryBackend {
                     .resource_to_bridge_index(linked_anchor)
                     .await
                     .ok_or(Error::BridgeNotRegistered(*linked_anchor))?;
-                let bridges = self.bridges(next_bridge_index).await?.unwrap();
-                Ok(bridges
-                    .resource_ids
-                    .0
-                    .into_iter()
-                    .filter(|r| r.0 != linked_anchor.0)
-                    .map(|r| {
-                        let rr = RawResourceId {
-                            resource_id: H256(r.0),
-                        };
-                        LinkedAnchorConfig::Raw(rr)
-                    })
-                    .collect())
+                match self.bridges(next_bridge_index).await? {
+                    None => Ok(vec![]),
+                    Some(bridges) => Ok(bridges
+                        .resource_ids
+                        .0
+                        .into_iter()
+                        .filter(|r| r.0 != linked_anchor.0)
+                        .map(|r| {
+                            let rr = RawResourceId {
+                                resource_id: H256(r.0),
+                            };
+                            LinkedAnchorConfig::Raw(rr)
+                        })
+                        .collect()),
+                }
             }
         }
     }

@@ -43,19 +43,25 @@ pub struct VAnchorLeavesHandler {
     storage: Arc<SledStore>,
 }
 impl VAnchorLeavesHandler {
-    pub fn new(storage: Arc<SledStore>, default_leaf: Vec<u8>) -> Self {
+    pub fn new(
+        storage: Arc<SledStore>,
+        default_leaf: Vec<u8>,
+    ) -> webb_relayer_utils::Result<Self> {
         let params = setup_params::<Bn254Fr>(Curve::Bn254, 5, 3);
         let poseidon = Poseidon::<Bn254Fr>::new(params);
         let default_leaf_scalar: Vec<Bn254Fr> =
             bytes_vec_to_f(&vec![default_leaf]);
-        let default_leaf_vec = default_leaf_scalar[0].into_repr().to_bytes_be();
+        let default_leaf_vec = default_leaf_scalar
+            .get(0)
+            .map(|d| d.into_repr().to_bytes_be())
+            .ok_or(webb_relayer_utils::Error::ConvertLeafScalarError)?;
         let pairs: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
-        let mt = MerkleTree::new(&pairs, &poseidon, &default_leaf_vec).unwrap();
+        let mt = MerkleTree::new(&pairs, &poseidon, &default_leaf_vec)?;
 
-        Self {
+        Ok(Self {
             mt: Arc::new(Mutex::new(mt)),
             storage,
-        }
+        })
     }
 }
 
