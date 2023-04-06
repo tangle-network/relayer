@@ -232,6 +232,7 @@ async fn get_wrapped_token_name_and_decimals(
     // TODO: add all supported tokens
     let name = match token_symbol.replace("webb", "").as_str() {
         "WETH" => "ethereum",
+        "Alpha" => "ethereum",
         // only used in tests
         "WEBB" if cfg!(debug_assertions) => "ethereum",
         x => x,
