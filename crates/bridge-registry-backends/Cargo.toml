@@ -9,8 +9,8 @@ homepage = { workspace = true }
 repository = { workspace = true }
 
 [dependencies]
-webb-relayer-utils = { path = "../relayer-utils" }
-webb-relayer-config = { path = "../relayer-config" }
+webb-relayer-utils = { workspace = true }
+webb-relayer-config = { workspace = true }
 
 async-trait = { workspace = true }
 futures = { workspace = true }

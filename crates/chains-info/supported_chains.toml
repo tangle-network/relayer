@@ -1,0 +1,20 @@
+chain-ids = [
+    5, # Goerli Testnet
+    10008, # Polygon Mumbai Testnet
+    421613, # Arbitrum Goerli Testnet
+    534353, # Scroll Alpha Testnet
+    11155111, # Sepolia Testnet
+    1287, # Moonbase Alpha
+]
+
+# Override the coingecko coin Id for the Moonbase Alpha network
+# Since the Moonbase Alpha network is not yet listed on CoinGecko.
+# so we use the mainnet coin id instead.
+[overrides.1287]
+coingecko-coin-id = "moonbeam"
+
+# Override the coingecko coin Id for Arbitrum Goerli Testnet
+# Since the Arbitrum Goerli Testnet is not yet listed on CoinGecko.
+# so we use the mainnet coin id instead.
+[overrides.421613]
+coingecko-coin-id = "arbitrum"
