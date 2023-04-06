@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use webb::evm::contract::protocol_solidity::{
-    FungibleTokenWrapperContract, OpenVAnchorContract,
+    FungibleTokenWrapperContract, VAnchorContract,
 };
 use webb::evm::ethers::middleware::gas_oracle::GasOracle;
 use webb::evm::ethers::prelude::U256;
@@ -224,7 +224,7 @@ async fn get_wrapped_token_name_and_decimals(
     let provider = ctx.evm_provider(&chain_name).await?;
     let client = Arc::new(provider);
 
-    let anchor_contract = OpenVAnchorContract::new(vanchor, client.clone());
+    let anchor_contract = VAnchorContract::new(vanchor, client.clone());
     let token_address = anchor_contract.token().call().await?;
     let token_contract =
         FungibleTokenWrapperContract::new(token_address, client.clone());
