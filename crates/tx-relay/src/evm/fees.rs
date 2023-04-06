@@ -214,8 +214,8 @@ fn calculate_transaction_fee(
     Ok(fee_with_profit)
 }
 
-/// Retrieves the token name of a given anchor contract. Wrapper prefixes are stripped in order
-/// to get a token name which coingecko understands.
+/// Returns the name and decimals of the wrapped token for the given chain.
+/// then converts it to the underlying token token name to be used in the price oracle.
 async fn get_wrapped_token_name_and_decimals(
     chain_id: TypedChainId,
     vanchor: Address,
@@ -232,12 +232,10 @@ async fn get_wrapped_token_name_and_decimals(
     let token_symbol = token_contract.symbol().call().await?;
     // TODO: add all supported tokens
     let name = match token_symbol.replace("webb", "").as_str() {
-        "WETH" => "ethereum",
-        "Alpha" => "ethereum",
-        "Standalone" => "ethereum",
+        "Alpha" | "Standalone" | "WETH" => "ETH",
         "tTNT-standalone" => "tTNT",
         // only used in tests
-        "WEBB" if cfg!(debug_assertions) => "ethereum",
+        "WEBB" if cfg!(debug_assertions) => "ETH",
         x => x,
     }
     .to_string();
