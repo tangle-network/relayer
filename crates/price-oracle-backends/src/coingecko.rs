@@ -59,14 +59,41 @@ impl super::PriceBackend for CoinGeckoBackend {
         tokens: &[&str],
         currency: super::FiatCurrency,
     ) -> Result<super::PricesMap> {
-        let prices = self
-            .price(tokens, &[currency.to_string().to_lowercase()])
+        // map token names to coingecko ids
+        let mut id_to_token = HashMap::new();
+        let chains_info = webb_chains_info::chains_info();
+        for token in tokens {
+            let id = chains_info
+                .iter()
+                .find_map(|(_, info)| {
+                    info.native_currency
+                        .symbol
+                        .eq(*token)
+                        .then_some(info.native_currency.coingecko_coin_id)
+                })
+                .flatten()
+                .unwrap_or(*token);
+            id_to_token.insert(id, *token);
+        }
+        let ids = id_to_token.keys().collect::<Vec<_>>();
+
+        let prices: crate::PricesMap = self
+            .price(&ids, &[currency.to_string().to_lowercase()])
             .map_ok(|m| {
                 m.into_iter()
                     .filter_map(|(k, v)| v.usd.map(|price| (k, price)))
                     .collect()
             })
             .await?;
+        // remap the ids back to token names
+        let prices = prices
+            .into_iter()
+            .filter_map(|(id, price)| {
+                id_to_token
+                    .get(id.as_str())
+                    .map(|t| ((*t).to_string(), price))
+            })
+            .collect();
         Ok(prices)
     }
 }
@@ -211,53 +238,45 @@ mod tests {
         }
     }
 
+    fn build_hard_coded_prices() -> crate::PricesMap {
+        let mut prices = crate::PricesMap::new();
+        prices.insert(String::from("ethereum"), 1000.0);
+        prices.insert(String::from("matic-network"), 1.0);
+        prices
+    }
+
     #[tokio::test]
     async fn it_works() {
         let mock_server = MockServer::builder()
-            .hard_coded_prices({
-                let mut prices = crate::PricesMap::new();
-                prices.insert(String::from("ETH"), 1000.0);
-                prices.insert(String::from("BTC"), 20000.0);
-                prices
-            })
+            .hard_coded_prices(build_hard_coded_prices())
             .build();
         let handle = mock_server.spwan();
         // Wait for the server to start
         tokio::time::sleep(Duration::from_millis(100)).await;
         let backend = handle.backend();
-        let prices = backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        let prices = backend.get_prices(&["ETH", "MATIC"]).await.unwrap();
         assert_eq!(prices.get("ETH"), Some(&1000.0));
-        assert_eq!(prices.get("BTC"), Some(&20000.0));
+        assert_eq!(prices.get("MATIC"), Some(&1.0));
     }
 
     #[tokio::test]
     async fn fails_when_server_errors() {
         let mock_server = MockServer::builder()
-            .hard_coded_prices({
-                let mut prices = crate::PricesMap::new();
-                prices.insert(String::from("ETH"), 1000.0);
-                prices.insert(String::from("BTC"), 20000.0);
-                prices
-            })
+            .hard_coded_prices(build_hard_coded_prices())
             .build();
         let handle = mock_server.spwan();
         // Wait for the server to start
         tokio::time::sleep(Duration::from_millis(100)).await;
         let backend = handle.backend();
         handle.simulate_server_error(true);
-        let prices = backend.get_prices(&["ETH", "BTC"]).await;
+        let prices = backend.get_prices(&["ETH", "MATIC"]).await;
         assert!(prices.is_err());
     }
 
     #[tokio::test]
     async fn should_keep_working_if_cached() {
         let mock_server = MockServer::builder()
-            .hard_coded_prices({
-                let mut prices = crate::PricesMap::new();
-                prices.insert(String::from("ETH"), 1000.0);
-                prices.insert(String::from("BTC"), 20000.0);
-                prices
-            })
+            .hard_coded_prices(build_hard_coded_prices())
             .build();
         let handle = mock_server.spwan();
         // Wait for the server to start
@@ -270,27 +289,24 @@ mod tests {
             // Disable cache expiration
             .cache_expiration(None)
             .build();
-        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        let prices =
+            cached_backend.get_prices(&["ETH", "MATIC"]).await.unwrap();
         assert_eq!(prices.get("ETH"), Some(&1000.0));
-        assert_eq!(prices.get("BTC"), Some(&20000.0));
+        assert_eq!(prices.get("MATIC"), Some(&1.0));
 
         // Simulate a server error
         handle.simulate_server_error(true);
         // The cache should still work
-        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        let prices =
+            cached_backend.get_prices(&["ETH", "MATIC"]).await.unwrap();
         assert_eq!(prices.get("ETH"), Some(&1000.0));
-        assert_eq!(prices.get("BTC"), Some(&20000.0));
+        assert_eq!(prices.get("MATIC"), Some(&1.0));
     }
 
     #[tokio::test]
     async fn should_not_work_if_the_cache_expired() {
         let mock_server = MockServer::builder()
-            .hard_coded_prices({
-                let mut prices = crate::PricesMap::new();
-                prices.insert(String::from("ETH"), 1000.0);
-                prices.insert(String::from("BTC"), 20000.0);
-                prices
-            })
+            .hard_coded_prices(build_hard_coded_prices())
             .build();
         let handle = mock_server.spwan();
         // Wait for the server to start
@@ -302,34 +318,32 @@ mod tests {
             .cache_expiration(Some(Duration::from_secs(2)))
             .use_cache_if_source_unavailable()
             .build();
-        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        let prices =
+            cached_backend.get_prices(&["ETH", "MATIC"]).await.unwrap();
         assert_eq!(prices.get("ETH"), Some(&1000.0));
-        assert_eq!(prices.get("BTC"), Some(&20000.0));
+        assert_eq!(prices.get("MATIC"), Some(&1.0));
 
         // Simulate a server error
         handle.simulate_server_error(true);
         // The cache should still work
-        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        let prices =
+            cached_backend.get_prices(&["ETH", "MATIC"]).await.unwrap();
         assert_eq!(prices.get("ETH"), Some(&1000.0));
-        assert_eq!(prices.get("BTC"), Some(&20000.0));
+        assert_eq!(prices.get("MATIC"), Some(&1.0));
 
         // Wait for the cache to expire
         tokio::time::sleep(Duration::from_secs(2)).await;
         // The cache should not work
-        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        let prices =
+            cached_backend.get_prices(&["ETH", "MATIC"]).await.unwrap();
         assert_eq!(prices.get("ETH"), None);
-        assert_eq!(prices.get("BTC"), None);
+        assert_eq!(prices.get("MATIC"), None);
     }
 
     #[tokio::test]
     async fn should_keep_working_if_cache_expired() {
         let mock_server = MockServer::builder()
-            .hard_coded_prices({
-                let mut prices = crate::PricesMap::new();
-                prices.insert(String::from("ETH"), 1000.0);
-                prices.insert(String::from("BTC"), 20000.0);
-                prices
-            })
+            .hard_coded_prices(build_hard_coded_prices())
             .build();
         let handle = mock_server.spwan();
         // Wait for the server to start
@@ -342,22 +356,38 @@ mod tests {
             .use_cache_if_source_unavailable()
             .even_if_expired()
             .build();
-        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        let prices =
+            cached_backend.get_prices(&["ETH", "MATIC"]).await.unwrap();
         assert_eq!(prices.get("ETH"), Some(&1000.0));
-        assert_eq!(prices.get("BTC"), Some(&20000.0));
+        assert_eq!(prices.get("MATIC"), Some(&1.0));
 
         // Simulate a server error
         handle.simulate_server_error(true);
         // The cache should still work
-        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        let prices =
+            cached_backend.get_prices(&["ETH", "MATIC"]).await.unwrap();
         assert_eq!(prices.get("ETH"), Some(&1000.0));
-        assert_eq!(prices.get("BTC"), Some(&20000.0));
+        assert_eq!(prices.get("MATIC"), Some(&1.0));
 
         // Wait for the cache to expire
         tokio::time::sleep(Duration::from_secs(2)).await;
         // The cache should still work
-        let prices = cached_backend.get_prices(&["ETH", "BTC"]).await.unwrap();
+        let prices =
+            cached_backend.get_prices(&["ETH", "MATIC"]).await.unwrap();
         assert_eq!(prices.get("ETH"), Some(&1000.0));
-        assert_eq!(prices.get("BTC"), Some(&20000.0));
+        assert_eq!(prices.get("MATIC"), Some(&1.0));
+    }
+
+    #[tokio::test]
+    async fn should_fail_if_token_not_listed_or_mapped() {
+        let mock_server = MockServer::builder()
+            .hard_coded_prices(build_hard_coded_prices())
+            .build();
+        let handle = mock_server.spwan();
+        // Wait for the server to start
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        let backend = handle.backend();
+        let prices = backend.get_prices(&["BTC"]).await.unwrap();
+        assert!(prices.is_empty());
     }
 }

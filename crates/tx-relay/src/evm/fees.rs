@@ -13,6 +13,7 @@ use webb::evm::ethers::middleware::gas_oracle::GasOracle;
 use webb::evm::ethers::prelude::U256;
 use webb::evm::ethers::types::Address;
 use webb::evm::ethers::utils::{format_units, parse_units};
+use webb_chains_info::chain_info_by_chain_id;
 use webb_price_oracle_backends::PriceBackend;
 use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
@@ -164,7 +165,7 @@ async fn generate_fee_info(
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
     let max_refund = parse_units(
         MAX_REFUND_USD / native_token_price,
-        native_token_decimals,
+        u32::from(native_token_decimals),
     )?
     .into();
 
@@ -213,8 +214,8 @@ fn calculate_transaction_fee(
     Ok(fee_with_profit)
 }
 
-/// Retrieves the token name of a given anchor contract. Wrapper prefixes are stripped in order
-/// to get a token name which coingecko understands.
+/// Returns the name and decimals of the wrapped token for the given chain.
+/// then converts it to the underlying token token name to be used in the price oracle.
 async fn get_wrapped_token_name_and_decimals(
     chain_id: TypedChainId,
     vanchor: Address,
@@ -231,12 +232,10 @@ async fn get_wrapped_token_name_and_decimals(
     let token_symbol = token_contract.symbol().call().await?;
     // TODO: add all supported tokens
     let name = match token_symbol.replace("webb", "").as_str() {
-        "WETH" => "ethereum",
-        "Alpha" => "ethereum",
-        "Standalone" => "ethereum",
+        "Alpha" | "Standalone" | "WETH" => "ETH",
         "tTNT-standalone" => "tTNT",
         // only used in tests
-        "WEBB" if cfg!(debug_assertions) => "ethereum",
+        "WEBB" if cfg!(debug_assertions) => "ETH",
         x => x,
     }
     .to_string();
@@ -244,73 +243,42 @@ async fn get_wrapped_token_name_and_decimals(
     Ok((name, decimals.into()))
 }
 
-/// Hardcodede mapping from chain id to base token name. Testnets use the mainnet name because
-/// otherwise there is no exchange rate available.
-///
-/// https://github.com/DefiLlama/chainlist/blob/main/constants/chainIds.json
-///
-/// These token names are the ids that is supported by coingecko.com.
-/// https://api.coingecko.com/api/v3/coins/list
-///
-/// FIXME: This is a temporary solution until we have a better way to get the token name.
-/// see: https://github.com/webb-tools/relayer/issues/412
+/// Returns the native token symbol and the decimals
+/// of the given chain identifier
 fn get_native_token_name_and_decimals(
     chain_id: TypedChainId,
-) -> Result<(&'static str, i32)> {
+) -> Result<(&'static str, u8)> {
     use TypedChainId::*;
-    let name = match chain_id {
-        Evm(id) => {
-            match id {
-                1 | // ethereum mainnet
-                    10 | // optimism mainnet
-                    5 | // goerli testnet
-                    421611 | // arbitrum mainnet
-                    534352 | // Scroll
-                    11155111 | // sepolia testnet
-                    420 | // optimism testnet
-                    421613 | // arbitrum goerli testnet
-                    534353 | // Scroll testnet
-                    5001 | // hermes testnet
-                    5002 | // athena testnet
-                    5003  // demeter testnet
-                => "ethereum",
-                // polygon mainnet and testnet
-                137 | 80001 => "matic-network",
-                // moonbeam mainnet and testnet
-                1284 | 1287 => "moonbeam",
-                43113 | 43114 => "avalanche-2",
-                _ => {
-                    // Typescript tests use randomly generated chain id, so we always return
-                    // "ethereum" in debug mode to make them work.
-                    if cfg!(debug_assertions) {
-                        "ethereum"
-                    } else {
-                        let chain_id = chain_id.chain_id().to_string();
-                        return Err(webb_relayer_utils::Error::ChainNotFound { chain_id });
-                    }
+    match chain_id {
+        Evm(id) => chain_info_by_chain_id(u64::from(id)).map_or_else(
+            || {
+                // Typescript tests use randomly generated chain id, so we always return
+                // "ethereum" in debug mode to make them work.
+                if cfg!(debug_assertions) {
+                    Ok(("ETH", 18))
+                } else {
+                    let chain_id = chain_id.chain_id().to_string();
+                    Err(webb_relayer_utils::Error::ChainNotFound { chain_id })
                 }
-            }
-        }
+            },
+            |info| {
+                Ok((info.native_currency.symbol, info.native_currency.decimals))
+            },
+        ),
         Substrate(id) => match id {
-            1080 => "tTNT",
+            1080 => Ok(("tTNT", 18)),
             _ => {
                 // During testing, we will use the tTNT token for all substrate chains.
                 if cfg!(debug_assertions) {
-                    "tTNT"
+                    Ok(("tTNT", 18))
                 } else {
                     let chain_id = chain_id.chain_id().to_string();
-                    return Err(webb_relayer_utils::Error::ChainNotFound {
-                        chain_id,
-                    });
+                    Err(webb_relayer_utils::Error::ChainNotFound { chain_id })
                 }
             }
         },
-        _ => {
-            return Err(webb_relayer_utils::Error::ChainNotFound {
-                chain_id: chain_id.chain_id().to_string(),
-            })
-        }
-    };
-    let decimals = 18;
-    Ok((name, decimals))
+        unknown => Err(webb_relayer_utils::Error::ChainNotFound {
+            chain_id: unknown.chain_id().to_string(),
+        }),
+    }
 }

@@ -2355,7 +2355,7 @@ dependencies = [
  "eyre",
  "getrandom 0.2.8",
  "hex",
- "prettyplease",
+ "prettyplease 0.1.25",
  "proc-macro2",
  "quote",
  "regex",
@@ -2381,7 +2381,7 @@ dependencies = [
  "eyre",
  "getrandom 0.2.8",
  "hex",
- "prettyplease",
+ "prettyplease 0.1.25",
  "proc-macro2",
  "quote",
  "regex",
@@ -4915,6 +4915,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "prettyplease"
+version = "0.2.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ceca8aaf45b5c46ec7ed39fff75f57290368c1846d33d24a122ca81416ab058"
+dependencies = [
+ "proc-macro2",
+ "syn 2.0.13",
+]
+
+[[package]]
 name = "primitive-types"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5272,6 +5282,7 @@ dependencies = [
  "http",
  "http-body 0.4.5",
  "hyper 0.14.25",
+ "hyper-rustls",
  "hyper-tls",
  "ipnet",
  "js-sys",
@@ -5281,16 +5292,20 @@ dependencies = [
  "once_cell",
  "percent-encoding",
  "pin-project-lite 0.2.9",
+ "rustls",
+ "rustls-pemfile",
  "serde",
  "serde_json",
  "serde_urlencoded 0.7.1",
  "tokio 1.27.0",
  "tokio-native-tls",
+ "tokio-rustls",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "web-sys",
+ "webpki-roots",
  "winreg",
 ]
 
@@ -8001,6 +8016,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb-chains-info"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "prettyplease 0.2.4",
+ "proc-macro2",
+ "quote",
+ "serde",
+ "serde_json",
+ "syn 2.0.13",
+ "toml 0.7.3",
+]
+
+[[package]]
 name = "webb-event-watcher-traits"
 version = "0.1.0"
 dependencies = [
@@ -8142,6 +8171,7 @@ dependencies = [
  "tokio 1.27.0",
  "typed-builder 0.12.0",
  "webb 0.5.22",
+ "webb-chains-info",
  "webb-relayer-store",
  "webb-relayer-utils 0.1.0",
 ]
@@ -8185,7 +8215,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer"
-version = "0.4.1"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -8347,6 +8377,7 @@ dependencies = [
  "tokio 1.27.0",
  "tracing",
  "webb 0.5.22",
+ "webb-chains-info",
  "webb-price-oracle-backends",
  "webb-proposals",
  "webb-relayer-config",
