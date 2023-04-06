@@ -1,9 +1,15 @@
 chain-ids = [
+    1, # Ethereum Mainnet
     5, # Goerli Testnet
+    137, # Polygon Mainnet
     80001, # Polygon Mumbai Testnet
+    42161, # Arbitrum One Mainnet
     421613, # Arbitrum Goerli Testnet
+    534352, # Scroll Mainnet
     534353, # Scroll Alpha Testnet
     11155111, # Sepolia Testnet
+    1284, # Moonbeam Mainnet
+    1285, # Moonriver
     1287, # Moonbase Alpha
 ]
 
@@ -17,4 +23,4 @@ coingecko-coin-id = "moonbeam"
 # Since the Arbitrum Goerli Testnet is not yet listed on CoinGecko.
 # so we use the mainnet coin id instead.
 [overrides.421613]
-coingecko-coin-id = "arbitrum"
+coingecko-coin-id = "ethereum"
