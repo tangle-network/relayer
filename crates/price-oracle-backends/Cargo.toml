@@ -11,6 +11,8 @@ repository = { workspace = true }
 [dependencies]
 webb-relayer-utils = { workspace = true }
 webb-relayer-store = { workspace = true }
+webb-chains-info = { workspace = true }
+
 async-trait = { workspace = true }
 futures = { workspace = true }
 serde = { workspace = true }
