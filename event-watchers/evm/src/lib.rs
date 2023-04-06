@@ -25,6 +25,8 @@ use webb::evm::ethers::{providers, types};
 
 pub mod signature_bridge_watcher;
 
+#[doc(hidden)]
+pub mod masp;
 /// A module for listening on open vanchor events.
 #[doc(hidden)]
 pub mod open_vanchor;
