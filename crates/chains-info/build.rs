@@ -135,20 +135,17 @@ fn bake_simple_chains_info(
         let native_currency_name = &native_currency.name;
         let native_currency_symbol = &native_currency.symbol;
         let native_currency_decimals = native_currency.decimals;
-        let maybe_coingecko_coin_id =
-            coingecko_coins_list.iter().find_map(|coin| {
-                if coin.symbol.to_lowercase()
-                    == native_currency_symbol.to_lowercase()
-                {
-                    Some(coin.id.clone())
-                } else {
-                    None
-                }
-            });
         // if the chain has a coingecko coin id, use it
         // otherwise use the one from the coingecko coins list
         let maybe_coingecko_coin_id =
-            chain.coingecko_coin_id.clone().or(maybe_coingecko_coin_id);
+            chain.coingecko_coin_id.clone().or_else(|| {
+                coingecko_coins_list.iter().find_map(|coin| {
+                    coin.symbol
+                        .to_lowercase()
+                        .eq(&native_currency_symbol.to_lowercase())
+                        .then(|| coin.id.clone())
+                })
+            });
         let coingecko_coin_id = if let Some(id) = maybe_coingecko_coin_id {
             quote::quote! { Some(#id) }
         } else {
