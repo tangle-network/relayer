@@ -1,6 +1,6 @@
 chain-ids = [
     5, # Goerli Testnet
-    10008, # Polygon Mumbai Testnet
+    80001, # Polygon Mumbai Testnet
     421613, # Arbitrum Goerli Testnet
     534353, # Scroll Alpha Testnet
     11155111, # Sepolia Testnet
