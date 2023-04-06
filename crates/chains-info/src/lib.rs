@@ -21,6 +21,6 @@ pub fn chain_info_by_chain_id(
     chains::CHAINS_INFO
         .binary_search_by_key(&chain_id, |(id, _)| *id)
         .ok()
-        .map(|index| &chains::CHAINS_INFO[index])
+        .and_then(|index| chains::CHAINS_INFO.get(index))
         .map(|(_, info)| info)
 }
