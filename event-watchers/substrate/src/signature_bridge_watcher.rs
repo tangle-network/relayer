@@ -34,7 +34,7 @@ use webb::substrate::protocol_substrate_runtime::api::signature_bridge::events::
 use std::borrow::Cow;
 use webb::substrate::scale::Encode;
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
-use webb_relayer_utils::metric;
+use webb_relayer_utils::{metric, Error};
 
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
@@ -177,7 +177,7 @@ where
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
-            .unwrap()
+            .ok_or(Error::ReadSubstrateStorageError)?
             .0;
 
         // Verify proposal signature
@@ -221,7 +221,7 @@ where
             pallet_name: Cow::Borrowed("SignatureBridge"),
             call_name: Cow::Borrowed("execute_proposal"),
             fields: vec![
-                Value::u128(typed_chain_id.chain_id() as u128),
+                Value::u128(u128::from(typed_chain_id.chain_id())),
                 Value::from_bytes(proposal_data),
                 Value::from_bytes(signature),
             ],
@@ -264,7 +264,7 @@ where
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
-            .unwrap()
+            .ok_or(Error::ReadSubstrateStorageError)?
             .0;
         // we need to do some checks here:
         // 1. convert the public key to address and check it is not the same as the current maintainer.
@@ -290,7 +290,7 @@ where
             .await?
             .fetch(&current_nonce)
             .await?
-            .unwrap();
+            .expect("fetch current nonce from storage");
 
         if nonce <= current_nonce {
             tracing::warn!(
@@ -314,17 +314,21 @@ where
             signature = %hex::encode(&signature),
         );
 
+        let mut message = nonce.to_be_bytes().to_vec();
+        message.extend_from_slice(&new_maintainer);
+
         let set_maintainer_call = SetMaintainer {
-            message: BoundedVec(new_maintainer.clone()),
+            message: BoundedVec(message.clone()),
             signature: BoundedVec(signature.clone()),
         };
 
         // webb dynamic payload
+        tracing::debug!("DKG Message Payload : {:?}", message);
         let set_maintainer_tx = WebbDynamicTxPayload {
             pallet_name: Cow::Borrowed("SignatureBridge"),
             call_name: Cow::Borrowed("set_maintainer"),
             fields: vec![
-                Value::from_bytes(new_maintainer),
+                Value::from_bytes(message),
                 Value::from_bytes(signature),
             ],
         };
@@ -346,16 +350,6 @@ where
         );
         Ok(())
     }
-}
-
-pub fn parse_nonce_from_proposal_data(proposal_data: &[u8]) -> u32 {
-    let nonce_bytes = proposal_data[36..40].try_into().unwrap_or_default();
-    u32::from_be_bytes(nonce_bytes)
-}
-
-pub fn parse_call_from_proposal_data(proposal_data: &[u8]) -> Vec<u8> {
-    // Not [36..] because there are 4 byte of zero padding to match Solidity side
-    proposal_data[40..].to_vec()
 }
 
 pub fn validate_ecdsa_signature(

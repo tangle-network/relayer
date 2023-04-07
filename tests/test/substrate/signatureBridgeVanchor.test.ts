@@ -131,7 +131,9 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     });
 
     // force set maintainer
+    const refreshNonce = 0;
     const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
+      refreshNonce,
       `0x${uncompressedKey}`
     );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
@@ -325,7 +327,7 @@ async function vanchorDeposit(
   const extAmount = currencyToUnitI128(10);
   const fee = 0;
   const refund = 0;
-  const assetId = new Uint8Array([ 0, 0, 0, 0 ]); // WEBB native token asset Id.
+  const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
   // Empty leaves
   leavesMap[outputChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);

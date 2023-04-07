@@ -42,12 +42,10 @@ impl ConstantWithMaxRetryCount {
 
 impl Backoff for ConstantWithMaxRetryCount {
     fn next_backoff(&mut self) -> Option<Duration> {
-        if self.count < self.max_retry_count {
+        (self.count < self.max_retry_count).then(|| {
             self.count += 1;
-            Some(self.interval)
-        } else {
-            None
-        }
+            self.interval
+        })
     }
 
     fn reset(&mut self) {

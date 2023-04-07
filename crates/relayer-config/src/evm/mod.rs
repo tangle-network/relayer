@@ -11,7 +11,7 @@ use super::*;
 
 /// EvmChainConfig is the configuration for the EVM based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct EvmChainConfig {
     /// String that groups configuration for this chain on a human-readable name.
     pub name: String,
@@ -25,7 +25,7 @@ pub struct EvmChainConfig {
     #[serde(skip_serializing)]
     pub ws_endpoint: RpcUrl,
     /// Block confirmations
-    #[serde(skip_serializing)]
+    #[serde(skip_serializing, default)]
     pub block_confirmations: u32,
     /// Block Explorer for this chain.
     ///
@@ -34,7 +34,6 @@ pub struct EvmChainConfig {
     #[serde(skip_serializing)]
     pub explorer: Option<url::Url>,
     /// chain specific id (output of chainId opcode on EVM networks)
-    #[serde(rename(serialize = "chainId"))]
     pub chain_id: u32,
     /// The Private Key of this account on this network
     /// the format is more dynamic here:
@@ -69,12 +68,13 @@ pub struct EvmChainConfig {
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
     /// Block poller/listening configuration
+    #[serde(skip_serializing, default)]
     pub block_poller: Option<BlockPollerConfig>,
 }
 
 /// Linked anchor config for Evm based target system
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct EvmLinkedAnchorConfig {
     /// The chain Id
     pub chain_id: u32,
@@ -96,41 +96,38 @@ pub enum Contract {
 
 /// CommonContractConfig represents the common configuration for contracts.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct CommonContractConfig {
     /// The address of this contract on this chain.
     pub address: Address,
     /// the block number where this contract got deployed at.
-    #[serde(rename(serialize = "deployedAt"))]
     pub deployed_at: u64,
 }
 
 /// VAnchorContractConfig represents the configuration for the VAnchor contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct VAnchorContractConfig {
     /// Common contract configuration.
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
     #[serde(rename(serialize = "proposalSigningBackend"))]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
-    #[serde(rename(serialize = "linkedAnchors"), default)]
+    #[serde(default)]
     pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
 }
 
 /// Signature Bridge contract configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct SignatureBridgeContractConfig {
     /// Common contract configuration.
     #[serde(flatten)]
     pub common: CommonContractConfig,
     /// Controls the events watcher
-    #[serde(rename(serialize = "eventsWatcher"))]
     pub events_watcher: EventsWatcherConfig,
 }

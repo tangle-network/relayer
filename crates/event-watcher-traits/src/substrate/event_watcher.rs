@@ -149,6 +149,8 @@ where
         handlers: Vec<EventHandlerFor<Self, RuntimeConfig>>,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
+        const MAX_RETRY_COUNT: usize = 5;
+
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let metrics_clone = metrics.clone();
         let task = || async {
@@ -244,7 +246,6 @@ where
                     // wraps each handler future in a retry logic, that will retry the handler
                     // if it fails, up to `MAX_RETRY_COUNT`, after this it will ignore that event for
                     // that specific handler.
-                    const MAX_RETRY_COUNT: usize = 5;
                     let tasks = handlers.iter().map(|handler| {
                         // a constant backoff with maximum retry count is used here.
                         let backoff = retry::ConstantWithMaxRetryCount::new(
@@ -264,7 +265,7 @@ where
                     // this event will be marked as handled if at least one handler succeeded.
                     // this because, for the failed events, we arleady tried to handle them
                     // many times (at this point), and there is no point in trying again.
-                    let mark_as_handled = result.iter().any(|r| r.is_ok());
+                    let mark_as_handled = result.iter().any(Result::is_ok);
                     // also, for all the failed event handlers, we should print what went
                     // wrong.
                     result.iter().for_each(|r| {

@@ -8,7 +8,7 @@ use super::*;
 
 /// Linked anchor config for Evm based target system
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct RawResourceId {
     /// Raw resource Id
     pub resource_id: H256,

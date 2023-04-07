@@ -15,6 +15,8 @@ webb-relayer-handler-utils = { workspace = true }
 webb-relayer-config = { workspace = true }
 webb-relayer-context = { workspace = true }
 webb-relayer-utils = { workspace = true }
+webb-price-oracle-backends = { workspace = true }
+webb-chains-info = { workspace = true }
 
 tracing = { workspace = true }
 futures = { workspace = true }
@@ -27,14 +29,10 @@ ethereum-types = { workspace = true }
 serde = { workspace = true }
 
 once_cell = "1.17.0"
-chrono = {version = "0.4.23", features = ["serde"] }
+chrono = { version = "0.4.23", features = ["serde"] }
 
 [features]
 default = ["std", "evm", "substrate"]
 std = []
-evm = [
-    "webb-relayer-context/evm",
-]
-substrate = [
-    "webb-relayer-context/substrate",
-]
+evm = ["webb-relayer-context/evm"]
+substrate = ["webb-relayer-context/substrate"]

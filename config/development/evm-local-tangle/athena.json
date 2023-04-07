@@ -1,0 +1,55 @@
+{
+  "evm": {
+    "athena": {
+      "name": "athena",
+      "http-endpoint": "http://localhost:5002",
+      "ws-endpoint": "ws://localhost:5002",
+      "chain-id": 5002,
+      "private-key": "$ATHENA_PRIVATE_KEY",
+      "tx-queue": {
+        "max-sleep-interval": 1500
+      },
+      "enabled": true,
+      "contracts": [
+        {
+          "contract": "VAnchor",
+          "address": "0x6595b34ED0a270B10a586FC1EA22030A95386f1e",
+          "deployed-at": 1,
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          },
+          "linked-anchors": [
+            {
+              "type": "Evm",
+              "chain": "hermes",
+              "chain-id": 5001,
+              "address": "0x6595b34ED0a270B10a586FC1EA22030A95386f1e"
+            },
+            {
+              "type": "Evm",
+              "chain": "demeter",
+              "chain-id": 5003,
+              "address": "0x6595b34ED0a270B10a586FC1EA22030A95386f1e"
+            }
+          ],
+          "proposal-signing-backend": {
+            "type": "DKGNode",
+            "chain-id": 1080
+          }
+        },
+        {
+          "contract": "SignatureBridge",
+          "address": "0xf2e246bb76df876cef8b38ae84130f4f55de395b",
+          "deployed-at": 1,
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          }
+        }
+      ]
+    }
+  }
+}

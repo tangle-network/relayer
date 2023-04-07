@@ -11,7 +11,6 @@ use webb_relayer_config::{
     cli::{create_store, load_config, setup_logger, Opts},
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_utils::Result;
 
 /// Starts all background services for all chains configured in the config file.
 ///
@@ -21,7 +20,7 @@ use webb_relayer_utils::Result;
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `store` -[Sled](https://sled.rs)-based database store
-pub async fn ignite(ctx: &RelayerContext) -> crate::Result<()> {
+pub async fn ignite(ctx: &RelayerContext) -> anyhow::Result<()> {
     tracing::debug!(
         "Relayer configuration: {}",
         serde_json::to_string_pretty(&ctx.config)?
@@ -34,7 +33,7 @@ pub async fn ignite(ctx: &RelayerContext) -> crate::Result<()> {
         }
 
         let mut chain_config = chain_config.clone();
-        let api_key_string = std::env::var("ETH1_INFURA_API_KEY").unwrap();
+        let api_key_string = std::env::var("ETH1_INFURA_API_KEY")?;
         chain_config.eth1_endpoint = chain_config
             .eth1_endpoint
             .replace("ETH1_INFURA_API_KEY", &api_key_string);
@@ -79,7 +78,7 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     // The RelayerContext takes a configuration, and populates objects that are needed
     // throughout the lifetime of the relayer. Items such as wallets and providers, as well
     // as a convenient place to access the configuration.
-    let ctx = RelayerContext::new(config, store);
+    let ctx = RelayerContext::new(config, store)?;
     tracing::trace!("Created persistent storage..");
     // The build_web_relayer command sets up routing (endpoint queries / requests mapped to handled code)
     // so clients can interact with the relayer

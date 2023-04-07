@@ -17,7 +17,6 @@ use axum::http::StatusCode;
 use axum::Json;
 use std::{collections::HashMap, sync::Arc};
 
-use crate::routes::HandlerError;
 use ethereum_types::Address;
 use serde::Serialize;
 use webb_proposals::{
@@ -25,6 +24,7 @@ use webb_proposals::{
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::LeafCacheStore;
+use webb_relayer_utils::HandlerError;
 
 use super::OptionalRangeQuery;
 
@@ -116,12 +116,10 @@ pub async fn handle_leaves_cache_evm(
         ResourceId::new(src_target_system, src_typed_chain_id);
     let leaves = ctx
         .store()
-        .get_leaves_with_range(history_store_key, query_range.into())
-        .unwrap();
+        .get_leaves_with_range(history_store_key, query_range.into())?;
     let last_queried_block = ctx
         .store()
-        .get_last_deposit_block_number(history_store_key)
-        .unwrap();
+        .get_last_deposit_block_number(history_store_key)?;
 
     Ok(Json(LeavesCacheResponse {
         leaves,
@@ -167,12 +165,10 @@ pub async fn handle_leaves_cache_substrate(
 
     let leaves = ctx
         .store()
-        .get_leaves_with_range(history_store_key, query_range.into())
-        .unwrap();
+        .get_leaves_with_range(history_store_key, query_range.into())?;
     let last_queried_block = ctx
         .store()
-        .get_last_deposit_block_number(history_store_key)
-        .unwrap();
+        .get_last_deposit_block_number(history_store_key)?;
 
     Ok(Json(LeavesCacheResponse {
         leaves,

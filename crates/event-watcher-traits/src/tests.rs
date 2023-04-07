@@ -86,7 +86,7 @@ async fn substrate_event_watcher_should_work() -> webb_relayer_utils::Result<()>
     let client = OnlineClient::<PolkadotConfig>::new().await?;
     let watcher = TestEventsWatcher::default();
     let config = webb_relayer_config::WebbRelayerConfig::default();
-    let ctx = RelayerContext::new(config, store.clone());
+    let ctx = RelayerContext::new(config, store.clone())?;
     let metrics = ctx.metrics.clone();
     let event_watcher_config = EventsWatcherConfig::default();
     watcher

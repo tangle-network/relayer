@@ -36,7 +36,7 @@ pub async fn handle_relayer_info(
                 .private_key
                 .as_ref()
                 .ok_or(webb_relayer_utils::Error::MissingSecrets)?;
-            let key = SecretKey::from_be_bytes(key.as_bytes())?;
+            let key = SecretKey::from_bytes(key.as_bytes().into())?;
             let wallet = LocalWallet::from(key);
             v.beneficiary = Some(wallet.address());
             webb_relayer_utils::Result::Ok(())

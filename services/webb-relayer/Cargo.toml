@@ -1,6 +1,6 @@
 [package]
 name = "webb-relayer"
-version = "0.4.1"
+version = "0.5.0"
 description = "The Webb Relayer toolkit"
 exclude = ["tests", "config", ".github", "ci", "assets", "docker"]
 authors = { workspace = true }
@@ -25,6 +25,7 @@ required-features = ["cli"]
 
 [dependencies]
 webb-proposal-signing-backends = { workspace = true }
+webb-bridge-registry-backends = { workspace = true }
 webb-relayer-tx-queue = { workspace = true }
 webb-relayer-handlers = { workspace = true }
 webb-relayer-store = { workspace = true }
@@ -45,6 +46,8 @@ config = { workspace = true }
 serde_json = { workspace = true }
 paw = { workspace = true, optional = true }
 webb = { workspace = true }
+sp-core = { workspace = true, optional = true }
+sp-runtime = { workspace = true, optional = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true, optional = true }
 webb-proposals = { workspace = true }
@@ -61,5 +64,11 @@ tempfile = { workspace = true }
 default = ["evm-runtime", "substrate-runtime"]
 cli = ["evm-runtime", "substrate-runtime", "anyhow", "paw", "webb-relayer-config/cli"]
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
-substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]
+substrate-runtime = [
+  "webb/substrate-runtime",
+  "webb-proposals/substrate",
+  "webb-relayer-tx-queue/substrate",
+  "sp-core",
+  "sp-runtime",
+]
 integration-tests = ["webb-relayer-config/integration-tests"]

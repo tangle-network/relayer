@@ -16,12 +16,13 @@
 //! # Relayer Context Module 🕸️
 //!
 //! A module for managing the context of the relayer.
-use std::convert::TryFrom;
 use std::sync::Arc;
 use std::time::Duration;
+use std::{collections::HashMap, convert::TryFrom};
 
 use tokio::sync::{broadcast, Mutex};
 
+use webb::evm::ethers;
 #[cfg(feature = "evm")]
 use webb::evm::ethers::core::k256::SecretKey;
 #[cfg(feature = "evm")]
@@ -29,10 +30,16 @@ use webb::evm::ethers::prelude::*;
 
 #[cfg(feature = "substrate")]
 use sp_core::sr25519::Pair as Sr25519Pair;
+use webb::evm::ethers::middleware::gas_oracle::{
+    Cache as CachedGasOracle, Etherscan as EtherscanGasOracle,
+    Median as GasOracleMedian, ProviderOracle,
+};
 #[cfg(feature = "substrate")]
 use webb::substrate::subxt;
 
-use coingecko::CoinGeckoClient;
+use webb_price_oracle_backends::{
+    CachedPriceBackend, CoinGeckoBackend, DummyPriceBackend, PriceOracleMerger,
+};
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric::{self, Metrics};
 
@@ -53,10 +60,10 @@ pub struct RelayerContext {
     /// Represents the metrics for the relayer
     pub metrics: Arc<Mutex<metric::Metrics>>,
     store: SledStore,
-    /// API client for https://www.coingecko.com/
-    coin_gecko_client: Arc<CoinGeckoClient>,
-    /// API client for https://etherscan.io/
-    etherscan_client: Client,
+    /// Price backend for fetching prices.
+    price_oracle: Arc<PriceOracleMerger>,
+    /// Hashmap of <ChainID, Etherscan Client>
+    etherscan_clients: HashMap<u32, ethers::etherscan::Client>,
 }
 
 impl RelayerContext {
@@ -64,19 +71,52 @@ impl RelayerContext {
     pub fn new(
         config: webb_relayer_config::WebbRelayerConfig,
         store: SledStore,
-    ) -> Self {
+    ) -> webb_relayer_utils::Result<Self> {
         let (notify_shutdown, _) = broadcast::channel(2);
-        let metrics = Arc::new(Mutex::new(Metrics::new()));
-        let coin_gecko_client = Arc::new(CoinGeckoClient::default());
-        let etherscan_client = Client::new_from_env(Chain::Mainnet).unwrap();
-        Self {
+        let metrics = Arc::new(Mutex::new(Metrics::new()?));
+
+        let dummy_backend = {
+            let price_map = config
+                .assets
+                .iter()
+                .map(|(token, details)| (token.clone(), details.price))
+                .collect();
+            DummyPriceBackend::new(price_map)
+        };
+        // **chef's kiss** this is so beautiful
+        let cached_coingecko_backend = CachedPriceBackend::builder()
+            .backend(CoinGeckoBackend::builder().build())
+            .store(store.clone())
+            .use_cache_if_source_unavailable()
+            .even_if_expired()
+            .build();
+        // merge all the price oracle backends
+        let price_oracle = PriceOracleMerger::builder()
+            .merge(Box::new(cached_coingecko_backend))
+            .merge(Box::new(dummy_backend))
+            .build();
+        let price_oracle = Arc::new(price_oracle);
+        let mut etherscan_clients: HashMap<u32, Client> = HashMap::new();
+        for (chain, etherscan_config) in &config.evm_etherscan {
+            let client_builder = ethers::etherscan::Client::builder()
+                .chain(*chain)?
+                .with_api_key(etherscan_config.api_key.as_str());
+            // if the api url is set, override the default
+            let client = if let Some(ref api_url) = etherscan_config.api_url {
+                client_builder.with_api_url(api_url.as_str())?.build()?
+            } else {
+                client_builder.build()?
+            };
+            etherscan_clients.insert(etherscan_config.chain_id, client);
+        }
+        Ok(Self {
             config,
             notify_shutdown,
             metrics,
             store,
-            coin_gecko_client,
-            etherscan_client,
-        }
+            price_oracle,
+            etherscan_clients,
+        })
     }
     /// Returns a broadcast receiver handle for the shutdown signal.
     pub fn shutdown_signal(&self) -> Shutdown {
@@ -125,7 +165,7 @@ impl RelayerContext {
             .private_key
             .as_ref()
             .ok_or(webb_relayer_utils::Error::MissingSecrets)?;
-        let key = SecretKey::from_be_bytes(private_key.as_bytes())?;
+        let key = SecretKey::from_bytes(private_key.as_bytes().into())?;
         let chain_id = chain_config.chain_id;
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
@@ -181,14 +221,38 @@ impl RelayerContext {
         &self.store
     }
 
-    /// Returns API client for https://www.coingecko.com/
-    pub fn coin_gecko_client(&self) -> &Arc<CoinGeckoClient> {
-        &self.coin_gecko_client
+    /// Returns a price oracle for fetching token prices.
+    pub fn price_oracle(&self) -> Arc<PriceOracleMerger> {
+        self.price_oracle.clone()
     }
 
-    /// Returns API client for https://etherscan.io/
-    pub fn etherscan_client(&self) -> &Client {
-        &self.etherscan_client
+    /// Returns a gas oracle for the given chain.
+    pub async fn gas_oracle(
+        &self,
+        chain_id: u32,
+    ) -> webb_relayer_utils::Result<GasOracleMedian> {
+        let chain_provider = self.evm_provider(&chain_id.to_string()).await?;
+        let provider_gas_oracle = ProviderOracle::new(chain_provider);
+        let mut gas_oracle = GasOracleMedian::new();
+        // Give only 10% of the weight to the provider gas oracle
+        // since it is not very accurate.
+        gas_oracle.add_weighted(0.1, provider_gas_oracle);
+        // Check if we have etherscan client for this chain
+        if let Some(etherscan_client) = self.etherscan_clients.get(&chain_id) {
+            let etherscan_gas_oracle =
+                EtherscanGasOracle::new(etherscan_client.clone());
+            let cached = CachedGasOracle::new(
+                // Cache for 5 minutes to avoid hitting etherscan rate limit
+                Duration::from_secs(5 * 60),
+                etherscan_gas_oracle,
+            );
+            // Etherscan gas oracle is more accurate than the provider gas oracle
+            // so give it the remaining 90% of the weight.
+            gas_oracle.add_weighted(0.9, cached);
+        }
+        // TODO: Add more gas oracles
+
+        Ok(gas_oracle)
     }
 }
 

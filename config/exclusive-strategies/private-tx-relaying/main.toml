@@ -6,3 +6,10 @@ port = 9955
 governance-relay = false
 data-query = false
 private-tx-relay = true
+
+[evm-etherscan.goerli]
+chain-id = 5
+api-key = "$ETHERSCAN_API_KEY"
+[evm-etherscan.sepolia]
+chain-id = 11155111
+api-key = "$ETHERSCAN_API_KEY"

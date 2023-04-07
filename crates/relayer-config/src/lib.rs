@@ -34,6 +34,8 @@ pub mod block_poller;
 /// CLI configuration
 #[cfg(feature = "cli")]
 pub mod cli;
+/// Module for all the default values.
+pub mod defaults;
 /// Event watcher configuration
 pub mod event_watcher;
 /// EVM configuration
@@ -49,42 +51,26 @@ use evm::EvmChainConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use substrate::SubstrateConfig;
-
-/// The default port the relayer will listen on. Defaults to 9955.
-const fn default_port() -> u16 {
-    9955
-}
-/// Leaves watcher is set to `true` by default.
-const fn enable_leaves_watcher_default() -> bool {
-    true
-}
-/// Data query access is set to `true` by default.
-const fn enable_data_query_default() -> bool {
-    true
-}
-/// The maximum events per step is set to `100` by default.
-const fn max_blocks_per_step_default() -> u64 {
-    100
-}
-/// The print progress interval is set to `7_000` by default.
-const fn print_progress_interval_default() -> u64 {
-    7_000
-}
+use webb::evm::ethers::types::Chain;
+use webb_relayer_types::etherscan_api::EtherscanApiKey;
 
 /// WebbRelayerConfig is the configuration for the webb relayer.
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct WebbRelayerConfig {
     /// WebSocket Server Port number
     ///
     /// default to 9955
-    #[serde(default = "default_port", skip_serializing)]
+    #[serde(default = "defaults::relayer_port", skip_serializing)]
     pub port: u16,
     /// EVM based networks and the configuration.
     ///
     /// a map between chain name and its configuration.
     #[serde(default)]
     pub evm: HashMap<String, EvmChainConfig>,
+    /// Etherscan API key configuration for evm based chains.
+    #[serde(default, skip_serializing)]
+    pub evm_etherscan: HashMap<Chain, EtherscanApiConfig>,
     /// ETH2 based networks and the configuration
     ///
     /// a map between chain name and its configuration
@@ -108,6 +94,11 @@ pub struct WebbRelayerConfig {
     /// 3. Private transaction relaying
     #[serde(default)]
     pub features: FeaturesConfig,
+    /// Configuration for the assets that are not listed on any exchange.
+    ///
+    /// it is a simple map between the asset symbol and its configuration.
+    #[serde(default = "defaults::unlisted_assets")]
+    pub assets: HashMap<String, UnlistedAssetConfig>,
 }
 
 impl WebbRelayerConfig {
@@ -143,7 +134,7 @@ impl WebbRelayerConfig {
 
 /// ExperimentalConfig is the configuration for the Experimental Options.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct ExperimentalConfig {
     /// Enable the Smart Anchor Updates when it comes to signaling
     /// the bridge to create the proposals.
@@ -155,7 +146,7 @@ pub struct ExperimentalConfig {
 
 /// FeaturesConfig is the configuration for running relayer with option.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct FeaturesConfig {
     /// Enable data quering for leafs
     pub data_query: bool,
@@ -164,6 +155,7 @@ pub struct FeaturesConfig {
     /// Enable private tx relaying
     pub private_tx_relay: bool,
 }
+
 impl Default for FeaturesConfig {
     fn default() -> Self {
         Self {
@@ -174,9 +166,26 @@ impl Default for FeaturesConfig {
     }
 }
 
+/// Configuration to add etherscan API key
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
+pub struct EtherscanApiConfig {
+    /// Chain Id
+    pub chain_id: u32,
+    /// A wrapper type around the `String` to allow reading it from the env.
+    #[serde(skip_serializing)]
+    pub api_key: EtherscanApiKey,
+    /// An optional URL to use for the Etherscan API instead of the default.
+    ///
+    /// This is useful for testing against a local Etherscan API.
+    /// Or in case of testnets, the Etherscan GasOracle API is not available.
+    /// So we can use the mainnet API URL to get the gas price.
+    pub api_url: Option<url::Url>,
+}
+
 /// TxQueueConfig is the configuration for the TxQueue.
 #[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "kebab-case")]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
 pub struct TxQueueConfig {
     /// Maximum number of milliseconds to wait before dequeuing a transaction from
     /// the queue.
@@ -187,6 +196,69 @@ impl Default for TxQueueConfig {
     fn default() -> Self {
         Self {
             max_sleep_interval: 10_000,
+        }
+    }
+}
+
+/// UnlistedAssetConfig is the configuration for the assets that are not listed on any exchange.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
+pub struct UnlistedAssetConfig {
+    /// The Price of the asset in USD.
+    pub price: f64,
+    /// The name of the asset.
+    pub name: String,
+    /// The decimals of the asset.
+    pub decimals: u8,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn all_config_files_are_correct() {
+        // This test is to make sure that all the config files are correct.
+        // This walks all the directories inside the root of the config directory
+        // and tries to parse the config file(s) inside it.
+
+        let git_root = std::process::Command::new("git")
+            .args(["rev-parse", "--show-toplevel"])
+            .output()
+            .expect("Failed to get git root")
+            .stdout;
+        let git_root = std::str::from_utf8(&git_root)
+            .expect("Failed to parse git root")
+            .trim();
+        let config_dir = std::path::Path::new(git_root).join("config");
+        let config_dirs =
+            glob::glob(config_dir.join("**").join("**").to_str().unwrap())
+                .expect("Failed to read config directory")
+                .filter_map(Result::ok)
+                .filter(|p| p.is_dir())
+                .collect::<Vec<_>>();
+        assert!(
+            !config_dirs.is_empty(),
+            "No config directories found in the config directory"
+        );
+        let cwd =
+            std::env::current_dir().expect("Failed to get current directory");
+        // For each config directory, we try to parse the config file(s) inside it.
+        for config_subdir in config_dirs {
+            std::env::set_current_dir(&config_subdir)
+                .expect("Failed to set current directory");
+            // Load the example dot env file.
+            let _ = dotenv::from_filename(".env.example");
+            if let Err(e) = utils::load(&config_subdir) {
+                panic!("Failed to parse config file in directory: {config_subdir:?} with error: {e}");
+            }
+
+            dotenv::vars().for_each(|(k, _)| {
+                std::env::remove_var(k);
+            });
+
+            std::env::set_current_dir(&cwd)
+                .expect("Failed to set current directory");
         }
     }
 }

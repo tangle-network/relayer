@@ -14,7 +14,7 @@ repository = { workspace = true }
 webb-relayer-utils = { workspace = true }
 
 tracing = { workspace = true }
-sled = { workspace = true }
+sled = { workspace = true, optional = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 hex = { workspace = true }
@@ -25,3 +25,8 @@ webb-proposals = { workspace = true }
 tempfile = { workspace = true }
 
 parking_lot = "^0.12"
+
+[features]
+default = ["std", "sled"]
+std = []
+sled = ["dep:sled"]

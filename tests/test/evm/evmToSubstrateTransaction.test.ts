@@ -77,12 +77,11 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   let signatureVBridge: VBridge.VBridge;
 
   // Mnemonic seed phrase to created governor key used for signing proposals.
-  const filePath = path.join(path.resolve('../'), 'sample_seed.txt');
-  const mnemonic = fs.readFileSync(filePath);
+  // DO NOT USE IN PRODUCTION
+  const mnemonic =
+    'point shiver hurt flight fun online hub antenna engine pave chef fantasy front interest poem accident catch load frequent praise elite pet remove used';
   const governorWallet = ethers.Wallet.fromMnemonic(mnemonic.toString());
   const GOV = governorWallet.privateKey;
-  // File path to secrets containing mnemonic seed phrase
-  const secretFile = `file:${filePath}`;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
   // slice 0x04 from public key
   const uncompressedKey = governorWallet
@@ -196,7 +195,10 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     // save the evm chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
-      proposalSigningBackend: { type: 'Mocked', privateKey: secretFile },
+      proposalSigningBackend: {
+        type: 'Mocked',
+        privateKey: governorWallet.privateKey,
+      },
       linkedAnchors: [
         { type: 'Raw', resourceId: substrateResourceId.toString() },
       ],
@@ -207,7 +209,9 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     // 2. We need to whitelist chain Id
 
     // force set maintainer
+    const refreshNonce = 0;
     const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
+      refreshNonce,
       `0x${uncompressedKey}`
     );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
@@ -436,7 +440,7 @@ async function vanchorWithdraw(
   const pk_hex = fs.readFileSync(pkPath).toString('hex');
   const pk = hexToU8a(pk_hex);
 
-  let note1 = depositNote;
+  const note1 = depositNote;
   const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(publicAmountUint);
   const notes = [note1, note2];
@@ -457,7 +461,7 @@ async function vanchorWithdraw(
   // Configure a new proving manager with direct call
   const provingManager = new ArkworksProvingManager(null);
   const leavesMap = {};
-  const assetId = new Uint8Array([ 0, 0, 0, 0 ]); // WEBB native token asset Id.
+  const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
   const address = account.address;
   const extAmount = currencyToUnitI128(10);
   const fee = 0;
@@ -513,7 +517,7 @@ async function vanchorWithdraw(
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };
-  let vanchorProofData = {
+  const vanchorProofData = {
     proof: `0x${data.proof}`,
     publicAmount: data.publicAmount,
     roots: rootsSet,
@@ -523,7 +527,7 @@ async function vanchorWithdraw(
   };
 
   // now we call the vanchor transact to withdraw on substrate
-  let transactCall = api.tx.vAnchorBn254!.transact!(
+  const transactCall = api.tx.vAnchorBn254!.transact!(
     treeId,
     vanchorProofData,
     extData

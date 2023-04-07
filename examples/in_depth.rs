@@ -77,6 +77,7 @@ async fn main() -> anyhow::Result<()> {
                             polling_interval: 3000,
                             max_blocks_per_step: 1000,
                             print_progress_interval: 60_000,
+                            sync_blocks_from: None,
                         },
                         proposal_signing_backend: Some(
                             ProposalSigningBackendConfig::Mocked(
@@ -99,6 +100,7 @@ async fn main() -> anyhow::Result<()> {
                             polling_interval: 3000,
                             max_blocks_per_step: 1000,
                             print_progress_interval: 60_000,
+                            sync_blocks_from: None,
                         },
                     }),
                 ],
@@ -118,11 +120,11 @@ async fn main() -> anyhow::Result<()> {
     )?;
     let config = webb_relayer_config::utils::parse_from_files(&config_files)?;
 
-    // finally, after loading the config files, we can build the relayer context.
-    let ctx = RelayerContext::new(config);
-
     // next is to build the store, or the storage backend:
     let store = webb_relayer_store::sled::SledStore::open("path/to/store")?;
+
+    // finally, after loading the config files, we can build the relayer context.
+    let ctx = RelayerContext::new(config, store.clone())?;
     // or temporary store:
     let store = webb_relayer_store::sled::SledStore::temporary()?;
 
@@ -130,13 +132,9 @@ async fn main() -> anyhow::Result<()> {
     // services.
 
     // Start the web server:
-    let (addr, web_services) =
-        service::build_web_services(ctx.clone(), store.clone())?;
+    service::build_web_services(ctx.clone()).await?;
     // and also the background services:
     // this does not block, will fire the services on background tasks.
     service::ignite(&ctx, Arc::new(store)).await?;
-
-    println!("Listening on {}", addr);
-    web_services.await;
     Ok(())
 }

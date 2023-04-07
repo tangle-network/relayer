@@ -39,7 +39,7 @@ backoff = { version = "0.4.0", features = ["tokio"] }
 tokio = { version = "^1", features = ["full"] }
 serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0", optional = true }
-webb = { git = "https://github.com/webb-tools/webb-rs" , default-features = false, features = ["evm-runtime"] }
+webb = { workspace = true, default-features = false, features = ["evm-runtime"] }
 webb-proposals = { version = "0.5.4", default-features = false, features = ["scale", "evm", "substrate"] }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"], optional = true }
