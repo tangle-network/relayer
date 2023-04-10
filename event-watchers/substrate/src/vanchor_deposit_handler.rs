@@ -19,6 +19,7 @@ use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
 use webb::substrate::subxt::{self, OnlineClient, SubstrateConfig};
+use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::substrate::EventHandler;
 
 use webb_proposal_signing_backends::{
@@ -29,30 +30,36 @@ use webb_relayer_store::EventHashStore;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric;
 /// SubstrateVAnchorDeposit handler handles `Transaction` event and creates `AnchorUpdate` proposals for linked anchors.
-pub struct SubstrateVAnchorDepositHandler<B> {
+pub struct SubstrateVAnchorDepositHandler<B, C> {
     proposal_signing_backend: B,
-    linked_anchors: Vec<LinkedAnchorConfig>,
+    bridge_registry_backend: C,
+    linked_anchors: Option<Vec<LinkedAnchorConfig>>,
 }
 
-impl<B> SubstrateVAnchorDepositHandler<B>
+impl<B, C> SubstrateVAnchorDepositHandler<B, C>
 where
     B: ProposalSigningBackend,
+    C: BridgeRegistryBackend,
 {
     pub fn new(
         proposal_signing_backend: B,
-        linked_anchors: Vec<LinkedAnchorConfig>,
+        bridge_registry_backend: C,
+        linked_anchors: Option<Vec<LinkedAnchorConfig>>,
     ) -> Self {
         Self {
             proposal_signing_backend,
+            bridge_registry_backend,
             linked_anchors,
         }
     }
 }
 
 #[async_trait::async_trait]
-impl<B> EventHandler<SubstrateConfig> for SubstrateVAnchorDepositHandler<B>
+impl<B, C> EventHandler<SubstrateConfig>
+    for SubstrateVAnchorDepositHandler<B, C>
 where
     B: ProposalSigningBackend + Send + Sync,
+    C: BridgeRegistryBackend + Send + Sync,
 {
     type Client = OnlineClient<SubstrateConfig>;
 
@@ -130,8 +137,13 @@ where
             let mut merkle_root = [0; 32];
             merkle_root.copy_from_slice(&root.encode());
 
+            let linked_anchors = self
+                .bridge_registry_backend
+                .config_or_dkg_bridges(&self.linked_anchors, &src_resource_id)
+                .await?;
+
             // update linked anchors
-            for linked_anchor in &self.linked_anchors {
+            for linked_anchor in linked_anchors {
                 let target_resource_id = match linked_anchor {
                     LinkedAnchorConfig::Raw(target) => {
                         let bytes: [u8; 32] = target.resource_id.into();

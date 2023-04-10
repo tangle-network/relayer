@@ -12,6 +12,7 @@ repository = { workspace = true }
 
 [dependencies]
 webb-proposal-signing-backends = { workspace = true }
+webb-bridge-registry-backends = { workspace = true }
 webb-event-watcher-traits = { workspace = true }
 webb-relayer-types = { workspace = true }
 webb-relayer-store = { workspace = true }
