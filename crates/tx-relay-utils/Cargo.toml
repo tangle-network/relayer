@@ -12,5 +12,13 @@ repository = { workspace = true }
 
 [dependencies]
 serde = { workspace = true }
+webb-relayer-context = { workspace = true }
+webb = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true, optional = true }
+
+[features]
+default = ["std", "evm" ]
+std = []
+evm = ["webb-relayer-context/evm"]
+# substrate = ["webb-relayer-context/substrate"]

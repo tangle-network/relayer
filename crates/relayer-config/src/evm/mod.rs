@@ -120,6 +120,39 @@ pub struct VAnchorContractConfig {
     #[serde(default)]
     pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
 }
+/// MaspContractConfig represents the configuration for the Masp contract.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
+pub struct MaspContractConfig {
+    /// Common contract configuration.
+    #[serde(flatten)]
+    pub common: CommonContractConfig,
+    /// Controls the events watcher
+    pub events_watcher: EventsWatcherConfig,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+    /// A List of linked Anchor Contracts (on other chains) to this contract.
+    #[serde(default)]
+    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
+}
+
+/// MaspProxyContractConfig represents the configuration for the MaspProxy contract.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
+pub struct MaspProxyContractConfig {
+    /// Common contract configuration.
+    #[serde(flatten)]
+    pub common: CommonContractConfig,
+    /// Controls the events watcher
+    pub events_watcher: EventsWatcherConfig,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(rename(serialize = "proposalSigningBackend"))]
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
+    /// A List of linked Anchor Contracts (on other chains) to this contract.
+    #[serde(default)]
+    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
+}
 
 /// Signature Bridge contract configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]

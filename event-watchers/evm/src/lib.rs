@@ -16,8 +16,9 @@ use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
 use webb::evm::contract::protocol_solidity::{
-    OpenVAnchorContract, OpenVAnchorContractEvents, VAnchorContract,
-    VAnchorContractEvents,
+    MaspContract, MaspContractEvents, MaspProxyContract,
+    MaspProxyContractEvents, OpenVAnchorContract, OpenVAnchorContractEvents,
+    VAnchorContract, VAnchorContractEvents,
 };
 use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::prelude::Middleware;
@@ -103,6 +104,130 @@ where
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct MaspContractWrapper<M>
+where
+    M: Middleware,
+{
+    pub config: webb_relayer_config::evm::MaspContractConfig,
+    pub webb_config: webb_relayer_config::WebbRelayerConfig,
+    pub contract: MaspContract<M>,
+}
+
+impl<M> MaspContractWrapper<M>
+where
+    M: Middleware,
+{
+    /// Creates a new MaspContractOverDKGWrapper.
+    pub fn new(
+        config: webb_relayer_config::evm::MaspContractConfig,
+        webb_config: webb_relayer_config::WebbRelayerConfig,
+        client: Arc<M>,
+    ) -> Self {
+        Self {
+            contract: MaspContract::new(config.common.address, client),
+            config,
+            webb_config,
+        }
+    }
+}
+
+impl<M> ops::Deref for MaspContractWrapper<M>
+where
+    M: Middleware,
+{
+    type Target = Contract<M>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.contract
+    }
+}
+
+impl<M> WatchableContract for MaspContractWrapper<M>
+where
+    M: Middleware,
+{
+    fn deployed_at(&self) -> types::U64 {
+        self.config.common.deployed_at.into()
+    }
+
+    fn polling_interval(&self) -> Duration {
+        Duration::from_millis(self.config.events_watcher.polling_interval)
+    }
+
+    fn max_blocks_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_blocks_per_step.into()
+    }
+
+    fn print_progress_interval(&self) -> Duration {
+        Duration::from_millis(
+            self.config.events_watcher.print_progress_interval,
+        )
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MaspProxyContractWrapper<M>
+where
+    M: Middleware,
+{
+    pub config: webb_relayer_config::evm::MaspProxyContractConfig,
+    pub webb_config: webb_relayer_config::WebbRelayerConfig,
+    pub contract: MaspProxyContract<M>,
+}
+
+impl<M> MaspProxyContractWrapper<M>
+where
+    M: Middleware,
+{
+    /// Creates a new MaspProxyContractOverDKGWrapper.
+    pub fn new(
+        config: webb_relayer_config::evm::MaspProxyContractConfig,
+        webb_config: webb_relayer_config::WebbRelayerConfig,
+        client: Arc<M>,
+    ) -> Self {
+        Self {
+            contract: MaspProxyContract::new(config.common.address, client),
+            config,
+            webb_config,
+        }
+    }
+}
+
+impl<M> ops::Deref for MaspProxyContractWrapper<M>
+where
+    M: Middleware,
+{
+    type Target = Contract<M>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.contract
+    }
+}
+
+impl<M> WatchableContract for MaspProxyContractWrapper<M>
+where
+    M: Middleware,
+{
+    fn deployed_at(&self) -> types::U64 {
+        self.config.common.deployed_at.into()
+    }
+
+    fn polling_interval(&self) -> Duration {
+        Duration::from_millis(self.config.events_watcher.polling_interval)
+    }
+
+    fn max_blocks_per_step(&self) -> types::U64 {
+        self.config.events_watcher.max_blocks_per_step.into()
+    }
+
+    fn print_progress_interval(&self) -> Duration {
+        Duration::from_millis(
+            self.config.events_watcher.print_progress_interval,
+        )
+    }
+}
+
 type HttpProvider = providers::Provider<providers::Http>;
 
 /// An Anchor Contract Watcher that watches for the Anchor contract events and calls the event
@@ -115,6 +240,14 @@ pub struct AnchorContractWatcher;
 #[derive(Copy, Clone, Debug, Default)]
 pub struct VAnchorContractWatcher;
 
+/// An Masp Contract Watcher that watches for the Anchor contract events and calls the event
+/// handlers.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct MaspContractWatcher;
+
+#[derive(Copy, Clone, Debug, Default)]
+pub struct MaspProxyContractWatcher;
+
 #[async_trait::async_trait]
 impl EventWatcher for VAnchorContractWatcher {
     const TAG: &'static str = "VAnchor Contract Watcher";
@@ -122,6 +255,28 @@ impl EventWatcher for VAnchorContractWatcher {
     type Contract = VAnchorContractWrapper<HttpProvider>;
 
     type Events = VAnchorContractEvents;
+
+    type Store = SledStore;
+}
+
+#[async_trait::async_trait]
+impl EventWatcher for MaspContractWatcher {
+    const TAG: &'static str = "Masp Contract Watcher";
+
+    type Contract = MaspContractWrapper<HttpProvider>;
+
+    type Events = MaspContractEvents;
+
+    type Store = SledStore;
+}
+
+#[async_trait::async_trait]
+impl EventWatcher for MaspProxyContractWatcher {
+    const TAG: &'static str = "Masp Contract Watcher";
+
+    type Contract = MaspProxyContractWrapper<HttpProvider>;
+
+    type Events = MaspProxyContractEvents;
 
     type Store = SledStore;
 }

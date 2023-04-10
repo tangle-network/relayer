@@ -186,6 +186,9 @@ pub async fn handle_cmd(
             EvmCommandType::VAnchor(vanchor) => {
                 handle_vanchor_relay_tx(ctx, vanchor, stream).await
             }
+            EvmCommandType::MASP(masp) => {
+                handle_vanchor_relay_tx(ctx, masp, stream).await
+            }
         },
         Command::Ping() => {
             let _ = stream.send(CommandResponse::Pong()).await;

@@ -71,6 +71,7 @@ pub enum Command {
 pub enum EvmCommandType {
     /// Webb Variable Anchors.
     VAnchor(EvmVanchorCommand),
+    MASP(EvmVanchorCommand),
 }
 
 /// Enumerates the supported substrate commands for relaying transactions
