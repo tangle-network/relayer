@@ -36,7 +36,7 @@
           ],
           "proposal-signing-backend": {
             "type": "DKGNode",
-            "node": "1080"
+            "chain-id": 1080
           }
         },
         {

@@ -51,7 +51,7 @@ impl super::BridgeRegistryBackend for DkgBridgeRegistryBackend {
         index: u32,
     ) -> webb_relayer_utils::Result<Option<BridgeMetadata>> {
         let storage = RuntimeApi::storage().bridge_registry();
-        let bridges = storage.bridges(dbg!(index));
+        let bridges = storage.bridges(index);
         Ok(self
             .client
             .storage()

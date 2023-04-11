@@ -186,7 +186,7 @@ async fn start_vanchor_events_watcher(
                 let leaves_handler = VAnchorLeavesHandler::new(
                     store.clone(),
                     default_leaf_bytes.to_vec(),
-                );
+                )?;
                 let encrypted_output_handler =
                     VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
@@ -223,7 +223,7 @@ async fn start_vanchor_events_watcher(
                 let leaves_handler = VAnchorLeavesHandler::new(
                     store.clone(),
                     default_leaf_bytes.to_vec(),
-                );
+                )?;
                 let encrypted_output_handler =
                     VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(
@@ -256,7 +256,7 @@ async fn start_vanchor_events_watcher(
                 let leaves_handler = VAnchorLeavesHandler::new(
                     store.clone(),
                     default_leaf_bytes.to_vec(),
-                );
+                )?;
                 let encrypted_output_handler =
                     VAnchorEncryptedOutputHandler::default();
                 let vanchor_watcher_task = contract_watcher.run(

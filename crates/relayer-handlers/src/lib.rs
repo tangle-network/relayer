@@ -17,7 +17,6 @@
 #![allow(clippy::large_enum_variant)]
 #![warn(missing_docs)]
 use axum::extract::{Path, State, WebSocketUpgrade};
-use axum::http::StatusCode;
 use ethereum_types::{Address, U256};
 use std::error::Error;
 use std::sync::Arc;
@@ -25,6 +24,7 @@ use std::sync::Arc;
 use futures::prelude::*;
 
 use axum::extract::ws::{Message, WebSocket};
+use axum::http::StatusCode;
 use axum::response::Response;
 use axum::Json;
 use axum_client_ip::InsecureClientIp;
@@ -39,13 +39,13 @@ use webb_relayer_handler_utils::{
 };
 use webb_relayer_tx_relay::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 
-use crate::routes::HandlerError;
 use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use webb_relayer_tx_relay::substrate::fees::{
     get_substrate_fee_info, SubstrateFeeInfo,
 };
 use webb_relayer_tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
+use webb_relayer_utils::HandlerError;
 
 /// Module handles relayer API
 pub mod routes;
@@ -211,21 +211,9 @@ pub async fn handle_evm_fee_info(
 ) -> Result<Json<EvmFeeInfo>, HandlerError> {
     let chain_id = dbg!(TypedChainId::from(chain_id));
     let gas_amount = U256::from(gas_amount);
-    get_evm_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
+    Ok(get_evm_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
         .await
-        .map(Json)
-        .map_err(|e| {
-            let status = match e {
-                webb_relayer_utils::Error::FetchTokenPriceError { .. } => {
-                    StatusCode::BAD_REQUEST
-                }
-                webb_relayer_utils::Error::EtherscanConfigNotFound {
-                    ..
-                } => StatusCode::BAD_REQUEST,
-                _ => StatusCode::INTERNAL_SERVER_ERROR,
-            };
-            HandlerError(status, e.to_string())
-        })
+        .map(Json)?)
 }
 pub async fn handle_substrate_fee_info(
     State(ctx): State<Arc<RelayerContext>>,

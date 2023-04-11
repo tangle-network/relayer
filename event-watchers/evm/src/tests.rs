@@ -10,6 +10,8 @@ use arkworks_utils::{bytes_vec_to_f, parse_vec};
 // merkle tree test
 #[test]
 fn test_merkle_root() {
+    type Smt = SparseMerkleTree<Bn254Fr, Poseidon<Bn254Fr>, 30>;
+
     let relayer_leaves = vec![
         "0x017dc570cb5c6807dbaa475c9d4e445ac95a73400692541c367786c009c844cf",
         "0x04568790fcfc67d855dfb60de6844f6d82f4b8dc6dd0115f9f04ece21ebffb8d",
@@ -23,7 +25,6 @@ fn test_merkle_root() {
         .enumerate()
         .map(|(i, l)| (i as u32, *l))
         .collect();
-    type Smt = SparseMerkleTree<Bn254Fr, Poseidon<Bn254Fr>, 30>;
     let default_leaf_hex = vec![
         "0x2fe54c60d3acabf3343a35b6eba15db4821b340f76e741e2249685ed4899af6c",
     ];

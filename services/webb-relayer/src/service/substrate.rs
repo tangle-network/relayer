@@ -5,6 +5,8 @@ use axum::Router;
 use sp_core::sr25519;
 use webb::substrate::subxt::config::ExtrinsicParams;
 use webb::substrate::subxt::{self, PolkadotConfig};
+use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
+use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
 use webb_event_watcher_traits::{
     SubstrateBridgeWatcher, SubstrateEventWatcher,
 };
@@ -366,12 +368,13 @@ pub fn start_substrate_vanchor_event_watcher(
         .await?;
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
-                // its safe to use unwrap on linked_anchors here
-                // since this option is always going to return Some(value).
-                // linked_anchors are validated in make_proposal_signing_backend() method
+                let bridge_registry =
+                    DkgBridgeRegistryBackend::new(backend.client.clone());
+
                 let deposit_handler = SubstrateVAnchorDepositHandler::new(
                     backend,
-                    my_config.linked_anchors.unwrap(),
+                    bridge_registry,
+                    my_config.linked_anchors,
                 );
                 let leaves_handler = SubstrateVAnchorLeavesHandler::default();
                 let encrypted_output_handler =
@@ -408,11 +411,13 @@ pub fn start_substrate_vanchor_event_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
-                // its safe to use unwrap on linked_anchors here
-                // since this option is always going to return Some(value).
+                let bridge_registry =
+                    MockedBridgeRegistryBackend::builder().build();
+
                 let deposit_handler = SubstrateVAnchorDepositHandler::new(
                     backend,
-                    my_config.linked_anchors.unwrap(),
+                    bridge_registry,
+                    my_config.linked_anchors,
                 );
                 let leaves_handler = SubstrateVAnchorLeavesHandler::default();
                 let encrypted_output_handler =

@@ -42,7 +42,7 @@ async fn submit_anchor_update_proposal() {
         PairSigner::new(Pair::from_string("//Alice", None).unwrap());
     let account_nonce = api
         .rpc()
-        .system_account_next_index(dbg!(sudo_account.account_id()))
+        .system_account_next_index(sudo_account.account_id())
         .await
         .unwrap();
 

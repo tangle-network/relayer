@@ -7,14 +7,10 @@ repository = "https://github.com/webb-tools/relayer"
 edition = "2021"
 
 [workspace]
-members = [
-    ".",
-    "crates/*",
-    "event-watchers/*",
-    "services/*",
-]
+members = [".", "crates/*", "event-watchers/*", "services/*"]
 
 [workspace.dependencies]
+webb-price-oracle-backends = { path = "crates/price-oracle-backends" }
 webb-bridge-registry-backends = { path = "crates/bridge-registry-backends" }
 webb-proposal-signing-backends = { path = "crates/proposal-signing-backends" }
 webb-relayer-tx-queue = { path = "crates/tx-queue" }
@@ -22,8 +18,9 @@ webb-relayer-handlers = { path = "crates/relayer-handlers" }
 webb-relayer-store = { path = "crates/relayer-store" }
 webb-relayer-config = { path = "crates/relayer-config" }
 webb-relayer-context = { path = "crates/relayer-context" }
-webb-relayer-utils = { path = "crates/relayer-utils"}
-webb-event-watcher-traits = { path = "crates/event-watcher-traits"}
+webb-relayer-utils = { path = "crates/relayer-utils" }
+webb-chains-info = { path = "crates/chains-info" }
+webb-event-watcher-traits = { path = "crates/event-watcher-traits" }
 webb-ew-dkg = { path = "event-watchers/dkg" }
 webb-ew-evm = { path = "event-watchers/evm" }
 webb-ew-substrate = { path = "event-watchers/substrate" }
@@ -31,6 +28,7 @@ webb-relayer-handler-utils = { path = "crates/relayer-handler-utils" }
 webb-relayer-types = { path = "crates/relayer-types" }
 webb-relayer = { path = "services/webb-relayer" }
 
+thiserror = "^1"
 anyhow = "^1"
 tracing = { version = "^0.1", features = ["log"] }
 url = { version = "^2.3", features = ["serde"] }
@@ -39,7 +37,8 @@ tokio = { version = "^1", features = ["full"] }
 config = { version = "0.13", default-features = false, features = ["toml", "json"] }
 serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0" }
-webb = { version="0.5.21", default-features = false }
+# webb = { version = "0.5.21", default-features = false }
+webb = { version = "0.5.22", git = "https://github.com/webb-tools/webb-rs", default-features = false }
 sp-core = { version = "16.0.0", default-features = false }
 sp-runtime = { version = "18.0.0", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
@@ -48,6 +47,7 @@ webb-proposals = { version = "0.5.4", default-features = false, features = ["sca
 ethereum-types = "0.14.1"
 dotenv = "0.15.0"
 axum = { version = "0.6.12", features = ["ws"] }
+reqwest = { version = "0.11", default-features = false, features = ["json", "rustls-tls"] }
 tempfile = "^3.3"
 async-trait = "^0.1"
 futures = { version = "^0.3", default-features = false }

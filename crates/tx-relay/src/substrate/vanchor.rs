@@ -57,8 +57,8 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             relayer: cmd.ext_data.relayer,
             fee: cmd.ext_data.fee,
             ext_amount: cmd.ext_data.ext_amount,
-            encrypted_output1: cmd.ext_data.encrypted_output1.to_vec(),
-            encrypted_output2: cmd.ext_data.encrypted_output2.to_vec(),
+            encrypted_output1: cmd.ext_data.encrypted_output1.clone(),
+            encrypted_output2: cmd.ext_data.encrypted_output2.clone(),
             refund: cmd.ext_data.refund,
             token: cmd.ext_data.token,
         };
