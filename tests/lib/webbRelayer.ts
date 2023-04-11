@@ -118,7 +118,7 @@ export class WebbRelayer {
         '--bin',
         'webb-relayer',
         '--features',
-        'integration-tests,cli',
+        'integration-tests,cli,native-tls/vendored',
         '--',
         '-c',
         opts.configDir,
