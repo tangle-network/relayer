@@ -17,7 +17,7 @@ env:
 
 jobs:
 
-  macos-build:
+  macos-check:
     runs-on: macos-latest
     steps:
       - name: Cancel Previous Runs
@@ -41,7 +41,7 @@ jobs:
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
       - name: Build target
-        run: cargo build --release --target=${{ matrix.target }} --features native-tls/vendored --locked
+        run: cargo check --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
@@ -73,8 +73,8 @@ jobs:
         
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
-      - name: Build target
-        run: cargo test --release --target=${{ matrix.target }} --locked
+      - name: Check target
+        run: cargo test --target=${{ matrix.target }} --locked
           
     strategy:
       fail-fast: true
@@ -84,7 +84,7 @@ jobs:
           - x86_64-apple-darwin
         
 
-  linux-build:
+  linux-check:
     runs-on: ubuntu-latest
     steps:
       - name: Cancel Previous Runs
@@ -110,8 +110,8 @@ jobs:
 
       - name: Install cross
         run: cargo install cross --locked
-      - name: Build target using cross
-        run: cross build --release --target=${{ matrix.target }} --features native-tls/vendored --locked
+      - name: Check target using cross
+        run: cross check --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
@@ -164,7 +164,7 @@ jobs:
       - name: Install cross
         run: cargo install cross --locked
       - name: Build target using cross
-        run: cross test --release --target=${{ matrix.target }} --features native-tls/vendored --locked
+        run: cross test --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
@@ -205,9 +205,6 @@ jobs:
           registry-url: "https://npm.pkg.github.com"
 
         if: matrix.target == 'x86_64-unknown-linux-musl'
-      - run: cargo build --features integration-tests,cli,native-tls/vendored
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        shell: bash
 
       - name: Install NPM Packages.
         if: matrix.target == 'x86_64-unknown-linux-musl'
