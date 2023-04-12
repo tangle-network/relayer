@@ -190,7 +190,7 @@ export class LocalProtocolSubstrate extends BaseLocalSubstrate {
               : c.proposalSigningBackend?.type === 'DKGNode'
               ? {
                   type: 'DKGNode',
-                  node: c.proposalSigningBackend?.node,
+                  "chain-id": c.proposalSigningBackend?.chainId,
                 }
               : undefined,
 

@@ -147,7 +147,7 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
-      proposalSigningBackend: { type: 'DKGNode', node: dkgNode3.name },
+      proposalSigningBackend: { type: 'DKGNode', chainId: dkgNodeChainId },
       enabledPallets,
     });
 

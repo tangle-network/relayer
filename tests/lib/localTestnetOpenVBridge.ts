@@ -346,7 +346,7 @@ export class LocalChain {
             : contract.proposalSigningBackend?.type === 'DKGNode'
             ? {
                 type: 'DKGNode',
-                node: contract.proposalSigningBackend?.node,
+                "chain-id": contract.proposalSigningBackend?.chainId,
               }
             : undefined,
         'withdraw-config': contract.withdrawConfig
