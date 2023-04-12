@@ -65,6 +65,7 @@ import {
 } from '../../lib/utils.js';
 import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import { VAnchor } from '@webb-tools/anchors';
+import { MintableToken } from '@webb-tools/tokens';
 const { ecdsaSign } = pkg;
 
 describe('Cross chain transaction <<>> Mocked Backend', function () {
@@ -161,11 +162,19 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
+   
     // Deploy the token.
-    const localToken1 = await localChain1.deployToken('Webb Token', 'WEBB');
+    const localToken = await localChain1.deployToken('Webb Token', 'WEBB');
+
+    const unwrappedToken = await MintableToken.createToken(
+      'Webb Token',
+      'WEBB',
+      wallet1
+    );
 
     signatureVBridge = await localChain1.deployVBridge(
-      localToken1,
+      localToken,
+      unwrappedToken,
       wallet1,
       governorWallet
     );

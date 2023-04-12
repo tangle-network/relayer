@@ -55,6 +55,7 @@ export type ExportedConfigOptions = {
   relayerWallet?: Wallet;
   linkedAnchors?: LinkedAnchor[];
   blockConfirmations?: number;
+  privateKey?: string;
 };
 
 // Default Events watcher for the contracts.
@@ -126,6 +127,7 @@ export class LocalChain {
   }
   public async deployVBridge(
     localToken: TokenConfig,
+    unwrappedToken: MintableToken,
     localWallet: ethers.Wallet,
     initialGovernor: ethers.Wallet
   ): Promise<VBridge.VBridge> {
@@ -138,7 +140,7 @@ export class LocalChain {
     const vBridgeInput: VBridge.VBridgeInput = {
       vAnchorInputs: {
         asset: {
-          [this.chainId]: [localWallet.address],
+          [this.chainId]: [unwrappedToken.contract.address],
         },
       },
       chainIDs: [this.chainId],
@@ -381,7 +383,7 @@ export class LocalChain {
       blockConfirmations: opts.blockConfirmations ?? 1,
       chainId: this.underlyingChainId,
       beneficiary: '',
-      privateKey: '',
+      privateKey: opts.privateKey ?? '',
       contracts: [],
     };
     for (const contract of this.opts.enabledContracts) {
@@ -446,7 +448,7 @@ export class LocalChain {
             : contract.proposalSigningBackend?.type === 'DKGNode'
             ? {
                 type: 'DKGNode',
-                node: contract.proposalSigningBackend?.node,
+                "chain-id": contract.proposalSigningBackend?.chainId,
               }
             : undefined,
         'events-watcher': {

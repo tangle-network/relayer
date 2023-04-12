@@ -66,6 +66,7 @@ import { LocalChain } from '../../lib/localTestnet.js';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
 import { UsageMode } from '@webb-tools/test-utils';
+import { MintableToken } from '@webb-tools/tokens';
 const { ecdsaSign } = pkg;
 
 describe('Cross chain transaction <<>> Mocked Backend', function () {
@@ -156,11 +157,18 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
-    // Deploy the token.
-    const localToken1 = await localChain1.deployToken('Webb Token', 'WEBB');
+   // Deploy the token.
+   const localToken = await localChain1.deployToken('Webb Token', 'WEBB');
+
+   const unwrappedToken = await MintableToken.createToken(
+     'Webb Token',
+     'WEBB',
+     wallet1
+   );
 
     signatureVBridge = await localChain1.deployVBridge(
-      localToken1,
+      localToken,
+      unwrappedToken,
       wallet1,
       governorWallet
     );
