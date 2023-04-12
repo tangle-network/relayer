@@ -369,7 +369,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     await webbRelayer.waitForEvent({
       kind: 'signing_backend',
       event: {
-        backend: 'Mocked',
+        backend: 'DKG',
       },
     });
 
