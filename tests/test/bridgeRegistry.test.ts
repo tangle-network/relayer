@@ -70,7 +70,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
 
-  // dkg nodes
+  // Dkg nodes
   let dkgNode1: LocalDkg;
   let dkgNode2: LocalDkg;
   let dkgNode3: LocalDkg;
@@ -81,7 +81,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
   let relayerNativeWallet: KeyringPair;
   let signatureVBridge: VBridge.VBridge;
 
-  // substrate vanchor treeId
+  // Substrate vanchor treeId
   let treeId: number;
 
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
@@ -134,19 +134,19 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
       enableLogging: false,
     });
 
-    // Wait until we are ready and connected
+    // Wait until we are ready and connected.
     const dkgApi = await dkgNode3.api();
     await dkgApi.isReady;
     console.log('dkg node ready');
     const dkgNodeChainId = await dkgNode3.getChainId();
-    // Step 2. We need to wait until the public key is on chain.
+    // We need to wait until the public key is on chain.
     await dkgNode3.waitForEvent({
       section: 'dkg',
       method: 'PublicKeySignatureChanged',
     });
 
 
-    // We start protocol-substrate nodes.
+    // Step 2. We initialize protocol-substrate nodes.
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
@@ -181,7 +181,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
       ports: 'auto',
       enableLogging: false,
     });
-    // Wait until we are ready and connected
+    // Wait until we are ready and connected.
     const api = await aliceNode.api();
     await api.isReady;
     relayerNativeWallet = createAccount("//Charlie");
@@ -199,7 +199,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     await substrateSetup(aliceNode, api, treeId, substrateChainId, substrateResourceId);
     console.log('substrate node ready');
 
-    // Start Evm chain node
+    // Step 3. We initialize Evm chain node.
     const localChain1Port = await getPort({
       port: portNumbers(3333, 4444),
     });
@@ -249,7 +249,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
       wallet1,
       wallet1
     );
-    // Get the anhor on localchain1
+    // Get the anchor on localchain1.
     const vanchor = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor.setSigner(wallet1);
     const evmResourceId = await vanchor.createResourceId();
@@ -268,13 +268,14 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
       relayerExternalWallet,
       relayerNativeWallet
     );
+    // Step 4. We transfer ownership to DKG.
     // Fetch current active governor from dkg node
     const dkgPublicKey = await dkgNode3.fetchDkgPublicKey();
     expect(dkgPublicKey).to.not.be.null;
-    await transferOwnsershipSubstrate(aliceNode, api, dkgPublicKey!);
+    await transferOwnershipSubstrate(aliceNode, api, dkgPublicKey!);
     await transferOwnershipEvm(signatureVBridge, dkgPublicKey!);
     
-    // Send anchor update proposal to register bride and its resources on DKG node.
+    // Step 5. We will send anchor update proposal to register bride and its resources on DKG node.
     await sendAnchorUpdateProposal(
       dkgNode3,
       dkgApi,
@@ -282,27 +283,27 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
       substrateResourceId.toString()
       );
 
-    // Save substrate node chain configs
+    // Save substrate node chain configs.
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       chainId: substrateChainId,
       proposalSigningBackend: { type: 'DKGNode', chainId: dkgNodeChainId },
       enabledPallets,
     });
-    // save evm node chain configs.
+    // Save evm node chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'DKGNode', chainId: dkgNodeChainId },
       privateKey: relayerPK,
     });
-    // save dkg node chain confis
+    // Save dkg node chain configs.
     await dkgNode3.writeConfig(`${tmpDirPath}/${dkgNode3.name}.json`, {
       suri: '//Charlie',
       chainId: dkgNodeChainId,
       enabledPallets: dkgEnabledPallets,
     });
 
-    // now start the relayer
+    // Now start the relayer.
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
     webbRelayer = new WebbRelayer({
       commonConfig: {
@@ -346,7 +347,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     );
     const typedSourceChainId = localChain1.chainId;
     
-    // deposit amount on evm
+    // Step 5. We make a deposit amount on evm chain
     const publicAmount = currencyToUnitI128(10);
     const depositUtxo = await CircomUtxo.generateUtxo({
       curve: 'Bn254',
@@ -365,7 +366,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     });
     console.log("Deposit made");
     
-    // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
+    // now we wait for the proposal to be signed by DKG backend and then send data to signature bridge.
     await webbRelayer.waitForEvent({
       kind: 'signing_backend',
       event: {
@@ -403,7 +404,7 @@ function createAccount(accountId: string): KeyringPair {
   return account;
 }
 
-async function transferOwnsershipSubstrate(
+async function transferOwnershipSubstrate(
   aliceNode: LocalProtocolSubstrate,
   api: ApiPromise, dkgPublicKey: `0x${string}`) {
   // force set maintainer
