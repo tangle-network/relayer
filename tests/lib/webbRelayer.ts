@@ -758,7 +758,7 @@ type PalletKind =
 
 export type DKGProposalSigningBackend = {
   type: 'DKGNode';
-  node: string;
+  chainId: number;
 }; /** DKG Node name in the config */
 export type MockedProposalSigningBackend = {
   type: 'Mocked';
