@@ -204,9 +204,6 @@ jobs:
           cache-dependency-path: "./tests/yarn.lock"
           registry-url: "https://npm.pkg.github.com"
 
-      - run: cargo build --features integration-tests,cli,native-tls/vendored
-        shell: bash
-
       - name: Install NPM Packages.
         run: cd tests && dvc pull && yarn
 
