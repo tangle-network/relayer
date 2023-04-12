@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint . --ext .ts",
-    "test": "mocha",
+    "test": "mocha test **/*.test.*",
     "test-evm": "mocha test test/evm/*.test.*",
     "test-substrate": "mocha test test/substrate/*.test.*",
     "format": "prettier -w '**/*.ts'",
