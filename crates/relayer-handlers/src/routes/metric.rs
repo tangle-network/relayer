@@ -11,13 +11,6 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::metric::Metrics;
 use webb_relayer_utils::HandlerError;
 
-/// Response with metrics message
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct RelayerMetricResponse {
-    metrics: String,
-}
-
 /// Response with resource metrics data
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -33,14 +26,11 @@ pub struct ResourceMetricResponse {
 /// Handles relayer metric requests
 ///
 /// Returns a Result with the `MetricResponse` on success
-pub async fn handle_metric_info(
-) -> Result<Json<RelayerMetricResponse>, HandlerError> {
+pub async fn handle_metric_info() -> Result<String, HandlerError> {
     let metric_gathered = Metrics::gather_metrics().map_err(|e| {
         HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
     })?;
-    Ok(Json(RelayerMetricResponse {
-        metrics: metric_gathered,
-    }))
+    Ok(metric_gathered)
 }
 
 /// Handles relayer metric requests for evm based resource
