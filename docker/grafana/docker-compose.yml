@@ -8,6 +8,8 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
+    volumes:
+      - grafana-data:/var/lib/grafana
 
   prometheus:
     image: prom/prometheus:v2.43.0
@@ -16,3 +18,6 @@ services:
       - "9090:9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
+volumes:
+  grafana-data:

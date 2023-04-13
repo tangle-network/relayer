@@ -10,6 +10,6 @@ Use the following steps for monitoring:
 - Open Grafana on `http://localhost:3000`. Use the following steps for initial setup:
     - Login with `admin` / `admin`
     - Click the cogwheel icon on the bottom left and go to "Data sources"
-    - Click "Add new data source", and add Prometheus with URL `http://localhost:9090/`
+    - Click "Add new data source", add Prometheus with URL `http://localhost:9090/` and click "Save & test"
     - Click "Dashboard" in the top left menu and select "Import"
     - Upload `grafana-dashboard.json` from this folder
