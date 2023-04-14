@@ -120,11 +120,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             proposal_data: BoundedVec(proposal.to_vec()),
             signature: BoundedVec(signature.encode()),
         };
-        enqueue_transaction(
-            execute_proposal_call,
-            self.typed_chain_id,
-            self.store.as_ref(),
-        )?;
+        enqueue_transaction(execute_proposal_call, self.store.as_ref())?;
 
         Ok(())
     }
@@ -156,7 +152,6 @@ fn webb_proposals_typed_chain_converter(
 
 pub fn enqueue_transaction(
     call: ExecuteProposal,
-    chain_id: webb_proposals::TypedChainId,
     store: &SledStore,
 ) -> webb_relayer_utils::Result<()> {
     let data_hash = utils::keccak256(call.encode());
@@ -171,6 +166,7 @@ pub fn enqueue_transaction(
         ],
     };
 
+    let chain_id = webb_proposals::TypedChainId::from(call.src_id);
     let tx_key = SledQueueKey::from_substrate_with_custom_key(
         chain_id.underlying_chain_id(),
         make_execute_proposal_key(data_hash),

@@ -217,7 +217,7 @@ where
             proposal_data: BoundedVec(proposal_data.clone()),
             signature: BoundedVec(signature.clone()),
         };
-        enqueue_transaction(execute_proposal_call, typed_chain_id, &store)?;
+        enqueue_transaction(execute_proposal_call, &store)?;
         Ok(())
     }
 
