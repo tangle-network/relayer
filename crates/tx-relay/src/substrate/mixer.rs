@@ -1,8 +1,8 @@
 use super::*;
 use crate::substrate::handle_substrate_tx;
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api::runtime_types::tangle_standalone_runtime::protocol_substrate_config::Element;
 use webb::substrate::{
-    protocol_substrate_runtime::api::runtime_types::webb_primitives::runtime::Element,
     subxt::{tx::PairSigner, SubstrateConfig},
 };
 use webb_relayer_context::RelayerContext;

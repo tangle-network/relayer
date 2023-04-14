@@ -27,8 +27,8 @@ pub use vanchor_encrypted_output_handler::*;
 pub use vanchor_leaves_handler::*;
 use webb::substrate::subxt::events::StaticEvent;
 use webb::substrate::{
-    protocol_substrate_runtime::api::v_anchor_bn254::events::Transaction,
     subxt::{OnlineClient, SubstrateConfig},
+    tangle_runtime::api::v_anchor_bn254::events::Transaction,
 };
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_relayer_store::SledStore;

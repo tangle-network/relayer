@@ -1,10 +1,11 @@
 use super::*;
 use crate::substrate::handle_substrate_tx;
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::subxt::utils::AccountId32;
+use webb::substrate::tangle_runtime::api::runtime_types::tangle_standalone_runtime::protocol_substrate_config::Element;
 use webb::substrate::{
-    protocol_substrate_runtime::api::runtime_types::{
-        webb_primitives::runtime::Element, webb_primitives::types::vanchor,
+    tangle_runtime::api::runtime_types::{
+    webb_primitives::types::vanchor,
     },
     subxt::{tx::PairSigner, SubstrateConfig},
 };

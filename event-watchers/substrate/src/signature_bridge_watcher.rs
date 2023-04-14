@@ -21,22 +21,26 @@ use webb::substrate::subxt::events::StaticEvent;
 
 use webb::substrate::subxt::{self, dynamic::Value, OnlineClient};
 
-use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
-use webb_event_watcher_traits::substrate::{SubstrateBridgeWatcher, EventHandler};
+use webb::substrate::tangle_runtime::api::signature_bridge::calls::{
+    ExecuteProposal, SetMaintainer,
+};
+use webb_event_watcher_traits::substrate::{
+    EventHandler, SubstrateBridgeWatcher,
+};
 use webb_event_watcher_traits::SubstrateEventWatcher;
-use webb_relayer_store::sled::{SledQueueKey,SledStore};
+use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, QueueStore};
 
 use webb::evm::ethers::utils;
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
-use webb::substrate::protocol_substrate_runtime::api::signature_bridge::events::MaintainerSet;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api::signature_bridge::events::MaintainerSet;
 
 use std::borrow::Cow;
 use webb::substrate::scale::Encode;
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb_relayer_utils::{metric, Error};
 
-use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
 /// A MaintainerSetEvent handler handles `MaintainerSet` events and signals signature bridge watcher
 /// to remove pending tx trying to do governor transfer.

@@ -1,11 +1,11 @@
 use futures::StreamExt;
 use sp_core::sr25519::Pair;
 use sp_core::Pair as _;
-use webb::substrate::dkg_runtime::api as RuntimeApi;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::ResourceId as DkgResourceId;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId as DkgTypedChainId;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce as DkgNonce;
-use webb::substrate::dkg_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::ResourceId as DkgResourceId;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::TypedChainId as DkgTypedChainId;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce as DkgNonce;
+use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 use webb::substrate::subxt::tx::{PairSigner, TxProgress, TxStatus};
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;

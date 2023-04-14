@@ -15,10 +15,10 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
-use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
 use webb::substrate::subxt::{self, OnlineClient, SubstrateConfig};
+use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api::v_anchor_bn254;
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::substrate::EventHandler;
 
