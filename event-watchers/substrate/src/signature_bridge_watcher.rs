@@ -37,6 +37,7 @@ use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb_relayer_utils::{metric, Error};
 
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+use webb_proposal_signing_backends::{enqueue_transaction, make_execute_proposal_key};
 
 /// A MaintainerSetEvent handler handles `MaintainerSet` events and signals signature bridge watcher
 /// to remove pending tx trying to do governor transfer.
@@ -216,32 +217,7 @@ where
             proposal_data: BoundedVec(proposal_data.clone()),
             signature: BoundedVec(signature.clone()),
         };
-        // webb dynamic payload
-        let execute_proposal_tx = WebbDynamicTxPayload {
-            pallet_name: Cow::Borrowed("SignatureBridge"),
-            call_name: Cow::Borrowed("execute_proposal"),
-            fields: vec![
-                Value::u128(u128::from(typed_chain_id.chain_id())),
-                Value::from_bytes(proposal_data),
-                Value::from_bytes(signature),
-            ],
-        };
-
-        let data_hash = utils::keccak256(execute_proposal_call.encode());
-        let tx_key = SledQueueKey::from_substrate_with_custom_key(
-            chain_id,
-            make_execute_proposal_key(data_hash),
-        );
-        // Enqueue WebbDynamicTxPayload in protocol-substrate transaction queue
-        QueueStore::<WebbDynamicTxPayload>::enqueue_item(
-            &store,
-            tx_key,
-            execute_proposal_tx,
-        )?;
-        tracing::debug!(
-            data_hash = ?hex::encode(data_hash),
-            "Enqueued execute-proposal call for execution through protocol-substrate tx queue",
-        );
+        enqueue_transaction(execute_proposal_call, typed_chain_id, &store)?;
         Ok(())
     }
 
@@ -388,12 +364,4 @@ fn secp256k1_ecdsa_recover(
     let mut res = [0u8; 64];
     res.copy_from_slice(&pubkey.serialize()[1..65]);
     Ok(res)
-}
-
-fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
-    let mut result = [0u8; 64];
-    let prefix = b"execute_proposal_with_signature_";
-    result[0..32].copy_from_slice(prefix);
-    result[32..64].copy_from_slice(&data_hash);
-    result
 }
