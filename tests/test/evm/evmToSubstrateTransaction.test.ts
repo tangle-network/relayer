@@ -210,11 +210,11 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
 
     // force set maintainer
     const refreshNonce = 0;
-    const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
+    const setMaintainerCall = api.tx.signatureBridge!.forceSetMaintainer(
       refreshNonce,
       `0x${uncompressedKey}`
-    );
-    await aliceNode.sudoExecuteTransaction(setMaintainerCall);
+    )!;
+    await aliceNode.sudoExecuteTransaction(setMaintainerCall!);
     const typedSourceChainId = calculateTypedChainId(
       ChainType.Substrate,
       substrateChainId
