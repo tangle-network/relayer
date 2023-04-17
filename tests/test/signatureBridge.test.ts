@@ -183,11 +183,11 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'DKGNode', node: charlieNode.name },
+      proposalSigningBackend: { type: 'DKGNode', chainId },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'DKGNode', node: charlieNode.name },
+      proposalSigningBackend: { type: 'DKGNode', chainId },
     });
     // fetch the dkg public key.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();

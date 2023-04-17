@@ -7,8 +7,8 @@ services:
     env_file:
       - ./nginx-certbot.env
     ports:
-      - 80:80
-      - 443:443
+      - "80:80"
+      - "443:443"
     volumes:
       - nginx_secrets:/etc/letsencrypt
       - ./user_conf.d:/etc/nginx/user_conf.d
@@ -17,8 +17,18 @@ services:
     restart: unless-stopped
     depends_on: [nginx]
     ports:
-      - 9955:9955
+      - "9955:9955"
     volumes:
       - ./config:/config
+  prometheus:
+    image: prom/prometheus:v2.43.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  grafana:
+    image: grafana/grafana:9.4.7
+    ports:
+      - "3000:3000"
 volumes:
   nginx_secrets:

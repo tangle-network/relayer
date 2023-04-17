@@ -118,7 +118,7 @@ export class WebbRelayer {
         '--bin',
         'webb-relayer',
         '--features',
-        'integration-tests,cli',
+        'integration-tests,cli,native-tls/vendored',
         '--',
         '-c',
         opts.configDir,
@@ -771,7 +771,7 @@ type PalletKind =
 
 export type DKGProposalSigningBackend = {
   type: 'DKGNode';
-  node: string;
+  chainId: number;
 }; /** DKG Node name in the config */
 export type MockedProposalSigningBackend = {
   type: 'Mocked';

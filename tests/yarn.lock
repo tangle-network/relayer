@@ -2425,6 +2425,15 @@
     webpack-subresource-integrity "^5.2.0-rc.1"
     yargs "^17.7.1"
 
+"@polkadot/keyring@10.1.6":
+  version "10.1.6"
+  resolved "https://registry.yarnpkg.com/@polkadot/keyring/-/keyring-10.1.6.tgz#973b20a1af6bf4efc460e20e13ef419f8da1fcc8"
+  integrity sha512-l4kF8SRJwkAfQaPKu15/0cxnSu5kPBj/RM0oJpSxkiqZXMhflU7i1tGX2DNhXST+btyEe0AYDzLg2YSyxYOPQA==
+  dependencies:
+    "@babel/runtime" "^7.18.9"
+    "@polkadot/util" "10.1.6"
+    "@polkadot/util-crypto" "10.1.6"
+
 "@polkadot/keyring@10.1.7":
   version "10.1.7"
   resolved "https://registry.yarnpkg.com/@polkadot/keyring/-/keyring-10.1.7.tgz#d51be1dc5807c961889847d8f0e10e4bbdd19d3f"
@@ -2451,6 +2460,15 @@
     "@polkadot/util" "11.1.3"
     "@polkadot/util-crypto" "11.1.3"
     tslib "^2.5.0"
+
+"@polkadot/networks@10.1.6":
+  version "10.1.6"
+  resolved "https://registry.yarnpkg.com/@polkadot/networks/-/networks-10.1.6.tgz#32749dc6d39a9dd0cbd3af7fea11b1da4a4a63a0"
+  integrity sha512-NINGTVkvAnrBDXbIdcSJ7gCmtXUB6ybI4TLHY2Tf/57hak+hlyQUoHZdaTzpRYrxZ9xoUUS1K83Lr3wfwMblHA==
+  dependencies:
+    "@babel/runtime" "^7.18.9"
+    "@polkadot/util" "10.1.6"
+    "@substrate/ss58-registry" "^1.28.0"
 
 "@polkadot/networks@10.1.7":
   version "10.1.7"
@@ -2732,6 +2750,23 @@
     "@polkadot/util" "^10.1.6"
     "@polkadot/util-crypto" "^10.1.6"
     rxjs "^7.5.6"
+
+"@polkadot/util-crypto@10.1.6":
+  version "10.1.6"
+  resolved "https://registry.yarnpkg.com/@polkadot/util-crypto/-/util-crypto-10.1.6.tgz#f28bdcea6c5f732fef272928a4ba1cfc7c08e45e"
+  integrity sha512-r3XWcCERomcGyB5PT7Qa1LYtCHfspVbehPGvraRlX5xhZBihpU4zMRWTSBNMPNaeIjUJmmSQHeG0ZnQVvnwzkg==
+  dependencies:
+    "@babel/runtime" "^7.18.9"
+    "@noble/hashes" "1.1.2"
+    "@noble/secp256k1" "1.6.3"
+    "@polkadot/networks" "10.1.6"
+    "@polkadot/util" "10.1.6"
+    "@polkadot/wasm-crypto" "^6.3.1"
+    "@polkadot/x-bigint" "10.1.6"
+    "@polkadot/x-randomvalues" "10.1.6"
+    "@scure/base" "1.1.1"
+    ed2curve "^0.3.0"
+    tweetnacl "^1.0.3"
 
 "@polkadot/util-crypto@10.1.7":
   version "10.1.7"
@@ -3015,6 +3050,14 @@
   integrity sha512-R3aqtIjgzFHJ3TyX6wavhp+59oLbZiqczIHkaas/nJe21+SVARqFmIII6BwS7ty7+8Uu4fHliA9re+ZSUp+rwg==
   dependencies:
     tslib "^2.5.0"
+
+"@polkadot/x-randomvalues@10.1.6":
+  version "10.1.6"
+  resolved "https://registry.yarnpkg.com/@polkadot/x-randomvalues/-/x-randomvalues-10.1.6.tgz#9dfb0e403d60139b5ac4ba7ebeecf395a8f193c6"
+  integrity sha512-NDOr7Zvv3lN0Z3+gt/RfmZbeOXg21402ggiBdL8ni9rf0ZMUzFLqRNsbm0334L0lApfhfvxm98MGfK+gq6uVZg==
+  dependencies:
+    "@babel/runtime" "^7.18.9"
+    "@polkadot/x-global" "10.1.6"
 
 "@polkadot/x-randomvalues@10.1.7":
   version "10.1.7"
@@ -4234,7 +4277,20 @@
     "@webassemblyjs/ast" "1.11.1"
     "@xtuc/long" "4.2.2"
 
-"@webb-tools/anchors@0.5.32", "@webb-tools/anchors@^0.5.27", "@webb-tools/anchors@^0.5.3", "@webb-tools/anchors@^0.5.32":
+"@webb-tools/anchors@0.5.27":
+  version "0.5.27"
+  resolved "https://registry.yarnpkg.com/@webb-tools/anchors/-/anchors-0.5.27.tgz#933e1e71b511a35421a750a668e4173ec3035ed7"
+  integrity sha512-X6DP8hMAw2rgjomAu9KKNzxL8bdfdXHUp6yZ1uSyN7awqibMN1mHR2dEHJn/tOU1Fmzzv7StrKhT2xybGf0pDg==
+  dependencies:
+    "@webb-tools/contracts" "^0.5.27"
+    "@webb-tools/interfaces" "^0.5.27"
+    "@webb-tools/sdk-core" "0.1.4-119"
+    "@webb-tools/semaphore" "0.0.1-5"
+    "@webb-tools/utils" "^0.5.19"
+    ethers "5.7.0"
+    jssha "^3.2.0"
+
+"@webb-tools/anchors@^0.5.27", "@webb-tools/anchors@^0.5.3", "@webb-tools/anchors@^0.5.32":
   version "0.5.32"
   resolved "https://registry.yarnpkg.com/@webb-tools/anchors/-/anchors-0.5.32.tgz#09be18bef91e95084bc595c2917ed0974e14ec56"
   integrity sha512-NRGEAdpsf3EzHmcu/CXKVwkP/LjN/sd0aUsMGiffjQqWX7w4FoC+Uqu6e6lHWpYxsC8E8cHRvf1/CWuFbC95jg==
