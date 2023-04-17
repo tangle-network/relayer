@@ -5,20 +5,17 @@ use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{T
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use sp_core::sr25519::Pair as Sr25519Pair;
-use webb::evm::ethers::types::TxHash;
 use webb::evm::ethers::utils;
-use webb::evm::ethers::utils::keccak256;
 use webb_proposals::ProposalTrait;
 use webb::substrate::scale::{Encode, Decode};
 use webb_relayer_utils::metric;
 use webb::substrate::dkg_runtime::api as RuntimeApi;
-use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::ExecuteProposal;
 use webb::substrate::subxt::dynamic::Value;
 use webb_relayer_store::{QueueStore, SledStore};
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
-use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
-use webb::substrate::subxt::tx::{PairSigner, Signer};
+use webb::substrate::subxt::tx::{PairSigner};
+use webb::substrate::dkg_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
 type DkgConfig = PolkadotConfig;
 type DkgClient = OnlineClient<DkgConfig>;
@@ -98,10 +95,13 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
-        metrics: Arc<Mutex<metric::Metrics>>,
+        _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
+        let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
+        let src_chain_id =
+            webb_proposals_typed_chain_converter(self.typed_chain_id);
         let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
         tracing::debug!(
             nonce = %hex::encode(nonce.encode()),
@@ -110,17 +110,33 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             proposal = %hex::encode(proposal.to_vec()),
             "sending proposal to DKG runtime"
         );
-        let hash = keccak256(proposal.to_vec());
-        let signature = self.pair.sign(TxHash(hash).as_ref());
-        // Proposal signed metric
-        metrics.lock().await.proposals_signed.inc();
 
-        let execute_proposal_call = ExecuteProposal {
-            src_id: self.typed_chain_id.chain_id(),
-            proposal_data: BoundedVec(proposal.to_vec()),
-            signature: BoundedVec(signature.encode()),
+        let xt = tx_api.acknowledge_proposal(
+            nonce,
+            src_chain_id,
+            ResourceId(resource_id.into_bytes()),
+            BoundedVec(proposal.to_vec()),
+        );
+        // webb dynamic payload
+        let execute_proposal_tx = WebbDynamicTxPayload {
+            pallet_name: Cow::Borrowed("dkgProposals"),
+            call_name: Cow::Borrowed("acknowledge_proposal"),
+            fields: vec![
+                Value::u128(u128::from(self.typed_chain_id.chain_id())),
+                Value::from_bytes(xt.call_data().encode()),
+            ],
         };
-        enqueue_transaction(execute_proposal_call, self.store.as_ref())?;
+        let data_hash = utils::keccak256(xt.call_data().encode());
+        let tx_key = SledQueueKey::from_substrate_with_custom_key(
+            self.typed_chain_id.underlying_chain_id(),
+            make_execute_proposal_key(data_hash),
+        );
+        // Enqueue WebbDynamicTxPayload in protocol-substrate transaction queue
+        QueueStore::<WebbDynamicTxPayload>::enqueue_item(
+            &self.store,
+            tx_key,
+            execute_proposal_tx,
+        )?;
 
         Ok(())
     }
@@ -148,40 +164,6 @@ fn webb_proposals_typed_chain_converter(
         webb_proposals::TypedChainId::Solana(id) => TypedChainId::Solana(id),
         webb_proposals::TypedChainId::Ink(id) => TypedChainId::Ink(id),
     }
-}
-
-pub fn enqueue_transaction(
-    call: ExecuteProposal,
-    store: &SledStore,
-) -> webb_relayer_utils::Result<()> {
-    let data_hash = utils::keccak256(call.encode());
-    // webb dynamic payload
-    let execute_proposal_tx = WebbDynamicTxPayload {
-        pallet_name: Cow::Borrowed("SignatureBridge"),
-        call_name: Cow::Borrowed("execute_proposal"),
-        fields: vec![
-            Value::u128(u128::from(call.src_id)),
-            Value::from_bytes(call.proposal_data.0),
-            Value::from_bytes(call.signature.0),
-        ],
-    };
-
-    let chain_id = webb_proposals::TypedChainId::from(call.src_id);
-    let tx_key = SledQueueKey::from_substrate_with_custom_key(
-        chain_id.underlying_chain_id(),
-        make_execute_proposal_key(data_hash),
-    );
-    // Enqueue WebbDynamicTxPayload in protocol-substrate transaction queue
-    QueueStore::<WebbDynamicTxPayload>::enqueue_item(
-        store,
-        tx_key,
-        execute_proposal_tx,
-    )?;
-    tracing::debug!(
-        data_hash = ?hex::encode(data_hash),
-        "Enqueued execute-proposal call for execution through protocol-substrate tx queue",
-    );
-    Ok(())
 }
 
 pub fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
