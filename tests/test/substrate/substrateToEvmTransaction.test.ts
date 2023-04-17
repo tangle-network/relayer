@@ -321,10 +321,8 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       .map((el) => hexToU8a(el.toHexString()));
     const publicAmount = (1e13).toString();
 
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
     // get leaves for substrate chain
-    const substrateLeaves = await api.derive.merkleTreeBn254.getLeavesForTree(
+    const substrateLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(
       treeId,
       0,
       1

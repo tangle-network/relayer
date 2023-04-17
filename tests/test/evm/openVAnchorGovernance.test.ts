@@ -23,7 +23,7 @@ import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnetOpenVBridge.js';
 import { EnabledContracts, WebbRelayer } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { u8aToHex, hexToU8a } from '@polkadot/util';
+import { u8aToHex } from '@polkadot/util';
 import { OpenVBridge } from '@webb-tools/vbridge';
 
 describe('Open VAnchor Governance Relayer', function () {
