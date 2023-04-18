@@ -1,5 +1,11 @@
 use serde::{Deserialize, Serialize};
 /// Proof data object for Masp proof delegation. This include the private variables.
+pub enum ProofGenerationError {
+    ParseBigIntError,
+    JsonDecodeError,
+}
+
+///
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MaspDelegatedProofInputsJson {

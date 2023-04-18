@@ -37,7 +37,8 @@ pub fn circom_from_raw(
 ) -> &'static Mutex<WitnessCalculator> {
     WITNESS_CALCULATOR.get_or_init(|| {
         let store = Store::default();
-        let module = Module::new(&store, wasm_buffer).unwrap();
+        let module = Module::new(&store, wasm_buffer)
+            .expect("Failed to produce wasm module");
         let result = WitnessCalculator::from_module(module)
             .expect("Failed to create witness calculator");
         Mutex::new(result)
@@ -61,7 +62,8 @@ pub fn circom_from_folder(
     wasm_path: &str,
 ) -> &'static Mutex<WitnessCalculator> {
     // We read the wasm file
-    let wasm_buffer = std::fs::read(wasm_path).unwrap();
+    let wasm_buffer =
+        std::fs::read(wasm_path).expect("Could not find file at provided path");
     circom_from_raw(wasm_buffer)
 }
 
