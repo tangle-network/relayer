@@ -9,7 +9,8 @@ services:
     depends_on:
       - prometheus
     volumes:
-      - grafana-data:/var/lib/grafana
+      - grafana-data2:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning
 
   prometheus:
     image: prom/prometheus:v2.43.0
@@ -20,4 +21,4 @@ services:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
 
 volumes:
-  grafana-data:
+  grafana-data2:
