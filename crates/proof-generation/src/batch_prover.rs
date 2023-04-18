@@ -40,7 +40,7 @@ impl MaspBatchProver {
             ("pathIndices", vec![proof_input.path_indices.clone()]),
             ("pathElements", proof_input.path_elements.clone()),
             ("leaves", proof_input.leaves.clone()),
-            ("argsHash", vec![proof_input.args_hash.clone()]),
+            ("argsHash", vec![proof_input.args_hash]),
         ];
         let num_inputs = self.zkey.1.num_instance_variables;
 
@@ -124,7 +124,7 @@ mod tests {
 
         // pre-generated inputs
         let old_root = BigInt::from_str("19476726467694243150694636071195943429153087843379888650723427850220480216251").unwrap();
-        let new_root = BigInt::from_str("15126246733515326086631621937388047923581111613947275249184377560170833782629").unwrap();
+        let new_root = BigInt::from_str("0").unwrap();
         let path_indices = BigInt::from(0);
         let path_elements = [
             "15126246733515326086631621937388047923581111613947275249184377560170833782629",

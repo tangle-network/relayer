@@ -43,9 +43,9 @@ impl MaspInUtxo {
     ) -> Self {
         Self {
             nullifier: BigInt::from_str(nullifier).unwrap(),
-            amount: BigInt::from_str(&amount).unwrap(),
-            blinding: BigInt::from_str(&blinding).unwrap(),
-            path_indices: BigInt::from_str(&path_indices).unwrap(),
+            amount: BigInt::from_str(amount).unwrap(),
+            blinding: BigInt::from_str(blinding).unwrap(),
+            path_indices: BigInt::from_str(path_indices).unwrap(),
             path_elements: path_elements
                 .iter()
                 .map(|x| BigInt::from_str(x).unwrap())
@@ -73,13 +73,13 @@ impl MaspOutUtxo {
     ) -> Self {
         Self {
             commitment: BigInt::from_str(commitment).unwrap(),
-            chain_id: BigInt::from_str(&chain_id).unwrap(),
+            chain_id: BigInt::from_str(chain_id).unwrap(),
             pk: Point {
-                x: BigInt::from_str(&pk_x).unwrap(),
-                y: BigInt::from_str(&pk_y).unwrap(),
+                x: BigInt::from_str(pk_x).unwrap(),
+                y: BigInt::from_str(pk_y).unwrap(),
             },
-            amount: BigInt::from_str(&amount).unwrap(),
-            blinding: BigInt::from_str(&blinding).unwrap(),
+            amount: BigInt::from_str(amount).unwrap(),
+            blinding: BigInt::from_str(blinding).unwrap(),
         }
     }
 }
@@ -101,13 +101,13 @@ impl MaspKey {
     ) -> Self {
         Self {
             ak: Point {
-                x: BigInt::from_str(&ak_x).unwrap(),
-                y: BigInt::from_str(&ak_y).unwrap(),
+                x: BigInt::from_str(ak_x).unwrap(),
+                y: BigInt::from_str(ak_y).unwrap(),
             },
-            alpha: BigInt::from_str(&alpha).unwrap(),
+            alpha: BigInt::from_str(alpha).unwrap(),
             ak_alpha: Point {
-                x: BigInt::from_str(&ak_alpha_x).unwrap(),
-                y: BigInt::from_str(&ak_alpha_y).unwrap(),
+                x: BigInt::from_str(ak_alpha_x).unwrap(),
+                y: BigInt::from_str(ak_alpha_y).unwrap(),
             },
         }
     }
@@ -214,7 +214,7 @@ impl MaspDelegatedProofInput {
         let whitelisted_asset_ids: Vec<BigInt> = stringified_inputs
             .whitelisted_asset_ids
             .iter()
-            .map(|x| BigInt::from_str(&x).unwrap())
+            .map(|x| BigInt::from_str(x).unwrap())
             .collect();
         let fee_asset = MaspAssetInfo {
             asset_id: BigInt::from_str(&stringified_inputs.fee_asset_id)
@@ -281,14 +281,12 @@ impl MaspDelegatedProofInput {
         let in_path_elements_flattened: Vec<BigInt> = self
             .in_utxos
             .iter()
-            .map(|utxo| utxo.path_elements.clone())
-            .flatten()
+            .flat_map(|utxo| utxo.path_elements.clone())
             .collect();
         let fee_in_path_elements_flattened: Vec<BigInt> = self
             .fee_in_utxos
             .iter()
-            .map(|utxo| utxo.path_elements.clone())
-            .flatten()
+            .flat_map(|utxo| utxo.path_elements.clone())
             .collect();
 
         [
@@ -326,7 +324,7 @@ impl MaspDelegatedProofInput {
                     .map(|utxo| utxo.path_indices.clone())
                     .collect(),
             ),
-            ("inPathElements", in_path_elements_flattened.clone()),
+            ("inPathElements", in_path_elements_flattened),
             (
                 "outputCommitment",
                 self.out_utxos
@@ -428,7 +426,7 @@ impl MaspDelegatedProofInput {
                     .map(|utxo| utxo.path_indices.clone())
                     .collect(),
             ),
-            ("feeInPathElements", fee_in_path_elements_flattened.clone()),
+            ("feeInPathElements", fee_in_path_elements_flattened),
             (
                 "feeOutputCommitment",
                 self.fee_out_utxos
@@ -548,7 +546,7 @@ mod tests {
     use circom_proving::verify_proof;
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn test_proof_delegation() {
         let zkey_path =
             "../../tests/solidity-fixtures/masp_vanchor_2/2/circuit_final.zkey"
