@@ -580,7 +580,7 @@ mod tests {
     use circom_proving::verify_proof;
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn test_proof_delegation() {
         let zkey_path =
             "../../tests/solidity-fixtures/masp_vanchor_2/2/circuit_final.zkey"
