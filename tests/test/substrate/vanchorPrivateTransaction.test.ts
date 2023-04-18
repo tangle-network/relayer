@@ -18,7 +18,7 @@
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import '@webb-tools/protocol-substrate-types';
-import { assert, expect } from 'chai';
+import { assert } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -494,7 +494,7 @@ async function vanchorDeposit(
     fee,
     refund: String(refund),
     token: assetId,
-    extAmount: extAmount,
+    extAmount: extAmount.toNumber(),
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };

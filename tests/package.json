@@ -17,10 +17,10 @@
     "node": "18.x.x"
   },
   "resolutions": {
-    "@webb-tools/api": "0.1.4-122",
-    "@webb-tools/api-derive": "0.1.4-122",
-    "@webb-tools/sdk-core": "0.1.4-122",
-    "@webb-tools/test-utils": "0.1.4-122"
+    "@webb-tools/api": "0.1.4-123",
+    "@webb-tools/api-derive": "0.1.4-123",
+    "@webb-tools/sdk-core": "0.1.4-123",
+    "@webb-tools/test-utils": "0.1.4-123"
   },
   "dependencies": {
     "@babel/core": "^7.17.8",
@@ -39,10 +39,10 @@
     "@webb-tools/evm-test-utils":"0.5.32",
     "@webb-tools/tokens": "0.5.32",
     "@webb-tools/utils": "0.5.24",
-    "@webb-tools/api": "0.1.4-122",
-    "@webb-tools/api-derive": "0.1.4-122",
-    "@webb-tools/sdk-core": "0.1.4-122",
-    "@webb-tools/test-utils": "0.1.4-122",
+    "@webb-tools/api": "0.1.4-123",
+    "@webb-tools/api-derive": "0.1.4-123",
+    "@webb-tools/sdk-core": "0.1.4-123",
+    "@webb-tools/test-utils": "0.1.4-123",
     "@webb-tools/protocol-substrate-types": "0.0.10",
     "@webb-tools/dkg-substrate-types": "0.0.5",
     "JSONStream": "^1.3.5",
