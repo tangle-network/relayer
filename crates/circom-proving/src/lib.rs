@@ -77,8 +77,6 @@ pub fn generate_proof<const N: usize>(
         .iter()
         .map(|(name, values)| (name.to_string(), values.clone()));
 
-    println!("inputs {inputs:?}");
-
     cfg_if! {
         if #[cfg(target_arch = "wasm32")] {
             let full_assignment = witness_calculator
@@ -98,6 +96,9 @@ pub fn generate_proof<const N: usize>(
     let r = Fr::rand(&mut rng);
     let s = Fr::rand(&mut rng);
 
+    // TODO: Need to understand why this function is generating proofs even if parameters are
+    // invalid. `test_gen_proof_fails_with_incorrect_root` should not be able to generate a
+    // proof since new_root has an incorrect value (path_elements[0] instead)
     let proof = create_proof_with_reduction_and_matrices::<_, CircomReduction>(
         &proving_key.0,
         r,
