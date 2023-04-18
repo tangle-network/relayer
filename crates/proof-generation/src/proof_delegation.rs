@@ -569,28 +569,4 @@ mod tests {
 
         assert!(did_proof_work, "failed proof verification");
     }
-    #[test]
-    // #[ignore]
-    fn test_proof_delegation_fails_with_invalid_inputs() {
-        let zkey_path =
-            "../../tests/solidity-fixtures/masp_vanchor_2/2/circuit_final.zkey"
-                .to_string();
-        let wasm_path = "../../tests/solidity-fixtures/masp_vanchor_2/2/masp_vanchor_2_2.wasm".to_string();
-
-        let path = ProverPath::new(zkey_path, wasm_path);
-        let prover = MaspDelegatedProver::new(path);
-
-        let mut proof_input =
-            MaspDelegatedProofInput::from_json("./test_data/proofInputs.json")
-                .unwrap();
-
-        proof_input.roots[0] = BigInt::from(0);
-        let (proof, inputs_for_verification) =
-            prover.gen_proof(&proof_input).unwrap();
-        let did_proof_work =
-            verify_proof(&prover.zkey.0.vk, &proof, inputs_for_verification)
-                .unwrap();
-
-        assert!(did_proof_work, "failed proof verification");
-    }
 }

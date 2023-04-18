@@ -44,10 +44,8 @@ impl MaspBatchProver {
         ];
         let num_inputs = self.zkey.1.num_instance_variables;
 
-        println!("here");
         let (proof, full_assignment) =
             generate_proof(self.wc, &self.zkey, inputs_for_proof.clone())?;
-        println!("HERE!!");
         let inputs_for_verification = &full_assignment[1..num_inputs];
         Ok((proof, inputs_for_verification.to_vec()))
     }
