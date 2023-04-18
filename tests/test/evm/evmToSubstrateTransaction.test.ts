@@ -25,7 +25,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { BigNumber, ethers } from 'ethers';
+import { ethers } from 'ethers';
 import {
   WebbRelayer,
   Pallet,
