@@ -40,6 +40,25 @@ pub struct MaspInUtxo {
     /// Path elements for utxo
     pub path_elements: Vec<BigInt>,
 }
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
+pub struct MaspSignature {
+    pub signature: BigInt,
+    pub r8x: BigInt,
+    pub r8y: BigInt,
+}
+impl MaspSignature {
+    pub fn from_str_values(
+        signature: &str,
+        r8x: &str,
+        r8y: &str,
+    ) -> Result<Self, ParseBigIntError> {
+        Ok(Self {
+            signature: BigInt::from_str(signature)?,
+            r8x: BigInt::from_str(r8x)?,
+            r8y: BigInt::from_str(r8y)?,
+        })
+    }
+}
 
 impl MaspInUtxo {
     pub fn from_str_values(
@@ -87,7 +106,7 @@ impl MaspOutUtxo {
         Ok(Self {
             commitment: BigInt::from_str(commitment)?,
             chain_id: BigInt::from_str(chain_id)?,
-            pk: Point {
+            pk: AuthKey {
                 x: BigInt::from_str(pk_x)?,
                 y: BigInt::from_str(pk_y)?,
             },
@@ -98,38 +117,18 @@ impl MaspOutUtxo {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
-pub struct MaspKey {
-    pub ak: Point,
-    pub alpha: BigInt,
-    pub ak_alpha: Point,
-}
-
-impl MaspKey {
-    pub fn from_str_values(
-        ak_x: &str,
-        ak_y: &str,
-        alpha: &str,
-        ak_alpha_x: &str,
-        ak_alpha_y: &str,
-    ) -> Result<Self, ParseBigIntError> {
-        Ok(Self {
-            ak: Point {
-                x: BigInt::from_str(ak_x)?,
-                y: BigInt::from_str(ak_y)?,
-            },
-            alpha: BigInt::from_str(alpha)?,
-            ak_alpha: Point {
-                x: BigInt::from_str(ak_alpha_x)?,
-                y: BigInt::from_str(ak_alpha_y)?,
-            },
-        })
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct Point {
     pub x: BigInt,
     pub y: BigInt,
+}
+type AuthKey = Point;
+impl Point {
+    pub fn from_str_values(x: &str, y: &str) -> Result<Self, ParseBigIntError> {
+        Ok(Point {
+            x: BigInt::from_str(x)?,
+            y: BigInt::from_str(y)?,
+        })
+    }
 }
 
 /// Proof data object for Masp proof delegation. This include the private variables.
@@ -148,24 +147,29 @@ pub struct MaspDelegatedProofInput {
     // data for transaction inputs
     pub in_utxos: Vec<MaspInUtxo>,
 
+    pub in_signature: MaspSignature,
+    pub auth_key: AuthKey,
+
     // data for transaction outputs
     pub out_utxos: Vec<MaspOutUtxo>,
+
+    pub out_signature: MaspSignature,
     /// Chain ID of the transaction
     pub chain_id: BigInt,
     /// roots for membership check on MASP
     pub roots: Vec<BigInt>,
 
-    /// Keypairs for transaction utxos
-    pub keypairs: Vec<MaspKey>,
     pub whitelisted_asset_ids: Vec<BigInt>,
     pub fee_asset: MaspAssetInfo,
 
     // data for fee transaction inputs
     pub fee_in_utxos: Vec<MaspInUtxo>,
+
+    pub fee_in_signature: MaspSignature,
     // data for fee transaction outputs
     pub fee_out_utxos: Vec<MaspOutUtxo>,
-    /// Keypairs for fee utxos
-    pub fee_keypairs: Vec<MaspKey>,
+    pub fee_out_signature: MaspSignature,
+    pub fee_auth_key: AuthKey,
 }
 
 impl MaspDelegatedProofInput {
@@ -176,6 +180,7 @@ impl MaspDelegatedProofInput {
             serde_json::from_reader(&file).expect(
                 "Failed to produce MaspDelegatedProofInputsJson from file",
             );
+        println!("stringified_inputs: {:#?}", stringified_inputs);
 
         let public_amount =
             BigInt::from_str(&stringified_inputs.public_amount)?;
@@ -191,7 +196,6 @@ impl MaspDelegatedProofInput {
             &stringified_inputs.public_asset_id,
             &stringified_inputs.public_token_id,
         )?;
-
         // get in_utxos
         let mut in_utxos: Vec<MaspInUtxo> = vec![];
         for (nullifier, amount, blinding, path_indices, path_elements) in izip!(
@@ -210,6 +214,12 @@ impl MaspDelegatedProofInput {
             )?;
             in_utxos.push(utxo);
         }
+        // get input signature
+        let in_signature = MaspSignature::from_str_values(
+            &stringified_inputs.in_signature,
+            &stringified_inputs.in_r8x,
+            &stringified_inputs.in_r8y,
+        )?;
 
         // get out_utxos
         let mut out_utxos: Vec<MaspOutUtxo> = vec![];
@@ -226,6 +236,12 @@ impl MaspDelegatedProofInput {
             )?;
             out_utxos.push(utxo);
         }
+        // get output signature
+        let out_signature = MaspSignature::from_str_values(
+            &stringified_inputs.out_signature,
+            &stringified_inputs.out_r8x,
+            &stringified_inputs.out_r8y,
+        )?;
 
         let chain_id = BigInt::from_str(&stringified_inputs.chain_id)?;
         let roots_result: Result<Vec<BigInt>, ParseBigIntError> =
@@ -235,21 +251,10 @@ impl MaspDelegatedProofInput {
                 .map(|x| BigInt::from_str(x))
                 .collect();
         let roots: Vec<BigInt> = roots_result?;
-
-        // get keypairs
-        let mut keypairs: Vec<MaspKey> = vec![];
-        for (ak_x, ak_y, alpha, ak_alpha_x, ak_alpha_y) in izip!(
+        let auth_key = AuthKey::from_str_values(
             &stringified_inputs.ak_x,
             &stringified_inputs.ak_y,
-            &stringified_inputs.alpha,
-            &stringified_inputs.ak_alpha_x,
-            &stringified_inputs.ak_alpha_y,
-        ) {
-            let key = MaspKey::from_str_values(
-                ak_x, ak_y, alpha, ak_alpha_x, ak_alpha_y,
-            )?;
-            keypairs.push(key);
-        }
+        )?;
 
         let whitelisted_asset_ids_result: Result<
             Vec<BigInt>,
@@ -265,8 +270,8 @@ impl MaspDelegatedProofInput {
             asset_id: BigInt::from_str(&stringified_inputs.fee_asset_id)?,
             token_id: BigInt::from_str(&stringified_inputs.fee_token_id)?,
         };
-
-        // get fee_in_utxos
+        //
+        // // get fee_in_utxos
         let mut fee_in_utxos: Vec<MaspInUtxo> = vec![];
         for (nullifier, amount, blinding, path_indices, path_elements) in izip!(
             &stringified_inputs.fee_input_nullifier,
@@ -284,6 +289,12 @@ impl MaspDelegatedProofInput {
             )?;
             fee_in_utxos.push(utxo);
         }
+        // get input signature
+        let fee_in_signature = MaspSignature::from_str_values(
+            &stringified_inputs.fee_in_signature,
+            &stringified_inputs.fee_in_r8x,
+            &stringified_inputs.fee_in_r8y,
+        )?;
 
         // get fee_out_utxos
         let mut fee_out_utxos: Vec<MaspOutUtxo> = vec![];
@@ -300,43 +311,40 @@ impl MaspDelegatedProofInput {
             )?;
             fee_out_utxos.push(utxo);
         }
-        // get fee_keypairs
-        let mut fee_keypairs: Vec<MaspKey> = vec![];
-        for (fee_ak_x, fee_ak_y, fee_alpha, fee_ak_alpha_x, fee_ak_alpha_y) in izip!(
+
+        // get input signature
+        let fee_out_signature = MaspSignature::from_str_values(
+            &stringified_inputs.fee_out_signature,
+            &stringified_inputs.fee_out_r8x,
+            &stringified_inputs.fee_out_r8y,
+        )?;
+        let fee_auth_key = AuthKey::from_str_values(
             &stringified_inputs.fee_ak_x,
             &stringified_inputs.fee_ak_y,
-            &stringified_inputs.fee_alpha,
-            &stringified_inputs.fee_ak_alpha_x,
-            &stringified_inputs.fee_ak_alpha_y,
-        ) {
-            let key = MaspKey::from_str_values(
-                fee_ak_x,
-                fee_ak_y,
-                fee_alpha,
-                fee_ak_alpha_x,
-                fee_ak_alpha_y,
-            )?;
-            fee_keypairs.push(key);
-        }
+        )?;
         Ok(Self {
             public_amount,
             ext_data_hash,
             asset,
             public_asset,
             in_utxos,
+            in_signature,
+            auth_key,
             out_utxos,
+            out_signature,
             chain_id,
             roots,
-            keypairs,
             whitelisted_asset_ids,
             fee_asset,
             fee_in_utxos,
+            fee_in_signature,
             fee_out_utxos,
-            fee_keypairs,
+            fee_out_signature,
+            fee_auth_key,
         })
     }
 
-    pub fn preprocess(&self) -> [(&'static str, Vec<BigInt>); 43] {
+    pub fn preprocess(&self) -> [(&'static str, Vec<BigInt>); 49] {
         let in_path_elements_flattened: Vec<BigInt> = self
             .in_utxos
             .iter()
@@ -385,6 +393,9 @@ impl MaspDelegatedProofInput {
                     .collect(),
             ),
             ("inPathElements", in_path_elements_flattened),
+            ("inSignature", vec![self.in_signature.signature.clone()]),
+            ("inR8x", vec![self.in_signature.r8x.clone()]),
+            ("inR8y", vec![self.in_signature.r8y.clone()]),
             (
                 "outputCommitment",
                 self.out_utxos
@@ -427,34 +438,13 @@ impl MaspDelegatedProofInput {
                     .map(|utxo| utxo.blinding.clone())
                     .collect(),
             ),
+            ("outSignature", vec![self.out_signature.signature.clone()]),
+            ("outR8x", vec![self.out_signature.r8x.clone()]),
+            ("outR8y", vec![self.out_signature.r8y.clone()]),
             ("chainID", vec![self.chain_id.clone()]),
             ("roots", self.roots.clone()),
-            (
-                "ak_X",
-                self.keypairs.iter().map(|key| key.ak.x.clone()).collect(),
-            ),
-            (
-                "ak_Y",
-                self.keypairs.iter().map(|key| key.ak.y.clone()).collect(),
-            ),
-            (
-                "alpha",
-                self.keypairs.iter().map(|key| key.alpha.clone()).collect(),
-            ),
-            (
-                "ak_alpha_X",
-                self.keypairs
-                    .iter()
-                    .map(|key| key.ak_alpha.x.clone())
-                    .collect(),
-            ),
-            (
-                "ak_alpha_Y",
-                self.keypairs
-                    .iter()
-                    .map(|key| key.ak_alpha.y.clone())
-                    .collect(),
-            ),
+            ("ak_X", vec![self.auth_key.x.clone()]),
+            ("ak_Y", vec![self.auth_key.y.clone()]),
             ("feeAssetID", vec![self.fee_asset.asset_id.clone()]),
             ("whitelistedAssetIDs", self.whitelisted_asset_ids.clone()),
             ("feeTokenID", vec![self.fee_asset.token_id.clone()]),
@@ -487,6 +477,12 @@ impl MaspDelegatedProofInput {
                     .collect(),
             ),
             ("feeInPathElements", fee_in_path_elements_flattened),
+            (
+                "feeInSignature",
+                vec![self.fee_in_signature.signature.clone()],
+            ),
+            ("feeInR8x", vec![self.fee_in_signature.r8x.clone()]),
+            ("feeInR8y", vec![self.fee_in_signature.r8y.clone()]),
             (
                 "feeOutputCommitment",
                 self.fee_out_utxos
@@ -530,40 +526,13 @@ impl MaspDelegatedProofInput {
                     .collect(),
             ),
             (
-                "fee_ak_X",
-                self.fee_keypairs
-                    .iter()
-                    .map(|key| key.ak.x.clone())
-                    .collect(),
+                "feeOutSignature",
+                vec![self.fee_out_signature.signature.clone()],
             ),
-            (
-                "fee_ak_Y",
-                self.fee_keypairs
-                    .iter()
-                    .map(|key| key.ak.y.clone())
-                    .collect(),
-            ),
-            (
-                "fee_alpha",
-                self.fee_keypairs
-                    .iter()
-                    .map(|key| key.alpha.clone())
-                    .collect(),
-            ),
-            (
-                "fee_ak_alpha_X",
-                self.fee_keypairs
-                    .iter()
-                    .map(|key| key.ak_alpha.x.clone())
-                    .collect(),
-            ),
-            (
-                "fee_ak_alpha_Y",
-                self.fee_keypairs
-                    .iter()
-                    .map(|key| key.ak_alpha.y.clone())
-                    .collect(),
-            ),
+            ("feeOutR8x", vec![self.fee_out_signature.r8x.clone()]),
+            ("feeOutR8y", vec![self.fee_out_signature.r8y.clone()]),
+            ("fee_ak_X", vec![self.fee_auth_key.x.clone()]),
+            ("fee_ak_Y", vec![self.fee_auth_key.y.clone()]),
         ];
     }
 }
@@ -611,7 +580,7 @@ mod tests {
     use circom_proving::verify_proof;
 
     #[test]
-    #[ignore]
+    // #[ignore]
     fn test_proof_delegation() {
         let zkey_path =
             "../../tests/solidity-fixtures/masp_vanchor_2/2/circuit_final.zkey"
@@ -630,6 +599,7 @@ mod tests {
             verify_proof(&prover.zkey.0.vk, &proof, inputs_for_verification)
                 .unwrap();
 
+        // assert!(false);
         assert!(did_proof_work, "failed proof verification");
     }
 }

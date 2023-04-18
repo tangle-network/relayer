@@ -23,6 +23,11 @@ pub struct MaspDelegatedProofInputsJson {
     pub in_path_indices: Vec<String>,
     pub in_path_elements: Vec<Vec<String>>,
 
+    // signature data
+    pub in_signature: String,
+    pub in_r8x: String,
+    pub in_r8y: String,
+
     // data for transaction outputs
     pub output_commitment: Vec<String>,
     pub out_amount: Vec<String>,
@@ -31,14 +36,16 @@ pub struct MaspDelegatedProofInputsJson {
     pub out_pk_y: Vec<String>,
     pub out_blinding: Vec<String>,
 
+    // signature data
+    pub out_signature: String,
+    pub out_r8x: String,
+    pub out_r8y: String,
+
     pub chain_id: String,
     pub roots: Vec<String>,
 
-    pub ak_x: Vec<String>,
-    pub ak_y: Vec<String>,
-    pub alpha: Vec<String>,
-    pub ak_alpha_x: Vec<String>,
-    pub ak_alpha_y: Vec<String>,
+    pub ak_x: String,
+    pub ak_y: String,
 
     pub whitelisted_asset_ids: Vec<String>,
     pub fee_asset_id: String,
@@ -51,6 +58,11 @@ pub struct MaspDelegatedProofInputsJson {
     pub fee_in_path_indices: Vec<String>,
     pub fee_in_path_elements: Vec<Vec<String>>,
 
+    // signature data
+    pub fee_in_signature: String,
+    pub fee_in_r8x: String,
+    pub fee_in_r8y: String,
+
     // data for transaction outputs
     pub fee_output_commitment: Vec<String>,
     pub fee_out_amount: Vec<String>,
@@ -59,9 +71,11 @@ pub struct MaspDelegatedProofInputsJson {
     pub fee_out_pk_y: Vec<String>,
     pub fee_out_blinding: Vec<String>,
 
-    pub fee_ak_x: Vec<String>,
-    pub fee_ak_y: Vec<String>,
-    pub fee_alpha: Vec<String>,
-    pub fee_ak_alpha_x: Vec<String>,
-    pub fee_ak_alpha_y: Vec<String>,
+    // signature data
+    pub fee_out_signature: String,
+    pub fee_out_r8x: String,
+    pub fee_out_r8y: String,
+
+    pub fee_ak_x: String,
+    pub fee_ak_y: String,
 }
