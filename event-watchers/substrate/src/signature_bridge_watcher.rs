@@ -16,7 +16,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use sp_core::hashing::keccak_256;
-use webb::substrate::subxt::config::SubstrateConfig;
+use webb::substrate::subxt::config::PolkadotConfig;
 use webb::substrate::subxt::events::StaticEvent;
 
 use webb::substrate::subxt::{self, dynamic::Value, OnlineClient};
@@ -48,14 +48,14 @@ use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bound
 pub struct MaintainerSetEventHandler;
 
 #[async_trait::async_trait]
-impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
-    type Client = OnlineClient<SubstrateConfig>;
+impl EventHandler<PolkadotConfig> for MaintainerSetEventHandler {
+    type Client = OnlineClient<PolkadotConfig>;
 
     type Store = SledStore;
 
     async fn can_handle_events(
         &self,
-        events: subxt::events::Events<SubstrateConfig>,
+        events: subxt::events::Events<PolkadotConfig>,
     ) -> webb_relayer_utils::Result<bool> {
         let has_event = events.has::<MaintainerSet>()?;
         Ok(has_event)
@@ -65,7 +65,7 @@ impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
         &self,
         _store: Arc<Self::Store>,
         _client: Arc<Self::Client>,
-        (events, _block_number): (subxt::events::Events<SubstrateConfig>, u64),
+        (events, _block_number): (subxt::events::Events<PolkadotConfig>, u64),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // todo
@@ -99,15 +99,15 @@ impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct SubstrateBridgeEventWatcher;
 
-impl SubstrateEventWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
+impl SubstrateEventWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
     const TAG: &'static str = "Substrate bridge pallet Watcher";
     const PALLET_NAME: &'static str = MaintainerSet::PALLET;
-    type Client = OnlineClient<SubstrateConfig>;
+    type Client = OnlineClient<PolkadotConfig>;
     type Store = SledStore;
 }
 
 #[async_trait::async_trait]
-impl SubstrateBridgeWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
+impl SubstrateBridgeWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
     #[tracing::instrument(skip_all)]
     async fn handle_cmd(
         &self,
@@ -148,14 +148,14 @@ impl SubstrateBridgeWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
 
 impl SubstrateBridgeEventWatcher
 where
-    Self: SubstrateBridgeWatcher<SubstrateConfig>,
+    Self: SubstrateBridgeWatcher<PolkadotConfig>,
 {
     #[tracing::instrument(skip_all)]
     async fn execute_proposal_with_signature(
         &self,
         chain_id: u32,
-        store: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Client>,
+        store: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Store>,
+        api: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Client>,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let proposal_data_hex = hex::encode(&proposal_data);
@@ -253,8 +253,8 @@ where
     async fn transfer_ownership_with_signature(
         &self,
         chain_id: u32,
-        store: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Client>,
+        store: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Store>,
+        api: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Client>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let new_maintainer = public_key.clone();

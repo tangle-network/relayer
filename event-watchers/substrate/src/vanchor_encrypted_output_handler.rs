@@ -14,7 +14,7 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::subxt::{self, OnlineClient, SubstrateConfig};
+use webb::substrate::subxt::{self, OnlineClient, PolkadotConfig};
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::tangle_runtime::api::v_anchor_bn254;
 use webb_event_watcher_traits::substrate::EventHandler;
@@ -32,14 +32,14 @@ use webb_relayer_utils::{metric, Error};
 pub struct SubstrateVAnchorEncryptedOutputHandler;
 
 #[async_trait::async_trait]
-impl EventHandler<SubstrateConfig> for SubstrateVAnchorEncryptedOutputHandler {
-    type Client = OnlineClient<SubstrateConfig>;
+impl EventHandler<PolkadotConfig> for SubstrateVAnchorEncryptedOutputHandler {
+    type Client = OnlineClient<PolkadotConfig>;
 
     type Store = SledStore;
 
     async fn can_handle_events(
         &self,
-        events: subxt::events::Events<SubstrateConfig>,
+        events: subxt::events::Events<PolkadotConfig>,
     ) -> webb_relayer_utils::Result<bool> {
         let has_event = events.has::<v_anchor_bn254::events::Transaction>()?;
         Ok(has_event)
@@ -49,7 +49,7 @@ impl EventHandler<SubstrateConfig> for SubstrateVAnchorEncryptedOutputHandler {
         &self,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
-        (events, block_number): (subxt::events::Events<SubstrateConfig>, u64),
+        (events, block_number): (subxt::events::Events<PolkadotConfig>, u64),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let at_hash = events.block_hash();
