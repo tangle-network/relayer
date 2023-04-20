@@ -2,6 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use tokio::sync::Mutex;
 use webb::evm::ethers::{
+    self,
     abi::Detokenize,
     prelude::{builders::ContractCall, Middleware},
 };
@@ -95,22 +96,26 @@ where
         finalized = true,
         tx_hash = %receipt.transaction_hash,
     );
-    // gas spent by relayer on particular resource.
-    let gas_price = receipt.gas_used.unwrap_or_default();
-    let mut metrics = metrics.lock().await;
-    let resource_metric = metrics
-        .resource_metric_map
-        .entry(resource_id)
-        .or_insert_with(|| Metrics::register_resource_id_counters(resource_id));
-
-    resource_metric
-        .total_gas_spent
-        .inc_by(gas_price.as_u64() as f64);
-    drop(metrics);
+    // send the finalized status to the client.
     let _ = stream
         .send(Withdraw(WithdrawStatus::Finalized {
             tx_hash: receipt.transaction_hash,
         }))
         .await;
+    // gas spent by relayer on particular resource.
+    let gas_used = receipt.gas_used.unwrap_or_default();
+    let mut metrics = metrics.lock().await;
+    let resource_metric = metrics
+        .resource_metric_map
+        .entry(resource_id)
+        .or_insert_with(|| Metrics::register_resource_id_counters(resource_id));
+    // convert gas used to gwei.
+    let gas_used = ethers::utils::format_units(gas_used, "gwei")
+        .and_then(|gas| {
+            gas.parse::<f64>()
+                .map_err(|_| ethers::utils::ConversionError::ParseOverflow)
+        })
+        .unwrap_or_default();
+    resource_metric.total_gas_spent.inc_by(gas_used);
     Ok(())
 }

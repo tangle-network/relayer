@@ -21,7 +21,7 @@ use webb_proposals::ResourceId;
 /// A struct for collecting metrics for particular resource.
 #[derive(Debug, Clone)]
 pub struct ResourceMetric {
-    /// Total gas spent on Resource.
+    /// Total gas spent (in gwei) on Resource.
     pub total_gas_spent: GenericCounter<AtomicF64>,
     /// Total fees earned on Resource.
     pub total_fee_earned: GenericCounter<AtomicF64>,
@@ -34,8 +34,6 @@ pub struct ResourceMetric {
 pub struct Metrics {
     /// Bridge watcher back off metric
     pub bridge_watcher_back_off: GenericCounter<AtomicF64>,
-    /// Total active Relayer metric
-    pub total_active_relayer: GenericCounter<AtomicF64>,
     /// Total transaction made Relayer metric
     pub total_transaction_made: GenericCounter<AtomicF64>,
     /// Anchor update proposals proposed by relayer
@@ -71,11 +69,6 @@ impl Metrics {
         let bridge_watcher_back_off_counter = register_counter!(
             "bridge_watcher_back_off",
             "specifies how many times the bridge watcher backed off"
-        )?;
-
-        let total_active_relayer_counter = register_counter!(
-            "total_active_relayer",
-            "The total number of active relayers",
         )?;
 
         let total_transaction_made_counter = register_counter!(
@@ -140,7 +133,6 @@ impl Metrics {
 
         Ok(Self {
             bridge_watcher_back_off: bridge_watcher_back_off_counter,
-            total_active_relayer: total_active_relayer_counter,
             total_transaction_made: total_transaction_made_counter,
             anchor_update_proposals: anchor_update_proposals_counter,
             proposals_signed: proposals_signed_counter,
@@ -182,7 +174,7 @@ impl Metrics {
         let total_gas_spent_counter = register_counter!(
             format!("resource_{resource_hex}_total_gas_spent"),
             format!(
-                "The total number of gas spent on resource : {resource_hex}"
+                "The total number of gas (in gwei) spent on resource : {resource_hex}"
             )
         );
         // Total fee earned on particular resource.

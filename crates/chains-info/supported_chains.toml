@@ -11,6 +11,9 @@ chain-ids = [
     1284, # Moonbeam Mainnet
     1285, # Moonriver
     1287, # Moonbase Alpha
+    5001, # Athena Testnet
+    5002, # Hermes Testnet
+    5003, # Demeter Testnet
 ]
 
 # Override the coingecko coin Id for the Moonbase Alpha network
