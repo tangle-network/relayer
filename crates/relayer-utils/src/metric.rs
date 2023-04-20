@@ -15,6 +15,8 @@
 use std::collections::HashMap;
 
 use prometheus::core::{AtomicF64, GenericCounter, GenericGauge};
+use prometheus::labels;
+use prometheus::opts;
 use prometheus::{register_counter, register_gauge, Encoder, TextEncoder};
 use webb_proposals::ResourceId;
 
@@ -66,65 +68,65 @@ impl Metrics {
     /// Instantiates the various metrics and their counters, also creates a registry for the counters and
     /// registers the counters
     pub fn new() -> Result<Self, prometheus::Error> {
-        let bridge_watcher_back_off_counter = register_counter!(
+        let bridge_watcher_back_off = register_counter!(
             "bridge_watcher_back_off",
             "specifies how many times the bridge watcher backed off"
         )?;
 
-        let total_transaction_made_counter = register_counter!(
+        let total_transaction_made = register_counter!(
             "total_transaction_made",
             "The total number of transaction made",
         )?;
 
-        let anchor_update_proposals_counter = register_counter!(
+        let anchor_update_proposals = register_counter!(
             "anchor_update_proposals",
             "The total number of anchor update proposal proposed by relayer",
         )?;
 
-        let proposals_signed_counter = register_counter!(
+        let proposals_signed = register_counter!(
             "proposals_signed",
             "The total number of proposal signed by dkg/mocked backend",
         )?;
 
-        let proposals_processed_tx_queue_counter = register_counter!(
+        let proposals_processed_tx_queue = register_counter!(
             "proposals_processed_tx_queue",
             "Total number of signed proposals processed by transaction queue",
         )?;
 
-        let proposals_processed_substrate_tx_queue_counter = register_counter!(
+        let proposals_processed_substrate_tx_queue = register_counter!(
             "proposals_processed_substrate_tx_queue",
             "Total number of signed proposals processed by substrate transaction queue",
         )?;
 
-        let proposals_processed_evm_tx_queue_counter = register_counter!(
+        let proposals_processed_evm_tx_queue = register_counter!(
             "proposals_processed_evm_tx_queue",
             "Total number of signed proposals processed by evm transaction queue",
         )?;
 
-        let transaction_queue_back_off_counter = register_counter!(
+        let transaction_queue_back_off = register_counter!(
             "transaction_queue_back_off",
             "How many times the transaction queue backed off",
         )?;
 
-        let substrate_transaction_queue_back_off_counter = register_counter!(
+        let substrate_transaction_queue_back_off = register_counter!(
             "substrate_transaction_queue_back_off",
             "How many times the substrate transaction queue backed off",
         )?;
 
-        let evm_transaction_queue_back_off_counter = register_counter!(
+        let evm_transaction_queue_back_off = register_counter!(
             "evm_transaction_queue_back_off",
             "How many times the evm transaction queue backed off",
         )?;
 
-        let total_fee_earned_counter = register_counter!(
+        let total_fee_earned = register_counter!(
             "total_fee_earned",
             "The total number of fees earned",
         )?;
 
-        let gas_spent_counter =
+        let gas_spent =
             register_counter!("gas_spent", "The total number of gas spent")?;
 
-        let total_amount_of_data_stored_counter = register_gauge!(
+        let total_amount_of_data_stored = register_gauge!(
             "total_amount_of_data_stored",
             "The Total number of data stored",
         )?;
@@ -132,23 +134,19 @@ impl Metrics {
         let resource_metric_map = HashMap::new();
 
         Ok(Self {
-            bridge_watcher_back_off: bridge_watcher_back_off_counter,
-            total_transaction_made: total_transaction_made_counter,
-            anchor_update_proposals: anchor_update_proposals_counter,
-            proposals_signed: proposals_signed_counter,
-            proposals_processed_tx_queue: proposals_processed_tx_queue_counter,
-            proposals_processed_substrate_tx_queue:
-                proposals_processed_substrate_tx_queue_counter,
-            proposals_processed_evm_tx_queue:
-                proposals_processed_evm_tx_queue_counter,
-            transaction_queue_back_off: transaction_queue_back_off_counter,
-            substrate_transaction_queue_back_off:
-                substrate_transaction_queue_back_off_counter,
-            evm_transaction_queue_back_off:
-                evm_transaction_queue_back_off_counter,
-            total_fee_earned: total_fee_earned_counter,
-            gas_spent: gas_spent_counter,
-            total_amount_of_data_stored: total_amount_of_data_stored_counter,
+            bridge_watcher_back_off,
+            total_transaction_made,
+            anchor_update_proposals,
+            proposals_signed,
+            proposals_processed_tx_queue,
+            proposals_processed_substrate_tx_queue,
+            proposals_processed_evm_tx_queue,
+            transaction_queue_back_off,
+            substrate_transaction_queue_back_off,
+            evm_transaction_queue_back_off,
+            total_fee_earned,
+            gas_spent,
+            total_amount_of_data_stored,
             resource_metric_map,
         })
     }
@@ -169,34 +167,36 @@ impl Metrics {
     pub fn register_resource_id_counters(
         resource_id: ResourceId,
     ) -> ResourceMetric {
-        let resource_hex = hex::encode(resource_id.to_bytes().as_ref());
+        let resource_name = hex::encode(resource_id.to_bytes().as_ref());
+
         // Total gas fee spent on particular resource.
-        let total_gas_spent_counter = register_counter!(
-            format!("resource_{resource_hex}_total_gas_spent"),
-            format!(
-                "The total number of gas spent on resource : {resource_hex}"
-            )
-        );
+        let total_gas_spent = register_counter!(opts!(
+            "resource_total_gas_spent",
+            "Total number of gas spent on resource",
+            labels!("resource_id" => &resource_name)
+        ))
+        .expect("create counter for gas spent");
+
         // Total fee earned on particular resource.
-        let total_fee_earned_counter = register_counter!(
-            format!("resource_{resource_hex}_total_fees_earned"),
-            format!(
-                "The total number of fees earned on resource : {resource_hex}"
-            )
-        );
+        let total_fee_earned = register_counter!(opts!(
+            "resource_total_fees_earned",
+            "Total number of fees earned on resource",
+            labels!("resource_id" => &resource_name)
+        ))
+        .expect("create counter for fees earned");
+
         // Account Balance
-        let account_balance_counter = register_gauge!(
-            format!("resource_{resource_hex}_account_balance"),
-            format!("Total account balance : {resource_hex}")
-        );
+        let account_balance = register_gauge!(opts!(
+            "resource_account_balance",
+            "Total account balance",
+            labels!("resource_id" => &resource_name)
+        ))
+        .expect("create gauge for account balance");
 
         ResourceMetric {
-            total_gas_spent: total_gas_spent_counter
-                .expect("create counter for gas spent"),
-            total_fee_earned: total_fee_earned_counter
-                .expect("create counter for fees earned"),
-            account_balance: account_balance_counter
-                .expect("create gauge for account balance"),
+            total_gas_spent,
+            total_fee_earned,
+            account_balance,
         }
     }
 }

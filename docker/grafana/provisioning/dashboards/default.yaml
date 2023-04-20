@@ -6,4 +6,4 @@ providers:
     type: file
     options:
       path:
-        /etc/grafana/provisioning/dashboards/grafana-dashboard.json
+        /etc/grafana/provisioning/dashboards/dashboard.json

@@ -3,3 +3,4 @@ datasources:
   - name: Prometheus
     type: prometheus
     url: http://localhost:9090
+    uid: PBFA97CFB590B2093
