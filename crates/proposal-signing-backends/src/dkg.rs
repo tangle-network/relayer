@@ -119,17 +119,19 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         );
         // webb dynamic payload
         let execute_proposal_tx = WebbDynamicTxPayload {
-            pallet_name: Cow::Borrowed("dkgProposals"),
+            pallet_name: Cow::Borrowed("DKGProposals"),
             call_name: Cow::Borrowed("acknowledge_proposal"),
             fields: vec![
+                Value::u128(u128::from(nonce)),
                 Value::u128(u128::from(self.typed_chain_id.chain_id())),
-                Value::from_bytes(xt.call_data().encode()),
+                Value::from_bytes(ResourceId(resource_id.into_bytes()).encode()),
+                Value::from_bytes(BoundedVec(proposal.to_vec()).encode()),
             ],
         };
         let data_hash = utils::keccak256(xt.call_data().encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             self.typed_chain_id.underlying_chain_id(),
-            make_execute_proposal_key(data_hash),
+            make_ acknowledge_proposal_key(data_hash),
         );
         // Enqueue WebbDynamicTxPayload in protocol-substrate transaction queue
         QueueStore::<WebbDynamicTxPayload>::enqueue_item(
@@ -166,9 +168,10 @@ fn webb_proposals_typed_chain_converter(
     }
 }
 
-pub fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
+pub fn make_ acknowledge_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
     let mut result = [0u8; 64];
-    let prefix = b"execute_proposal_with_signature_";
+    // make sure that this byte array is 32 bytes.
+    let prefix = b"acknowledge_proposal_fixed_key_";
     result[0..32].copy_from_slice(prefix);
     result[32..64].copy_from_slice(&data_hash);
     result
