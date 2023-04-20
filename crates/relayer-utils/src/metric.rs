@@ -167,7 +167,7 @@ impl Metrics {
     pub fn register_resource_id_counters(
         resource_id: ResourceId,
     ) -> ResourceMetric {
-        let resource_name = hex::encode(resource_id.to_bytes().as_ref());
+        let resource_name = format!("{resource_id");
 
         // Total gas fee spent on particular resource.
         let total_gas_spent = register_counter!(opts!(
