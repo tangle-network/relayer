@@ -16,6 +16,7 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
 use webb::substrate::subxt::config::ExtrinsicParams;
+use webb::substrate::subxt::tx::TxPayload;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::QueueStore;
@@ -43,6 +44,7 @@ where
     store: Arc<S>,
     _marker: PhantomData<&'a ()>,
 }
+
 impl<'a, S> SubstrateTxQueue<'a, S>
 where
     S: QueueStore<WebbDynamicTxPayload<'a>, Key = SledQueueKey>,
@@ -123,16 +125,31 @@ where
                         payload.call_name,
                         payload.fields,
                     );
-                    let signed_extrinsic = client
+                    let signed_extrinsic_result = client
                         .tx()
                         .create_signed(
                             &dynamic_tx_payload,
                             &signer,
                             Default::default(),
                         )
-                        .map_err(Into::into)
+                        .map_err(webb_relayer_utils::Error::from)
                         .map_err(backoff::Error::transient)
-                        .await?;
+                        .await;
+                    let signed_extrinsic = match signed_extrinsic_result {
+                        Ok(signed_extrinsic) => signed_extrinsic,
+                        Err(err) => {
+                            tracing::event!(
+                                target: webb_relayer_utils::probe::TARGET,
+                                tracing::Level::ERROR,
+                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id,
+                                errored = true,
+                                error = %err,
+                            );
+                            continue;
+                        }
+                    };
                     // dry run test
                     let dry_run_outcome = signed_extrinsic.dry_run(None).await;
                     match dry_run_outcome {
