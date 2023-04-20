@@ -31,7 +31,7 @@ import {
   Pallet,
   EnabledContracts,
 } from '../../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
+import { LocalTangle } from '../../lib/localTangle.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
@@ -60,19 +60,21 @@ import { LocalChain } from '../../lib/localTestnet.js';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
 import {
+  createAccount,
   defaultEventsWatcherValue,
   generateVAnchorNote,
 } from '../../lib/utils.js';
 import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import { VAnchor } from '@webb-tools/anchors';
 import { MintableToken } from '@webb-tools/tokens';
+import { KeyringPair } from '@polkadot/keyring/types.js';
 const { ecdsaSign } = pkg;
 
 describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
+  let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   let wallet1: ethers.Wallet;
   let signatureVBridge: VBridge.VBridge;
@@ -96,7 +98,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -110,7 +112,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       },
     ];
 
-    aliceNode = await LocalProtocolSubstrate.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
@@ -118,7 +120,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       enableLogging: false,
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
+    bobNode = await LocalTangle.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
@@ -162,7 +164,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
-   
+
     // Deploy the token.
     const localToken = await localChain1.deployToken('Webb Token', 'WEBB');
 
@@ -425,7 +427,7 @@ async function vanchorWithdraw(
   depositNote: Note,
   treeId: number,
   api: ApiPromise,
-  aliceNode: LocalProtocolSubstrate
+  aliceNode: LocalTangle
 ) {
   const account = createAccount('//Dave');
   const typedSourceChainId = depositNote.note.sourceChainId;
@@ -536,18 +538,11 @@ async function vanchorWithdraw(
   };
 
   // now we call the vanchor transact to withdraw on substrate
-  const transactCall = api.tx.vAnchorBn254!.transact!(
+  const transactCall = api.tx.vAnchorBn254.transact(
     treeId,
     vanchorProofData,
     extData
   );
   const txSigned = await transactCall.signAsync(account);
   await aliceNode.executeTransaction(txSigned);
-}
-
-function createAccount(accountId: string): any {
-  const keyring = new Keyring({ type: 'sr25519' });
-  const account = keyring.addFromUri(accountId);
-
-  return account;
 }

@@ -24,22 +24,21 @@ import temp from 'temp';
 import path from 'path';
 import isCi from 'is-ci';
 import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
+import { LocalTangle } from '../../lib/localTangle.js';
 import { u8aToHex } from '@polkadot/util';
 import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
-import { LocalDkg } from '../../lib/localDkg.js';
 import { timeout } from '../../lib/timeout.js';
 
 describe.skip('Substrate SignatureBridge Governor Update', function () {
   const tmpDirPath = temp.mkdirSync();
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
+  let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
 
   // dkg nodes
-  let dkgNode1: LocalDkg;
-  let dkgNode2: LocalDkg;
-  let dkgNode3: LocalDkg;
+  let dkgNode1: LocalTangle;
+  let dkgNode2: LocalTangle;
+  let dkgNode3: LocalTangle;
 
   let webbRelayer: WebbRelayer;
 
@@ -49,7 +48,7 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../dkg-substrate/target/release/dkg-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
 
@@ -65,7 +64,7 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
     ];
 
     // Step 1. We initialize DKG nodes.
-    dkgNode1 = await LocalDkg.start({
+    dkgNode1 = await LocalTangle.start({
       name: 'dkg-alice',
       authority: 'alice',
       usageMode: usageModeDkg,
@@ -73,7 +72,7 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
       enableLogging: false,
     });
 
-    dkgNode2 = await LocalDkg.start({
+    dkgNode2 = await LocalTangle.start({
       name: 'dkg-bob',
       authority: 'bob',
       usageMode: usageModeDkg,
@@ -81,7 +80,7 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
       enableLogging: false,
     });
 
-    dkgNode3 = await LocalDkg.start({
+    dkgNode3 = await LocalTangle.start({
       name: 'dkg-charlie',
       authority: 'charlie',
       usageMode: usageModeDkg,
@@ -112,7 +111,7 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -123,7 +122,7 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
     ];
 
     // Step 3. We start protocol-substrate nodes.
-    aliceNode = await LocalProtocolSubstrate.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
@@ -131,7 +130,7 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
       enableLogging: false,
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
+    bobNode = await LocalTangle.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,

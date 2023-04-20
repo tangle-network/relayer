@@ -30,11 +30,10 @@ import {
   Pallet,
   RelayerMetricResponse,
 } from '../../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
+import { LocalTangle } from '../../lib/localTangle.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 
-import { BigNumber } from 'ethers';
-import { ApiPromise, Keyring } from '@polkadot/api';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
@@ -58,17 +57,18 @@ import {
 import pkg from 'secp256k1';
 import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
 import {
+  createAccount,
   defaultEventsWatcherValue,
   generateVAnchorNote,
 } from '../../lib/utils.js';
-import { UsageMode } from '@webb-tools/test-utils';
+import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
 describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
+  let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
   let webbRelayer: WebbRelayer;
 
   // Governer key
@@ -87,7 +87,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -101,7 +101,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       },
     ];
 
-    aliceNode = await LocalProtocolSubstrate.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
@@ -109,7 +109,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       enableLogging: false,
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
+    bobNode = await LocalTangle.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
@@ -270,7 +270,7 @@ async function setResourceIdProposal(
 async function vanchorDeposit(
   treeId: number,
   api: ApiPromise,
-  aliceNode: LocalProtocolSubstrate
+  aliceNode: LocalTangle
 ) {
   const account = createAccount('//Dave');
   const chainId = '2199023256632';
@@ -388,16 +388,4 @@ async function vanchorDeposit(
   );
   const txSigned = await transactCall.signAsync(account);
   await aliceNode.executeTransaction(txSigned);
-}
-
-function currencyToUnitI128(currencyAmount: number) {
-  const bn = BigNumber.from(currencyAmount);
-  return bn.mul(1_000_000_000_000);
-}
-
-function createAccount(accountId: string) {
-  const keyring = new Keyring({ type: 'sr25519' });
-  const account = keyring.addFromUri(accountId);
-
-  return account;
 }

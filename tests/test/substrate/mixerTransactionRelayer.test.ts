@@ -10,7 +10,6 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { WebbRelayer } from '../../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 import { ApiPromise, Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
@@ -22,11 +21,13 @@ import {
   ArkworksProvingManager,
 } from '@webb-tools/sdk-core';
 import { UsageMode } from '@webb-tools/test-utils';
+import { LocalTangle } from '../../lib/localTangle.js';
+import { createAccount } from '../../lib/utils.js';
 
 describe('Substrate Mixer Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
+  let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
 
@@ -36,18 +37,18 @@ describe('Substrate Mixer Transaction Relayer', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
 
-    aliceNode = await LocalProtocolSubstrate.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
       ports: 'auto',
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
+    bobNode = await LocalTangle.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
@@ -496,13 +497,6 @@ async function createMixerWithdrawProof(
     console.error(error.code);
     throw error;
   }
-}
-
-function createAccount(accountId: string) {
-  const keyring = new Keyring({ type: 'sr25519' });
-  const account = keyring.addFromUri(accountId);
-
-  return account;
 }
 
 async function makeDeposit(

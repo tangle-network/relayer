@@ -26,7 +26,7 @@ import retry from 'async-retry';
 import { LocalChain } from '../lib/localTestnet.js';
 import { Pallet, WebbRelayer, EnabledContracts } from '../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { LocalDkg } from '../lib/localDkg.js';
+import { LocalTangle } from '../lib/localTangle.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
@@ -48,9 +48,9 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   let wallet2: ethers.Wallet;
 
   // dkg nodes
-  let aliceNode: LocalDkg;
-  let bobNode: LocalDkg;
-  let charlieNode: LocalDkg;
+  let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
+  let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
 
@@ -64,7 +64,7 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../dkg-substrate/target/release/dkg-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -73,21 +73,21 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
-    aliceNode = await LocalDkg.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
       ports: 'auto',
     });
 
-    bobNode = await LocalDkg.start({
+    bobNode = await LocalTangle.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
       ports: 'auto',
     });
 
-    charlieNode = await LocalDkg.start({
+    charlieNode = await LocalTangle.start({
       name: 'substrate-charlie',
       authority: 'charlie',
       usageMode,

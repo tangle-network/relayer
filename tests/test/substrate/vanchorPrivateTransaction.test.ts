@@ -18,7 +18,7 @@
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import '@webb-tools/protocol-substrate-types';
-import { assert, expect } from 'chai';
+import { assert } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -31,10 +31,9 @@ import {
   SubstrateVAnchorExtData,
   SubstrateVAnchorProofData,
 } from '../../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
 
-import { BigNumber, ethers } from 'ethers';
-import { ApiPromise, Keyring } from '@polkadot/api';
+import { ethers } from 'ethers';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
@@ -46,17 +45,19 @@ import {
   calculateTypedChainId,
   ChainType,
 } from '@webb-tools/sdk-core';
-import { UsageMode } from '@webb-tools/test-utils';
+import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import {
+  createAccount,
   defaultEventsWatcherValue,
   generateVAnchorNote,
 } from '../../lib/utils.js';
+import { LocalTangle } from '../../lib/localTangle.js';
 
 describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
-
+  let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
+  let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
@@ -66,7 +67,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -76,7 +77,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       },
     ];
 
-    aliceNode = await LocalProtocolSubstrate.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
@@ -84,9 +85,17 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       enableLogging: false,
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
+    bobNode = await LocalTangle.start({
       name: 'substrate-bob',
       authority: 'bob',
+      usageMode,
+      ports: 'auto',
+      enableLogging: false,
+    });
+
+    charlieNode = await LocalTangle.start({
+      name: 'dkg-charlie',
+      authority: 'charlie',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -112,7 +121,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -137,12 +146,12 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const data = await vanchorDeposit(
       typedSourceChainId.toString(), // source chain Id
       typedSourceChainId.toString(), // target chain Id
-      10, // public amount
+      1000, // public amount
       treeId,
       api,
       aliceNode
     );
-
+    console.log('Deposit made');
     // now we wait for all deposit to be saved in LeafStorageCache.
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
@@ -218,8 +227,10 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
 
     // Bob's balance after withdrawal.
     const BobBalanceAfter = await api.query.system.account(account.address);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     //@ts-ignore
     console.log('balance after : ', BobBalanceAfter.data.free);
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     //@ts-ignore
     assert(BobBalanceAfter.data.free > bobBalanceBefore.data.free);
   });
@@ -227,23 +238,12 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   after(async () => {
     await aliceNode?.stop();
     await bobNode?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });
 
 // Helper methods, we can move them somewhere if we end up using them again.
-
-function currencyToUnitI128(currencyAmount: number) {
-  const bn = BigNumber.from(currencyAmount);
-  return bn.mul(1_000_000_000_000);
-}
-
-function createAccount(accountId: string): any {
-  const keyring = new Keyring({ type: 'sr25519' });
-  const account = keyring.addFromUri(accountId);
-
-  return account;
-}
 
 async function vanchorWithdraw(
   typedTargetChainId: string,
@@ -274,7 +274,6 @@ async function vanchorWithdraw(
   const pk = hexToU8a(pk_hex);
   const leavesMap = {};
   // get source chain (evm) leaves.
-  //@ts-ignore
   const substrateLeaves = await api.derive.merkleTreeBn254.getLeavesForTree(
     treeId,
     0,
@@ -382,7 +381,7 @@ async function vanchorDeposit(
   publicAmountUint: number,
   treeId: number,
   api: ApiPromise,
-  aliceNode: LocalProtocolSubstrate
+  aliceNode: LocalTangle
 ): Promise<{ depositUtxos: [Utxo, Utxo] }> {
   const account = createAccount('//Dave');
   const secret = randomAsU8a();
@@ -450,7 +449,7 @@ async function vanchorDeposit(
   const leavesMap = {};
 
   const address = account.address;
-  const extAmount = currencyToUnitI128(10);
+  const extAmount = currencyToUnitI128(1000);
   const fee = 0;
   const refund = 0;
   // Initially leaves will be empty

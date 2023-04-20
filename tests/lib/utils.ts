@@ -1,4 +1,7 @@
+import { Keyring } from '@polkadot/api';
+import { KeyringPair } from '@polkadot/keyring/types';
 import { Keypair, Note, Utxo } from '@webb-tools/sdk-core';
+import { BigNumber } from 'ethers';
 import { EventsWatcher } from './webbRelayer';
 
 // Default Events watcher for the pallets.
@@ -59,4 +62,10 @@ export async function generateVAnchorNote(
   });
 
   return note;
+}
+
+export function createAccount(accountId: string): KeyringPair {
+  const keyring = new Keyring({ type: 'sr25519' });
+  const account = keyring.addFromUri(accountId);
+  return account;
 }

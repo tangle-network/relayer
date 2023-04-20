@@ -30,10 +30,8 @@ import {
   Pallet,
   LeavesCacheResponse,
 } from '../../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
+import { LocalTangle } from '../../lib/localTangle.js';
 
-import { BigNumber, ethers } from 'ethers';
-import { Keyring } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
@@ -44,17 +42,21 @@ import {
   Utxo,
   VAnchorProof,
   LeafIdentifier,
+  calculateTypedChainId,
+  ChainType,
 } from '@webb-tools/sdk-core';
-import { UsageMode } from '@webb-tools/test-utils';
+import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import {
+  createAccount,
   defaultEventsWatcherValue,
   generateVAnchorNote,
 } from '../../lib/utils.js';
+import { ethers } from 'ethers';
 
 describe('Substrate VAnchor Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
+  let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
@@ -65,7 +67,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -75,7 +77,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       },
     ];
 
-    aliceNode = await LocalProtocolSubstrate.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
@@ -83,7 +85,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       enableLogging: false,
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
+    bobNode = await LocalTangle.start({
       name: 'substrate-bob',
       authority: 'bob',
       usageMode,
@@ -127,8 +129,13 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
     const treeId = nextTreeId.toNumber() - 1;
 
-    const chainId = '2199023256632';
-    const outputChainId = BigInt(chainId);
+    // ChainId of the substrate chain
+    const chainId = await aliceNode.getChainId();
+    const typedSourceChainId = calculateTypedChainId(
+      ChainType.Substrate,
+      chainId
+    );
+    const outputChainId = BigInt(typedSourceChainId);
     const secret = randomAsU8a();
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
@@ -157,20 +164,20 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       0
     );
     const note2 = await note1.getDefaultUtxoNote();
-    const publicAmount = currencyToUnitI128(10);
+    const publicAmount = currencyToUnitI128(1000);
     const notes = [note1, note2];
     // Output UTXOs configs
     const output1 = await Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Arkworks',
       amount: publicAmount.toString(),
-      chainId,
+      chainId: chainId.toString(),
     });
     const output2 = await Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Arkworks',
       amount: '0',
-      chainId,
+      chainId: chainId.toString(),
     });
 
     // Configure a new proving manager with direct call
@@ -178,7 +185,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     const leavesMap = {};
 
     const address = account.address;
-    const extAmount = currencyToUnitI128(10);
+    const extAmount = currencyToUnitI128(1000);
     const fee = 0;
     const refund = 0;
     // Empty leaves
@@ -280,17 +287,3 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     await webbRelayer?.stop();
   });
 });
-
-// Helper methods, we can move them somewhere if we end up using them again.
-
-function currencyToUnitI128(currencyAmount: number) {
-  const bn = BigNumber.from(currencyAmount);
-  return bn.mul(1_000_000_000_000);
-}
-
-function createAccount(accountId: string): any {
-  const keyring = new Keyring({ type: 'sr25519' });
-  const account = keyring.addFromUri(accountId);
-
-  return account;
-}
