@@ -37,7 +37,6 @@ use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb_relayer_utils::{metric, Error};
 
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
-use webb_proposal_signing_backends::make_execute_proposal_key;
 
 /// A MaintainerSetEvent handler handles `MaintainerSet` events and signals signature bridge watcher
 /// to remove pending tx trying to do governor transfer.
@@ -389,4 +388,13 @@ fn secp256k1_ecdsa_recover(
     let mut res = [0u8; 64];
     res.copy_from_slice(&pubkey.serialize()[1..65]);
     Ok(res)
+}
+
+fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
+    let mut result = [0u8; 64];
+    let prefix = b"execute_proposal_with_signature_";
+    debug_assert!(prefix.len() == 32);
+    result[0..32].copy_from_slice(prefix);
+    result[32..64].copy_from_slice(&data_hash);
+    result
 }
