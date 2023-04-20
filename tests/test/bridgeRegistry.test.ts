@@ -60,7 +60,6 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
 
   // Tangle nodes
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
@@ -112,14 +111,6 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
       enableLogging: false,
     });
 
-    bobNode = await LocalTangle.start({
-      name: 'dkg-bob',
-      authority: 'bob',
-      usageMode,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
     charlieNode = await LocalTangle.start({
       name: 'dkg-charlie',
       authority: 'charlie',
@@ -147,7 +138,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     const substrateResourceId = createSubstrateResourceId(
       substrateChainId,
       treeId,
-      '0x2C'
+      '0x2A'
     );
     await substrateSetup(
       aliceNode,
@@ -342,7 +333,6 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
   after(async () => {
     await localChain1?.stop();
     await aliceNode?.stop();
-    await bobNode?.stop();
     await charlieNode?.stop();
     await webbRelayer?.stop();
   });

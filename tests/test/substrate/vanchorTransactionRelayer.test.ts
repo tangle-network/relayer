@@ -56,7 +56,7 @@ import { ethers } from 'ethers';
 describe('Substrate VAnchor Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
+  let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
@@ -85,9 +85,9 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       enableLogging: false,
     });
 
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
+    charlieNode = await LocalTangle.start({
+      name: 'substrate-charlie',
+      authority: 'charlie',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -283,7 +283,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });

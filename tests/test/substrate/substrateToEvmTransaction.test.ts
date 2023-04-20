@@ -74,7 +74,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
+  let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   let wallet1: ethers.Wallet;
   let signatureVBridge: VBridge.VBridge;
@@ -118,9 +118,9 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       enableLogging: false,
     });
 
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
+    charlieNode = await LocalTangle.start({
+      name: 'substrate-charlie',
+      authority: 'charlie',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -183,7 +183,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     const substrateResourceId = createSubstrateResourceId(
       substrateChainId,
       6,
-      '0x2C'
+      '0x2A'
     );
     // save the substrate chain configs
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
@@ -268,6 +268,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       substrateChainId
     );
     const typedTargetChainId = localChain1.chainId;
+    console.log('Set Resource');
     // now we set resource through proposal execution
     const setResourceIdProposalCall = await setResourceIdProposal(
       api,
@@ -277,7 +278,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     );
     const txSigned = await setResourceIdProposalCall.signAsync(account);
     await aliceNode.executeTransaction(txSigned);
-
+    console.log('Resource set');
     // dummy Deposit Note. Input note is directed toward source chain
     const depositNote = await generateVAnchorNote(
       0,
@@ -385,7 +386,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   after(async () => {
     await localChain1?.stop();
     await aliceNode?.stop();
-    await bobNode?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });
@@ -400,7 +401,7 @@ async function setResourceIdProposal(
 ): Promise<SubmittableExtrinsic<'promise'>> {
   const functionSignature = hexToU8a('0x00000002', 32);
   const nonce = 1;
-  const palletIndex = '0x2C';
+  const palletIndex = '0x2A';
   const callIndex = '0x02';
   // set resource ID on signature bridge.
   const resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);

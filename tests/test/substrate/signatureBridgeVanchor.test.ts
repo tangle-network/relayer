@@ -68,7 +68,7 @@ const { ecdsaSign } = pkg;
 describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
+  let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
 
   // Governer key
@@ -109,9 +109,9 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       enableLogging: false,
     });
 
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
+    charlieNode = await LocalTangle.start({
+      name: 'substrate-charlie',
+      authority: 'charlie',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -214,7 +214,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });
@@ -229,7 +229,7 @@ async function setResourceIdProposal(
 ): Promise<SubmittableExtrinsic<'promise'>> {
   const functionSignature = hexToU8a('0x00000002', 32);
   const nonce = 1;
-  const palletIndex = '0x2C';
+  const palletIndex = '0x2A';
   const callIndex = '0x02';
   const substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
   // set resource ID

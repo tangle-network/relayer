@@ -55,7 +55,6 @@ describe.skip('SignatureBridge Governor Updates', function () {
 
   // dkg nodes
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
@@ -84,13 +83,6 @@ describe.skip('SignatureBridge Governor Updates', function () {
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode,
-      ports: 'auto',
-    });
-
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
       usageMode,
       ports: 'auto',
     });
@@ -328,7 +320,6 @@ describe.skip('SignatureBridge Governor Updates', function () {
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
     await charlieNode?.stop();
     await localChain1?.stop();
     await localChain2?.stop();

@@ -27,7 +27,7 @@ import { createAccount } from '../../lib/utils.js';
 describe('Substrate Mixer Transaction Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
+  let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
 
@@ -48,9 +48,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
       ports: 'auto',
     });
 
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
+    charlieNode = await LocalTangle.start({
+      name: 'substrate-charlie',
+      authority: 'charlie',
       usageMode,
       ports: 'auto',
     });
@@ -373,7 +373,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });

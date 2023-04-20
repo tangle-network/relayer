@@ -49,7 +49,6 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
   // dkg nodes
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
@@ -76,13 +75,6 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode,
-      ports: 'auto',
-    });
-
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
       usageMode,
       ports: 'auto',
     });
@@ -351,7 +343,6 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
     await charlieNode?.stop();
     await localChain1?.stop();
     await localChain2?.stop();
