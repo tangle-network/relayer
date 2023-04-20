@@ -21,7 +21,7 @@ use webb_proposals::ResourceId;
 /// A struct for collecting metrics for particular resource.
 #[derive(Debug, Clone)]
 pub struct ResourceMetric {
-    /// Total gas spent on Resource.
+    /// Total gas spent (in gwei) on Resource.
     pub total_gas_spent: GenericCounter<AtomicF64>,
     /// Total fees earned on Resource.
     pub total_fee_earned: GenericCounter<AtomicF64>,
@@ -174,7 +174,7 @@ impl Metrics {
         let total_gas_spent_counter = register_counter!(
             format!("resource_{resource_hex}_total_gas_spent"),
             format!(
-                "The total number of gas spent on resource : {resource_hex}"
+                "The total number of gas (in gwei) spent on resource : {resource_hex}"
             )
         );
         // Total fee earned on particular resource.
