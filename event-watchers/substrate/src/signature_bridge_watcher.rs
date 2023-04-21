@@ -393,6 +393,7 @@ fn secp256k1_ecdsa_recover(
 fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
     let mut result = [0u8; 64];
     let prefix = b"execute_proposal_with_signature_";
+    debug_assert!(prefix.len() == 32);
     result[0..32].copy_from_slice(prefix);
     result[32..64].copy_from_slice(&data_hash);
     result
