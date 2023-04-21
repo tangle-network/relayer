@@ -4,9 +4,9 @@ deps:
 - path: solidity-fixtures
   repo:
     url: https://github.com/webb-tools/solidity-fixtures
-    rev_lock: d3bd2705b81c5f5d7bb3956cf1f3521078bce341
+    rev_lock: 97cb9f8e2a11ef5e67c4d451c496fe15e089ca72
 outs:
-- md5: 340d9570aa8786ab222982b5bdf7e452.dir
-  size: 7012317150
-  nfiles: 245
+- md5: 5a60727de10eb4fc2486f04a16d9eb5d.dir
+  size: 6627655556
+  nfiles: 230
   path: solidity-fixtures
