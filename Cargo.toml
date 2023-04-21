@@ -43,7 +43,7 @@ sp-core = { version = "16.0.0", default-features = false }
 sp-runtime = { version = "18.0.0", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"] }
-webb-proposals = { git = "https://github.com/webb-tools/webb-rs", branch = "felix/display-resource-id", default-features = false, features = ["scale"] }
+webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
 ethereum-types = "0.14.1"
 dotenv = "0.15.0"
 axum = { version = "0.6.12", features = ["ws"] }

@@ -18,7 +18,7 @@ use prometheus::core::{AtomicF64, GenericCounter, GenericGauge};
 use prometheus::labels;
 use prometheus::opts;
 use prometheus::{register_counter, register_gauge, Encoder, TextEncoder};
-use webb_proposals::ResourceId;
+use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 
 /// A struct for collecting metrics for particular resource.
 #[derive(Debug, Clone)]
@@ -163,17 +163,54 @@ impl Metrics {
         Ok(String::from_utf8(buffer.clone())?)
     }
 
+    // TODO: move this to webb-proposals
+    fn chain_name(chain: TypedChainId) -> &'static str {
+        match chain {
+            TypedChainId::None => "None",
+            TypedChainId::Evm(_) => "Evm",
+            TypedChainId::Substrate(_) => "Substrate",
+            TypedChainId::PolkadotParachain(_) => "PolkadotParachain",
+            TypedChainId::KusamaParachain(_) => "KusamaParachain",
+            TypedChainId::RococoParachain(_) => "RococoParachain",
+            TypedChainId::Cosmos(_) => "Cosmos",
+            TypedChainId::Solana(_) => "Solana",
+            TypedChainId::Ink(_) => "Ink",
+        }
+    }
+
     /// Registers new counters to track metric for individual resources.
     pub fn register_resource_id_counters(
         resource_id: ResourceId,
     ) -> ResourceMetric {
-        let resource_name = format!("{resource_id");
+        let chain_id = resource_id
+            .typed_chain_id()
+            .underlying_chain_id()
+            .to_string();
+        let (target_system_type, target_system_value) =
+            match resource_id.target_system() {
+                TargetSystem::ContractAddress(address) => {
+                    ("contract", hex::encode(address))
+                }
+                TargetSystem::Substrate(system) => (
+                    "tree_id",
+                    format!(
+                        "{}, pallet_index: {}",
+                        system.tree_id, system.pallet_index
+                    ),
+                ),
+            };
+        let labels = labels!(
+            "chain_type" => Self::chain_name(resource_id.typed_chain_id()),
+            "chain_id" => &chain_id,
+            "target_system_type" => target_system_type,
+            "target_system_value" => &target_system_value
+        );
 
         // Total gas fee spent on particular resource.
         let total_gas_spent = register_counter!(opts!(
             "resource_total_gas_spent",
             "Total number of gas spent on resource",
-            labels!("resource_id" => &resource_name)
+            labels
         ))
         .expect("create counter for gas spent");
 
@@ -181,7 +218,7 @@ impl Metrics {
         let total_fee_earned = register_counter!(opts!(
             "resource_total_fees_earned",
             "Total number of fees earned on resource",
-            labels!("resource_id" => &resource_name)
+            labels
         ))
         .expect("create counter for fees earned");
 
@@ -189,7 +226,7 @@ impl Metrics {
         let account_balance = register_gauge!(opts!(
             "resource_account_balance",
             "Total account balance",
-            labels!("resource_id" => &resource_name)
+            labels
         ))
         .expect("create gauge for account balance");
 

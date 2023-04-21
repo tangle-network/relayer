@@ -238,7 +238,7 @@
           },
           "editorMode": "code",
           "expr": "resource_account_balance / 10^18",
-          "legendFormat": "{{resource_id}}",
+          "legendFormat": "{{chain_type}}({{chain_id}}) {{target_system_type}}({{target_system_value}})",
           "range": true,
           "refId": "A"
         }
@@ -330,12 +330,12 @@
           },
           "editorMode": "builder",
           "expr": "anchor_update_proposals",
-          "legendFormat": "__auto",
+          "legendFormat": "{{__name__}}",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Panel Title",
+      "title": "Anchor update proposals",
       "type": "timeseries"
     },
     {
@@ -420,9 +420,9 @@
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "editorMode": "code",
-          "expr": "resource_total_fees_earned / 10^18",
-          "legendFormat": "{{resource_id}}",
+          "editorMode": "builder",
+          "expr": "resource_total_fees_earned / 10 ^ 18",
+          "legendFormat": "{{chain_type}}({{chain_id}}) {{target_system_type}}({{target_system_value}})",
           "range": true,
           "refId": "A"
         }
@@ -630,7 +630,7 @@
           },
           "editorMode": "code",
           "expr": "resource_total_gas_spent / 10^18",
-          "legendFormat": "{{resource_id}}",
+          "legendFormat": "{{chain_type}}({{chain_id}}) {{target_system_type}}({{target_system_value}})",
           "range": true,
           "refId": "A"
         }
@@ -995,6 +995,6 @@
   "timezone": "",
   "title": "Relayer",
   "uid": "MGkfbJEVk",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }
