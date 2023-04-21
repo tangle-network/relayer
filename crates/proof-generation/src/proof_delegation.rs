@@ -3,13 +3,13 @@ use ark_bn254::{Bn254, Fr};
 use ark_circom::{read_zkey, WitnessCalculator};
 use ark_groth16::{Proof as ArkProof, ProvingKey};
 use ark_relations::r1cs::ConstraintMatrices;
-use circom_proving::{
-    circom_from_folder, generate_proof, ProofError, ProverPath,
-};
 use itertools::izip;
 use num_bigint::{BigInt, ParseBigIntError};
 use serde::{Deserialize, Serialize};
 use std::{fs::File, str::FromStr, sync::Mutex};
+use webb_circom_proving::{
+    circom_from_folder, generate_proof, ProofError, ProverPath,
+};
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq)]
 pub struct MaspAssetInfo {

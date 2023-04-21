@@ -2,8 +2,7 @@ use ark_bn254::{Bn254, Fr};
 use ark_circom::{read_zkey, WitnessCalculator};
 use ark_groth16::{Proof as ArkProof, ProvingKey};
 use ark_relations::r1cs::ConstraintMatrices;
-use circom_proving::ProverPath;
-use circom_proving::{circom_from_folder, generate_proof, ProofError};
+use webb_circom_proving::{ProverPath, circom_from_folder, generate_proof, ProofError};
 use num_bigint::BigInt;
 use std::{fs::File, sync::Mutex};
 
