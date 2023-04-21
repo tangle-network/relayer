@@ -62,9 +62,9 @@ impl MaspBatchProver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use webb_circom_proving::verify_proof;
     use num_bigint::Sign;
     use std::str::FromStr;
+    use webb_circom_proving::verify_proof;
 
     #[test]
     #[ignore = "fails when this runs with the other proof test in sequence"]
