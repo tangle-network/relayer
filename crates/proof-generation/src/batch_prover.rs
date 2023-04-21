@@ -62,7 +62,7 @@ impl MaspBatchProver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use circom_proving::verify_proof;
+    use webb_circom_proving::verify_proof;
     use num_bigint::Sign;
     use std::str::FromStr;
 
