@@ -1107,31 +1107,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "circom-proving"
-version = "0.1.0"
-dependencies = [
- "ark-bn254",
- "ark-circom",
- "ark-crypto-primitives",
- "ark-ec",
- "ark-ff",
- "ark-groth16 0.3.0 (git+https://github.com/arkworks-rs/groth16?rev=765817f)",
- "ark-relations",
- "ark-serialize",
- "ark-std",
- "arkworks-native-gadgets",
- "cfg-if 1.0.0",
- "color-eyre 0.6.2",
- "num-bigint",
- "num-traits",
- "once_cell",
- "serde",
- "serde_json",
- "thiserror",
- "wasmer",
-]
-
-[[package]]
 name = "clap"
 version = "2.34.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8913,6 +8888,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb-circom-proving"
+version = "0.1.0"
+dependencies = [
+ "ark-bn254",
+ "ark-circom",
+ "ark-crypto-primitives",
+ "ark-ec",
+ "ark-ff",
+ "ark-groth16 0.3.0 (git+https://github.com/arkworks-rs/groth16?rev=765817f)",
+ "ark-relations",
+ "ark-serialize",
+ "ark-std",
+ "arkworks-native-gadgets",
+ "cfg-if 1.0.0",
+ "color-eyre 0.6.2",
+ "num-bigint",
+ "num-traits",
+ "once_cell",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "wasmer",
+]
+
+[[package]]
 name = "webb-event-watcher-traits"
 version = "0.1.0"
 dependencies = [
@@ -9071,7 +9071,6 @@ dependencies = [
  "ark-relations",
  "ark-serialize",
  "arkworks-setups",
- "circom-proving",
  "hex",
  "itertools",
  "num-bigint",
@@ -9079,6 +9078,7 @@ dependencies = [
  "serde_json",
  "wasmer",
  "webb 0.5.22",
+ "webb-circom-proving",
 ]
 
 [[package]]
