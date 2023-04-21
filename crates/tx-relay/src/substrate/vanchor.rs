@@ -13,7 +13,7 @@ use webb_proposals::{
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::SubstrateVAchorCommand;
-use webb_relayer_utils::metric::Metrics;
+
 
 /// Handler for Substrate Anchor commands
 ///
@@ -110,15 +110,24 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     let metrics_clone = ctx.metrics.clone();
     let mut metrics = metrics_clone.lock().await;
     // update metric for total fee earned by relayer on particular resource
-    let resource_metric = metrics
-        .resource_metric_map
-        .entry(resource_id)
-        .or_insert_with(|| Metrics::register_resource_id_counters(resource_id));
-
-    resource_metric
+    metrics
+        .resource_metric_entry(resource_id)
         .total_fee_earned
         .inc_by(cmd.ext_data.fee as f64);
     // update metric for total fee earned by relayer
     metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
+
+    let account = RuntimeApi::storage()
+        .system()
+        .account(signer.account_id());
+    let balance = client
+        .storage()
+        .at(None)
+        .await
+        .unwrap()
+        .fetch(&account)
+        .await
+        .unwrap().unwrap();
+    metrics.account_balance_entry(typed_chain_id).set(balance.data.free as f64);
     Ok(())
 }

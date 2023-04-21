@@ -9,7 +9,7 @@ use webb_proposals::ResourceId;
 use webb_relayer_handler_utils::{
     into_withdraw_error, CommandResponse, CommandStream, WithdrawStatus,
 };
-use webb_relayer_utils::metric::{self, Metrics};
+use webb_relayer_utils::metric::{self};
 
 pub mod fees;
 /// Variable Anchor transaction relayer.
@@ -98,12 +98,8 @@ where
     // gas spent by relayer on particular resource.
     let gas_price = receipt.gas_used.unwrap_or_default();
     let mut metrics = metrics.lock().await;
-    let resource_metric = metrics
-        .resource_metric_map
-        .entry(resource_id)
-        .or_insert_with(|| Metrics::register_resource_id_counters(resource_id));
-
-    resource_metric
+    metrics
+        .resource_metric_entry(resource_id)
         .total_gas_spent
         .inc_by(gas_price.as_u64() as f64);
     drop(metrics);

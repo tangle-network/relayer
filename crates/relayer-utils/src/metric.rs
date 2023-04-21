@@ -27,8 +27,6 @@ pub struct ResourceMetric {
     pub total_gas_spent: GenericCounter<AtomicF64>,
     /// Total fees earned on Resource.
     pub total_fee_earned: GenericCounter<AtomicF64>,
-    /// Account Balance
-    pub account_balance: GenericGauge<AtomicF64>,
 }
 
 /// A struct definition for collecting metrics in the relayer.
@@ -61,7 +59,9 @@ pub struct Metrics {
     /// Total amount of data stored metric
     pub total_amount_of_data_stored: GenericGauge<AtomicF64>,
     /// Resource metric
-    pub resource_metric_map: HashMap<ResourceId, ResourceMetric>,
+    resource_metric_map: HashMap<ResourceId, ResourceMetric>,
+    /// Metric for account balance on specific chain
+    account_balance: HashMap<TypedChainId, GenericGauge<AtomicF64>>,
 }
 
 impl Metrics {
@@ -131,8 +131,6 @@ impl Metrics {
             "The Total number of data stored",
         )?;
 
-        let resource_metric_map = HashMap::new();
-
         Ok(Self {
             bridge_watcher_back_off,
             total_transaction_made,
@@ -147,7 +145,8 @@ impl Metrics {
             total_fee_earned,
             gas_spent,
             total_amount_of_data_stored,
-            resource_metric_map,
+            resource_metric_map: Default::default(),
+            account_balance: Default::default(),
         })
     }
 
@@ -178,8 +177,37 @@ impl Metrics {
         }
     }
 
+    pub fn resource_metric_entry(
+        &mut self,
+        resource_id: ResourceId,
+    ) -> &mut ResourceMetric {
+        self.resource_metric_map
+            .entry(resource_id)
+            .or_insert_with(|| {
+                Metrics::register_resource_id_counters(resource_id)
+            })
+    }
+
+    pub fn account_balance_entry(
+        &mut self,
+        chain: TypedChainId,
+    ) -> &mut GenericGauge<AtomicF64> {
+        self.account_balance.entry(chain).or_insert_with(|| {
+            let chain_id = chain.underlying_chain_id().to_string();
+            register_gauge!(opts!(
+                "chain_account_balance",
+                "Total account balance on chain",
+                labels!(
+                    "chain_type" => Self::chain_name(chain),
+                    "chain_id" => &chain_id,
+                )
+            ))
+            .expect("create gauge for account balance")
+        })
+    }
+
     /// Registers new counters to track metric for individual resources.
-    pub fn register_resource_id_counters(
+    fn register_resource_id_counters(
         resource_id: ResourceId,
     ) -> ResourceMetric {
         let chain_id = resource_id
@@ -222,18 +250,9 @@ impl Metrics {
         ))
         .expect("create counter for fees earned");
 
-        // Account Balance
-        let account_balance = register_gauge!(opts!(
-            "resource_account_balance",
-            "Total account balance",
-            labels
-        ))
-        .expect("create gauge for account balance");
-
         ResourceMetric {
             total_gas_spent,
             total_fee_earned,
-            account_balance,
         }
     }
 }
