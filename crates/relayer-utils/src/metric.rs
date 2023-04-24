@@ -23,7 +23,7 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 /// A struct for collecting metrics for particular resource.
 #[derive(Debug, Clone)]
 pub struct ResourceMetric {
-    /// Total gas spent on Resource.
+    /// Total gas spent (in gwei) on Resource.
     pub total_gas_spent: GenericCounter<AtomicF64>,
     /// Total fees earned on Resource.
     pub total_fee_earned: GenericCounter<AtomicF64>,
