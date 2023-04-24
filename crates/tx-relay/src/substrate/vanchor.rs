@@ -115,7 +115,9 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .total_fee_earned
         .inc_by(cmd.ext_data.fee as f64);
     // update metric for total fee earned by relayer
-    metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
+    metrics
+        .total_fee_earned
+        .inc_by(wei_to_gwei(cmd.ext_data.fee));
 
     let account = RuntimeApi::storage().system().account(signer.account_id());
     let balance = client
@@ -132,6 +134,6 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         )))?;
     metrics
         .account_balance_entry(typed_chain_id)
-        .set(balance.data.free as f64);
+        .set(wei_to_gwei(balance.data.free));
     Ok(())
 }

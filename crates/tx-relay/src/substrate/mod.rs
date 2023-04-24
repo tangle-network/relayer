@@ -114,3 +114,7 @@ pub async fn handle_substrate_tx(
     }
     Ok(())
 }
+
+fn wei_to_gwei(wei: u128) -> f64 {
+    (wei / (10 ^ 9)) as f64
+}

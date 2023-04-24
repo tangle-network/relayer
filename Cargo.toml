@@ -69,5 +69,5 @@ strip = "symbols"
 lto = "thin"
 
 [profile.dev]
-#strip = "symbols"
-#debug = 0
+strip = "symbols"
+debug = 0
