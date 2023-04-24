@@ -60,7 +60,7 @@ pub struct Metrics {
     pub total_amount_of_data_stored: GenericGauge<AtomicF64>,
     /// Resource metric
     resource_metric_map: HashMap<ResourceId, ResourceMetric>,
-    /// Metric for account balance on specific chain
+    /// Metric for account balance (in gwei) on specific chain
     account_balance: HashMap<TypedChainId, GenericGauge<AtomicF64>>,
 }
 

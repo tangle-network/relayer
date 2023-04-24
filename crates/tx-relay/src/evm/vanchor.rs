@@ -213,16 +213,16 @@ pub async fn handle_vanchor_relay_tx<'a>(
     metrics
         .resource_metric_entry(resource_id)
         .total_fee_earned
-        .inc_by(cmd.ext_data.fee.as_u64() as f64);
+        .inc_by(cmd.ext_data.fee.as_u128() as f64);
 
     // update metric for total fee earned by relayer
     metrics
         .total_fee_earned
-        .inc_by(cmd.ext_data.fee.as_u64() as f64);
+        .inc_by(cmd.ext_data.fee.as_u128() as f64);
 
     metrics
         .account_balance_entry(typed_chain_id)
-        .set(relayer_balance.as_u128() as f64);
+        .set(wei_to_gwei(relayer_balance));
     Ok(())
 }
 
