@@ -237,13 +237,13 @@
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "resource_account_balance / 10^18",
-          "legendFormat": "{{chain_type}}({{chain_id}}) {{target_system_type}}({{target_system_value}})",
+          "expr": "chain_account_balance / 10 ^ 18",
+          "legendFormat": "{{chain_type}}({{chain_id}})",
           "range": true,
           "refId": "A"
         }
       ],
-      "title": "Resource account balance",
+      "title": "Chain account balance",
       "type": "timeseries"
     },
     {
@@ -979,7 +979,7 @@
       "type": "timeseries"
     }
   ],
-  "refresh": "",
+  "refresh": "5s",
   "revision": 1,
   "schemaVersion": 38,
   "style": "dark",
@@ -988,13 +988,13 @@
     "list": []
   },
   "time": {
-    "from": "now-5m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "Relayer",
   "uid": "MGkfbJEVk",
-  "version": 2,
+  "version": 3,
   "weekStart": ""
 }
