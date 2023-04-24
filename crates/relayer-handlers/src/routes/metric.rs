@@ -1,4 +1,3 @@
-
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
 use axum::Json;
@@ -48,7 +47,10 @@ pub async fn handle_evm_metric_info(
     let typed_chain_id = TypedChainId::Evm(chain_id);
     let resource_id = ResourceId::new(target_system, typed_chain_id);
     // fetch metric for given resource_id
-    let account_balance = metrics.account_balance_entry(typed_chain_id).get().to_string();
+    let account_balance = metrics
+        .account_balance_entry(typed_chain_id)
+        .get()
+        .to_string();
     let resource_metric = metrics.resource_metric_entry(resource_id);
 
     Json(ResourceMetricResponse {
@@ -76,7 +78,10 @@ pub async fn handle_substrate_metric_info(
     let resource_id = ResourceId::new(target_system, typed_chain_id);
 
     // fetch metric for given resource_id
-    let account_balance = metrics.account_balance_entry(typed_chain_id).get().to_string();
+    let account_balance = metrics
+        .account_balance_entry(typed_chain_id)
+        .get()
+        .to_string();
     let resource_metric = metrics.resource_metric_entry(resource_id);
 
     Json(ResourceMetricResponse {

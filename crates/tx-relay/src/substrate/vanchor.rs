@@ -1,5 +1,6 @@
 use super::*;
 use crate::substrate::handle_substrate_tx;
+use webb::evm::ethers::utils::hex;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::subxt::utils::AccountId32;
 use webb::substrate::{
@@ -13,7 +14,6 @@ use webb_proposals::{
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::SubstrateVAchorCommand;
-
 
 /// Handler for Substrate Anchor commands
 ///
@@ -117,17 +117,21 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     // update metric for total fee earned by relayer
     metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
 
-    let account = RuntimeApi::storage()
-        .system()
-        .account(signer.account_id());
+    let account = RuntimeApi::storage().system().account(signer.account_id());
     let balance = client
         .storage()
         .at(None)
         .await
-        .unwrap()
+        .map_err(|e| Error(e.to_string()))?
         .fetch(&account)
         .await
-        .unwrap().unwrap();
-    metrics.account_balance_entry(typed_chain_id).set(balance.data.free as f64);
+        .map_err(|e| Error(e.to_string()))?
+        .ok_or(Error(format!(
+            "Substrate storage returned None for {}",
+            hex::encode(account.to_bytes())
+        )))?;
+    metrics
+        .account_balance_entry(typed_chain_id)
+        .set(balance.data.free as f64);
     Ok(())
 }
