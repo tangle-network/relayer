@@ -11,34 +11,25 @@ use webb_relayer_utils::metric;
 use webb::substrate::dkg_runtime::api as RuntimeApi;
 use webb_relayer_store::{QueueStore, SledStore};
 use webb_relayer_store::sled::SledQueueKey;
-use webb::substrate::subxt::tx::{PairSigner};
+use webb::substrate::subxt::tx::PairSigner;
 use webb::substrate::dkg_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
 type DkgConfig = PolkadotConfig;
 type DkgClient = OnlineClient<DkgConfig>;
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
+#[derive(typed_builder::TypedBuilder)]
 pub struct DkgProposalSigningBackend {
+    #[builder(setter(into))]
     pub client: DkgClient,
     pub pair: PairSigner<PolkadotConfig, Sr25519Pair>,
-    pub typed_chain_id: webb_proposals::TypedChainId,
     /// Something that implements the QueueStore trait.
+    #[builder(setter(into))]
     store: Arc<SledStore>,
-}
-
-impl DkgProposalSigningBackend {
-    pub fn new(
-        client: OnlineClient<PolkadotConfig>,
-        pair: PairSigner<PolkadotConfig, Sr25519Pair>,
-        typed_chain_id: webb_proposals::TypedChainId,
-        store: Arc<SledStore>,
-    ) -> Self {
-        Self {
-            client,
-            pair,
-            typed_chain_id,
-            store,
-        }
-    }
+    /// The chain id of the chain that this backend is running on.
+    ///
+    /// This used as the source chain id for the proposals.
+    #[builder(setter(into))]
+    src_chain_id: webb_proposals::TypedChainId,
 }
 
 //AnchorUpdateProposal for evm
@@ -50,9 +41,8 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
     ) -> webb_relayer_utils::Result<bool> {
         let header = proposal.header();
         let resource_id = header.resource_id();
-
         let src_chain_id =
-            webb_proposals_typed_chain_converter(self.typed_chain_id);
+            webb_proposals_typed_chain_converter(self.src_chain_id);
         let chain_nonce_addrs = RuntimeApi::storage()
             .dkg_proposals()
             .chain_nonces(&src_chain_id);
@@ -94,19 +84,31 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
+        let my_chain_id_addr =
+            RuntimeApi::constants().dkg_proposals().chain_identifier();
+        let my_chain_id = self.client.constants().at(&my_chain_id_addr)?;
+        let my_chain_id = match my_chain_id {
+            TypedChainId::Substrate(chain_id) => chain_id,
+            TypedChainId::PolkadotParachain(chain_id) => chain_id,
+            TypedChainId::KusamaParachain(chain_id) => chain_id,
+            _ => return Err(webb_relayer_utils::Error::Generic(
+                "dkg proposal signing backend only supports substrate chains",
+            )),
+        };
         let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
         let src_chain_id =
-            webb_proposals_typed_chain_converter(self.typed_chain_id);
-        let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
+            webb_proposals_typed_chain_converter(self.src_chain_id);
         tracing::debug!(
-            nonce = %hex::encode(nonce.encode()),
+            ?nonce,
             resource_id = %hex::encode(resource_id.into_bytes()),
-            src_chain_id = ?self.typed_chain_id,
+            src_chain_id = ?self.src_chain_id,
             proposal = %hex::encode(proposal.to_vec()),
             "sending proposal to DKG runtime"
         );
+
+        let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
 
         let acknowledge_proposal_tx = tx_api.acknowledge_proposal(
             nonce.clone(),
@@ -125,7 +127,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         let data_hash =
             utils::keccak256(acknowledge_proposal_tx.call_data().encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
-            self.typed_chain_id.underlying_chain_id(),
+            my_chain_id,
             make_acknowledge_proposal_key(data_hash),
         );
         // Enqueue transaction in protocol-substrate transaction queue
