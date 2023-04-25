@@ -1,0 +1,25 @@
+[package]
+name = "webb-proof-generation"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+itertools = "0.10.5"
+webb = { workspace = true }
+hex = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+ark-bn254 = { version = "^0.3.0", default-features = true, features = ["curve"] }
+ark-ff = { version = "^0.3.0", default-features = true }
+arkworks-setups = { version = "1.2.1", features = ["r1cs"], default-features = false }
+webb-circom-proving = { path = "../circom-proving", default-features = false }
+ark-circom = { git = "https://github.com/vacp2p/ark-circom", branch = "wasm", default-features = false, features = ["circom-2"] }
+num-bigint = { version = "0.4", default-features = false, features = ["rand", "serde"] }
+ark-groth16 = { git = "https://github.com/arkworks-rs/groth16", rev = "765817f", default-features = false, features = ["parallel"] }
+wasmer = { version = "2.3.0", default-features = false }
+ark-relations = { version = "^0.3.0", default-features = false }
+ark-serialize = { version = "^0.3.0", default-features = false, features = ["derive"] }
+[features]
+default = ["wasmer/sys-default" ]

@@ -137,6 +137,7 @@ pub async fn make_proposal_signing_backend(
                 dkg_client,
                 subxt::tx::PairSigner::new(pair),
                 typed_chain_id,
+                store.clone(),
             );
             Ok(ProposalSigningBackendSelector::Dkg(backend))
         }
