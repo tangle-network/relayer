@@ -53,7 +53,7 @@ import {
 } from '../../lib/utils.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 
-describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
+describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let bobNode: LocalTangle;

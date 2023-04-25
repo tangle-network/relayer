@@ -17,7 +17,7 @@ import { ConvertToKebabCase } from './tsHacks.js';
 import { SubstrateNodeBase } from './substrateNodeBase.js';
 
 const TANGLE_DOCKER_IMAGE_URL =
-  'ghcr.io/webb-tools/tangle/tangle-standalone:main';
+  'ghcr.io/webb-tools/tangle/tangle-standalone-integration-tests:main';
 
 type ExportedConfigOptions = {
   suri: string;
@@ -58,6 +58,7 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         TANGLE_DOCKER_IMAGE_URL,
         'tangle-standalone-node',
         '--tmp',
+        '--chain=relayer',
         '--rpc-cors',
         'all',
         '--ws-external',
@@ -78,7 +79,7 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
     } else {
       startArgs.push(
         '--tmp',
-        '--chain=local',
+        '--chain=relayer',
         '--rpc-cors',
         'all',
         '--rpc-methods=unsafe',
