@@ -1,3 +1,4 @@
+use ethereum_types::U256;
 use std::{sync::Arc, time::Duration};
 
 use tokio::sync::Mutex;
@@ -10,7 +11,7 @@ use webb_proposals::ResourceId;
 use webb_relayer_handler_utils::{
     into_withdraw_error, CommandResponse, CommandStream, WithdrawStatus,
 };
-use webb_relayer_utils::metric::{self, Metrics};
+use webb_relayer_utils::metric::{self};
 
 pub mod fees;
 /// Variable Anchor transaction relayer.
@@ -96,7 +97,6 @@ where
         finalized = true,
         tx_hash = %receipt.transaction_hash,
     );
-    // send the finalized status to the client.
     let _ = stream
         .send(Withdraw(WithdrawStatus::Finalized {
             tx_hash: receipt.transaction_hash,
@@ -105,17 +105,19 @@ where
     // gas spent by relayer on particular resource.
     let gas_used = receipt.gas_used.unwrap_or_default();
     let mut metrics = metrics.lock().await;
-    let resource_metric = metrics
-        .resource_metric_map
-        .entry(resource_id)
-        .or_insert_with(|| Metrics::register_resource_id_counters(resource_id));
-    // convert gas used to gwei.
-    let gas_used = ethers::utils::format_units(gas_used, "gwei")
+    metrics
+        .resource_metric_entry(resource_id)
+        .total_gas_spent
+        .inc_by(wei_to_gwei(gas_used));
+    Ok(())
+}
+
+fn wei_to_gwei(wei: U256) -> f64 {
+    ethers::utils::format_units(wei, "gwei")
         .and_then(|gas| {
             gas.parse::<f64>()
+                // TODO: this error is pointless as it is silently dropped
                 .map_err(|_| ethers::utils::ConversionError::ParseOverflow)
         })
-        .unwrap_or_default();
-    resource_metric.total_gas_spent.inc_by(gas_used);
-    Ok(())
+        .unwrap_or_default()
 }

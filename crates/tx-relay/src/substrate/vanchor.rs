@@ -1,5 +1,6 @@
 use super::*;
 use crate::substrate::handle_substrate_tx;
+use webb::evm::ethers::utils::hex;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::subxt::utils::AccountId32;
 use webb::substrate::{
@@ -13,7 +14,6 @@ use webb_proposals::{
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::SubstrateVAchorCommand;
-use webb_relayer_utils::metric::Metrics;
 
 /// Handler for Substrate Anchor commands
 ///
@@ -110,15 +110,30 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     let metrics_clone = ctx.metrics.clone();
     let mut metrics = metrics_clone.lock().await;
     // update metric for total fee earned by relayer on particular resource
-    let resource_metric = metrics
-        .resource_metric_map
-        .entry(resource_id)
-        .or_insert_with(|| Metrics::register_resource_id_counters(resource_id));
-
-    resource_metric
+    metrics
+        .resource_metric_entry(resource_id)
         .total_fee_earned
         .inc_by(cmd.ext_data.fee as f64);
     // update metric for total fee earned by relayer
-    metrics.total_fee_earned.inc_by(cmd.ext_data.fee as f64);
+    metrics
+        .total_fee_earned
+        .inc_by(wei_to_gwei(cmd.ext_data.fee));
+
+    let account = RuntimeApi::storage().system().account(signer.account_id());
+    let balance = client
+        .storage()
+        .at(None)
+        .await
+        .map_err(|e| Error(e.to_string()))?
+        .fetch(&account)
+        .await
+        .map_err(|e| Error(e.to_string()))?
+        .ok_or(Error(format!(
+            "Substrate storage returned None for {}",
+            hex::encode(account.to_bytes())
+        )))?;
+    metrics
+        .account_balance_entry(typed_chain_id)
+        .set(wei_to_gwei(balance.data.free));
     Ok(())
 }

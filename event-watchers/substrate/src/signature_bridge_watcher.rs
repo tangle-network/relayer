@@ -19,21 +19,20 @@ use sp_core::hashing::keccak_256;
 use webb::substrate::subxt::config::SubstrateConfig;
 use webb::substrate::subxt::events::StaticEvent;
 
-use webb::substrate::subxt::{self, dynamic::Value, OnlineClient};
-
-use webb::substrate::protocol_substrate_runtime::api::signature_bridge::calls::{ExecuteProposal,SetMaintainer};
-use webb_event_watcher_traits::substrate::{SubstrateBridgeWatcher, EventHandler};
+use sp_core::sr25519::Pair as Sr25519Pair;
+use webb::substrate::subxt::tx::PairSigner;
+use webb::substrate::subxt::{self, OnlineClient};
+use webb_event_watcher_traits::substrate::{
+    EventHandler, SubstrateBridgeWatcher,
+};
 use webb_event_watcher_traits::SubstrateEventWatcher;
-use webb_relayer_store::sled::{SledQueueKey,SledStore};
+use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, QueueStore};
 
 use webb::evm::ethers::utils;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::protocol_substrate_runtime::api::signature_bridge::events::MaintainerSet;
-
-use std::borrow::Cow;
 use webb::substrate::scale::Encode;
-use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb_relayer_utils::{metric, Error};
 
 use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
@@ -110,6 +109,7 @@ impl SubstrateBridgeWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
         chain_id: u32,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
+        pair: Sr25519Pair,
         cmd: BridgeCommand,
     ) -> webb_relayer_utils::Result<()> {
         use BridgeCommand::*;
@@ -120,6 +120,7 @@ impl SubstrateBridgeWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
                     chain_id,
                     store,
                     client.clone(),
+                    pair.clone(),
                     (data, signature),
                 )
                 .await?
@@ -133,6 +134,7 @@ impl SubstrateBridgeWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
                     chain_id,
                     store,
                     client.clone(),
+                    pair.clone(),
                     (public_key, nonce, signature),
                 )
                 .await?
@@ -152,6 +154,7 @@ where
         chain_id: u32,
         store: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Store>,
         api: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Client>,
+        pair: Sr25519Pair,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let proposal_data_hex = hex::encode(&proposal_data);
@@ -210,37 +213,35 @@ where
 
         let typed_chain_id = webb_proposals::TypedChainId::Substrate(chain_id);
 
-        // Enqueue transaction call data in protocol-substrate transaction queue
-        let execute_proposal_call = ExecuteProposal {
-            src_id: typed_chain_id.chain_id(),
-            proposal_data: BoundedVec(proposal_data.clone()),
-            signature: BoundedVec(signature.clone()),
-        };
-        // webb dynamic payload
-        let execute_proposal_tx = WebbDynamicTxPayload {
-            pallet_name: Cow::Borrowed("SignatureBridge"),
-            call_name: Cow::Borrowed("execute_proposal"),
-            fields: vec![
-                Value::u128(u128::from(typed_chain_id.chain_id())),
-                Value::from_bytes(proposal_data),
-                Value::from_bytes(signature),
-            ],
-        };
+        let execute_proposal_tx =
+            RuntimeApi::tx().signature_bridge().execute_proposal(
+                typed_chain_id.chain_id(),
+                BoundedVec(proposal_data),
+                BoundedVec(signature),
+            );
 
-        let data_hash = utils::keccak256(execute_proposal_call.encode());
+        let signer: PairSigner<SubstrateConfig, Sr25519Pair> =
+            subxt::tx::PairSigner::new(pair);
+        let signed_execute_proposal_tx = api
+            .tx()
+            .create_signed(&execute_proposal_tx, &signer, Default::default())
+            .await?;
+
+        // Enqueue transaction in protocol-substrate transaction queue
+        let data_hash =
+            utils::keccak256(execute_proposal_tx.call_data().encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),
         );
-        // Enqueue WebbDynamicTxPayload in protocol-substrate transaction queue
-        QueueStore::<WebbDynamicTxPayload>::enqueue_item(
+        QueueStore::<Vec<u8>>::enqueue_item(
             &store,
             tx_key,
-            execute_proposal_tx,
+            signed_execute_proposal_tx.into_encoded(),
         )?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
-            "Enqueued execute-proposal call for execution through protocol-substrate tx queue",
+            "Enqueued execute-proposal tx for execution through protocol-substrate tx queue",
         );
         Ok(())
     }
@@ -251,6 +252,7 @@ where
         chain_id: u32,
         store: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Store>,
         api: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Client>,
+        pair: Sr25519Pair,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let new_maintainer = public_key.clone();
@@ -317,36 +319,32 @@ where
         let mut message = nonce.to_be_bytes().to_vec();
         message.extend_from_slice(&new_maintainer);
 
-        let set_maintainer_call = SetMaintainer {
-            message: BoundedVec(message.clone()),
-            signature: BoundedVec(signature.clone()),
-        };
+        let set_maintainer_tx = RuntimeApi::tx()
+            .signature_bridge()
+            .set_maintainer(BoundedVec(message), BoundedVec(signature));
 
-        // webb dynamic payload
-        tracing::debug!("DKG Message Payload : {:?}", message);
-        let set_maintainer_tx = WebbDynamicTxPayload {
-            pallet_name: Cow::Borrowed("SignatureBridge"),
-            call_name: Cow::Borrowed("set_maintainer"),
-            fields: vec![
-                Value::from_bytes(message),
-                Value::from_bytes(signature),
-            ],
-        };
+        let signer: PairSigner<SubstrateConfig, Sr25519Pair> =
+            subxt::tx::PairSigner::new(pair);
+        let signed_set_maintainer_tx = api
+            .tx()
+            .create_signed(&set_maintainer_tx, &signer, Default::default())
+            .await?;
 
-        let data_hash = utils::keccak256(set_maintainer_call.encode());
+        let data_hash =
+            utils::keccak256(set_maintainer_tx.call_data().encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),
         );
-        // Enqueue WebbDynamicTxPayload in protocol-substrate transaction queue
-        QueueStore::<WebbDynamicTxPayload>::enqueue_item(
+        // Enqueue transaction in protocol-substrate transaction queue
+        QueueStore::<Vec<u8>>::enqueue_item(
             &store,
             tx_key,
-            set_maintainer_tx,
+            signed_set_maintainer_tx.into_encoded(),
         )?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
-            "Enqueued set-maintainer call for execution through protocol-substrate tx queue",
+            "Enqueued set-maintainer tx for execution through protocol-substrate tx queue",
         );
         Ok(())
     }
@@ -393,6 +391,7 @@ fn secp256k1_ecdsa_recover(
 fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
     let mut result = [0u8; 64];
     let prefix = b"execute_proposal_with_signature_";
+    debug_assert!(prefix.len() == 32);
     result[0..32].copy_from_slice(prefix);
     result[32..64].copy_from_slice(&data_hash);
     result
