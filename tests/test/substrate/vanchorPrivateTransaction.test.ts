@@ -53,10 +53,9 @@ import {
 } from '../../lib/utils.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 
-describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function () {
+describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
@@ -80,14 +79,6 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function ()
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -237,7 +228,6 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function ()
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
     await charlieNode?.stop();
     await webbRelayer?.stop();
   });
