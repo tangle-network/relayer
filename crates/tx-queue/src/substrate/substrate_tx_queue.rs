@@ -15,7 +15,9 @@
 use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
+use webb::substrate::subxt;
 use webb::substrate::subxt::config::ExtrinsicParams;
+use webb::substrate::subxt::tx::SubmittableExtrinsic;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::QueueStore;
@@ -24,28 +26,24 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use sp_core::sr25519;
-use std::marker::PhantomData;
-use webb::substrate::subxt;
-use webb::substrate::subxt::tx::{PairSigner, TxStatus as TransactionStatus};
-use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
+use webb::substrate::subxt::tx::TxStatus as TransactionStatus;
 
 /// The SubstrateTxQueue stores transaction call params in bytes so the relayer can process them later.
 /// This prevents issues such as creating transactions with the same nonce.
 /// Randomized sleep intervals are used to prevent relayers from submitting
 /// the same transaction.
 #[derive(Clone)]
-pub struct SubstrateTxQueue<'a, S>
+pub struct SubstrateTxQueue<S>
 where
-    S: QueueStore<WebbDynamicTxPayload<'a>, Key = SledQueueKey>,
+    S: QueueStore<Vec<u8>, Key = SledQueueKey>,
 {
     ctx: RelayerContext,
     chain_id: u32,
     store: Arc<S>,
-    _marker: PhantomData<&'a ()>,
 }
-impl<'a, S> SubstrateTxQueue<'a, S>
+impl<S> SubstrateTxQueue<S>
 where
-    S: QueueStore<WebbDynamicTxPayload<'a>, Key = SledQueueKey>,
+    S: QueueStore<Vec<u8>, Key = SledQueueKey>,
 {
     /// Creates a new SubstrateTxQueue instance.
     ///
@@ -61,7 +59,6 @@ where
             ctx,
             chain_id,
             store,
-            _marker: PhantomData {},
         }
     }
     /// Starts the SubstrateTxQueue service.
@@ -96,10 +93,6 @@ where
             .substrate_provider::<X>(&chain_id.to_string())
             .await?;
 
-        // get pair
-        let pair = self.ctx.substrate_wallet(&chain_id.to_string()).await?;
-        let signer = PairSigner::new(pair);
-
         tracing::event!(
             target: webb_relayer_utils::probe::TARGET,
             tracing::Level::DEBUG,
@@ -113,26 +106,16 @@ where
         let task = || async {
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
-                // dequeue transaction call data. This are call params stored as bytes
+                // dequeue signed transaction
                 let maybe_call_data = store.dequeue_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),
                 )?;
                 if let Some(payload) = maybe_call_data {
-                    let dynamic_tx_payload = subxt::dynamic::tx(
-                        payload.pallet_name,
-                        payload.call_name,
-                        payload.fields,
+                    let signed_extrinsic = SubmittableExtrinsic::from_bytes(
+                        client.clone(),
+                        payload,
                     );
-                    let signed_extrinsic = client
-                        .tx()
-                        .create_signed(
-                            &dynamic_tx_payload,
-                            &signer,
-                            Default::default(),
-                        )
-                        .map_err(Into::into)
-                        .map_err(backoff::Error::transient)
-                        .await?;
+
                     // dry run test
                     let dry_run_outcome = signed_extrinsic.dry_run(None).await;
                     match dry_run_outcome {
@@ -161,12 +144,8 @@ where
                         }
                     }
                     // watch_extrinsic submits and returns transaction subscription
-                    let mut progress = client
-                        .tx()
-                        .sign_and_submit_then_watch_default(
-                            &dynamic_tx_payload,
-                            &signer,
-                        )
+                    let mut progress = signed_extrinsic
+                        .submit_and_watch()
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;
