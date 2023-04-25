@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
@@ -10,10 +9,8 @@ use webb_proposals::ProposalTrait;
 use webb::substrate::scale::{Encode, Decode};
 use webb_relayer_utils::metric;
 use webb::substrate::dkg_runtime::api as RuntimeApi;
-use webb::substrate::subxt::dynamic::Value;
 use webb_relayer_store::{QueueStore, SledStore};
 use webb_relayer_store::sled::SledQueueKey;
-use webb_relayer_types::dynamic_payload::WebbDynamicTxPayload;
 use webb::substrate::subxt::tx::{PairSigner};
 use webb::substrate::dkg_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
@@ -111,35 +108,31 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             "sending proposal to DKG runtime"
         );
 
-        let xt = tx_api.acknowledge_proposal(
+        let acknowledge_proposal_tx = tx_api.acknowledge_proposal(
             nonce.clone(),
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
             BoundedVec(proposal.to_vec()),
         );
-        // webb dynamic payload
-        let execute_proposal_tx = WebbDynamicTxPayload {
-            pallet_name: Cow::Borrowed("DKGProposals"),
-            call_name: Cow::Borrowed("acknowledge_proposal"),
-            fields: vec![
-                Value::u128(u128::from(nonce.0)),
-                Value::u128(u128::from(self.typed_chain_id.chain_id())),
-                Value::from_bytes(
-                    ResourceId(resource_id.into_bytes()).encode(),
-                ),
-                Value::from_bytes(BoundedVec(proposal.to_vec()).encode()),
-            ],
-        };
-        let data_hash = utils::keccak256(xt.call_data().encode());
+
+        let signer = &self.pair;
+        let signed_acknowledge_proposal_tx = self
+            .client
+            .tx()
+            .create_signed(&acknowledge_proposal_tx, signer, Default::default())
+            .await?;
+
+        let data_hash =
+            utils::keccak256(acknowledge_proposal_tx.call_data().encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             self.typed_chain_id.underlying_chain_id(),
             make_acknowledge_proposal_key(data_hash),
         );
-        // Enqueue WebbDynamicTxPayload in protocol-substrate transaction queue
-        QueueStore::<WebbDynamicTxPayload>::enqueue_item(
+        // Enqueue transaction in protocol-substrate transaction queue
+        QueueStore::<Vec<u8>>::enqueue_item(
             &self.store,
             tx_key,
-            execute_proposal_tx,
+            signed_acknowledge_proposal_tx.into_encoded(),
         )?;
 
         Ok(())
