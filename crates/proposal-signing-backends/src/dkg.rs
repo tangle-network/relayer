@@ -1,37 +1,35 @@
 use std::sync::Arc;
-use futures::StreamExt;
 use tokio::sync::Mutex;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use sp_core::sr25519::Pair as Sr25519Pair;
+use webb::evm::ethers::utils;
 use webb_proposals::ProposalTrait;
 use webb::substrate::scale::{Encode, Decode};
 use webb_relayer_utils::metric;
-use webb::substrate::subxt::tx::{PairSigner, TxStatus as TransactionStatus};
 use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb_relayer_store::{QueueStore, SledStore};
+use webb_relayer_store::sled::SledQueueKey;
+use webb::substrate::subxt::tx::PairSigner;
+
 type DkgConfig = PolkadotConfig;
 type DkgClient = OnlineClient<DkgConfig>;
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
+#[derive(typed_builder::TypedBuilder)]
 pub struct DkgProposalSigningBackend {
+    #[builder(setter(into))]
     pub client: DkgClient,
     pub pair: PairSigner<PolkadotConfig, Sr25519Pair>,
-    pub typed_chain_id: webb_proposals::TypedChainId,
-}
-
-impl DkgProposalSigningBackend {
-    pub fn new(
-        client: OnlineClient<PolkadotConfig>,
-        pair: PairSigner<PolkadotConfig, Sr25519Pair>,
-        typed_chain_id: webb_proposals::TypedChainId,
-    ) -> Self {
-        Self {
-            client,
-            pair,
-            typed_chain_id,
-        }
-    }
+    /// Something that implements the QueueStore trait.
+    #[builder(setter(into))]
+    store: Arc<SledStore>,
+    /// The chain id of the chain that this backend is running on.
+    ///
+    /// This used as the source chain id for the proposals.
+    #[builder(setter(into))]
+    src_chain_id: webb_proposals::TypedChainId,
 }
 
 //AnchorUpdateProposal for evm
@@ -43,9 +41,8 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
     ) -> webb_relayer_utils::Result<bool> {
         let header = proposal.header();
         let resource_id = header.resource_id();
-
         let src_chain_id =
-            webb_proposals_typed_chain_converter(self.typed_chain_id);
+            webb_proposals_typed_chain_converter(self.src_chain_id);
         let chain_nonce_addrs = RuntimeApi::storage()
             .dkg_proposals()
             .chain_nonces(&src_chain_id);
@@ -85,84 +82,61 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
     async fn handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
-        metrics: Arc<Mutex<metric::Metrics>>,
+        _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
+        let my_chain_id_addr =
+            RuntimeApi::constants().dkg_proposals().chain_identifier();
+        let my_chain_id = self.client.constants().at(&my_chain_id_addr)?;
+        let my_chain_id = match my_chain_id {
+            TypedChainId::Substrate(chain_id) => chain_id,
+            TypedChainId::PolkadotParachain(chain_id) => chain_id,
+            TypedChainId::KusamaParachain(chain_id) => chain_id,
+            _ => return Err(webb_relayer_utils::Error::Generic(
+                "dkg proposal signing backend only supports substrate chains",
+            )),
+        };
         let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
         let src_chain_id =
-            webb_proposals_typed_chain_converter(self.typed_chain_id);
-        let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
+            webb_proposals_typed_chain_converter(self.src_chain_id);
         tracing::debug!(
-            nonce = %hex::encode(nonce.encode()),
+            ?nonce,
             resource_id = %hex::encode(resource_id.into_bytes()),
-            src_chain_id = ?src_chain_id,
+            src_chain_id = ?self.src_chain_id,
             proposal = %hex::encode(proposal.to_vec()),
             "sending proposal to DKG runtime"
         );
-        let xt = tx_api.acknowledge_proposal(
-            nonce,
+
+        let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
+
+        let acknowledge_proposal_tx = tx_api.acknowledge_proposal(
+            nonce.clone(),
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
             BoundedVec(proposal.to_vec()),
         );
 
-        // TODO: here we should have a substrate based tx queue in the background
-        // where just send the raw xt bytes and let it handle the work for us.
-        // but this here for now.
         let signer = &self.pair;
-        let mut progress = self
+        let signed_acknowledge_proposal_tx = self
             .client
             .tx()
-            .sign_and_submit_then_watch_default(&xt, signer)
+            .create_signed(&acknowledge_proposal_tx, signer, Default::default())
             .await?;
 
-        while let Some(event) = progress.next().await {
-            let e = match event {
-                Ok(e) => e,
-                Err(err) => {
-                    tracing::error!(error = %err, "failed to watch for tx events");
-                    return Err(err.into());
-                }
-            };
+        let data_hash =
+            utils::keccak256(acknowledge_proposal_tx.call_data().encode());
+        let tx_key = SledQueueKey::from_substrate_with_custom_key(
+            my_chain_id,
+            make_acknowledge_proposal_key(data_hash),
+        );
+        // Enqueue transaction in protocol-substrate transaction queue
+        QueueStore::<Vec<u8>>::enqueue_item(
+            &self.store,
+            tx_key,
+            signed_acknowledge_proposal_tx.into_encoded(),
+        )?;
 
-            match e {
-                TransactionStatus::Future => {}
-                TransactionStatus::Ready => {
-                    tracing::trace!("tx ready");
-                }
-                TransactionStatus::Broadcast(_) => {}
-                TransactionStatus::InBlock(_) => {
-                    tracing::trace!("tx in block");
-                }
-                TransactionStatus::Retracted(_) => {
-                    tracing::warn!("tx retracted");
-                }
-                TransactionStatus::FinalityTimeout(_) => {
-                    tracing::warn!("tx timeout");
-                }
-                TransactionStatus::Finalized(v) => {
-                    let maybe_success = v.wait_for_success().await;
-                    match maybe_success {
-                        Ok(_events) => {
-                            metrics.lock().await.proposals_signed.inc();
-                            tracing::debug!("tx finalized");
-                        }
-                        Err(err) => {
-                            tracing::error!(error = %err, "tx failed");
-                            return Err(err.into());
-                        }
-                    }
-                }
-                TransactionStatus::Usurped(_) => {}
-                TransactionStatus::Dropped => {
-                    tracing::warn!("tx dropped");
-                }
-                TransactionStatus::Invalid => {
-                    tracing::warn!("tx invalid");
-                }
-            }
-        }
         Ok(())
     }
 }
@@ -189,4 +163,13 @@ fn webb_proposals_typed_chain_converter(
         webb_proposals::TypedChainId::Solana(id) => TypedChainId::Solana(id),
         webb_proposals::TypedChainId::Ink(id) => TypedChainId::Ink(id),
     }
+}
+
+pub fn make_acknowledge_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
+    let mut result = [0u8; 64];
+    let prefix = b"acknowledge_proposal_fixed_key__";
+    debug_assert!(prefix.len() == 32);
+    result[0..32].copy_from_slice(prefix);
+    result[32..64].copy_from_slice(&data_hash);
+    result
 }

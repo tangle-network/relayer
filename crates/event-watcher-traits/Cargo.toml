@@ -27,6 +27,7 @@ native-tls = { workspace = true }
 webb-proposals = { workspace = true }
 tracing-test = "0.2"
 sled = { version = "^0.34" }
+sp-core = { workspace = true }
 
 [features]
 default = ["std", "evm", "substrate"]
