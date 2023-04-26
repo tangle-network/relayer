@@ -1,29 +1,30 @@
 // This our basic Substrate Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
-import '@webb-tools/protocol-substrate-types';
-import { expect } from 'chai';
-import getPort, { portNumbers } from 'get-port';
-import temp from 'temp';
-import path from 'path';
-import fs from 'fs';
-import isCi from 'is-ci';
-import child from 'child_process';
-import { WebbRelayer } from '../../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
-import { ApiPromise, Keyring } from '@polkadot/api';
-import { u8aToHex, hexToU8a } from '@polkadot/util';
-import { SubmittableExtrinsic } from '@polkadot/api/types';
-import { decodeAddress } from '@polkadot/util-crypto';
+import "@webb-tools/protocol-substrate-types";
+import { expect } from "chai";
+import getPort, { portNumbers } from "get-port";
+import temp from "temp";
+import path from "path";
+import fs from "fs";
+import isCi from "is-ci";
+import child from "child_process";
+import { WebbRelayer } from "../../lib/webbRelayer.js";
+import { LocalProtocolSubstrate } from "../../lib/localProtocolSubstrate.js";
+import { ApiPromise, Keyring } from "@polkadot/api";
+import { u8aToHex, hexToU8a } from "@polkadot/util";
+import { SubmittableExtrinsic } from "@polkadot/api/types";
+import { decodeAddress } from "@polkadot/util-crypto";
 import {
   Note,
   NoteGenInput,
   ProvingManagerSetupInput,
   ArkworksProvingManager,
-} from '@webb-tools/sdk-core';
-import { UsageMode } from '@webb-tools/test-utils';
+} from "@webb-tools/sdk-core";
+import { UsageMode } from "@webb-tools/test-utils";
 
-describe('Substrate Mixer Transaction Relayer', function () {
+// we are going to remove support for Substrate mixer
+describe.skip("Substrate Mixer Transaction Relayer", function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalProtocolSubstrate;
   let bobNode: LocalProtocolSubstrate;
@@ -32,26 +33,26 @@ describe('Substrate Mixer Transaction Relayer', function () {
 
   before(async () => {
     const usageMode: UsageMode = isCi
-      ? { mode: 'docker', forcePullImage: false }
+      ? { mode: "docker", forcePullImage: false }
       : {
-          mode: 'host',
+          mode: "host",
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            "../../protocol-substrate/target/release/webb-standalone-node"
           ),
         };
 
     aliceNode = await LocalProtocolSubstrate.start({
-      name: 'substrate-alice',
-      authority: 'alice',
+      name: "substrate-alice",
+      authority: "alice",
       usageMode,
-      ports: 'auto',
+      ports: "auto",
     });
 
     bobNode = await LocalProtocolSubstrate.start({
-      name: 'substrate-bob',
-      authority: 'bob',
+      name: "substrate-bob",
+      authority: "bob",
       usageMode,
-      ports: 'auto',
+      ports: "auto",
     });
 
     // Wait until we are ready and connected
@@ -61,7 +62,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
     const chainId = await aliceNode.getChainId();
 
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
-      suri: '//Charlie',
+      suri: "//Charlie",
       chainId: chainId,
     });
 
@@ -78,9 +79,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('Simple Mixer Transaction', async () => {
+  it("Simple Mixer Transaction", async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Dave');
+    const account = createAccount("//Dave");
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
       api,
@@ -110,9 +111,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
     });
     // now we wait for relayer to execute transaction.
     await webbRelayer.waitForEvent({
-      kind: 'private_tx',
+      kind: "private_tx",
       event: {
-        ty: 'SUBSTRATE',
+        ty: "SUBSTRATE",
         chain_id: chainId.toString(),
         finalized: true,
       },
@@ -126,9 +127,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
     expect(balanceAfterWithdraw > initialBalance);
   });
 
-  it('Should fail to withdraw if recipient address is invalid', async () => {
+  it("Should fail to withdraw if recipient address is invalid", async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Dave');
+    const account = createAccount("//Dave");
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
       api,
@@ -137,7 +138,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       note
     );
 
-    const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
+    const invalidAddress = "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy";
     // get chainId
     const chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
@@ -159,14 +160,14 @@ describe('Substrate Mixer Transaction Relayer', function () {
       expect(e).to.not.be.null;
       // Runtime Error that indicates invalid withdrawal proof
       expect(e).to.contain(
-        'Runtime error: RuntimeError(Module { index: 40, error: 1 }'
+        "Runtime error: RuntimeError(Module { index: 40, error: 1 }"
       );
     }
   });
 
-  it('Should fail to withdraw if proof is invalid', async () => {
+  it("Should fail to withdraw if proof is invalid", async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Eve');
+    const account = createAccount("//Eve");
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
       api,
@@ -206,15 +207,15 @@ describe('Substrate Mixer Transaction Relayer', function () {
 
       // Runtime Error that indicates VerifyError in pallet-verifier, or InvalidWithdrawProof in pallet-mixer
       const correctErrorMessage =
-        errorMessage.includes('Module { index: 35, error: 1 }') ||
-        errorMessage.includes('Module { index: 40, error: 1 }');
+        errorMessage.includes("Module { index: 35, error: 1 }") ||
+        errorMessage.includes("Module { index: 40, error: 1 }");
       expect(correctErrorMessage);
     }
   });
 
-  it('Should fail to withdraw if fee is not expected', async () => {
+  it("Should fail to withdraw if fee is not expected", async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Ferdie');
+    const account = createAccount("//Ferdie");
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
       api,
@@ -248,9 +249,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
     }
   });
 
-  it('Should fail to withdraw with invalid root', async () => {
+  it("Should fail to withdraw with invalid root", async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Eve');
+    const account = createAccount("//Eve");
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
       api,
@@ -291,9 +292,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
     }
   });
 
-  it('Should fail to withdraw if recipient address is invalid', async () => {
+  it("Should fail to withdraw if recipient address is invalid", async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Dave');
+    const account = createAccount("//Dave");
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
       api,
@@ -302,7 +303,7 @@ describe('Substrate Mixer Transaction Relayer', function () {
       note
     );
 
-    const invalidAddress = '5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy';
+    const invalidAddress = "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy";
     // get chainId
     const chainId = await aliceNode.getChainId();
     // now we need to submit the withdrawal transaction.
@@ -327,9 +328,9 @@ describe('Substrate Mixer Transaction Relayer', function () {
     }
   });
 
-  it('Should fail to withdraw with invalid nullifier hash', async () => {
+  it("Should fail to withdraw with invalid nullifier hash", async () => {
     const api = await aliceNode.api();
-    const account = createAccount('//Eve');
+    const account = createAccount("//Eve");
     const note = await makeDeposit(api, aliceNode, account);
     const withdrawalProof = await initWithdrawal(
       api,
@@ -380,24 +381,24 @@ describe('Substrate Mixer Transaction Relayer', function () {
 // Helper methods, we can move them somewhere if we end up using them again.
 
 async function createMixerDepositTx(api: ApiPromise): Promise<{
-  tx: SubmittableExtrinsic<'promise'>;
+  tx: SubmittableExtrinsic<"promise">;
   note: Note;
 }> {
   const noteInput: NoteGenInput = {
-    protocol: 'mixer',
-    version: 'v2',
-    sourceChain: '5',
-    targetChain: '5',
-    sourceIdentifyingData: '3',
-    targetIdentifyingData: '3',
-    tokenSymbol: 'WEBB',
-    amount: '1',
-    denomination: '18',
-    backend: 'Arkworks',
-    hashFunction: 'Poseidon',
-    curve: 'Bn254',
-    width: '3',
-    exponentiation: '5',
+    protocol: "mixer",
+    version: "v2",
+    sourceChain: "5",
+    targetChain: "5",
+    sourceIdentifyingData: "3",
+    targetIdentifyingData: "3",
+    tokenSymbol: "WEBB",
+    amount: "1",
+    denomination: "18",
+    backend: "Arkworks",
+    hashFunction: "Poseidon",
+    curve: "Bn254",
+    width: "3",
+    exponentiation: "5",
   };
   const note = await Note.generateNote(noteInput);
   const treeId = 0;
@@ -431,12 +432,12 @@ async function createMixerWithdrawProof(
 ): Promise<WithdrawalProof> {
   try {
     const recipientAddressHex = u8aToHex(decodeAddress(opts.recipient)).replace(
-      '0x',
-      ''
+      "0x",
+      ""
     );
     const relayerAddressHex = u8aToHex(decodeAddress(opts.relayer)).replace(
-      '0x',
-      ''
+      "0x",
+      ""
     );
     const treeId = 0;
     const leafCount: number =
@@ -456,21 +457,21 @@ async function createMixerWithdrawProof(
     const leafIndex = treeLeaves.findIndex((l) => u8aToHex(l) === leafHex);
     expect(leafIndex).to.be.greaterThan(-1);
     const gitRoot = child
-      .execSync('git rev-parse --show-toplevel')
+      .execSync("git rev-parse --show-toplevel")
       .toString()
       .trim();
     const provingKeyPath = path.join(
       gitRoot,
-      'tests',
-      'substrate-fixtures',
-      'mixer',
-      'bn254',
-      'x5',
-      'proving_key_uncompressed.bin'
+      "tests",
+      "substrate-fixtures",
+      "mixer",
+      "bn254",
+      "x5",
+      "proving_key_uncompressed.bin"
     );
     const provingKey = fs.readFileSync(provingKeyPath);
 
-    const proofInput: ProvingManagerSetupInput<'mixer'> = {
+    const proofInput: ProvingManagerSetupInput<"mixer"> = {
       note: note.serialize(),
       relayer: relayerAddressHex,
       recipient: recipientAddressHex,
@@ -480,7 +481,7 @@ async function createMixerWithdrawProof(
       refund: opts.refund === undefined ? 0 : opts.refund,
       provingKey,
     };
-    const zkProof = await provingManager.prove('mixer', proofInput);
+    const zkProof = await provingManager.prove("mixer", proofInput);
     return {
       id: treeId,
       proofBytes: `0x${zkProof.proof}`,
@@ -499,7 +500,7 @@ async function createMixerWithdrawProof(
 }
 
 function createAccount(accountId: string) {
-  const keyring = new Keyring({ type: 'sr25519' });
+  const keyring = new Keyring({ type: "sr25519" });
   const account = keyring.addFromUri(accountId);
 
   return account;
