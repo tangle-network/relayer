@@ -8921,6 +8921,7 @@ dependencies = [
  "futures",
  "native-tls",
  "sled",
+ "sp-core",
  "tokio 1.27.0",
  "tracing",
  "tracing-test",

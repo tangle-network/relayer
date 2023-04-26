@@ -503,6 +503,7 @@ pub async fn start_substrate_signature_bridge_events_watcher(
     }
     let mut shutdown_signal = ctx.shutdown_signal();
     let my_config = config.clone();
+    let pair = ctx.substrate_wallet(&chain_id.to_string()).await?;
     let task = async move {
         tracing::debug!(
             "Substrate Signature Bridge watcher for ({}) Started.",
@@ -523,6 +524,7 @@ pub async fn start_substrate_signature_bridge_events_watcher(
             &substrate_bridge_watcher,
             chain_id,
             client.into(),
+            pair.clone(),
             store.clone(),
         );
         tokio::select! {
