@@ -114,6 +114,11 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust"
+
       - name: Install cross
         run: cargo install cross --locked
       - name: Check target using cross
