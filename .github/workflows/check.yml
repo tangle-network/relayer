@@ -214,7 +214,7 @@ jobs:
         run: cd tests && yarn ${{ matrix.test-type }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         channel: [stable]
         target:
