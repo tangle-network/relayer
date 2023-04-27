@@ -42,7 +42,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Build target
         run: cargo check --target=${{ matrix.target }} --features native-tls/vendored --locked
@@ -79,7 +79,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Check target
         run: cargo test --target=${{ matrix.target }} --locked
@@ -120,7 +120,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Install cross
         run: cargo install cross --locked
@@ -163,7 +163,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Use Node.js
         uses: actions/setup-node@v3
@@ -217,7 +217,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Use Node.js
         uses: actions/setup-node@v3
