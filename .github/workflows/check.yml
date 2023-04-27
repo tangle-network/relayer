@@ -116,12 +116,6 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/cache"
-
       - name: Install cross
         run: cargo install cross --locked
       - name: Check target using cross
@@ -158,12 +152,6 @@ jobs:
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Use Node.js
         uses: actions/setup-node@v3
