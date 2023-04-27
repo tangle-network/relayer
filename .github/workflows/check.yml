@@ -200,23 +200,21 @@ jobs:
           cache-dependency-path: "./tests/yarn.lock"
           registry-url: "https://npm.pkg.github.com"
 
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-
       - name: Install NPM Packages.
-        if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && dvc pull && yarn
 
       - name: Pull Docker Images used for testing.
         run: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:stable
         
       - name: Webb Relayer Integration tests.
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: cd tests && yarn test
+        run: cd tests && yarn ${{ matrix.test-type }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         channel: [stable]
         target:
-          - aarch64-unknown-linux-musl
           - x86_64-unknown-linux-musl
+        test-type:
+          - test-evm
+          - test-substrate
