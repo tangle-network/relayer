@@ -213,7 +213,7 @@ api-key = "$POLYGONSCAN_MAINNET_API_KEY"
 
 To deploy the relayer with Docker, copy the `docker` folder to your server. Add an `.env` file as described above and save it into the `config` directory. You also need to adjust the `server_name` (domain) specified in `user_conf.d/relayer.conf`. When you are ready, start the relayer with `docker compose up -d`. You can see the logs with `docker compose logs -f`. It will automatically request a TLS certificate using Let's Encrypt and start operating.
 
-> Note: this uses the latest and pre-released version deployed from `develop` branch, change `:edge` to the [latest stable release version](https://github.com/webb-tools/relayer/pkgs/container/relayer).
+> Note: this uses the latest and pre-released version deployed from `develop` branch, change `:edge` to the [latest stable release version](https://github.com/webb-tools/relayer/pkgs/container/relayer). On the other hand if you always want to use the latest development build, set up a cronjob to execute `docker compose pull && docker compose up -d` regularly in the docker folder.
 
 The Docker setup also includes a preconfigured Grafana installation for monitoring. It is available on `localhost:3000` with login `admin` / `admin`. It includes configuration for Slack alerts, to use it enter a Slack Incoming Webhook URL in `provisioning/alerting/alerting.yaml` where it says `slack-placeholder`.
 
