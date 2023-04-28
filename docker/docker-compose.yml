@@ -12,23 +12,32 @@ services:
     volumes:
       - nginx_secrets:/etc/letsencrypt
       - ./user_conf.d:/etc/nginx/user_conf.d
+
   relayer:
     image: ghcr.io/webb-tools/relayer:edge
     restart: unless-stopped
     depends_on: [nginx]
     ports:
-      - "9955:9955"
+      - "127.0.0.1:9955:9955"
     volumes:
       - ./config:/config
-  prometheus:
-    image: prom/prometheus:v2.43.0
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
   grafana:
     image: grafana/grafana:9.4.7
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
+    depends_on: [prometheus]
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./provisioning:/etc/grafana/provisioning
+
+  prometheus:
+    image: prom/prometheus:v2.43.0
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+
 volumes:
   nginx_secrets:
+  grafana-data:
