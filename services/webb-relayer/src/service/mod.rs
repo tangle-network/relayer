@@ -133,11 +133,12 @@ pub async fn make_proposal_signing_backend(
                 )
                 .await?;
             let pair = ctx.substrate_wallet(&c.chain_id.to_string()).await?;
-            let backend = DkgProposalSigningBackend::new(
-                dkg_client,
-                subxt::tx::PairSigner::new(pair),
-                typed_chain_id,
-            );
+            let backend = DkgProposalSigningBackend::builder()
+                .client(dkg_client)
+                .pair(subxt::tx::PairSigner::new(pair))
+                .src_chain_id(typed_chain_id)
+                .store(store.clone())
+                .build();
             Ok(ProposalSigningBackendSelector::Dkg(backend))
         }
         Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
