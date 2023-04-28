@@ -2,7 +2,7 @@ name: Container Image Release
 
 on:
   push:
-    # Publish `main` as Container `edge` image.
+    # Publish `develop` as Container `edge` image.
     branches:
       - develop
     # Publish `v1.2.3` tags as releases.
@@ -97,7 +97,7 @@ jobs:
           [[ "${{ github.ref }}" == "refs/tags/"* ]] && VERSION=$(echo $VERSION | sed -e 's/^v//')
 
           # Use Docker `edge` tag convention
-          [ "$VERSION" == "main" ] && VERSION=edge
+          [ "$VERSION" == "develop" ] && VERSION=edge
 
           echo IMAGE_ID=$IMAGE_ID
           echo VERSION=$VERSION
