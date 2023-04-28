@@ -12,7 +12,7 @@ jobs:
   clippy:
     name: Clippy
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}-clippy
       cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
@@ -41,7 +41,7 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}-rustfmt
       cancel-in-progress: true
     steps:
       - name: Checkout sources
