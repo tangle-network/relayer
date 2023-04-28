@@ -2,6 +2,7 @@ use super::*;
 use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
+use futures::TryFutureExt;
 use std::{collections::HashMap, sync::Arc};
 use webb::evm::ethers::utils::{format_units, parse_ether};
 use webb::evm::{
@@ -135,6 +136,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         public_inputs,
         encryptions,
     );
+
     if !cmd.ext_data.refund.is_zero() {
         call = call.value(cmd.ext_data.refund);
     }
@@ -179,7 +181,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
     if cmd.ext_data.fee < adjusted_fee + wrapped_amount {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
-            cmd.ext_data.fee, adjusted_fee + wrapped_amount
+            cmd.ext_data.fee,
+            adjusted_fee + wrapped_amount
         );
         return Err(Error(msg));
     }
@@ -206,6 +209,11 @@ pub async fn handle_vanchor_relay_tx<'a>(
     metrics
         .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u128() as f64);
+
+    let relayer_balance = client
+        .get_balance(client.signer().address(), None)
+        .unwrap_or_else(|_| U256::zero())
+        .await;
 
     metrics
         .account_balance_entry(typed_chain_id)

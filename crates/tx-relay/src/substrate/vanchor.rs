@@ -100,7 +100,8 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     dbg!(&payment_info);
     let fee_info =
         get_substrate_fee_info(requested_chain, payment_info.partial_fee, &ctx)
-            .await.unwrap();
+            .await
+            .unwrap();
 
     // validate refund amount
     if U256::from(cmd.ext_data.refund) > fee_info.max_refund {
@@ -121,7 +122,8 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
-            format_ether(cmd.ext_data.fee), format_ether(fee_info.estimated_fee + cmd.ext_data.refund)
+            format_ether(cmd.ext_data.fee),
+            format_ether(fee_info.estimated_fee + cmd.ext_data.refund)
         );
         return Err(Error(msg));
     }

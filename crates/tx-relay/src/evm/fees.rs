@@ -21,8 +21,6 @@ use webb_chains_info::chain_info_by_chain_id;
 use webb_price_oracle_backends::PriceBackend;
 use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handler_utils::CommandResponse::{Error, Network};
-use webb_relayer_handler_utils::{CommandResponse, NetworkStatus};
 use webb_relayer_utils::Result;
 
 /// Amount of time for which a `FeeInfo` is valid after creation
@@ -165,15 +163,20 @@ async fn generate_fee_info(
     )?
     .into();
 
+    let wallet = ctx
+        .evm_wallet(&chain_id.underlying_chain_id().to_string())
+        .await?;
+    let provider = ctx
+        .evm_provider(&chain_id.underlying_chain_id().to_string())
+        .await?;
+    let relayer_balance = provider.get_balance(wallet.address(), None).await?;
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
     // Ensuring that refund <= relayer balance
-    // TODO: should also check balance when returning cached value
-    let relayer_balance =
-        relayer_balance(chain_id.underlying_chain_id(), ctx).await.unwrap();
-    let max_refund =
-        parse_units(MAX_REFUND_USD / native_token_price,
-                    u32::from(native_token_decimals),)?
-            .into();
+    let max_refund = parse_units(
+        MAX_REFUND_USD / native_token_price,
+        u32::from(native_token_decimals),
+    )?
+    .into();
     let max_refund = min(relayer_balance, max_refund);
 
     Ok(EvmFeeInfo {
@@ -186,28 +189,6 @@ async fn generate_fee_info(
         wrapped_token_price,
         wrapped_token_decimals,
     })
-}
-
-async fn relayer_balance(
-    chain_id: u32,
-    ctx: &RelayerContext,
-) -> std::result::Result<U256, CommandResponse> {
-    let wallet = ctx.evm_wallet(&chain_id.to_string()).await.map_err(|e| {
-        Error(format!("Misconfigured Network: {:?}, {e}", chain_id))
-    })?;
-    let provider =
-        ctx.evm_provider(&chain_id.to_string()).await.map_err(|e| {
-            Network(NetworkStatus::Failed {
-                reason: e.to_string(),
-            })
-        })?;
-    let relayer_balance = provider
-        .get_balance(wallet.address(), None)
-        .await
-        .map_err(|e| {
-            Error(format!("Failed to retrieve relayer balance: {e}"))
-        })?;
-    Ok(relayer_balance)
 }
 
 /// Pull USD prices of base token from coingecko.com, and use this to calculate the transaction
