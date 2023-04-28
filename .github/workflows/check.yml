@@ -40,6 +40,10 @@ jobs:
         
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
+
       - name: Build target
         run: cargo check --target=${{ matrix.target }} --features native-tls/vendored --locked
 
@@ -73,6 +77,10 @@ jobs:
         
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
+
       - name: Check target
         run: cargo test --target=${{ matrix.target }} --locked
           
@@ -195,6 +203,9 @@ jobs:
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Use Node.js
         uses: actions/setup-node@v3
@@ -204,23 +215,21 @@ jobs:
           cache-dependency-path: "./tests/yarn.lock"
           registry-url: "https://npm.pkg.github.com"
 
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-
       - name: Install NPM Packages.
-        if: matrix.target == 'x86_64-unknown-linux-musl'
         run: cd tests && dvc pull && yarn
 
       - name: Pull Docker Images used for testing.
         run: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:stable
         
       - name: Webb Relayer Integration tests.
-        if: matrix.target == 'x86_64-unknown-linux-musl'
-        run: cd tests && yarn test
+        run: cd tests && yarn ${{ matrix.test-type }}
 
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         channel: [stable]
         target:
-          - aarch64-unknown-linux-musl
           - x86_64-unknown-linux-musl
+        test-type:
+          - test-evm
+          - test-substrate
