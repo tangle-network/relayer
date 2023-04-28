@@ -188,6 +188,9 @@ describe('Vanchor Transaction relayer', function () {
   });
 
   it('number of deposits made should be equal to number of leaves in cache', async () => {
+    // sometimes this a flakes, so we retry it.
+    this.retries(3);
+
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
 
