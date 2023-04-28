@@ -18,6 +18,7 @@
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import '@webb-tools/protocol-substrate-types';
+import '@webb-tools/dkg-substrate-types';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -179,8 +180,8 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
   it('ownership should be transfered when the DKG rotates', async () => {
     // Now we just need to force the DKG to rotate/refresh.
     const dkgApi = await dkgNode3.api();
-    const forceIncrementNonce = dkgApi.tx.dkg?.manualIncrementNonce?.();
-    const forceRefresh = dkgApi.tx.dkg?.manualRefresh?.();
+    const forceIncrementNonce = dkgApi.tx.dkg.manualIncrementNonce!();
+    const forceRefresh = dkgApi.tx.dkg.manualRefresh!();
     await timeout(dkgNode3.sudoExecuteTransaction(forceIncrementNonce), 30_000);
     await timeout(dkgNode3.sudoExecuteTransaction(forceRefresh), 60_000);
     // Now we just need for the relayer to pick up the new DKG events.
