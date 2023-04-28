@@ -22,10 +22,10 @@ import {
   IVariableAnchorExtData,
   IVariableAnchorPublicInputs,
 } from '@webb-tools/interfaces';
-import { ChildProcess, spawn, execSync } from 'child_process';
+import { ChildProcess, spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
-import { BigNumber, BigNumberish } from 'ethers';
+import { BigNumber } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
 import { padHexString } from '../lib/utils.js';
 
@@ -633,7 +633,7 @@ export interface WebbRelayerInfo {
 }
 
 export interface LeavesCacheResponse {
-  leaves: [string];
+  leaves: number[][];
   lastQueriedBlock: string;
 }
 
