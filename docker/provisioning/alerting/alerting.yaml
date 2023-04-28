@@ -94,7 +94,7 @@ contactPoints:
         type: slack
         settings:
           # Replace this with Slack Incoming Webhook URL to enable notifications
-          url: 'placeholder'
+          url: 'slack-placeholder'
 
 policies:
   - orgId: 1
