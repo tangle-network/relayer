@@ -187,7 +187,7 @@ jobs:
       fail-fast: false
       matrix:
         target:
-          - x86_64-unknown-linux-musl
+          - x86_64-unknown-linux-gnu
         test-type:
           - test-evm
           - test-substrate
