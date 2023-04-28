@@ -129,6 +129,12 @@ jobs:
           toolchain: stable
           targets: ${{ matrix.target }}
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
+
       - name: Create Env file
         run: |
           touch .env
