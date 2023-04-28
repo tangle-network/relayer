@@ -1,5 +1,4 @@
 on:
-  push:
   pull_request:
     branches:
       - develop
@@ -11,27 +10,24 @@ env:
 
 jobs:
   clippy:
-    name: Rust Clippy
+    name: Clippy
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-clippy
+      cancel-in-progress: true
     runs-on: ubuntu-latest
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
+
       - name: Checkout sources
         uses: actions/checkout@v2
-      - name: Cache Cargo
-        uses: actions/cache@v2
+
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
-            target/debug
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          shared-key: "rust"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
+
       - name: Install stable toolchain with clippy available
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -42,14 +38,12 @@ jobs:
         continue-on-error: false
 
   rustfmt:
-    name: Rust Format
+    name: Format
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-rustfmt
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-          
       - name: Checkout sources
         uses: actions/checkout@v2
 

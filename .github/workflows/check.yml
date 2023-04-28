@@ -12,99 +12,83 @@ env:
   ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
 
 jobs:
-
   macos-check:
+    name: macOS Check
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-macos-latest-${{ matrix.target }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
-          
+
       - name: Setup | Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Setup DVC
-        uses: iterative/setup-dvc@v1
-        
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
           cache-directories: ".dvc/tmp\n.dvc/cache"
 
-      - name: Build target
+      - name: Build Checking on ${{ matrix.target }}
         run: cargo check --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
       matrix:
-        channel: [stable]
         target:
           - x86_64-apple-darwin
 
   macos-unit-tests:
+    name: macOS Unit Tests
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-macos-unit-tests-${{ matrix.target }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
-          
+
       - name: Setup | Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Setup DVC
-        uses: iterative/setup-dvc@v1
-        
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
           cache-directories: ".dvc/tmp\n.dvc/cache"
 
-      - name: Check target
+      - name: Testing on ${{ matrix.target }}
         run: cargo test --target=${{ matrix.target }} --locked
-          
+
     strategy:
       fail-fast: true
       matrix:
-        channel: [stable]
         target:
           - x86_64-apple-darwin
-        
 
   linux-check:
+    name: Linux Check
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-linux-check-${{ matrix.target }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
 
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
-
-      - name: Setup DVC
-        uses: iterative/setup-dvc@v1
 
       - name: Setup | Rust
         uses: dtolnay/rust-toolchain@stable
@@ -114,25 +98,24 @@ jobs:
 
       - name: Install cross
         run: cargo install cross --locked
-      - name: Check target using cross
+
+      - name: Build Checking on ${{ matrix.target }} using cross
         run: cross check --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
       matrix:
-        channel: [stable]
         target:
           - aarch64-unknown-linux-musl
           - x86_64-unknown-linux-musl
 
   linux-unit-tests:
+    name: Linux Unit Tests
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-linux-unit-tests-${{ matrix.target }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
 
@@ -140,53 +123,39 @@ jobs:
         with:
           fetch-depth: 50
 
-      - name: Setup DVC
-        uses: iterative/setup-dvc@v1
-
       - name: Setup | Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
           targets: ${{ matrix.target }}
 
-      - name: Use Node.js
-        uses: actions/setup-node@v3
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          node-version-file: "./tests/.nvmrc"
-          cache: "yarn"
-          cache-dependency-path: "./tests/yarn.lock"
-          registry-url: "https://npm.pkg.github.com"
+          shared-key: "rust"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
 
-      - run: yarn global add @webb-tools/dkg-standalone-binary@latest
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
       - name: Create Env file
         run: |
-            touch .env
-            echo ETH1_INFURA_API_KEY = ${{ secrets.ETH1_INFURA_API_KEY }} >> .env
-      - name: Install cross
-        run: cargo install cross --locked
-      - name: Build target using cross
-        run: cross test --target=${{ matrix.target }} --features native-tls/vendored --locked
+          touch .env
+          echo ETH1_INFURA_API_KEY = ${{ secrets.ETH1_INFURA_API_KEY }} >> .env
+
+      - name: Testing on ${{ matrix.target }}
+        run: cargo test --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
       fail-fast: true
       matrix:
-        channel: [stable]
         target:
-          - aarch64-unknown-linux-musl
-          - x86_64-unknown-linux-musl
-
+          - x86_64-unknown-linux-gnu
 
   linux-integration-tests:
+    name: Linux Integration Tests
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-linux-integration-tests-${{ matrix.target }}-${{ matrix.test-type }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-          
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
 
@@ -211,21 +180,20 @@ jobs:
           cache-dependency-path: "./tests/yarn.lock"
           registry-url: "https://npm.pkg.github.com"
 
-      - name: Install NPM Packages.
+      - name: Install Node Packages.
         run: cd tests && dvc pull && yarn
 
       - name: Pull Docker Images used for testing.
         run: docker pull ghcr.io/webb-tools/protocol-substrate-standalone-node:stable
-        
+
       - name: Webb Relayer Integration tests.
         run: cd tests && yarn ${{ matrix.test-type }}
 
     strategy:
       fail-fast: false
       matrix:
-        channel: [stable]
         target:
-          - x86_64-unknown-linux-musl
+          - x86_64-unknown-linux-gnu
         test-type:
           - test-evm
           - test-substrate
