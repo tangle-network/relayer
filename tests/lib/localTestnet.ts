@@ -18,11 +18,13 @@ import fs from 'fs';
 import { BigNumberish, ethers, Wallet } from 'ethers';
 import { Anchors, Utility, VBridge } from '@webb-tools/protocol-solidity';
 import {
-  DeployerConfig,
-  GovernorConfig,
   IVariableAnchorExtData,
   IVariableAnchorPublicInputs,
-} from '@webb-tools/interfaces';
+} from '@webb-tools/interfaces/dist/vanchor';
+import {
+  DeployerConfig,
+  GovernorConfig,
+} from '@webb-tools/interfaces/dist/bridge';
 import { FungibleTokenWrapper, MintableToken } from '@webb-tools/tokens';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 
@@ -40,7 +42,7 @@ import {
 import { ConvertToKebabCase } from './tsHacks';
 import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
-import { TokenConfig } from '@webb-tools/vbridge/lib/VBridge';
+import { TokenConfig } from '@webb-tools/vbridge/dist/VBridge';
 import { LocalEvmChain } from '@webb-tools/evm-test-utils';
 
 export type GanacheAccounts = {
@@ -301,12 +303,16 @@ export class LocalChain {
         console.log('entry: ', entry);
         console.log(await chainBridgeSide.contract.signer.getAddress());
         const nonce = await chainBridgeSide.contract.proposalNonce();
+        const initialGovernor = entry[1];
+        const governorAddress =
+          typeof initialGovernor === 'string' ? initialGovernor : initialGovernor!.address!;
+        const governorNonce = typeof initialGovernor === 'string' ? nonce.toNumber() : initialGovernor!.nonce!;
         // eslint-disable-next-line no-constant-condition
         while (true) {
           try {
             const tx = await chainBridgeSide.transferOwnership(
-              entry[1],
-              nonce.toNumber()
+              governorAddress,
+              governorNonce
             );
             await tx.wait();
             break;
@@ -448,7 +454,7 @@ export class LocalChain {
             : contract.proposalSigningBackend?.type === 'DKGNode'
             ? {
                 type: 'DKGNode',
-                "chain-id": contract.proposalSigningBackend?.chainId,
+                'chain-id': contract.proposalSigningBackend?.chainId,
               }
             : undefined,
         'events-watcher': {
