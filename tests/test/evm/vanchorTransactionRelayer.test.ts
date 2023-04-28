@@ -214,8 +214,18 @@ describe('Vanchor Transaction relayer', function () {
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
 
+    const chainId = localChain1.underlyingChainId.toString();
+    const response0 = await webbRelayer.getLeavesEvm(
+      chainId,
+      vanchor1.contract.address
+    );
+    expect(response0.status).equal(200);
+    const alreadyCachedLeaves =
+      response0.json() as Promise<LeavesCacheResponse>;
+    const depositsToMake = 5;
+    const alreadyCachedLeavesCount = (await alreadyCachedLeaves).leaves.length;
     // Make 5 deposits (10 leaves)
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < depositsToMake; i++) {
       // Define inputs/outputs utxo for transact function
       const depositUtxo = await CircomUtxo.generateUtxo({
         curve: 'Bn254',
@@ -234,20 +244,21 @@ describe('Vanchor Transaction relayer', function () {
       });
     }
 
+    const expectedLeavesCount = alreadyCachedLeavesCount + depositsToMake * 2;
+
     // now we wait for all deposits to be saved in LeafStorageCache
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
       event: {
-        leaf_index: '9',
+        leaf_index: (expectedLeavesCount - 1).toString(),
       },
     });
 
-    const expectedLeaves = vanchor1.tree
-      .elements()
-      .map((el) => Array.from(toFixedHex(el)));
+    const expectedLeaves = vanchor1.tree.elements().map((el) => toFixedHex(el));
+    expect(expectedLeaves.length).to.equal(expectedLeavesCount);
+
     // now we call relayer leaf API to check no of leaves stored in LeafStorageCache
     // are equal to no of deposits made. Each VAnchor deposit generates 2 leaf entries
-    const chainId = localChain1.underlyingChainId.toString();
     const response = await webbRelayer.getLeavesEvm(
       chainId,
       vanchor1.contract.address
@@ -255,10 +266,8 @@ describe('Vanchor Transaction relayer', function () {
     expect(response.status).equal(200);
     const leavesStore = response.json() as Promise<LeavesCacheResponse>;
     await leavesStore.then((resp) => {
-      const leaves = resp.leaves.map((el) =>
-        Array.from(u8aToHex(Uint8Array.from(el)))
-      );
-      expect(leaves.length).to.equal(10);
+      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
+      expect(leaves.length).to.equal(expectedLeaves.length);
       expect(leaves).to.deep.equal(expectedLeaves);
     });
 
@@ -274,7 +283,10 @@ describe('Vanchor Transaction relayer', function () {
     const response1 = await webbRelayer.getLeavesEvm(
       chainId,
       vanchor1.contract.address,
-      { start: 20, end: 30 }
+      {
+        start: expectedLeavesCount + 2,
+        end: expectedLeavesCount + 4,
+      }
     );
     expect(response1.status).equal(200);
     const leavesStore1 = response1.json() as Promise<LeavesCacheResponse>;
@@ -292,11 +304,10 @@ describe('Vanchor Transaction relayer', function () {
     expect(response2.status).equal(200);
     const leavesStore2 = response2.json() as Promise<LeavesCacheResponse>;
     await leavesStore2.then((resp) => {
-      const leaves = resp.leaves.map((el) =>
-        Array.from(u8aToHex(Uint8Array.from(el)))
-      );
-      expect(leaves.length).to.equal(4);
-      expect(leaves).to.deep.equal(expectedLeaves.slice(1, 5));
+      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
+      expect(leaves.length).to.equal(5 - 1);
+      const expectedLeavesSlice = expectedLeaves.slice(1, 5);
+      expect(leaves).to.deep.equal(expectedLeavesSlice);
     });
 
     // 2.1 Querying a range of leaves that are present in the cache (4..7).
@@ -309,28 +320,28 @@ describe('Vanchor Transaction relayer', function () {
     expect(response21.status).equal(200);
     const leavesStore21 = response21.json() as Promise<LeavesCacheResponse>;
     await leavesStore21.then((resp) => {
-      const leaves = resp.leaves.map((el) =>
-        Array.from(u8aToHex(Uint8Array.from(el)))
-      );
-      expect(leaves.length).to.equal(3);
-      expect(leaves).to.deep.equal(expectedLeaves.slice(4, 7));
+      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
+      expect(leaves.length).to.equal(7 - 4);
+      const expectedLeavesSlice = expectedLeaves.slice(4, 7);
+      expect(leaves).to.deep.equal(expectedLeavesSlice);
     });
 
-    // 3. Querying a range of leaves that are partially present in the cache (1..12)
-    // We will query leaves from 1 to 12
+    // 3. Querying a range of leaves that are partially present in the cache (1..(alreadyCachedLeavesCount + depositsToMake * 2 + 4)))
     const response3 = await webbRelayer.getLeavesEvm(
       chainId,
       vanchor1.contract.address,
-      { start: 1, end: 12 }
+      { start: 1, end: expectedLeavesCount + 4 }
     );
     expect(response3.status).equal(200);
     const leavesStore3 = response3.json() as Promise<LeavesCacheResponse>;
     await leavesStore3.then((resp) => {
-      const leaves = resp.leaves.map((el) =>
-        Array.from(u8aToHex(Uint8Array.from(el)))
+      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
+      expect(leaves.length).to.equal(expectedLeavesCount - 1);
+      const expectedLeavesSlice = expectedLeaves.slice(
+        1,
+        expectedLeavesCount + 4
       );
-      expect(leaves.length).to.equal(9);
-      expect(leaves).to.deep.equal(expectedLeaves.slice(1, 12));
+      expect(leaves).to.deep.equal(expectedLeavesSlice);
     });
 
     // 4. Querying a range of leaves that is reverse (9..0)
@@ -347,11 +358,10 @@ describe('Vanchor Transaction relayer', function () {
     expect(response4.status).equal(200);
     const leavesStore4 = response4.json() as Promise<LeavesCacheResponse>;
     await leavesStore4.then((resp) => {
-      const leaves = resp.leaves.map((el) =>
-        Array.from(u8aToHex(Uint8Array.from(el)))
-      );
+      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
       expect(leaves.length).to.equal(1);
-      expect(leaves).to.deep.equal(expectedLeaves.slice(9));
+      const expectedLeavesSlice = expectedLeaves.slice(9);
+      expect(leaves).to.deep.equal(expectedLeavesSlice);
     });
   });
 
