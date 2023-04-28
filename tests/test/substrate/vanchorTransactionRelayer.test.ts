@@ -227,7 +227,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       fee,
       refund: String(refund),
       token: assetId,
-      extAmount: extAmount,
+      extAmount: extAmount.toNumber(),
       encryptedOutput1: u8aToHex(comEnc1),
       encryptedOutput2: u8aToHex(comEnc2),
     };

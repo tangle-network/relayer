@@ -25,7 +25,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import { BigNumber, ethers } from 'ethers';
+import { ethers } from 'ethers';
 import {
   WebbRelayer,
   Pallet,
@@ -524,7 +524,7 @@ async function vanchorWithdraw(
     fee,
     refund: String(refund),
     token: assetId,
-    extAmount: extAmount,
+    extAmount: extAmount.toNumber(),
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };

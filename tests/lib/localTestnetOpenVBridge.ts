@@ -199,12 +199,16 @@ export class LocalChain {
         console.log('entry: ', entry);
         console.log(await chainBridgeSide.contract.signer.getAddress());
         const nonce = await chainBridgeSide.contract.proposalNonce();
+        const initialGovernor = entry[1];
+        const governorAddress =
+          typeof initialGovernor === 'string' ? initialGovernor : initialGovernor!.address!;
+        const governorNonce = typeof initialGovernor === 'string' ? nonce.toNumber() : initialGovernor!.nonce!;
         // eslint-disable-next-line no-constant-condition
         while (true) {
           try {
             const tx = await chainBridgeSide.transferOwnership(
-              entry[1],
-              nonce.toNumber()
+              governorAddress,
+              governorNonce
             );
             await tx.wait();
             break;
