@@ -13,13 +13,12 @@ env:
 
 jobs:
   macos-check:
+    name: macOS Check
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
@@ -36,7 +35,7 @@ jobs:
           shared-key: "rust"
           cache-directories: ".dvc/tmp\n.dvc/cache"
 
-      - name: Build ${{ matrix.target }}
+      - name: Build Checking on ${{ matrix.target }}
         run: cargo check --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
@@ -46,13 +45,12 @@ jobs:
           - x86_64-apple-darwin
 
   macos-unit-tests:
+    name: macOS Unit Tests
     runs-on: macos-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - uses: actions/checkout@v3
         with:
           fetch-depth: 50
@@ -69,7 +67,7 @@ jobs:
           shared-key: "rust"
           cache-directories: ".dvc/tmp\n.dvc/cache"
 
-      - name: Check ${{ matrix.target }}
+      - name: Testing on ${{ matrix.target }}
         run: cargo test --target=${{ matrix.target }} --locked
 
     strategy:
@@ -79,13 +77,12 @@ jobs:
           - x86_64-apple-darwin
 
   linux-check:
+    name: Linux Check
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
 
@@ -102,7 +99,7 @@ jobs:
       - name: Install cross
         run: cargo install cross --locked
 
-      - name: Check ${{ matrix.target }} using cross
+      - name: Build Checking on ${{ matrix.target }} using cross
         run: cross check --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
@@ -113,13 +110,12 @@ jobs:
           - x86_64-unknown-linux-musl
 
   linux-unit-tests:
+    name: Linux Unit Tests
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
 
@@ -138,7 +134,7 @@ jobs:
           touch .env
           echo ETH1_INFURA_API_KEY = ${{ secrets.ETH1_INFURA_API_KEY }} >> .env
 
-      - name: Test ${{ matrix.target }}
+      - name: Testing on ${{ matrix.target }}
         run: cargo test --target=${{ matrix.target }} --features native-tls/vendored --locked
 
     strategy:
@@ -148,13 +144,12 @@ jobs:
           - x86_64-unknown-linux-gnu
 
   linux-integration-tests:
+    name: Linux Integration Tests
     runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
-
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
 
