@@ -72,7 +72,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
+  let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   let wallet1: ethers.Wallet;
   let signatureVBridge: VBridge.VBridge;
@@ -118,9 +118,9 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       enableLogging: false,
     });
 
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
+    charlieNode = await LocalTangle.start({
+      name: 'substrate-charlie',
+      authority: 'charlie',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -370,7 +370,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   after(async () => {
     await localChain1?.stop();
     await aliceNode?.stop();
-    await bobNode?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });
@@ -385,7 +385,7 @@ async function setResourceIdProposal(
 ): Promise<SubmittableExtrinsic<'promise'>> {
   const functionSignature = hexToU8a('0x00000002', 32);
   const nonce = 1;
-  const palletIndex = '0x2C';
+  const palletIndex = '0x2A';
   const callIndex = '0x02';
   // set resource ID
   const resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
