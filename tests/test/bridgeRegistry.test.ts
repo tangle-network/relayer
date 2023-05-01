@@ -18,8 +18,8 @@
 // In this test we will deposit on evm vanchor system
 // and withdraw through substrate vanchor system.
 
-import '@webb-tools/protocol-substrate-types';
-import '@webb-tools/dkg-substrate-types';
+
+import '@webb-tools/tangle-substrate-types';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -222,9 +222,9 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     // Step 4. We transfer ownership to DKG.
     // Fetch current active governor from dkg node
     const dkgPublicKey = await aliceNode.fetchDkgPublicKey();
-    expect(dkgPublicKey).to.not.be.null;
-    await transferOwnershipSubstrate(aliceNode, api, dkgPublicKey!);
-    await transferOwnershipEvm(signatureVBridge, dkgPublicKey!);
+    expect(dkgPublicKey).to.not.equal('0x');
+    await transferOwnershipSubstrate(aliceNode, api, dkgPublicKey);
+    await transferOwnershipEvm(signatureVBridge, dkgPublicKey);
 
     // Step 5. We will send anchor update proposal to register bride and its resources on DKG node.
     await sendAnchorUpdateProposal(

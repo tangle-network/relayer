@@ -17,8 +17,8 @@
 // This our basic Substrate VAnchor Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
-import '@webb-tools/protocol-substrate-types';
-import '@webb-tools/dkg-substrate-types';
+
+import '@webb-tools/tangle-substrate-types';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -100,13 +100,13 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
 
     // Step 4. We force set maintainer on signature bridge.
     const dkgPublicKey = await aliceNode.fetchDkgPublicKey();
-    expect(dkgPublicKey).to.not.be.null;
+    expect(dkgPublicKey).to.not.equal('0x');
     const refreshNonce = await api.query.dkg.refreshNonce();
 
     // force set maintainer
     const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
       refreshNonce,
-      dkgPublicKey!
+      dkgPublicKey
     );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
 
@@ -126,13 +126,12 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
   it('ownership should be transfered when the DKG rotates', async () => {
     // Now we just need to force the DKG to rotate/refresh.
     const api = await aliceNode.api();
-    const forceIncrementNonce = api.tx.dkg?.manualIncrementNonce?.();
-    const forceRefresh = api.tx.dkg?.manualRefresh?.();
+    const forceChangeAuthorities = api.tx.dkg.forceChangeAuthorities();
+
     await timeout(
-      aliceNode.sudoExecuteTransaction(forceIncrementNonce),
+      aliceNode.sudoExecuteTransaction(forceChangeAuthorities),
       30_000
     );
-    await timeout(aliceNode.sudoExecuteTransaction(forceRefresh), 60_000);
     // Now we just need for the relayer to pick up the new DKG events.
     const chainId = await aliceNode.getChainId();
     await webbRelayer.waitForEvent({
@@ -146,7 +145,7 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
 
     // Now we need to check that the ownership was transfered.
     const dkgPublicKey = await aliceNode.fetchDkgPublicKey();
-    expect(dkgPublicKey).to.not.be.null;
+    expect(dkgPublicKey).to.not.equal('0x');
 
     const maintainer = await api.query.signatureBridge.maintainer();
     const aliceMainatinerPubKey = u8aToHex(maintainer);

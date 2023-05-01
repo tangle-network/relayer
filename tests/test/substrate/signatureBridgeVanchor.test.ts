@@ -17,7 +17,7 @@
 // This is Substrate VAnchor Transaction Relayer Tests.
 // In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
 
-import '@webb-tools/protocol-substrate-types';
+
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -204,12 +204,8 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     // check metrics gathered
     const responseMetricsGathered = await webbRelayer.getMetricsGathered();
     expect(responseMetricsGathered.status).equal(200);
-    let metricsGathered =
-      responseMetricsGathered.json() as Promise<RelayerMetricResponse>;
-    metricsGathered.then((resp) => {
-      console.log(resp.metrics);
-      expect(resp.metrics).to.not.be.null;
-    });
+    const metricsGathered = await responseMetricsGathered.json() as RelayerMetricResponse ;
+    expect(metricsGathered.metrics).to.not.be.null;
   });
 
   after(async () => {

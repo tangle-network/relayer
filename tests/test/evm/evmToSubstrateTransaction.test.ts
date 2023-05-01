@@ -18,7 +18,7 @@
 // In this test we will deposit on evm vanchor system
 // and withdraw through substrate vanchor system.
 
-import '@webb-tools/protocol-substrate-types';
+
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';

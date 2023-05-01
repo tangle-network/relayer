@@ -1,7 +1,7 @@
 // This our basic Substrate Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
-import '@webb-tools/protocol-substrate-types';
+
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -10,7 +10,7 @@ import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
 import { WebbRelayer } from '../../lib/webbRelayer.js';
-import { ApiPromise, Keyring } from '@polkadot/api';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 import { decodeAddress } from '@polkadot/util-crypto';

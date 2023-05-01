@@ -16,7 +16,7 @@
  */
 
 // A simple test for Updating the Signature Bridge Governor when DKG Rotates.
-import '@webb-tools/dkg-substrate-types';
+import '@webb-tools/tangle-substrate-types';
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { VBridge, Tokens } from '@webb-tools/protocol-solidity';

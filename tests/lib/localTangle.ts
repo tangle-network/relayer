@@ -1,7 +1,7 @@
 /// A Helper Class to Start and Manage a Local Protocol Substrate Node.
 /// This Could be through a Docker Container or a Local Compiled node.
 import fs from 'fs';
-import '@webb-tools/dkg-substrate-types';
+import '@webb-tools/tangle-substrate-types';
 import { spawn } from 'child_process';
 import {
   EventsWatcher,
@@ -17,7 +17,7 @@ import { ConvertToKebabCase } from './tsHacks.js';
 import { SubstrateNodeBase } from './substrateNodeBase.js';
 
 const TANGLE_DOCKER_IMAGE_URL =
-  'ghcr.io/webb-tools/tangle/tangle-standalone-integration-tests:main';
+  'salman01zp/my-tangle-image:mac';
 
 type ExportedConfigOptions = {
   suri: string;
@@ -38,6 +38,7 @@ type FullNodeInfo = NodeInfo & {
 export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
   public static async start(opts: LocalNodeOpts): Promise<LocalTangle> {
     opts.ports = await super.makePorts(opts);
+    // opts.usageMode.mode = 'docker'
     const startArgs: string[] = [];
     if (opts.usageMode.mode === 'docker') {
       LocalTangle.pullImage({
@@ -56,7 +57,7 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         '-p',
         `${opts.ports.p2p}:30333`,
         TANGLE_DOCKER_IMAGE_URL,
-        'tangle-standalone-node',
+        'tangle-standalone',
         '--tmp',
         '--chain=relayer',
         '--rpc-cors',
@@ -102,7 +103,7 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
     }
   }
 
-  public async fetchDkgPublicKey(): Promise<`0x${string}` | null> {
+  public async fetchDkgPublicKey(): Promise<`0x${string}`> {
     const api = await super.api();
     const res = await api.query.dkg.dkgPublicKey();
     const json = res.toJSON() as [number, string];
@@ -116,7 +117,7 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
       // now we remove the `04` prefix byte and return it.
       return `0x${dkgPubKey.slice(2)}`;
     } else {
-      return null;
+      return `0x`;
     }
   }
 

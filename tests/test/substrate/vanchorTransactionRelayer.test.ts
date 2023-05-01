@@ -17,7 +17,7 @@
 // This our basic Substrate VAnchor Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
-import '@webb-tools/protocol-substrate-types';
+
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -274,11 +274,9 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       '44' // pallet Id
     );
     expect(response.status).equal(200);
-    const leavesStore = response.json() as Promise<LeavesCacheResponse>;
-
-    leavesStore.then((resp) => {
-      expect(indexBeforeInsetion + 2).to.equal(resp.leaves.length);
-    });
+    const leavesStore = await response.json() as LeavesCacheResponse;
+    expect(indexBeforeInsetion + 2).to.equal(leavesStore.leaves.length);
+   
   });
 
   after(async () => {

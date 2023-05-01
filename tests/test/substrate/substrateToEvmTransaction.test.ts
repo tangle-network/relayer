@@ -18,7 +18,7 @@
 // In this test we will deposit on substrate vanchor system
 // and withdraw through evm vanchor system.
 
-import '@webb-tools/protocol-substrate-types';
+
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -33,8 +33,7 @@ import {
 } from '../../lib/webbRelayer.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import { BigNumber } from 'ethers';
-import { ApiPromise, Keyring } from '@polkadot/api';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a, assert } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
@@ -358,7 +357,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
         toFixedHex(withdrawUtxo.commitment),
       'Invalid commitment'
     );
-    const res = await vanchor1.transact([], [], 0, 0, '0', '0', tokenAddress, {
+    await vanchor1.transact([], [], 0, 0, '0', '0', tokenAddress, {
       [localChain1.chainId]: leaves,
       [typedSourceChainId]: substrateLeaves,
     });
