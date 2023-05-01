@@ -68,7 +68,7 @@ import { VAnchor } from '@webb-tools/anchors';
 import { MintableToken } from '@webb-tools/tokens';
 const { ecdsaSign } = pkg;
 
-describe.only('Cross chain transaction <<>> Mocked Backend', function () {
+describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalTangle;
