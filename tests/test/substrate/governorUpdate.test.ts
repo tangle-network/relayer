@@ -17,7 +17,6 @@
 // This our basic Substrate VAnchor Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
-
 import '@webb-tools/tangle-substrate-types';
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';

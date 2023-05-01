@@ -17,7 +17,6 @@
 
 // Testing different kind of proposals between DKG <=> Relayer <=> Signature Bridge.
 
-
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';

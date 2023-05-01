@@ -18,7 +18,6 @@
 // In this test we will deposit on evm vanchor system
 // and withdraw through substrate vanchor system.
 
-
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';

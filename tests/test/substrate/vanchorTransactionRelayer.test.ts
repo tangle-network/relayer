@@ -17,7 +17,6 @@
 // This our basic Substrate VAnchor Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
-
 import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -276,7 +275,6 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
     expect(response.status).equal(200);
     const leavesStore = await response.json() as LeavesCacheResponse;
     expect(indexBeforeInsetion + 2).to.equal(leavesStore.leaves.length);
-   
   });
 
   after(async () => {

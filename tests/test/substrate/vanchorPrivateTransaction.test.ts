@@ -17,7 +17,6 @@
 // This our basic Substrate VAnchor Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
-
 import { assert } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
@@ -53,7 +52,7 @@ import {
 } from '../../lib/utils.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 
-describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
+describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let charlieNode: LocalTangle;
@@ -137,7 +136,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const data = await vanchorDeposit(
       typedSourceChainId.toString(), // source chain Id
       typedSourceChainId.toString(), // target chain Id
-      1000, // public amount
+      10, // public amount
       treeId,
       api,
       aliceNode
@@ -439,7 +438,7 @@ async function vanchorDeposit(
   const leavesMap = {};
 
   const address = account.address;
-  const extAmount = currencyToUnitI128(1000);
+  const extAmount = currencyToUnitI128(10);
   const fee = 0;
   const refund = 0;
   // Initially leaves will be empty

@@ -18,7 +18,6 @@
 // In this test we will deposit on substrate vanchor system
 // and withdraw through evm vanchor system.
 
-
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -323,11 +322,8 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     const publicAmount = (1e13).toString();
 
     // get leaves for substrate chain
-    const substrateLeaves: Uint8Array[] = await api.derive.merkleTreeBn254.getLeavesForTree(
-      treeId,
-      0,
-      1
-    );
+    const substrateLeaves: Uint8Array[] =
+      await api.derive.merkleTreeBn254.getLeavesForTree(treeId, 0, 1);
     assert(substrateLeaves.length === 2, 'Invalid substrate leaves length');
     const index = substrateLeaves.findIndex(
       (leaf) => data.outputUtxo.commitment.toString() === leaf.toString()
