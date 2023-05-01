@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use webb::substrate::dkg_runtime::api::dkg_proposal_handler;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
+use webb::substrate::tangle_runtime::api::dkg_proposal_handler;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::subxt::{self, OnlineClient, PolkadotConfig};
 
 use webb_relayer_store::sled::{SledQueueKey, SledStore};

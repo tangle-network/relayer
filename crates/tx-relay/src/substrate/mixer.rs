@@ -1,9 +1,9 @@
 use super::*;
 use crate::substrate::handle_substrate_tx;
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api::runtime_types::tangle_standalone_runtime::protocol_substrate_config::Element;
 use webb::substrate::{
-    protocol_substrate_runtime::api::runtime_types::webb_primitives::runtime::Element,
-    subxt::{tx::PairSigner, SubstrateConfig},
+    subxt::{tx::PairSigner, PolkadotConfig},
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::SubstrateMixerCommand;
@@ -27,7 +27,7 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
 
     let requested_chain = cmd.chain_id;
     let client = ctx
-        .substrate_provider::<SubstrateConfig>(&requested_chain.to_string())
+        .substrate_provider::<PolkadotConfig>(&requested_chain.to_string())
         .await
         .map_err(|e| {
             Error(format!("Error while getting Substrate client: {e}"))

@@ -1,13 +1,14 @@
 use super::*;
 use crate::substrate::handle_substrate_tx;
 use webb::evm::ethers::utils::hex;
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::subxt::utils::AccountId32;
+use webb::substrate::tangle_runtime::api::runtime_types::tangle_standalone_runtime::protocol_substrate_config::Element;
 use webb::substrate::{
-    protocol_substrate_runtime::api::runtime_types::{
-        webb_primitives::runtime::Element, webb_primitives::types::vanchor,
+    tangle_runtime::api::runtime_types::{
+    webb_primitives::types::vanchor,
     },
-    subxt::{tx::PairSigner, SubstrateConfig},
+    subxt::{tx::PairSigner, PolkadotConfig},
 };
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
@@ -61,7 +62,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
 
     let requested_chain = cmd.chain_id;
     let maybe_client = ctx
-        .substrate_provider::<SubstrateConfig>(&requested_chain.to_string())
+        .substrate_provider::<PolkadotConfig>(&requested_chain.to_string())
         .await;
     let client = maybe_client.map_err(|e| {
         Error(format!("Error while getting Substrate client: {e}"))

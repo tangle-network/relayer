@@ -19,11 +19,7 @@
 
 import { expect } from 'chai';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
-import {
-  CircomUtxo,
-  Keypair,
-  parseTypedChainId,
-} from '@webb-tools/sdk-core';
+import { CircomUtxo, Keypair, parseTypedChainId } from '@webb-tools/sdk-core';
 import dotenv from 'dotenv';
 import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';

@@ -17,7 +17,6 @@
 // This is Substrate VAnchor Transaction Relayer Tests.
 // In this test relayer on vanchor deposit will create and relay proposals to signature bridge pallet for execution
 
-import '@webb-tools/protocol-substrate-types';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -30,11 +29,10 @@ import {
   Pallet,
   RelayerMetricResponse,
 } from '../../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
+import { LocalTangle } from '../../lib/localTangle.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
 
-import { BigNumber } from 'ethers';
-import { ApiPromise, Keyring } from '@polkadot/api';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
@@ -58,17 +56,18 @@ import {
 import pkg from 'secp256k1';
 import { makeSubstrateTargetSystem } from '../../lib/webbProposals.js';
 import {
+  createAccount,
   defaultEventsWatcherValue,
   generateVAnchorNote,
 } from '../../lib/utils.js';
-import { UsageMode } from '@webb-tools/test-utils';
+import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
 describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
+  let aliceNode: LocalTangle;
+  let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
 
   // Governer key
@@ -79,7 +78,6 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     ._signingKey()
     .publicKey.toString()
     .slice(4);
-  const typedSourceChainId = calculateTypedChainId(ChainType.Substrate, 1080);
 
   before(async () => {
     const usageMode: UsageMode = isCi
@@ -87,7 +85,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -101,7 +99,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       },
     ];
 
-    aliceNode = await LocalProtocolSubstrate.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
@@ -109,9 +107,9 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       enableLogging: false,
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
-      name: 'substrate-bob',
-      authority: 'bob',
+    charlieNode = await LocalTangle.start({
+      name: 'substrate-charlie',
+      authority: 'charlie',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -137,10 +135,10 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
       `0x${uncompressedKey}`
     );
     await aliceNode.sudoExecuteTransaction(setMaintainerCall);
-
+    const typedChainId = calculateTypedChainId(ChainType.Substrate, chainId);
     //whitelist chain
     const whitelistChainCall =
-      api.tx.signatureBridge.whitelistChain(typedSourceChainId);
+      api.tx.signatureBridge.whitelistChain(typedChainId);
     await aliceNode.sudoExecuteTransaction(whitelistChainCall);
 
     // now start the relayer
@@ -180,7 +178,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     await aliceNode.executeTransaction(txSigned);
 
     // vanchor deposit
-    await vanchorDeposit(treeId, api, aliceNode);
+    await vanchorDeposit(treeId, chainId, api, aliceNode);
 
     // now we wait for the proposal to be signed by mocked backend and then send data to signature bridge
     await webbRelayer.waitForEvent({
@@ -204,7 +202,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
     // check metrics gathered
     const responseMetricsGathered = await webbRelayer.getMetricsGathered();
     expect(responseMetricsGathered.status).equal(200);
-    let metricsGathered =
+    const metricsGathered =
       responseMetricsGathered.json() as Promise<RelayerMetricResponse>;
     metricsGathered.then((resp) => {
       console.log(resp.metrics);
@@ -214,7 +212,7 @@ describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Bac
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });
@@ -229,7 +227,7 @@ async function setResourceIdProposal(
 ): Promise<SubmittableExtrinsic<'promise'>> {
   const functionSignature = hexToU8a('0x00000002', 32);
   const nonce = 1;
-  const palletIndex = '0x2C';
+  const palletIndex = '0x2A';
   const callIndex = '0x02';
   const substrateTargetSystem = makeSubstrateTargetSystem(treeId, palletIndex);
   // set resource ID
@@ -269,12 +267,12 @@ async function setResourceIdProposal(
 
 async function vanchorDeposit(
   treeId: number,
+  chainId: number,
   api: ApiPromise,
-  aliceNode: LocalProtocolSubstrate
+  aliceNode: LocalTangle
 ) {
   const account = createAccount('//Dave');
-  const chainId = '2199023256632';
-  const outputChainId = BigInt(chainId);
+  const typedChainId = calculateTypedChainId(ChainType.Substrate, chainId);
   const secret = randomAsU8a();
   const gitRoot = child
     .execSync('git rev-parse --show-toplevel')
@@ -296,12 +294,7 @@ async function vanchorDeposit(
   const pk = hexToU8a(pk_hex);
 
   // Creating two empty vanchor notes
-  const note1 = await generateVAnchorNote(
-    0,
-    Number(outputChainId.toString()),
-    Number(outputChainId.toString()),
-    0
-  );
+  const note1 = await generateVAnchorNote(0, typedChainId, typedChainId, 0);
   const note2 = await note1.getDefaultUtxoNote();
   const notes = [note1, note2];
   const publicAmount = currencyToUnitI128(10);
@@ -310,13 +303,13 @@ async function vanchorDeposit(
     curve: 'Bn254',
     backend: 'Arkworks',
     amount: publicAmount.toString(),
-    chainId,
+    chainId: typedChainId.toString(),
   });
   const output2 = await Utxo.generateUtxo({
     curve: 'Bn254',
     backend: 'Arkworks',
     amount: '0',
-    chainId,
+    chainId: typedChainId.toString(),
   });
 
   // Configure a new proving manager with direct call
@@ -329,7 +322,7 @@ async function vanchorDeposit(
   const refund = 0;
   const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
   // Empty leaves
-  leavesMap[outputChainId.toString()] = [];
+  leavesMap[typedChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);
   const root = tree.unwrap().root.toHex();
   const rootsSet = [hexToU8a(root), hexToU8a(root)];
@@ -338,11 +331,11 @@ async function vanchorDeposit(
   const { encrypted: comEnc2 } = naclEncrypt(output2.commitment, secret);
   const leafId: LeafIdentifier = {
     index: 0,
-    typedChainId: Number(outputChainId.toString()),
+    typedChainId,
   };
 
   const setup: ProvingManagerSetupInput<'vanchor'> = {
-    chainId: outputChainId.toString(),
+    chainId: typedChainId.toString(),
     leafIds: [leafId, leafId],
     inputUtxos: notes.map((n) => new Utxo(n.note.getUtxo())),
     leavesMap: leavesMap,
@@ -388,16 +381,4 @@ async function vanchorDeposit(
   );
   const txSigned = await transactCall.signAsync(account);
   await aliceNode.executeTransaction(txSigned);
-}
-
-function currencyToUnitI128(currencyAmount: number) {
-  const bn = BigNumber.from(currencyAmount);
-  return bn.mul(1_000_000_000_000);
-}
-
-function createAccount(accountId: string) {
-  const keyring = new Keyring({ type: 'sr25519' });
-  const account = keyring.addFromUri(accountId);
-
-  return account;
 }

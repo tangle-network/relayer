@@ -16,7 +16,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use sp_core::hashing::keccak_256;
-use webb::substrate::subxt::config::SubstrateConfig;
+use webb::substrate::subxt::config::PolkadotConfig;
 use webb::substrate::subxt::events::StaticEvent;
 
 use sp_core::sr25519::Pair as Sr25519Pair;
@@ -30,12 +30,13 @@ use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, QueueStore};
 
 use webb::evm::ethers::utils;
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
-use webb::substrate::protocol_substrate_runtime::api::signature_bridge::events::MaintainerSet;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api::signature_bridge::events::MaintainerSet;
+
 use webb::substrate::scale::Encode;
 use webb_relayer_utils::{metric, Error};
 
-use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
 /// A MaintainerSetEvent handler handles `MaintainerSet` events and signals signature bridge watcher
 /// to remove pending tx trying to do governor transfer.
@@ -43,14 +44,14 @@ use webb::substrate::protocol_substrate_runtime::api::runtime_types::sp_core::bo
 pub struct MaintainerSetEventHandler;
 
 #[async_trait::async_trait]
-impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
-    type Client = OnlineClient<SubstrateConfig>;
+impl EventHandler<PolkadotConfig> for MaintainerSetEventHandler {
+    type Client = OnlineClient<PolkadotConfig>;
 
     type Store = SledStore;
 
     async fn can_handle_events(
         &self,
-        events: subxt::events::Events<SubstrateConfig>,
+        events: subxt::events::Events<PolkadotConfig>,
     ) -> webb_relayer_utils::Result<bool> {
         let has_event = events.has::<MaintainerSet>()?;
         Ok(has_event)
@@ -60,7 +61,7 @@ impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
         &self,
         _store: Arc<Self::Store>,
         _client: Arc<Self::Client>,
-        (events, _block_number): (subxt::events::Events<SubstrateConfig>, u64),
+        (events, _block_number): (subxt::events::Events<PolkadotConfig>, u64),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // todo
@@ -94,15 +95,15 @@ impl EventHandler<SubstrateConfig> for MaintainerSetEventHandler {
 #[derive(Copy, Clone, Debug, Default)]
 pub struct SubstrateBridgeEventWatcher;
 
-impl SubstrateEventWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
+impl SubstrateEventWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
     const TAG: &'static str = "Substrate bridge pallet Watcher";
     const PALLET_NAME: &'static str = MaintainerSet::PALLET;
-    type Client = OnlineClient<SubstrateConfig>;
+    type Client = OnlineClient<PolkadotConfig>;
     type Store = SledStore;
 }
 
 #[async_trait::async_trait]
-impl SubstrateBridgeWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
+impl SubstrateBridgeWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
     #[tracing::instrument(skip_all)]
     async fn handle_cmd(
         &self,
@@ -146,14 +147,14 @@ impl SubstrateBridgeWatcher<SubstrateConfig> for SubstrateBridgeEventWatcher {
 
 impl SubstrateBridgeEventWatcher
 where
-    Self: SubstrateBridgeWatcher<SubstrateConfig>,
+    Self: SubstrateBridgeWatcher<PolkadotConfig>,
 {
     #[tracing::instrument(skip_all)]
     async fn execute_proposal_with_signature(
         &self,
         chain_id: u32,
-        store: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Client>,
+        store: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Store>,
+        api: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Client>,
         pair: Sr25519Pair,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
@@ -220,7 +221,7 @@ where
                 BoundedVec(signature),
             );
 
-        let signer: PairSigner<SubstrateConfig, Sr25519Pair> =
+        let signer: PairSigner<PolkadotConfig, Sr25519Pair> =
             subxt::tx::PairSigner::new(pair);
         let signed_execute_proposal_tx = api
             .tx()
@@ -250,8 +251,8 @@ where
     async fn transfer_ownership_with_signature(
         &self,
         chain_id: u32,
-        store: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher<SubstrateConfig>>::Client>,
+        store: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Store>,
+        api: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Client>,
         pair: Sr25519Pair,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
@@ -323,7 +324,7 @@ where
             .signature_bridge()
             .set_maintainer(BoundedVec(message), BoundedVec(signature));
 
-        let signer: PairSigner<SubstrateConfig, Sr25519Pair> =
+        let signer: PairSigner<PolkadotConfig, Sr25519Pair> =
             subxt::tx::PairSigner::new(pair);
         let signed_set_maintainer_tx = api
             .tx()

@@ -719,7 +719,6 @@ export interface Substrate {
 
 export interface NodeInfo {
   enabled: boolean;
-  runtime: RuntimeKind;
   pallets: Pallet[];
 }
 

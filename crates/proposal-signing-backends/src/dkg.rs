@@ -1,18 +1,18 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
+use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use sp_core::sr25519::Pair as Sr25519Pair;
 use webb::evm::ethers::utils;
 use webb_proposals::ProposalTrait;
 use webb::substrate::scale::{Encode, Decode};
 use webb_relayer_utils::metric;
-use webb::substrate::dkg_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb_relayer_store::{QueueStore, SledStore};
 use webb_relayer_store::sled::SledQueueKey;
 use webb::substrate::subxt::tx::PairSigner;
-use webb::substrate::dkg_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 
 type DkgConfig = PolkadotConfig;
 type DkgClient = OnlineClient<DkgConfig>;

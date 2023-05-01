@@ -24,7 +24,7 @@
 //! - `DKGBridgeRegistryBackend`: This is the actual backend that is used in production.
 
 use ethereum_types::H256;
-use webb::substrate::dkg_runtime::api::runtime_types::pallet_bridge_registry::types::BridgeMetadata;
+use webb::substrate::tangle_runtime::api::runtime_types::pallet_bridge_registry::types::BridgeMetadata;
 use webb_proposals::ResourceId;
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_config::anchor::RawResourceId;

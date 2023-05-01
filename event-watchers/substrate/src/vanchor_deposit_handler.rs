@@ -15,10 +15,10 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
-use webb::substrate::protocol_substrate_runtime::api::v_anchor_bn254;
 use webb::substrate::scale::Encode;
-use webb::substrate::subxt::{self, OnlineClient, SubstrateConfig};
+use webb::substrate::subxt::{self, OnlineClient, PolkadotConfig};
+use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api::v_anchor_bn254;
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::substrate::EventHandler;
 
@@ -55,19 +55,18 @@ where
 }
 
 #[async_trait::async_trait]
-impl<B, C> EventHandler<SubstrateConfig>
-    for SubstrateVAnchorDepositHandler<B, C>
+impl<B, C> EventHandler<PolkadotConfig> for SubstrateVAnchorDepositHandler<B, C>
 where
     B: ProposalSigningBackend + Send + Sync,
     C: BridgeRegistryBackend + Send + Sync,
 {
-    type Client = OnlineClient<SubstrateConfig>;
+    type Client = OnlineClient<PolkadotConfig>;
 
     type Store = SledStore;
 
     async fn can_handle_events(
         &self,
-        events: subxt::events::Events<SubstrateConfig>,
+        events: subxt::events::Events<PolkadotConfig>,
     ) -> webb_relayer_utils::Result<bool> {
         let has_event = events.has::<v_anchor_bn254::events::Transaction>()?;
         Ok(has_event)
@@ -78,7 +77,7 @@ where
         &self,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
-        (events, _block_number): (subxt::events::Events<SubstrateConfig>, u64),
+        (events, _block_number): (subxt::events::Events<PolkadotConfig>, u64),
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let at_hash = events.block_hash();

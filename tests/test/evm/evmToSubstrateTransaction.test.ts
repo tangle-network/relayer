@@ -18,7 +18,6 @@
 // In this test we will deposit on evm vanchor system
 // and withdraw through substrate vanchor system.
 
-import '@webb-tools/protocol-substrate-types';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -31,9 +30,9 @@ import {
   Pallet,
   EnabledContracts,
 } from '../../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../../lib/localProtocolSubstrate.js';
+import { LocalTangle } from '../../lib/localTangle.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import { ApiPromise, Keyring } from '@polkadot/api';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
@@ -60,6 +59,7 @@ import { LocalChain } from '../../lib/localTestnet.js';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
 import {
+  createAccount,
   defaultEventsWatcherValue,
   generateVAnchorNote,
 } from '../../lib/utils.js';
@@ -71,8 +71,8 @@ const { ecdsaSign } = pkg;
 describe('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
+  let aliceNode: LocalTangle;
+  let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   let wallet1: ethers.Wallet;
   let signatureVBridge: VBridge.VBridge;
@@ -96,7 +96,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -110,7 +110,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       },
     ];
 
-    aliceNode = await LocalProtocolSubstrate.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
@@ -118,9 +118,9 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
       enableLogging: false,
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
-      name: 'substrate-bob',
-      authority: 'bob',
+    charlieNode = await LocalTangle.start({
+      name: 'substrate-charlie',
+      authority: 'charlie',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -162,7 +162,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
-   
+
     // Deploy the token.
     const localToken = await localChain1.deployToken('Webb Token', 'WEBB');
 
@@ -189,7 +189,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     const substrateResourceId = createSubstrateResourceId(
       substrateChainId,
       6,
-      '0x2C'
+      '0x2A'
     );
 
     // save the substrate chain configs
@@ -370,7 +370,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
   after(async () => {
     await localChain1?.stop();
     await aliceNode?.stop();
-    await bobNode?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });
@@ -385,7 +385,7 @@ async function setResourceIdProposal(
 ): Promise<SubmittableExtrinsic<'promise'>> {
   const functionSignature = hexToU8a('0x00000002', 32);
   const nonce = 1;
-  const palletIndex = '0x2C';
+  const palletIndex = '0x2A';
   const callIndex = '0x02';
   // set resource ID
   const resourceId = createSubstrateResourceId(chainId, treeId, palletIndex);
@@ -425,7 +425,7 @@ async function vanchorWithdraw(
   depositNote: Note,
   treeId: number,
   api: ApiPromise,
-  aliceNode: LocalProtocolSubstrate
+  aliceNode: LocalTangle
 ) {
   const account = createAccount('//Dave');
   const typedSourceChainId = depositNote.note.sourceChainId;
@@ -536,18 +536,11 @@ async function vanchorWithdraw(
   };
 
   // now we call the vanchor transact to withdraw on substrate
-  const transactCall = api.tx.vAnchorBn254!.transact!(
+  const transactCall = api.tx.vAnchorBn254.transact(
     treeId,
     vanchorProofData,
     extData
   );
   const txSigned = await transactCall.signAsync(account);
   await aliceNode.executeTransaction(txSigned);
-}
-
-function createAccount(accountId: string): any {
-  const keyring = new Keyring({ type: 'sr25519' });
-  const account = keyring.addFromUri(accountId);
-
-  return account;
 }
