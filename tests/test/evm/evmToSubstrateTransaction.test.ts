@@ -32,7 +32,7 @@ import {
 } from '../../lib/webbRelayer.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 import { SubmittableExtrinsic } from '@polkadot/api/types';
-import { ApiPromise, Keyring } from '@polkadot/api';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
@@ -66,10 +66,9 @@ import {
 import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import { VAnchor } from '@webb-tools/anchors';
 import { MintableToken } from '@webb-tools/tokens';
-import { KeyringPair } from '@polkadot/keyring/types.js';
 const { ecdsaSign } = pkg;
 
-describe('Cross chain transaction <<>> Mocked Backend', function () {
+describe.only('Cross chain transaction <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let aliceNode: LocalTangle;
@@ -190,7 +189,7 @@ describe('Cross chain transaction <<>> Mocked Backend', function () {
     const substrateResourceId = createSubstrateResourceId(
       substrateChainId,
       6,
-      '0x2C'
+      '0x2A'
     );
 
     // save the substrate chain configs
