@@ -17,7 +17,7 @@ import { ConvertToKebabCase } from './tsHacks.js';
 import { SubstrateNodeBase } from './substrateNodeBase.js';
 
 const TANGLE_DOCKER_IMAGE_URL =
-  'salman01zp/my-tangle-image:mac';
+  'ghcr.io/webb-tools/tangle/tangle-standalone-integration-tests:main';
 
 type ExportedConfigOptions = {
   suri: string;

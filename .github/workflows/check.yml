@@ -184,7 +184,7 @@ jobs:
         run: cd tests && dvc pull && yarn
 
       - name: Pull Docker Images used for testing.
-        run: docker pull salman01zp/my-tangle-image:mac
+        run: docker pull ghcr.io/webb-tools/tangle/tangle-standalone-integration-tests:main
 
       - name: Webb Relayer Integration tests.
         run: cd tests && yarn ${{ matrix.test-type }}
