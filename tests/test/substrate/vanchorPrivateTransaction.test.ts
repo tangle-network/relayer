@@ -17,7 +17,7 @@
 // This our basic Substrate VAnchor Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
-import { assert } from 'chai';
+import { assert, expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -36,7 +36,7 @@ import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
-
+import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 import {
   ProvingManagerSetupInput,
   ArkworksProvingManager,
@@ -52,7 +52,7 @@ import {
 } from '../../lib/utils.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 
-describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function () {
+describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let charlieNode: LocalTangle;
@@ -151,7 +151,7 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function ()
     });
 
     // 3. Now we withdraw it on bob's account using private transaction.
-    const account = createAccount('//Bob');
+    const account = createAccount('//Dave');
     // Bob's balance after withdrawal
     const bobBalanceBefore = await api.query.system.account(account.address);
 
@@ -261,6 +261,21 @@ async function vanchorWithdraw(
   );
   const pk_hex = fs.readFileSync(pkPath).toString('hex');
   const pk = hexToU8a(pk_hex);
+
+  const vkPath = path.join(
+    // tests path
+    gitRoot,
+    'tests',
+    'substrate-fixtures',
+    'vanchor',
+    'bn254',
+    'x5',
+    '2-2-2',
+    'verifying_key_uncompressed.bin'
+  );
+  const vk_hex = fs.readFileSync(vkPath).toString('hex');
+  const vk = hexToU8a(vk_hex);
+
   const leavesMap = {};
   // get source chain (evm) leaves.
   const substrateLeaves = await api.derive.merkleTreeBn254.getLeavesForTree(
@@ -360,6 +375,16 @@ async function vanchorWithdraw(
     outputCommitments: data.outputUtxos.map((utxo) => utxo.commitment),
     extDataHash: data.extDataHash,
   };
+
+  const isValidProof = verify_js_proof(
+    data.proof,
+    data.publicInputs,
+    u8aToHex(vk).replace('0x', ''),
+    'Bn254'
+  );
+  console.log('Is proof valid : ', isValidProof);
+  expect(isValidProof).to.be.true;
+  
 
   return { extData, proofData };
 }

@@ -28,9 +28,8 @@ import { LocalTangle } from '../../lib/localTangle.js';
 import { u8aToHex } from '@polkadot/util';
 import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
-import { timeout } from '../../lib/timeout.js';
 
-describe.skip('Substrate SignatureBridge Governor Update', function () {
+describe('Substrate SignatureBridge Governor Update', function () {
   const tmpDirPath = temp.mkdirSync();
   // Tangle nodes
   let aliceNode: LocalTangle;
@@ -122,17 +121,18 @@ describe.skip('Substrate SignatureBridge Governor Update', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('ownership should be transfered when the DKG rotates', async () => {
+  it('ownership should be transferred when the DKG rotates', async () => {
     // Now we just need to force the DKG to rotate/refresh.
     const api = await aliceNode.api();
-    const forceChangeAuthorities = api.tx.dkg.forceChangeAuthorities();
-
-    await timeout(
-      aliceNode.sudoExecuteTransaction(forceChangeAuthorities),
-      30_000
-    );
-    // Now we just need for the relayer to pick up the new DKG events.
     const chainId = await aliceNode.getChainId();
+    await webbRelayer.waitForEvent({
+      kind: 'signature_bridge',
+      event: {
+        call: 'transfer_ownership_with_signature_pub_key',
+        chain_id: chainId.toString(),
+      },
+    });
+    // Now we just need for the relayer to pick up the new DKG events.
     await webbRelayer.waitForEvent({
       kind: 'tx_queue',
       event: {
