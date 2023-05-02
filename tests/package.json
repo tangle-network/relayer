@@ -16,7 +16,7 @@
     "ts-check": "npx tsc --noEmit"
   },
   "engines": {
-    "node": "16.x.x"
+    "node": "18.x.x"
   },
   "resolutions": {
     "@webb-tools/api": "0.1.4-123",
