@@ -2,6 +2,7 @@ use super::*;
 use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
+use futures::TryFutureExt;
 use std::{collections::HashMap, sync::Arc};
 use webb::evm::ethers::utils::{format_units, parse_ether};
 use webb::evm::{
@@ -15,7 +16,6 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::EvmVanchorCommand;
 use webb_relayer_handler_utils::{CommandStream, NetworkStatus};
-use webb_relayer_utils::metric::Metrics;
 
 /// Handler for VAnchor commands
 ///
@@ -136,6 +136,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         public_inputs,
         encryptions,
     );
+
     if !cmd.ext_data.refund.is_zero() {
         call = call.value(cmd.ext_data.refund);
     }
@@ -180,7 +181,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
     if cmd.ext_data.fee < adjusted_fee + wrapped_amount {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
-            cmd.ext_data.fee, adjusted_fee + wrapped_amount
+            cmd.ext_data.fee,
+            adjusted_fee + wrapped_amount
         );
         return Err(Error(msg));
     }
@@ -198,18 +200,24 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let metrics_clone = ctx.metrics.clone();
     let mut metrics = metrics_clone.lock().await;
     // update metric for total fee earned by relayer on particular resource
-    let resource_metric = metrics
-        .resource_metric_map
-        .entry(resource_id)
-        .or_insert_with(|| Metrics::register_resource_id_counters(resource_id));
-    resource_metric
+    metrics
+        .resource_metric_entry(resource_id)
         .total_fee_earned
-        .inc_by(cmd.ext_data.fee.as_u64() as f64);
+        .inc_by(cmd.ext_data.fee.as_u128() as f64);
 
     // update metric for total fee earned by relayer
     metrics
         .total_fee_earned
-        .inc_by(cmd.ext_data.fee.as_u64() as f64);
+        .inc_by(cmd.ext_data.fee.as_u128() as f64);
+
+    let relayer_balance = client
+        .get_balance(client.signer().address(), None)
+        .unwrap_or_else(|_| U256::zero())
+        .await;
+
+    metrics
+        .account_balance_entry(typed_chain_id)
+        .set(wei_to_gwei(relayer_balance));
     Ok(())
 }
 

@@ -211,16 +211,24 @@ pub async fn handle_evm_fee_info(
 ) -> Result<Json<EvmFeeInfo>, HandlerError> {
     let chain_id = dbg!(TypedChainId::from(chain_id));
     let gas_amount = U256::from(gas_amount);
-    Ok(get_evm_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
-        .await
-        .map(Json)?)
+    Ok(
+        get_evm_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
+            .await
+            .map(Json)?,
+    )
 }
+
+/// Handler for fee estimation
+///
+/// # Arguments
+/// * `chain_id` - ID of the blockchain
+/// * `estimated_tx_fees` - Estimated transaction fees
+/// * `ctx` - RelayContext reference that holds the configuration
 pub async fn handle_substrate_fee_info(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, estimated_tx_fees)): Path<(u64, u128)>,
 ) -> Result<Json<SubstrateFeeInfo>, HandlerError> {
-    get_substrate_fee_info(chain_id,
-                           estimated_tx_fees.into(), ctx.as_ref())
+    get_substrate_fee_info(chain_id, estimated_tx_fees.into(), ctx.as_ref())
         .await
         .map(Json)
         .map_err(|e| {

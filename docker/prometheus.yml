@@ -7,4 +7,4 @@ scrape_configs:
     metrics_path: '/api/v1/metrics'
 
     static_configs:
-      - targets: ['localhost:9955']
+      - targets: ['relayer:9955']

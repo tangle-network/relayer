@@ -285,8 +285,8 @@ describe.skip('SignatureBridge Governor Updates', function () {
   it('ownership should be transfered when the DKG rotates', async () => {
     // now we just need to force the DKG to rotate/refresh.
     const api = await charlieNode.api();
-    const forceIncrementNonce = api.tx.dkg.manualIncrementNonce();
-    const forceRefresh = api.tx.dkg.manualRefresh();
+    const forceIncrementNonce = api.tx.dkg.manualIncrementNonce!();
+    const forceRefresh = api.tx.dkg.manualRefresh!();
     await timeout(
       charlieNode.sudoExecuteTransaction(forceIncrementNonce),
       30_000

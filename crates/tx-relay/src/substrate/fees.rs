@@ -1,12 +1,12 @@
-use std::cmp::min;
 use crate::{MAX_REFUND_USD, TRANSACTION_PROFIT_USD};
 use chrono::{DateTime, Utc};
 use serde::Deserialize;
-use serde::{Serialize};
+use serde::Serialize;
 use sp_core::U256;
-use webb::substrate::subxt::{PolkadotConfig, SubstrateConfig};
+use std::cmp::min;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::subxt::tx::PairSigner;
+use webb::substrate::subxt::{PolkadotConfig, SubstrateConfig};
 use webb_relayer_context::RelayerContext;
 
 const TOKEN_PRICE_USD: f64 = 0.1;
@@ -63,20 +63,20 @@ pub async fn get_substrate_fee_info(
     })
 }
 
-async fn relayer_balance(chain_id: u64,
-    ctx: &RelayerContext,) -> webb_relayer_utils::Result<U256>{
+async fn relayer_balance(
+    chain_id: u64,
+    ctx: &RelayerContext,
+) -> webb_relayer_utils::Result<U256> {
     let client = ctx
         .substrate_provider::<SubstrateConfig>(&chain_id.to_string())
         .await?;
-    let pair = ctx
-        .substrate_wallet(&chain_id.to_string())
-        .await?;
+    let pair = ctx.substrate_wallet(&chain_id.to_string()).await?;
 
-    let signer = PairSigner::<SubstrateConfig, sp_core::sr25519::Pair>::new(pair.clone());
+    let signer = PairSigner::<SubstrateConfig, sp_core::sr25519::Pair>::new(
+        pair.clone(),
+    );
 
-    let account = RuntimeApi::storage()
-        .system()
-        .account(signer.account_id());
+    let account = RuntimeApi::storage().system().account(signer.account_id());
 
     let balance = client
         .storage()

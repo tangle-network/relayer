@@ -185,7 +185,7 @@ impl EventHandler for VAnchorLeavesHandler {
                     tracing::Level::DEBUG,
                     kind = %webb_relayer_utils::probe::Kind::LeavesStore,
                     leaf_index = %value.0,
-                    leaf = %format!("{:?}", value.1),
+                    leaf = %hex::encode(value.1),
                     chain_id = %chain_id,
                     block_number = %log.block_number
                 );

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use super::{event_watcher::SubstrateEventWatcher, *};
-
+use sp_core::sr25519::Pair as Sr25519Pair;
 // A Substrate Bridge Watcher is a trait for Signature Bridge Pallet that is not specific for watching events from that pallet,
 /// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers
 /// from the actual action that should be taken depending on the event.
@@ -32,6 +32,7 @@ where
         chain_id: u32,
         store: Arc<Self::Store>,
         client: Arc<Self::Client>,
+        pair: Sr25519Pair,
         cmd: BridgeCommand,
     ) -> webb_relayer_utils::Result<()>;
 
@@ -48,6 +49,7 @@ where
         &self,
         chain_id: u32,
         client: Arc<Self::Client>,
+        pair: Sr25519Pair,
         store: Arc<Self::Store>,
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
@@ -64,6 +66,7 @@ where
                             chain_id,
                             store.clone(),
                             client.clone(),
+                            pair.clone(),
                             cmd,
                         )
                         .await
