@@ -16,11 +16,11 @@
  */
 
 // A simple test for Updating the Signature Bridge Governor when DKG Rotates.
-
+import '@webb-tools/tangle-substrate-types';
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { VBridge, Tokens } from '@webb-tools/protocol-solidity';
-import { BigNumber, ethers } from 'ethers';
+import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
 import { LocalChain } from '../../lib/localTestnet.js';
@@ -32,7 +32,7 @@ import {
   EnabledContracts,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { LocalDkg } from '../../lib/localDkg.js';
+import { LocalTangle } from '../../lib/localTangle.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
@@ -54,9 +54,8 @@ describe.skip('SignatureBridge Governor Updates', function () {
   let wallet2: ethers.Wallet;
 
   // dkg nodes
-  let aliceNode: LocalDkg;
-  let bobNode: LocalDkg;
-  let charlieNode: LocalDkg;
+  let aliceNode: LocalTangle;
+  let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
 
@@ -68,7 +67,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../dkg-substrate/target/release/dkg-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -81,21 +80,14 @@ describe.skip('SignatureBridge Governor Updates', function () {
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
-    aliceNode = await LocalDkg.start({
+    aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
       ports: 'auto',
     });
 
-    bobNode = await LocalDkg.start({
-      name: 'substrate-bob',
-      authority: 'bob',
-      usageMode,
-      ports: 'auto',
-    });
-
-    charlieNode = await LocalDkg.start({
+    charlieNode = await LocalTangle.start({
       name: 'substrate-charlie',
       authority: 'charlie',
       usageMode,
@@ -189,11 +181,11 @@ describe.skip('SignatureBridge Governor Updates', function () {
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'DKGNode', chainId  },
+      proposalSigningBackend: { type: 'DKGNode', chainId },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'DKGNode', chainId  },
+      proposalSigningBackend: { type: 'DKGNode', chainId },
     });
     // fetch the dkg public key.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
@@ -223,7 +215,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
       expect(currentGovernor).to.eq(governorAddress);
     }
     // get the anhor on localchain1
-    const anchor = signatureBridge.getVAnchor(localChain1.chainId)!;
+    const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     await anchor.setSigner(wallet1);
     // approve token spending
     const tokenAddress = signatureBridge.getWebbTokenAddress(
@@ -241,7 +233,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
 
     // do the same but on localchain2
-    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId)!;
+    const anchor2 = signatureBridge.getVAnchor(localChain2.chainId);
     await anchor2.setSigner(wallet2);
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
       localChain2.chainId
@@ -263,7 +255,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     const resourceId2 = await anchor2.createResourceId();
 
     const call = (resourceId: string) =>
-      api.tx.dkgProposals!.setResource!(resourceId, '0x00');
+      api.tx.dkgProposals.setResource(resourceId, '0x00');
     // register the resource on DKG node.
     for (const rid of [resourceId1, resourceId2]) {
       await charlieNode.sudoExecuteTransaction(call(rid));
@@ -328,7 +320,6 @@ describe.skip('SignatureBridge Governor Updates', function () {
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
     await charlieNode?.stop();
     await localChain1?.stop();
     await localChain2?.stop();

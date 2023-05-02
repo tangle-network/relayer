@@ -1,6 +1,6 @@
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
-use webb::substrate::dkg_runtime::api as RuntimeApi;
-use webb::substrate::dkg_runtime::api::runtime_types::pallet_bridge_registry::types::BridgeMetadata;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api::runtime_types::pallet_bridge_registry::types::BridgeMetadata;
 use webb_proposals::ResourceId;
 
 pub struct DkgBridgeRegistryBackend {
@@ -32,7 +32,7 @@ impl super::BridgeRegistryBackend for DkgBridgeRegistryBackend {
         &self,
         resource_id: &ResourceId,
     ) -> Option<u32> {
-        let resource_id2 = webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::ResourceId(resource_id.0);
+        let resource_id2 = webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::ResourceId(resource_id.0);
         let storage = RuntimeApi::storage().bridge_registry();
         let resource_to_bridge_index =
             storage.resource_to_bridge_index(resource_id2);

@@ -163,7 +163,7 @@ describe('Relayer transfer assets', function () {
       commonConfig: {
         features: { dataQuery: false, governanceRelay: false },
         port: relayerPort,
-        evmEtherscan
+        evmEtherscan,
       },
       tmp: true,
       configDir: tmpDirPath,

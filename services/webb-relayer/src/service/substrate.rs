@@ -21,8 +21,7 @@ use webb_ew_substrate::{
 };
 use webb_relayer_config::substrate::{
     DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet,
-    SignatureBridgePalletConfig, SubstrateConfig, SubstrateRuntime,
-    VAnchorBn254PalletConfig,
+    SignatureBridgePalletConfig, SubstrateConfig, VAnchorBn254PalletConfig,
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::handle_substrate_fee_info;
@@ -31,10 +30,8 @@ use webb_relayer_tx_queue::substrate::SubstrateTxQueue;
 
 use super::ProposalSigningBackendSelector;
 
-/// Type alias for the DKG DefaultConfig
-pub type DkgClient = subxt::OnlineClient<PolkadotConfig>;
-/// Type alias for the WebbProtocol DefaultConfig
-pub type WebbProtocolClient = subxt::OnlineClient<subxt::SubstrateConfig>;
+/// Type alias for the Tangle DefaultConfig
+pub type TangleClient = subxt::OnlineClient<PolkadotConfig>;
 
 /// Setup and build all the Substrate web services and handlers.
 pub fn build_web_services() -> Router<Arc<RelayerContext>> {
@@ -69,26 +66,13 @@ pub async fn ignite(
         if !node_config.enabled {
             continue;
         }
-        match node_config.runtime {
-            SubstrateRuntime::Dkg => {
-                ignite_dkg_runtime(ctx, store.clone(), node_name, node_config)
-                    .await?;
-            }
-            SubstrateRuntime::WebbProtocol => {
-                ignite_webb_protocol_runtime(
-                    ctx,
-                    store.clone(),
-                    node_name,
-                    node_config,
-                )
-                .await?;
-            }
-        };
+        ignite_tangle_runtime(ctx, store.clone(), node_name, node_config)
+            .await?;
     }
     Ok(())
 }
 
-async fn ignite_dkg_runtime(
+async fn ignite_tangle_runtime(
     ctx: &RelayerContext,
     store: Arc<super::Store>,
     node_name: &str,
@@ -119,46 +103,6 @@ async fn ignite_dkg_runtime(
             Pallet::DKGProposals(_) => {
                 // TODO(@shekohex): start the dkg proposals service
             }
-            Pallet::SignatureBridge(_) => {
-                return Err(crate::Error::Config(config::ConfigError::Message(
-                    "SignatureBridge pallet is not supported in DKG runtime"
-                        .to_string(),
-                )))
-            }
-            Pallet::VAnchorBn254(_) => {
-                return Err(crate::Error::Config(config::ConfigError::Message(
-                    "VAnchorBn254 pallet is not supported in DKG runtime"
-                        .to_string(),
-                )))
-            }
-        }
-    }
-    // start the transaction queue for dkg-substrate extrinsics after starting other tasks.
-    start_tx_queue::<PolkadotConfig>(ctx.clone(), chain_id, store.clone())?;
-    Ok(())
-}
-
-async fn ignite_webb_protocol_runtime(
-    ctx: &RelayerContext,
-    store: Arc<super::Store>,
-    node_name: &str,
-    node_config: &SubstrateConfig,
-) -> crate::Result<()> {
-    let client = ctx
-        .substrate_provider::<subxt::SubstrateConfig>(node_name)
-        .await?;
-    let chain_id = node_config.chain_id;
-    for pallet in &node_config.pallets {
-        match pallet {
-            Pallet::VAnchorBn254(config) => {
-                start_substrate_vanchor_event_watcher(
-                    ctx,
-                    config,
-                    client.clone(),
-                    chain_id,
-                    store.clone(),
-                )?;
-            }
             Pallet::SignatureBridge(config) => {
                 start_substrate_signature_bridge_events_watcher(
                     ctx.clone(),
@@ -169,30 +113,19 @@ async fn ignite_webb_protocol_runtime(
                 )
                 .await?;
             }
-            Pallet::DKGProposals(_) => {
-                return Err(crate::Error::Config(config::ConfigError::Message(
-                    "DKGProposals pallet is not supported in WebbProtocol runtime".to_string(),
-                )))
-            }
-            Pallet::DKGProposalHandler(_) => {
-                return Err(crate::Error::Config(config::ConfigError::Message(
-                    "DKGProposalHandler pallet is not supported in WebbProtocol runtime".to_string(),
-                )))
-            }
-            Pallet::Dkg(_) => {
-                return Err(crate::Error::Config(config::ConfigError::Message(
-                    "Dkg pallet is not supported in WebbProtocol runtime".to_string(),
-                )))
+            Pallet::VAnchorBn254(config) => {
+                start_substrate_vanchor_event_watcher(
+                    ctx,
+                    config,
+                    client.clone(),
+                    chain_id,
+                    store.clone(),
+                )?;
             }
         }
     }
-
-    // start the transaction queue for protocol-substrate after starting other tasks.
-    start_tx_queue::<subxt::SubstrateConfig>(
-        ctx.clone(),
-        chain_id,
-        store.clone(),
-    )?;
+    // start the transaction queue for dkg-substrate extrinsics after starting other tasks.
+    start_tx_queue::<PolkadotConfig>(ctx.clone(), chain_id, store.clone())?;
     Ok(())
 }
 
@@ -210,7 +143,7 @@ async fn ignite_webb_protocol_runtime(
 pub fn start_dkg_proposal_handler(
     ctx: &RelayerContext,
     config: &DKGProposalHandlerPalletConfig,
-    client: DkgClient,
+    client: TangleClient,
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
@@ -274,7 +207,7 @@ pub fn start_dkg_proposal_handler(
 pub fn start_dkg_pallet_watcher(
     ctx: &RelayerContext,
     config: &DKGPalletConfig,
-    client: DkgClient,
+    client: TangleClient,
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
@@ -338,7 +271,7 @@ pub fn start_dkg_pallet_watcher(
 pub fn start_substrate_vanchor_event_watcher(
     ctx: &RelayerContext,
     config: &VAnchorBn254PalletConfig,
-    client: WebbProtocolClient,
+    client: TangleClient,
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
@@ -495,7 +428,7 @@ pub fn start_substrate_vanchor_event_watcher(
 pub async fn start_substrate_signature_bridge_events_watcher(
     ctx: RelayerContext,
     config: &SignatureBridgePalletConfig,
-    client: WebbProtocolClient,
+    client: TangleClient,
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {

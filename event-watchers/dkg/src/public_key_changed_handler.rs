@@ -14,8 +14,8 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::dkg_runtime::api::dkg;
 use webb::substrate::subxt::{self, OnlineClient, PolkadotConfig};
+use webb::substrate::tangle_runtime::api::dkg;
 
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};

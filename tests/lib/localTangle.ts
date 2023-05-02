@@ -1,30 +1,8 @@
-/*
- * Copyright 2022 Webb Technologies Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- *
- */
-/// A Helper Class to Start and Manage a Local DKG Node.
+/// A Helper Class to Start and Manage a Local Protocol Substrate Node.
 /// This Could be through a Docker Container or a Local Compiled node.
-
-import '@webb-tools/dkg-substrate-types';
 import fs from 'fs';
+import '@webb-tools/tangle-substrate-types';
 import { spawn } from 'child_process';
-import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
-import isCI from 'is-ci';
-import * as TinySecp256k1 from 'tiny-secp256k1';
-
-import { LocalNodeOpts } from '@webb-tools/test-utils';
 import {
   EventsWatcher,
   LinkedAnchor,
@@ -32,8 +10,14 @@ import {
   Pallet,
   ProposalSigningBackend,
 } from './webbRelayer.js';
+import { LocalNodeOpts } from '@webb-tools/test-utils';
+import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
+import * as TinySecp256k1 from 'tiny-secp256k1';
 import { ConvertToKebabCase } from './tsHacks.js';
 import { SubstrateNodeBase } from './substrateNodeBase.js';
+
+const TANGLE_DOCKER_IMAGE_URL =
+  'ghcr.io/webb-tools/tangle/tangle-standalone-integration-tests:main';
 
 type ExportedConfigOptions = {
   suri: string;
@@ -51,22 +35,15 @@ type FullNodeInfo = NodeInfo & {
   chainId: number;
 };
 
-const DKG_STANDALONE_DOCKER_IMAGE_URL =
-  'ghcr.io/webb-tools/dkg-standalone-node:edge';
-
-export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
-  public static async start(opts: LocalNodeOpts): Promise<LocalDkg> {
-    opts.ports = await SubstrateNodeBase.makePorts(opts);
-    const startArgs: string[] = [
-      '-ldkg=debug',
-      '-ldkg_metadata=debug',
-      '-lruntime::offchain=debug',
-      '-ldkg_proposal_handler=debug',
-    ];
+export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
+  public static async start(opts: LocalNodeOpts): Promise<LocalTangle> {
+    opts.ports = await super.makePorts(opts);
+    // opts.usageMode.mode = 'docker'
+    const startArgs: string[] = [];
     if (opts.usageMode.mode === 'docker') {
-      super.pullImage({
+      LocalTangle.pullImage({
         forcePull: opts.usageMode.forcePullImage,
-        image: DKG_STANDALONE_DOCKER_IMAGE_URL,
+        image: TANGLE_DOCKER_IMAGE_URL,
       });
       const dockerArgs = [
         'run',
@@ -79,9 +56,10 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
         `${opts.ports.http}:9933`,
         '-p',
         `${opts.ports.p2p}:30333`,
-        DKG_STANDALONE_DOCKER_IMAGE_URL,
-        'dkg-standalone-node',
+        TANGLE_DOCKER_IMAGE_URL,
+        'tangle-standalone',
         '--tmp',
+        '--chain=relayer',
         '--rpc-cors',
         'all',
         '--ws-external',
@@ -98,11 +76,11 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
           console.error(data.toString());
         });
       }
-      return new LocalDkg(opts, proc);
+      return new LocalTangle(opts, proc);
     } else {
       startArgs.push(
         '--tmp',
-        '--chain=local',
+        '--chain=relayer',
         '--rpc-cors',
         'all',
         '--rpc-methods=unsafe',
@@ -121,11 +99,11 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
           console.error(data.toString());
         });
       }
-      return new LocalDkg(opts, proc);
+      return new LocalTangle(opts, proc);
     }
   }
 
-  public async fetchDkgPublicKey(): Promise<`0x${string}` | null> {
+  public async fetchDkgPublicKey(): Promise<`0x${string}`> {
     const api = await super.api();
     const res = await api.query.dkg.dkgPublicKey();
     const json = res.toJSON() as [number, string];
@@ -139,13 +117,14 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
       // now we remove the `04` prefix byte and return it.
       return `0x${dkgPubKey.slice(2)}`;
     } else {
-      return null;
+      return `0x`;
     }
   }
+
   // get chainId
   public async getChainId(): Promise<number> {
     const api = await super.api();
-    const chainId = api.consts?.dkgProposals?.chainIdentifier?.toNumber();
+    const chainId = api.consts.linkableTreeBn254.chainIdentifier.toNumber();
     return chainId;
   }
 
@@ -153,27 +132,42 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
     opts: ExportedConfigOptions
   ): Promise<FullNodeInfo> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
-    const host = isCI ? 'localhost' : '127.0.0.1';
+    const enabledPallets: Pallet[] = [];
+    for (const p of opts.enabledPallets ?? []) {
+      if (p.pallet != 'SignatureBridge') {
+        (p.linkedAnchors = opts.linkedAnchors),
+          (p.proposalSigningBackend = opts.proposalSigningBackend);
+        enabledPallets.push(p);
+      } else {
+        enabledPallets.push(p);
+      }
+    }
     const nodeInfo: FullNodeInfo = {
-      name: 'localDKG',
+      name: 'localSubstrate',
       enabled: true,
-      httpEndpoint: `http://${host}:${ports.http}`,
-      wsEndpoint: `ws://${host}:${ports.ws}`,
-      runtime: 'DKG',
-      pallets: opts.enabledPallets ?? [],
+      httpEndpoint: `http://127.0.0.1:${ports.http}`,
+      wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
+      pallets: enabledPallets,
       suri: opts.suri,
       chainId: opts.chainId,
     };
     return nodeInfo;
   }
 
-  public async writeConfig(path: string, opts: ExportedConfigOptions) {
+  public async writeConfig(
+    path: string,
+    opts: ExportedConfigOptions
+  ): Promise<void> {
     const config = await this.exportConfig(opts);
+    // don't mind my typescript typing here XD
+    type ConvertedLinkedAnchor = ConvertToKebabCase<LinkedAnchor>;
     type ConvertedPallet = Omit<
       ConvertToKebabCase<Pallet>,
-      'events-watcher'
+      'events-watcher' | 'proposal-signing-backend' | 'linked-anchors'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
+      'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
+      'linked-anchors'?: ConvertedLinkedAnchor[];
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -181,14 +175,17 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
     > & {
       pallets: ConvertedPallet[];
     };
-
+    type FullConfigFile = {
+      substrate: {
+        [key: string]: ConvertedConfig;
+      };
+    };
     const convertedConfig: ConvertedConfig = {
       name: config.name,
       enabled: config.enabled,
       'http-endpoint': config.httpEndpoint,
       'ws-endpoint': config.wsEndpoint,
       'chain-id': config.chainId,
-      runtime: config.runtime,
       suri: config.suri,
       pallets: config.pallets.map((c: Pallet) => {
         const convertedPallet: ConvertedPallet = {
@@ -199,15 +196,41 @@ export class LocalDkg extends SubstrateNodeBase<TypedEvent> {
             'print-progress-interval': c.eventsWatcher.printProgressInterval,
             'sync-blocks-from': c.eventsWatcher.syncBlocksFrom,
           },
+          'proposal-signing-backend':
+            c.proposalSigningBackend?.type === 'Mocked'
+              ? {
+                  type: 'Mocked',
+                  'private-key': c.proposalSigningBackend?.privateKey,
+                }
+              : c.proposalSigningBackend?.type === 'DKGNode'
+              ? {
+                  type: 'DKGNode',
+                  'chain-id': c.proposalSigningBackend?.chainId,
+                }
+              : undefined,
+
+          'linked-anchors': c.linkedAnchors?.map((anchor: LinkedAnchor) =>
+            anchor.type === 'Evm'
+              ? {
+                  'chain-id': anchor.chainId,
+                  type: 'Evm',
+                  address: anchor.address,
+                }
+              : anchor.type === 'Substrate'
+              ? {
+                  type: 'Substrate',
+                  'chain-id': anchor.chainId,
+                  'tree-id': anchor.treeId,
+                  pallet: anchor.pallet,
+                }
+              : {
+                  type: 'Raw',
+                  'resource-id': anchor.resourceId,
+                }
+          ),
         };
         return convertedPallet;
       }),
-    };
-
-    type FullConfigFile = {
-      substrate: {
-        [key: string]: ConvertedConfig;
-      };
     };
     const fullConfigFile: FullConfigFile = {
       substrate: {
@@ -226,7 +249,9 @@ export type TypedEvent =
   | PublicKeySubmitted
   | PublicKeyChanged
   | PublicKeySignatureChanged
-  | ProposalSigned;
+  | ProposalSigned
+  | MixerBn254DepositEvent
+  | MixerBn254WithdrawEvent;
 
 type NewSession = { section: 'session'; method: 'NewSession' };
 type NextPublicKeySubmitted = {
@@ -248,3 +273,5 @@ type ProposalSigned = {
   section: 'dkgProposalHandler';
   method: 'ProposalSigned';
 };
+type MixerBn254DepositEvent = { section: 'mixerBn254'; method: 'Deposit' };
+type MixerBn254WithdrawEvent = { section: 'mixerBn254'; method: 'Withdraw' };

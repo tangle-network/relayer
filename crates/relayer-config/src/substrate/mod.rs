@@ -63,8 +63,6 @@ pub struct SubstrateConfig {
     pub suri: Option<Suri>,
     /// Optionally, a user can specify an account to receive rewards for relaying
     pub beneficiary: Option<Public>,
-    /// Which Substrate Runtime to use?
-    pub runtime: SubstrateRuntime,
     /// Supported pallets over this substrate node.
     #[serde(default)]
     pub pallets: Vec<Pallet>,
@@ -100,16 +98,6 @@ pub enum Pallet {
     SignatureBridge(SignatureBridgePalletConfig),
     /// `vanchor-bn256` or as named in the runtime as `VAnchorBn256` pallet.
     VAnchorBn254(VAnchorBn254PalletConfig),
-}
-
-/// Enumerates the supported Substrate runtimes.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum SubstrateRuntime {
-    /// The DKG runtime. (dkg-substrate)
-    #[serde(rename = "DKG")]
-    Dkg,
-    /// The Webb Protocol runtime. (protocol-substrate)
-    WebbProtocol,
 }
 
 /// DKGProposalsPalletConfig represents the configuration for the DKGProposals pallet.

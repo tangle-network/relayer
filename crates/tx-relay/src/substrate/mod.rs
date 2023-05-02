@@ -2,7 +2,7 @@ use ethereum_types::H256;
 use futures::TryStreamExt;
 use webb::substrate::subxt::{
     tx::TxProgress, tx::TxStatus as TransactionStatus, OnlineClient,
-    SubstrateConfig,
+    PolkadotConfig,
 };
 use webb_relayer_handler_utils::{
     CommandResponse, CommandStream, WithdrawStatus,
@@ -20,10 +20,7 @@ pub mod vanchor;
 /// is intended to be used in a variety of places for all kinds of submitted Substrate
 /// transactions.
 pub async fn handle_substrate_tx(
-    mut event_stream: TxProgress<
-        SubstrateConfig,
-        OnlineClient<SubstrateConfig>,
-    >,
+    mut event_stream: TxProgress<PolkadotConfig, OnlineClient<PolkadotConfig>>,
     stream: CommandStream,
     chain_id: u64,
 ) -> Result<(), CommandResponse> {

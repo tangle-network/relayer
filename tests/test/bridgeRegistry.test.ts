@@ -18,20 +18,16 @@
 // In this test we will deposit on evm vanchor system
 // and withdraw through substrate vanchor system.
 
-import '@webb-tools/protocol-substrate-types';
+import '@webb-tools/tangle-substrate-types';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
 import isCi from 'is-ci';
 import retry from 'async-retry';
 import { ethers } from 'ethers';
-import {
-  WebbRelayer,
-  Pallet,
-  EnabledContracts,
-} from '../lib/webbRelayer.js';
-import { LocalProtocolSubstrate } from '../lib/localProtocolSubstrate.js';
-import { ApiPromise, Keyring } from '@polkadot/api';
+import { WebbRelayer, Pallet, EnabledContracts } from '../lib/webbRelayer.js';
+import { LocalTangle } from '../lib/localTangle.js';
+import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 
 import {
@@ -43,17 +39,12 @@ import {
   ResourceId,
 } from '@webb-tools/sdk-core';
 
-
-
 import { createSubstrateResourceId } from '../lib/webbProposals.js';
 import { LocalChain } from '../lib/localTestnet.js';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { expect } from 'chai';
-import {
-  defaultEventsWatcherValue,
-} from '../lib/utils.js';
+import { defaultEventsWatcherValue } from '../lib/utils.js';
 import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
-import { LocalDkg } from '../lib/localDkg.js';
 import { KeyringPair } from '@polkadot/keyring/types.js';
 import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
 import { MintableToken } from '@webb-tools/tokens';
@@ -66,14 +57,9 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
   // Evm node
   let localChain1: LocalChain;
 
-  // Protocol-substrate node
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
-
-  // Dkg nodes
-  let dkgNode1: LocalDkg;
-  let dkgNode2: LocalDkg;
-  let dkgNode3: LocalDkg;
+  // Tangle nodes
+  let aliceNode: LocalTangle;
+  let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
   let wallet1: ethers.Wallet;
@@ -83,22 +69,20 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
 
   // Substrate vanchor treeId
   let treeId: number;
-
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
   const relayerPK = u8aToHex(ethers.utils.randomBytes(32));
 
-
   before(async () => {
-    const usageModeDkg: UsageMode = isCi
-      ? { mode: 'host', nodePath: 'dkg-standalone-node' }
+    const usageMode: UsageMode = isCi
+      ? { mode: 'host', nodePath: 'tangle-standalone' }
       : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../dkg-substrate/target/release/dkg-standalone-node'
-        ),
-      };
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../tangle/target/release/tangle-standalone'
+          ),
+        };
 
-    const dkgEnabledPallets: Pallet[] = [
+    const enabledPallets: Pallet[] = [
       {
         pallet: 'DKGProposalHandler',
         eventsWatcher: defaultEventsWatcherValue,
@@ -107,55 +91,6 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
         pallet: 'DKG',
         eventsWatcher: defaultEventsWatcherValue,
       },
-    ];
-
-    // Step 1. We initialize DKG nodes.
-    dkgNode1 = await LocalDkg.start({
-      name: 'dkg-alice',
-      authority: 'alice',
-      usageMode: usageModeDkg,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
-    dkgNode2 = await LocalDkg.start({
-      name: 'dkg-bob',
-      authority: 'bob',
-      usageMode: usageModeDkg,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
-    dkgNode3 = await LocalDkg.start({
-      name: 'dkg-charlie',
-      authority: 'charlie',
-      usageMode: usageModeDkg,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
-    // Wait until we are ready and connected.
-    const dkgApi = await dkgNode3.api();
-    await dkgApi.isReady;
-    console.log('dkg node ready');
-    const dkgNodeChainId = await dkgNode3.getChainId();
-    // We need to wait until the public key is on chain.
-    await dkgNode3.waitForEvent({
-      section: 'dkg',
-      method: 'PublicKeySignatureChanged',
-    });
-
-
-    // Step 2. We initialize protocol-substrate nodes.
-    const usageMode: UsageMode = isCi
-      ? { mode: 'docker', forcePullImage: false }
-      : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../protocol-substrate/target/release/webb-standalone-node'
-        ),
-      };
-    const enabledPallets: Pallet[] = [
       {
         pallet: 'VAnchorBn254',
         eventsWatcher: defaultEventsWatcherValue,
@@ -166,26 +101,34 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
       },
     ];
 
-    aliceNode = await LocalProtocolSubstrate.start({
-      name: 'substrate-alice',
+    // Step 1. We initialize DKG nodes.
+    aliceNode = await LocalTangle.start({
+      name: 'dkg-alice',
       authority: 'alice',
       usageMode,
       ports: 'auto',
       enableLogging: false,
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
-      name: 'substrate-bob',
-      authority: 'bob',
+    charlieNode = await LocalTangle.start({
+      name: 'dkg-charlie',
+      authority: 'charlie',
       usageMode,
       ports: 'auto',
       enableLogging: false,
     });
+
     // Wait until we are ready and connected.
     const api = await aliceNode.api();
     await api.isReady;
-    relayerNativeWallet = createAccount("//Charlie");
+    console.log('Tangle node is ready');
     const substrateChainId = await aliceNode.getChainId();
+    // We need to wait until the public key is on chain.
+    await aliceNode.waitForEvent({
+      section: 'dkg',
+      method: 'PublicKeySignatureChanged',
+    });
+
     // Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
@@ -194,9 +137,15 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     const substrateResourceId = createSubstrateResourceId(
       substrateChainId,
       treeId,
-      '0x2C'
+      '0x2A'
     );
-    await substrateSetup(aliceNode, api, treeId, substrateChainId, substrateResourceId);
+    await substrateSetup(
+      aliceNode,
+      api,
+      treeId,
+      substrateChainId,
+      substrateResourceId
+    );
     console.log('substrate node ready');
 
     // Step 3. We initialize Evm chain node.
@@ -210,8 +159,8 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
       },
 
       {
-        contract: 'SignatureBridge'
-      }
+        contract: 'SignatureBridge',
+      },
     ];
     localChain1 = await LocalChain.init({
       port: localChain1Port,
@@ -229,8 +178,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
           balance: ethers.utils
             .parseEther('100000000000000000000000')
             .toHexString(),
-        }
-
+        },
       ],
       enabledContracts: enabledContracts,
     });
@@ -254,13 +202,15 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     await vanchor.setSigner(wallet1);
     const evmResourceId = await vanchor.createResourceId();
     // relayer external wallet
-    relayerExternalWallet = new ethers.Wallet(relayerPK, localChain1.provider());
+    relayerExternalWallet = new ethers.Wallet(
+      relayerPK,
+      localChain1.provider()
+    );
     console.log('Local evm chain ready');
 
-
     await dkgSetup(
-      dkgNode3,
-      dkgApi,
+      aliceNode,
+      api,
       substrateChainId,
       localChain1.underlyingChainId,
       substrateResourceId.toString(),
@@ -270,37 +220,31 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     );
     // Step 4. We transfer ownership to DKG.
     // Fetch current active governor from dkg node
-    const dkgPublicKey = await dkgNode3.fetchDkgPublicKey();
-    expect(dkgPublicKey).to.not.be.null;
-    await transferOwnershipSubstrate(aliceNode, api, dkgPublicKey!);
-    await transferOwnershipEvm(signatureVBridge, dkgPublicKey!);
-    
+    const dkgPublicKey = await aliceNode.fetchDkgPublicKey();
+    expect(dkgPublicKey).to.not.equal('0x');
+    await transferOwnershipSubstrate(aliceNode, api, dkgPublicKey);
+    await transferOwnershipEvm(signatureVBridge, dkgPublicKey);
+
     // Step 5. We will send anchor update proposal to register bride and its resources on DKG node.
     await sendAnchorUpdateProposal(
-      dkgNode3,
-      dkgApi,
+      aliceNode,
+      api,
       evmResourceId,
       substrateResourceId.toString()
-      );
+    );
 
-    // Save substrate node chain configs.
+    // Save tangle node chain configs.
     await aliceNode.writeConfig(`${tmpDirPath}/${aliceNode.name}.json`, {
       suri: '//Charlie',
       chainId: substrateChainId,
-      proposalSigningBackend: { type: 'DKGNode', chainId: dkgNodeChainId },
+      proposalSigningBackend: { type: 'DKGNode', chainId: substrateChainId },
       enabledPallets,
     });
     // Save evm node chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
-      proposalSigningBackend: { type: 'DKGNode', chainId: dkgNodeChainId },
+      proposalSigningBackend: { type: 'DKGNode', chainId: substrateChainId },
       privateKey: relayerPK,
-    });
-    // Save dkg node chain configs.
-    await dkgNode3.writeConfig(`${tmpDirPath}/${dkgNode3.name}.json`, {
-      suri: '//Charlie',
-      chainId: dkgNodeChainId,
-      enabledPallets: dkgEnabledPallets,
     });
 
     // Now start the relayer.
@@ -346,7 +290,7 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
       substrateChainId
     );
     const typedSourceChainId = localChain1.chainId;
-    
+
     // Step 5. We make a deposit amount on evm chain
     const publicAmount = currencyToUnitI128(10);
     const depositUtxo = await CircomUtxo.generateUtxo({
@@ -364,8 +308,8 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
     await vanchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
       [typedSourceChainId]: leaves,
     });
-    console.log("Deposit made");
-    
+    console.log('Deposit made');
+
     // now we wait for the proposal to be signed by DKG backend and then send data to signature bridge.
     await webbRelayer.waitForEvent({
       kind: 'signing_backend',
@@ -388,25 +332,18 @@ describe.skip('Bridge Registry Pallet Integration Test <=> Substrate', function 
   after(async () => {
     await localChain1?.stop();
     await aliceNode?.stop();
-    await bobNode?.stop();
-    await dkgNode1?.stop();
-    await dkgNode2?.stop();
-    await dkgNode3?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });
 
 // Helper methods, we can move them somewhere if we end up using them again.
 
-function createAccount(accountId: string): KeyringPair {
-  const keyring = new Keyring({ type: 'sr25519' });
-  const account = keyring.addFromUri(accountId);
-  return account;
-}
-
 async function transferOwnershipSubstrate(
-  aliceNode: LocalProtocolSubstrate,
-  api: ApiPromise, dkgPublicKey: `0x${string}`) {
+  aliceNode: LocalTangle,
+  api: ApiPromise,
+  dkgPublicKey: `0x${string}`
+) {
   // force set maintainer
   const refreshNonce = 0;
   const setMaintainerCall = api.tx.signatureBridge.forceSetMaintainer(
@@ -414,13 +351,12 @@ async function transferOwnershipSubstrate(
     dkgPublicKey
   );
   await aliceNode.sudoExecuteTransaction(setMaintainerCall);
-
 }
 
 async function transferOwnershipEvm(
   signatureVBridge: VBridge.VBridge,
-  dkgPublicKey: `0x${string}`) {
-
+  dkgPublicKey: `0x${string}`
+) {
   const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey);
   // verify the governor address is a valid ethereum address.
   expect(ethers.utils.isAddress(governorAddress)).to.be.true;
@@ -449,7 +385,7 @@ async function transferOwnershipEvm(
 
 // Setup substrate chain, we will whitelist chains and register resourceId
 async function substrateSetup(
-  aliceNode: LocalProtocolSubstrate,
+  aliceNode: LocalTangle,
   api: ApiPromise,
   treeId: number,
   substrateChainId: number,
@@ -460,16 +396,20 @@ async function substrateSetup(
     api.tx.signatureBridge.whitelistChain(substrateChainId);
   await aliceNode.sudoExecuteTransaction(whitelistChainCall);
   // Set resource on signature bridge
-  const setResourceCall = api.tx.signatureBridge.setResource(substrateResourceId.toU8a());
+  const setResourceCall = api.tx.signatureBridge.setResource(
+    substrateResourceId.toU8a()
+  );
   await aliceNode.sudoExecuteTransaction(setResourceCall);
   // set resource on vanchor-handler
-  const forceSetResource = api.tx.vAnchorHandlerBn254.forceSetResource!(substrateResourceId.toU8a(), treeId);
+  const forceSetResource = api.tx.vAnchorHandlerBn254.forceSetResource!(
+    substrateResourceId.toU8a(),
+    treeId
+  );
   await aliceNode.sudoExecuteTransaction(forceSetResource);
-
 }
 
 async function dkgSetup(
-  dkgNode: LocalDkg,
+  dkgNode: LocalTangle,
   dkgApi: ApiPromise,
   substrateChainId: number,
   evmChainId: number,
@@ -477,28 +417,40 @@ async function dkgSetup(
   evmResourceId: string,
   relayerExternalWallet: ethers.Wallet,
   relayerNativeWallet: KeyringPair
-
 ) {
   // Whitelist chain in dkg node
-  const whitelistSubstrateChainDkgCall = dkgApi.tx.dkgProposals.whitelistChain({ Substrate: substrateChainId });
+  const whitelistSubstrateChainDkgCall = dkgApi.tx.dkgProposals.whitelistChain({
+    Substrate: substrateChainId,
+  });
   await dkgNode.sudoExecuteTransaction(whitelistSubstrateChainDkgCall);
 
-  const whitelistEVMChainDkgCall = dkgApi.tx.dkgProposals.whitelistChain({ Evm: evmChainId });
+  const whitelistEVMChainDkgCall = dkgApi.tx.dkgProposals.whitelistChain({
+    Evm: evmChainId,
+  });
   await dkgNode.sudoExecuteTransaction(whitelistEVMChainDkgCall);
 
   // Set resources
-  const setResource1Call = dkgApi.tx.dkgProposals.setResource(evmResourceId, '0x')
+  const setResource1Call = dkgApi.tx.dkgProposals.setResource(
+    evmResourceId,
+    '0x'
+  );
   await dkgNode.sudoExecuteTransaction(setResource1Call);
-  const setResource2Call = dkgApi.tx.dkgProposals.setResource(substrateResourceId, '0x')
+  const setResource2Call = dkgApi.tx.dkgProposals.setResource(
+    substrateResourceId,
+    '0x'
+  );
   await dkgNode.sudoExecuteTransaction(setResource2Call);
 
   // Add Proposer
-  const addProposerCall = dkgApi.tx.dkgProposals.addProposer(relayerNativeWallet.address, relayerExternalWallet.address);
+  const addProposerCall = dkgApi.tx.dkgProposals.addProposer(
+    relayerNativeWallet.address,
+    relayerExternalWallet.address
+  );
   await dkgNode.sudoExecuteTransaction(addProposerCall);
 }
 
 async function sendAnchorUpdateProposal(
-  dkgNode: LocalDkg,
+  dkgNode: LocalTangle,
   dkgApi: ApiPromise,
   evmResourceId: string,
   substrateResourceId: string
@@ -508,8 +460,12 @@ async function sendAnchorUpdateProposal(
   const targetResourceId = ResourceId.fromBytes(hexToU8a(substrateResourceId));
   const functionSignature = hexToU8a('0x00000002', 32);
   const merkleRoot = u8aToHex(ethers.utils.randomBytes(32));
-  const header = new ProposalHeader(targetResourceId, functionSignature, 0)
-  const anchorUpdateProposal = new AnchorUpdateProposal(header, merkleRoot, sourceResourceId);
+  const header = new ProposalHeader(targetResourceId, functionSignature, 0);
+  const anchorUpdateProposal = new AnchorUpdateProposal(
+    header,
+    merkleRoot,
+    sourceResourceId
+  );
   const kind = dkgApi.createType(
     'WebbProposalsProposalProposalKind',
     'AnchorUpdate'
@@ -521,7 +477,8 @@ async function sendAnchorUpdateProposal(
     },
   });
 
-  const submitUnsignedProposalCall = dkgApi.tx.dkgProposalHandler.forceSubmitUnsignedProposal(prop.toU8a());
+  const submitUnsignedProposalCall =
+    dkgApi.tx.dkgProposalHandler.forceSubmitUnsignedProposal(prop.toU8a());
   await dkgNode.sudoExecuteTransaction(submitUnsignedProposalCall);
-  console.log("Dummy proposal sent");
+  console.log('Dummy proposal sent');
 }

@@ -20,12 +20,12 @@ pub use proposal_signed_handler::*;
 mod public_key_changed_handler;
 #[doc(hidden)]
 pub use public_key_changed_handler::*;
-use webb::substrate::dkg_runtime::api::{
+use webb::substrate::subxt::events::StaticEvent;
+use webb::substrate::subxt::{self, PolkadotConfig};
+use webb::substrate::tangle_runtime::api::{
     dkg::events::PublicKeySignatureChanged,
     dkg_proposal_handler::events::ProposalSigned,
 };
-use webb::substrate::subxt::events::StaticEvent;
-use webb::substrate::subxt::{self, PolkadotConfig};
 use webb_event_watcher_traits::SubstrateEventWatcher;
 
 /// The DKGMetadataWatcher watches for the events from Dkg Pallet.

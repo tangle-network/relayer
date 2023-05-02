@@ -14,8 +14,8 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::dkg_runtime::api::system;
 use webb::substrate::subxt::{self, Config, OnlineClient, PolkadotConfig};
+use webb::substrate::tangle_runtime::api::system;
 use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledStore;

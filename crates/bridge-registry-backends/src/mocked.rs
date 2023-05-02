@@ -1,10 +1,10 @@
 use typed_builder::TypedBuilder;
-use webb::substrate::dkg_runtime::api::runtime_types::pallet_bridge_registry::types::{BridgeInfo, BridgeMetadata, SerdeData};
-use webb::substrate::dkg_runtime::api::runtime_types::pallet_identity::types::Data;
+use webb::substrate::tangle_runtime::api::runtime_types::pallet_bridge_registry::types::{BridgeInfo, BridgeMetadata, SerdeData};
+use webb::substrate::tangle_runtime::api::runtime_types::pallet_identity::types::Data;
 use webb::substrate::scale::DecodeAll;
 use crate::BridgeRegistryBackend;use hex_literal::hex;
-use webb::substrate::dkg_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
-use webb::substrate::dkg_runtime::api::runtime_types::webb_proposals::header::ResourceId;
+use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::ResourceId;
 
 #[derive(TypedBuilder)]
 pub struct MockedBridgeRegistryBackend {}

@@ -1,33 +1,34 @@
 // This our basic Substrate Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
-import "@webb-tools/protocol-substrate-types";
-import { expect } from "chai";
-import getPort, { portNumbers } from "get-port";
-import temp from "temp";
-import path from "path";
-import fs from "fs";
-import isCi from "is-ci";
-import child from "child_process";
-import { WebbRelayer } from "../../lib/webbRelayer.js";
-import { LocalProtocolSubstrate } from "../../lib/localProtocolSubstrate.js";
-import { ApiPromise, Keyring } from "@polkadot/api";
-import { u8aToHex, hexToU8a } from "@polkadot/util";
-import { SubmittableExtrinsic } from "@polkadot/api/types";
-import { decodeAddress } from "@polkadot/util-crypto";
+
+import { expect } from 'chai';
+import getPort, { portNumbers } from 'get-port';
+import temp from 'temp';
+import path from 'path';
+import fs from 'fs';
+import isCi from 'is-ci';
+import child from 'child_process';
+import { WebbRelayer } from '../../lib/webbRelayer.js';
+import { ApiPromise } from '@polkadot/api';
+import { u8aToHex, hexToU8a } from '@polkadot/util';
+import { SubmittableExtrinsic } from '@polkadot/api/types';
+import { decodeAddress } from '@polkadot/util-crypto';
 import {
   Note,
   NoteGenInput,
   ProvingManagerSetupInput,
   ArkworksProvingManager,
-} from "@webb-tools/sdk-core";
-import { UsageMode } from "@webb-tools/test-utils";
+} from '@webb-tools/sdk-core';
+import { UsageMode } from '@webb-tools/test-utils';
+import { LocalTangle } from '../../lib/localTangle.js';
+import { createAccount } from '../../lib/utils.js';
 
 // we are going to remove support for Substrate mixer
 describe.skip("Substrate Mixer Transaction Relayer", function () {
   const tmpDirPath = temp.mkdirSync();
-  let aliceNode: LocalProtocolSubstrate;
-  let bobNode: LocalProtocolSubstrate;
+  let aliceNode: LocalTangle;
+  let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
 
@@ -37,20 +38,20 @@ describe.skip("Substrate Mixer Transaction Relayer", function () {
       : {
           mode: "host",
           nodePath: path.resolve(
-            "../../protocol-substrate/target/release/webb-standalone-node"
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
 
-    aliceNode = await LocalProtocolSubstrate.start({
-      name: "substrate-alice",
-      authority: "alice",
+    aliceNode = await LocalTangle.start({
+      name: 'substrate-alice',
+      authority: 'alice',
       usageMode,
       ports: "auto",
     });
 
-    bobNode = await LocalProtocolSubstrate.start({
-      name: "substrate-bob",
-      authority: "bob",
+    charlieNode = await LocalTangle.start({
+      name: 'substrate-charlie',
+      authority: 'charlie',
       usageMode,
       ports: "auto",
     });
@@ -373,7 +374,7 @@ describe.skip("Substrate Mixer Transaction Relayer", function () {
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
+    await charlieNode?.stop();
     await webbRelayer?.stop();
   });
 });
@@ -497,13 +498,6 @@ async function createMixerWithdrawProof(
     console.error(error.code);
     throw error;
   }
-}
-
-function createAccount(accountId: string) {
-  const keyring = new Keyring({ type: "sr25519" });
-  const account = keyring.addFromUri(accountId);
-
-  return account;
 }
 
 async function makeDeposit(
