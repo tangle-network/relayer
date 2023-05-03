@@ -17,7 +17,7 @@
 // This our basic Substrate VAnchor Transaction Relayer Tests.
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
-import { assert } from 'chai';
+import { assert, expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -32,7 +32,7 @@ import {
   SubstrateFeeInfo,
 } from '../../lib/webbRelayer.js';
 
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
@@ -52,6 +52,7 @@ import {
   generateVAnchorNote,
 } from '../../lib/utils.js';
 import { LocalTangle } from '../../lib/localTangle.js';
+import { formatEther } from 'ethers/lib/utils.js';
 
 describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
@@ -61,6 +62,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
   before(async () => {
+    console.log(1);
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
@@ -75,6 +77,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
+    console.log(2);
 
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
@@ -83,6 +86,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ports: 'auto',
       enableLogging: false,
     });
+    console.log(3);
 
     charlieNode = await LocalTangle.start({
       name: 'dkg-charlie',
@@ -91,6 +95,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ports: 'auto',
       enableLogging: false,
     });
+    console.log(4);
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
@@ -103,6 +108,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       enabledPallets,
     });
+    console.log(5);
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
@@ -213,9 +219,10 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     };
 
     // TODO: not working yet, value hardcoded for now
-    //const info = api.tx.vAnchorBn254.transact(treeId, substrateProofData,
-    //  substrateExtData).paymentInfo(account);
-    //console.log(info);
+    const info = api.tx.vAnchorBn254.transact(treeId, substrateProofData,
+      substrateExtData).paymentInfo(account);
+    console.log(info);
+    expect(info).equal("test");
     const partialFee = 10958835753;
     const feeInfoResponse2 = await webbRelayer.getSubstrateFeeInfo(
       substrateChainId,
