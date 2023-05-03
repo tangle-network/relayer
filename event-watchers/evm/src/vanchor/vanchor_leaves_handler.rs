@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{HttpProvider, VAnchorContractWrapper};
+use super::VAnchorContractWrapper;
 use ark_ff::{BigInteger, PrimeField};
 use arkworks_native_gadgets::poseidon::Poseidon;
 use arkworks_setups::common::setup_params;
@@ -23,8 +23,10 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
-use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb::evm::ethers::prelude::LogMeta;
+use webb::evm::ethers::providers::Middleware;
 use webb_event_watcher_traits::evm::EventHandler;
+use webb_event_watcher_traits::EthersClient;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::{EventHashStore, LeafCacheStore};
 use webb_relayer_store::{HistoryStore, SledStore};
@@ -67,7 +69,7 @@ impl VAnchorLeavesHandler {
 
 #[async_trait::async_trait]
 impl EventHandler for VAnchorLeavesHandler {
-    type Contract = VAnchorContractWrapper<HttpProvider>;
+    type Contract = VAnchorContractWrapper<EthersClient>;
 
     type Events = VAnchorContractEvents;
 

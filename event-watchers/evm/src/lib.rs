@@ -21,7 +21,7 @@ use webb::evm::contract::protocol_solidity::{
 };
 use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::prelude::Middleware;
-use webb::evm::ethers::{providers, types};
+use webb::evm::ethers::types;
 
 pub mod signature_bridge_watcher;
 
@@ -36,6 +36,7 @@ pub mod vanchor;
 mod tests;
 
 use webb_event_watcher_traits::evm::{EventWatcher, WatchableContract};
+use webb_event_watcher_traits::EthersClient;
 use webb_relayer_store::SledStore;
 
 // VAnchorContractWrapper contains VAnchorContract contract along with configurations for Anchor contract, and Relayer.
@@ -101,8 +102,6 @@ where
     }
 }
 
-type HttpProvider = providers::Provider<providers::Http>;
-
 /// An Anchor Contract Watcher that watches for the Anchor contract events and calls the event
 /// handlers.
 #[derive(Copy, Clone, Debug, Default)]
@@ -117,7 +116,7 @@ pub struct VAnchorContractWatcher;
 impl EventWatcher for VAnchorContractWatcher {
     const TAG: &'static str = "VAnchor Contract Watcher";
 
-    type Contract = VAnchorContractWrapper<HttpProvider>;
+    type Contract = VAnchorContractWrapper<EthersClient>;
 
     type Events = VAnchorContractEvents;
 
@@ -196,7 +195,7 @@ pub struct OpenVAnchorContractWatcher;
 impl EventWatcher for OpenVAnchorContractWatcher {
     const TAG: &'static str = "Open VAnchor Contract Watcher";
 
-    type Contract = OpenVAnchorContractWrapper<HttpProvider>;
+    type Contract = OpenVAnchorContractWrapper<EthersClient>;
 
     type Events = OpenVAnchorContractEvents;
 

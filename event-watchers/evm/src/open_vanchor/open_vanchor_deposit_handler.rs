@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{HttpProvider, OpenVAnchorContractWrapper};
+use super::OpenVAnchorContractWrapper;
 use ethereum_types::H256;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -20,6 +20,7 @@ use webb::evm::contract::protocol_solidity::OpenVAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::evm::EventHandler;
+use webb_event_watcher_traits::EthersClient;
 use webb_proposal_signing_backends::{
     proposal_handler, ProposalSigningBackend,
 };
@@ -56,7 +57,7 @@ where
     B: ProposalSigningBackend + Send + Sync,
     C: BridgeRegistryBackend + Send + Sync,
 {
-    type Contract = OpenVAnchorContractWrapper<HttpProvider>;
+    type Contract = OpenVAnchorContractWrapper<EthersClient>;
 
     type Events = OpenVAnchorContractEvents;
 

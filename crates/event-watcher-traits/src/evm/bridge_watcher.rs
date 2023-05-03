@@ -50,7 +50,7 @@ where
     )]
     async fn run(
         &self,
-        client: Arc<providers::Provider<providers::Http>>,
+        client: Arc<EthersClient>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
         metrics: Arc<Mutex<metric::Metrics>>,

@@ -71,7 +71,7 @@ pub enum Error {
     EthersProvider(#[from] ethers::providers::ProviderError),
     /// Smart contract error.
     #[error(transparent)]
-    EthersContract(
+    EthersContractCall(
         #[from]
         ethers::contract::ContractError<
             ethers::providers::Provider<ethers::providers::Http>,
@@ -79,12 +79,22 @@ pub enum Error {
     ),
     /// Smart contract error.
     #[error(transparent)]
-    EthersContract2(
+    EthersContractCallWithSigner(
         #[from]
         ethers::contract::ContractError<
             ethers::middleware::SignerMiddleware<
                 ethers::providers::Provider<ethers::providers::Http>,
                 ethers::prelude::Wallet<ethers::core::k256::ecdsa::SigningKey>,
+            >,
+        >,
+    ),
+    /// Smart contract error.
+    #[error(transparent)]
+    EthersContractCallWithRetry(
+        #[from]
+        ethers::contract::ContractError<
+            ethers::providers::Provider<
+                ethers::providers::RetryClient<ethers::providers::Http>,
             >,
         >,
     ),
