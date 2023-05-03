@@ -62,7 +62,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
   before(async () => {
-    console.log(1);
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
@@ -77,7 +76,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
         eventsWatcher: defaultEventsWatcherValue,
       },
     ];
-    console.log(2);
 
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
@@ -86,7 +84,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ports: 'auto',
       enableLogging: false,
     });
-    console.log(3);
 
     charlieNode = await LocalTangle.start({
       name: 'dkg-charlie',
@@ -95,7 +92,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ports: 'auto',
       enableLogging: false,
     });
-    console.log(4);
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
@@ -108,7 +104,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
       enabledPallets,
     });
-    console.log(5);
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(8000, 8888) });
@@ -124,6 +119,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   });
 
   it.only('should withdraw using private transaction ', async () => {
+    console.log("start");
     const api = await aliceNode.api();
     // 1. Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
@@ -140,10 +136,11 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     );
 
     // 2. Deposit amount on substrate chain.
+    console.log("deposit 1");
     const data = await vanchorDeposit(
       typedSourceChainId.toString(), // source chain Id
       typedSourceChainId.toString(), // target chain Id
-      100, // public amount
+      1_0000_000, // public amount
       treeId,
       api,
       aliceNode
@@ -190,15 +187,15 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const substrateExtData: SubstrateVAnchorExtData = {
       recipient: vanchorData.extData.recipient,
       relayer: vanchorData.extData.relayer,
-      extAmount: Number(vanchorData.extData.extAmount),
-      fee: Number(vanchorData.extData.fee),
+      extAmount: vanchorData.extData.extAmount.toString(),
+      fee: vanchorData.extData.fee.toString(),
       encryptedOutput1: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput1)
       ),
       encryptedOutput2: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput2)
       ),
-      refund: Number(vanchorData.extData.refund),
+      refund: vanchorData.extData.refund.toString(),
       token: token.getUint32(0, true),
     };
 
@@ -218,11 +215,10 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ),
     };
 
-    // TODO: not working yet, value hardcoded for now
-    const info = api.tx.vAnchorBn254.transact(treeId, substrateProofData,
+    console.log(substrateExtData);
+    const info = await api.tx.vAnchorBn254.transact(treeId, substrateProofData,
       substrateExtData).paymentInfo(account);
     console.log(info);
-    expect(info).equal("test");
     const partialFee = 10958835753;
     const feeInfoResponse2 = await webbRelayer.getSubstrateFeeInfo(
       substrateChainId,
@@ -529,7 +525,7 @@ async function vanchorDeposit(
     fee,
     refund: String(refund),
     token: assetId,
-    extAmount: extAmount.toNumber(),
+    extAmount: extAmount.toString(),
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };
