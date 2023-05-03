@@ -17,6 +17,10 @@ use webb_relayer_utils::retry;
 
 use super::*;
 
+/// Ethereum client using Ethers, that includes a retry strategy.
+pub type EthersClient =
+    providers::Provider<providers::RetryClient<providers::Http>>;
+
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
     /// The block number where this contract is deployed.
@@ -49,7 +53,7 @@ pub trait EventWatcher {
     /// A Helper tag used to identify the event watcher during the logs.
     const TAG: &'static str;
     /// The contract that this event watcher is watching.
-    type Contract: Deref<Target = contract::Contract<providers::Provider<providers::Http>>>
+    type Contract: Deref<Target = contract::Contract<EthersClient>>
         + WatchableContract;
     /// The Events that this event watcher is interested in.
     type Events: contract::EthLogDecode + Clone;
@@ -67,7 +71,7 @@ pub trait EventWatcher {
     )]
     async fn run(
         &self,
-        client: Arc<providers::Provider<providers::Http>>,
+        client: Arc<EthersClient>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
         handlers: Vec<EventHandlerFor<Self>>,
@@ -245,7 +249,7 @@ pub trait EventWatcher {
 pub trait EventHandler {
     /// The Type of contract this handler is for, Must be the same as the contract type in the
     /// watcher.
-    type Contract: Deref<Target = contract::Contract<providers::Provider<providers::Http>>>
+    type Contract: Deref<Target = contract::Contract<EthersClient>>
         + WatchableContract;
     /// The type of event this handler is for.
     type Events: contract::EthLogDecode + Clone;

@@ -90,7 +90,9 @@ pub trait BlockPoller {
     )]
     async fn run(
         &self,
-        client: Arc<providers::Provider<providers::Http>>,
+        client: Arc<
+            providers::Provider<providers::RetryClient<providers::Http>>,
+        >,
         store: Arc<Self::Store>,
         listener_config: BlockPollerConfig,
         handlers: Vec<BlockPollingHandlerFor<Self>>,
