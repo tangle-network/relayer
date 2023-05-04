@@ -488,7 +488,7 @@ cargo test
 
 ### To run E2E tests
 
-First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) node, compiled locally (in release mode) and both the `protocol-substrate` and `relayer` project must be next to each other. The relayer must be compiled using `--features integration-tests,cli`.
+First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) and [`tangle`](https://github.com/webb-tools/tangle) nodes, compiled locally (in release mode) and both the `protocol-substrate` and `relayer` project must be next to each other. The relayer must be compiled using `--features integration-tests,cli`.
 
 Here is the basic setup you will need:
 
@@ -496,10 +496,12 @@ Here is the basic setup you will need:
 2. Clone Protocol Substrate node `https://github.com/webb-tools/protocol-substrate.git`
 3. Then fetch the submodules for the node `cd protocol-substrate && git submodule update --init`
 4. While you are there, build the standalone node `cargo build --release -p webb-standalone-node`
-5. And then go back to the relayer `cd ../relayer`
-6. Run `cd tests && dvc pull`
-7. Run `yarn install` (in `tests` dir)
-8. `yarn test`
+5. Clone Tangle repo `https://github.com/webb-tools/tangle.git`
+6. Build tangle `cd tangle && cargo build --release --features integration-tests -p tangle-standalone`
+7. And then go back to the relayer `cd ../relayer`
+8. Run `cd tests && dvc pull`
+9. Run `yarn install` (in `tests` dir)
+10. `yarn test`
 
 ### Tips for E2E tests
 

@@ -18,7 +18,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::mpsc;
 use webb::evm::ethers::abi::Address;
-use webb::evm::ethers::prelude::{ContractError, I256};
+use webb::evm::ethers::prelude::{ContractError, I256, U128};
 use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::types::Bytes;
 use webb::evm::ethers::types::{H256, U256};
@@ -170,8 +170,9 @@ type P = Vec<u8>; // Substrate raw proof bytes
 type R = Vec<[u8; 32]>; // Substrate roots format
 type E = [u8; 32]; // Substrate element type
 type I = AccountId32; // Substrate account identifier
-type B = u128; // Substrate balance type
-type A = i128; // Substrate signed amount type
+type B = U128; // Substrate balance type
+// TODO: this should use I128 type (but doesnt exist)
+type A = WebbI256; // Substrate signed amount type
 type T = u32; // Substrate assetId
 
 /// The command type for Substrate mixer txes

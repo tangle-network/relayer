@@ -54,11 +54,11 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         vanchor::ExtData {
             recipient: cmd.ext_data.recipient,
             relayer: cmd.ext_data.relayer,
-            fee: cmd.ext_data.fee,
-            ext_amount: cmd.ext_data.ext_amount,
+            fee: cmd.ext_data.fee.as_u128(),
+            ext_amount: cmd.ext_data.ext_amount.0.as_i128(),
             encrypted_output1: cmd.ext_data.encrypted_output1.clone(),
             encrypted_output2: cmd.ext_data.encrypted_output2.clone(),
-            refund: cmd.ext_data.refund,
+            refund: cmd.ext_data.refund.as_u128(),
             token: cmd.ext_data.token,
         };
 
@@ -103,7 +103,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             .unwrap();
 
     // validate refund amount
-    if U256::from(cmd.ext_data.refund) > fee_info.max_refund {
+    if dbg!(U256::from(cmd.ext_data.refund)) > dbg!(fee_info.max_refund) {
         // TODO: use error enum for these messages so they dont have to be duplicated between
         //       evm/substrate
         let msg = format!(
@@ -156,11 +156,11 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     metrics
         .resource_metric_entry(resource_id)
         .total_fee_earned
-        .inc_by(cmd.ext_data.fee as f64);
+        .inc_by(cmd.ext_data.fee.as_u128() as f64);
     // update metric for total fee earned by relayer
     metrics
         .total_fee_earned
-        .inc_by(wei_to_gwei(cmd.ext_data.fee));
+        .inc_by(wei_to_gwei(cmd.ext_data.fee.as_u128()));
 
     let account = RuntimeApi::storage().system().account(signer.account_id());
     let balance = client

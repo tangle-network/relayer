@@ -420,7 +420,7 @@ export class WebbRelayer {
       },
     };
 
-    console.log(cmd);
+    console.log(JSON.stringify(cmd));
     return substrateTxHashOrReject(ws, cmd);
   }
 }
@@ -589,11 +589,11 @@ export type EventSelector = {
 export type SubstrateVAnchorExtData = {
   recipient: string;
   relayer: string;
-  extAmount: number;
-  fee: number;
+  extAmount: string;
+  fee: string;
   encryptedOutput1: number[];
   encryptedOutput2: number[];
-  refund: number;
+  refund: string;
   token: number;
 };
 

@@ -140,7 +140,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const data = await vanchorDeposit(
       typedSourceChainId.toString(), // source chain Id
       typedSourceChainId.toString(), // target chain Id
-      1_0000_000, // public amount
+      100, // public amount
       treeId,
       api,
       aliceNode
@@ -183,6 +183,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     );
     // Now we construct payload for substrate private transaction.
     // Convert [u8;4] to u32 asset Id
+    console.log(feeInfo1.maxRefund);
     const token = new DataView(vanchorData.extData.token.buffer, 0);
     const substrateExtData: SubstrateVAnchorExtData = {
       recipient: vanchorData.extData.recipient,
@@ -195,7 +196,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       encryptedOutput2: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput2)
       ),
-      refund: vanchorData.extData.refund.toString(),
+      refund: feeInfo1.maxRefund,
       token: token.getUint32(0, true),
     };
 
@@ -215,7 +216,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ),
     };
 
-    console.log(substrateExtData);
+    console.log("substrateExtData: ", substrateExtData);
     const info = await api.tx.vAnchorBn254.transact(treeId, substrateProofData,
       substrateExtData).paymentInfo(account);
     console.log(info);
@@ -227,15 +228,17 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     expect(feeInfoResponse2.status).equal(200);
     const feeInfo2 =
       await (feeInfoResponse2.json() as Promise<SubstrateFeeInfo>);
-    console.log(feeInfo2);
+    console.log("feeInfo2: ", feeInfo2);
 
     // now we withdraw using private transaction
+    console.log(1);
     await webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
       substrateExtData,
       substrateProofData
     );
+    console.log(2);
 
     // now we wait for relayer to execute private transaction.
     await webbRelayer.waitForEvent({
@@ -246,6 +249,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
         finalized: true,
       },
     });
+    console.log(3);
 
     // Bob's balance after withdrawal.
     const BobBalanceAfter = await api.query.system.account(account.address);
