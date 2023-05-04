@@ -97,7 +97,6 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .request::<RpcFeeDetailsResponse>("payment_queryInfo", params)
         .await
         .unwrap();
-    dbg!(&payment_info);
     let fee_info =
         get_substrate_fee_info(requested_chain, payment_info.partial_fee, &ctx)
             .await
@@ -117,8 +116,8 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     // Check that transaction fee is enough to cover network fee and relayer fee
     // TODO: refund needs to be converted from wrapped token to native token once there
     //       is an exchange rate
-    if dbg!(U256::from(cmd.ext_data.fee))
-        < dbg!(fee_info.estimated_fee) + dbg!(cmd.ext_data.refund)
+    if U256::from(cmd.ext_data.fee)
+        < fee_info.estimated_fee + cmd.ext_data.refund
     {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",

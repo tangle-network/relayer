@@ -43,13 +43,11 @@ pub async fn get_substrate_fee_info(
         .unwrap()
         .as_i64()
         .unwrap() as i32;
-    let estimated_fee = dbg!(U256::from(
-        dbg!(estimated_tx_fees)
-            + dbg!(native_token_to_unit(
-                TRANSACTION_PROFIT_USD / TOKEN_PRICE_USD,
-                decimals,
-            )),
-    ));
+    let estimated_fee = estimated_tx_fees
+        + native_token_to_unit(
+            TRANSACTION_PROFIT_USD / TOKEN_PRICE_USD,
+            decimals,
+        );
     let refund_exchange_rate = native_token_to_unit(1., decimals);
     // TODO: should ensure that refund <= relayer balance
     let max_refund =

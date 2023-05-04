@@ -209,7 +209,7 @@ pub async fn handle_evm_fee_info(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, vanchor, gas_amount)): Path<(u64, Address, u64)>,
 ) -> Result<Json<EvmFeeInfo>, HandlerError> {
-    let chain_id = dbg!(TypedChainId::from(chain_id));
+    let chain_id = TypedChainId::from(chain_id);
     let gas_amount = U256::from(gas_amount);
     Ok(
         get_evm_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
