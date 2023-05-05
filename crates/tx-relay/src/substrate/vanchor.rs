@@ -103,7 +103,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             .unwrap();
 
     // validate refund amount
-    if dbg!(U256::from(cmd.ext_data.refund)) > dbg!(fee_info.max_refund) {
+    if U256::from(cmd.ext_data.refund) > fee_info.max_refund {
         // TODO: use error enum for these messages so they dont have to be duplicated between
         //       evm/substrate
         let msg = format!(
@@ -116,8 +116,8 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     // Check that transaction fee is enough to cover network fee and relayer fee
     // TODO: refund needs to be converted from wrapped token to native token once there
     //       is an exchange rate
-    if U256::from(cmd.ext_data.fee)
-        < fee_info.estimated_fee + cmd.ext_data.refund
+    if dbg!(U256::from(cmd.ext_data.fee))
+        < dbg!(fee_info.estimated_fee + cmd.ext_data.refund)
     {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",

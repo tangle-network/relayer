@@ -28,6 +28,7 @@ import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
 import { padHexString } from '../lib/utils.js';
+import * as BN from 'bn.js';
 
 export type CommonConfig = {
   features?: FeaturesConfig;
@@ -246,7 +247,7 @@ export class WebbRelayer {
     return response;
   }
 
-  public async getSubstrateFeeInfo(chainId: number, partialFee: number) {
+  public async getSubstrateFeeInfo(chainId: number, partialFee: BN) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/substrate/${chainId}/${partialFee}`;
     const response = await fetch(endpoint);
     return response;
@@ -589,11 +590,11 @@ export type EventSelector = {
 export type SubstrateVAnchorExtData = {
   recipient: string;
   relayer: string;
-  extAmount: string;
-  fee: string;
+  extAmount: BN;
+  fee: BN;
   encryptedOutput1: number[];
   encryptedOutput2: number[];
-  refund: string;
+  refund: BN;
   token: number;
 };
 

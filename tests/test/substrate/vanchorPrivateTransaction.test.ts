@@ -37,6 +37,7 @@ import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
+import * as BN from 'bn.js';
 
 import {
   ProvingManagerSetupInput,
@@ -119,7 +120,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   });
 
   it.only('should withdraw using private transaction ', async () => {
-    console.log("start");
+    console.log('start');
     const api = await aliceNode.api();
     // 1. Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
@@ -136,7 +137,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     );
 
     // 2. Deposit amount on substrate chain.
-    console.log("deposit 1");
+    console.log('deposit 1');
     const data = await vanchorDeposit(
       typedSourceChainId.toString(), // source chain Id
       typedSourceChainId.toString(), // target chain Id
@@ -162,7 +163,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     // get refund amount
     const feeInfoResponse1 = await webbRelayer.getSubstrateFeeInfo(
       substrateChainId,
-      0
+      new BN.BN(0)
     );
     expect(feeInfoResponse1.status).equal(200);
     const feeInfo1 =
@@ -185,18 +186,23 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     // Convert [u8;4] to u32 asset Id
     console.log(feeInfo1.maxRefund);
     const token = new DataView(vanchorData.extData.token.buffer, 0);
+    const fee = new BN.BN(feeInfo1.estimatedFee.replace('0x', ''), 16);
+    console.log('fee: ', fee.toString());
     const substrateExtData: SubstrateVAnchorExtData = {
       recipient: vanchorData.extData.recipient,
       relayer: vanchorData.extData.relayer,
-      extAmount: vanchorData.extData.extAmount.toString(),
-      fee: vanchorData.extData.fee.toString(),
+      extAmount: new BN.BN(
+        vanchorData.extData.extAmount.toString().replace('0x', ''),
+        16
+      ),
+      fee: fee,
       encryptedOutput1: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput1)
       ),
       encryptedOutput2: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput2)
       ),
-      refund: feeInfo1.maxRefund,
+      refund: new BN.BN(feeInfo1.maxRefund.replace('0x', ''), 16),
       token: token.getUint32(0, true),
     };
 
@@ -216,19 +222,19 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ),
     };
 
-    console.log("substrateExtData: ", substrateExtData);
-    const info = await api.tx.vAnchorBn254.transact(treeId, substrateProofData,
-      substrateExtData).paymentInfo(account);
-    console.log(info);
-    const partialFee = 10958835753;
+    console.log('substrateExtData: ', substrateExtData);
+    const info = await api.tx.vAnchorBn254
+      .transact(treeId, substrateProofData, substrateExtData)
+      .paymentInfo(account);
+    console.log('fee info: ', info);
     const feeInfoResponse2 = await webbRelayer.getSubstrateFeeInfo(
       substrateChainId,
-      partialFee
+      info.partialFee.toBn()
     );
     expect(feeInfoResponse2.status).equal(200);
     const feeInfo2 =
       await (feeInfoResponse2.json() as Promise<SubstrateFeeInfo>);
-    console.log("feeInfo2: ", feeInfo2);
+    console.log('feeInfo2: ', feeInfo2);
 
     // now we withdraw using private transaction
     console.log(1);
