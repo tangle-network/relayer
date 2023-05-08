@@ -120,7 +120,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   });
 
   it.only('should withdraw using private transaction ', async () => {
-    console.log('start');
     const api = await aliceNode.api();
     // 1. Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
@@ -137,7 +136,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     );
 
     // 2. Deposit amount on substrate chain.
-    console.log('deposit 1');
     const data = await vanchorDeposit(
       typedSourceChainId.toString(), // source chain Id
       typedSourceChainId.toString(), // target chain Id
@@ -146,7 +144,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       api,
       aliceNode
     );
-    console.log('Deposit made');
     // now we wait for all deposit to be saved in LeafStorageCache.
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
@@ -160,49 +157,98 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     // Bob's balance after withdrawal
     const bobBalanceBefore = await api.query.system.account(account.address);
 
-    // get refund amount
-    const feeInfoResponse1 = await webbRelayer.getSubstrateFeeInfo(
-      substrateChainId,
-      new BN.BN(0)
+    const dummyVanchorData = await vanchorWithdraw(
+      typedSourceChainId.toString(),
+      typedSourceChainId.toString(),
+      account.address,
+      data.depositUtxos,
+      treeId,
+      BigNumber.from(0),
+      // TODO: need to convert this once there is exchange rate between native
+      //       token and wrapped token
+      BigNumber.from(0),
+      api
     );
-    expect(feeInfoResponse1.status).equal(200);
-    const feeInfo1 =
-      await (feeInfoResponse1.json() as Promise<SubstrateFeeInfo>);
-    console.log('fee info 1: ', feeInfo1);
+    // Now we construct payload for substrate private transaction.
+    // Convert [u8;4] to u32 asset Id
+    const token = new DataView(dummyVanchorData.extData.token.buffer, 0);
+    const dummySubstrateExtData: SubstrateVAnchorExtData = {
+      recipient: dummyVanchorData.extData.recipient,
+      relayer: dummyVanchorData.extData.relayer,
+      extAmount: new BN.BN(
+        dummyVanchorData.extData.extAmount.toString().replace('0x', ''),
+        16
+      ),
+      fee: new BN.BN(0),
+      encryptedOutput1: Array.from(
+        hexToU8a(dummyVanchorData.extData.encryptedOutput1)
+      ),
+      encryptedOutput2: Array.from(
+        hexToU8a(dummyVanchorData.extData.encryptedOutput2)
+      ),
+      refund: new BN.BN(0),
+      token: token.getUint32(0, true),
+    };
 
+    const dummySubstrateProofData: SubstrateVAnchorProofData = {
+      proof: Array.from(hexToU8a(dummyVanchorData.proofData.proof)),
+      extDataHash: Array.from(dummyVanchorData.proofData.extDataHash),
+      extensionRoots: dummyVanchorData.proofData.roots.map((root) =>
+        Array.from(root)
+      ),
+      publicAmount: Array.from(dummyVanchorData.proofData.publicAmount),
+      roots: dummyVanchorData.proofData.roots.map((root) => Array.from(root)),
+      outputCommitments: dummyVanchorData.proofData.outputCommitments.map(
+        (com) => Array.from(com)
+      ),
+      inputNullifiers: dummyVanchorData.proofData.inputNullifiers.map((com) =>
+        Array.from(hexToU8a(com))
+      ),
+    };
+
+    const info = await api.tx.vAnchorBn254
+      .transact(treeId, dummySubstrateProofData, dummySubstrateExtData)
+      .paymentInfo(account);
+    const feeInfoResponse2 = await webbRelayer.getSubstrateFeeInfo(
+      substrateChainId,
+      info.partialFee.toBn()
+    );
+    expect(feeInfoResponse2.status).equal(200);
+    const feeInfo2 =
+      await (feeInfoResponse2.json() as Promise<SubstrateFeeInfo>);
+    const estimatedFee = new BN.BN(
+      feeInfo2.estimatedFee.replace('0x', ''),
+      'hex'
+    );
+    const refund = new BN.BN(feeInfo2.maxRefund.replace('0x', ''), 'hex');
+    const feeTotal = estimatedFee.add(refund);
     const vanchorData = await vanchorWithdraw(
       typedSourceChainId.toString(),
       typedSourceChainId.toString(),
       account.address,
       data.depositUtxos,
       treeId,
-      BigNumber.from(feeInfo1.estimatedFee),
+      BigNumber.from(feeTotal.toString()),
       // TODO: need to convert this once there is exchange rate between native
       //       token and wrapped token
-      BigNumber.from(feeInfo1.maxRefund),
+      BigNumber.from(refund.toString()),
       api
     );
-    // Now we construct payload for substrate private transaction.
-    // Convert [u8;4] to u32 asset Id
-    console.log(feeInfo1.maxRefund);
-    const token = new DataView(vanchorData.extData.token.buffer, 0);
-    const fee = new BN.BN(feeInfo1.estimatedFee.replace('0x', ''), 16);
-    console.log('fee: ', fee.toString());
     const substrateExtData: SubstrateVAnchorExtData = {
       recipient: vanchorData.extData.recipient,
       relayer: vanchorData.extData.relayer,
       extAmount: new BN.BN(
         vanchorData.extData.extAmount.toString().replace('0x', ''),
-        16
+        'hex'
       ),
-      fee: fee,
+      fee: feeTotal,
       encryptedOutput1: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput1)
       ),
       encryptedOutput2: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput2)
       ),
-      refund: new BN.BN(feeInfo1.maxRefund.replace('0x', ''), 16),
+      refund: refund,
       token: token.getUint32(0, true),
     };
 
@@ -222,29 +268,13 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ),
     };
 
-    console.log('substrateExtData: ', substrateExtData);
-    const info = await api.tx.vAnchorBn254
-      .transact(treeId, substrateProofData, substrateExtData)
-      .paymentInfo(account);
-    console.log('fee info: ', info);
-    const feeInfoResponse2 = await webbRelayer.getSubstrateFeeInfo(
-      substrateChainId,
-      info.partialFee.toBn()
-    );
-    expect(feeInfoResponse2.status).equal(200);
-    const feeInfo2 =
-      await (feeInfoResponse2.json() as Promise<SubstrateFeeInfo>);
-    console.log('feeInfo2: ', feeInfo2);
-
     // now we withdraw using private transaction
-    console.log(1);
     await webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
       substrateExtData,
       substrateProofData
     );
-    console.log(2);
 
     // now we wait for relayer to execute private transaction.
     await webbRelayer.waitForEvent({
@@ -255,7 +285,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
         finalized: true,
       },
     });
-    console.log(3);
 
     // Bob's balance after withdrawal.
     const BobBalanceAfter = await api.query.system.account(account.address);
@@ -341,17 +370,9 @@ async function vanchorWithdraw(
   const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
 
   const address = recipient;
-  console.log('fee: ', formatEther(fee));
-  console.log('refund: ', formatEther(refund));
-  const fee2 = fee.add(refund);
-  console.log('fee2: ', formatEther(fee2));
-  console.log('fee2          : ', fee2.toString());
   const withdrawAmount = depositUtxos.reduce((acc, utxo) => {
     return BigNumber.from(utxo.amount).add(acc);
   }, BigNumber.from(0));
-  console.log('withdrawAmount: ', formatEther(withdrawAmount));
-  const extAmount = withdrawAmount.mul(-1);
-  console.log('extAmount: ', formatEther(extAmount));
 
   const publicAmount = -withdrawAmount;
 
@@ -380,13 +401,13 @@ async function vanchorWithdraw(
     output: [output1, output2],
     encryptedCommitments: [comEnc1, comEnc2],
     provingKey: pk,
-    publicAmount: String(publicAmount),
+    publicAmount: publicAmount.toString(),
     roots: rootsSet,
     relayer: decodedAddress,
     recipient: decodedAddress,
-    extAmount: extAmount.toString(),
-    fee: fee2.toString(),
-    refund: String(refund),
+    extAmount: withdrawAmount.toString(),
+    fee: fee.toString(),
+    refund: refund.toString(),
     token: assetId,
   };
 
@@ -394,10 +415,10 @@ async function vanchorWithdraw(
   const extData = {
     relayer: address,
     recipient: address,
-    fee: fee2,
-    refund: String(refund),
+    fee: fee.toString(),
+    refund: refund.toString(),
     token: assetId,
-    extAmount: extAmount,
+    extAmount: withdrawAmount.toString(),
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };
@@ -467,7 +488,6 @@ async function vanchorDeposit(
   const note1 = depositNote;
   const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(publicAmountUint);
-  console.log('deposit amount: ', publicAmount.toString());
   const notes = [note1, note2];
   // Output UTXOs configs
   const output1 = await Utxo.generateUtxo({

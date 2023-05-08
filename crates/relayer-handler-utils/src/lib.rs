@@ -171,7 +171,7 @@ type R = Vec<[u8; 32]>; // Substrate roots format
 type E = [u8; 32]; // Substrate element type
 type I = AccountId32; // Substrate account identifier
 type B = U128; // Substrate balance type
-// TODO: this should use I128 type (but doesnt exist)
+               // TODO: this should use I128 type (but doesnt exist)
 type A = WebbI256; // Substrate signed amount type
 type T = u32; // Substrate assetId
 

@@ -11,6 +11,8 @@ use webb::substrate::{
     },
     subxt::{tx::PairSigner, PolkadotConfig},
 };use ethereum_types::U256;
+use sp_core::{Decode, Encode};
+use webb::substrate::scale::Compact;
 use webb::substrate::subxt::rpc::RpcParams;
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
@@ -85,22 +87,30 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         ext_data_elements,
     );
 
-    let mut params = RpcParams::new();
+    // TODO: Taken from subxt PR. Replace with new method state_call_decoded() after upgrading subxt.
+    //       https://github.com/paritytech/subxt/pull/910
     let signed = client
         .tx()
         .create_signed(&transact_tx, &signer, Default::default())
         .await
         .unwrap();
-    params.push(hex::encode(signed.encoded())).unwrap();
-    let payment_info = client
+    let mut params = signed.encoded().to_vec();
+    (signed.encoded().len() as u32).encode_to(&mut params);
+    let bytes = client
         .rpc()
-        .request::<RpcFeeDetailsResponse>("payment_queryInfo", params)
+        .state_call("TransactionPaymentApi_query_info", Some(&params), None)
         .await
         .unwrap();
-    let fee_info =
-        get_substrate_fee_info(requested_chain, payment_info.partial_fee, &ctx)
-            .await
-            .unwrap();
+    let cursor = &mut &bytes[..];
+    let payment_info: (Compact<u64>, Compact<u64>, u8, u128) =
+        Decode::decode(cursor).unwrap();
+    let fee_info = get_substrate_fee_info(
+        requested_chain,
+        U256::from(payment_info.3),
+        &ctx,
+    )
+    .await
+    .unwrap();
 
     // validate refund amount
     if U256::from(cmd.ext_data.refund) > fee_info.max_refund {
@@ -116,13 +126,13 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     // Check that transaction fee is enough to cover network fee and relayer fee
     // TODO: refund needs to be converted from wrapped token to native token once there
     //       is an exchange rate
-    if dbg!(U256::from(cmd.ext_data.fee))
-        < dbg!(fee_info.estimated_fee + cmd.ext_data.refund)
+    if U256::from(cmd.ext_data.fee)
+        < fee_info.estimated_fee + cmd.ext_data.refund
     {
         let msg = format!(
-            "User sent a fee that is too low {} but expected {}",
-            format_ether(cmd.ext_data.fee),
-            format_ether(fee_info.estimated_fee + cmd.ext_data.refund)
+            "User sent a fee that is too low ({}) but expected {}",
+            cmd.ext_data.fee,
+            fee_info.estimated_fee + cmd.ext_data.refund
         );
         return Err(Error(msg));
     }
