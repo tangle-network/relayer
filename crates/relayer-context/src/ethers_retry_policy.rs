@@ -96,13 +96,17 @@ impl RetryPolicy<HttpClientError> for WebbHttpRetryPolicy {
     }
 
     fn backoff_hint(&self, error: &HttpClientError) -> Option<Duration> {
+        const DEFAULT_BACKOFF: Duration = Duration::from_secs(5);
+
         if let HttpClientError::JsonRpcError(JsonRpcError { data, .. }) = error
         {
             let data = data.as_ref()?;
 
             // if daily rate limit exceeded, infura returns the requested backoff in the error
             // response
-            let backoff_seconds = &data["rate"]["backoff_seconds"];
+            let Some(backoff_seconds) = data.get("rate").and_then(|v| v.get("backoff_seconds")) else {
+                return Some(DEFAULT_BACKOFF);
+            };
             // infura rate limit error
             if let Some(seconds) = backoff_seconds.as_u64() {
                 return Some(Duration::from_secs(seconds));
@@ -113,6 +117,6 @@ impl RetryPolicy<HttpClientError> for WebbHttpRetryPolicy {
         }
 
         // A default value of 5s
-        Some(Duration::from_secs(5))
+        Some(DEFAULT_BACKOFF)
     }
 }
