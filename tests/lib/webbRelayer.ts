@@ -590,11 +590,11 @@ export type EventSelector = {
 export type SubstrateVAnchorExtData = {
   recipient: string;
   relayer: string;
-  extAmount: BN;
-  fee: BN;
+  extAmount: BigInt;
+  fee: BigInt;
   encryptedOutput1: number[];
   encryptedOutput2: number[];
-  refund: BN;
+  refund: BigInt;
   token: number;
 };
 

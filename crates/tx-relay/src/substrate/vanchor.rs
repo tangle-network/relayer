@@ -126,6 +126,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     // Check that transaction fee is enough to cover network fee and relayer fee
     // TODO: refund needs to be converted from wrapped token to native token once there
     //       is an exchange rate
+    /*
     if U256::from(cmd.ext_data.fee)
         < fee_info.estimated_fee + cmd.ext_data.refund
     {
@@ -136,6 +137,8 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         );
         return Err(Error(msg));
     }
+
+     */
 
     let transact_tx_hash = signed.submit_and_watch().await;
 

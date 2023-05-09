@@ -19,10 +19,10 @@
     "node": "18.x.x"
   },
   "resolutions": {
-    "@webb-tools/api": "0.1.4-123",
-    "@webb-tools/api-derive": "0.1.4-123",
-    "@webb-tools/sdk-core": "0.1.4-123",
-    "@webb-tools/test-utils": "0.1.4-123"
+    "@webb-tools/api": "0.1.4-125",
+    "@webb-tools/api-derive": "0.1.4-125",
+    "@webb-tools/sdk-core": "0.1.4-125",
+    "@webb-tools/test-utils": "0.1.4-125"
   },
   "dependencies": {
     "@babel/core": "^7.17.8",
@@ -36,13 +36,13 @@
     "@polkadot/util": "11.1.3",
     "@truffle/hdwallet-provider": "^2.0.3",
     "@webb-tools/anchors": "0.5.38",
-    "@webb-tools/api": "0.1.4-123",
-    "@webb-tools/api-derive": "0.1.4-123",
+    "@webb-tools/api": "0.1.4-125",
+    "@webb-tools/api-derive": "0.1.4-125",
     "@webb-tools/evm-test-utils": "0.5.38",
     "@webb-tools/protocol-solidity": "0.5.38",
-    "@webb-tools/sdk-core": "0.1.4-123",
+    "@webb-tools/sdk-core": "0.1.4-125",
     "@webb-tools/tangle-substrate-types": "0.0.1",
-    "@webb-tools/test-utils": "0.1.4-123",
+    "@webb-tools/test-utils": "0.1.4-125",
     "@webb-tools/tokens": "0.5.38",
     "@webb-tools/utils": "0.5.30",
     "@webb-tools/vbridge": "0.5.38",
