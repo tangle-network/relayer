@@ -46,4 +46,7 @@ pub enum Kind {
     /// Relayer Encrypted Output Store state on a specific chain/node.
     #[display(fmt = "encrypted_outputs_store")]
     EncryptedOutputStore,
+    /// When the relayer will retry to do something.
+    #[display(fmt = "retry")]
+    Retry,
 }

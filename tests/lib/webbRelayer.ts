@@ -106,8 +106,6 @@ export class WebbRelayer {
     const configString = JSON.stringify(commonConfigFile, null, 2);
     fs.writeFileSync(path.join(opts.configDir, 'main.json'), configString);
 
-    console.log('config string: ', configString);
-
     // Startup the relayer
     const verbosity = opts.verbosity ?? 3;
     const levels = ['error', 'warn', 'info', 'debug', 'trace'];
@@ -128,9 +126,10 @@ export class WebbRelayer {
       ],
       {
         env: {
-          ...process.env,
-          WEBB_PORT: `${opts.commonConfig.port}`,
           RUST_LOG: `webb_probe=${logLevel}`,
+          WEBB_PORT: `${opts.commonConfig.port}`,
+          // allow us to override the env
+          ...process.env,
         },
       }
     );
@@ -578,7 +577,8 @@ type EventKind =
   | 'leaves_store'
   | 'signing_backend'
   | 'signature_bridge'
-  | 'encrypted_outputs_store';
+  | 'encrypted_outputs_store'
+  | 'retry';
 
 type EventTarget = 'webb_probe';
 
@@ -789,26 +789,26 @@ type NetworkMessage = {
   kind: 'network';
 } & {
   network:
-    | 'connecting'
-    | 'connected'
-    | { failed: { reason: string } }
-    | 'disconnected'
-    | 'unsupportedContract'
-    | 'unsupportedChain'
-    | 'invalidRelayerAddress';
+  | 'connecting'
+  | 'connected'
+  | { failed: { reason: string } }
+  | 'disconnected'
+  | 'unsupportedContract'
+  | 'unsupportedChain'
+  | 'invalidRelayerAddress';
 };
 
 type WithdrawMessage = {
   kind: 'withdraw';
 } & {
   withdraw:
-    | 'sent'
-    | { submitted: { txHash: string } }
-    | { finalized: { txHash: string } }
-    | 'valid'
-    | 'invalidMerkleRoots'
-    | 'droppedFromMemPool'
-    | { errored: { code: number; reason: string } };
+  | 'sent'
+  | { submitted: { txHash: string } }
+  | { finalized: { txHash: string } }
+  | 'valid'
+  | 'invalidMerkleRoots'
+  | 'droppedFromMemPool'
+  | { errored: { code: number; reason: string } };
 };
 
 type ErrorMessage = {

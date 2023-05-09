@@ -2,10 +2,9 @@ use std::sync::Arc;
 
 use axum::routing::get;
 use axum::Router;
-use webb::evm::ethers::providers;
 use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
 use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
-use webb_event_watcher_traits::{BridgeWatcher, EventWatcher};
+use webb_event_watcher_traits::{BridgeWatcher, EthersClient, EventWatcher};
 use webb_ew_evm::open_vanchor::{
     OpenVAnchorDepositHandler, OpenVAnchorLeavesHandler,
 };
@@ -33,7 +32,7 @@ use super::make_proposal_signing_backend;
 use super::ProposalSigningBackendSelector;
 
 /// Type alias for providers
-pub type Client = providers::Provider<providers::Http>;
+pub type Client = EthersClient;
 
 /// Setup and build all the EVM web services and handlers.
 pub fn build_web_services() -> Router<Arc<RelayerContext>> {

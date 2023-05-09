@@ -9186,9 +9186,14 @@ dependencies = [
 name = "webb-relayer-context"
 version = "0.1.0"
 dependencies = [
+ "http",
  "native-tls",
+ "regex",
+ "serde",
+ "serde_json",
  "sp-core",
  "tokio 1.27.0",
+ "tracing",
  "webb 0.5.22",
  "webb-price-oracle-backends",
  "webb-relayer-config",

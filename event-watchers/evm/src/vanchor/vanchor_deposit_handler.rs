@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::VAnchorContractWrapper;
 use ethereum_types::H256;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -19,6 +20,7 @@ use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::evm::EventHandler;
+use webb_event_watcher_traits::EthersClient;
 use webb_proposal_signing_backends::{
     proposal_handler, ProposalSigningBackend,
 };
@@ -26,8 +28,6 @@ use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_store::EventHashStore;
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric;
-
-use crate::{HttpProvider, VAnchorContractWrapper};
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B, C> {
@@ -57,7 +57,7 @@ where
     B: ProposalSigningBackend + Send + Sync,
     C: BridgeRegistryBackend + Send + Sync,
 {
-    type Contract = VAnchorContractWrapper<HttpProvider>;
+    type Contract = VAnchorContractWrapper<EthersClient>;
 
     type Events = VAnchorContractEvents;
 

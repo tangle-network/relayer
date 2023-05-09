@@ -16,12 +16,16 @@ webb-relayer-utils = { workspace = true }
 webb-relayer-store = { workspace = true }
 webb-price-oracle-backends = { workspace = true, features = ["coingecko"] }
 
+tracing = { workspace = true }
 tokio = { workspace = true }
 webb = { workspace = true }
 sp-core = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true }
-
+serde = { workspace = true }
+serde_json = { workspace = true }
+http = "0.2.9"
+regex = { version = "1" }
 
 [features]
 default = ["std", "evm", "substrate"]
