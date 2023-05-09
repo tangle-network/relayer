@@ -43,6 +43,9 @@ use webb_price_oracle_backends::{
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric::{self, Metrics};
 
+mod ethers_retry_policy;
+use ethers_retry_policy::WebbHttpRetryPolicy;
+
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
 pub struct RelayerContext {
@@ -143,8 +146,10 @@ impl RelayerContext {
         })?;
         let client = Http::new(chain_config.http_endpoint.clone());
         // Wrap the provider with a retry client.
-        let policy = Box::new(providers::HttpRateLimitRetryPolicy);
-        let retry_client = RetryClientBuilder::default().build(client, policy);
+        let retry_client = RetryClientBuilder::default()
+            .timeout_retries(u32::MAX)
+            .rate_limit_retries(u32::MAX)
+            .build(client, WebbHttpRetryPolicy::boxed());
         let proivder = Provider::new(retry_client);
         Ok(proivder)
     }
