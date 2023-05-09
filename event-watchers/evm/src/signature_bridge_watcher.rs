@@ -23,24 +23,31 @@ use webb::evm::contract::protocol_solidity::{
 use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::prelude::*;
-use webb::evm::ethers::providers;
 use webb::evm::ethers::types;
 use webb::evm::ethers::utils;
 
 use webb_event_watcher_traits::evm::{
     BridgeWatcher, EventHandler, EventWatcher, WatchableContract,
 };
+use webb_event_watcher_traits::EthersClient;
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, QueueStore};
 use webb_relayer_utils::metric;
 
-type HttpProvider = providers::Provider<providers::Http>;
-
 /// A Wrapper around the `SignatureBridgeContract` contract.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SignatureBridgeContractWrapper<M: Middleware> {
     config: webb_relayer_config::evm::SignatureBridgeContractConfig,
-    contract: SignatureBridgeContract<M>,
+    contract: Arc<SignatureBridgeContract<M>>,
+}
+
+impl<M: Middleware> Clone for SignatureBridgeContractWrapper<M> {
+    fn clone(&self) -> Self {
+        Self {
+            config: self.config.clone(),
+            contract: Arc::clone(&self.contract),
+        }
+    }
 }
 
 impl<M: Middleware> SignatureBridgeContractWrapper<M> {
@@ -49,10 +56,10 @@ impl<M: Middleware> SignatureBridgeContractWrapper<M> {
         client: Arc<M>,
     ) -> Self {
         Self {
-            contract: SignatureBridgeContract::new(
+            contract: Arc::new(SignatureBridgeContract::new(
                 config.common.address,
                 client,
-            ),
+            )),
             config,
         }
     }
@@ -97,7 +104,7 @@ pub struct SignatureBridgeGovernanceOwnershipTransferredHandler;
 impl EventWatcher for SignatureBridgeContractWatcher {
     const TAG: &'static str = "Signature Bridge Watcher";
 
-    type Contract = SignatureBridgeContractWrapper<HttpProvider>;
+    type Contract = SignatureBridgeContractWrapper<EthersClient>;
 
     type Events = SignatureBridgeContractEvents;
 
@@ -106,7 +113,7 @@ impl EventWatcher for SignatureBridgeContractWatcher {
 
 #[async_trait::async_trait]
 impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
-    type Contract = SignatureBridgeContractWrapper<HttpProvider>;
+    type Contract = SignatureBridgeContractWrapper<EthersClient>;
 
     type Events = SignatureBridgeContractEvents;
 
@@ -205,7 +212,7 @@ where
     async fn execute_proposal_with_signature(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
-        contract: &SignatureBridgeContract<HttpProvider>,
+        contract: &SignatureBridgeContract<EthersClient>,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let proposal_data_hex = hex::encode(&proposal_data);
@@ -291,7 +298,7 @@ where
     async fn transfer_ownership_with_signature(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
-        contract: &SignatureBridgeContract<HttpProvider>,
+        contract: &SignatureBridgeContract<EthersClient>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         // before doing anything, we need to do just two things:

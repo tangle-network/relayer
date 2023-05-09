@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use super::{HttpProvider, VAnchorContractWrapper};
+use super::VAnchorContractWrapper;
 use ethereum_types::H256;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb_event_watcher_traits::evm::EventHandler;
+use webb_event_watcher_traits::EthersClient;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EncryptedOutputCacheStore, EventHashStore};
@@ -31,7 +32,7 @@ pub struct VAnchorEncryptedOutputHandler;
 
 #[async_trait::async_trait]
 impl EventHandler for VAnchorEncryptedOutputHandler {
-    type Contract = VAnchorContractWrapper<HttpProvider>;
+    type Contract = VAnchorContractWrapper<EthersClient>;
 
     type Events = VAnchorContractEvents;
 

@@ -16,9 +16,9 @@
 //! # Relayer Context Module 🕸️
 //!
 //! A module for managing the context of the relayer.
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
-use std::{collections::HashMap, convert::TryFrom};
 
 use tokio::sync::{broadcast, Mutex};
 
@@ -42,6 +42,9 @@ use webb_price_oracle_backends::{
 };
 use webb_relayer_store::SledStore;
 use webb_relayer_utils::metric::{self, Metrics};
+
+mod ethers_retry_policy;
+use ethers_retry_policy::WebbHttpRetryPolicy;
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
@@ -135,15 +138,20 @@ impl RelayerContext {
     pub async fn evm_provider(
         &self,
         chain_id: &str,
-    ) -> webb_relayer_utils::Result<Provider<Http>> {
+    ) -> webb_relayer_utils::Result<Provider<RetryClient<Http>>> {
         let chain_config = self.config.evm.get(chain_id).ok_or_else(|| {
             webb_relayer_utils::Error::ChainNotFound {
                 chain_id: chain_id.to_string(),
             }
         })?;
-        let provider = Provider::try_from(chain_config.http_endpoint.as_str())?
-            .interval(Duration::from_millis(5u64));
-        Ok(provider)
+        let client = Http::new(chain_config.http_endpoint.clone());
+        // Wrap the provider with a retry client.
+        let retry_client = RetryClientBuilder::default()
+            .timeout_retries(u32::MAX)
+            .rate_limit_retries(u32::MAX)
+            .build(client, WebbHttpRetryPolicy::boxed());
+        let proivder = Provider::new(retry_client);
+        Ok(proivder)
     }
     /// Sets up and returns an EVM wallet for the relayer.
     ///
