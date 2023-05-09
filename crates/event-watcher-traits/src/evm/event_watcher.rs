@@ -275,7 +275,7 @@ pub trait EventHandler {
     /// Whether any of the events could be handled by the handler
     async fn can_handle_events(
         &self,
-        event: Self::Events,
+        (event, log): (Self::Events, contract::LogMeta),
         wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool>;
 }
@@ -303,7 +303,10 @@ pub trait EventHandlerWithRetry: EventHandler {
         backoff: impl backoff::backoff::Backoff + Send + Sync + 'static,
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        if !self.can_handle_events(event.clone(), contract).await? {
+        if !self
+            .can_handle_events((event.clone(), log.clone()), contract)
+            .await?
+        {
             return Ok(());
         };
 

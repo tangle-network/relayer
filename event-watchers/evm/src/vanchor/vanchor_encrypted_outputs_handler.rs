@@ -40,7 +40,7 @@ impl EventHandler for VAnchorEncryptedOutputHandler {
 
     async fn can_handle_events(
         &self,
-        events: Self::Events,
+        (events, _meta): (Self::Events, LogMeta),
         _wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool> {
         use VAnchorContractEvents::*;
