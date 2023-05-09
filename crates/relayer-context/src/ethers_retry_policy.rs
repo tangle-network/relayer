@@ -19,7 +19,7 @@ impl WebbHttpRetryPolicy {
     pub fn new() -> Self {
         Self {
             err_regex: regex::Regex::new(
-                r"(?mixU)\b(?:rate|limit|429|Too Many Requests)\b",
+                r"(?mixU)\b(?:rate|limit|429|Too \s Many \s Requests)\b",
             )
             .expect("Valid Regex"),
         }
