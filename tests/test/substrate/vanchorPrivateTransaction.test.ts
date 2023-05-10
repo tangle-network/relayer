@@ -58,6 +58,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let charlieNode: LocalTangle;
+  let bobNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
@@ -67,7 +68,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../tangle/target/release/tangle-standalone'
+            '../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -88,6 +89,13 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     charlieNode = await LocalTangle.start({
       name: 'dkg-charlie',
       authority: 'charlie',
+      usageMode,
+      ports: 'auto',
+      enableLogging: false,
+    });
+    bobNode = await LocalTangle.start({
+      name: 'dkg-bob',
+      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -300,6 +308,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   after(async () => {
     await aliceNode?.stop();
     await charlieNode?.stop();
+    await bobNode?.stop();
     await webbRelayer?.stop();
   });
 });
