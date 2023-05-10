@@ -65,12 +65,20 @@ where
 
     async fn can_handle_events(
         &self,
-        events: Self::Events,
-        _wrapper: &Self::Contract,
+        (events, meta): (Self::Events, LogMeta),
+        wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool> {
         use VAnchorContractEvents::*;
+        // only handle events if we fully synced.
+        let latest_block = wrapper.contract.client().get_block_number().await?;
+        let event_block = meta.block_number;
+        let allowed_margin = 10u64;
+        // Check if the event is in the latest block or within the allowed margin.
+        let fully_synced = event_block >= latest_block
+            || event_block.saturating_add(allowed_margin.into())
+                >= latest_block;
         let has_event = matches!(events, NewCommitmentFilter(_));
-        Ok(has_event)
+        Ok(has_event && fully_synced)
     }
 
     #[tracing::instrument(skip_all)]

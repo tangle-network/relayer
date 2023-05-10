@@ -158,10 +158,6 @@ async fn start_vanchor_events_watcher(
     let contract_address = config.common.address;
     let my_ctx = ctx.clone();
     let my_config = config.clone();
-    let default_leaf = wrapper.contract.get_zero_hash(0).call().await?;
-
-    let mut default_leaf_bytes = [0u8; 32];
-    default_leaf.to_big_endian(&mut default_leaf_bytes);
     let task = async move {
         tracing::debug!(
             "VAnchor events watcher for ({}) Started.",
@@ -176,6 +172,10 @@ async fn start_vanchor_events_watcher(
             my_config.proposal_signing_backend,
         )
         .await?;
+
+        let default_leaf = wrapper.contract.get_zero_hash(0).call().await?;
+        let mut default_leaf_bytes = [0u8; 32];
+        default_leaf.to_big_endian(&mut default_leaf_bytes);
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
                 let bridge_registry =
