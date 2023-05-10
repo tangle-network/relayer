@@ -34,7 +34,7 @@ import {
 
 import { ethers } from 'ethers';
 import { ApiPromise } from '@polkadot/api';
-import { u8aToHex, hexToU8a } from '@polkadot/util';
+import { u8aToHex, hexToU8a, BN } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
 import { naclEncrypt, randomAsU8a } from '@polkadot/util-crypto';
 
@@ -57,6 +57,7 @@ import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
@@ -67,7 +68,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../tangle/target/release/tangle-standalone'
+            '../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -80,6 +81,14 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
+      usageMode,
+      ports: 'auto',
+      enableLogging: false,
+    });
+
+    bobNode = await LocalTangle.start({
+      name: 'substrate-bob',
+      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -139,7 +148,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const data = await vanchorDeposit(
       typedSourceChainId.toString(), // source chain Id
       typedSourceChainId.toString(), // target chain Id
-      100, // public amount
+      1000000000, // public amount
       treeId,
       api,
       aliceNode
@@ -214,18 +223,23 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const feeInfo2 =
       await (feeInfoResponse2.json() as Promise<SubstrateFeeInfo>);
     const estimatedFee = BigInt(feeInfo2.estimatedFee);
+    const estimatedrefund = BigInt(feeInfo2.maxRefund);
+    
+    console.log("estimatedFee", estimatedFee);
+    console.log("estimatedrefund ", estimatedrefund);
+    
     const refund = BigInt(0);
-    const feeTotal = BigInt(0);
+    const feeTotal = estimatedFee + refund;
     const vanchorData = await vanchorWithdraw(
       typedSourceChainId.toString(),
       typedSourceChainId.toString(),
       account.address,
       data.depositUtxos,
       treeId,
-      BigInt(feeTotal.toString()),
+      feeTotal,
       // TODO: need to convert this once there is exchange rate between native
       //       token and wrapped token
-      BigInt(refund.toString()),
+      refund,
       api
     );
     const substrateExtData: SubstrateVAnchorExtData = {
@@ -259,23 +273,38 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ),
     };
 
+    const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
+      Number(treeId)
+    );
+    const indexBeforeInsetion = Math.max(leafsCount - 1, 0);
+    console.log("indexBeforeInsetion ",indexBeforeInsetion);
+
     // now we withdraw using private transaction
 
-    const transactCall = api.tx.vAnchorBn254.transact(
-      treeId,
-      vanchorData.proofData,
-      vanchorData.extData
-    );
-    const txSigned = await transactCall.signAsync(account);
-    await aliceNode.executeTransaction(txSigned);
-    /*
+    // const transactCall = api.tx.vAnchorBn254.transact(
+    //   treeId,
+    //   vanchorData.proofData,
+    //   vanchorData.extData
+    // );
+    // const txSigned = await transactCall.signAsync(account);
+    // await aliceNode.executeTransaction(txSigned);
+    
+    
+    // await webbRelayer.waitForEvent({
+    //   kind: 'leaves_store',
+    //   event: {
+    //     leaf_index: indexBeforeInsetion + 1,
+    //   },
+    // });
+    
     await webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
       substrateExtData,
       substrateProofData
     );
-    */
+    
+
 
     // now we wait for relayer to execute private transaction.
     await webbRelayer.waitForEvent({
@@ -299,6 +328,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
 
   after(async () => {
     await aliceNode?.stop();
+    await bobNode?.stop();
     await charlieNode?.stop();
     await webbRelayer?.stop();
   });
@@ -312,8 +342,8 @@ async function vanchorWithdraw(
   recipient: string,
   depositUtxos: [Utxo, Utxo],
   treeId: number,
-  fee: BigInt,
-  refund: BigInt,
+  fee: bigint,
+  refund: bigint,
   api: ApiPromise
 ): Promise<{ extData: any; proofData: any }> {
   const secret = randomAsU8a();
@@ -391,9 +421,13 @@ async function vanchorWithdraw(
   }, BigInt(0));
 
   const publicAmount = -withdrawAmount;
+  const extAmount = -(withdrawAmount-fee);
+
+
   console.log({
     fee: fee.toString(),
-    extAmount: withdrawAmount.toString(),
+    extAmount: extAmount.toString(),
+    publicAmount: publicAmount.toString()
   });
 
   const tree = await api.query.merkleTreeBn254.trees(treeId);
@@ -425,7 +459,7 @@ async function vanchorWithdraw(
     roots: rootsSet,
     relayer: decodedAddress,
     recipient: decodedAddress,
-    extAmount: publicAmount.toString(),
+    extAmount: extAmount.toString(),
     fee: fee.toString(),
     refund: refund.toString(),
     token: assetId,
@@ -448,7 +482,7 @@ async function vanchorWithdraw(
     fee: fee.toString(),
     refund: refund.toString(),
     token: assetId,
-    extAmount: publicAmount.toString(),
+    extAmount: extAmount.toString(),
     encryptedOutput1: u8aToHex(comEnc1),
     encryptedOutput2: u8aToHex(comEnc2),
   };
