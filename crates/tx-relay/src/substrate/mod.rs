@@ -1,9 +1,12 @@
 use ethereum_types::H256;
 use futures::TryStreamExt;
+use sp_core::sr25519::Pair;
+use webb::substrate::subxt::tx::PairSigner;
 use webb::substrate::subxt::{
     tx::TxProgress, tx::TxStatus as TransactionStatus, OnlineClient,
     PolkadotConfig,
 };
+use webb::substrate::tangle_runtime::api;
 use webb_relayer_handler_utils::{
     CommandResponse, CommandStream, WithdrawStatus,
 };
@@ -115,4 +118,19 @@ pub async fn handle_substrate_tx(
 
 fn wei_to_gwei(wei: u128) -> f64 {
     (wei / (10 ^ 9)) as f64
+}
+
+async fn balance(
+    client: OnlineClient<PolkadotConfig>,
+    signer: PairSigner<PolkadotConfig, Pair>,
+) -> webb_relayer_utils::Result<u128> {
+    let account = api::storage().system().account(signer.account_id());
+    let balance = client
+        .storage()
+        .at(None)
+        .await?
+        .fetch(&account)
+        .await?
+        .ok_or(webb_relayer_utils::Error::ReadSubstrateStorageError)?;
+    Ok(balance.data.free)
 }

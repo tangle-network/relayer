@@ -59,6 +59,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   let aliceNode: LocalTangle;
   let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
+  let bobNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
@@ -97,6 +98,13 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     charlieNode = await LocalTangle.start({
       name: 'dkg-charlie',
       authority: 'charlie',
+      usageMode,
+      ports: 'auto',
+      enableLogging: false,
+    });
+    bobNode = await LocalTangle.start({
+      name: 'dkg-bob',
+      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -330,6 +338,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     await aliceNode?.stop();
     await bobNode?.stop();
     await charlieNode?.stop();
+    await bobNode?.stop();
     await webbRelayer?.stop();
   });
 });

@@ -1,12 +1,12 @@
+use crate::substrate::balance;
 use crate::{MAX_REFUND_USD, TRANSACTION_PROFIT_USD};
 use chrono::{DateTime, Utc};
 use serde::Serialize;
 use sp_core::U256;
 use std::cmp::min;
 use webb::evm::ethers::utils::__serde_json::Value;
-use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::subxt::tx::PairSigner;
-use webb::substrate::subxt::{PolkadotConfig, SubstrateConfig};
+use webb::substrate::subxt::PolkadotConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Error;
 
@@ -51,38 +51,17 @@ pub async fn get_substrate_fee_info(
     // TODO: should ensure that refund <= relayer balance
     let max_refund =
         native_token_to_unit(MAX_REFUND_USD / TOKEN_PRICE_USD, decimals);
-    let max_refund = min(max_refund, relayer_balance(chain_id, ctx).await?);
+    let pair = ctx.substrate_wallet(&chain_id.to_string()).await?;
+    let signer = PairSigner::new(pair.clone());
+
+    let max_refund =
+        min(max_refund, U256::from(balance(client, signer).await?));
     Ok(SubstrateFeeInfo {
         estimated_fee,
         refund_exchange_rate,
         max_refund,
         timestamp: Utc::now(),
     })
-}
-
-async fn relayer_balance(
-    chain_id: u64,
-    ctx: &RelayerContext,
-) -> webb_relayer_utils::Result<U256> {
-    let client = ctx
-        .substrate_provider::<SubstrateConfig>(&chain_id.to_string())
-        .await?;
-    let pair = ctx.substrate_wallet(&chain_id.to_string()).await?;
-
-    let signer = PairSigner::<SubstrateConfig, sp_core::sr25519::Pair>::new(
-        pair.clone(),
-    );
-
-    let account = RuntimeApi::storage().system().account(signer.account_id());
-
-    let balance = client
-        .storage()
-        .at(None)
-        .await?
-        .fetch(&account)
-        .await?
-        .ok_or(Error::ReadSubstrateStorageError)?;
-    Ok(U256::from(balance.data.free))
 }
 
 /// Convert from full wrapped token amount to smallest unit amount.

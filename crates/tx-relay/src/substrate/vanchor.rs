@@ -1,15 +1,12 @@
 use super::*;
-use crate::substrate::fees::{get_substrate_fee_info};
+use crate::substrate::fees::get_substrate_fee_info;
 use crate::substrate::handle_substrate_tx;
-use webb::evm::ethers::utils::{hex};
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::subxt::utils::AccountId32;
 use webb::substrate::tangle_runtime::api::runtime_types::tangle_standalone_runtime::protocol_substrate_config::Element;
 use webb::substrate::{
-    tangle_runtime::api::runtime_types::{
-    webb_primitives::types::vanchor,
-    },
-    subxt::{tx::PairSigner, PolkadotConfig},
+    subxt::{PolkadotConfig, tx::PairSigner},
+    tangle_runtime::api::runtime_types::webb_primitives::types::vanchor,
 };use ethereum_types::U256;
 use sp_core::{Decode, Encode};
 use webb::substrate::scale::Compact;
@@ -177,22 +174,12 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .total_fee_earned
         .inc_by(wei_to_gwei(cmd.ext_data.fee.as_u128()));
 
-    let account = RuntimeApi::storage().system().account(signer.account_id());
-    let balance = client
-        .storage()
-        .at(None)
+    let balance = balance(client, signer)
         .await
-        .map_err(|e| Error(e.to_string()))?
-        .fetch(&account)
-        .await
-        .map_err(|e| Error(e.to_string()))?
-        .ok_or(Error(format!(
-            "Substrate storage returned None for {}",
-            hex::encode(account.to_bytes())
-        )))?;
+        .map_err(|e| Error(format!("Failed to read substrate balance: {e}")))?;
     metrics
         .account_balance_entry(typed_chain_id)
-        .set(wei_to_gwei(balance.data.free));
+        .set(wei_to_gwei(balance));
     Ok(())
 }
 
