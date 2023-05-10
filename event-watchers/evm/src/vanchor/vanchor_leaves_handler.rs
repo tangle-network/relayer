@@ -43,6 +43,7 @@ type MerkleTree = SparseMerkleTree<Bn254Fr, Poseidon<Bn254Fr>, 30>;
 pub struct VAnchorLeavesHandler {
     mt: Arc<Mutex<MerkleTree>>,
     storage: Arc<SledStore>,
+    hasher: Poseidon<Bn254Fr>,
 }
 impl VAnchorLeavesHandler {
     pub fn new(
@@ -62,6 +63,7 @@ impl VAnchorLeavesHandler {
 
         Ok(Self {
             mt: Arc::new(Mutex::new(mt)),
+            hasher: poseidon,
             storage,
         })
     }
@@ -77,7 +79,7 @@ impl EventHandler for VAnchorLeavesHandler {
 
     async fn can_handle_events(
         &self,
-        events: Self::Events,
+        (events, log): (Self::Events, LogMeta),
         wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool> {
         use VAnchorContractEvents::*;
@@ -94,19 +96,24 @@ impl EventHandler for VAnchorLeavesHandler {
                 let leaf: Bn254Fr =
                     Bn254Fr::from_be_bytes_mod_order(commitment.as_slice());
                 let mut batch: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
-                let params = setup_params::<Bn254Fr>(Curve::Bn254, 5, 3);
-                let poseidon = Poseidon::<Bn254Fr>::new(params);
                 batch.insert(leaf_index, leaf);
                 let mut mt = self.mt.lock().await;
-                mt.insert_batch(&batch, &poseidon)?;
+                mt.insert_batch(&batch, &self.hasher)?;
                 let root_bytes = mt.root().into_repr().to_bytes_be();
                 let root: U256 = U256::from_big_endian(root_bytes.as_slice());
-                let is_known_root =
-                    wrapper.contract.is_known_root(root).call().await?;
+                let is_known_root = wrapper
+                    .contract
+                    .is_known_root(root)
+                    .block(log.block_number)
+                    .call()
+                    .await?;
+
                 tracing::trace!("Is known root: {:?}", is_known_root);
+
                 if event_data.leaf_index.as_u32() % 2 == 0 {
                     return Ok(true);
                 }
+
                 if !is_known_root {
                     tracing::warn!("Invalid merkle root .. Restarting");
                     // In case of invalid merkle root, relayer should clear its storage and restart syncing.
@@ -142,7 +149,8 @@ impl EventHandler for VAnchorLeavesHandler {
                         history_store_key,
                         wrapper.config.common.deployed_at,
                     )?;
-                    return Ok(true);
+                    // Do not handle this event
+                    return Ok(false);
                 }
                 return Ok(true);
             }
