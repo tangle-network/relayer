@@ -1,13 +1,14 @@
 use crate::{MAX_REFUND_USD, TRANSACTION_PROFIT_USD};
 use chrono::{DateTime, Utc};
-use serde::Deserialize;
 use serde::Serialize;
 use sp_core::U256;
 use std::cmp::min;
+use webb::evm::ethers::utils::__serde_json::Value;
 use webb::substrate::protocol_substrate_runtime::api as RuntimeApi;
 use webb::substrate::subxt::tx::PairSigner;
 use webb::substrate::subxt::{PolkadotConfig, SubstrateConfig};
 use webb_relayer_context::RelayerContext;
+use webb_relayer_utils::Error;
 
 const TOKEN_PRICE_USD: f64 = 0.1;
 
@@ -32,17 +33,15 @@ pub async fn get_substrate_fee_info(
 ) -> webb_relayer_utils::Result<SubstrateFeeInfo> {
     let client = ctx
         .substrate_provider::<PolkadotConfig>(&chain_id.to_string())
-        .await
-        .unwrap();
+        .await?;
     let decimals: i32 = client
         .rpc()
         .system_properties()
-        .await
-        .unwrap()
+        .await?
         .get("tokenDecimals")
-        .unwrap()
-        .as_i64()
-        .unwrap() as i32;
+        .and_then(Value::as_i64)
+        .ok_or(Error::ReadSubstrateStorageError)?
+        as i32;
     let estimated_fee = estimated_tx_fees
         + native_token_to_unit(
             TRANSACTION_PROFIT_USD / TOKEN_PRICE_USD,
@@ -79,12 +78,11 @@ async fn relayer_balance(
     let balance = client
         .storage()
         .at(None)
-        .await
-        .unwrap()
+        .await?
         .fetch(&account)
-        .await
-        .unwrap();
-    Ok(U256::from(balance.unwrap().data.free))
+        .await?
+        .ok_or(Error::ReadSubstrateStorageError)?;
+    Ok(U256::from(balance.data.free))
 }
 
 /// Convert from full wrapped token amount to smallest unit amount.
@@ -92,10 +90,4 @@ async fn relayer_balance(
 /// It looks like subxt has no built-in functionality for this.
 fn native_token_to_unit(matic: f64, token_decimals: i32) -> U256 {
     U256::from((matic * 10_f64.powi(token_decimals)) as u128)
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub(super) struct RpcFeeDetailsResponse {
-    pub partial_fee: U256,
 }

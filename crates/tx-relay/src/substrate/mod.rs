@@ -1,4 +1,4 @@
-use ethereum_types::{H256, U128};
+use ethereum_types::H256;
 use futures::TryStreamExt;
 use webb::substrate::subxt::{
     tx::TxProgress, tx::TxStatus as TransactionStatus, OnlineClient,

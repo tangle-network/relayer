@@ -1,7 +1,7 @@
 use super::*;
-use crate::substrate::fees::{get_substrate_fee_info, RpcFeeDetailsResponse};
+use crate::substrate::fees::{get_substrate_fee_info};
 use crate::substrate::handle_substrate_tx;
-use webb::evm::ethers::utils::{format_ether, hex};
+use webb::evm::ethers::utils::{hex};
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::subxt::utils::AccountId32;
 use webb::substrate::tangle_runtime::api::runtime_types::tangle_standalone_runtime::protocol_substrate_config::Element;
@@ -13,7 +13,6 @@ use webb::substrate::{
 };use ethereum_types::U256;
 use sp_core::{Decode, Encode};
 use webb::substrate::scale::Compact;
-use webb::substrate::subxt::rpc::RpcParams;
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };
@@ -93,24 +92,30 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .tx()
         .create_signed(&transact_tx, &signer, Default::default())
         .await
-        .unwrap();
+        .map_err(|e| Error(format!("Failed to sign transaction: {e}")))?;
     let mut params = signed.encoded().to_vec();
     (signed.encoded().len() as u32).encode_to(&mut params);
     let bytes = client
         .rpc()
         .state_call("TransactionPaymentApi_query_info", Some(&params), None)
         .await
-        .unwrap();
+        .map_err(|e| {
+            Error(format!(
+                "RPC call TransactionPaymentApi_query_info failed: {e}"
+            ))
+        })?;
     let cursor = &mut &bytes[..];
     let payment_info: (Compact<u64>, Compact<u64>, u8, u128) =
-        Decode::decode(cursor).unwrap();
+        Decode::decode(cursor).map_err(|e| {
+            Error(format!("Failed to decode payment info: {e}"))
+        })?;
     let fee_info = get_substrate_fee_info(
         requested_chain,
         U256::from(payment_info.3),
         &ctx,
     )
     .await
-    .unwrap();
+    .map_err(|e| Error(format!("Get substrate fee info failed: {e}")))?;
 
     // validate refund amount
     if U256::from(cmd.ext_data.refund) > fee_info.max_refund {
@@ -126,7 +131,6 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     // Check that transaction fee is enough to cover network fee and relayer fee
     // TODO: refund needs to be converted from wrapped token to native token once there
     //       is an exchange rate
-    /*
     if U256::from(cmd.ext_data.fee)
         < fee_info.estimated_fee + cmd.ext_data.refund
     {
@@ -137,8 +141,6 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         );
         return Err(Error(msg));
     }
-
-     */
 
     let transact_tx_hash = signed.submit_and_watch().await;
 

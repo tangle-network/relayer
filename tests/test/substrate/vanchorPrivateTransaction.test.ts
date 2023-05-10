@@ -175,9 +175,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const dummySubstrateExtData: SubstrateVAnchorExtData = {
       recipient: dummyVanchorData.extData.recipient,
       relayer: dummyVanchorData.extData.relayer,
-      extAmount: BigInt(
-        dummyVanchorData.extData.extAmount.toString()
-      ),
+      extAmount: BigInt(dummyVanchorData.extData.extAmount.toString()),
       fee: BigInt(0),
       encryptedOutput1: Array.from(
         hexToU8a(dummyVanchorData.extData.encryptedOutput1)
@@ -215,9 +213,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     expect(feeInfoResponse2.status).equal(200);
     const feeInfo2 =
       await (feeInfoResponse2.json() as Promise<SubstrateFeeInfo>);
-    const estimatedFee = BigInt(
-      feeInfo2.estimatedFee
-    );
+    const estimatedFee = BigInt(feeInfo2.estimatedFee);
     const refund = BigInt(0);
     const feeTotal = BigInt(0);
     const vanchorData = await vanchorWithdraw(
@@ -235,9 +231,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const substrateExtData: SubstrateVAnchorExtData = {
       recipient: vanchorData.extData.recipient,
       relayer: vanchorData.extData.relayer,
-      extAmount: BigInt(
-        vanchorData.extData.extAmount.toString()
-      ),
+      extAmount: BigInt(vanchorData.extData.extAmount.toString()),
       fee: feeTotal,
       encryptedOutput1: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput1)
@@ -266,16 +260,15 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     };
 
     // now we withdraw using private transaction
-    
-    
-  const transactCall = api.tx.vAnchorBn254.transact(
-    treeId,
-    vanchorData.proofData,
-    vanchorData.extData
-  );
-  const txSigned = await transactCall.signAsync(account);
-  await aliceNode.executeTransaction(txSigned);
-  /*
+
+    const transactCall = api.tx.vAnchorBn254.transact(
+      treeId,
+      vanchorData.proofData,
+      vanchorData.extData
+    );
+    const txSigned = await transactCall.signAsync(account);
+    await aliceNode.executeTransaction(txSigned);
+    /*
     await webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
@@ -394,13 +387,13 @@ async function vanchorWithdraw(
 
   const address = recipient;
   const withdrawAmount = depositUtxos.reduce((acc, utxo) => {
-    return BigInt(utxo.amount) + (acc);
+    return BigInt(utxo.amount) + acc;
   }, BigInt(0));
 
   const publicAmount = -withdrawAmount;
   console.log({
-    'fee': fee.toString(),
-    'extAmount': withdrawAmount.toString()
+    fee: fee.toString(),
+    extAmount: withdrawAmount.toString(),
   });
 
   const tree = await api.query.merkleTreeBn254.trees(treeId);
@@ -448,7 +441,7 @@ async function vanchorWithdraw(
   );
   console.log('Is proof valid : ', isValidProof);
   expect(isValidProof).to.be.true;
-  
+
   const extData = {
     relayer: address,
     recipient: address,
@@ -616,4 +609,3 @@ async function vanchorDeposit(
   await aliceNode.executeTransaction(txSigned);
   return { depositUtxos: data.outputUtxos };
 }
-
