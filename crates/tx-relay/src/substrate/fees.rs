@@ -48,7 +48,6 @@ pub async fn get_substrate_fee_info(
             decimals,
         );
     let refund_exchange_rate = native_token_to_unit(1., decimals);
-    // TODO: should ensure that refund <= relayer balance
     let max_refund =
         native_token_to_unit(MAX_REFUND_USD / TOKEN_PRICE_USD, decimals);
     let pair = ctx.substrate_wallet(&chain_id.to_string()).await?;
