@@ -590,11 +590,11 @@ export type EventSelector = {
 export type SubstrateVAnchorExtData = {
   recipient: string;
   relayer: string;
-  extAmount: BigInt;
-  fee: BigInt;
+  extAmount: string;
+  fee: string;
   encryptedOutput1: number[];
   encryptedOutput2: number[];
-  refund: BigInt;
+  refund: string;
   token: number;
 };
 
@@ -760,7 +760,6 @@ type ContractKind =
   | 'VAnchor'
   | 'OpenVAnchor';
 
-type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind =
   | 'DKG'
   | 'DKGProposals'

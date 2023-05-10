@@ -32,7 +32,7 @@ import {
   SubstrateFeeInfo,
 } from '../../lib/webbRelayer.js';
 
-import { ethers } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a, BN } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
@@ -59,7 +59,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   let aliceNode: LocalTangle;
   let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
-  let bobNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
 
@@ -98,13 +97,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     charlieNode = await LocalTangle.start({
       name: 'dkg-charlie',
       authority: 'charlie',
-      usageMode,
-      ports: 'auto',
-      enableLogging: false,
-    });
-    bobNode = await LocalTangle.start({
-      name: 'dkg-bob',
-      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -186,42 +178,10 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       BigInt(0),
       api
     );
-    // Now we construct payload for substrate private transaction.
-    // Convert [u8;4] to u32 asset Id
     const token = new DataView(dummyVanchorData.extData.token.buffer, 0);
-    const dummySubstrateExtData: SubstrateVAnchorExtData = {
-      recipient: dummyVanchorData.extData.recipient,
-      relayer: dummyVanchorData.extData.relayer,
-      extAmount: BigInt(dummyVanchorData.extData.extAmount.toString()),
-      fee: BigInt(0),
-      encryptedOutput1: Array.from(
-        hexToU8a(dummyVanchorData.extData.encryptedOutput1)
-      ),
-      encryptedOutput2: Array.from(
-        hexToU8a(dummyVanchorData.extData.encryptedOutput2)
-      ),
-      refund: BigInt(0),
-      token: token.getUint32(0, true),
-    };
-
-    const dummySubstrateProofData: SubstrateVAnchorProofData = {
-      proof: Array.from(hexToU8a(dummyVanchorData.proofData.proof)),
-      extDataHash: Array.from(dummyVanchorData.proofData.extDataHash),
-      extensionRoots: dummyVanchorData.proofData.roots.map((root) =>
-        Array.from(root)
-      ),
-      publicAmount: Array.from(dummyVanchorData.proofData.publicAmount),
-      roots: dummyVanchorData.proofData.roots.map((root) => Array.from(root)),
-      outputCommitments: dummyVanchorData.proofData.outputCommitments.map(
-        (com) => Array.from(com)
-      ),
-      inputNullifiers: dummyVanchorData.proofData.inputNullifiers.map((com) =>
-        Array.from(hexToU8a(com))
-      ),
-    };
 
     const info = await api.tx.vAnchorBn254
-      .transact(treeId, dummySubstrateProofData, dummySubstrateExtData)
+      .transact(treeId, dummyVanchorData.proofData, dummyVanchorData.extData)
       .paymentInfo(account);
     const feeInfoResponse2 = await webbRelayer.getSubstrateFeeInfo(
       substrateChainId,
@@ -253,15 +213,15 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const substrateExtData: SubstrateVAnchorExtData = {
       recipient: vanchorData.extData.recipient,
       relayer: vanchorData.extData.relayer,
-      extAmount: BigInt(vanchorData.extData.extAmount.toString()),
-      fee: feeTotal,
+      extAmount: BigNumber.from(vanchorData.extData.extAmount).toString(),
+      fee: feeTotal.toString(),
       encryptedOutput1: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput1)
       ),
       encryptedOutput2: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput2)
       ),
-      refund: refund,
+      refund: refund.toString(),
       token: token.getUint32(0, true),
     };
 
@@ -315,6 +275,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
 
 
     // now we wait for relayer to execute private transaction.
+    
     await webbRelayer.waitForEvent({
       kind: 'private_tx',
       event: {
@@ -338,7 +299,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     await aliceNode?.stop();
     await bobNode?.stop();
     await charlieNode?.stop();
-    await bobNode?.stop();
     await webbRelayer?.stop();
   });
 });
