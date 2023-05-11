@@ -64,7 +64,6 @@ pub trait EventWatcher {
     #[tracing::instrument(
         skip_all,
         fields(
-            chain_id = ?client.get_chainid().await,
             address = %contract.address(),
             tag = %Self::TAG,
         ),
