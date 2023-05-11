@@ -12,3 +12,4 @@ store/
 .idea/
 .env.direnv
 .direnv
+.env
