@@ -171,22 +171,37 @@ async fn start_vanchor_events_watcher(
             my_config.proposal_signing_backend,
         )
         .await?;
-
-        let default_leaf = wrapper.contract.get_zero_hash(0).call().await?;
-        let mut default_leaf_bytes = [0u8; 32];
-        default_leaf.to_big_endian(&mut default_leaf_bytes);
+        tracing::debug!(
+            %chain_id,
+            %contract_address,
+            "Fetching the Zero Hash from the contract",
+        );
+        let zero_hash = wrapper.contract.get_zero_hash(0).call().await?;
+        tracing::debug!(
+            %chain_id,
+            %contract_address,
+            %zero_hash,
+            "Found the Zero Hash",
+        );
+        let mut zero_hash_bytes = [0u8; 32];
+        zero_hash.to_big_endian(&mut zero_hash_bytes);
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
                 let bridge_registry =
                     DkgBridgeRegistryBackend::new(backend.client.clone());
-                let deposit_handler =
-                    VAnchorDepositHandler::new(backend, bridge_registry);
+                let deposit_handler = VAnchorDepositHandler::new(
+                    backend,
+                    bridge_registry,
+                    chain_id.into(),
+                );
                 let leaves_handler = VAnchorLeavesHandler::new(
+                    chain_id.into(),
+                    contract_address,
                     store.clone(),
-                    default_leaf_bytes.to_vec(),
+                    zero_hash_bytes.to_vec(),
                 )?;
                 let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
+                    VAnchorEncryptedOutputHandler::new(chain_id.into());
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
@@ -216,14 +231,19 @@ async fn start_vanchor_events_watcher(
             ProposalSigningBackendSelector::Mocked(backend) => {
                 let bridge_registry =
                     MockedBridgeRegistryBackend::builder().build();
-                let deposit_handler =
-                    VAnchorDepositHandler::new(backend, bridge_registry);
+                let deposit_handler = VAnchorDepositHandler::new(
+                    backend,
+                    bridge_registry,
+                    chain_id.into(),
+                );
                 let leaves_handler = VAnchorLeavesHandler::new(
+                    chain_id.into(),
+                    contract_address,
                     store.clone(),
-                    default_leaf_bytes.to_vec(),
+                    zero_hash_bytes.to_vec(),
                 )?;
                 let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
+                    VAnchorEncryptedOutputHandler::new(chain_id.into());
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
@@ -252,11 +272,13 @@ async fn start_vanchor_events_watcher(
             }
             ProposalSigningBackendSelector::None => {
                 let leaves_handler = VAnchorLeavesHandler::new(
+                    chain_id.into(),
+                    contract_address,
                     store.clone(),
-                    default_leaf_bytes.to_vec(),
+                    zero_hash_bytes.to_vec(),
                 )?;
                 let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
+                    VAnchorEncryptedOutputHandler::new(chain_id.into());
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
