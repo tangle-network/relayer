@@ -16,9 +16,8 @@
 //! # Relayer Context Module 🕸️
 //!
 //! A module for managing the context of the relayer.
-use std::collections::HashMap;
-use std::sync::Arc;
 use std::time::Duration;
+use std::{collections::HashMap, sync::Arc};
 
 use tokio::sync::{broadcast, Mutex};
 
@@ -46,6 +45,8 @@ use webb_relayer_utils::metric::{self, Metrics};
 mod ethers_retry_policy;
 use ethers_retry_policy::WebbHttpRetryPolicy;
 
+type EthersClient = Provider<RetryClient<Http>>;
+
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
 pub struct RelayerContext {
@@ -66,7 +67,10 @@ pub struct RelayerContext {
     /// Price backend for fetching prices.
     price_oracle: Arc<PriceOracleMerger>,
     /// Hashmap of <ChainID, Etherscan Client>
-    etherscan_clients: HashMap<u32, ethers::etherscan::Client>,
+    etherscan_clients: Arc<HashMap<types::U256, ethers::etherscan::Client>>,
+
+    /// Evm Providers Cache.
+    evm_providers: Arc<HashMap<types::U256, Arc<EthersClient>>>,
 }
 
 impl RelayerContext {
@@ -99,7 +103,7 @@ impl RelayerContext {
             .merge(Box::new(dummy_backend))
             .build();
         let price_oracle = Arc::new(price_oracle);
-        let mut etherscan_clients: HashMap<u32, Client> = HashMap::new();
+        let mut etherscan_clients = HashMap::new();
         for (chain, etherscan_config) in &config.evm_etherscan {
             let client_builder = ethers::etherscan::Client::builder()
                 .chain(*chain)?
@@ -110,15 +114,31 @@ impl RelayerContext {
             } else {
                 client_builder.build()?
             };
-            etherscan_clients.insert(etherscan_config.chain_id, client);
+            etherscan_clients.insert(etherscan_config.chain_id.into(), client);
         }
+
+        // Create a Map for all EVM Chains
+        let mut evm_providers = HashMap::new();
+        for (_, chain_config) in config.evm.iter() {
+            let client = Http::new(chain_config.http_endpoint.clone());
+            // Wrap the provider with a retry client.
+            let retry_client = RetryClientBuilder::default()
+                .timeout_retries(u32::MAX)
+                .rate_limit_retries(u32::MAX)
+                .build(client, WebbHttpRetryPolicy::boxed());
+            let proivder = Arc::new(Provider::new(retry_client));
+            evm_providers
+                .insert(chain_config.chain_id.into(), proivder.clone());
+        }
+
         Ok(Self {
             config,
             notify_shutdown,
             metrics,
             store,
             price_oracle,
-            etherscan_clients,
+            etherscan_clients: Arc::new(etherscan_clients),
+            evm_providers: Arc::new(evm_providers),
         })
     }
     /// Returns a broadcast receiver handle for the shutdown signal.
@@ -135,23 +155,19 @@ impl RelayerContext {
     ///
     /// * `chain_id` - A string representing the chain id.
     #[cfg(feature = "evm")]
-    pub async fn evm_provider(
+    pub async fn evm_provider<I: Into<types::U256>>(
         &self,
-        chain_id: &str,
-    ) -> webb_relayer_utils::Result<Provider<RetryClient<Http>>> {
-        let chain_config = self.config.evm.get(chain_id).ok_or_else(|| {
-            webb_relayer_utils::Error::ChainNotFound {
-                chain_id: chain_id.to_string(),
-            }
-        })?;
-        let client = Http::new(chain_config.http_endpoint.clone());
-        // Wrap the provider with a retry client.
-        let retry_client = RetryClientBuilder::default()
-            .timeout_retries(u32::MAX)
-            .rate_limit_retries(u32::MAX)
-            .build(client, WebbHttpRetryPolicy::boxed());
-        let proivder = Provider::new(retry_client);
-        Ok(proivder)
+        chain_id: I,
+    ) -> webb_relayer_utils::Result<Arc<EthersClient>> {
+        let chain_id: types::U256 = chain_id.into();
+        if let Some(provider) = self.evm_providers.get(&chain_id) {
+            Ok(provider.clone())
+        } else {
+            let chain_id_string = chain_id.clone().to_string();
+            Err(webb_relayer_utils::Error::ChainNotFound {
+                chain_id: chain_id_string,
+            })
+        }
     }
     /// Sets up and returns an EVM wallet for the relayer.
     ///
@@ -159,12 +175,14 @@ impl RelayerContext {
     ///
     /// * `chain_id` - A string representing the chain id.
     #[cfg(feature = "evm")]
-    pub async fn evm_wallet(
+    pub async fn evm_wallet<I: Into<types::U256>>(
         &self,
-        chain_name: &str,
+        chain_id: I
     ) -> webb_relayer_utils::Result<LocalWallet> {
+        let chain_id: types::U256 = chain_id.into();
+        let chain_name = chain_id.to_string();
         let chain_config =
-            self.config.evm.get(chain_name).ok_or_else(|| {
+            self.config.evm.get(&chain_name).ok_or_else(|| {
                 webb_relayer_utils::Error::ChainNotFound {
                     chain_id: chain_name.to_string(),
                 }
@@ -235,11 +253,12 @@ impl RelayerContext {
     }
 
     /// Returns a gas oracle for the given chain.
-    pub async fn gas_oracle(
+    pub async fn gas_oracle<I: Into<types::U256>>(
         &self,
-        chain_id: u32,
+        chain_id: I,
     ) -> webb_relayer_utils::Result<GasOracleMedian> {
-        let chain_provider = self.evm_provider(&chain_id.to_string()).await?;
+        let chain_id: types::U256 = chain_id.into();
+        let chain_provider = self.evm_provider(chain_id).await?;
         let provider_gas_oracle = ProviderOracle::new(chain_provider);
         let mut gas_oracle = GasOracleMedian::new();
         // Give only 10% of the weight to the provider gas oracle
