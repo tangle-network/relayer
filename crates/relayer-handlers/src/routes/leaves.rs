@@ -116,7 +116,12 @@ pub async fn handle_leaves_cache_evm(
         ResourceId::new(src_target_system, src_typed_chain_id);
     let leaves = ctx
         .store()
-        .get_leaves_with_range(history_store_key, query_range.into())?;
+        .get_leaves_with_range(history_store_key, query_range.into())
+        .map(|tree| {
+            tree.into_values()
+                .map(|v| v.to_fixed_bytes().to_vec())
+                .collect::<Vec<_>>()
+        })?;
     let last_queried_block = ctx
         .store()
         .get_last_deposit_block_number(history_store_key)?;
@@ -165,7 +170,12 @@ pub async fn handle_leaves_cache_substrate(
 
     let leaves = ctx
         .store()
-        .get_leaves_with_range(history_store_key, query_range.into())?;
+        .get_leaves_with_range(history_store_key, query_range.into())
+        .map(|tree| {
+            tree.into_values()
+                .map(|v| v.to_fixed_bytes().to_vec())
+                .collect::<Vec<_>>()
+        })?;
     let last_queried_block = ctx
         .store()
         .get_last_deposit_block_number(history_store_key)?;
