@@ -73,6 +73,10 @@ where
         wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool> {
         use VAnchorContractEvents::*;
+        let has_event = matches!(events, NewCommitmentFilter(event_data) if event_data.leaf_index.as_u32() % 2 != 0);
+        if !has_event {
+            return Ok(false);
+        }
         // only handle events if we fully synced.
         let latest_block = wrapper.contract.client().get_block_number().await?;
         let event_block = meta.block_number;
@@ -81,8 +85,7 @@ where
         let fully_synced = event_block >= latest_block
             || event_block.saturating_add(allowed_margin.into())
                 >= latest_block;
-        let has_event = matches!(events, NewCommitmentFilter(_));
-        Ok(has_event && fully_synced)
+        Ok(fully_synced)
     }
 
     #[tracing::instrument(skip_all)]
@@ -97,7 +100,6 @@ where
         let metrics_clone = metrics.clone();
         let event_data = match event {
             NewCommitmentFilter(data) => {
-                let chain_id = wrapper.contract.client().get_chainid().await?;
                 let commitment: [u8; 32] = data.commitment.into();
                 let info = (data.leaf_index.as_u32(), H256::from(commitment));
                 tracing::event!(
@@ -106,7 +108,7 @@ where
                     kind = %webb_relayer_utils::probe::Kind::MerkleTreeInsertion,
                     leaf_index = %info.0,
                     leaf = %info.1,
-                    chain_id = %chain_id,
+                    chain_id = %self.chain_id,
                     block_number = %log.block_number
                 );
                 data
@@ -132,12 +134,11 @@ where
             return Ok(());
         }
 
-        let client = wrapper.contract.client();
-        let chain_id = client.get_chainid().await?;
         let root: [u8; 32] =
             wrapper.contract.get_last_root().call().await?.into();
         let leaf_index = event_data.leaf_index.as_u32();
-        let src_chain_id = webb_proposals::TypedChainId::Evm(chain_id.as_u32());
+        let src_chain_id =
+            webb_proposals::TypedChainId::Evm(self.chain_id.as_u32());
         let src_target_system =
             webb_proposals::TargetSystem::new_contract_address(
                 wrapper.contract.address().to_fixed_bytes(),
