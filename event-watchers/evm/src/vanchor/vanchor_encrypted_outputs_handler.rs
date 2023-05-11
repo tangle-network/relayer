@@ -34,7 +34,9 @@ pub struct VAnchorEncryptedOutputHandler {
 }
 
 impl VAnchorEncryptedOutputHandler {
-    pub fn new(chain_id: types::U256) -> Self { Self { chain_id } }
+    pub fn new(chain_id: types::U256) -> Self {
+        Self { chain_id }
+    }
 }
 
 #[async_trait::async_trait]
