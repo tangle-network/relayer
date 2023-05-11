@@ -99,6 +99,45 @@ impl HistoryStore for SledStore {
             None => Ok(default_block_number),
         }
     }
+
+    #[tracing::instrument(skip(self))]
+    fn set_target_block_number<K: Into<HistoryStoreKey> + Debug>(
+            &self,
+            key: K,
+            block_number: u64,
+        ) -> crate::Result<u64> {
+        let tree = self.db.open_tree("target_block_numbers")?;
+        let bytes = block_number.to_le_bytes();
+        let key: HistoryStoreKey = key.into();
+        let old = tree.insert(key.to_bytes(), &bytes)?;
+        match old {
+            Some(v) => {
+                let mut output = [0u8; 8];
+                output.copy_from_slice(&v);
+                Ok(u64::from_be_bytes(output))
+            }
+            None => Ok(block_number),
+        }
+    }
+
+    #[tracing::instrument(skip(self))]
+    fn get_target_block_number<K: Into<HistoryStoreKey> + Debug>(
+            &self,
+            key: K,
+            default_block_number: u64,
+        ) -> crate::Result<u64> {
+        let tree = self.db.open_tree("target_block_numbers")?;
+        let key: HistoryStoreKey = key.into();
+        let val = tree.get(key.to_bytes())?;
+        match val {
+            Some(v) => {
+                let mut output = [0u8; 8];
+                output.copy_from_slice(&v);
+                Ok(u64::from_le_bytes(output))
+            }
+            None => Ok(default_block_number),
+        }
+    }
 }
 
 impl LeafCacheStore for SledStore {

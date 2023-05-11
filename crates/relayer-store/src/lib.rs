@@ -218,6 +218,29 @@ pub trait HistoryStore: Clone + Send + Sync {
     ) -> crate::Result<u64> {
         self.get_last_block_number(key, 1u64)
     }
+
+    /// Sets the Target Block number (Usually the latest block number of the target chain)
+    /// This used to be able to check if we are fully synced with the target chain or not.
+    fn set_target_block_number<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        block_number: u64,
+    ) -> crate::Result<u64>;
+    /// Get the target block number.
+    /// if not found, returns the `default_block_number`.
+    fn get_target_block_number<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        default_block_number: u64,
+    ) -> crate::Result<u64>;
+
+    /// an easy way to call the `get_target_block_number`.
+    fn get_target_block_number_or_default<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+    ) -> crate::Result<u64> {
+        self.get_target_block_number(key, 1u64)
+    }
 }
 
 /// A Simple Event Store, that does not store the events, instead it store the hash of the event as the key

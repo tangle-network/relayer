@@ -35,6 +35,7 @@ pub struct InMemoryStore {
     store_for_vec: Arc<RwLock<MemStoreForVec>>,
     store_for_map: Arc<RwLock<MemStoreForMap>>,
     last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
+    target_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
     token_prices_cache: Arc<RwLock<HashMap<String, Vec<u8>>>>,
 }
 
@@ -77,6 +78,33 @@ impl HistoryStore for InMemoryStore {
         key: K,
     ) -> crate::Result<u64> {
         self.get_last_block_number(key, 1u64)
+    }
+
+    #[tracing::instrument(skip(self))]
+    fn set_target_block_number<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        block_number: u64,
+    ) -> crate::Result<u64> {
+        let mut guard = self.target_block_numbers.write();
+        let val = guard.entry(key.into()).or_insert(block_number);
+        let old = *val;
+        *val = block_number;
+        Ok(old)
+    }
+
+    #[tracing::instrument(skip(self))]
+    fn get_target_block_number<K: Into<HistoryStoreKey> + Debug>(
+        &self,
+        key: K,
+        default_block_number: u64,
+    ) -> crate::Result<u64> {
+        let guard = self.target_block_numbers.read();
+        let val = guard
+            .get(&key.into())
+            .cloned()
+            .unwrap_or(default_block_number);
+        Ok(val)
     }
 }
 
