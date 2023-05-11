@@ -102,10 +102,10 @@ impl HistoryStore for SledStore {
 
     #[tracing::instrument(skip(self))]
     fn set_target_block_number<K: Into<HistoryStoreKey> + Debug>(
-            &self,
-            key: K,
-            block_number: u64,
-        ) -> crate::Result<u64> {
+        &self,
+        key: K,
+        block_number: u64,
+    ) -> crate::Result<u64> {
         let tree = self.db.open_tree("target_block_numbers")?;
         let bytes = block_number.to_le_bytes();
         let key: HistoryStoreKey = key.into();
@@ -122,10 +122,10 @@ impl HistoryStore for SledStore {
 
     #[tracing::instrument(skip(self))]
     fn get_target_block_number<K: Into<HistoryStoreKey> + Debug>(
-            &self,
-            key: K,
-            default_block_number: u64,
-        ) -> crate::Result<u64> {
+        &self,
+        key: K,
+        default_block_number: u64,
+    ) -> crate::Result<u64> {
         let tree = self.db.open_tree("target_block_numbers")?;
         let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
