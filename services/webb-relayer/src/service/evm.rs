@@ -75,8 +75,7 @@ pub async fn ignite(
         }
         let chain_name = &chain_config.name;
         let chain_id = chain_config.chain_id;
-        let provider = ctx.evm_provider(&chain_id.to_string()).await?;
-        let client = Arc::new(provider);
+        let client = ctx.evm_provider(chain_id).await?;
         tracing::debug!(
             "Starting Background Services for ({}) chain.",
             chain_name
@@ -118,7 +117,7 @@ pub async fn ignite(
         // start the transaction queue after starting other tasks.
         start_tx_queue(
             ctx.clone(),
-            chain_config.chain_id.to_string().clone(),
+            chain_config.chain_id,
             store.clone(),
         )?;
     }
@@ -510,7 +509,7 @@ pub async fn start_signature_bridge_events_watcher(
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_tx_queue(
     ctx: RelayerContext,
-    chain_id: String,
+    chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
     // Start tx_queue only when governance relaying feature is enabled for relayer.
@@ -520,7 +519,7 @@ pub fn start_tx_queue(
     }
 
     let mut shutdown_signal = ctx.shutdown_signal();
-    let tx_queue = TxQueue::new(ctx, chain_id.clone(), store);
+    let tx_queue = TxQueue::new(ctx, chain_id.into(), store);
 
     tracing::debug!("Transaction Queue for ({}) Started.", chain_id);
     let task = async move {

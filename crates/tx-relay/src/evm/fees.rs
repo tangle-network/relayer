@@ -221,8 +221,7 @@ async fn get_wrapped_token_name_and_decimals(
     vanchor: Address,
     ctx: &RelayerContext,
 ) -> Result<(String, u32)> {
-    let chain_name = chain_id.underlying_chain_id().to_string();
-    let provider = ctx.evm_provider(&chain_name).await?;
+    let provider = ctx.evm_provider(chain_id.underlying_chain_id()).await?;
     let client = Arc::new(provider);
 
     let anchor_contract = VAnchorContract::new(vanchor, client.clone());
