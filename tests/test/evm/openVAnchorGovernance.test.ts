@@ -155,8 +155,8 @@ describe('Open VAnchor Governance Relayer', function () {
         port: relayerPort,
       },
       configDir: tmpDirPath,
-      showLogs: false,
-      verbosity: 4,
+      showLogs: true,
+      verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -166,10 +166,9 @@ describe('Open VAnchor Governance Relayer', function () {
     const openVAnchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     const openVAnchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
     await openVAnchor2.setSigner(wallet2);
-    const wrappedTokenAddress = await signatureVBridge.getWebbTokenAddress(
+    const wrappedTokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    console.log(wrappedTokenAddress, await openVAnchor1.contract.token());
     const token = await MintableToken.tokenFromAddress(
       localToken1.contract.address,
       wallet1
@@ -222,19 +221,45 @@ describe('Open VAnchor Governance Relayer', function () {
         finalized: true,
       },
     });
+
+    webbRelayer.clearLogs();
+
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain2.underlyingChainId.toString(),
+        finalized: true,
+      },
+    });
+
     // all is good, last thing is to check for the roots.
-    const srcChainRoot = await openVAnchor1.contract.getLastRoot();
-    const neigborRoots = await openVAnchor2.contract.getLatestNeighborRoots();
+    const currentRootIndex = await openVAnchor1.contract.currentRootIndex();
+    const [srcChainRoot, _] = await openVAnchor1.contract.roots(
+      currentRootIndex
+    );
     const edges = await openVAnchor2.contract.getLatestNeighborEdges();
+    const neigborRoots = await openVAnchor2.contract.getLatestNeighborRoots();
     const isKnownNeighborRoot = neigborRoots.some(
       (root: BigNumber) => root.toHexString() === srcChainRoot.toHexString()
     );
+    const isKnownNeighborEdge = edges.some(
+      ([_chainId, root, _latestLeafIndex, _srcResoruceId]) =>
+        root.toHexString() === srcChainRoot.toHexString()
+    );
     if (!isKnownNeighborRoot) {
       console.log({
-        srcChainRoot,
-        neigborRoots,
-        edges,
+        isKnownNeighborEdge,
         isKnownNeighborRoot,
+        currentRootIndex,
+        srcChainRoot: srcChainRoot.toHexString(),
+        neigborRoots: neigborRoots.map((root: BigNumber) => root.toHexString()),
+        edges: edges.map(([chainId, root, latestLeafIndex, srcResoruceId]) => ({
+          chainId: chainId.toNumber(),
+          root: root.toHexString(),
+          latestLeafIndex: latestLeafIndex.toNumber(),
+          srcResoruceId: srcResoruceId,
+        })),
       });
     }
     expect(isKnownNeighborRoot).to.be.true;
