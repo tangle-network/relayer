@@ -16,9 +16,10 @@ use crate::{BridgeKey, QueueKey};
 use core::fmt;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::path::Path;
-use webb::evm::ethers;
+use webb::evm::ethers::{self, types};
 
 use super::HistoryStoreKey;
 use super::{
@@ -101,7 +102,7 @@ impl HistoryStore for SledStore {
 }
 
 impl LeafCacheStore for SledStore {
-    type Output = Vec<Vec<u8>>;
+    type Output = BTreeMap<u32, types::H256>;
 
     #[tracing::instrument(skip(self))]
     fn clear_leaves_cache<K: Into<HistoryStoreKey> + Debug>(
@@ -128,9 +129,20 @@ impl LeafCacheStore for SledStore {
             key.chain_id(),
             key.address()
         ))?;
-        let leaves =
-            tree.iter().values().flatten().map(|v| v.to_vec()).collect();
-        Ok(leaves)
+        let leaves_map: BTreeMap<_, _> = tree
+            .iter()
+            .flatten()
+            .map(|(k, v)| {
+                let leaf_index_bytes = k.get(0..4).expect("leaf index bytes");
+                let leaf_index_bytes = leaf_index_bytes
+                    .try_into()
+                    .expect("leaf index bytes is u32 bytes");
+                let leaf_index = u32::from_le_bytes(leaf_index_bytes);
+                let leaf = types::H256::from_slice(&v);
+                (leaf_index, leaf)
+            })
+            .collect();
+        Ok(leaves_map)
     }
 
     #[tracing::instrument(skip(self))]
@@ -149,9 +161,16 @@ impl LeafCacheStore for SledStore {
         let range_end = range.end.to_le_bytes();
         let leaves = tree
             .range(range_start..range_end)
-            .values()
             .flatten()
-            .map(|v| v.to_vec())
+            .map(|(k, v)| {
+                let leaf_index_bytes = k.get(0..4).expect("leaf index bytes");
+                let leaf_index_bytes = leaf_index_bytes
+                    .try_into()
+                    .expect("leaf index bytes is u32 bytes");
+                let leaf_index = u32::from_le_bytes(leaf_index_bytes);
+                let leaf = types::H256::from_slice(&v);
+                (leaf_index, leaf)
+            })
             .collect();
         Ok(leaves)
     }
@@ -167,9 +186,12 @@ impl LeafCacheStore for SledStore {
             key.chain_id(),
             key.address()
         ))?;
-        for (k, v) in leaves {
-            tree.insert(k.to_le_bytes(), v.as_slice())?;
-        }
+        tree.transaction(|db| {
+            for (k, v) in leaves {
+                db.insert(&k.to_le_bytes(), v.as_slice())?;
+            }
+            Ok(())
+        })?;
         Ok(())
     }
 
@@ -200,7 +222,10 @@ impl LeafCacheStore for SledStore {
         let tree = self.db.open_tree("last_deposit_block_number")?;
         let bytes = block_number.to_le_bytes();
         let key: HistoryStoreKey = key.into();
-        let old = tree.insert(key.to_bytes(), &bytes)?;
+        let old = tree.transaction(|db| {
+            let old = db.insert(key.to_bytes(), &bytes)?;
+            Ok(old)
+        })?;
         match old {
             Some(v) => {
                 let mut output = [0u8; 8];
@@ -703,7 +728,10 @@ mod tests {
             .unwrap();
         assert_eq!(leaves.len(), 5);
         assert_eq!(
-            leaves,
+            leaves
+                .values()
+                .map(|v| v.to_fixed_bytes().to_vec())
+                .collect::<Vec<_>>(),
             generated_leaves
                 .into_iter()
                 .skip(5)
