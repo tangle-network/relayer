@@ -99,12 +99,18 @@ pub trait EventWatcher {
             let mut instant = std::time::Instant::now();
             // we only query this once, at the start of the events watcher.
             // then we will update it later once we fully synced.
-            let mut latest_block_number = client
+            let mut target_block_number = client
                 .get_block_number()
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
                 .await?
                 .as_u64();
+            // Save the target block number in the store
+            // so other things can use it.
+            store.set_target_block_number(
+                history_store_key,
+                target_block_number,
+            )?;
 
             loop {
                 let block = store.get_last_block_number(
@@ -112,7 +118,7 @@ pub trait EventWatcher {
                     contract.deployed_at().as_u64(),
                 )?;
                 let dest_block =
-                    core::cmp::min(block + step, latest_block_number);
+                    core::cmp::min(block + step, target_block_number);
 
                 let events_filter = contract
                     .event_with_filter::<Self::Events>(Default::default())
@@ -179,7 +185,8 @@ pub trait EventWatcher {
 
                 // move the block pointer to the destination block
                 store.set_last_block_number(history_store_key, dest_block)?;
-                let should_cooldown = dest_block == latest_block_number;
+                // if we fully synced, we can update the target block number
+                let should_cooldown = dest_block == target_block_number;
                 if should_cooldown {
                     let duration = contract.polling_interval();
                     tracing::trace!(
@@ -188,12 +195,16 @@ pub trait EventWatcher {
                     );
                     tokio::time::sleep(duration).await;
                     // update the latest block number
-                    latest_block_number = client
+                    target_block_number = client
                         .get_block_number()
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?
                         .as_u64();
+                    store.set_target_block_number(
+                        history_store_key,
+                        target_block_number,
+                    )?;
                 }
 
                 if contract.print_progress_interval()
@@ -206,11 +217,11 @@ pub trait EventWatcher {
                     )?;
                     let diff = currently_at.saturating_sub(block);
                     let progress = currently_at as f64
-                        / latest_block_number as f64
+                        / target_block_number as f64
                         * 100.0;
-                    let is_syncing = progress > 99.9;
+                    let is_syncing = progress < 99.99;
                     tracing::info!(
-                        target_block = latest_block_number,
+                        target_block = target_block_number,
                         currently_at,
                         diff,
                         is_syncing,

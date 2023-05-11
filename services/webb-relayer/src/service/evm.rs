@@ -186,9 +186,10 @@ async fn start_vanchor_events_watcher(
                 let bridge_registry =
                     DkgBridgeRegistryBackend::new(backend.client.clone());
                 let deposit_handler = VAnchorDepositHandler::new(
+                    chain_id.into(),
+                    store.clone(),
                     backend,
                     bridge_registry,
-                    chain_id.into(),
                 );
                 let leaves_handler = VAnchorLeavesHandler::new(
                     chain_id.into(),
@@ -228,9 +229,10 @@ async fn start_vanchor_events_watcher(
                 let bridge_registry =
                     MockedBridgeRegistryBackend::builder().build();
                 let deposit_handler = VAnchorDepositHandler::new(
+                    chain_id.into(),
+                    store.clone(),
                     backend,
                     bridge_registry,
-                    chain_id.into(),
                 );
                 let leaves_handler = VAnchorLeavesHandler::new(
                     chain_id.into(),
