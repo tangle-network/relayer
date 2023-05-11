@@ -52,12 +52,9 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .get(&cmd.id)
         .ok_or(Network(NetworkStatus::UnsupportedContract))?;
 
-    let wallet =
-        ctx.evm_wallet(&cmd.chain_id.to_string())
-            .await
-            .map_err(|e| {
-                Error(format!("Misconfigured Network: {:?}, {e}", cmd.chain_id))
-            })?;
+    let wallet = ctx.evm_wallet(cmd.chain_id).await.map_err(|e| {
+        Error(format!("Misconfigured Network: {:?}, {e}", cmd.chain_id))
+    })?;
     // validate the relayer address first before trying
     // send the transaction.
     let reward_address = chain.beneficiary.unwrap_or(wallet.address());
@@ -78,14 +75,11 @@ pub async fn handle_vanchor_relay_tx<'a>(
         chain.http_endpoint
     );
     let _ = stream.send(Network(NetworkStatus::Connecting)).await;
-    let provider =
-        ctx.evm_provider(&cmd.chain_id.to_string())
-            .await
-            .map_err(|e| {
-                Network(NetworkStatus::Failed {
-                    reason: e.to_string(),
-                })
-            })?;
+    let provider = ctx.evm_provider(cmd.chain_id).await.map_err(|e| {
+        Network(NetworkStatus::Failed {
+            reason: e.to_string(),
+        })
+    })?;
     let _ = stream.send(Network(NetworkStatus::Connected)).await;
 
     let client = Arc::new(SignerMiddleware::new(provider, wallet));

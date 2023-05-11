@@ -14,7 +14,7 @@ pub const fn enable_data_query() -> bool {
 }
 /// The maximum events per step is set to `100` by default.
 pub const fn max_blocks_per_step() -> u64 {
-    100
+    500
 }
 /// The print progress interval is set to `7_000` by default.
 pub const fn print_progress_interval() -> u64 {

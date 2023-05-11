@@ -55,8 +55,11 @@
             cd $ROOT/tests && pipx run dvc pull
             cd $ROOT
           '';
+
+          # Environment variables
+          RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
+          # Needed for running DKG/Tangle locally
+          LD_LIBRARY_PATH = "${pkgs.gmp}/lib";
         };
-        # Environment variables
-        RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
       });
 }
