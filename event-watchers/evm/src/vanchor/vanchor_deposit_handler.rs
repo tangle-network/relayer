@@ -17,7 +17,7 @@ use ethereum_types::H256;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
-use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb::evm::ethers::prelude::LogMeta;
 use webb::evm::ethers::types;
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::evm::EventHandler;
@@ -26,15 +26,16 @@ use webb_proposal_signing_backends::{
     proposal_handler, ProposalSigningBackend,
 };
 use webb_relayer_config::anchor::LinkedAnchorConfig;
-use webb_relayer_store::EventHashStore;
 use webb_relayer_store::SledStore;
+use webb_relayer_store::{EventHashStore, HistoryStore};
 use webb_relayer_utils::metric;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B, C> {
+    chain_id: types::U256,
+    store: Arc<SledStore>,
     proposal_signing_backend: B,
     bridge_registry_backend: C,
-    chain_id: types::U256,
 }
 
 impl<B, C> VAnchorDepositHandler<B, C>
@@ -43,14 +44,16 @@ where
     C: BridgeRegistryBackend,
 {
     pub fn new(
+        chain_id: types::U256,
+        store: Arc<SledStore>,
         proposal_signing_backend: B,
         bridge_registry_backend: C,
-        chain_id: types::U256,
     ) -> Self {
         Self {
+            chain_id,
+            store,
             proposal_signing_backend,
             bridge_registry_backend,
-            chain_id,
         }
     }
 }
@@ -78,13 +81,23 @@ where
             return Ok(false);
         }
         // only handle events if we fully synced.
-        let latest_block = wrapper.contract.client().get_block_number().await?;
-        let event_block = meta.block_number;
+        let src_chain_id =
+            webb_proposals::TypedChainId::Evm(self.chain_id.as_u32());
+        let src_target_system =
+            webb_proposals::TargetSystem::new_contract_address(
+                wrapper.contract.address().to_fixed_bytes(),
+            );
+        let history_key =
+            webb_proposals::ResourceId::new(src_target_system, src_chain_id);
+        let target_block_number = self
+            .store
+            .get_target_block_number(history_key, meta.block_number.as_u64())?;
+        let event_block = meta.block_number.as_u64();
         let allowed_margin = 10u64;
         // Check if the event is in the latest block or within the allowed margin.
-        let fully_synced = event_block >= latest_block
-            || event_block.saturating_add(allowed_margin.into())
-                >= latest_block;
+        let fully_synced = event_block >= target_block_number
+            || event_block.saturating_add(allowed_margin)
+                >= target_block_number;
         Ok(fully_synced)
     }
 
