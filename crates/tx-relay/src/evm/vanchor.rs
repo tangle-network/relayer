@@ -52,7 +52,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .ok_or(Network(NetworkStatus::UnsupportedContract))?;
 
     let wallet =
-        ctx.evm_wallet(&cmd.chain_id.to_string())
+        ctx.evm_wallet(cmd.chain_id)
             .await
             .map_err(|e| {
                 Error(format!("Misconfigured Network: {:?}, {e}", cmd.chain_id))
@@ -78,7 +78,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     );
     let _ = stream.send(Network(NetworkStatus::Connecting)).await;
     let provider =
-        ctx.evm_provider(&cmd.chain_id.to_string())
+        ctx.evm_provider(cmd.chain_id)
             .await
             .map_err(|e| {
                 Network(NetworkStatus::Failed {

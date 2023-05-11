@@ -65,12 +65,12 @@ where
     #[tracing::instrument(skip_all, fields(chain = %self.chain_id))]
     pub async fn run(self) -> webb_relayer_utils::Result<()> {
         let provider = self.ctx.evm_provider(&self.chain_id).await?;
-        let wallet = self.ctx.evm_wallet(&self.chain_id).await?;
+        let wallet = self.ctx.evm_wallet(self.chain_id).await?;
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
         let chain_config =
-            self.ctx.config.evm.get(&self.chain_id).ok_or_else(|| {
+            self.ctx.config.evm.get(&self.chain_id.as_u64().to_string()).ok_or_else(|| {
                 webb_relayer_utils::Error::ChainNotFound {
-                    chain_id: self.chain_id.clone(),
+                    chain_id: self.chain_id.to_string(),
                 }
             })?;
         let chain_id = client
