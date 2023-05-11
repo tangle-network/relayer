@@ -75,8 +75,7 @@ pub async fn ignite(
         }
         let chain_name = &chain_config.name;
         let chain_id = chain_config.chain_id;
-        let provider = ctx.evm_provider(&chain_id.to_string()).await?;
-        let client = Arc::new(provider);
+        let client = ctx.evm_provider(chain_id).await?;
         tracing::debug!(
             "Starting Background Services for ({}) chain.",
             chain_name
@@ -116,11 +115,7 @@ pub async fn ignite(
             }
         }
         // start the transaction queue after starting other tasks.
-        start_tx_queue(
-            ctx.clone(),
-            chain_config.chain_id.to_string().clone(),
-            store.clone(),
-        )?;
+        start_tx_queue(ctx.clone(), chain_config.chain_id, store.clone())?;
     }
     Ok(())
 }
@@ -158,10 +153,6 @@ async fn start_vanchor_events_watcher(
     let contract_address = config.common.address;
     let my_ctx = ctx.clone();
     let my_config = config.clone();
-    let default_leaf = wrapper.contract.get_zero_hash(0).call().await?;
-
-    let mut default_leaf_bytes = [0u8; 32];
-    default_leaf.to_big_endian(&mut default_leaf_bytes);
     let task = async move {
         tracing::debug!(
             "VAnchor events watcher for ({}) Started.",
@@ -176,18 +167,38 @@ async fn start_vanchor_events_watcher(
             my_config.proposal_signing_backend,
         )
         .await?;
+        tracing::debug!(
+            %chain_id,
+            %contract_address,
+            "Fetching the Zero Hash from the contract",
+        );
+        let zero_hash = wrapper.contract.get_zero_hash(0).call().await?;
+        tracing::debug!(
+            %chain_id,
+            %contract_address,
+            %zero_hash,
+            "Found the Zero Hash",
+        );
+        let mut zero_hash_bytes = [0u8; 32];
+        zero_hash.to_big_endian(&mut zero_hash_bytes);
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
                 let bridge_registry =
                     DkgBridgeRegistryBackend::new(backend.client.clone());
-                let deposit_handler =
-                    VAnchorDepositHandler::new(backend, bridge_registry);
-                let leaves_handler = VAnchorLeavesHandler::new(
+                let deposit_handler = VAnchorDepositHandler::new(
+                    chain_id.into(),
                     store.clone(),
-                    default_leaf_bytes.to_vec(),
+                    backend,
+                    bridge_registry,
+                );
+                let leaves_handler = VAnchorLeavesHandler::new(
+                    chain_id.into(),
+                    contract_address,
+                    store.clone(),
+                    zero_hash_bytes.to_vec(),
                 )?;
                 let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
+                    VAnchorEncryptedOutputHandler::new(chain_id.into());
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
@@ -217,14 +228,20 @@ async fn start_vanchor_events_watcher(
             ProposalSigningBackendSelector::Mocked(backend) => {
                 let bridge_registry =
                     MockedBridgeRegistryBackend::builder().build();
-                let deposit_handler =
-                    VAnchorDepositHandler::new(backend, bridge_registry);
-                let leaves_handler = VAnchorLeavesHandler::new(
+                let deposit_handler = VAnchorDepositHandler::new(
+                    chain_id.into(),
                     store.clone(),
-                    default_leaf_bytes.to_vec(),
+                    backend,
+                    bridge_registry,
+                );
+                let leaves_handler = VAnchorLeavesHandler::new(
+                    chain_id.into(),
+                    contract_address,
+                    store.clone(),
+                    zero_hash_bytes.to_vec(),
                 )?;
                 let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
+                    VAnchorEncryptedOutputHandler::new(chain_id.into());
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
@@ -253,11 +270,13 @@ async fn start_vanchor_events_watcher(
             }
             ProposalSigningBackendSelector::None => {
                 let leaves_handler = VAnchorLeavesHandler::new(
+                    chain_id.into(),
+                    contract_address,
                     store.clone(),
-                    default_leaf_bytes.to_vec(),
+                    zero_hash_bytes.to_vec(),
                 )?;
                 let encrypted_output_handler =
-                    VAnchorEncryptedOutputHandler::default();
+                    VAnchorEncryptedOutputHandler::new(chain_id.into());
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
                     store,
@@ -510,7 +529,7 @@ pub async fn start_signature_bridge_events_watcher(
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_tx_queue(
     ctx: RelayerContext,
-    chain_id: String,
+    chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
     // Start tx_queue only when governance relaying feature is enabled for relayer.
@@ -520,7 +539,7 @@ pub fn start_tx_queue(
     }
 
     let mut shutdown_signal = ctx.shutdown_signal();
-    let tx_queue = TxQueue::new(ctx, chain_id.clone(), store);
+    let tx_queue = TxQueue::new(ctx, chain_id.into(), store);
 
     tracing::debug!("Transaction Queue for ({}) Started.", chain_id);
     let task = async move {

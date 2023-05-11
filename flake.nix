@@ -33,6 +33,9 @@
             (lib.optionals pkgs.stdenv.isLinux pkgs.mold)
           ];
           buildInputs = [
+            # Used for DVC
+            pkgs.python311
+            pkgs.python311Packages.pipx
             # We want the unwrapped version, wrapped comes with nixpkgs' toolchain
             pkgs.rust-analyzer-unwrapped
             # Nodejs for test suite
@@ -43,8 +46,20 @@
             toolchain
           ];
           packages = [ ];
+
+          # Runs DVC pull in the fixtures
+          # we do not install dvc globally, since it
+          # is broken on nixos
+          shellHook = ''
+            ROOT=$(git rev-parse --show-toplevel)
+            cd $ROOT/tests && pipx run dvc pull
+            cd $ROOT
+          '';
+
+          # Environment variables
+          RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
+          # Needed for running DKG/Tangle locally
+          LD_LIBRARY_PATH = "${pkgs.gmp}/lib";
         };
-        # Environment variables
-        RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
       });
 }

@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::sync::Arc;
+
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use webb::{evm::ethers, substrate::subxt};
@@ -88,6 +90,7 @@ pub enum Error {
             >,
         >,
     ),
+
     /// Smart contract error.
     #[error(transparent)]
     EthersContractCallWithRetry(
@@ -95,6 +98,18 @@ pub enum Error {
         ethers::contract::ContractError<
             ethers::providers::Provider<
                 ethers::providers::RetryClient<ethers::providers::Http>,
+            >,
+        >,
+    ),
+    /// Smart contract error.
+    #[error(transparent)]
+    EthersContractCallWithRetryCloneable(
+        #[from]
+        ethers::contract::ContractError<
+            Arc<
+                ethers::providers::Provider<
+                    ethers::providers::RetryClient<ethers::providers::Http>,
+                >,
             >,
         >,
     ),

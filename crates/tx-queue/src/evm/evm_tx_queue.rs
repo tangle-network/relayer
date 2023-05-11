@@ -22,6 +22,7 @@ use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::middleware::SignerMiddleware;
 use webb::evm::ethers::providers::Middleware;
 
+use webb::evm::ethers::types;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::QueueStore;
@@ -34,7 +35,7 @@ use webb_relayer_utils::clickable_link::ClickableLink;
 #[derive(Clone)]
 pub struct TxQueue<S: QueueStore<TypedTransaction>> {
     ctx: RelayerContext,
-    chain_id: String,
+    chain_id: types::U256,
     store: Arc<S>,
 }
 
@@ -51,7 +52,11 @@ where
     /// * `ctx` - RelayContext reference that holds the configuration
     /// * `chain_id` - The chainId that this queue is for
     /// * `store` - [Sled](https://sled.rs)-based database store
-    pub fn new(ctx: RelayerContext, chain_id: String, store: Arc<S>) -> Self {
+    pub fn new(
+        ctx: RelayerContext,
+        chain_id: types::U256,
+        store: Arc<S>,
+    ) -> Self {
         Self {
             ctx,
             chain_id,
@@ -64,13 +69,15 @@ where
     #[tracing::instrument(skip_all, fields(chain = %self.chain_id))]
     pub async fn run(self) -> webb_relayer_utils::Result<()> {
         let provider = self.ctx.evm_provider(&self.chain_id).await?;
-        let wallet = self.ctx.evm_wallet(&self.chain_id).await?;
+        let wallet = self.ctx.evm_wallet(self.chain_id).await?;
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
-        let chain_config =
-            self.ctx.config.evm.get(&self.chain_id).ok_or_else(|| {
-                webb_relayer_utils::Error::ChainNotFound {
-                    chain_id: self.chain_id.clone(),
-                }
+        let chain_config = self
+            .ctx
+            .config
+            .evm
+            .get(&self.chain_id.as_u64().to_string())
+            .ok_or_else(|| webb_relayer_utils::Error::ChainNotFound {
+                chain_id: self.chain_id.to_string(),
             })?;
         let chain_id = client
             .get_chainid()

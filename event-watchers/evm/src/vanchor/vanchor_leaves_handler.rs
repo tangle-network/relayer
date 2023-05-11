@@ -24,12 +24,12 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::LogMeta;
-use webb::evm::ethers::providers::Middleware;
+use webb::evm::ethers::types;
 use webb_event_watcher_traits::evm::EventHandler;
 use webb_event_watcher_traits::EthersClient;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
+use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, LeafCacheStore};
-use webb_relayer_store::{HistoryStore, SledStore};
 use webb_relayer_utils::metric;
 
 use ark_bn254::Fr as Bn254Fr;
@@ -42,27 +42,59 @@ type MerkleTree = SparseMerkleTree<Bn254Fr, Poseidon<Bn254Fr>, 30>;
 
 pub struct VAnchorLeavesHandler {
     mt: Arc<Mutex<MerkleTree>>,
-    storage: Arc<SledStore>,
+    hasher: Poseidon<Bn254Fr>,
+    chain_id: types::U256,
 }
+
 impl VAnchorLeavesHandler {
+    /// Creates a new Leaves Handler for the given contract address.
+    /// on the given chain id.
+    ///
+    /// Using the storage, it will try to load any old leaves and
+    /// construct the merkle tree in memory.
     pub fn new(
+        chain_id: types::U256,
+        contract_address: types::Address,
         storage: Arc<SledStore>,
-        default_leaf: Vec<u8>,
+        empty_leaf: Vec<u8>,
     ) -> webb_relayer_utils::Result<Self> {
         let params = setup_params::<Bn254Fr>(Curve::Bn254, 5, 3);
         let poseidon = Poseidon::<Bn254Fr>::new(params);
-        let default_leaf_scalar: Vec<Bn254Fr> =
-            bytes_vec_to_f(&vec![default_leaf]);
-        let default_leaf_vec = default_leaf_scalar
+        let empty_leaf_scalar: Vec<Bn254Fr> = bytes_vec_to_f(&vec![empty_leaf]);
+        let empty_leaf_vec = empty_leaf_scalar
             .get(0)
             .map(|d| d.into_repr().to_bytes_be())
             .ok_or(webb_relayer_utils::Error::ConvertLeafScalarError)?;
-        let pairs: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
-        let mt = MerkleTree::new(&pairs, &poseidon, &default_leaf_vec)?;
+
+        let target_system = TargetSystem::new_contract_address(
+            contract_address.to_fixed_bytes(),
+        );
+        let typed_chain_id = TypedChainId::Evm(chain_id.as_u32());
+        let history_store_key = ResourceId::new(target_system, typed_chain_id);
+        // Load all the old leaves
+        let leaves = storage.get_leaves(history_store_key)?;
+        let mut batch: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
+        for (i, leaf) in leaves.into_iter() {
+            tracing::trace!(
+                leaf_index = i,
+                leaf = hex::encode(leaf.as_bytes()),
+                "Inserting leaf into merkle tree",
+            );
+
+            let leaf: Bn254Fr =
+                Bn254Fr::from_be_bytes_mod_order(leaf.as_bytes());
+            batch.insert(i as _, leaf);
+        }
+        let mt = MerkleTree::new(&batch, &poseidon, &empty_leaf_vec)?;
+        tracing::debug!(
+            root = hex::encode(mt.root().into_repr().to_bytes_be()),
+            "Loaded merkle tree from store",
+        );
 
         Ok(Self {
+            chain_id,
             mt: Arc::new(Mutex::new(mt)),
-            storage,
+            hasher: poseidon,
         })
     }
 }
@@ -77,7 +109,7 @@ impl EventHandler for VAnchorLeavesHandler {
 
     async fn can_handle_events(
         &self,
-        events: Self::Events,
+        (events, log): (Self::Events, LogMeta),
         wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool> {
         use VAnchorContractEvents::*;
@@ -90,59 +122,46 @@ impl EventHandler for VAnchorLeavesHandler {
             NewCommitmentFilter(event_data) => {
                 let leaf_index = event_data.leaf_index.as_u32();
                 let commitment: [u8; 32] = event_data.commitment.into();
-
                 let leaf: Bn254Fr =
                     Bn254Fr::from_be_bytes_mod_order(commitment.as_slice());
                 let mut batch: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
-                let params = setup_params::<Bn254Fr>(Curve::Bn254, 5, 3);
-                let poseidon = Poseidon::<Bn254Fr>::new(params);
                 batch.insert(leaf_index, leaf);
                 let mut mt = self.mt.lock().await;
-                mt.insert_batch(&batch, &poseidon)?;
-                let root_bytes = mt.root().into_repr().to_bytes_be();
-                let root: U256 = U256::from_big_endian(root_bytes.as_slice());
-                let is_known_root =
-                    wrapper.contract.is_known_root(root).call().await?;
-                tracing::trace!("Is known root: {:?}", is_known_root);
+                mt.insert_batch(&batch, &self.hasher)?;
+                // if leaf index is even number then we don't need to verify commitment
                 if event_data.leaf_index.as_u32() % 2 == 0 {
+                    tracing::debug!(
+                        leaf_index = leaf_index,
+                        commitment = hex::encode(commitment.as_slice()),
+                        "Verified commitment",
+                    );
                     return Ok(true);
                 }
+                let root_bytes = mt.root().into_repr().to_bytes_be();
+                let root = U256::from_big_endian(root_bytes.as_slice());
+                let is_known_root = wrapper
+                    .contract
+                    .is_known_root(root)
+                    .block(log.block_number)
+                    .call()
+                    .await?;
+
+                tracing::debug!(
+                    leaf_index = leaf_index,
+                    root = hex::encode(root_bytes.as_slice()),
+                    is_known_root,
+                    "New commitment need to be verified",
+                );
+
                 if !is_known_root {
-                    tracing::warn!("Invalid merkle root .. Restarting");
-                    // In case of invalid merkle root, relayer should clear its storage and restart syncing.
-                    // 1. We define history store key which will be used to access storage.
-                    let chain_id =
-                        wrapper.contract.client().get_chainid().await?;
-                    let target_system = TargetSystem::new_contract_address(
-                        wrapper.contract.address().to_fixed_bytes(),
-                    );
-                    let typed_chain_id = TypedChainId::Evm(chain_id.as_u32());
-                    let history_store_key =
-                        ResourceId::new(target_system, typed_chain_id);
-
-                    // 2. Clear merkle tree on relayer.
-                    tracing::warn!("Clear merkle tree...!");
-                    mt.tree.clear();
-                    // 3. Clear LeafStore cache on relayer.
-                    tracing::warn!("Clear local leaves cache...!");
-                    self.storage.clear_leaves_cache(history_store_key)?;
-                    // 4. Reset last block no processed by leaf handler.
-                    tracing::warn!("Clear last deposit block number...!");
-                    self.storage.insert_last_deposit_block_number(
-                        history_store_key,
-                        0,
-                    )?;
-
-                    // 5. Reset last saved block number by event watcher.
-                    //    Relayer will restart syncing from block number contract was deployed at.
                     tracing::warn!(
-                        "Reset block number to contract deployed at...!"
+                        expected_root = ?root,
+                        "Invalid merkle root. Maybe invalid leaf or commitment"
                     );
-                    self.storage.set_last_block_number(
-                        history_store_key,
-                        wrapper.config.common.deployed_at,
-                    )?;
-                    return Ok(true);
+                    // TODO: take a snapshot of current state and restart syncing events
+                    // FIXME: We should restart syncing events
+                    // Do not handle this event
+                    return Ok(false);
                 }
                 return Ok(true);
             }
@@ -164,11 +183,10 @@ impl EventHandler for VAnchorLeavesHandler {
                 let commitment: [u8; 32] = deposit.commitment.into();
                 let leaf_index = deposit.leaf_index.as_u32();
                 let value = (leaf_index, commitment.to_vec());
-                let chain_id = wrapper.contract.client().get_chainid().await?;
                 let target_system = TargetSystem::new_contract_address(
                     wrapper.contract.address().to_fixed_bytes(),
                 );
-                let typed_chain_id = TypedChainId::Evm(chain_id.as_u32());
+                let typed_chain_id = TypedChainId::Evm(self.chain_id.as_u32());
                 let history_store_key =
                     ResourceId::new(target_system, typed_chain_id);
                 store.insert_leaves(history_store_key, &[value.clone()])?;
@@ -188,7 +206,7 @@ impl EventHandler for VAnchorLeavesHandler {
                     kind = %webb_relayer_utils::probe::Kind::LeavesStore,
                     leaf_index = %value.0,
                     leaf = %hex::encode(value.1),
-                    chain_id = %chain_id,
+                    chain_id = %self.chain_id,
                     block_number = %log.block_number
                 );
             }

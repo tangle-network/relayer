@@ -16,7 +16,6 @@
 //! # EVM Events Watcher Traits 🕸️
 
 use futures::prelude::*;
-use std::cmp;
 use std::ops::Deref;
 use std::sync::Arc;
 use std::time::Duration;

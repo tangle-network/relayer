@@ -17,7 +17,8 @@ use ethereum_types::H256;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
-use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb::evm::ethers::prelude::LogMeta;
+use webb::evm::ethers::types;
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::evm::EventHandler;
 use webb_event_watcher_traits::EthersClient;
@@ -25,12 +26,14 @@ use webb_proposal_signing_backends::{
     proposal_handler, ProposalSigningBackend,
 };
 use webb_relayer_config::anchor::LinkedAnchorConfig;
-use webb_relayer_store::EventHashStore;
 use webb_relayer_store::SledStore;
+use webb_relayer_store::{EventHashStore, HistoryStore};
 use webb_relayer_utils::metric;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 pub struct VAnchorDepositHandler<B, C> {
+    chain_id: types::U256,
+    store: Arc<SledStore>,
     proposal_signing_backend: B,
     bridge_registry_backend: C,
 }
@@ -41,10 +44,14 @@ where
     C: BridgeRegistryBackend,
 {
     pub fn new(
+        chain_id: types::U256,
+        store: Arc<SledStore>,
         proposal_signing_backend: B,
         bridge_registry_backend: C,
     ) -> Self {
         Self {
+            chain_id,
+            store,
             proposal_signing_backend,
             bridge_registry_backend,
         }
@@ -65,12 +72,33 @@ where
 
     async fn can_handle_events(
         &self,
-        events: Self::Events,
-        _wrapper: &Self::Contract,
+        (events, meta): (Self::Events, LogMeta),
+        wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool> {
         use VAnchorContractEvents::*;
-        let has_event = matches!(events, NewCommitmentFilter(_));
-        Ok(has_event)
+        let has_event = matches!(events, NewCommitmentFilter(event_data) if event_data.leaf_index.as_u32() % 2 != 0);
+        if !has_event {
+            return Ok(false);
+        }
+        // only handle events if we fully synced.
+        let src_chain_id =
+            webb_proposals::TypedChainId::Evm(self.chain_id.as_u32());
+        let src_target_system =
+            webb_proposals::TargetSystem::new_contract_address(
+                wrapper.contract.address().to_fixed_bytes(),
+            );
+        let history_key =
+            webb_proposals::ResourceId::new(src_target_system, src_chain_id);
+        let target_block_number = self
+            .store
+            .get_target_block_number(history_key, meta.block_number.as_u64())?;
+        let event_block = meta.block_number.as_u64();
+        let allowed_margin = 10u64;
+        // Check if the event is in the latest block or within the allowed margin.
+        let fully_synced = event_block >= target_block_number
+            || event_block.saturating_add(allowed_margin)
+                >= target_block_number;
+        Ok(fully_synced)
     }
 
     #[tracing::instrument(skip_all)]
@@ -85,7 +113,6 @@ where
         let metrics_clone = metrics.clone();
         let event_data = match event {
             NewCommitmentFilter(data) => {
-                let chain_id = wrapper.contract.client().get_chainid().await?;
                 let commitment: [u8; 32] = data.commitment.into();
                 let info = (data.leaf_index.as_u32(), H256::from(commitment));
                 tracing::event!(
@@ -94,7 +121,7 @@ where
                     kind = %webb_relayer_utils::probe::Kind::MerkleTreeInsertion,
                     leaf_index = %info.0,
                     leaf = %info.1,
-                    chain_id = %chain_id,
+                    chain_id = %self.chain_id,
                     block_number = %log.block_number
                 );
                 data
@@ -120,12 +147,11 @@ where
             return Ok(());
         }
 
-        let client = wrapper.contract.client();
-        let chain_id = client.get_chainid().await?;
         let root: [u8; 32] =
             wrapper.contract.get_last_root().call().await?.into();
         let leaf_index = event_data.leaf_index.as_u32();
-        let src_chain_id = webb_proposals::TypedChainId::Evm(chain_id.as_u32());
+        let src_chain_id =
+            webb_proposals::TypedChainId::Evm(self.chain_id.as_u32());
         let src_target_system =
             webb_proposals::TargetSystem::new_contract_address(
                 wrapper.contract.address().to_fixed_bytes(),

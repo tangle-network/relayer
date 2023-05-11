@@ -43,7 +43,6 @@ where
     #[tracing::instrument(
         skip_all,
         fields(
-            chain_id = ?client.get_chainid().await,
             address = %contract.address(),
             tag = %Self::TAG,
         ),
@@ -57,13 +56,13 @@ where
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
         let task = || async {
-            let my_chain_id = client
+            let chain_id = client
                 .get_chainid()
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
                 .await?;
             let typed_chain_id =
-                webb_proposals::TypedChainId::Evm(my_chain_id.as_u32());
+                webb_proposals::TypedChainId::Evm(chain_id.as_u32());
             let bridge_key = BridgeKey::new(typed_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
@@ -83,13 +82,13 @@ where
                 };
                 match result {
                     Ok(_) => {
-                        tracing::debug!(?key, "Handled command successfully");
+                        tracing::debug!(?key, %chain_id, "Handled command successfully");
                         continue;
                     }
                     Err(e) => {
-                        tracing::error!("Error while handle_cmd {}", e);
+                        tracing::error!(%chain_id, "Error while handle_cmd {}", e);
                         // this a transient error, so we will retry again.
-                        tracing::warn!("Restarting bridge event watcher ...");
+                        tracing::warn!(%chain_id, "Restarting bridge event watcher ...");
                         // metric for when the bridge watcher enters back off
                         let metrics = metrics.lock().await;
                         metrics.bridge_watcher_back_off.inc();
