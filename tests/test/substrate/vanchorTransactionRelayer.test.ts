@@ -273,7 +273,7 @@ describe('Substrate VAnchor Transaction Relayer Tests', function () {
       '44' // pallet Id
     );
     expect(response.status).equal(200);
-    const leavesStore = await response.json() as LeavesCacheResponse;
+    const leavesStore = (await response.json()) as LeavesCacheResponse;
     expect(indexBeforeInsetion + 2).to.equal(leavesStore.leaves.length);
   });
 
