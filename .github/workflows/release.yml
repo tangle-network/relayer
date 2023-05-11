@@ -53,15 +53,11 @@ jobs:
         with:
           access_token: ${{ github.token }}
       - uses: actions/checkout@v2
-      - name: Cache Cargo
-        uses: actions/cache@v2
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
+          shared-key: "rust"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
       - uses: actions/download-artifact@v1
         with:
           name: cross-apple-darwin
@@ -107,15 +103,11 @@ jobs:
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
       - uses: actions/checkout@v2
-      - name: Cache Cargo
-        uses: actions/cache@v2
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-${{ matrix.target }}
+          shared-key: "rust"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
       - uses: actions/download-artifact@v1
         with:
           name: cross-linux-musl
