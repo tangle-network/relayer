@@ -242,7 +242,7 @@ pub trait EventHashStore: Send + Sync + Clone {
 /// getting the leaves and insert them with a simple API.
 pub trait LeafCacheStore: HistoryStore {
     /// The Output type which is the leaf.
-    type Output: IntoIterator<Item = Vec<u8>>;
+    type Output: IntoIterator<Item = (u32, types::H256)>;
 
     /// Clear leaf cache on relayer
     fn clear_leaves_cache<K: Into<HistoryStoreKey> + Debug>(

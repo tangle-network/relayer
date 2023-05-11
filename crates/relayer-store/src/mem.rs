@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::HashMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -27,11 +27,13 @@ use super::{
 
 type MemStore = HashMap<HistoryStoreKey, Vec<types::H256>>;
 type MemStoreForVec = HashMap<HistoryStoreKey, Vec<Vec<u8>>>;
+type MemStoreForMap = HashMap<HistoryStoreKey, BTreeMap<u32, types::H256>>;
 /// InMemoryStore is a store that stores the history of events in memory.
 #[derive(Clone, Default)]
 pub struct InMemoryStore {
     _store: Arc<RwLock<MemStore>>,
     store_for_vec: Arc<RwLock<MemStoreForVec>>,
+    store_for_map: Arc<RwLock<MemStoreForMap>>,
     last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
     token_prices_cache: Arc<RwLock<HashMap<String, Vec<u8>>>>,
 }
@@ -79,14 +81,14 @@ impl HistoryStore for InMemoryStore {
 }
 
 impl LeafCacheStore for InMemoryStore {
-    type Output = Vec<Vec<u8>>;
+    type Output = BTreeMap<u32, types::H256>;
 
     #[tracing::instrument(skip(self))]
     fn clear_leaves_cache<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
     ) -> crate::Result<()> {
-        let mut guard = self.store_for_vec.write();
+        let mut guard = self.store_for_map.write();
         guard.clear();
         Ok(())
     }
@@ -96,7 +98,7 @@ impl LeafCacheStore for InMemoryStore {
         &self,
         key: K,
     ) -> crate::Result<Self::Output> {
-        let guard = self.store_for_vec.read();
+        let guard = self.store_for_map.read();
         let val = guard.get(&key.into()).cloned().unwrap_or_default();
         Ok(val)
     }
@@ -106,7 +108,7 @@ impl LeafCacheStore for InMemoryStore {
         key: K,
         range: core::ops::Range<u32>,
     ) -> crate::Result<Self::Output> {
-        let guard = self.store_for_vec.read();
+        let guard = self.store_for_map.read();
         let val = guard.get(&key.into()).cloned().unwrap_or_default();
         let iter = val
             .into_iter()
@@ -121,15 +123,21 @@ impl LeafCacheStore for InMemoryStore {
         key: K,
         leaves: &[(u32, Vec<u8>)],
     ) -> crate::Result<()> {
-        let mut guard = self.store_for_vec.write();
+        let mut guard = self.store_for_map.write();
         guard
             .entry(key.into())
             .and_modify(|v| {
                 for (index, leaf) in leaves {
-                    v.insert(*index as usize, leaf.clone());
+                    v.insert(*index, types::H256::from_slice(leaf));
                 }
             })
-            .or_insert_with(|| leaves.iter().map(|v| v.1.clone()).collect());
+            .or_insert_with(|| {
+                let mut map = BTreeMap::new();
+                for (index, leaf) in leaves {
+                    map.insert(*index, types::H256::from_slice(leaf));
+                }
+                map
+            });
         Ok(())
     }
 
@@ -256,7 +264,10 @@ mod tests {
         store.insert_leaves(key, &generated_leaves).unwrap();
         let leaves = store.get_leaves(key).unwrap();
         assert_eq!(
-            leaves,
+            leaves
+                .into_iter()
+                .map(|v| v.1.to_fixed_bytes().to_vec())
+                .collect::<Vec<_>>(),
             generated_leaves
                 .iter()
                 .map(|v| v.1.clone())
@@ -275,7 +286,10 @@ mod tests {
         store.insert_leaves(key, &generated_leaves).unwrap();
         let leaves = store.get_leaves_with_range(key, 5..10).unwrap();
         assert_eq!(
-            leaves,
+            leaves
+                .into_iter()
+                .map(|v| v.1.to_fixed_bytes().to_vec())
+                .collect::<Vec<_>>(),
             generated_leaves
                 .iter()
                 .skip(5)
