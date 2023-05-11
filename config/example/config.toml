@@ -68,11 +68,11 @@ private-key = "$PRIVATE_KEY"
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0x9678647b9fcb0039652a16dba688bd067d6e5077"
+address = "0x38e7aa90c77f86747fab355eecaa0c2e4c3a463d"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
-deployed-at = 8648487
+deployed-at = 8703495
 # Configuration for the events watcher of this contract. The events-watcher can be switched on/off
 # and the polling interval specifies the period of time (in ms) that the events-watcher thread
 # will wait before issuing another query for new events.
