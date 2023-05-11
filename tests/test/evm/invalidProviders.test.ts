@@ -63,12 +63,12 @@ class RateLimitedProvider extends InvalidProvider {
 }
 
 describe('Invalid EVM Providers', () => {
-  describe('Rate Limited Provider', function() {
+  describe('Rate Limited Provider', function () {
     const tmpDirPath = temp.mkdirSync();
     let provider: RateLimitedProvider;
     let webbRelayer: WebbRelayer;
 
-    before(async function() {
+    before(async function () {
       this.timeout(0);
       provider = new RateLimitedProvider(await getPort());
 
@@ -116,7 +116,7 @@ describe('Invalid EVM Providers', () => {
       });
     });
 
-    it('should keep retrying with the rate limited provider', async function() {
+    it('should keep retrying with the rate limited provider', async function () {
       await webbRelayer.waitForEvent({
         kind: 'retry',
         event: {
