@@ -17,7 +17,8 @@ use ethereum_types::H256;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
-use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb::evm::ethers::prelude::LogMeta;
+use webb::evm::ethers::types;
 use webb_event_watcher_traits::evm::EventHandler;
 use webb_event_watcher_traits::EthersClient;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
@@ -27,8 +28,14 @@ use webb_relayer_utils::metric;
 
 /// An Encrypted Output Handler that handles `NewCommitment` events and saves the encrypted_output to the store.
 /// It serves as a cache for encrypted_output that could be used by dApp for proof generation.
-#[derive(Copy, Clone, Debug, Default)]
-pub struct VAnchorEncryptedOutputHandler;
+#[derive(Copy, Clone, Debug)]
+pub struct VAnchorEncryptedOutputHandler {
+    chain_id: types::U256,
+}
+
+impl VAnchorEncryptedOutputHandler {
+    pub fn new(chain_id: types::U256) -> Self { Self { chain_id } }
+}
 
 #[async_trait::async_trait]
 impl EventHandler for VAnchorEncryptedOutputHandler {
@@ -62,12 +69,11 @@ impl EventHandler for VAnchorEncryptedOutputHandler {
                 let encrypted_output_bytes = deposit.encrypted_output.clone();
                 let encrypted_output = deposit.encrypted_output.to_vec();
                 let encrypted_output_index = deposit.leaf_index.as_u32();
-                let value = (encrypted_output_index, encrypted_output.clone());
-                let chain_id = wrapper.contract.client().get_chainid().await?;
+                let value = (encrypted_output_index, encrypted_output);
                 let target_system = TargetSystem::new_contract_address(
                     wrapper.contract.address().to_fixed_bytes(),
                 );
-                let typed_chain_id = TypedChainId::Evm(chain_id.as_u32());
+                let typed_chain_id = TypedChainId::Evm(self.chain_id.as_u32());
                 let history_store_key =
                     ResourceId::new(target_system, typed_chain_id);
                 store.insert_encrypted_output(
@@ -89,8 +95,8 @@ impl EventHandler for VAnchorEncryptedOutputHandler {
                     tracing::Level::DEBUG,
                     kind = %webb_relayer_utils::probe::Kind::EncryptedOutputStore,
                     encrypted_output_index = %value.0,
-                    encrypted_output = %encrypted_output_bytes,
-                    chain_id = %chain_id,
+                    encrypted_output = %hex::encode(encrypted_output_bytes),
+                    chain_id = %self.chain_id,
                     block_number = %log.block_number
                 );
             }

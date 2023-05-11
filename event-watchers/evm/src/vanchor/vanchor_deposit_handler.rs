@@ -18,6 +18,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::{LogMeta, Middleware};
+use webb::evm::ethers::types;
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::evm::EventHandler;
 use webb_event_watcher_traits::EthersClient;
@@ -33,6 +34,7 @@ use webb_relayer_utils::metric;
 pub struct VAnchorDepositHandler<B, C> {
     proposal_signing_backend: B,
     bridge_registry_backend: C,
+    chain_id: types::U256,
 }
 
 impl<B, C> VAnchorDepositHandler<B, C>
@@ -43,10 +45,12 @@ where
     pub fn new(
         proposal_signing_backend: B,
         bridge_registry_backend: C,
+        chain_id: types::U256,
     ) -> Self {
         Self {
             proposal_signing_backend,
             bridge_registry_backend,
+            chain_id,
         }
     }
 }
