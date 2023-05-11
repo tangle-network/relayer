@@ -58,16 +58,12 @@ jobs:
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
       - uses: actions/checkout@v2
-      - name: Cache Cargo
-        uses: actions/cache@v2
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            ~/.cargo/bin
-            target/x86_64-unknown-linux-musl
-            target/release
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}-x86_64-unknown-linux-musl
+          shared-key: "rust"
+          cache-directories: ".dvc/tmp\n.dvc/cache"
+
       - uses: actions/download-artifact@v1
         with:
           name: cross-linux-musl
