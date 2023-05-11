@@ -52,7 +52,11 @@ where
     /// * `ctx` - RelayContext reference that holds the configuration
     /// * `chain_id` - The chainId that this queue is for
     /// * `store` - [Sled](https://sled.rs)-based database store
-    pub fn new(ctx: RelayerContext, chain_id: types::U256, store: Arc<S>) -> Self {
+    pub fn new(
+        ctx: RelayerContext,
+        chain_id: types::U256,
+        store: Arc<S>,
+    ) -> Self {
         Self {
             ctx,
             chain_id,
@@ -67,11 +71,13 @@ where
         let provider = self.ctx.evm_provider(&self.chain_id).await?;
         let wallet = self.ctx.evm_wallet(self.chain_id).await?;
         let client = Arc::new(SignerMiddleware::new(provider, wallet));
-        let chain_config =
-            self.ctx.config.evm.get(&self.chain_id.as_u64().to_string()).ok_or_else(|| {
-                webb_relayer_utils::Error::ChainNotFound {
-                    chain_id: self.chain_id.to_string(),
-                }
+        let chain_config = self
+            .ctx
+            .config
+            .evm
+            .get(&self.chain_id.as_u64().to_string())
+            .ok_or_else(|| webb_relayer_utils::Error::ChainNotFound {
+                chain_id: self.chain_id.to_string(),
             })?;
         let chain_id = client
             .get_chainid()

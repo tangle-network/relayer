@@ -205,7 +205,9 @@ pub trait EventWatcher {
                         contract.deployed_at().as_u64(),
                     )?;
                     let diff = currently_at.saturating_sub(block);
-                    let progress = currently_at as f64 / latest_block_number as f64 * 100.0;
+                    let progress = currently_at as f64
+                        / latest_block_number as f64
+                        * 100.0;
                     let is_syncing = progress > 99.9;
                     tracing::info!(
                         target_block = latest_block_number,

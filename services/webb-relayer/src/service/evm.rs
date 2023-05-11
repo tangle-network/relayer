@@ -115,11 +115,7 @@ pub async fn ignite(
             }
         }
         // start the transaction queue after starting other tasks.
-        start_tx_queue(
-            ctx.clone(),
-            chain_config.chain_id,
-            store.clone(),
-        )?;
+        start_tx_queue(ctx.clone(), chain_config.chain_id, store.clone())?;
     }
     Ok(())
 }

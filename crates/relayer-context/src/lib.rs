@@ -177,7 +177,7 @@ impl RelayerContext {
     #[cfg(feature = "evm")]
     pub async fn evm_wallet<I: Into<types::U256>>(
         &self,
-        chain_id: I
+        chain_id: I,
     ) -> webb_relayer_utils::Result<LocalWallet> {
         let chain_id: types::U256 = chain_id.into();
         let chain_name = chain_id.to_string();
