@@ -1,5 +1,6 @@
 on:
   # separate push conditions so they are combined with 'or', not 'and'
+  # TODO: this is not working, might have to run on all pushes and then cancel manually?
   push:
     branches:
       - develop
