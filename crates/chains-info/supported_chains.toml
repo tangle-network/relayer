@@ -4,6 +4,7 @@ chain-ids = [
     137, # Polygon Mainnet
     80001, # Polygon Mumbai Testnet
     42161, # Arbitrum One Mainnet
+    43113, # Avalance Fuji Testnet
     421613, # Arbitrum Goerli Testnet
     534352, # Scroll Mainnet
     534353, # Scroll Alpha Testnet
