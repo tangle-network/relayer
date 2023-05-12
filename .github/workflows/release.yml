@@ -114,7 +114,7 @@ jobs:
     needs: ["macos", "linux"]
     env:
       # TODO: change to develop branch
-      release_name: ${{ (github.branch == 'felix/automatic-release') && 'nightly' || github.ref}}
+      release_name: ${{ (github.branch == 'felix/automatic-release') && 'develop' || github.ref}}
     steps:
       - name: Install Nodejs
         uses: actions/setup-node@v3
