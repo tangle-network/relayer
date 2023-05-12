@@ -73,14 +73,11 @@ jobs:
 
       - run: ci/set_rust_version.bash stable ${{ matrix.target }}
       - run: ci/build.bash cross ${{ matrix.target }} RELEASE
-      - run: tar -czvf ${{ env.BIN }}.tar.gz --directory=target/${{ matrix.target }}/release ${{ env.BIN }}
+      - run: tar -czvf dist/${{ env.BIN }}.tar.gz --directory=target/${{ matrix.target }}/release ${{ env.BIN }}
       - name: Upload release artifacts for publishing
         uses: actions/upload-artifact@v3
         with:
-          name: dist-without-markdown
-          path: |
-            ${{ env.BIN }}.tar.gz
-            ${{ env.BIN }}-${{ matrix.target }}.tar.gz
+          path: dist
 
   linux:
     runs-on: ubuntu-latest
@@ -111,14 +108,12 @@ jobs:
           name: cross-linux-musl
           path: /tmp/
       - run: chmod +x /tmp/cross
-
       - run: ci/set_rust_version.bash stable ${{ matrix.target }}
       - run: ci/build.bash /tmp/cross ${{ matrix.target }} RELEASE
-      - run: tar -czvf ${{ env.BIN }}.tar.gz --directory=target/${{ matrix.target }}/release ${{ env.BIN }}
+      - run: tar -czvf dist/${{ env.BIN }}.tar.gz --directory=target/${{ matrix.target }}/release ${{ env.BIN }}
       - name: Upload release artifacts for publishing
         uses: actions/upload-artifact@v3
         with:
-          name: dist-without-markdown
           path: |
             ${{ env.BIN }}.tar.gz
             ${{ env.BIN }}-${{ matrix.target }}.tar.gz
@@ -135,13 +130,7 @@ jobs:
       - name: Download artifacts from builders
         uses: actions/download-artifact@v1
         with:
-          name: dist-aarch64-pc-windows-msvc
-          path: |
-            webb-relayer-aarch64-apple-darwin.tar.gz
-            webb-relayer-aarch64-unknown-linux-gnu.tar.gz
-            webb-relayer-x86_64-apple-darwin.tar.gz
-            webb-relayer-x86_64-unknown-linux-gnu.tar.gz
-            webb-relayer-x86_64-unknown-linux-musl.tar.gz
+          path: dist
       - run: ls -al ./dist
       - run: echo ${{github.action}}
       - name: Initialize variable `release_name`
