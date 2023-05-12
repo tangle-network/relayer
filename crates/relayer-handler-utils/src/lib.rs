@@ -171,7 +171,7 @@ type R = Vec<[u8; 32]>; // Substrate roots format
 type E = [u8; 32]; // Substrate element type
 type I = AccountId32; // Substrate account identifier
 type B = U128; // Substrate balance type
-type A = i128; // Substrate signed amount type
+type A = WebbI256; // Substrate signed amount type
 type T = u32; // Substrate assetId
 
 /// The command type for Substrate mixer txes

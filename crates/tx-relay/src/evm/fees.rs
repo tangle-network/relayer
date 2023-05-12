@@ -275,7 +275,7 @@ fn get_native_token_name_and_decimals(
             },
         ),
         Substrate(id) => match id {
-            1080 => Ok(("tTNT", 18)),
+            1081 => Ok(("tTNT", 18)),
             _ => {
                 // During testing, we will use the tTNT token for all substrate chains.
                 if cfg!(debug_assertions) {

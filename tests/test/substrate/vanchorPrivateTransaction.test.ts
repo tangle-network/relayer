@@ -57,7 +57,6 @@ import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
@@ -68,7 +67,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
+            '../../tangle/target/release/tangle-standalone'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -81,14 +80,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -128,7 +119,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it.only('should withdraw using private transaction ', async () => {
+  it('should withdraw using private transaction ', async () => {
     const api = await aliceNode.api();
     // 1. Create vanchor on Substrate chain with height 30 and maxEdges = 1
     const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
@@ -191,11 +182,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const feeInfo2 =
       await (feeInfoResponse2.json() as Promise<SubstrateFeeInfo>);
     const estimatedFee = BigInt(feeInfo2.estimatedFee);
-    const estimatedrefund = BigInt(feeInfo2.maxRefund);
-    
-    console.log("estimatedFee", estimatedFee);
-    console.log("estimatedrefund ", estimatedrefund);
-    
+
     const refund = BigInt(0);
     const feeTotal = estimatedFee + refund;
     const vanchorData = await vanchorWithdraw(
@@ -213,15 +200,17 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const substrateExtData: SubstrateVAnchorExtData = {
       recipient: vanchorData.extData.recipient,
       relayer: vanchorData.extData.relayer,
-      extAmount: BigNumber.from(vanchorData.extData.extAmount).toString(),
-      fee: feeTotal.toString(),
+      extAmount: BigNumber.from(vanchorData.extData.extAmount)
+        .toHexString()
+        .replace('0x', ''),
+      fee: BigNumber.from(feeTotal.toString()).toHexString(),
       encryptedOutput1: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput1)
       ),
       encryptedOutput2: Array.from(
         hexToU8a(vanchorData.extData.encryptedOutput2)
       ),
-      refund: refund.toString(),
+      refund: BigNumber.from(refund.toString()).toHexString(),
       token: token.getUint32(0, true),
     };
 
@@ -241,41 +230,16 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
       ),
     };
 
-    const leafsCount = await api.derive.merkleTreeBn254.getLeafCountForTree(
-      Number(treeId)
-    );
-    const indexBeforeInsetion = Math.max(leafsCount - 1, 0);
-    console.log("indexBeforeInsetion ",indexBeforeInsetion);
-
     // now we withdraw using private transaction
-
-    // const transactCall = api.tx.vAnchorBn254.transact(
-    //   treeId,
-    //   vanchorData.proofData,
-    //   vanchorData.extData
-    // );
-    // const txSigned = await transactCall.signAsync(account);
-    // await aliceNode.executeTransaction(txSigned);
-    
-    
-    // await webbRelayer.waitForEvent({
-    //   kind: 'leaves_store',
-    //   event: {
-    //     leaf_index: indexBeforeInsetion + 1,
-    //   },
-    // });
-    
     await webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
       substrateExtData,
       substrateProofData
     );
-    
-
 
     // now we wait for relayer to execute private transaction.
-    
+
     await webbRelayer.waitForEvent({
       kind: 'private_tx',
       event: {
@@ -297,7 +261,7 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
+    // await bobNode?.stop();
     await charlieNode?.stop();
     await webbRelayer?.stop();
   });
@@ -390,13 +354,12 @@ async function vanchorWithdraw(
   }, BigInt(0));
 
   const publicAmount = -withdrawAmount;
-  const extAmount = -(withdrawAmount-fee);
-
+  const extAmount = -(withdrawAmount - fee);
 
   console.log({
     fee: fee.toString(),
     extAmount: extAmount.toString(),
-    publicAmount: publicAmount.toString()
+    publicAmount: publicAmount.toString(),
   });
 
   const tree = await api.query.merkleTreeBn254.trees(treeId);
@@ -495,21 +458,6 @@ async function vanchorDeposit(
   );
   const pk_hex = fs.readFileSync(pkPath).toString('hex');
   const pk = hexToU8a(pk_hex);
-
-  const vkPath = path.join(
-    // tests path
-    gitRoot,
-    'tests',
-    'substrate-fixtures',
-    'vanchor',
-    'bn254',
-    'x5',
-    '2-2-2',
-    'verifying_key_uncompressed.bin'
-  );
-  const vk_hex = fs.readFileSync(vkPath).toString('hex');
-  const vk = hexToU8a(vk_hex);
-
   // dummy Deposit Note. Input note is directed toward source chain
   const depositNote = await generateVAnchorNote(
     0,

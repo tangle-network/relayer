@@ -80,7 +80,7 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
     } else {
       startArgs.push(
         '--tmp',
-        '--chain=local',
+        '--chain=relayer',
         '--rpc-cors',
         'all',
         '--rpc-methods=unsafe',
