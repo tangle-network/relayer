@@ -136,5 +136,5 @@ jobs:
         uses: ./.github/actions/github-release
         with:
           files: "dist/*"
-          name: ${{ release_name }}
+          name: $release_name
           token: ${{ secrets.GITHUB_TOKEN }}
