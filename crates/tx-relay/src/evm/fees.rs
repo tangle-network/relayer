@@ -163,12 +163,8 @@ async fn generate_fee_info(
     )?
     .into();
 
-    let wallet = ctx
-        .evm_wallet(&chain_id.underlying_chain_id().to_string())
-        .await?;
-    let provider = ctx
-        .evm_provider(&chain_id.underlying_chain_id().to_string())
-        .await?;
+    let wallet = ctx.evm_wallet(chain_id.underlying_chain_id()).await?;
+    let provider = ctx.evm_provider(chain_id.underlying_chain_id()).await?;
     let relayer_balance = provider.get_balance(wallet.address(), None).await?;
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
     // Ensuring that refund <= relayer balance
