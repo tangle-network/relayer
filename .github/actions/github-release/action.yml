@@ -1,0 +1,15 @@
+name: 'develop github releases'
+description: 'develop github releases'
+inputs:
+  token:
+    description: ''
+    required: true
+  name:
+    description: ''
+    required: true
+  files:
+    description: ''
+    required: true
+runs:
+  using: 'docker'
+  image: 'Dockerfile'
