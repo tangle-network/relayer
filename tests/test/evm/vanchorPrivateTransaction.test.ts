@@ -27,8 +27,8 @@ import { LocalChain, setupVanchorEvmTx } from '../../lib/localTestnet.js';
 import {
   defaultWithdrawConfigValue,
   EnabledContracts,
+  EvmFeeInfo,
   EvmEtherscanConfig,
-  FeeInfo,
   ResourceMetricResponse,
   WebbRelayer,
 } from '../../lib/webbRelayer.js';
@@ -300,13 +300,13 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       dummyOutput.extData
     );
 
-    const feeInfoResponse = await webbRelayer.getFeeInfo(
+    const feeInfoResponse = await webbRelayer.getEvmFeeInfo(
       localChain2.chainId,
       vanchor2.getAddress(),
       gas_amount
     );
     expect(feeInfoResponse.status).equal(200);
-    const feeInfo = await (feeInfoResponse.json() as Promise<FeeInfo>);
+    const feeInfo = await (feeInfoResponse.json() as Promise<EvmFeeInfo>);
     console.log(feeInfo);
     const maxRefund = Number(formatEther(feeInfo.maxRefund));
     const refundExchangeRate = Number(formatEther(feeInfo.refundExchangeRate));

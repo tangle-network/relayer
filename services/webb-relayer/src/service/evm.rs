@@ -24,7 +24,7 @@ use webb_relayer_config::evm::{
     Contract, SignatureBridgeContractConfig, VAnchorContractConfig,
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handlers::handle_fee_info;
+use webb_relayer_handlers::handle_evm_fee_info;
 use webb_relayer_handlers::routes::{encrypted_outputs, leaves, metric};
 use webb_relayer_tx_queue::evm::TxQueue;
 
@@ -52,8 +52,8 @@ pub fn build_web_services() -> Router<Arc<RelayerContext>> {
         // for backward compatibility
         .route("/metrics", get(metric::handle_metric_info))
         .route(
-            "/fee_info/:chain_id/:vanchor/:gas_amount",
-            get(handle_fee_info),
+            "/fee_info/evm/:chain_id/:vanchor/:gas_amount",
+            get(handle_evm_fee_info),
         )
 }
 

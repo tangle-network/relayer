@@ -24,6 +24,7 @@ use std::sync::Arc;
 use futures::prelude::*;
 
 use axum::extract::ws::{Message, WebSocket};
+use axum::http::StatusCode;
 use axum::response::Response;
 use axum::Json;
 use axum_client_ip::InsecureClientIp;
@@ -36,9 +37,12 @@ use webb_relayer_handler_utils::{
     Command, CommandResponse, CommandStream, EvmCommandType,
     IpInformationResponse, SubstrateCommandType,
 };
-use webb_relayer_tx_relay::evm::fees::{get_fee_info, FeeInfo};
+use webb_relayer_tx_relay::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 
 use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
+use webb_relayer_tx_relay::substrate::fees::{
+    get_substrate_fee_info, SubstrateFeeInfo,
+};
 use webb_relayer_tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
 use webb_relayer_utils::HandlerError;
@@ -201,13 +205,33 @@ pub async fn handle_cmd(
 /// * `vanchor` - Address of the smart contract
 /// * `gas_amount` - How much gas the transaction needs. Don't use U256 here because it
 ///                  gets parsed incorrectly.
-pub async fn handle_fee_info(
+pub async fn handle_evm_fee_info(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, vanchor, gas_amount)): Path<(u64, Address, u64)>,
-) -> Result<Json<FeeInfo>, HandlerError> {
+) -> Result<Json<EvmFeeInfo>, HandlerError> {
     let chain_id = TypedChainId::from(chain_id);
     let gas_amount = U256::from(gas_amount);
-    Ok(get_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
+    Ok(
+        get_evm_fee_info(chain_id, vanchor, gas_amount, ctx.as_ref())
+            .await
+            .map(Json)?,
+    )
+}
+
+/// Handler for fee estimation
+///
+/// # Arguments
+/// * `chain_id` - ID of the blockchain
+/// * `estimated_tx_fees` - Estimated transaction fees
+/// * `ctx` - RelayContext reference that holds the configuration
+pub async fn handle_substrate_fee_info(
+    State(ctx): State<Arc<RelayerContext>>,
+    Path((chain_id, estimated_tx_fees)): Path<(u64, u128)>,
+) -> Result<Json<SubstrateFeeInfo>, HandlerError> {
+    get_substrate_fee_info(chain_id, estimated_tx_fees.into(), ctx.as_ref())
         .await
-        .map(Json)?)
+        .map(Json)
+        .map_err(|e| {
+            HandlerError(StatusCode::INTERNAL_SERVER_ERROR, e.to_string())
+        })
 }

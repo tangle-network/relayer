@@ -24,6 +24,7 @@ use webb_relayer_config::substrate::{
     SignatureBridgePalletConfig, SubstrateConfig, VAnchorBn254PalletConfig,
 };
 use webb_relayer_context::RelayerContext;
+use webb_relayer_handlers::handle_substrate_fee_info;
 use webb_relayer_handlers::routes::{leaves, metric};
 use webb_relayer_tx_queue::substrate::SubstrateTxQueue;
 
@@ -42,6 +43,10 @@ pub fn build_web_services() -> Router<Arc<RelayerContext>> {
         .route(
             "/metrics/substrate/:chain_id/:tree_id/:pallet_id",
             get(metric::handle_substrate_metric_info),
+        )
+        .route(
+            "/fee_info/substrate/:chain_id/:estimated_tx_fees",
+            get(handle_substrate_fee_info),
         )
 }
 
