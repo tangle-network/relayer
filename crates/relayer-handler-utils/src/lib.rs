@@ -52,6 +52,24 @@ impl<'de> Deserialize<'de> for WebbI256 {
         Ok(WebbI256(i128_val))
     }
 }
+/// A wrapper type around [`i128`] that implements a correct way for [`Serialize`] and [`Deserialize`].
+///
+/// This supports the signed integer hex values that are not originally supported by the [`i128`] type.
+#[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
+pub struct WebbI128(pub i128);
+
+impl<'de> Deserialize<'de> for WebbI128 {
+    fn deserialize<D>(deserializer: D) -> Result<WebbI128, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let i128_str = String::deserialize(deserializer)?;
+        let value = i128::from_str_radix(&i128_str, 16)
+            .map_err(serde::de::Error::custom)?;
+        Ok(WebbI128(value))
+    }
+}
 
 /// Type of Command to use
 #[derive(Debug, Clone, Deserialize)]
@@ -171,7 +189,7 @@ type R = Vec<[u8; 32]>; // Substrate roots format
 type E = [u8; 32]; // Substrate element type
 type I = AccountId32; // Substrate account identifier
 type B = U128; // Substrate balance type
-type A = WebbI256; // Substrate signed amount type
+type A = WebbI128; // Substrate signed amount type
 type T = u32; // Substrate assetId
 
 /// The command type for Substrate mixer txes

@@ -53,7 +53,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             recipient: cmd.ext_data.recipient,
             relayer: cmd.ext_data.relayer,
             fee: cmd.ext_data.fee.as_u128(),
-            ext_amount: cmd.ext_data.ext_amount.0.as_i128(),
+            ext_amount: cmd.ext_data.ext_amount.0,
             encrypted_output1: cmd.ext_data.encrypted_output1.clone(),
             encrypted_output2: cmd.ext_data.encrypted_output2.clone(),
             refund: cmd.ext_data.refund.as_u128(),
