@@ -1,8 +1,10 @@
+use crate::{MAX_REFUND_USD, TRANSACTION_PROFIT_USD};
 use chrono::DateTime;
 use chrono::Duration;
 use chrono::Utc;
 use once_cell::sync::Lazy;
 use serde::Serialize;
+use std::cmp::min;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
@@ -11,6 +13,8 @@ use webb::evm::contract::protocol_solidity::{
 };
 use webb::evm::ethers::middleware::gas_oracle::GasOracle;
 use webb::evm::ethers::prelude::U256;
+use webb::evm::ethers::providers::Middleware;
+use webb::evm::ethers::signers::Signer;
 use webb::evm::ethers::types::Address;
 use webb::evm::ethers::utils::{format_units, parse_units};
 use webb_chains_info::chain_info_by_chain_id;
@@ -19,22 +23,19 @@ use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
 
-/// Maximum refund amount per relay transaction in USD.
-const MAX_REFUND_USD: f64 = 5.;
 /// Amount of time for which a `FeeInfo` is valid after creation
 static FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
-/// Amount of profit that the relay should make with each transaction (in USD).
-const TRANSACTION_PROFIT_USD: f64 = 5.;
 
 /// Cache for previously generated fee info. Key consists of the VAnchor address and chain id.
 /// Entries are valid as long as `timestamp` is no older than `FEE_CACHE_TIME`.
-static FEE_INFO_CACHED: Lazy<Mutex<HashMap<(Address, TypedChainId), FeeInfo>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
+static FEE_INFO_CACHED: Lazy<
+    Mutex<HashMap<(Address, TypedChainId), EvmFeeInfo>>,
+> = Lazy::new(|| Mutex::new(HashMap::new()));
 
 /// Return value of fee_info API call. Contains information about relay transaction fee and refunds.
 #[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct FeeInfo {
+pub struct EvmFeeInfo {
     /// Estimated fee for an average relay transaction, in `wrappedToken`. This is only for
     /// display to the user
     pub estimated_fee: U256,
@@ -49,6 +50,9 @@ pub struct FeeInfo {
     /// Price of the native token in USD, internally cached to recalculate estimated fee
     #[serde(skip)]
     native_token_price: f64,
+    /// Number of decimals of the native token, internally cached to recalculate max refund
+    #[serde(skip)]
+    native_token_decimals: u8,
     /// Price of the wrapped token in USD, internally cached to recalculate estimated fee
     #[serde(skip)]
     wrapped_token_price: f64,
@@ -61,12 +65,12 @@ pub struct FeeInfo {
 ///
 /// If fee info was recently requested, the cached value is used. Otherwise it is regenerated
 /// based on the current exchange rate and estimated gas price.
-pub async fn get_fee_info(
+pub async fn get_evm_fee_info(
     chain_id: TypedChainId,
     vanchor: Address,
     gas_amount: U256,
     ctx: &RelayerContext,
-) -> Result<FeeInfo> {
+) -> Result<EvmFeeInfo> {
     // Retrieve cached fee info item
     let fee_info_cached = {
         let mut lock =
@@ -89,6 +93,14 @@ pub async fn get_fee_info(
             fee_info.wrapped_token_price,
             fee_info.wrapped_token_decimals,
         )?;
+        // Recalculate max refund in case relayer balance changed.
+        fee_info.max_refund = max_refund(
+            chain_id,
+            fee_info.native_token_price,
+            fee_info.native_token_decimals,
+            ctx,
+        )
+        .await?;
         Ok(fee_info)
     } else {
         let fee_info =
@@ -109,7 +121,7 @@ async fn generate_fee_info(
     vanchor: Address,
     gas_amount: U256,
     ctx: &RelayerContext,
-) -> Result<FeeInfo> {
+) -> Result<EvmFeeInfo> {
     // Get token names
     let (native_token, native_token_decimals) =
         get_native_token_name_and_decimals(chain_id)?;
@@ -162,23 +174,42 @@ async fn generate_fee_info(
     )?
     .into();
 
+    Ok(EvmFeeInfo {
+        estimated_fee,
+        gas_price,
+        refund_exchange_rate,
+        max_refund: max_refund(
+            chain_id,
+            native_token_price,
+            native_token_decimals,
+            ctx,
+        )
+        .await?,
+        timestamp: Utc::now(),
+        native_token_price,
+        native_token_decimals,
+        wrapped_token_price,
+        wrapped_token_decimals,
+    })
+}
+
+async fn max_refund(
+    chain_id: TypedChainId,
+    native_token_price: f64,
+    native_token_decimals: u8,
+    ctx: &RelayerContext,
+) -> Result<U256> {
+    let wallet = ctx.evm_wallet(chain_id.underlying_chain_id()).await?;
+    let provider = ctx.evm_provider(chain_id.underlying_chain_id()).await?;
+    let relayer_balance = provider.get_balance(wallet.address(), None).await?;
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
+    // Ensuring that refund <= relayer balance
     let max_refund = parse_units(
         MAX_REFUND_USD / native_token_price,
         u32::from(native_token_decimals),
     )?
     .into();
-
-    Ok(FeeInfo {
-        estimated_fee,
-        gas_price,
-        refund_exchange_rate,
-        max_refund,
-        timestamp: Utc::now(),
-        native_token_price,
-        wrapped_token_price,
-        wrapped_token_decimals,
-    })
+    Ok(min(relayer_balance, max_refund))
 }
 
 /// Pull USD prices of base token from coingecko.com, and use this to calculate the transaction
@@ -265,7 +296,7 @@ fn get_native_token_name_and_decimals(
             },
         ),
         Substrate(id) => match id {
-            1080 => Ok(("tTNT", 18)),
+            1081 => Ok(("tTNT", 18)),
             _ => {
                 // During testing, we will use the tTNT token for all substrate chains.
                 if cfg!(debug_assertions) {

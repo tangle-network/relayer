@@ -18,7 +18,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::mpsc;
 use webb::evm::ethers::abi::Address;
-use webb::evm::ethers::prelude::{ContractError, I256};
+use webb::evm::ethers::prelude::{ContractError, I256, U128};
 use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::types::Bytes;
 use webb::evm::ethers::types::{H256, U256};
@@ -50,6 +50,24 @@ impl<'de> Deserialize<'de> for WebbI256 {
         let i128_val =
             I256::from_hex_str(&i128_str).map_err(serde::de::Error::custom)?;
         Ok(WebbI256(i128_val))
+    }
+}
+/// A wrapper type around [`i128`] that implements a correct way for [`Serialize`] and [`Deserialize`].
+///
+/// This supports the signed integer hex values that are not originally supported by the [`i128`] type.
+#[derive(Debug, Clone, Serialize)]
+#[serde(transparent)]
+pub struct WebbI128(pub i128);
+
+impl<'de> Deserialize<'de> for WebbI128 {
+    fn deserialize<D>(deserializer: D) -> Result<WebbI128, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let i128_str = String::deserialize(deserializer)?;
+        let value = i128::from_str_radix(&i128_str, 16)
+            .map_err(serde::de::Error::custom)?;
+        Ok(WebbI128(value))
     }
 }
 
@@ -170,8 +188,8 @@ type P = Vec<u8>; // Substrate raw proof bytes
 type R = Vec<[u8; 32]>; // Substrate roots format
 type E = [u8; 32]; // Substrate element type
 type I = AccountId32; // Substrate account identifier
-type B = u128; // Substrate balance type
-type A = i128; // Substrate signed amount type
+type B = U128; // Substrate balance type
+type A = WebbI128; // Substrate signed amount type
 type T = u32; // Substrate assetId
 
 /// The command type for Substrate mixer txes

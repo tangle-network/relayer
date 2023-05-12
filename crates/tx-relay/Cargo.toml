@@ -27,6 +27,7 @@ native-tls = { workspace = true, optional = true }
 webb-proposals = { workspace = true }
 ethereum-types = { workspace = true }
 serde = { workspace = true }
+sp-core = { workspace = true }
 
 once_cell = "1.17.0"
 chrono = { version = "0.4.23", features = ["serde"] }

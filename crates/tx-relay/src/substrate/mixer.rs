@@ -49,8 +49,8 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
         nullifier_hash_element,
         cmd.recipient,
         cmd.relayer,
-        cmd.fee,
-        cmd.refund,
+        cmd.fee.as_u128(),
+        cmd.refund.as_u128(),
     );
 
     let withdraw_tx_hash = client

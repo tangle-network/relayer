@@ -28,6 +28,7 @@ import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
 import { padHexString } from '../lib/utils.js';
+import * as BN from 'bn.js';
 
 export type CommonConfig = {
   features?: FeaturesConfig;
@@ -234,13 +235,19 @@ export class WebbRelayer {
     const response = await fetch(endpoint);
     return response;
   }
-  // API to fetch metrics for particular resource
-  public async getFeeInfo(
+
+  public async getEvmFeeInfo(
     chainId: number,
     vanchor: string,
     gas_amount: BigNumber
   ) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/${chainId}/${vanchor}/${gas_amount}`;
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/evm/${chainId}/${vanchor}/${gas_amount}`;
+    const response = await fetch(endpoint);
+    return response;
+  }
+
+  public async getSubstrateFeeInfo(chainId: number, partialFee: BN) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/substrate/${chainId}/${partialFee}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -413,7 +420,7 @@ export class WebbRelayer {
       },
     };
 
-    console.log(cmd);
+    console.log(JSON.stringify(cmd));
     return substrateTxHashOrReject(ws, cmd);
   }
 }
@@ -583,11 +590,11 @@ export type EventSelector = {
 export type SubstrateVAnchorExtData = {
   recipient: string;
   relayer: string;
-  extAmount: number;
-  fee: number;
+  extAmount: string;
+  fee: string;
   encryptedOutput1: number[];
   encryptedOutput2: number[];
-  refund: number;
+  refund: string;
   token: number;
 };
 
@@ -665,11 +672,18 @@ export interface ChainInfo {
   blockConfirmations: number;
 }
 
-export interface FeeInfo {
-  estimatedFee: BigNumber;
-  gasPrice: BigNumber;
-  refundExchangeRate: BigNumber;
-  maxRefund: BigNumber;
+export interface EvmFeeInfo {
+  estimatedFee: string;
+  gasPrice: string;
+  refundExchangeRate: string;
+  maxRefund: string;
+  timestamp: string;
+}
+
+export interface SubstrateFeeInfo {
+  estimatedFee: string;
+  refundExchangeRate: string;
+  maxRefund: string;
   timestamp: string;
 }
 
@@ -746,7 +760,6 @@ type ContractKind =
   | 'VAnchor'
   | 'OpenVAnchor';
 
-type RuntimeKind = 'DKG' | 'WebbProtocol';
 type PalletKind =
   | 'DKG'
   | 'DKGProposals'

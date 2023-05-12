@@ -1,7 +1,8 @@
 use super::*;
-use crate::evm::fees::{get_fee_info, FeeInfo};
+use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
+use futures::TryFutureExt;
 use std::{collections::HashMap, sync::Arc};
 use webb::evm::ethers::utils::{format_units, parse_ether};
 use webb::evm::{
@@ -81,19 +82,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
     })?;
     let _ = stream.send(Network(NetworkStatus::Connected)).await;
 
-    // ensure that relayer has enough balance for refund
-    let relayer_balance = provider
-        .get_balance(wallet.address(), None)
-        .await
-        .map_err(|e| {
-            Error(format!("Failed to retrieve relayer balance: {e}"))
-        })?;
-    if cmd.ext_data.refund > relayer_balance {
-        return Err(Error(
-            "Requested refund is higher than relayer balance".to_string(),
-        ));
-    }
-
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
     let contract = VAnchorContract::new(cmd.id, client.clone());
 
@@ -142,6 +130,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         public_inputs,
         encryptions,
     );
+
     if !cmd.ext_data.refund.is_zero() {
         call = call.value(cmd.ext_data.refund);
     }
@@ -153,7 +142,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
             })
         })?;
     let typed_chain_id = TypedChainId::Evm(chain.chain_id);
-    let fee_info = get_fee_info(
+    let fee_info = get_evm_fee_info(
         typed_chain_id,
         contract_config.common.address,
         gas_amount,
@@ -186,7 +175,8 @@ pub async fn handle_vanchor_relay_tx<'a>(
     if cmd.ext_data.fee < adjusted_fee + wrapped_amount {
         let msg = format!(
             "User sent a fee that is too low {} but expected {}",
-            cmd.ext_data.fee, fee_info.estimated_fee
+            cmd.ext_data.fee,
+            adjusted_fee + wrapped_amount
         );
         return Err(Error(msg));
     }
@@ -214,6 +204,11 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .total_fee_earned
         .inc_by(cmd.ext_data.fee.as_u128() as f64);
 
+    let relayer_balance = client
+        .get_balance(client.signer().address(), None)
+        .unwrap_or_else(|_| U256::zero())
+        .await;
+
     metrics
         .account_balance_entry(typed_chain_id)
         .set(wei_to_gwei(relayer_balance));
@@ -222,7 +217,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
 
 fn calculate_wrapped_refund_amount(
     refund: U256,
-    fee_info: &FeeInfo,
+    fee_info: &EvmFeeInfo,
 ) -> webb_relayer_utils::Result<U256> {
     let refund_exchange_rate: f32 =
         format_units(fee_info.refund_exchange_rate, "ether")?.parse()?;
