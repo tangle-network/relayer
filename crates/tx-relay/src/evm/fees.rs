@@ -50,6 +50,9 @@ pub struct EvmFeeInfo {
     /// Price of the native token in USD, internally cached to recalculate estimated fee
     #[serde(skip)]
     native_token_price: f64,
+    /// Number of decimals of the native token, internally cached to recalculate max refund
+    #[serde(skip)]
+    native_token_decimals: u8,
     /// Price of the wrapped token in USD, internally cached to recalculate estimated fee
     #[serde(skip)]
     wrapped_token_price: f64,
@@ -90,6 +93,14 @@ pub async fn get_evm_fee_info(
             fee_info.wrapped_token_price,
             fee_info.wrapped_token_decimals,
         )?;
+        // Recalculate max refund in case relayer balance changed.
+        fee_info.max_refund = max_refund(
+            chain_id,
+            fee_info.native_token_price,
+            fee_info.native_token_decimals,
+            ctx,
+        )
+        .await?;
         Ok(fee_info)
     } else {
         let fee_info =
@@ -163,6 +174,31 @@ async fn generate_fee_info(
     )?
     .into();
 
+    Ok(EvmFeeInfo {
+        estimated_fee,
+        gas_price,
+        refund_exchange_rate,
+        max_refund: max_refund(
+            chain_id,
+            native_token_price,
+            native_token_decimals,
+            ctx,
+        )
+        .await?,
+        timestamp: Utc::now(),
+        native_token_price,
+        native_token_decimals,
+        wrapped_token_price,
+        wrapped_token_decimals,
+    })
+}
+
+async fn max_refund(
+    chain_id: TypedChainId,
+    native_token_price: f64,
+    native_token_decimals: u8,
+    ctx: &RelayerContext,
+) -> Result<U256> {
     let wallet = ctx.evm_wallet(chain_id.underlying_chain_id()).await?;
     let provider = ctx.evm_provider(chain_id.underlying_chain_id()).await?;
     let relayer_balance = provider.get_balance(wallet.address(), None).await?;
@@ -173,18 +209,7 @@ async fn generate_fee_info(
         u32::from(native_token_decimals),
     )?
     .into();
-    let max_refund = min(relayer_balance, max_refund);
-
-    Ok(EvmFeeInfo {
-        estimated_fee,
-        gas_price,
-        refund_exchange_rate,
-        max_refund,
-        timestamp: Utc::now(),
-        native_token_price,
-        wrapped_token_price,
-        wrapped_token_decimals,
-    })
+    Ok(min(relayer_balance, max_refund))
 }
 
 /// Pull USD prices of base token from coingecko.com, and use this to calculate the transaction
