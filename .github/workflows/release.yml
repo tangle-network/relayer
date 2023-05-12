@@ -121,7 +121,7 @@ jobs:
         with:
           node-version: 18
       - name: Download artifacts from builders
-        uses: actions/download-artifact@v1
+        uses: actions/download-artifact@v3
         with:
           path: dist
       - run: ls -al ./dist
