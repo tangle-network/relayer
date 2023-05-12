@@ -16,8 +16,8 @@ env:
 jobs:
   # This job downloads and stores `cross` as an artifact, so that it can be
   # redownloaded across all of the jobs. Currently this copied pasted between
-  # `ci.yml` and `release.yml`. Make sure to update both places when making
-  # changes.
+  # `image-publish.yml` and `release.yml`. Make sure to update both places
+  # when making changes.
   install-cross:
     runs-on: ubuntu-latest
     steps:
