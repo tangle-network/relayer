@@ -1,15 +1,11 @@
 on:
-  # separate push conditions so they are combined with 'or', not 'and'
-  # TODO: this is not working, might have to run on all pushes and then cancel manually?
   push:
     branches:
+      # TODO: if its on main branch and not a tag, cancel workflow
+      - main
       - develop
       # TODO: only for testing
       - felix/automatic-release
-  push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
 
 name: Webb Relayer Release
 env:
