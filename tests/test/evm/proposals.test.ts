@@ -437,7 +437,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         finalized: true,
       },
     });
-    await sleep(10000);
+    await sleep(5000);
     // now we check that the token was removed.
     const tokens = await governedToken.contract.getTokens();
     expect(tokens.includes(tokenToRemove!)).to.eq(false);
@@ -505,7 +505,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         finalized: true,
       },
     });
-    await sleep(10000);
+    await sleep(5000);
     const fee = await governedToken.contract.getFee();
     expect(newFee).to.eq(ethers.utils.hexValue(fee));
   });
