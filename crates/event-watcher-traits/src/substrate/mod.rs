@@ -28,7 +28,7 @@ use webb_proposals::{
 };
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::{
-    BridgeCommand, BridgeKey, HistoryStore, ProposalStore, QueueStore,
+    BridgeCommand, BridgeKey, HistoryStore, QueueStore,
 };
 
 /// Event watching traits
