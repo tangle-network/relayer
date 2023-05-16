@@ -68,7 +68,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
-      ? { mode: 'host', nodePath: 'dkg-standalone-node' }
+      ? { mode: 'docker', forcePullImage: false }
       : {
           mode: 'host',
           nodePath: path.resolve(
