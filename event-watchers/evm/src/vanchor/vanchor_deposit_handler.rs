@@ -208,7 +208,7 @@ where
                     .await?;
                 }
             };
-        }
+        };
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;
         store.store_event(&events_bytes)?;
