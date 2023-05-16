@@ -36,17 +36,17 @@ pub mod dkg;
 #[doc(hidden)]
 pub mod mocked;
 
+pub mod queue;
+
 /// A module that Implements the DKG Proposal Signing Backend.
 pub use dkg::*;
 /// A module that Implements the Mocked Proposal Signing Backend.
 pub use mocked::*;
 use webb_relayer_utils::metric;
 
+
 /// A Proposal Signing Backend is responsible for signing proposal `P` where `P` is anything really depending on the
 /// requirement of the user of this backend.
-///
-/// For example, an Anchor Event Watcher that watches for `Deposit` events might need to sign an `AnchorUpdateProposal` and to do so, it will
-/// require a `ProposalSigningBackend<AnchorUpdateProposal>` to do so.
 ///
 /// As of now, we have two implementations of this trait:
 ///
@@ -54,6 +54,7 @@ use webb_relayer_utils::metric;
 /// - `MockedSigningBackend`: This is using the Governor's `PrivateKey` to sign the proposal directly.
 #[async_trait::async_trait]
 pub trait ProposalSigningBackend {
+    type Queue: queue::ProposalsQueue + Sync + Send + 'static;
     /// A method to be called first to check if this backend can handle this proposal or not.
     async fn can_handle_proposal(
         &self,

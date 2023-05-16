@@ -8030,6 +8030,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "typed-builder"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64cba322cb9b7bc6ca048de49e83918223f35e7a86311267013afff257004870"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "typenum"
 version = "1.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9090,12 +9101,13 @@ dependencies = [
  "ethereum-types 0.14.1",
  "futures",
  "hex",
+ "impl-trait-for-tuples",
  "native-tls",
  "sled",
  "sp-core",
  "tokio 1.27.0",
  "tracing",
- "typed-builder 0.12.0",
+ "typed-builder 0.14.0",
  "webb 0.5.22",
  "webb-proposals",
  "webb-relayer-store",
