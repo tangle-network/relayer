@@ -61,8 +61,8 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
 
     const usageMode: UsageMode = isCi
-      ? { mode: 'host', nodePath: 'dkg-standalone-node' }
-      : {
+    ? { mode: 'docker', forcePullImage: false }
+    : {
           mode: 'host',
           nodePath: path.resolve(
             '../../tangle/target/release/tangle-standalone'
