@@ -16,7 +16,7 @@
  */
 
 // Testing different kind of proposals between DKG <=> Relayer <=> Signature Bridge.
-
+import '@webb-tools/tangle-substrate-types';
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
 import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
@@ -24,14 +24,14 @@ import { u8aToHex } from '@polkadot/util';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
-import { LocalChain } from '../lib/localTestnet.js';
-import { Pallet, WebbRelayer, EnabledContracts } from '../lib/webbRelayer.js';
+import { LocalChain } from '../../lib/localTestnet.js';
+import { Pallet, WebbRelayer, EnabledContracts } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
-import { LocalTangle } from '../lib/localTangle.js';
+import { LocalTangle } from '../../lib/localTangle.js';
 import isCi from 'is-ci';
 import path from 'path';
-import { ethAddressFromUncompressedPublicKey } from '../lib/ethHelperFunctions.js';
-import { sleep } from '../lib/sleep.js';
+import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
+import { sleep } from '../../lib/sleep.js';
 import {
   ProposalHeader,
   ResourceId,
@@ -42,21 +42,20 @@ import {
 import { hexToU8a } from '@polkadot/util';
 import { ChainType } from '@webb-tools/sdk-core';
 import { UsageMode } from '@webb-tools/test-utils';
-import { defaultEventsWatcherValue } from '../lib/utils.js';
+import { defaultEventsWatcherValue } from '../../lib/utils.js';
 import { MintableToken } from '@webb-tools/tokens';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
-  // 8 minutes
-  this.timeout(8 * 60 * 1000);
+describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
   let signatureBridge: VBridge.VBridge;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
+  let relayerWallet1: ethers.Wallet;
 
   // dkg nodes
   let aliceNode: LocalTangle;
@@ -65,10 +64,9 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   let webbRelayer: WebbRelayer;
 
   before(async function () {
-    // Only run these tests in CI
-    if (!isCi) this.skip();
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
+    const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
       ? { mode: 'host', nodePath: 'dkg-standalone-node' }
       : {
@@ -82,12 +80,18 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         pallet: 'DKGProposalHandler',
         eventsWatcher: defaultEventsWatcherValue,
       },
+      {
+        pallet: 'DKG',
+        eventsWatcher: defaultEventsWatcherValue,
+      },
     ];
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
       usageMode,
       ports: 'auto',
+      enableLogging: false,
+
     });
 
     charlieNode = await LocalTangle.start({
@@ -98,8 +102,11 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       enableLogging: false,
     });
 
-    // get chainId
+    const api = await charlieNode.api();
+    await api.isReady;
+    console.log('tangle node ready waiting for dkg public key to be set onchain');
     const chainId = await charlieNode.getChainId();
+
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
@@ -109,7 +116,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // we need to wait until the public key is on chain.
     await charlieNode.waitForEvent({
       section: 'dkg',
-      method: 'PublicKeySubmitted',
+      method: 'PublicKeySignatureChanged',
     });
 
     // next we need to start local evm node.
@@ -119,7 +126,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
 
     const enabledContracts: EnabledContracts[] = [
       {
-        contract: 'Anchor',
+        contract: 'VAnchor',
       },
     ];
     localChain1 = await LocalChain.init({
@@ -129,6 +136,10 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       populatedAccounts: [
         {
           secretKey: PK1,
+          balance: ethers.utils.parseEther('1000').toHexString(),
+        },
+        {
+          secretKey: relayerPk,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
       ],
@@ -148,12 +159,17 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
           secretKey: PK2,
           balance: ethers.utils.parseEther('1000').toHexString(),
         },
+        {
+          secretKey: relayerPk,
+          balance: ethers.utils.parseEther('1000').toHexString(),
+        },
       ],
       enabledContracts: enabledContracts,
     });
 
     wallet1 = new ethers.Wallet(PK1, localChain1.provider());
     wallet2 = new ethers.Wallet(PK2, localChain2.provider());
+    relayerWallet1 = new ethers.Wallet(relayerPk, localChain1.provider());
     // Deploy the token.
     const wrappedToken1 = await localChain1.deployToken(
       'Wrapped Ethereum',
@@ -187,15 +203,17 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', chainId },
+      relayerWallet: relayerWallet1
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', chainId },
+      relayerWallet: relayerWallet1
     });
     // fetch the dkg public key.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
-    expect(dkgPublicKey).to.not.be.null;
-    const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey!);
+    expect(dkgPublicKey).to.not.equal('0x');
+    const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey);
     // verify the governor address is a valid ethereum address.
     expect(ethers.utils.isAddress(governorAddress)).to.be.true;
     // transfer ownership to the DKG.
@@ -255,7 +273,6 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
-    const api = await charlieNode.api();
     const resourceId1 = await anchor.createResourceId();
     const resourceId2 = await anchor2.createResourceId();
     const governedTokenAddress = anchor.token!;
@@ -276,10 +293,11 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     webbRelayer = new WebbRelayer({
       tmp: true,
       commonConfig: {
+        features: { privateTxRelay: false },
         port: relayerPort,
       },
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
@@ -302,18 +320,19 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const resourceId = ResourceId.newFromContractAddress(
       governedTokenAddress,
       ChainType.EVM,
-      await governedToken.signer.getChainId()
+      localChain1.underlyingChainId
     );
     const functionSignature = hexToU8a(
       governedToken.contract.interface.getSighash(
-        governedToken.contract.interface.functions['add(address,uint256)']
+        governedToken.contract.interface.functions['add(address,uint32)']
       )
     );
     const nonce = await governedToken.contract.proposalNonce();
+    console.log("Proposal nonce: ", nonce.toString());
     const proposalHeader = new ProposalHeader(
       resourceId,
       functionSignature,
-      nonce.toNumber()
+      nonce.add(1).toNumber()
     );
     const tokenAddProposal = new TokenAddProposal(
       proposalHeader,
@@ -331,7 +350,10 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { chain_id: localChain1.underlyingChainId.toString() },
+      event: { 
+        chain_id: localChain1.underlyingChainId.toString(),
+        call: 'execute_proposal_with_signature',
+         },
     });
     // now we wait for the tx queue on that chain to execute the transaction.
     await webbRelayer.waitForEvent({
@@ -342,14 +364,19 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         finalized: true,
       },
     });
-    await sleep(1000);
+    await sleep(5000);
     // now we check that the token was added.
     const tokens = await governedToken.contract.getTokens();
     expect(tokens.includes(testToken.contract.address)).to.eq(true);
   });
 
   it('should handle TokenRemoveProposal', async () => {
-    // get the anhor on localchain1
+     // we need to wait until the public key is on chain.
+     await charlieNode.waitForEvent({
+      section: 'dkg',
+      method: 'PublicKeySignatureChanged',
+    });
+    // get the anchor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
     const governedToken = Tokens.FungibleTokenWrapper.connect(
@@ -364,26 +391,29 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const resourceId = ResourceId.newFromContractAddress(
       governedTokenAddress,
       ChainType.EVM,
-      await governedToken.signer.getChainId()
+      localChain1.underlyingChainId
     );
     const functionSignature = hexToU8a(
       governedToken.contract.interface.getSighash(
-        governedToken.contract.interface.functions['remove(address,uint256)']
+        governedToken.contract.interface.functions['remove(address,uint32)']
       )
     );
     const nonce = await governedToken.contract.proposalNonce();
+    console.log("Proposal nonce: ", nonce.toString());
     const proposalHeader = new ProposalHeader(
       resourceId,
       functionSignature,
-      nonce.toNumber()
+      nonce.add(1).toNumber()
     );
-    const tokenAddProposal = new TokenRemoveProposal(
+    const tokenRemoveProposal = new TokenRemoveProposal(
       proposalHeader,
       tokenToRemove!
     );
+   
+
     await forceSubmitUnsignedProposal(charlieNode, {
       kind: 'TokenRemove',
-      data: u8aToHex(tokenAddProposal.toU8a()),
+      data: u8aToHex(tokenRemoveProposal.toU8a()),
     });
     // now we wait for the proposal to be signed.
     charlieNode.waitForEvent({
@@ -393,7 +423,10 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { chain_id: localChain1.underlyingChainId.toString() },
+      event: { 
+        chain_id: localChain1.underlyingChainId.toString(),
+        call: 'execute_proposal_with_signature',
+       },
     });
     // now we wait for the tx queue on that chain to execute the transaction.
     await webbRelayer.waitForEvent({
@@ -404,13 +437,18 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         finalized: true,
       },
     });
-    await sleep(1000);
+    await sleep(10000);
     // now we check that the token was removed.
     const tokens = await governedToken.contract.getTokens();
     expect(tokens.includes(tokenToRemove!)).to.eq(false);
   });
 
   it('should handle WrappingFeeUpdateProposal', async () => {
+     // we need to wait until the public key is on chain.
+     await charlieNode.waitForEvent({
+      section: 'dkg',
+      method: 'PublicKeySignatureChanged',
+    });
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
@@ -424,15 +462,16 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       localChain1.underlyingChainId
     );
     const nonce = await governedToken.contract.proposalNonce();
+    console.log("Proposal nonce: ", nonce.toString());
     const functionSignature = hexToU8a(
       governedToken.contract.interface.getSighash(
-        governedToken.contract.interface.functions['setFee(uint8,uint256)']
+        governedToken.contract.interface.functions['setFee(uint16,uint32)']
       )
     );
     const proposalHeader = new ProposalHeader(
       resourceId,
       functionSignature,
-      nonce.toNumber()
+      nonce.add(1).toNumber()
     );
     webbRelayer.clearLogs();
     const newFee = ethers.utils.hexValue(50);
@@ -452,7 +491,10 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { chain_id: localChain1.underlyingChainId.toString() },
+      event: { 
+        chain_id: localChain1.underlyingChainId.toString(),
+        call: 'execute_proposal_with_signature',
+      },
     });
     // now we wait for the tx queue on that chain to execute the transaction.
     await webbRelayer.waitForEvent({
@@ -463,7 +505,7 @@ describe.skip('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         finalized: true,
       },
     });
-    await sleep(1000);
+    await sleep(10000);
     const fee = await governedToken.contract.getFee();
     expect(newFee).to.eq(ethers.utils.hexValue(fee));
   });
@@ -488,11 +530,11 @@ async function forceSubmitUnsignedProposal(
 ) {
   const api = await node.api();
   const kind = api.createType(
-    'DkgRuntimePrimitivesProposalProposalKind',
+    'WebbProposalsProposalProposalKind',
     opts.kind
   );
   const proposal = api
-    .createType('DkgRuntimePrimitivesProposal', {
+    .createType('WebbProposalsProposal', {
       Unsigned: {
         kind,
         data: opts.data,

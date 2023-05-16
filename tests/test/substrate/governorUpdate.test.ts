@@ -29,7 +29,7 @@ import { u8aToHex } from '@polkadot/util';
 import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
 
-describe.only('Substrate SignatureBridge Governor Update', function () {
+describe('Substrate SignatureBridge Governor Update', function () {
   const tmpDirPath = temp.mkdirSync();
   // Tangle nodes
   let aliceNode: LocalTangle;
