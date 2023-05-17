@@ -11,7 +11,10 @@ function sleep(milliseconds) {
 async function runOnce() {
   // Load all our inputs and env vars. Note that `getInput` reads from `INPUT_*`
   const files = core.getInput('files');
-  const name = core.getInput('name');
+  var name = core.getInput('name');
+  if (name == 'felix/automatic-release') {
+    name = "develop";
+  }
   const token = core.getInput('token');
   const slug = process.env.GITHUB_REPOSITORY;
   const owner = slug.split('/')[0];
@@ -42,9 +45,7 @@ async function runOnce() {
   }
 
   // We also need to update the `dev` tag while we're at it on the `dev` branch.
-  // TODO
-  //if (name == 'develop') {
-  if (name == 'felix/automatic-release') {
+  if (name == 'develop') {
     try {
       core.info(`updating develop tag`);
       await octokit.rest.git.updateRef({
@@ -77,9 +78,7 @@ async function runOnce() {
     name,
     tag_name: name,
     target_commitish: sha,
-    // TODO
-    //prerelease: name === 'develop',
-    prerelease: name === 'felix/automatic-release',
+    prerelease: name === 'develop',
     // TODO: just for testing
     draft: true
   });
