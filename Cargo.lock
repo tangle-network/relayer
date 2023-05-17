@@ -9107,6 +9107,7 @@ dependencies = [
  "sp-core",
  "tokio 1.27.0",
  "tracing",
+ "tracing-subscriber 0.3.16",
  "typed-builder 0.14.0",
  "webb 0.5.22",
  "webb-proposals",
