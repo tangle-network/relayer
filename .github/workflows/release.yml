@@ -125,7 +125,7 @@ jobs:
         with:
           path: dist
       #- run: ls -al ./dist/**
-      - run: ls -al .github/actions/github-release
+      - run: ls -al .github
       - run: echo ${{github.action}}
       - name: Publish Release
         uses: ./.github/actions/github-release
