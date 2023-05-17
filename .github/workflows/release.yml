@@ -124,6 +124,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           path: dist
+      - uses: actions/checkout@v2
       #- run: ls -al ./dist/**
       - run: ls -al .github
       - run: echo ${{github.action}}
