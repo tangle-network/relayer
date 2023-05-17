@@ -6,6 +6,8 @@ on:
       - develop
       # TODO: only for testing
       - felix/automatic-release
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
 
 name: Webb Relayer Release
 env:
