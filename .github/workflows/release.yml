@@ -124,7 +124,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           path: dist
-      - run: ls -al ./dist/**
+      #- run: ls -al ./dist/**
       - run: ls -al .github/actions/github-release
       - run: echo ${{github.action}}
       - name: Publish Release
