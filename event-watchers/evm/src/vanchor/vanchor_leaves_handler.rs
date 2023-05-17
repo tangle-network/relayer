@@ -109,24 +109,41 @@ impl EventHandler for VAnchorLeavesHandler {
 
     async fn can_handle_events(
         &self,
-        (events, log): (Self::Events, LogMeta),
-        wrapper: &Self::Contract,
+        (events, _log): (Self::Events, LogMeta),
+        _wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool> {
         use VAnchorContractEvents::*;
-        // In this we will validate leaf/commitment we are trying to save is valid with following steps
-        // 1. We create a local merkle tree and insert leaf to it.
-        // 2. Compute merkle root for tree
-        // 3. Check if computed root is known root on contract
-        // 4. If it fails to validate we restart syncing events
-        match events {
+        let has_event = matches!(events, NewCommitmentFilter(_));
+        Ok(has_event)
+    }
+
+    #[tracing::instrument(skip_all)]
+    async fn handle_event(
+        &self,
+        store: Arc<Self::Store>,
+        wrapper: &Self::Contract,
+        (event, log): (Self::Events, LogMeta),
+        _metrics: Arc<Mutex<metric::Metrics>>,
+    ) -> webb_relayer_utils::Result<()> {
+        use VAnchorContractEvents::*;
+        let mut batch: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
+        let mut mt = self.mt.lock().await;
+        match event {
             NewCommitmentFilter(event_data) => {
-                let leaf_index = event_data.leaf_index.as_u32();
                 let commitment: [u8; 32] = event_data.commitment.into();
+                let leaf_index = event_data.leaf_index.as_u32();
+                let value = (leaf_index, commitment.to_vec());
+                let target_system = TargetSystem::new_contract_address(
+                    wrapper.contract.address().to_fixed_bytes(),
+                );
+                let typed_chain_id = TypedChainId::Evm(self.chain_id.as_u32());
+                let history_store_key =
+                    ResourceId::new(target_system, typed_chain_id);
+
+                // 1. We will validate leaf before inserting it into store
                 let leaf: Bn254Fr =
                     Bn254Fr::from_be_bytes_mod_order(commitment.as_slice());
-                let mut batch: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
                 batch.insert(leaf_index, leaf);
-                let mut mt = self.mt.lock().await;
                 mt.insert_batch(&batch, &self.hasher)?;
                 // if leaf index is even number then we don't need to verify commitment
                 if event_data.leaf_index.as_u32() % 2 == 0 {
@@ -135,7 +152,6 @@ impl EventHandler for VAnchorLeavesHandler {
                         commitment = hex::encode(commitment.as_slice()),
                         "Verified commitment",
                     );
-                    return Ok(true);
                 }
                 let root_bytes = mt.root().into_repr().to_bytes_be();
                 let root = U256::from_big_endian(root_bytes.as_slice());
@@ -160,41 +176,14 @@ impl EventHandler for VAnchorLeavesHandler {
                     );
                     // TODO: take a snapshot of current state and restart syncing events
                     // FIXME: We should restart syncing events
-                    // Do not handle this event
-                    return Ok(false);
                 }
-                return Ok(true);
-            }
-            _ => return Ok(false),
-        };
-    }
-
-    #[tracing::instrument(skip_all)]
-    async fn handle_event(
-        &self,
-        store: Arc<Self::Store>,
-        wrapper: &Self::Contract,
-        (event, log): (Self::Events, LogMeta),
-        _metrics: Arc<Mutex<metric::Metrics>>,
-    ) -> webb_relayer_utils::Result<()> {
-        use VAnchorContractEvents::*;
-        match event {
-            NewCommitmentFilter(deposit) => {
-                let commitment: [u8; 32] = deposit.commitment.into();
-                let leaf_index = deposit.leaf_index.as_u32();
-                let value = (leaf_index, commitment.to_vec());
-                let target_system = TargetSystem::new_contract_address(
-                    wrapper.contract.address().to_fixed_bytes(),
-                );
-                let typed_chain_id = TypedChainId::Evm(self.chain_id.as_u32());
-                let history_store_key =
-                    ResourceId::new(target_system, typed_chain_id);
+                // 2. We will insert leaf into store
                 store.insert_leaves(history_store_key, &[value.clone()])?;
                 store.insert_last_deposit_block_number(
                     history_store_key,
                     log.block_number.as_u64(),
                 )?;
-                let events_bytes = serde_json::to_vec(&deposit)?;
+                let events_bytes = serde_json::to_vec(&event_data)?;
                 store.store_event(&events_bytes)?;
                 tracing::trace!(
                     %log.block_number,
