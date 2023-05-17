@@ -96,7 +96,9 @@ describe('SignatureBridge Governor Updates', function () {
     // Wait until we are ready and connected
     const api = await charlieNode.api();
     await api.isReady;
-    console.log('tangle node ready waiting for dkg public key to be set onchain');
+    console.log(
+      'tangle node ready waiting for dkg public key to be set onchain'
+    );
     const chainId = await charlieNode.getChainId();
 
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {

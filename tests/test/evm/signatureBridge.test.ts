@@ -24,17 +24,20 @@ import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
 import { LocalChain } from '../../lib/localTestnet.js';
-import { Pallet, WebbRelayer, EnabledContracts } from '../../lib/webbRelayer.js';
+import {
+  Pallet,
+  WebbRelayer,
+  EnabledContracts,
+} from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { LocalTangle } from '../../lib/localTangle.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
-import { AnchorUpdateProposal, CircomUtxo, Keypair, ProposalHeader, ResourceId } from '@webb-tools/sdk-core';
+import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
 import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
 import { MintableToken } from '@webb-tools/tokens';
-import { ApiPromise } from '@polkadot/api';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -61,8 +64,8 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
 
     const usageMode: UsageMode = isCi
-    ? { mode: 'docker', forcePullImage: false }
-    : {
+      ? { mode: 'docker', forcePullImage: false }
+      : {
           mode: 'host',
           nodePath: path.resolve(
             '../../tangle/target/release/tangle-standalone'
@@ -83,7 +86,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
       authority: 'alice',
       usageMode,
       // ports: 'auto',
-      ports: {ws: 9944, http: 9933, p2p: 30333},
+      ports: { ws: 9944, http: 9933, p2p: 30333 },
       enableLogging: false,
     });
 
@@ -92,12 +95,14 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
       authority: 'charlie',
       usageMode,
       // ports: 'auto',
-      ports: {ws: 9945, http: 9934, p2p: 30334},
+      ports: { ws: 9945, http: 9934, p2p: 30334 },
       enableLogging: false,
     });
     const api = await charlieNode.api();
     await api.isReady;
-    console.log('tangle node ready waiting for dkg public key to be set onchain');
+    console.log(
+      'tangle node ready waiting for dkg public key to be set onchain'
+    );
     const chainId = await charlieNode.getChainId();
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
@@ -193,17 +198,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
       unwrappedToken1,
       unwrappedToken2
     );
-    // save the chain configs.
-    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
-      signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'DKGNode', chainId },
-      relayerWallet
-    });
-    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
-      signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'DKGNode', chainId },
-      relayerWallet
-    });
+
     // fetch the dkg public key.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
     expect(dkgPublicKey).to.not.equal('0x');
@@ -231,7 +226,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
       const currentGovernor = await signatureSide.contract.governor();
       expect(currentGovernor).to.eq(governorAddress);
     }
-    
+
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     await anchor.setSigner(wallet1);
@@ -279,25 +274,33 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     }
     // Whitelist chainId on tangle node
     const whitelistChainIdCall = (chain_id: number) =>
-      api.tx.dkgProposals.whitelistChain({Evm: chain_id});
-    for (const chain_id of [localChain1.underlyingChainId,localChain2.underlyingChainId]) {
+      api.tx.dkgProposals.whitelistChain({ Evm: chain_id });
+    for (const chain_id of [
+      localChain1.underlyingChainId,
+      localChain2.underlyingChainId,
+    ]) {
       await charlieNode.sudoExecuteTransaction(whitelistChainIdCall(chain_id));
     }
-    
-    // We will send anchor update proposal to register bride and its resources on tangle node.
-    await sendAnchorUpdateProposal(
-      charlieNode,
-      api,
-      resourceId1,
-      resourceId2
-    );
 
+    // save the chain configs.
+    await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
+      signatureVBridge: signatureBridge,
+      proposalSigningBackend: { type: 'DKGNode', chainId },
+      linkedAnchors: [{ type: 'Raw', resourceId: resourceId2 }],
+      relayerWallet,
+    });
+    await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
+      signatureVBridge: signatureBridge,
+      proposalSigningBackend: { type: 'DKGNode', chainId },
+      linkedAnchors: [{ type: 'Raw', resourceId: resourceId1 }],
+      relayerWallet,
+    });
 
     // now start the relayer
     const relayerPort = await getPort({ port: portNumbers(9955, 9999) });
     webbRelayer = new WebbRelayer({
       commonConfig: {
-
+        features: { governanceRelay: true },
         port: relayerPort,
       },
       tmp: true,
@@ -309,6 +312,12 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
   });
 
   it('should handle AnchorUpdateProposal when a deposit happens using DKG proposal backend', async () => {
+    // we need to wait until the public key is changed.
+    await charlieNode.waitForEvent({
+      section: 'dkg',
+      method: 'PublicKeySignatureChanged',
+    });
+
     // we will use chain1 as an example here.
     const anchor1 = signatureBridge.getVAnchor(localChain1.chainId);
     const anchor2 = signatureBridge.getVAnchor(localChain2.chainId);
@@ -341,16 +350,15 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const leaves = anchor1.tree
       .elements()
       .map((el) => hexToU8a(el.toHexString()));
-    
 
-      await anchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
+    await anchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
       [localChain1.chainId]: leaves,
     });
 
     // wait until the signature bridge receives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { 
+      event: {
         chain_id: localChain2.underlyingChainId.toString(),
         call: 'execute_proposal_with_signature',
       },
@@ -598,7 +606,7 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     // wait until the signature bridge recives the execute call.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { 
+      event: {
         chain_id: localChain2.underlyingChainId.toString(),
         call: 'execute_proposal_with_signature',
       },
@@ -636,37 +644,3 @@ describe('Signature Bridge <> Mocked Proposal Signing Backend', function () {
     await webbRelayer?.stop();
   });
 });
-
-async function sendAnchorUpdateProposal(
-  dkgNode: LocalTangle,
-  api: ApiPromise,
-  resourceId1: string,
-  resourceId2: string
-) {
-  // send dummy proposal to register bridge
-  const sourceResourceId = ResourceId.fromBytes(hexToU8a(resourceId1));
-  const targetResourceId = ResourceId.fromBytes(hexToU8a(resourceId2));
-  const functionSignature = hexToU8a('0x00000002', 32);
-  const merkleRoot = u8aToHex(ethers.utils.randomBytes(32));
-  const header = new ProposalHeader(targetResourceId, functionSignature, 0);
-  const anchorUpdateProposal = new AnchorUpdateProposal(
-    header,
-    merkleRoot,
-    sourceResourceId
-  );
-  const kind = api.createType(
-    'WebbProposalsProposalProposalKind',
-    'AnchorUpdate'
-  );
-  const prop = api.createType('WebbProposalsProposal', {
-    Unsigned: {
-      kind,
-      data: u8aToHex(anchorUpdateProposal.toU8a()),
-    },
-  });
-
-  const submitUnsignedProposalCall =
-    api.tx.dkgProposalHandler.forceSubmitUnsignedProposal(prop.toU8a());
-  await dkgNode.sudoExecuteTransaction(submitUnsignedProposalCall);
-  console.log('Dummy proposal sent');
-}

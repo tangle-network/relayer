@@ -80,7 +80,9 @@ describe('Substrate SignatureBridge Governor Update', function () {
     // Wait until we are ready and connected
     const api = await aliceNode.api();
     await api.isReady;
-    console.log('tangle node ready waiting for dkg public key to be set onchain');
+    console.log(
+      'tangle node ready waiting for dkg public key to be set onchain'
+    );
     const chainId = await aliceNode.getChainId();
 
     // Step 2. We need to wait until the public key is on chain.

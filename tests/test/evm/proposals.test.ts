@@ -25,7 +25,11 @@ import { ethers } from 'ethers';
 import temp from 'temp';
 import retry from 'async-retry';
 import { LocalChain } from '../../lib/localTestnet.js';
-import { Pallet, WebbRelayer, EnabledContracts } from '../../lib/webbRelayer.js';
+import {
+  Pallet,
+  WebbRelayer,
+  EnabledContracts,
+} from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { LocalTangle } from '../../lib/localTangle.js';
 import isCi from 'is-ci';
@@ -91,7 +95,6 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       usageMode,
       ports: 'auto',
       enableLogging: false,
-
     });
 
     charlieNode = await LocalTangle.start({
@@ -104,7 +107,9 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
 
     const api = await charlieNode.api();
     await api.isReady;
-    console.log('tangle node ready waiting for dkg public key to be set onchain');
+    console.log(
+      'tangle node ready waiting for dkg public key to be set onchain'
+    );
     const chainId = await charlieNode.getChainId();
 
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
@@ -203,12 +208,12 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', chainId },
-      relayerWallet: relayerWallet1
+      relayerWallet: relayerWallet1,
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge: signatureBridge,
       proposalSigningBackend: { type: 'DKGNode', chainId },
-      relayerWallet: relayerWallet1
+      relayerWallet: relayerWallet1,
     });
     // fetch the dkg public key.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
@@ -328,7 +333,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       )
     );
     const nonce = await governedToken.contract.proposalNonce();
-    console.log("Proposal nonce: ", nonce.toString());
+    console.log('Proposal nonce: ', nonce.toString());
     const proposalHeader = new ProposalHeader(
       resourceId,
       functionSignature,
@@ -350,10 +355,10 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { 
+      event: {
         chain_id: localChain1.underlyingChainId.toString(),
         call: 'execute_proposal_with_signature',
-         },
+      },
     });
     // now we wait for the tx queue on that chain to execute the transaction.
     await webbRelayer.waitForEvent({
@@ -371,8 +376,8 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   });
 
   it('should handle TokenRemoveProposal', async () => {
-     // we need to wait until the public key is on chain.
-     await charlieNode.waitForEvent({
+    // we need to wait until the public key is on chain.
+    await charlieNode.waitForEvent({
       section: 'dkg',
       method: 'PublicKeySignatureChanged',
     });
@@ -399,7 +404,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       )
     );
     const nonce = await governedToken.contract.proposalNonce();
-    console.log("Proposal nonce: ", nonce.toString());
+    console.log('Proposal nonce: ', nonce.toString());
     const proposalHeader = new ProposalHeader(
       resourceId,
       functionSignature,
@@ -409,7 +414,6 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       proposalHeader,
       tokenToRemove!
     );
-   
 
     await forceSubmitUnsignedProposal(charlieNode, {
       kind: 'TokenRemove',
@@ -423,10 +427,10 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { 
+      event: {
         chain_id: localChain1.underlyingChainId.toString(),
         call: 'execute_proposal_with_signature',
-       },
+      },
     });
     // now we wait for the tx queue on that chain to execute the transaction.
     await webbRelayer.waitForEvent({
@@ -444,8 +448,8 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   });
 
   it('should handle WrappingFeeUpdateProposal', async () => {
-     // we need to wait until the public key is on chain.
-     await charlieNode.waitForEvent({
+    // we need to wait until the public key is on chain.
+    await charlieNode.waitForEvent({
       section: 'dkg',
       method: 'PublicKeySignatureChanged',
     });
@@ -462,7 +466,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       localChain1.underlyingChainId
     );
     const nonce = await governedToken.contract.proposalNonce();
-    console.log("Proposal nonce: ", nonce.toString());
+    console.log('Proposal nonce: ', nonce.toString());
     const functionSignature = hexToU8a(
       governedToken.contract.interface.getSighash(
         governedToken.contract.interface.functions['setFee(uint16,uint32)']
@@ -491,7 +495,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
-      event: { 
+      event: {
         chain_id: localChain1.underlyingChainId.toString(),
         call: 'execute_proposal_with_signature',
       },
@@ -529,10 +533,7 @@ async function forceSubmitUnsignedProposal(
   }
 ) {
   const api = await node.api();
-  const kind = api.createType(
-    'WebbProposalsProposalProposalKind',
-    opts.kind
-  );
+  const kind = api.createType('WebbProposalsProposalProposalKind', opts.kind);
   const proposal = api
     .createType('WebbProposalsProposal', {
       Unsigned: {
