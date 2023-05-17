@@ -132,5 +132,5 @@ jobs:
         uses: ./.github/actions/github-release
         with:
           files: "dist/*"
-          name: $${{ github.ref_name }}
+          name: ${{ github.ref_name }}
           token: ${{ secrets.GITHUB_TOKEN }}
