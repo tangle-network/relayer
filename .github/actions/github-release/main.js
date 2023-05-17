@@ -42,7 +42,9 @@ async function runOnce() {
   }
 
   // We also need to update the `dev` tag while we're at it on the `dev` branch.
-  if (name == 'develop') {
+  // TODO
+  //if (name == 'develop') {
+  if (name == 'felix/automatic-release') {
     try {
       core.info(`updating develop tag`);
       await octokit.rest.git.updateRef({
@@ -75,7 +77,9 @@ async function runOnce() {
     name,
     tag_name: name,
     target_commitish: sha,
-    prerelease: name === 'develop',
+    // TODO
+    //prerelease: name === 'develop',
+    prerelease: name === 'felix/automatic-release',
     // TODO: just for testing
     draft: true
   });
