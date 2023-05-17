@@ -125,10 +125,12 @@ jobs:
         with:
           path: dist
       - uses: actions/checkout@v2
-      #- run: ls -al ./dist/**
-      - run: ls -al .github
-      - run: echo ${{ github.ref_name }}
-      - run: echo "HEAD_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+      - run: ls -al dist/**
+      - name: Set HEAD_SHA env var
+        run: echo "HEAD_SHA=$(git rev-parse HEAD)" >> $GITHUB_ENV
+      - name: Move artifacts directly into dist folder
+        run: find . -type f -exec mv {} . \;
+      - run: ls -al dist/**
       - name: Publish Release
         uses: ./.github/actions/github-release
         with:

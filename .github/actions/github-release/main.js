@@ -78,6 +78,7 @@ async function runOnce() {
     name,
     tag_name: name,
     target_commitish: sha,
+    // TODO: always mark as prerelease?
     prerelease: name === 'develop',
     // TODO: just for testing
     draft: true
@@ -86,6 +87,7 @@ async function runOnce() {
 
   // Upload all the relevant assets for this release as just general blobs.
   for (const file of glob.sync(files)) {
+    core.info(`add file ${file}`);
     const size = fs.statSync(file).size;
     const name = path.basename(file);
 
