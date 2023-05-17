@@ -31,6 +31,10 @@ ethereum-types = { workspace = true }
 typed-builder = "0.14.0"
 impl-trait-for-tuples = "0.2"
 
+[dev-dependencies]
+tracing-subscriber = { workspace = true }
+
+
 [features]
 default = ["std"]
 std = []
