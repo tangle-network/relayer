@@ -29,7 +29,7 @@ webb-proposals = { workspace = true }
 ethereum-types = { workspace = true }
 
 parking_lot = { workspace = true }
-typed-builder = { workspace = true }
+typed-builder = "0.14.0"
 impl-trait-for-tuples = "0.2"
 
 [dev-dependencies]

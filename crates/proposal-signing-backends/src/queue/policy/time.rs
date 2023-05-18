@@ -129,7 +129,7 @@ impl TimeDelayPolicy {
     }
 }
 
-impl super::ProposalPolicy for TimeDelayPolicy {
+impl super::ProposalsQueuePolicy for TimeDelayPolicy {
     #[tracing::instrument(
         skip_all
         fields(

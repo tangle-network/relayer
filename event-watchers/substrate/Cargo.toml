@@ -30,4 +30,3 @@ sp-core = { workspace = true }
 native-tls = { workspace = true, optional = true }
 webb-proposals = { workspace = true }
 libsecp256k1 = { workspace = true }
-typed-builder = { workspace = true }

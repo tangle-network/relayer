@@ -27,7 +27,7 @@ impl AlwaysHigherNoncePolicy {
     }
 }
 
-impl super::ProposalPolicy for AlwaysHigherNoncePolicy {
+impl super::ProposalsQueuePolicy for AlwaysHigherNoncePolicy {
     #[tracing::instrument(
         skip_all
         fields(
@@ -51,29 +51,18 @@ impl super::ProposalPolicy for AlwaysHigherNoncePolicy {
             self.nonce.store(nonce, atomic::Ordering::SeqCst);
             tracing::debug!("nonce is high enough to accept the proposal");
             // Look through the queue and remove any proposals that have a nonce lower than the current nonce
-            // but make sure the proposal kind is the same and with the same target target system.
             queue.retain(|p| {
                 let p_header = p.header();
                 let p_nonce = p_header.nonce().to_u32();
-                let p_fun_sig = p_header.function_signature();
-                let p_target_system = p_header.resource_id().target_system();
-                let p_target_chain = p_header.resource_id().typed_chain_id();
-
-                let fun_sig = header.function_signature();
-                let target_system = header.resource_id().target_system();
-                let target_chain = header.resource_id().typed_chain_id();
-                let should_keep_anyway = p_fun_sig != fun_sig
-                    || p_target_system != target_system
-                    || p_target_chain != target_chain;
                 let should_keep = p_nonce >= nonce;
-                if !should_keep && !should_keep_anyway {
+                if !should_keep {
                     tracing::debug!(
                         marked_proposal = hex::encode(p.full_hash()),
                         marked_proposal_nonce = p_nonce,
                         "marked proposal for removal because it has a lower nonce than the current nonce"
                     );
                 }
-                should_keep || should_keep_anyway
+                should_keep
             })
         }
     }
