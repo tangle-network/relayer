@@ -22,7 +22,8 @@ const WINDOW_SIZE: usize = 5;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```rust,no_run
+/// # use webb_proposal_signing_backends::queue::policy::TimeDelayPolicy;
 /// use std::time::Duration;
 ///
 /// // Create a TimeDelayPolicy with custom configuration
@@ -31,8 +32,7 @@ const WINDOW_SIZE: usize = 5;
 ///     .min_delay(5)
 ///     .max_delay(30)
 ///     .window_size(5)
-///     .build()
-///     .unwrap();
+///     .build();
 ///
 /// // Get the current delay
 /// let current_delay = policy.delay();
@@ -210,12 +210,10 @@ mod tests {
     use std::time::Duration;
 
     use webb::evm::ethers;
-    use webb_proposals::evm::AnchorUpdateProposal;
 
     use crate::queue::{mem::InMemoryProposalsQueue, test_utils::*};
 
-    type TestQueue =
-        InMemoryProposalsQueue<AnchorUpdateProposal, TimeDelayPolicy>;
+    type TestQueue = InMemoryProposalsQueue;
 
     #[test]
     fn test_default_configuration() {
@@ -337,8 +335,8 @@ mod tests {
             queue.enqueue(proposal, policy.clone()).is_ok(),
             "should accept proposal"
         );
-        // There is no need to wait, since the delay is never adjusted
-        // this means we can dequeue the proposal immediately.
+        // wait until the proposal is expected to be dequeued
+        std::thread::sleep(policy.delay());
         let proposal = queue.dequeue(policy).unwrap();
         assert!(proposal.is_some(), "should dequeue proposal");
     }

@@ -1,28 +1,29 @@
 use std::sync::{atomic, Arc};
 
+use tokio::sync::Mutex;
 use webb::evm::ethers;
 use webb_proposals::{ProposalHeader, ProposalTrait};
+use webb_relayer_utils::metric;
 
 /// A module for in-memory Proposals Queue.
 mod mem;
 /// A module for Proposals Polices.
 pub mod policy;
+/// A module that utilize sled Proposals Queue.
+mod sled;
 
 /// A Proposal Queue is a simple Queue that holds the proposals that are going to be
 /// signed or already signed and need to be sent to the target system to be executed.
 pub trait ProposalsQueue {
-    /// The policy type associated with the Proposal Queue.
+    /// The proposal type associated with the Proposal Queue.
+    type Proposal: ProposalTrait + ProposalMetadata + Send + Sync + 'static;
+
+    /// Enqueues a proposal into the queue with the specified policy.
+    ///
     ///
     /// The [`policy::ProposalsQueuePolicy`] trait is implemented for tuples of up to 5 policies.
     /// These policies are chained together and applied sequentially.
     /// If any of the policies in the chain rejects the proposal, the enqueue operation fails and returns an error.
-    type Policy: policy::ProposalsQueuePolicy;
-
-    /// The proposal type associated with the Proposal Queue.
-    type Proposal: ProposalTrait + ProposalMetadata;
-
-    /// Enqueues a proposal into the queue with the specified policy.
-    ///
     /// The proposal is added to the queue, and the provided policy is applied to determine if the proposal should be accepted.
     /// If the policy chain rejects the proposal, the enqueue operation fails and returns an error.
     ///
@@ -36,17 +37,19 @@ pub trait ProposalsQueue {
     /// Returns a `Result` indicating whether the enqueue operation was successful or not.
     /// If the enqueue operation fails, an error is returned. Possible errors include:
     /// - `EnqueueQueueError` if there is an issue during the enqueue operation, such as a policy rejection.
-    ///
-    fn enqueue(
+    fn enqueue<Policy: policy::ProposalsQueuePolicy>(
         &self,
         proposal: Self::Proposal,
-        policy: Self::Policy,
+        policy: Policy,
     ) -> webb_relayer_utils::Result<()>;
 
     /// Dequeues a proposal from the queue with the specified policy.
     ///
     /// The dequeue operation retrieves the next proposal from the queue that satisfies the provided policy.
     /// The policy is applied sequentially to the proposals in the queue until a matching proposal is found.
+    /// The [`policy::ProposalsQueuePolicy`] trait is implemented for tuples of up to 5 policies.
+    /// These policies are chained together and applied sequentially.
+    /// If any of the policies in the chain rejects the proposal, the dequeue operation fails and returns an error.
     ///
     /// # Arguments
     ///
@@ -60,9 +63,9 @@ pub trait ProposalsQueue {
     /// If the dequeue operation fails, an error is returned. Possible errors include:
     /// - `DequeueQueueError` if there is an issue during the dequeue operation.
     ///
-    fn dequeue(
+    fn dequeue<Policy: policy::ProposalsQueuePolicy>(
         &self,
-        policy: Self::Policy,
+        policy: Policy,
     ) -> webb_relayer_utils::Result<Option<Self::Proposal>>;
 
     /// Returns the length of the proposal queue.
@@ -174,6 +177,8 @@ pub struct QueuedProposalMetadata {
 }
 
 impl QueuedProposalMetadata {
+    /// Get the time at which the proposal should be dequeued.
+    /// The value is the number of secs since the UNIX epoch.
     pub fn should_be_dequeued_at(&self) -> Option<u64> {
         let should_be_dequeued_at =
             self.should_be_dequeued_at.load(atomic::Ordering::SeqCst);
@@ -184,10 +189,14 @@ impl QueuedProposalMetadata {
         }
     }
 
+    /// Get the time at which the proposal was enqueued.
+    /// The value is the number of secs since the UNIX epoch.
     pub fn queued_at(&self) -> u64 {
         self.queued_at.load(atomic::Ordering::SeqCst)
     }
 
+    /// Set the time at which the proposal should be dequeued.
+    /// The value is the number of secs since the UNIX epoch.
     pub fn set_should_be_dequeued_at(&self, should_be_dequeued_at: u64) {
         self.should_be_dequeued_at
             .store(should_be_dequeued_at, atomic::Ordering::SeqCst);
@@ -208,27 +217,38 @@ impl Default for QueuedProposalMetadata {
 }
 
 /// A Small Wrapper around a proposal that adds some metadata.
-#[derive(Debug)]
-pub struct QueuedProposal<P> {
-    inner: P,
+#[derive(Clone)]
+pub struct QueuedProposal {
+    inner: Arc<dyn ProposalTrait + Sync + Send>,
     metadata: QueuedProposalMetadata,
 }
 
-impl<P: Clone> Clone for QueuedProposal<P> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            metadata: self.metadata.clone(),
-        }
+impl std::fmt::Debug for QueuedProposal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("QueuedProposal")
+            .field("inner", &hex::encode(self.inner.to_vec()))
+            .field("metadata", &self.metadata)
+            .finish()
     }
 }
 
-impl<P: ProposalTrait> QueuedProposal<P> {
-    pub fn new(inner: P) -> Self {
+impl QueuedProposal {
+    /// Creates a new `QueuedProposal` from a proposal.
+    /// This abstracts away the metadata creation.
+    pub fn new<P>(inner: P) -> Self
+    where
+        P: ProposalTrait + Send + Sync + 'static,
+    {
         Self {
-            inner,
+            inner: Arc::new(inner),
             metadata: Default::default(),
         }
+    }
+
+    /// Unwraps the `QueuedProposal` and returns the inner proposal.
+    /// This consumes the `QueuedProposal`.
+    pub fn into_inner(self) -> Arc<dyn ProposalTrait> {
+        self.inner
     }
 }
 
@@ -249,8 +269,7 @@ where
     P: ProposalTrait,
 {
     fn full_hash(&self) -> [u8; 32] {
-        let full = self.to_vec();
-        ethers::utils::keccak256(&full)
+        ethers::utils::keccak256(self.to_vec())
     }
 
     fn body_hash(&self) -> [u8; 32] {
@@ -260,10 +279,7 @@ where
     }
 }
 
-impl<P> ProposalTrait for QueuedProposal<P>
-where
-    P: ProposalTrait,
-{
+impl ProposalTrait for QueuedProposal {
     fn header(&self) -> webb_proposals::ProposalHeader {
         self.inner.header()
     }
@@ -287,80 +303,83 @@ pub trait ProposalMetadata {
     fn metadata(&self) -> &QueuedProposalMetadata;
 }
 
-impl<P> ProposalMetadata for QueuedProposal<P>
-where
-    P: ProposalTrait,
-{
+impl ProposalMetadata for QueuedProposal {
     fn metadata(&self) -> &QueuedProposalMetadata {
         &self.metadata
     }
 }
 
-pub struct DummyProposal;
+/// Runs the queue in a loop that it will try
+/// to dequeue proposals and sends them to the signing backend.
+///
+/// This function will loop forever and should be run in a separate task.
+/// it will never end unless the task is cancelled.
+#[tracing::instrument(skip_all)]
+pub async fn run<Queue, Policy, PSB>(
+    queue: Queue,
+    policy: Policy,
+    proposal_signing_backend: PSB,
+    metrics: Arc<Mutex<metric::Metrics>>,
+) where
+    Queue: ProposalsQueue,
+    Policy: policy::ProposalsQueuePolicy + Clone,
+    PSB: super::ProposalSigningBackend,
+{
+    loop {
+        let proposal = match queue.dequeue(policy.clone()) {
+            Ok(Some(proposal)) => proposal,
+            Ok(None) => {
+                tracing::trace!("No proposal to dequeue");
+                tokio::task::yield_now().await;
+                continue;
+            }
+            Err(e) => {
+                tracing::error!("Failed to dequeue proposal: {:?}", e);
+                tokio::task::yield_now().await;
+                continue;
+            }
+        };
 
-impl ProposalTrait for DummyProposal {
-    fn header(&self) -> webb_proposals::ProposalHeader {
-        todo!()
-    }
-
-    fn to_vec(&self) -> Vec<u8> {
-        todo!()
-    }
-}
-
-impl ProposalMetadata for DummyProposal {
-    fn metadata(&self) -> &QueuedProposalMetadata {
-        todo!()
-    }
-}
-
-impl ProposalsQueue for () {
-    type Policy = ();
-
-    type Proposal = DummyProposal;
-
-    fn enqueue(
-        &self,
-        proposal: Self::Proposal,
-        policy: Self::Policy,
-    ) -> webb_relayer_utils::Result<()> {
-        todo!()
-    }
-
-    fn dequeue(
-        &self,
-        policy: Self::Policy,
-    ) -> webb_relayer_utils::Result<Option<Self::Proposal>> {
-        todo!()
-    }
-
-    fn len(&self) -> webb_relayer_utils::Result<usize> {
-        todo!()
-    }
-
-    fn clear(&self) -> webb_relayer_utils::Result<()> {
-        todo!()
-    }
-
-    fn remove(
-        &self,
-        hash: [u8; 32],
-    ) -> webb_relayer_utils::Result<Option<Self::Proposal>> {
-        todo!()
-    }
-
-    fn retain<F>(&self, f: F) -> webb_relayer_utils::Result<()>
-    where
-        F: FnMut(&Self::Proposal) -> bool,
-    {
-        todo!()
-    }
-
-    fn modify_in_place<F>(&self, f: F) -> webb_relayer_utils::Result<()>
-    where
-        F: FnMut(&mut Self::Proposal) -> webb_relayer_utils::Result<()>,
-    {
-        todo!()
+        let maybe_can_sign_proposal = proposal_signing_backend
+            .can_handle_proposal(&proposal)
+            .await;
+        let can_sign_proposal = match maybe_can_sign_proposal {
+            Ok(v) => v,
+            Err(e) => {
+                tracing::error!(
+                    "Failed to check if the proposal can be signed: {:?}",
+                    e
+                );
+                tokio::task::yield_now().await;
+                continue;
+            }
+        };
+        let result = if can_sign_proposal {
+            proposal_signing_backend
+                .handle_proposal(&proposal, metrics.clone())
+                .await
+        } else {
+            tracing::warn!(
+                proposal = ?hex::encode(proposal.to_vec()),
+                "the proposal is not supported by the signing backend"
+            );
+            Ok(())
+        };
+        match result {
+            Ok(_) => {
+                tracing::debug!(
+                    proposal = ?hex::encode(proposal.to_vec()),
+                    "the proposal was successfully handled by the signing backend"
+                );
+            }
+            Err(e) => {
+                tracing::error!(
+                    error = ?e,
+                    proposal = ?hex::encode(proposal.to_vec()),
+                    "failed to handle the proposal",
+                );
+            }
+        }
     }
 }
 
@@ -416,7 +435,7 @@ pub(crate) mod test_utils {
     pub fn mock_evm_anchor_update_proposal(
         header: webb_proposals::ProposalHeader,
         src_resourc_id: webb_proposals::ResourceId,
-    ) -> QueuedProposal<webb_proposals::evm::AnchorUpdateProposal> {
+    ) -> QueuedProposal {
         let root = ethers::types::H256::random();
         let proposal = webb_proposals::evm::AnchorUpdateProposal::new(
             header,

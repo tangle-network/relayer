@@ -1,41 +1,48 @@
+use parking_lot::RwLock;
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use webb::evm::ethers;
-use webb_proposals::ProposalTrait;
 
-use super::policy::*;
-use super::ProposalHash;
-use super::QueuedProposal;
+use super::{policy::*, ProposalHash, QueuedProposal};
 
+/// An in-memory implementation of a proposals queue.
+///
+/// The `InMemoryProposalsQueue` struct stores proposals in a `BTreeMap` data structure, where each proposal is associated
+/// with a unique identifier of type [`ethers::types::H256`] which is the hash of the proposal.
+///
+/// The `InMemoryProposalsQueue` struct is `Clone` and `Debug`, allowing for easy cloning and debugging of the queue.
+/// It is designed to be cheap to clone, as it internally uses an `Arc` to share the underlying `BTreeMap` across multiple
+/// clones, and a `RwLock` to ensure safe concurrent access to the map.
+///
+/// # Sharing the Queue Across Threads
+///
+/// The `InMemoryProposalsQueue` struct is designed to be shared across multiple threads. It internally uses an `Arc`
+/// to share the underlying `BTreeMap` across multiple clones, ensuring safe concurrent access to the map.
+///
+/// # Copying the Queue
+///
+/// The `InMemoryProposalsQueue` struct is also cheap to copy, as it implements the `Clone` trait. It internally uses an `Arc`
+/// to share the underlying `BTreeMap`, which means that cloning the queue only involves incrementing the reference count
+/// of the `Arc` and cloning the `RwLock` handles, rather than performing a deep copy of the entire map.
+///
 #[derive(Clone, Debug)]
-pub struct InMemoryProposalsQueue<Proposal, Policy> {
-    proposals:
-        Arc<RwLock<BTreeMap<ethers::types::H256, QueuedProposal<Proposal>>>>,
-    _marker: std::marker::PhantomData<Policy>,
+pub struct InMemoryProposalsQueue {
+    proposals: Arc<RwLock<BTreeMap<ethers::types::H256, QueuedProposal>>>,
 }
 
-impl<Proposal, Policy> InMemoryProposalsQueue<Proposal, Policy> {
+impl InMemoryProposalsQueue {
     /// Creates a new `InMemoryProposalsQueue` that will store the proposals
     /// in memory.
     pub fn new() -> Self {
         Self {
             proposals: Arc::new(RwLock::new(Default::default())),
-            _marker: std::marker::PhantomData,
         }
     }
 }
 
-impl<Proposal, Policy> super::ProposalsQueue
-    for InMemoryProposalsQueue<Proposal, Policy>
-where
-    Proposal: ProposalTrait + Clone,
-    Policy: ProposalsQueuePolicy,
-{
-    type Policy = Policy;
-
-    type Proposal = QueuedProposal<Proposal>;
+impl super::ProposalsQueue for InMemoryProposalsQueue {
+    type Proposal = QueuedProposal;
 
     #[tracing::instrument(
         skip_all,
@@ -44,35 +51,26 @@ where
             proposal = hex::encode(proposal.full_hash()),
         )
     )]
-    fn enqueue(
+    fn enqueue<Policy: ProposalsQueuePolicy>(
         &self,
         proposal: Self::Proposal,
-        policy: Self::Policy,
+        policy: Policy,
     ) -> webb_relayer_utils::Result<()> {
         let accepted = policy.check(&proposal, self);
         tracing::debug!(accepted = ?accepted, "proposal check result");
         accepted?;
         self.proposals
             .write()
-            .map_err(|_| {
-                webb_relayer_utils::Error::Generic(
-                    "failed to acquire write lock on proposals",
-                )
-            })?
             .insert(proposal.full_hash().into(), proposal);
         Ok(())
     }
 
     #[tracing::instrument(skip_all, fields(queue = "in_memory"))]
-    fn dequeue(
+    fn dequeue<Policy: ProposalsQueuePolicy>(
         &self,
-        policy: Self::Policy,
+        policy: Policy,
     ) -> webb_relayer_utils::Result<Option<Self::Proposal>> {
-        let rlock = self.proposals.read().map_err(|_| {
-            webb_relayer_utils::Error::Generic(
-                "failed to acquire read lock on proposals",
-            )
-        })?;
+        let rlock = self.proposals.read();
         let values = rlock
             .iter()
             .map(|(k, v)| (*k, v.clone()))
@@ -94,12 +92,7 @@ where
             match policy.check(&proposal, self) {
                 Ok(_) => {
                     // lock and remove the proposal
-                    let mut wlock = self.proposals.write().map_err(|_| {
-                        webb_relayer_utils::Error::Generic(
-                            "failed to acquire write lock on proposals",
-                        )
-                    })?;
-                    wlock.remove(&k);
+                    self.proposals.write().remove(&k);
                     tracing::debug!(
                         proposal = hex::encode(k.as_bytes()),
                         "proposal passed policy check before dequeue",
@@ -118,27 +111,12 @@ where
     }
 
     fn len(&self) -> webb_relayer_utils::Result<usize> {
-        let len = self
-            .proposals
-            .read()
-            .map_err(|_| {
-                webb_relayer_utils::Error::Generic(
-                    "failed to acquire read lock on proposals",
-                )
-            })?
-            .len();
+        let len = self.proposals.read().len();
         Ok(len)
     }
 
     fn clear(&self) -> webb_relayer_utils::Result<()> {
-        self.proposals
-            .write()
-            .map_err(|_| {
-                webb_relayer_utils::Error::Generic(
-                    "failed to acquire write lock on proposals",
-                )
-            })?
-            .clear();
+        self.proposals.write().clear();
         Ok(())
     }
 
@@ -146,15 +124,7 @@ where
         &self,
         hash: [u8; 32],
     ) -> webb_relayer_utils::Result<Option<Self::Proposal>> {
-        let maybe_prop = self
-            .proposals
-            .write()
-            .map_err(|_| {
-                webb_relayer_utils::Error::Generic(
-                    "failed to acquire write lock on proposals",
-                )
-            })?
-            .remove(&hash.into());
+        let maybe_prop = self.proposals.write().remove(&hash.into());
         Ok(maybe_prop)
     }
 
@@ -162,27 +132,14 @@ where
     where
         F: FnMut(&Self::Proposal) -> bool,
     {
-        let mut write_lock = self.proposals.write().map_err(|_| {
-            webb_relayer_utils::Error::Generic(
-                "failed to acquire write lock on proposals",
-            )
-        })?;
-        write_lock.retain(|_k, v| f(v));
+        self.proposals.write().retain(|_k, v| f(v));
         Ok(())
     }
 
-    fn modify_in_place<F>(&self, mut f: F) -> webb_relayer_utils::Result<()>
+    fn modify_in_place<F>(&self, f: F) -> webb_relayer_utils::Result<()>
     where
         F: FnMut(&mut Self::Proposal) -> webb_relayer_utils::Result<()>,
     {
-        let mut write_lock = self.proposals.write().map_err(|_| {
-            webb_relayer_utils::Error::Generic(
-                "failed to acquire write lock on proposals",
-            )
-        })?;
-        for (_k, v) in write_lock.iter_mut() {
-            f(v)?;
-        }
-        Ok(())
+        self.proposals.write().values_mut().try_for_each(f)
     }
 }

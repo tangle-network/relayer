@@ -18,33 +18,6 @@ pub trait ProposalsQueuePolicy {
     ///
     /// This method may return an error if the proposal fails to meet the policy's criteria.
     ///
-    /// # Examples
-    ///
-    /// Implementations of this method should perform the necessary checks on the proposal.
-    /// If the proposal does not meet the policy's criteria, an error should be returned.
-    ///
-    /// ```rust
-    /// use webb_relayer_utils::Result;
-    ///
-    /// struct MyPolicy;
-    ///
-    /// impl ProposalsQueuePolicy for MyPolicy {
-    ///     fn check<Q: super::ProposalsQueue>(
-    ///         &self,
-    ///         proposal: &Q::Proposal,
-    ///         queue: &Q,
-    ///     ) -> Result<()> {
-    ///         // Perform checks on the proposal
-    ///         // ...
-    ///
-    ///         // If the proposal fails to meet the criteria, return an error
-    ///         // return Err(webb_relayer_utils::Error::new("Proposal does not meet policy criteria"));
-    ///
-    ///         // If the proposal meets the criteria, return Ok(())
-    ///         Ok(())
-    ///     }
-    /// }
-    /// ```
     fn check<Q: super::ProposalsQueue>(
         &self,
         proposal: &Q::Proposal,

@@ -68,15 +68,13 @@ mod tests {
     use std::time::Duration;
 
     use webb::evm::ethers;
-    use webb_proposals::evm::AnchorUpdateProposal;
 
     use super::*;
     use crate::queue::{
         mem::InMemoryProposalsQueue, test_utils::*, ProposalHash,
     };
 
-    type TestQueue =
-        InMemoryProposalsQueue<AnchorUpdateProposal, AlwaysHigherNoncePolicy>;
+    type TestQueue = InMemoryProposalsQueue;
 
     #[test]
     fn should_accept_proposals_with_higher_nonce() {
