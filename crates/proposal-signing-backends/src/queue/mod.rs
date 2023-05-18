@@ -9,8 +9,6 @@ use webb_relayer_utils::metric;
 mod mem;
 /// A module for Proposals Polices.
 pub mod policy;
-/// A module that utilize sled Proposals Queue.
-mod sled;
 
 /// A Proposal Queue is a simple Queue that holds the proposals that are going to be
 /// signed or already signed and need to be sent to the target system to be executed.
@@ -37,7 +35,7 @@ pub trait ProposalsQueue {
     /// Returns a `Result` indicating whether the enqueue operation was successful or not.
     /// If the enqueue operation fails, an error is returned. Possible errors include:
     /// - `EnqueueQueueError` if there is an issue during the enqueue operation, such as a policy rejection.
-    fn enqueue<Policy: policy::ProposalsQueuePolicy>(
+    fn enqueue<Policy: policy::ProposalPolicy>(
         &self,
         proposal: Self::Proposal,
         policy: Policy,
@@ -63,7 +61,7 @@ pub trait ProposalsQueue {
     /// If the dequeue operation fails, an error is returned. Possible errors include:
     /// - `DequeueQueueError` if there is an issue during the dequeue operation.
     ///
-    fn dequeue<Policy: policy::ProposalsQueuePolicy>(
+    fn dequeue<Policy: policy::ProposalPolicy>(
         &self,
         policy: Policy,
     ) -> webb_relayer_utils::Result<Option<Self::Proposal>>;
@@ -218,12 +216,12 @@ impl Default for QueuedProposalMetadata {
 
 /// A Small Wrapper around a proposal that adds some metadata.
 #[derive(Clone)]
-pub struct QueuedProposal {
+pub struct QueuedAnchorUpdateProposal {
     inner: Arc<dyn ProposalTrait + Sync + Send>,
     metadata: QueuedProposalMetadata,
 }
 
-impl std::fmt::Debug for QueuedProposal {
+impl std::fmt::Debug for QueuedAnchorUpdateProposal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("QueuedProposal")
             .field("inner", &hex::encode(self.inner.to_vec()))
@@ -232,8 +230,8 @@ impl std::fmt::Debug for QueuedProposal {
     }
 }
 
-impl QueuedProposal {
-    /// Creates a new `QueuedProposal` from a proposal.
+impl QueuedAnchorUpdateProposal {
+    /// Creates a new `QueuedAnchorUpdateProposal` from a proposal.
     /// This abstracts away the metadata creation.
     pub fn new<P>(inner: P) -> Self
     where
@@ -243,12 +241,6 @@ impl QueuedProposal {
             inner: Arc::new(inner),
             metadata: Default::default(),
         }
-    }
-
-    /// Unwraps the `QueuedProposal` and returns the inner proposal.
-    /// This consumes the `QueuedProposal`.
-    pub fn into_inner(self) -> Arc<dyn ProposalTrait> {
-        self.inner
     }
 }
 
@@ -279,7 +271,7 @@ where
     }
 }
 
-impl ProposalTrait for QueuedProposal {
+impl ProposalTrait for QueuedAnchorUpdateProposal {
     fn header(&self) -> webb_proposals::ProposalHeader {
         self.inner.header()
     }
@@ -303,7 +295,7 @@ pub trait ProposalMetadata {
     fn metadata(&self) -> &QueuedProposalMetadata;
 }
 
-impl ProposalMetadata for QueuedProposal {
+impl ProposalMetadata for QueuedAnchorUpdateProposal {
     fn metadata(&self) -> &QueuedProposalMetadata {
         &self.metadata
     }
@@ -322,7 +314,7 @@ pub async fn run<Queue, Policy, PSB>(
     metrics: Arc<Mutex<metric::Metrics>>,
 ) where
     Queue: ProposalsQueue,
-    Policy: policy::ProposalsQueuePolicy + Clone,
+    Policy: policy::ProposalPolicy + Clone,
     PSB: super::ProposalSigningBackend,
 {
     loop {
@@ -342,31 +334,12 @@ pub async fn run<Queue, Policy, PSB>(
             }
         };
 
-        let maybe_can_sign_proposal = proposal_signing_backend
-            .can_handle_proposal(&proposal)
-            .await;
-        let can_sign_proposal = match maybe_can_sign_proposal {
-            Ok(v) => v,
-            Err(e) => {
-                tracing::error!(
-                    "Failed to check if the proposal can be signed: {:?}",
-                    e
-                );
-                tokio::task::yield_now().await;
-                continue;
-            }
-        };
-        let result = if can_sign_proposal {
-            proposal_signing_backend
-                .handle_proposal(&proposal, metrics.clone())
-                .await
-        } else {
-            tracing::warn!(
-                proposal = ?hex::encode(proposal.to_vec()),
-                "the proposal is not supported by the signing backend"
-            );
-            Ok(())
-        };
+        let result = crate::proposal_handler::handle_proposal(
+            &proposal,
+            &proposal_signing_backend,
+            metrics.clone(),
+        )
+        .await;
         match result {
             Ok(_) => {
                 tracing::debug!(
@@ -436,14 +409,14 @@ pub(crate) mod test_utils {
     pub fn mock_evm_anchor_update_proposal(
         header: webb_proposals::ProposalHeader,
         src_resourc_id: webb_proposals::ResourceId,
-    ) -> QueuedProposal {
+    ) -> QueuedAnchorUpdateProposal {
         let root = ethers::types::H256::random();
         let proposal = webb_proposals::evm::AnchorUpdateProposal::new(
             header,
             root.to_fixed_bytes(),
             src_resourc_id,
         );
-        QueuedProposal::new(proposal)
+        QueuedAnchorUpdateProposal::new(proposal)
     }
 
     pub fn mock_metrics() -> Arc<Mutex<metric::Metrics>> {
