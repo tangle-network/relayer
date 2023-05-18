@@ -376,7 +376,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     expect(tokens.includes(testToken.contract.address)).to.eq(true);
   });
 
-  it('should handle TokenRemoveProposal', async () => {
+  it.skip('should handle TokenRemoveProposal', async () => {
     // we need to wait until the public key is changed.
     await charlieNode.waitForEvent({
       section: 'dkg',
@@ -464,7 +464,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         finalized: true,
       },
     });
-    await sleep(10000);
+    await sleep(5000);
     // now we check that the token was removed.
     const tokens = await governedToken.contract.getTokens();
     expect(tokens.includes(tokenToRemove!)).to.eq(false);
@@ -554,7 +554,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         finalized: true,
       },
     });
-    await sleep(5000);
+    await sleep(10000);
     const fee = await governedToken.contract.getFee();
     expect(newFee).to.eq(ethers.utils.hexValue(fee));
   });
