@@ -4,9 +4,9 @@ mod time;
 pub use nonce::*;
 pub use time::*;
 
-/// The `ProposalsQueuePolicy` trait defines the behavior of a policy that is applied to proposals in a queue.
+/// The `ProposalPolicy` trait defines the behavior of a policy that is applied to proposal in a queue.
 /// A policy determines whether a proposal should be accepted or rejected based on specific criteria.
-pub trait ProposalsQueuePolicy {
+pub trait ProposalPolicy {
     /// Checks whether a proposal should be accepted or rejected based on the policy's criteria.
     ///
     /// # Arguments
@@ -26,7 +26,7 @@ pub trait ProposalsQueuePolicy {
 }
 
 #[impl_trait_for_tuples::impl_for_tuples(5)]
-impl ProposalsQueuePolicy for TupleIdentifier {
+impl ProposalPolicy for TupleIdentifier {
     fn check<Q: super::ProposalsQueue>(
         &self,
         proposal: &Q::Proposal,

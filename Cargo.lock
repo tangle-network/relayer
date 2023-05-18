@@ -8020,17 +8020,6 @@ dependencies = [
 
 [[package]]
 name = "typed-builder"
-version = "0.12.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6179333b981641242a768f30f371c9baccbfcc03749627000c500ab88bf4528b"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "typed-builder"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64cba322cb9b7bc6ca048de49e83918223f35e7a86311267013afff257004870"
@@ -8877,7 +8866,7 @@ dependencies = [
  "native-tls",
  "sp-core",
  "tokio 1.27.0",
- "typed-builder 0.12.0",
+ "typed-builder 0.14.0",
  "webb 0.5.22",
  "webb-proposals",
  "webb-relayer-config",
@@ -8982,6 +8971,7 @@ dependencies = [
  "sled",
  "tokio 1.27.0",
  "tracing",
+ "typed-builder 0.14.0",
  "webb 0.5.22",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
@@ -9004,6 +8994,7 @@ dependencies = [
  "sp-core",
  "tokio 1.27.0",
  "tracing",
+ "typed-builder 0.14.0",
  "webb 0.5.22",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
@@ -9065,7 +9056,7 @@ dependencies = [
  "reqwest",
  "serde",
  "tokio 1.27.0",
- "typed-builder 0.12.0",
+ "typed-builder 0.14.0",
  "webb 0.5.22",
  "webb-chains-info",
  "webb-relayer-store",

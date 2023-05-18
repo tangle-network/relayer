@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use webb::evm::ethers;
 
-use super::{policy::*, ProposalHash, QueuedProposal};
+use super::{policy::*, ProposalHash, QueuedAnchorUpdateProposal};
 
 /// An in-memory implementation of a proposals queue.
 ///
@@ -28,7 +28,7 @@ use super::{policy::*, ProposalHash, QueuedProposal};
 ///
 #[derive(Clone, Debug)]
 pub struct InMemoryProposalsQueue {
-    proposals: Arc<RwLock<BTreeMap<ethers::types::H256, QueuedProposal>>>,
+    proposals: Arc<RwLock<BTreeMap<ethers::types::H256, QueuedAnchorUpdateProposal>>>,
 }
 
 impl InMemoryProposalsQueue {
@@ -42,7 +42,7 @@ impl InMemoryProposalsQueue {
 }
 
 impl super::ProposalsQueue for InMemoryProposalsQueue {
-    type Proposal = QueuedProposal;
+    type Proposal = QueuedAnchorUpdateProposal;
 
     #[tracing::instrument(
         skip_all,
@@ -51,7 +51,7 @@ impl super::ProposalsQueue for InMemoryProposalsQueue {
             proposal = hex::encode(proposal.full_hash()),
         )
     )]
-    fn enqueue<Policy: ProposalsQueuePolicy>(
+    fn enqueue<Policy: ProposalPolicy>(
         &self,
         proposal: Self::Proposal,
         policy: Policy,
@@ -66,7 +66,7 @@ impl super::ProposalsQueue for InMemoryProposalsQueue {
     }
 
     #[tracing::instrument(skip_all, fields(queue = "in_memory"))]
-    fn dequeue<Policy: ProposalsQueuePolicy>(
+    fn dequeue<Policy: ProposalPolicy>(
         &self,
         policy: Policy,
     ) -> webb_relayer_utils::Result<Option<Self::Proposal>> {

@@ -21,7 +21,7 @@ webb = { workspace = true }
 native-tls = { workspace = true, optional = true }
 
 chrono = { version = "0.4.23", features = ["serde"] }
-typed-builder = "0.12.0"
+typed-builder = { workspace = true }
 # Backends for the price oracle.
 reqwest = { workspace = true, features = ["json"], optional = true }
 
