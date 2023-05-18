@@ -25,7 +25,6 @@ import temp from 'temp';
 import retry from 'async-retry';
 import { LocalChain } from '../../lib/localTestnet.js';
 import { sleep } from '../../lib/sleep.js';
-import { timeout } from '../../lib/timeout.js';
 import {
   Pallet,
   WebbRelayer,
@@ -45,7 +44,7 @@ import { MintableToken } from '@webb-tools/tokens';
 Chai.use(ChaiAsPromised);
 
 // FIXME: this test is skipped since there is an issue with manual DKG Refresh.
-describe.skip('SignatureBridge Governor Updates', function () {
+describe('SignatureBridge Governor Updates', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -63,7 +62,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
-      ? { mode: 'host', nodePath: 'dkg-standalone-node' }
+      ? { mode: 'docker', forcePullImage: false }
       : {
           mode: 'host',
           nodePath: path.resolve(
@@ -94,8 +93,14 @@ describe.skip('SignatureBridge Governor Updates', function () {
       ports: 'auto',
       enableLogging: false,
     });
-
+    // Wait until we are ready and connected
+    const api = await charlieNode.api();
+    await api.isReady;
+    console.log(
+      'tangle node ready waiting for dkg public key to be set onchain'
+    );
     const chainId = await charlieNode.getChainId();
+
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
@@ -105,7 +110,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     // we need to wait until the public key is on chain.
     await charlieNode.waitForEvent({
       section: 'dkg',
-      method: 'PublicKeySubmitted',
+      method: 'PublicKeySignatureChanged',
     });
 
     // next we need to start local evm node.
@@ -189,8 +194,8 @@ describe.skip('SignatureBridge Governor Updates', function () {
     });
     // fetch the dkg public key.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
-    expect(dkgPublicKey).to.not.be.null;
-    const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey!);
+    expect(dkgPublicKey).to.not.equal('0x');
+    const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey);
     // verify the governor address is a valid ethereum address.
     expect(ethers.utils.isAddress(governorAddress)).to.be.true;
     // transfer ownership to the DKG.
@@ -250,7 +255,6 @@ describe.skip('SignatureBridge Governor Updates', function () {
     await tx.wait();
     await token2.mintTokens(wallet2.address, ethers.utils.parseEther('1000'));
 
-    const api = await charlieNode.api();
     const resourceId1 = await anchor.createResourceId();
     const resourceId2 = await anchor2.createResourceId();
 
@@ -268,22 +272,13 @@ describe.skip('SignatureBridge Governor Updates', function () {
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
       verbosity: 3,
     });
     await webbRelayer.waitUntilReady();
   });
 
   it('ownership should be transfered when the DKG rotates', async () => {
-    // now we just need to force the DKG to rotate/refresh.
-    const api = await charlieNode.api();
-    const forceIncrementNonce = api.tx.dkg.manualIncrementNonce!();
-    const forceRefresh = api.tx.dkg.manualRefresh!();
-    await timeout(
-      charlieNode.sudoExecuteTransaction(forceIncrementNonce),
-      30_000
-    );
-    await timeout(charlieNode.sudoExecuteTransaction(forceRefresh), 60_000);
     // now we just need for the relayer to pick up the new DKG events.
     // and update both chains' signature bridge governor.
     await Promise.all([
@@ -308,8 +303,8 @@ describe.skip('SignatureBridge Governor Updates', function () {
     await sleep(1000);
     // now we need to check that the ownership was transfered.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();
-    expect(dkgPublicKey).to.not.be.null;
-    const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey!);
+    expect(dkgPublicKey).to.not.equal('0x');
+    const governorAddress = ethAddressFromUncompressedPublicKey(dkgPublicKey);
     const sides = signatureBridge.vBridgeSides.values();
     for (const signatureSide of sides) {
       const contract = signatureSide.contract;

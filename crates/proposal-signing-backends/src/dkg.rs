@@ -1,11 +1,12 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
-use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
 use sp_core::sr25519::Pair as Sr25519Pair;
 use webb::evm::ethers::utils;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::{Proposal, ProposalKind};
 use webb_proposals::ProposalTrait;
 use webb::substrate::scale::{Encode, Decode};
 use webb_relayer_utils::metric;
@@ -109,21 +110,33 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         );
 
         let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
-
+        let unsigned_proposal = Proposal::Unsigned {
+            kind: ProposalKind::AnchorUpdate,
+            data: BoundedVec(proposal.to_vec()),
+        };
         let acknowledge_proposal_tx = tx_api.acknowledge_proposal(
             nonce.clone(),
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
-            BoundedVec(proposal.to_vec()),
+            unsigned_proposal,
         );
 
         let signer = &self.pair;
-        let signed_acknowledge_proposal_tx = self
+        let maybe_signed_acknowledge_proposal_tx = self
             .client
             .tx()
             .create_signed(&acknowledge_proposal_tx, signer, Default::default())
-            .await?;
-
+            .await;
+        let signed_acknowledge_proposal_tx =
+            match maybe_signed_acknowledge_proposal_tx {
+                Ok(tx) => tx,
+                Err(e) => {
+                    tracing::error!(?e, "failed to sign tx");
+                    return Err(webb_relayer_utils::Error::Generic(
+                        "failed to sign tx",
+                    ));
+                }
+            };
         let data_hash =
             utils::keccak256(acknowledge_proposal_tx.call_data().encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
