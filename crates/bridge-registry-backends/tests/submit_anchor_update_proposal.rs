@@ -5,9 +5,11 @@ use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::ResourceId as DkgResourceId;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::TypedChainId as DkgTypedChainId;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce as DkgNonce;
-use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 use webb::substrate::subxt::tx::{PairSigner, TxProgress, TxStatus};
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::Proposal;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::ProposalKind;
 use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_proposals::evm::AnchorUpdateProposal;
@@ -64,12 +66,15 @@ async fn submit_anchor_update_proposal() {
             hex::encode(anchor_update_proposal)
         );
         assert_eq!(104, anchor_update_proposal.len());
-
+        let unsigned_proposal = Proposal::Unsigned {
+            kind: ProposalKind::AnchorUpdate,
+            data: BoundedVec(anchor_update_proposal.to_vec()),
+        };
         let xt = tx_api.acknowledge_proposal(
             DkgNonce(account_nonce),
             DkgTypedChainId::Evm(5001),
             DkgResourceId(resource_id.into_bytes()),
-            BoundedVec(anchor_update_proposal.to_vec()),
+            unsigned_proposal,
         );
 
         let mut progress = api

@@ -333,7 +333,6 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       )
     );
     const nonce = await governedToken.contract.proposalNonce();
-    console.log('Proposal nonce: ', nonce.toString());
     const proposalHeader = new ProposalHeader(
       resourceId,
       functionSignature,
@@ -347,12 +346,14 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       kind: 'TokenAdd',
       data: u8aToHex(tokenAddProposal.toU8a()),
     });
+
     // now we wait for the proposal to be signed.
     charlieNode.waitForEvent({
       section: 'dkgProposalHandler',
       method: 'ProposalSigned',
     });
-    // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
+ 
+   // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
       event: {
@@ -376,11 +377,31 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   });
 
   it('should handle TokenRemoveProposal', async () => {
-    // we need to wait until the public key is on chain.
+    // we need to wait until the public key is changed.
     await charlieNode.waitForEvent({
       section: 'dkg',
       method: 'PublicKeySignatureChanged',
     });
+    // wait until the signature bridge receives the transfer ownership call.
+    await webbRelayer.waitForEvent({
+      kind: 'signature_bridge',
+      event: {
+        chain_id: localChain2.underlyingChainId.toString(),
+        call: 'transfer_ownership_with_signature_pub_key',
+      },
+    });
+
+    // now we wait for the tx queue on that chain to execute the transfer ownership transaction.
+     await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain2.underlyingChainId.toString(),
+        finalized: true,
+      },
+    });
+
+    webbRelayer.clearLogs();
     // get the anchor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
@@ -392,7 +413,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const tokenToRemove = currentTokens[0];
     expect(tokenToRemove).to.not.be.undefined;
     // but first, remove all realyer old events (as in reset the event listener)
-    webbRelayer.clearLogs();
+
     const resourceId = ResourceId.newFromContractAddress(
       governedTokenAddress,
       ChainType.EVM,
@@ -404,7 +425,6 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       )
     );
     const nonce = await governedToken.contract.proposalNonce();
-    console.log('Proposal nonce: ', nonce.toString());
     const proposalHeader = new ProposalHeader(
       resourceId,
       functionSignature,
@@ -419,11 +439,14 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       kind: 'TokenRemove',
       data: u8aToHex(tokenRemoveProposal.toU8a()),
     });
+    console.log(' TokenRemove Proposal submitted');
+    
     // now we wait for the proposal to be signed.
     charlieNode.waitForEvent({
       section: 'dkgProposalHandler',
       method: 'ProposalSigned',
     });
+
     // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
@@ -448,11 +471,31 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   });
 
   it('should handle WrappingFeeUpdateProposal', async () => {
-    // we need to wait until the public key is on chain.
-    await charlieNode.waitForEvent({
-      section: 'dkg',
-      method: 'PublicKeySignatureChanged',
+   // we need to wait until the public key is changed.
+   await charlieNode.waitForEvent({
+    section: 'dkg',
+    method: 'PublicKeySignatureChanged',
     });
+    // wait until the signature bridge receives the transfer ownership call.
+    await webbRelayer.waitForEvent({
+      kind: 'signature_bridge',
+      event: {
+        chain_id: localChain2.underlyingChainId.toString(),
+        call: 'transfer_ownership_with_signature_pub_key',
+      },
+    });
+
+    // now we wait for the tx queue on that chain to execute the transfer ownership transaction.
+    await webbRelayer.waitForEvent({
+      kind: 'tx_queue',
+      event: {
+        ty: 'EVM',
+        chain_id: localChain2.underlyingChainId.toString(),
+        finalized: true,
+      },
+    });
+
+    webbRelayer.clearLogs();
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
@@ -466,7 +509,6 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       localChain1.underlyingChainId
     );
     const nonce = await governedToken.contract.proposalNonce();
-    console.log('Proposal nonce: ', nonce.toString());
     const functionSignature = hexToU8a(
       governedToken.contract.interface.getSighash(
         governedToken.contract.interface.functions['setFee(uint16,uint32)']
@@ -477,7 +519,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       functionSignature,
       nonce.add(1).toNumber()
     );
-    webbRelayer.clearLogs();
+    
     const newFee = ethers.utils.hexValue(50);
     const wrappingFeeProposalPayload = new WrappingFeeUpdateProposal(
       proposalHeader,
@@ -487,11 +529,14 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       kind: 'WrappingFeeUpdate',
       data: u8aToHex(wrappingFeeProposalPayload.toU8a()),
     });
+    console.log('WrappingFeeUpdate Proposal submitted');
+
     // now we wait for the proposal to be signed.
     charlieNode.waitForEvent({
       section: 'dkgProposalHandler',
       method: 'ProposalSigned',
     });
+
     // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
@@ -509,7 +554,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
         finalized: true,
       },
     });
-    await sleep(10000);
+    await sleep(5000);
     const fee = await governedToken.contract.getFee();
     expect(newFee).to.eq(ethers.utils.hexValue(fee));
   });
