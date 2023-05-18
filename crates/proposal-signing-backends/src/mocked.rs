@@ -47,7 +47,6 @@ impl<S> super::ProposalSigningBackend for MockedProposalSigningBackend<S>
 where
     S: QueueStore<BridgeCommand, Key = SledQueueKey> + Send + Sync + 'static,
 {
-    type Queue = ();
     async fn can_handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),

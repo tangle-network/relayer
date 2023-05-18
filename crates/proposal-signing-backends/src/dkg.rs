@@ -35,7 +35,6 @@ pub struct DkgProposalSigningBackend {
 //AnchorUpdateProposal for evm
 #[async_trait::async_trait]
 impl super::ProposalSigningBackend for DkgProposalSigningBackend {
-    type Queue = ();
     async fn can_handle_proposal(
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
