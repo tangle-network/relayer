@@ -36,7 +36,7 @@ use webb::substrate::tangle_runtime::api::signature_bridge::events::MaintainerSe
 use webb::substrate::scale::Encode;
 use webb_relayer_utils::{metric, Error};
 
-use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 
 /// A MaintainerSetEvent handler handles `MaintainerSet` events and signals signature bridge watcher
 /// to remove pending tx trying to do governor transfer.
