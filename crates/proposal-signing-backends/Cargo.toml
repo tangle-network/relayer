@@ -34,7 +34,7 @@ impl-trait-for-tuples = "0.2"
 
 [dev-dependencies]
 tracing-subscriber = { workspace = true }
-
+rand = { workspace = true }
 
 [features]
 default = ["std"]

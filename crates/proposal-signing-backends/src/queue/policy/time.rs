@@ -117,6 +117,16 @@ impl TimeDelayPolicy {
     pub fn delay(&self) -> Duration {
         Duration::from_secs(self.current_delay.load(atomic::Ordering::Relaxed))
     }
+
+    /// Returns the maximum delay as a [`Duration`]
+    pub fn max_delay(&self) -> Duration {
+        Duration::from_secs(self.max_delay)
+    }
+
+    /// Returns the minimum delay as a [`Duration`]
+    pub fn min_delay(&self) -> Duration {
+        Duration::from_secs(self.min_delay)
+    }
 }
 
 impl super::ProposalsQueuePolicy for TimeDelayPolicy {
@@ -135,7 +145,7 @@ impl super::ProposalsQueuePolicy for TimeDelayPolicy {
         let size = queue.len()?;
         let delay_changed = self.update_delay(size)?;
         let delay = self.delay().as_secs();
-        tracing::debug!(delay_changed, "Delay adjusted to match queue size");
+        tracing::debug!(delay_changed, delay, queue_size = size);
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .expect("Time went backwards")

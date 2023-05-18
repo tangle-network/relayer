@@ -55,6 +55,7 @@ tempfile = "^3.3"
 async-trait = "^0.1"
 futures = { version = "^0.3", default-features = false }
 parking_lot = "^0.12"
+rand = { version = "0.8", default-features = false, features = ["getrandom"] }
 backoff = { version = "0.4.0", features = ["tokio"] }
 hex = { version = "0.4", default-features = false }
 libsecp256k1 = "0.7.1"

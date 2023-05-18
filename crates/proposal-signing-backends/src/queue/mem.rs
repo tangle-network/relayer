@@ -73,13 +73,14 @@ impl super::ProposalsQueue for InMemoryProposalsQueue {
         let rlock = self.proposals.read();
         let values = rlock
             .iter()
+            .rev()
             .map(|(k, v)| (*k, v.clone()))
             .collect::<Vec<_>>();
         // Drop the read lock before checking the proposals
         // since the policy might need to acquire the lock
         drop(rlock);
         if values.is_empty() {
-            tracing::debug!("no proposals to dequeue");
+            tracing::trace!("no proposals to dequeue");
             return Ok(None);
         }
         tracing::debug!(len = values.len(), "checking proposals for dequeue",);

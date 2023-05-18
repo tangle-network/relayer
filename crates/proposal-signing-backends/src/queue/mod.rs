@@ -317,7 +317,7 @@ impl ProposalMetadata for QueuedProposal {
 #[tracing::instrument(skip_all)]
 pub async fn run<Queue, Policy, PSB>(
     queue: Queue,
-    policy: Policy,
+    dequeue_policy: Policy,
     proposal_signing_backend: PSB,
     metrics: Arc<Mutex<metric::Metrics>>,
 ) where
@@ -326,11 +326,13 @@ pub async fn run<Queue, Policy, PSB>(
     PSB: super::ProposalSigningBackend,
 {
     loop {
-        let proposal = match queue.dequeue(policy.clone()) {
+        let proposal = match queue.dequeue(dequeue_policy.clone()) {
             Ok(Some(proposal)) => proposal,
             Ok(None) => {
                 tracing::trace!("No proposal to dequeue");
-                tokio::task::yield_now().await;
+                // Sleep for a bit to avoid busy looping
+                tokio::time::sleep(core::time::Duration::from_millis(100))
+                    .await;
                 continue;
             }
             Err(e) => {
@@ -389,16 +391,15 @@ pub(crate) mod test_utils {
 
     pub fn setup_tracing() -> tracing::subscriber::DefaultGuard {
         // Setup tracing for tests
-        let s = tracing_subscriber::fmt()
-            .with_env_filter(
-                tracing_subscriber::EnvFilter::builder()
-                    .with_default_directive(
-                        tracing_subscriber::filter::LevelFilter::DEBUG.into(),
-                    )
-                    .from_env_lossy(),
+        let env_filter = tracing_subscriber::EnvFilter::builder()
+            .with_default_directive(
+                tracing_subscriber::filter::LevelFilter::DEBUG.into(),
             )
+            .from_env_lossy();
+        let s = tracing_subscriber::fmt()
+            .with_env_filter(env_filter)
             .with_test_writer()
-            .pretty()
+            .compact()
             .finish();
         tracing::subscriber::set_default(s)
     }
@@ -443,5 +444,151 @@ pub(crate) mod test_utils {
             src_resourc_id,
         );
         QueuedProposal::new(proposal)
+    }
+
+    pub fn mock_metrics() -> Arc<Mutex<metric::Metrics>> {
+        Arc::new(Mutex::new(metric::Metrics::new().unwrap()))
+    }
+
+    #[derive(Clone, Debug, Default)]
+    pub struct DummySigningBackend {
+        pub handled_proposals_count: Arc<atomic::AtomicU32>,
+    }
+
+    #[async_trait::async_trait]
+    impl crate::ProposalSigningBackend for DummySigningBackend {
+        async fn can_handle_proposal(
+            &self,
+            _proposal: &(impl ProposalTrait + Sync + Send + 'static),
+        ) -> webb_relayer_utils::Result<bool> {
+            Ok(true)
+        }
+        async fn handle_proposal(
+            &self,
+            proposal: &(impl ProposalTrait + Sync + Send + 'static),
+            _metrics: Arc<Mutex<metric::Metrics>>,
+        ) -> webb_relayer_utils::Result<()> {
+            tracing::debug!(
+                proposal = ?hex::encode(proposal.to_vec()),
+                "pretending to handle proposal",
+            );
+            self.handled_proposals_count
+                .fetch_add(1, atomic::Ordering::SeqCst);
+            Ok(())
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Duration;
+
+    use rand::Rng;
+
+    use super::test_utils::*;
+    use super::*;
+
+    #[tokio::test]
+    async fn simulation() {
+        let _guard = setup_tracing();
+        let queue = mem::InMemoryProposalsQueue::new();
+        let time_delay_policy = policy::TimeDelayPolicy::builder()
+            .initial_delay(1)
+            .min_delay(1)
+            .max_delay(5)
+            .build();
+        let nonce_policy = policy::AlwaysHigherNoncePolicy::new(0);
+        let enqueue_policy = (nonce_policy.clone(), time_delay_policy.clone());
+        let dequeue_policy = time_delay_policy.clone();
+        let signing_backend = DummySigningBackend::default();
+        let metrics = mock_metrics();
+
+        let handle = tokio::spawn(run(
+            queue.clone(),
+            dequeue_policy,
+            signing_backend.clone(),
+            metrics,
+        ));
+
+        let target_system = mock_target_system(ethers::types::Address::zero());
+        let target_chain = mock_typed_chain_id(1);
+        let src_system = mock_target_system(ethers::types::Address::zero());
+        let src_chain = mock_typed_chain_id(42);
+        let r_id = mock_resourc_id(target_system, target_chain);
+        let src_r_id = mock_resourc_id(src_system, src_chain);
+        // fill the queue with proposals.
+        let n = 5;
+        for nonce in 1..=n {
+            let header = mock_proposal_header(r_id, nonce);
+            let proposal = mock_evm_anchor_update_proposal(header, src_r_id);
+            queue.enqueue(proposal, enqueue_policy.clone()).unwrap();
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        // the nonce policy should have been updated.
+        assert_eq!(nonce_policy.current_nonce(), n);
+        tokio::time::sleep(time_delay_policy.delay()).await;
+        // all proposals should be handled by now.
+        // the queue should be empty.
+        assert!(queue.is_empty().unwrap(), "the queue should be empty");
+        // we should only have handled one proposal.
+        // the rest should be removed from the queue.
+        assert_eq!(
+            signing_backend
+                .handled_proposals_count
+                .load(atomic::Ordering::SeqCst),
+            1,
+            "we should only have handled one proposal",
+        );
+        handle.abort();
+    }
+
+    /// This tests simulate the case that we are running a proposal queue
+    /// with nonce policy and time delay policy in the enqueue operation
+    /// and time delay policy in the dequeue operation.
+    #[ignore = "this test simulate a real usage hence the wait time is long"]
+    #[tokio::test]
+    async fn manual_simulation_case1() {
+        let _guard = setup_tracing();
+        let queue = mem::InMemoryProposalsQueue::new();
+        let time_delay_policy = policy::TimeDelayPolicy::builder()
+            .initial_delay(30)
+            .min_delay(60)
+            .max_delay(300)
+            .build();
+        let nonce_policy = policy::AlwaysHigherNoncePolicy::new(0);
+        let enqueue_policy = (nonce_policy.clone(), time_delay_policy.clone());
+        let dequeue_policy = time_delay_policy.clone();
+        let signing_backend = DummySigningBackend::default();
+        let metrics = mock_metrics();
+
+        let handle = tokio::spawn(run(
+            queue.clone(),
+            dequeue_policy,
+            signing_backend.clone(),
+            metrics,
+        ));
+
+        let target_system = mock_target_system(ethers::types::Address::zero());
+        let target_chain = mock_typed_chain_id(1);
+        let r_id = mock_resourc_id(target_system, target_chain);
+
+        let src_system = mock_target_system(ethers::types::Address::zero());
+        let src_chain = mock_typed_chain_id(42);
+        let src_r_id = mock_resourc_id(src_system, src_chain);
+
+        // fill the queue with proposals.
+        let n = 5;
+        for nonce in 1..=n {
+            let header = mock_proposal_header(r_id, nonce);
+            let proposal = mock_evm_anchor_update_proposal(header, src_r_id);
+            queue.enqueue(proposal, enqueue_policy.clone()).unwrap();
+            // Simulate that a time passed between each proposal.
+            // The time will be randomly choosed.
+            let delay = rand::thread_rng().gen_range(10_000..60_000);
+            tokio::time::sleep(Duration::from_millis(delay)).await;
+        }
+        // the nonce policy should have been updated.
+        assert_eq!(nonce_policy.current_nonce(), n);
+        handle.abort();
     }
 }

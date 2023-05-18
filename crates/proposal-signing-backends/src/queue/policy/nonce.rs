@@ -20,6 +20,11 @@ impl AlwaysHigherNoncePolicy {
             nonce: Arc::new(atomic::AtomicU32::from(nonce)),
         }
     }
+
+    /// Get the current nonce.
+    pub fn current_nonce(&self) -> u32 {
+        self.nonce.load(atomic::Ordering::SeqCst)
+    }
 }
 
 impl super::ProposalsQueuePolicy for AlwaysHigherNoncePolicy {
