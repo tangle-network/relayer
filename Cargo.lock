@@ -9103,6 +9103,7 @@ dependencies = [
  "hex",
  "impl-trait-for-tuples",
  "native-tls",
+ "parking_lot 0.12.1",
  "sled",
  "sp-core",
  "tokio 1.27.0",
