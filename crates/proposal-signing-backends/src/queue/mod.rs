@@ -2,7 +2,7 @@ use std::sync::{atomic, Arc};
 
 use tokio::sync::Mutex;
 use webb::evm::ethers;
-use webb_proposals::{ProposalHeader, ProposalTrait};
+use webb_proposals::ProposalTrait;
 use webb_relayer_utils::metric;
 
 /// A module for in-memory Proposals Queue.
@@ -240,9 +240,6 @@ pub trait ProposalHash {
     /// Returns the hash of the full proposal.
     /// The full proposal is the proposal header concatenated with the proposal body.
     fn full_hash(&self) -> [u8; 32];
-    /// Returns the hash of the proposal body.
-    /// The proposal body is the proposal without the header.
-    fn body_hash(&self) -> [u8; 32];
 }
 
 // *** Implementation of the `ProposalHash` trait for all types that implement `ProposalTrait` ***
@@ -252,12 +249,6 @@ where
 {
     fn full_hash(&self) -> [u8; 32] {
         ethers::utils::keccak256(self.to_vec())
-    }
-
-    fn body_hash(&self) -> [u8; 32] {
-        let full = self.to_vec();
-        let body = &full[ProposalHeader::LENGTH..];
-        ethers::utils::keccak256(body)
     }
 }
 

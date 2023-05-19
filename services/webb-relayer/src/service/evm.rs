@@ -191,18 +191,27 @@ async fn start_vanchor_events_watcher(
             .window_size(my_config.smart_anchor_updates.time_delay_window_size)
             .build();
 
-        let enqueue_policy = if my_config.smart_anchor_updates.enabled {
-            tracing::warn!("Using Smart Anchor Updates, Experimental feature!");
-            Some((policy::AlwaysHigherNoncePolicy, time_delay_policy.clone()))
+        if my_config.smart_anchor_updates.enabled {
+            tracing::info!(
+                %chain_id,
+                %contract_address,
+                "Smart Anchor Updates enabled",
+            );
         } else {
-            None
-        };
+            tracing::info!(
+                chain_id,
+                %contract_address,
+                "Smart Anchor Updates disabled",
+            );
+        }
 
-        let dequeue_policy = if my_config.smart_anchor_updates.enabled {
-            Some(time_delay_policy)
-        } else {
-            None
-        };
+        let enqueue_policy = my_config.smart_anchor_updates.enabled.then_some(
+            (policy::AlwaysHigherNoncePolicy, time_delay_policy.clone()),
+        );
+        let dequeue_policy = my_config
+            .smart_anchor_updates
+            .enabled
+            .then_some(time_delay_policy);
 
         let metrics = my_ctx.metrics.clone();
         match proposal_signing_backend {
