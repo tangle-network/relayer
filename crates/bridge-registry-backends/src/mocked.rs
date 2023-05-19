@@ -3,7 +3,7 @@ use webb::substrate::tangle_runtime::api::runtime_types::pallet_bridge_registry:
 use webb::substrate::tangle_runtime::api::runtime_types::pallet_identity::types::Data;
 use webb::substrate::scale::DecodeAll;
 use crate::BridgeRegistryBackend;use hex_literal::hex;
-use webb::substrate::tangle_runtime::api::runtime_types::sp_core::bounded::bounded_vec::BoundedVec;
+use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::ResourceId;
 
 #[derive(TypedBuilder)]
