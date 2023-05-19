@@ -193,7 +193,7 @@ impl LeafCacheStore for InMemoryStore {
             // 2. Insert last deposit block number
             guard2.insert(key.clone().into(), block_number);
             // 3. Insert last block number
-            guard3.entry(key.clone().into()).or_insert(block_number);
+            guard3.entry(key.into()).or_insert(block_number);
         }
         Ok(())
     }
@@ -265,7 +265,7 @@ impl EncryptedOutputCacheStore for InMemoryStore {
                 .or_insert_with(|| {
                     encrypted_outputs.iter().map(|v| v.1.clone()).collect()
                 });
-            guard2.insert(key.clone().into(), block_number);
+            guard2.insert(key.into(), block_number);
         }
         Ok(())
     }
