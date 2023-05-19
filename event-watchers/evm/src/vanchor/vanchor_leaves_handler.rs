@@ -13,7 +13,9 @@
 // limitations under the License.
 
 use super::VAnchorContractWrapper;
+use ark_bn254::Fr as Bn254Fr;
 use ark_ff::{BigInteger, PrimeField};
+use arkworks_native_gadgets::merkle_tree::SparseMerkleTree;
 use arkworks_native_gadgets::poseidon::Poseidon;
 use arkworks_setups::common::setup_params;
 use arkworks_setups::Curve;
@@ -31,9 +33,7 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, LeafCacheStore};
 use webb_relayer_utils::metric;
-
-use ark_bn254::Fr as Bn254Fr;
-use arkworks_native_gadgets::merkle_tree::SparseMerkleTree;
+use webb_relayer_utils::Error;
 
 /// An VAnchor Leaves Handler that handles `NewCommitment` events and saves the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
@@ -128,6 +128,9 @@ impl EventHandler for VAnchorLeavesHandler {
         use VAnchorContractEvents::*;
         let mut batch: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
         let mut mt = self.mt.lock().await;
+        // We will clone the tree to compare it with the new one.
+        let mt_snapshot = mt.tree.clone();
+
         match event {
             NewCommitmentFilter(event_data) => {
                 let commitment: [u8; 32] = event_data.commitment.into();
@@ -145,7 +148,7 @@ impl EventHandler for VAnchorLeavesHandler {
                     Bn254Fr::from_be_bytes_mod_order(commitment.as_slice());
                 batch.insert(leaf_index, leaf);
                 mt.insert_batch(&batch, &self.hasher)?;
-                // if leaf index is even number then we don't need to verify commitment
+                // If leaf index is even number then we don't need to verify commitment
                 if event_data.leaf_index.as_u32() % 2 == 0 {
                     tracing::debug!(
                         leaf_index = leaf_index,
@@ -174,8 +177,9 @@ impl EventHandler for VAnchorLeavesHandler {
                         expected_root = ?root,
                         "Invalid merkle root. Maybe invalid leaf or commitment"
                     );
-                    // TODO: take a snapshot of current state and restart syncing events
-                    // FIXME: We should restart syncing events
+                    // Restore previous state of the tree.
+                    mt.tree = mt_snapshot;
+                    return Err(Error::InvalidMerkleRootError(leaf_index));
                 }
                 // 2. We will insert leaf and last deposit block number into store
                 store.insert_leaves_and_last_deposit_block_number(

@@ -213,26 +213,6 @@ impl LeafCacheStore for SledStore {
             .collect();
         Ok(leaves)
     }
-    #[tracing::instrument(skip(self))]
-    fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        leaves: &[(u32, Vec<u8>)],
-    ) -> crate::Result<()> {
-        let key: HistoryStoreKey = key.into();
-        let tree = self.db.open_tree(format!(
-            "leaves/{}/{}",
-            key.chain_id(),
-            key.address()
-        ))?;
-        tree.transaction(|db| {
-            for (k, v) in leaves {
-                db.insert(&k.to_le_bytes(), v.as_slice())?;
-            }
-            Ok(())
-        })?;
-        Ok(())
-    }
 
     #[tracing::instrument(skip(self))]
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
@@ -252,28 +232,6 @@ impl LeafCacheStore for SledStore {
         }
     }
 
-    #[tracing::instrument(skip(self))]
-    fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        block_number: u64,
-    ) -> crate::Result<u64> {
-        let tree = self.db.open_tree("last_deposit_block_number")?;
-        let bytes = block_number.to_le_bytes();
-        let key: HistoryStoreKey = key.into();
-        let old = tree.transaction(|db| {
-            let old = db.insert(key.to_bytes(), &bytes)?;
-            Ok(old)
-        })?;
-        match old {
-            Some(v) => {
-                let mut output = [0u8; 8];
-                output.copy_from_slice(&v);
-                Ok(u64::from_le_bytes(output))
-            }
-            None => Ok(block_number),
-        }
-    }
     #[tracing::instrument(skip(self))]
     fn insert_leaves_and_last_deposit_block_number<
         K: Into<HistoryStoreKey> + Debug,
@@ -352,32 +310,15 @@ impl EncryptedOutputCacheStore for SledStore {
         Ok(encrypted_outputs)
     }
 
-    #[tracing::instrument(skip(self))]
-    fn insert_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        encrypted_output: &[(u32, Vec<u8>)],
-    ) -> crate::Result<()> {
-        let key: HistoryStoreKey = key.into();
-
-        let tree = self.db.open_tree(format!(
-            "encrypted_outputs/{}/{}",
-            key.chain_id(),
-            key.address()
-        ))?;
-        for (k, v) in encrypted_output {
-            tree.insert(k.to_le_bytes(), &*v.clone())?;
-        }
-        Ok(())
-    }
-
     fn get_last_deposit_block_number_for_encrypted_output<
         K: Into<HistoryStoreKey> + Debug,
     >(
         &self,
         key: K,
     ) -> crate::Result<u64> {
-        let tree = self.db.open_tree("last_deposit_block_number")?;
+        let tree = self
+            .db
+            .open_tree("encrypted_output_last_deposit_block_number")?;
         let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
         match val {
@@ -390,29 +331,9 @@ impl EncryptedOutputCacheStore for SledStore {
         }
     }
 
-    fn insert_last_deposit_block_number_for_encrypted_output<
-        K: Into<HistoryStoreKey> + Debug,
-    >(
-        &self,
-        key: K,
-        block_number: u64,
-    ) -> crate::Result<u64> {
-        let tree = self.db.open_tree("last_deposit_block_number")?;
-        let bytes = block_number.to_le_bytes();
-        let key: HistoryStoreKey = key.into();
-        let old = tree.insert(key.to_bytes(), &bytes)?;
-        match old {
-            Some(v) => {
-                let mut output = [0u8; 8];
-                output.copy_from_slice(&v);
-                Ok(u64::from_be_bytes(output))
-            }
-            None => Ok(block_number),
-        }
-    }
     #[tracing::instrument(skip(self))]
     fn insert_encrypted_output_and_last_deposit_block_number<
-        K: Into<HistoryStoreKey> + Debug,
+        K: Into<HistoryStoreKey> + Debug + Clone,
     >(
         &self,
         key: K,
@@ -426,7 +347,9 @@ impl EncryptedOutputCacheStore for SledStore {
             key.chain_id(),
             key.address()
         ))?;
-        let set_block_tree = self.db.open_tree("last_deposit_block_number")?;
+        let set_block_tree = self
+            .db
+            .open_tree("encrypted_output_last_deposit_block_number")?;
         let block_number_bytes = block_number.to_le_bytes();
         (&encrypted_output_tree, &set_block_tree).transaction(
             |(encrypted_output_tree, set_block_tree)| {
@@ -814,6 +737,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let store = SledStore::open(tmp.path()).unwrap();
         let chain_id = 1u32;
+        let block_number = 20u64;
         let contract =
             types::H160::from_slice("11111111111111111111".as_bytes());
         let history_store_key = (
@@ -824,7 +748,11 @@ mod tests {
             .map(|i| (i, types::H256::random().to_fixed_bytes().to_vec()))
             .collect::<Vec<_>>();
         store
-            .insert_leaves(history_store_key, &generated_leaves)
+            .insert_leaves_and_last_deposit_block_number(
+                history_store_key,
+                &generated_leaves,
+                block_number,
+            )
             .unwrap();
         let leaves = store
             .get_leaves_with_range(history_store_key, 5..10)
