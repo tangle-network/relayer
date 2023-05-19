@@ -13,7 +13,9 @@
 // limitations under the License.
 
 use super::VAnchorContractWrapper;
+use ark_bn254::Fr as Bn254Fr;
 use ark_ff::{BigInteger, PrimeField};
+use arkworks_native_gadgets::merkle_tree::SparseMerkleTree;
 use arkworks_native_gadgets::poseidon::Poseidon;
 use arkworks_setups::common::setup_params;
 use arkworks_setups::Curve;
@@ -31,9 +33,7 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, LeafCacheStore};
 use webb_relayer_utils::metric;
-
-use ark_bn254::Fr as Bn254Fr;
-use arkworks_native_gadgets::merkle_tree::SparseMerkleTree;
+use webb_relayer_utils::Error;
 
 /// An VAnchor Leaves Handler that handles `NewCommitment` events and saves the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
@@ -109,64 +109,12 @@ impl EventHandler for VAnchorLeavesHandler {
 
     async fn can_handle_events(
         &self,
-        (events, log): (Self::Events, LogMeta),
-        wrapper: &Self::Contract,
+        (events, _log): (Self::Events, LogMeta),
+        _wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool> {
         use VAnchorContractEvents::*;
-        // In this we will validate leaf/commitment we are trying to save is valid with following steps
-        // 1. We create a local merkle tree and insert leaf to it.
-        // 2. Compute merkle root for tree
-        // 3. Check if computed root is known root on contract
-        // 4. If it fails to validate we restart syncing events
-        match events {
-            NewCommitmentFilter(event_data) => {
-                let leaf_index = event_data.leaf_index.as_u32();
-                let commitment: [u8; 32] = event_data.commitment.into();
-                let leaf: Bn254Fr =
-                    Bn254Fr::from_be_bytes_mod_order(commitment.as_slice());
-                let mut batch: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
-                batch.insert(leaf_index, leaf);
-                let mut mt = self.mt.lock().await;
-                mt.insert_batch(&batch, &self.hasher)?;
-                // if leaf index is even number then we don't need to verify commitment
-                if event_data.leaf_index.as_u32() % 2 == 0 {
-                    tracing::debug!(
-                        leaf_index = leaf_index,
-                        commitment = hex::encode(commitment.as_slice()),
-                        "Verified commitment",
-                    );
-                    return Ok(true);
-                }
-                let root_bytes = mt.root().into_repr().to_bytes_be();
-                let root = U256::from_big_endian(root_bytes.as_slice());
-                let is_known_root = wrapper
-                    .contract
-                    .is_known_root(root)
-                    .block(log.block_number)
-                    .call()
-                    .await?;
-
-                tracing::debug!(
-                    leaf_index = leaf_index,
-                    root = hex::encode(root_bytes.as_slice()),
-                    is_known_root,
-                    "New commitment need to be verified",
-                );
-
-                if !is_known_root {
-                    tracing::warn!(
-                        expected_root = ?root,
-                        "Invalid merkle root. Maybe invalid leaf or commitment"
-                    );
-                    // TODO: take a snapshot of current state and restart syncing events
-                    // FIXME: We should restart syncing events
-                    // Do not handle this event
-                    return Ok(false);
-                }
-                return Ok(true);
-            }
-            _ => return Ok(false),
-        };
+        let has_event = matches!(events, NewCommitmentFilter(_));
+        Ok(has_event)
     }
 
     #[tracing::instrument(skip_all)]
@@ -178,10 +126,15 @@ impl EventHandler for VAnchorLeavesHandler {
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         use VAnchorContractEvents::*;
+        let mut batch: BTreeMap<u32, Bn254Fr> = BTreeMap::new();
+        let mut mt = self.mt.lock().await;
+        // We will clone the tree to compare it with the new one.
+        let mt_snapshot = mt.tree.clone();
+
         match event {
-            NewCommitmentFilter(deposit) => {
-                let commitment: [u8; 32] = deposit.commitment.into();
-                let leaf_index = deposit.leaf_index.as_u32();
+            NewCommitmentFilter(event_data) => {
+                let commitment: [u8; 32] = event_data.commitment.into();
+                let leaf_index = event_data.leaf_index.as_u32();
                 let value = (leaf_index, commitment.to_vec());
                 let target_system = TargetSystem::new_contract_address(
                     wrapper.contract.address().to_fixed_bytes(),
@@ -189,12 +142,54 @@ impl EventHandler for VAnchorLeavesHandler {
                 let typed_chain_id = TypedChainId::Evm(self.chain_id.as_u32());
                 let history_store_key =
                     ResourceId::new(target_system, typed_chain_id);
-                store.insert_leaves(history_store_key, &[value.clone()])?;
-                store.insert_last_deposit_block_number(
+
+                // 1. We will validate leaf before inserting it into store
+                let leaf: Bn254Fr =
+                    Bn254Fr::from_be_bytes_mod_order(commitment.as_slice());
+                batch.insert(leaf_index, leaf);
+                mt.insert_batch(&batch, &self.hasher)?;
+                // If leaf index is even number then we don't need to verify commitment
+                if event_data.leaf_index.as_u32() % 2 == 0 {
+                    tracing::debug!(
+                        leaf_index = leaf_index,
+                        commitment = hex::encode(commitment.as_slice()),
+                        "Verified commitment",
+                    );
+                } else {
+                    // We will verify commitment
+                    let root_bytes = mt.root().into_repr().to_bytes_be();
+                    let root = U256::from_big_endian(root_bytes.as_slice());
+                    let is_known_root = wrapper
+                        .contract
+                        .is_known_root(root)
+                        .block(log.block_number)
+                        .call()
+                        .await?;
+
+                    tracing::debug!(
+                        leaf_index = leaf_index,
+                        root = hex::encode(root_bytes.as_slice()),
+                        is_known_root,
+                        "New commitment need to be verified",
+                    );
+
+                    if !is_known_root {
+                        tracing::warn!(
+                            expected_root = ?root,
+                            "Invalid merkle root. Maybe invalid leaf or commitment"
+                        );
+                        // Restore previous state of the tree.
+                        mt.tree = mt_snapshot;
+                        return Err(Error::InvalidMerkleRootError(leaf_index));
+                    }
+                }
+                // 2. We will insert leaf and last deposit block number into store
+                store.insert_leaves_and_last_deposit_block_number(
                     history_store_key,
+                    &[value.clone()],
                     log.block_number.as_u64(),
                 )?;
-                let events_bytes = serde_json::to_vec(&deposit)?;
+                let events_bytes = serde_json::to_vec(&event_data)?;
                 store.store_event(&events_bytes)?;
                 tracing::trace!(
                     %log.block_number,

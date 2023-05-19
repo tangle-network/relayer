@@ -94,9 +94,9 @@ impl EventHandler<PolkadotConfig> for SubstrateVAnchorLeavesHandler {
             let mut leaf_store = Vec::with_capacity(leaf_count);
             for leaf in event.leafs {
                 let value = (leaf_index, leaf.0.to_vec());
-                store.insert_leaves(history_store_key, &[value])?;
-                store.insert_last_deposit_block_number(
+                store.insert_leaves_and_last_deposit_block_number(
                     history_store_key,
+                    &[value],
                     block_number,
                 )?;
                 leaf_index += 1;

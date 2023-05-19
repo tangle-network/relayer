@@ -101,9 +101,9 @@ impl EventHandler<PolkadotConfig> for SubstrateVAnchorEncryptedOutputHandler {
                 [event.encrypted_output1, event.encrypted_output2]
             {
                 let value = (index, encrypted_output.clone());
-                store.insert_encrypted_output(history_store_key, &[value])?;
-                store.insert_last_deposit_block_number_for_encrypted_output(
+                store.insert_encrypted_output_and_last_deposit_block_number(
                     history_store_key,
+                    &[value],
                     block_number,
                 )?;
                 index += 1;
