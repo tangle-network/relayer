@@ -155,31 +155,33 @@ impl EventHandler for VAnchorLeavesHandler {
                         commitment = hex::encode(commitment.as_slice()),
                         "Verified commitment",
                     );
-                }
-                let root_bytes = mt.root().into_repr().to_bytes_be();
-                let root = U256::from_big_endian(root_bytes.as_slice());
-                let is_known_root = wrapper
-                    .contract
-                    .is_known_root(root)
-                    .block(log.block_number)
-                    .call()
-                    .await?;
+                } else {
+                    // We will verify commitment
+                    let root_bytes = mt.root().into_repr().to_bytes_be();
+                    let root = U256::from_big_endian(root_bytes.as_slice());
+                    let is_known_root = wrapper
+                        .contract
+                        .is_known_root(root)
+                        .block(log.block_number)
+                        .call()
+                        .await?;
 
-                tracing::debug!(
-                    leaf_index = leaf_index,
-                    root = hex::encode(root_bytes.as_slice()),
-                    is_known_root,
-                    "New commitment need to be verified",
-                );
-
-                if !is_known_root {
-                    tracing::warn!(
-                        expected_root = ?root,
-                        "Invalid merkle root. Maybe invalid leaf or commitment"
+                    tracing::debug!(
+                        leaf_index = leaf_index,
+                        root = hex::encode(root_bytes.as_slice()),
+                        is_known_root,
+                        "New commitment need to be verified",
                     );
-                    // Restore previous state of the tree.
-                    mt.tree = mt_snapshot;
-                    return Err(Error::InvalidMerkleRootError(leaf_index));
+
+                    if !is_known_root {
+                        tracing::warn!(
+                            expected_root = ?root,
+                            "Invalid merkle root. Maybe invalid leaf or commitment"
+                        );
+                        // Restore previous state of the tree.
+                        mt.tree = mt_snapshot;
+                        return Err(Error::InvalidMerkleRootError(leaf_index));
+                    }
                 }
                 // 2. We will insert leaf and last deposit block number into store
                 store.insert_leaves_and_last_deposit_block_number(
