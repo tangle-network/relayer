@@ -6,7 +6,7 @@ use webb_proposals::{ProposalHeader, ProposalTrait};
 use webb_relayer_utils::metric;
 
 /// A module for in-memory Proposals Queue.
-mod mem;
+pub mod mem;
 /// A module for Proposals Polices.
 pub mod policy;
 
@@ -93,28 +93,6 @@ pub trait ProposalsQueue {
     ///
     fn clear(&self) -> webb_relayer_utils::Result<()>;
 
-    /// Removes a proposal from the queue based on its hash.
-    ///
-    /// The proposal with the specified hash is removed from the queue.
-    /// If no proposal with the given hash is found, `None` is returned.
-    ///
-    /// # Arguments
-    ///
-    /// * `hash` - The hash of the proposal to be removed from the queue.
-    ///
-    /// # Returns
-    ///
-    /// Returns a `Result` containing an optional proposal.
-    /// - If a proposal with the specified hash is found, it is returned as `Some(proposal)`.
-    /// - If no proposal with the given hash is found, `None` is returned.
-    /// If the remove operation fails, an error is returned. Possible errors include:
-    /// - `RemoveQueueError` if there is an issue during the remove operation.
-    ///
-    fn remove(
-        &self,
-        hash: [u8; 32],
-    ) -> webb_relayer_utils::Result<Option<Self::Proposal>>;
-
     /// Retains only the proposals in the queue that satisfy the given predicate.
     ///
     /// This method removes all proposals from the queue that do not satisfy the provided predicate function.
@@ -159,6 +137,18 @@ pub trait ProposalsQueue {
     fn modify_in_place<F>(&self, f: F) -> webb_relayer_utils::Result<()>
     where
         F: FnMut(&mut Self::Proposal) -> webb_relayer_utils::Result<()>;
+
+    /// Finds and returns a proposal that satisfies the given predicate.
+    /// The predicate function takes a reference to a proposal, and returns `true` if the proposal is a match,
+    /// or `false` if it is not a match.
+    /// The first proposal that satisfies the predicate is returned.
+    /// If no matching proposal is found, `None` is returned.
+    fn find<F>(
+        &self,
+        f: F,
+    ) -> webb_relayer_utils::Result<Option<Self::Proposal>>
+    where
+        F: FnMut(&Self::Proposal) -> bool;
 }
 
 /// Associated metadata for a queued proposal.
@@ -323,7 +313,7 @@ pub async fn run<Queue, Policy, PSB>(
             Ok(None) => {
                 tracing::trace!("No proposal to dequeue");
                 // Sleep for a bit to avoid busy looping
-                tokio::time::sleep(core::time::Duration::from_millis(100))
+                tokio::time::sleep(core::time::Duration::from_millis(1100))
                     .await;
                 continue;
             }
@@ -342,7 +332,7 @@ pub async fn run<Queue, Policy, PSB>(
         .await;
         match result {
             Ok(_) => {
-                tracing::debug!(
+                tracing::trace!(
                     proposal = ?hex::encode(proposal.to_vec()),
                     "the proposal was successfully handled by the signing backend"
                 );
@@ -372,6 +362,8 @@ pub(crate) mod test_utils {
         let s = tracing_subscriber::fmt()
             .with_env_filter(env_filter)
             .with_test_writer()
+            .without_time()
+            .with_target(false)
             .compact()
             .finish();
         tracing::subscriber::set_default(s)
@@ -470,8 +462,8 @@ mod tests {
             .min_delay(1)
             .max_delay(5)
             .build();
-        let nonce_policy = policy::AlwaysHigherNoncePolicy::new(0);
-        let enqueue_policy = (nonce_policy.clone(), time_delay_policy.clone());
+        let nonce_policy = policy::AlwaysHigherNoncePolicy;
+        let enqueue_policy = (nonce_policy, time_delay_policy.clone());
         let dequeue_policy = time_delay_policy.clone();
         let signing_backend = DummySigningBackend::default();
         let metrics = mock_metrics();
@@ -497,8 +489,6 @@ mod tests {
             queue.enqueue(proposal, enqueue_policy.clone()).unwrap();
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        // the nonce policy should have been updated.
-        assert_eq!(nonce_policy.current_nonce(), n);
         tokio::time::sleep(time_delay_policy.delay()).await;
         // all proposals should be handled by now.
         // the queue should be empty.
@@ -528,8 +518,8 @@ mod tests {
             .min_delay(60)
             .max_delay(300)
             .build();
-        let nonce_policy = policy::AlwaysHigherNoncePolicy::new(0);
-        let enqueue_policy = (nonce_policy.clone(), time_delay_policy.clone());
+        let nonce_policy = policy::AlwaysHigherNoncePolicy;
+        let enqueue_policy = (nonce_policy, time_delay_policy.clone());
         let dequeue_policy = time_delay_policy.clone();
         let signing_backend = DummySigningBackend::default();
         let metrics = mock_metrics();
@@ -560,8 +550,92 @@ mod tests {
             let delay = rand::thread_rng().gen_range(10_000..60_000);
             tokio::time::sleep(Duration::from_millis(delay)).await;
         }
-        // the nonce policy should have been updated.
-        assert_eq!(nonce_policy.current_nonce(), n);
+
+        tokio::time::sleep(time_delay_policy.delay()).await;
+        // all proposals should be handled by now.
+        // the queue should be empty.
+        assert!(queue.is_empty().unwrap(), "the queue should be empty");
+        // we should only have handled one proposal.
+        // the rest should be removed from the queue.
+        assert_eq!(
+            signing_backend
+                .handled_proposals_count
+                .load(atomic::Ordering::SeqCst),
+            1,
+            "we should only have handled one proposal",
+        );
         handle.abort();
+    }
+
+    /// This tests simulate the case that we are running a proposal queue
+    /// with a time delay policy in the enqueue operation
+    /// and time delay policy in the dequeue operation.
+    ///
+    /// This test case is more specific to test if someone can DDOS the queue
+    /// by sending a lot of proposals which would increase the delay of the
+    /// queue and hence the queue will never process any proposal.
+    ///
+    /// We simulate this by sending a lot of proposals with a small delay in between
+    /// and we expect that the queue will process at least one proposal in a reasonable
+    /// time.
+    #[ignore = "this test simulate a real usage hence the wait time is long"]
+    #[tokio::test]
+    async fn manual_simulation_case2() {
+        let _guard = setup_tracing();
+        let queue = mem::InMemoryProposalsQueue::new();
+        let time_delay_policy = policy::TimeDelayPolicy::builder()
+            .initial_delay(30)
+            .min_delay(60)
+            .max_delay(90)
+            .build();
+        let enqueue_policy = time_delay_policy.clone();
+        let dequeue_policy = time_delay_policy.clone();
+        let signing_backend = DummySigningBackend::default();
+        let metrics = mock_metrics();
+
+        let handle = tokio::spawn(run(
+            queue.clone(),
+            dequeue_policy,
+            signing_backend.clone(),
+            metrics,
+        ));
+
+        let target_system = mock_target_system(ethers::types::Address::zero());
+        let target_chain = mock_typed_chain_id(1);
+        let r_id = mock_resourc_id(target_system, target_chain);
+
+        let src_system = mock_target_system(ethers::types::Address::zero());
+        let src_chain = mock_typed_chain_id(42);
+        let src_r_id = mock_resourc_id(src_system, src_chain);
+
+        let queue2 = queue.clone();
+        let handle2 = tokio::spawn(async move {
+            let mut nonce = 1;
+            // fill the queue with proposals.
+            loop {
+                let header = mock_proposal_header(r_id, nonce);
+                let proposal =
+                    mock_evm_anchor_update_proposal(header, src_r_id);
+                queue2.enqueue(proposal, enqueue_policy.clone()).unwrap();
+                // Simulate that a time passed between each proposal.
+                // The time will be randomly choosed.
+                let delay = rand::thread_rng().gen_range(5_000..12_000);
+                tokio::time::sleep(Duration::from_millis(delay)).await;
+                nonce += 1;
+            }
+        });
+
+        // wait for the queue to process at least one proposal.
+        tokio::time::sleep(time_delay_policy.max_delay().mul_f64(1.5)).await;
+        // we should only have handled at least one proposal.
+        assert!(
+            signing_backend
+                .handled_proposals_count
+                .load(atomic::Ordering::SeqCst)
+                .ge(&1),
+            "we should have at least handled one proposal",
+        );
+        handle.abort();
+        handle2.abort();
     }
 }

@@ -36,3 +36,19 @@ impl ProposalPolicy for TupleIdentifier {
         Ok(())
     }
 }
+
+impl<P> ProposalPolicy for Option<P>
+where
+    P: ProposalPolicy,
+{
+    fn check<Q: super::ProposalsQueue>(
+        &self,
+        proposal: &Q::Proposal,
+        queue: &Q,
+    ) -> webb_relayer_utils::Result<()> {
+        match self {
+            Some(policy) => policy.check(proposal, queue),
+            None => Ok(()),
+        }
+    }
+}

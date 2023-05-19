@@ -24,7 +24,9 @@ use webb_event_watcher_traits::evm::EventHandler;
 use webb_event_watcher_traits::EthersClient;
 use webb_proposal_signing_backends::proposal_handler;
 use webb_proposal_signing_backends::queue::policy::ProposalPolicy;
-use webb_proposal_signing_backends::queue::{ProposalsQueue, QueuedAnchorUpdateProposal};
+use webb_proposal_signing_backends::queue::{
+    ProposalsQueue, QueuedAnchorUpdateProposal,
+};
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, HistoryStore};
@@ -38,7 +40,6 @@ pub struct VAnchorDepositHandler<Q, P, C> {
     #[builder(setter(into))]
     store: Arc<SledStore>,
     proposals_queue: Q,
-    #[builder(setter(into))]
     policy: P,
     bridge_registry_backend: C,
 }
@@ -96,7 +97,6 @@ where
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         use VAnchorContractEvents::*;
-        let metrics_clone = metrics.clone();
         let event_data = match event {
             NewCommitmentFilter(data) => {
                 let commitment: [u8; 32] = data.commitment.into();
@@ -163,7 +163,7 @@ where
             // Anchor update proposal proposed metric
             metrics.lock().await.anchor_update_proposals.inc();
 
-            match target_resource_id.target_system() {
+            let proposal = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let p = proposal_handler::evm_anchor_update_proposal(
                         root,
@@ -171,25 +171,20 @@ where
                         target_resource_id,
                         src_resource_id,
                     );
-                    let proposal = QueuedAnchorUpdateProposal::new(p);
-                    self.proposals_queue.enqueue(proposal, self.policy.clone())?;
+                    QueuedAnchorUpdateProposal::new(p)
                 }
                 webb_proposals::TargetSystem::Substrate(_) => {
-                    let proposal =
-                        proposal_handler::substrate_anchor_update_proposal(
-                            root,
-                            leaf_index,
-                            target_resource_id,
-                            src_resource_id,
-                        );
-                    proposal_handler::handle_proposal(
-                        &proposal,
-                        &self.proposal_queue,
-                        metrics_clone.clone(),
-                    )
-                    .await?;
+                    let p = proposal_handler::substrate_anchor_update_proposal(
+                        root,
+                        leaf_index,
+                        target_resource_id,
+                        src_resource_id,
+                    );
+                    QueuedAnchorUpdateProposal::new(p)
                 }
             };
+
+            self.proposals_queue.enqueue(proposal, self.policy.clone())?;
         }
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;

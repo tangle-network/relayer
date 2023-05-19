@@ -47,7 +47,6 @@ pub use dkg::*;
 pub use mocked::*;
 use webb_relayer_utils::metric;
 
-
 /// A Proposal Signing Backend is responsible for signing proposal `P` where `P` is anything really depending on the
 /// requirement of the user of this backend.
 ///

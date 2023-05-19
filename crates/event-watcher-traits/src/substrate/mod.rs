@@ -27,9 +27,7 @@ use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };
 use webb_relayer_store::sled::SledQueueKey;
-use webb_relayer_store::{
-    BridgeCommand, BridgeKey, HistoryStore, QueueStore,
-};
+use webb_relayer_store::{BridgeCommand, BridgeKey, HistoryStore, QueueStore};
 
 /// Event watching traits
 mod event_watcher;

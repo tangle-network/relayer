@@ -1,34 +1,13 @@
 use parking_lot::RwLock;
-use std::collections::BTreeMap;
+use std::collections::VecDeque;
 use std::sync::Arc;
-
-use webb::evm::ethers;
 
 use super::{policy::*, ProposalHash, QueuedAnchorUpdateProposal};
 
-/// An in-memory implementation of a proposals queue.
-///
-/// The `InMemoryProposalsQueue` struct stores proposals in a `BTreeMap` data structure, where each proposal is associated
-/// with a unique identifier of type [`ethers::types::H256`] which is the hash of the proposal.
-///
-/// The `InMemoryProposalsQueue` struct is `Clone` and `Debug`, allowing for easy cloning and debugging of the queue.
-/// It is designed to be cheap to clone, as it internally uses an `Arc` to share the underlying `BTreeMap` across multiple
-/// clones, and a `RwLock` to ensure safe concurrent access to the map.
-///
-/// # Sharing the Queue Across Threads
-///
-/// The `InMemoryProposalsQueue` struct is designed to be shared across multiple threads. It internally uses an `Arc`
-/// to share the underlying `BTreeMap` across multiple clones, ensuring safe concurrent access to the map.
-///
-/// # Copying the Queue
-///
-/// The `InMemoryProposalsQueue` struct is also cheap to copy, as it implements the `Clone` trait. It internally uses an `Arc`
-/// to share the underlying `BTreeMap`, which means that cloning the queue only involves incrementing the reference count
-/// of the `Arc` and cloning the `RwLock` handles, rather than performing a deep copy of the entire map.
-///
-#[derive(Clone, Debug)]
+/// In memory implementation of the proposals queue.
+#[derive(Clone, Debug, Default)]
 pub struct InMemoryProposalsQueue {
-    proposals: Arc<RwLock<BTreeMap<ethers::types::H256, QueuedAnchorUpdateProposal>>>,
+    proposals: Arc<RwLock<VecDeque<QueuedAnchorUpdateProposal>>>,
 }
 
 impl InMemoryProposalsQueue {
@@ -57,11 +36,9 @@ impl super::ProposalsQueue for InMemoryProposalsQueue {
         policy: Policy,
     ) -> webb_relayer_utils::Result<()> {
         let accepted = policy.check(&proposal, self);
-        tracing::debug!(accepted = ?accepted, "proposal check result");
+        tracing::trace!(accepted = ?accepted, "proposal check result");
         accepted?;
-        self.proposals
-            .write()
-            .insert(proposal.full_hash().into(), proposal);
+        self.proposals.write().push_back(proposal);
         Ok(())
     }
 
@@ -70,45 +47,34 @@ impl super::ProposalsQueue for InMemoryProposalsQueue {
         &self,
         policy: Policy,
     ) -> webb_relayer_utils::Result<Option<Self::Proposal>> {
-        let rlock = self.proposals.read();
-        let values = rlock
-            .iter()
-            .rev()
-            .map(|(k, v)| (*k, v.clone()))
-            .collect::<Vec<_>>();
-        // Drop the read lock before checking the proposals
-        // since the policy might need to acquire the lock
-        drop(rlock);
-        if values.is_empty() {
+        if self.proposals.read().is_empty() {
             tracing::trace!("no proposals to dequeue");
             return Ok(None);
         }
-        tracing::debug!(len = values.len(), "checking proposals for dequeue",);
-
-        for (k, proposal) in values {
-            tracing::debug!(
-                proposal = hex::encode(k.as_bytes()),
-                "about to dequeue",
-            );
-            match policy.check(&proposal, self) {
-                Ok(_) => {
-                    // lock and remove the proposal
-                    self.proposals.write().remove(&k);
-                    tracing::debug!(
-                        proposal = hex::encode(k.as_bytes()),
-                        "proposal passed policy check before dequeue",
-                    );
-                    return Ok(Some(proposal));
-                }
-                Err(e) => {
-                    tracing::debug!(
-                        reason = %e,
-                        "proposal failed policy check before dequeue",
-                    );
-                }
+        let proposal = match self.proposals.write().pop_front() {
+            Some(proposal) => proposal,
+            None => return Ok(None),
+        };
+        match policy.check(&proposal, self) {
+            Ok(_) => {
+                tracing::trace!(
+                    proposal = hex::encode(proposal.full_hash()),
+                    "proposal passed policy check before dequeue",
+                );
+                Ok(Some(proposal))
+            }
+            Err(e) => {
+                tracing::trace!(
+                    reason = %e,
+                    "proposal failed policy check before dequeue",
+                );
+                // push back the proposal if it failed the policy check
+                // so that it can be dequeued again later
+                self.proposals.write().push_back(proposal);
+                // the caller should try again later
+                Ok(None)
             }
         }
-        Ok(None)
     }
 
     fn len(&self) -> webb_relayer_utils::Result<usize> {
@@ -116,24 +82,20 @@ impl super::ProposalsQueue for InMemoryProposalsQueue {
         Ok(len)
     }
 
+    fn is_empty(&self) -> webb_relayer_utils::Result<bool> {
+        Ok(self.proposals.read().is_empty())
+    }
+
     fn clear(&self) -> webb_relayer_utils::Result<()> {
         self.proposals.write().clear();
         Ok(())
     }
 
-    fn remove(
-        &self,
-        hash: [u8; 32],
-    ) -> webb_relayer_utils::Result<Option<Self::Proposal>> {
-        let maybe_prop = self.proposals.write().remove(&hash.into());
-        Ok(maybe_prop)
-    }
-
-    fn retain<F>(&self, mut f: F) -> webb_relayer_utils::Result<()>
+    fn retain<F>(&self, f: F) -> webb_relayer_utils::Result<()>
     where
         F: FnMut(&Self::Proposal) -> bool,
     {
-        self.proposals.write().retain(|_k, v| f(v));
+        self.proposals.write().retain(f);
         Ok(())
     }
 
@@ -141,6 +103,17 @@ impl super::ProposalsQueue for InMemoryProposalsQueue {
     where
         F: FnMut(&mut Self::Proposal) -> webb_relayer_utils::Result<()>,
     {
-        self.proposals.write().values_mut().try_for_each(f)
+        self.proposals.write().iter_mut().try_for_each(f)
+    }
+
+    fn find<F>(
+        &self,
+        mut f: F,
+    ) -> webb_relayer_utils::Result<Option<Self::Proposal>>
+    where
+        F: FnMut(&Self::Proposal) -> bool,
+    {
+        let v = self.proposals.read().iter().find(|v| f(v)).cloned();
+        Ok(v)
     }
 }

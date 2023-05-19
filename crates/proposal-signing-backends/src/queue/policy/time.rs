@@ -1,19 +1,20 @@
 use std::{
     ops::Add,
-    sync::{atomic, Arc, Mutex},
+    sync::{atomic, Arc},
     time::Duration,
 };
+use parking_lot::Mutex;
 
 use crate::queue::{ProposalHash, ProposalMetadata, ProposalsQueue};
 
 /// Initial delay in seconds
-const INITIAL_DELAY: u64 = 30;
+pub const INITIAL_DELAY: u64 = 30;
 /// Minimum delay in seconds
-const MIN_DELAY: u64 = 10;
+pub const MIN_DELAY: u64 = 10;
 /// Maximum delay in seconds
-const MAX_DELAY: u64 = 300;
+pub const MAX_DELAY: u64 = 300;
 /// Sliding window size
-const WINDOW_SIZE: usize = 5;
+pub const WINDOW_SIZE: usize = 5;
 
 /// A policy for introducing time delays based on a sliding window average.
 ///
@@ -22,7 +23,7 @@ const WINDOW_SIZE: usize = 5;
 ///
 /// # Example
 ///
-/// ```rust,no_run
+/// ```rust
 /// # use webb_proposal_signing_backends::queue::policy::TimeDelayPolicy;
 /// use std::time::Duration;
 ///
@@ -74,11 +75,7 @@ impl TimeDelayPolicy {
         num_proposals: usize,
     ) -> webb_relayer_utils::Result<bool> {
         // Add the current delay to the sliding window
-        let mut lock = self.delays.lock().map_err(|_| {
-            webb_relayer_utils::Error::Generic(
-                "Failed to acquire lock on delays",
-            )
-        })?;
+        let mut lock = self.delays.lock();
 
         // Add the current delay to the sliding window
         lock.push(self.current_delay.load(atomic::Ordering::Relaxed));
@@ -96,7 +93,7 @@ impl TimeDelayPolicy {
         } else {
             self.initial_delay
         };
-        tracing::debug!(
+        tracing::trace!(
             adjusted_delay,
             avg_delay,
             self.initial_delay,
@@ -143,7 +140,8 @@ impl super::ProposalPolicy for TimeDelayPolicy {
         queue: &Q,
     ) -> webb_relayer_utils::Result<()> {
         let size = queue.len()?;
-        let delay_changed = self.update_delay(size)?;
+        // Size = len + 1 because the proposal is still in the queue
+        let delay_changed = self.update_delay(size + 1)?;
         let delay = self.delay().as_secs();
         tracing::debug!(delay_changed, delay, queue_size = size);
         let now = std::time::SystemTime::now()
@@ -156,7 +154,7 @@ impl super::ProposalPolicy for TimeDelayPolicy {
             Some(v) if v <= now => {
                 // this means we are trying to dequeue a proposal.
                 // and the proposal should be dequeued
-                tracing::debug!(
+                tracing::trace!(
                     should_be_dequeued_at = v,
                     now,
                     diff_secs = now - v,
@@ -165,7 +163,7 @@ impl super::ProposalPolicy for TimeDelayPolicy {
                 Ok(())
             }
             Some(v) => {
-                tracing::debug!(
+                tracing::trace!(
                     should_be_dequeued_at = v,
                     wait_secs = v - now,
                     "Proposal should not be dequeued",
@@ -180,7 +178,7 @@ impl super::ProposalPolicy for TimeDelayPolicy {
                 // this means we are trying to queue a proposal.
                 // we set the should_be_dequeued_at value
                 metadata.set_should_be_dequeued_at(expected_to_be_dequeued_at);
-                tracing::debug!(
+                tracing::trace!(
                     queued_at,
                     should_be_dequeued_at = expected_to_be_dequeued_at,
                     would_wait_secs = expected_to_be_dequeued_at - queued_at,
@@ -191,7 +189,7 @@ impl super::ProposalPolicy for TimeDelayPolicy {
         };
         // if the delay changed, adjust all the proposals in the queue with the new delay
         if delay_changed {
-            tracing::debug!(
+            tracing::trace!(
                 "Delay changed. Adjusting all proposals in the queue"
             );
             queue.modify_in_place(|p| {
@@ -200,7 +198,7 @@ impl super::ProposalPolicy for TimeDelayPolicy {
                 let expected_to_be_dequeued_at = queued_at.add(delay);
                 let should_be_dequeued_at = metadata.should_be_dequeued_at();
                 metadata.set_should_be_dequeued_at(expected_to_be_dequeued_at);
-                tracing::debug!(
+                tracing::trace!(
                     queued_at,
                     old_should_be_dequeued_at = should_be_dequeued_at,
                     new_should_be_dequeued_at = expected_to_be_dequeued_at,

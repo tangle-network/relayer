@@ -82,9 +82,6 @@ pub struct WebbRelayerConfig {
     /// a map between chain name and its configuration.
     #[serde(default)]
     pub substrate: HashMap<String, SubstrateConfig>,
-    /// For Experimental Options
-    #[serde(default)]
-    pub experimental: ExperimentalConfig,
     /// Configuration for running relayer
     ///
     /// by deafult all features are enabled
@@ -130,18 +127,6 @@ impl WebbRelayerConfig {
             .then_some(())
             .ok_or(webb_relayer_utils::Error::MissingSecrets)
     }
-}
-
-/// ExperimentalConfig is the configuration for the Experimental Options.
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]
-#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
-pub struct ExperimentalConfig {
-    /// Enable the Smart Anchor Updates when it comes to signaling
-    /// the bridge to create the proposals.
-    pub smart_anchor_updates: bool,
-    /// The number of retries to check if an anchor is updated before sending our update
-    /// or not, before actually sending our update.
-    pub smart_anchor_updates_retries: u32,
 }
 
 /// FeaturesConfig is the configuration for running relayer with option.
