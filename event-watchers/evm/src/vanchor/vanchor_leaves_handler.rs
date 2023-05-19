@@ -177,10 +177,10 @@ impl EventHandler for VAnchorLeavesHandler {
                     // TODO: take a snapshot of current state and restart syncing events
                     // FIXME: We should restart syncing events
                 }
-                // 2. We will insert leaf into store
-                store.insert_leaves(history_store_key, &[value.clone()])?;
-                store.insert_last_deposit_block_number(
+                // 2. We will insert leaf and last deposit block number into store
+                store.insert_leaves_and_last_deposit_block_number(
                     history_store_key,
+                    &[value.clone()],
                     log.block_number.as_u64(),
                 )?;
                 let events_bytes = serde_json::to_vec(&event_data)?;

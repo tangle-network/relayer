@@ -185,6 +185,18 @@ impl LeafCacheStore for InMemoryStore {
     ) -> crate::Result<u64> {
         Ok(0u64)
     }
+
+    #[tracing::instrument(skip(self))]
+    fn insert_leaves_and_last_deposit_block_number<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
+        &self,
+        key: K,
+        leaves: &[(u32, Vec<u8>)],
+        block_number: u64,
+    ) -> crate::Result<()> {
+        Ok(())
+    }
 }
 
 impl EncryptedOutputCacheStore for InMemoryStore {
@@ -254,6 +266,17 @@ impl EncryptedOutputCacheStore for InMemoryStore {
         block_number: u64,
     ) -> crate::Result<u64> {
         Ok(0u64)
+    }
+    #[tracing::instrument(skip(self))]
+    fn insert_encrypted_output_and_last_deposit_block_number<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
+        &self,
+        key: K,
+        encrypted_outputs: &[(u32, Vec<u8>)],
+        block_number: u64,
+    ) -> crate::Result<()> {
+        Ok(())
     }
 }
 
