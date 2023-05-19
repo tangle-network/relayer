@@ -184,7 +184,8 @@ where
                 }
             };
 
-            self.proposals_queue.enqueue(proposal, self.policy.clone())?;
+            self.proposals_queue
+                .enqueue(proposal, self.policy.clone())?;
         }
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;

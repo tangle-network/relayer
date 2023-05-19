@@ -1,9 +1,9 @@
+use parking_lot::Mutex;
 use std::{
     ops::Add,
     sync::{atomic, Arc},
     time::Duration,
 };
-use parking_lot::Mutex;
 
 use crate::queue::{ProposalHash, ProposalMetadata, ProposalsQueue};
 
