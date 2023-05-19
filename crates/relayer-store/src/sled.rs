@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{BridgeKey, QueueKey};
-use core::fmt;
-use serde::de::DeserializeOwned;
-use serde::Serialize;
-use std::collections::BTreeMap;
-use std::fmt::Debug;
-use std::path::Path;
-use webb::evm::ethers::{self, types};
-
 use super::HistoryStoreKey;
 use super::{
     EncryptedOutputCacheStore, EventHashStore, HistoryStore, LeafCacheStore,
     QueueStore, TokenPriceCacheStore,
 };
+use crate::{BridgeKey, QueueKey};
+use core::fmt;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+use sled::Transactional;
+use std::collections::BTreeMap;
+use std::fmt::Debug;
+use std::path::Path;
+use webb::evm::ethers::{self, types};
 /// SledStore is a store that stores the history of events in  a [Sled](https://sled.rs)-based database.
 #[derive(Clone)]
 pub struct SledStore {
@@ -213,26 +213,6 @@ impl LeafCacheStore for SledStore {
             .collect();
         Ok(leaves)
     }
-    #[tracing::instrument(skip(self))]
-    fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        leaves: &[(u32, Vec<u8>)],
-    ) -> crate::Result<()> {
-        let key: HistoryStoreKey = key.into();
-        let tree = self.db.open_tree(format!(
-            "leaves/{}/{}",
-            key.chain_id(),
-            key.address()
-        ))?;
-        tree.transaction(|db| {
-            for (k, v) in leaves {
-                db.insert(&k.to_le_bytes(), v.as_slice())?;
-            }
-            Ok(())
-        })?;
-        Ok(())
-    }
 
     #[tracing::instrument(skip(self))]
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
@@ -253,26 +233,38 @@ impl LeafCacheStore for SledStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+    fn insert_leaves_and_last_deposit_block_number<
+        K: Into<HistoryStoreKey> + Debug,
+    >(
         &self,
         key: K,
+        leaves: &[(u32, Vec<u8>)],
         block_number: u64,
-    ) -> crate::Result<u64> {
-        let tree = self.db.open_tree("last_deposit_block_number")?;
-        let bytes = block_number.to_le_bytes();
+    ) -> crate::Result<()> {
         let key: HistoryStoreKey = key.into();
-        let old = tree.transaction(|db| {
-            let old = db.insert(key.to_bytes(), &bytes)?;
-            Ok(old)
-        })?;
-        match old {
-            Some(v) => {
-                let mut output = [0u8; 8];
-                output.copy_from_slice(&v);
-                Ok(u64::from_le_bytes(output))
-            }
-            None => Ok(block_number),
-        }
+
+        let leaf_tree = self.db.open_tree(format!(
+            "leaves/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
+        // This is last deposit event block number
+        let set_block_tree1 = self.db.open_tree("last_deposit_block_number")?;
+        // This will be used by event watcher to track the block number has been processed
+        let set_block_tree2 = self.db.open_tree("last_block_numbers")?;
+        let block_number_bytes = block_number.to_le_bytes();
+
+        (&leaf_tree, &set_block_tree1, &set_block_tree2).transaction(
+            |(leaf_tree, set_block_tree1, set_block_tree2)| {
+                for (k, v) in leaves {
+                    leaf_tree.insert(&k.to_le_bytes(), v.as_slice())?;
+                }
+                set_block_tree1.insert(key.to_bytes(), &block_number_bytes)?;
+                set_block_tree2.insert(key.to_bytes(), &block_number_bytes)?;
+                Ok(())
+            },
+        )?;
+        Ok(())
     }
 }
 
@@ -318,32 +310,15 @@ impl EncryptedOutputCacheStore for SledStore {
         Ok(encrypted_outputs)
     }
 
-    #[tracing::instrument(skip(self))]
-    fn insert_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        encrypted_output: &[(u32, Vec<u8>)],
-    ) -> crate::Result<()> {
-        let key: HistoryStoreKey = key.into();
-
-        let tree = self.db.open_tree(format!(
-            "encrypted_outputs/{}/{}",
-            key.chain_id(),
-            key.address()
-        ))?;
-        for (k, v) in encrypted_output {
-            tree.insert(k.to_le_bytes(), &*v.clone())?;
-        }
-        Ok(())
-    }
-
     fn get_last_deposit_block_number_for_encrypted_output<
         K: Into<HistoryStoreKey> + Debug,
     >(
         &self,
         key: K,
     ) -> crate::Result<u64> {
-        let tree = self.db.open_tree("last_deposit_block_number")?;
+        let tree = self
+            .db
+            .open_tree("encrypted_output_last_deposit_block_number")?;
         let key: HistoryStoreKey = key.into();
         let val = tree.get(key.to_bytes())?;
         match val {
@@ -356,25 +331,37 @@ impl EncryptedOutputCacheStore for SledStore {
         }
     }
 
-    fn insert_last_deposit_block_number_for_encrypted_output<
-        K: Into<HistoryStoreKey> + Debug,
+    #[tracing::instrument(skip(self))]
+    fn insert_encrypted_output_and_last_deposit_block_number<
+        K: Into<HistoryStoreKey> + Debug + Clone,
     >(
         &self,
         key: K,
+        encrypted_output: &[(u32, Vec<u8>)],
         block_number: u64,
-    ) -> crate::Result<u64> {
-        let tree = self.db.open_tree("last_deposit_block_number")?;
-        let bytes = block_number.to_le_bytes();
+    ) -> crate::Result<()> {
         let key: HistoryStoreKey = key.into();
-        let old = tree.insert(key.to_bytes(), &bytes)?;
-        match old {
-            Some(v) => {
-                let mut output = [0u8; 8];
-                output.copy_from_slice(&v);
-                Ok(u64::from_be_bytes(output))
-            }
-            None => Ok(block_number),
-        }
+
+        let encrypted_output_tree = self.db.open_tree(format!(
+            "encrypted_outputs/{}/{}",
+            key.chain_id(),
+            key.address()
+        ))?;
+        let set_block_tree = self
+            .db
+            .open_tree("encrypted_output_last_deposit_block_number")?;
+        let block_number_bytes = block_number.to_le_bytes();
+        (&encrypted_output_tree, &set_block_tree).transaction(
+            |(encrypted_output_tree, set_block_tree)| {
+                for (k, v) in encrypted_output {
+                    encrypted_output_tree
+                        .insert(&k.to_le_bytes(), v.as_slice())?;
+                }
+                set_block_tree.insert(key.to_bytes(), &block_number_bytes)?;
+                Ok(())
+            },
+        )?;
+        Ok(())
     }
 }
 
@@ -719,6 +706,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let store = SledStore::open(tmp.path()).unwrap();
         let chain_id = 1u32;
+        let block_number = 20u64;
         let contract =
             types::H160::from_slice("11111111111111111111".as_bytes());
         let history_store_key = (
@@ -729,7 +717,11 @@ mod tests {
             .map(|i| (i, types::H256::random().to_fixed_bytes().to_vec()))
             .collect::<Vec<_>>();
         store
-            .insert_leaves(history_store_key, &generated_leaves)
+            .insert_leaves_and_last_deposit_block_number(
+                history_store_key,
+                &generated_leaves,
+                block_number,
+            )
             .unwrap();
         let leaves = store
             .get_leaves_with_range(history_store_key, 5..10)
@@ -866,5 +858,56 @@ mod tests {
             // remove the event
             store.delete_event(&event_bytes).unwrap();
         }
+    }
+
+    #[test]
+    fn insert_leaves_and_last_deposit_block_number_should_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+        let chain_id = 1u32;
+        let contract =
+            types::H160::from_slice("11111111111111111111".as_bytes());
+        let history_store_key = (
+            TypedChainId::Evm(chain_id),
+            TargetSystem::new_contract_address(contract.to_fixed_bytes()),
+        );
+        let generated_leaves = (0..2u32)
+            .map(|i| (i, types::H256::random().to_fixed_bytes().to_vec()))
+            .collect::<Vec<_>>();
+        let block_number = 20u64;
+        let default_block_number = 1u64;
+        store
+            .insert_leaves_and_last_deposit_block_number(
+                history_store_key,
+                &generated_leaves,
+                block_number,
+            )
+            .unwrap();
+        let leaves = store
+            .get_leaves_with_range(history_store_key, 0..2)
+            .unwrap();
+        assert_eq!(leaves.len(), 2);
+        assert_eq!(
+            leaves
+                .values()
+                .map(|v| v.to_fixed_bytes().to_vec())
+                .collect::<Vec<_>>(),
+            generated_leaves
+                .into_iter()
+                .map(|(_, v)| v)
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            store
+                .get_last_deposit_block_number(history_store_key)
+                .unwrap(),
+            block_number
+        );
+        assert_eq!(
+            store
+                .get_last_block_number(history_store_key, default_block_number)
+                .unwrap(),
+            block_number
+        );
     }
 }

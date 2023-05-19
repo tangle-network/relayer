@@ -36,6 +36,9 @@ pub struct InMemoryStore {
     store_for_map: Arc<RwLock<MemStoreForMap>>,
     last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
     target_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
+    last_deposit_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
+    encrypted_output_last_deposit_block_numbers:
+        Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
     token_prices_cache: Arc<RwLock<HashMap<String, Vec<u8>>>>,
 }
 
@@ -146,44 +149,53 @@ impl LeafCacheStore for InMemoryStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        leaves: &[(u32, Vec<u8>)],
-    ) -> crate::Result<()> {
-        let mut guard = self.store_for_map.write();
-        guard
-            .entry(key.into())
-            .and_modify(|v| {
-                for (index, leaf) in leaves {
-                    v.insert(*index, types::H256::from_slice(leaf));
-                }
-            })
-            .or_insert_with(|| {
-                let mut map = BTreeMap::new();
-                for (index, leaf) in leaves {
-                    map.insert(*index, types::H256::from_slice(leaf));
-                }
-                map
-            });
-        Ok(())
-    }
-
-    #[tracing::instrument(skip(self))]
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
     ) -> crate::Result<u64> {
-        Ok(0u64)
+        let guard = self.last_deposit_block_numbers.read();
+        let default_block_number = 0u64;
+        let val = guard
+            .get(&key.into())
+            .cloned()
+            .unwrap_or(default_block_number);
+        Ok(val)
     }
 
     #[tracing::instrument(skip(self))]
-    fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+    fn insert_leaves_and_last_deposit_block_number<
+        K: Into<HistoryStoreKey> + Debug + Clone,
+    >(
         &self,
         key: K,
+        leaves: &[(u32, Vec<u8>)],
         block_number: u64,
-    ) -> crate::Result<u64> {
-        Ok(0u64)
+    ) -> crate::Result<()> {
+        let mut guard1 = self.store_for_map.write();
+        let mut guard2 = self.last_deposit_block_numbers.write();
+        let mut guard3 = self.last_block_numbers.write();
+        {
+            // 1. Insert leaves
+            guard1
+                .entry(key.clone().into())
+                .and_modify(|v| {
+                    for (index, leaf) in leaves {
+                        v.insert(*index, types::H256::from_slice(leaf));
+                    }
+                })
+                .or_insert_with(|| {
+                    let mut map = BTreeMap::new();
+                    for (index, leaf) in leaves {
+                        map.insert(*index, types::H256::from_slice(leaf));
+                    }
+                    map
+                });
+            // 2. Insert last deposit block number
+            guard2.insert(key.clone().into(), block_number);
+            // 3. Insert last block number
+            guard3.entry(key.into()).or_insert(block_number);
+        }
+        Ok(())
     }
 }
 
@@ -216,44 +228,46 @@ impl EncryptedOutputCacheStore for InMemoryStore {
     }
 
     #[tracing::instrument(skip(self))]
-    fn insert_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        encrypted_outputs: &[(u32, Vec<u8>)],
-    ) -> crate::Result<()> {
-        let mut guard = self.store_for_vec.write();
-        guard
-            .entry(key.into())
-            .and_modify(|v| {
-                for (index, encrypted_output) in encrypted_outputs {
-                    v.insert(*index as usize, encrypted_output.clone());
-                }
-            })
-            .or_insert_with(|| {
-                encrypted_outputs.iter().map(|v| v.1.clone()).collect()
-            });
-        Ok(())
-    }
-
-    #[tracing::instrument(skip(self))]
     fn get_last_deposit_block_number_for_encrypted_output<
         K: Into<HistoryStoreKey> + Debug,
     >(
         &self,
         key: K,
     ) -> crate::Result<u64> {
-        Ok(0u64)
+        let guard = self.encrypted_output_last_deposit_block_numbers.read();
+        let default_block_number = 0u64;
+        let val = guard
+            .get(&key.into())
+            .cloned()
+            .unwrap_or(default_block_number);
+        Ok(val)
     }
 
     #[tracing::instrument(skip(self))]
-    fn insert_last_deposit_block_number_for_encrypted_output<
-        K: Into<HistoryStoreKey> + Debug,
+    fn insert_encrypted_output_and_last_deposit_block_number<
+        K: Into<HistoryStoreKey> + Debug + Clone,
     >(
         &self,
         key: K,
+        encrypted_outputs: &[(u32, Vec<u8>)],
         block_number: u64,
-    ) -> crate::Result<u64> {
-        Ok(0u64)
+    ) -> crate::Result<()> {
+        let mut guard1 = self.store_for_vec.write();
+        let mut guard2 = self.last_deposit_block_numbers.write();
+        {
+            guard1
+                .entry(key.clone().into())
+                .and_modify(|v| {
+                    for (index, encrypted_output) in encrypted_outputs {
+                        v.insert(*index as usize, encrypted_output.clone());
+                    }
+                })
+                .or_insert_with(|| {
+                    encrypted_outputs.iter().map(|v| v.1.clone()).collect()
+                });
+            guard2.insert(key.into(), block_number);
+        }
+        Ok(())
     }
 }
 
@@ -289,7 +303,14 @@ mod tests {
             .map(|i| (i, types::H256::random().to_fixed_bytes().to_vec()))
             .collect::<Vec<_>>();
         let key = HistoryStoreKey::from(1u32);
-        store.insert_leaves(key, &generated_leaves).unwrap();
+        let block_number = 20u64;
+        store
+            .insert_leaves_and_last_deposit_block_number(
+                key,
+                &generated_leaves,
+                block_number,
+            )
+            .unwrap();
         let leaves = store.get_leaves(key).unwrap();
         assert_eq!(
             leaves
@@ -311,7 +332,14 @@ mod tests {
             .map(|i| (i, types::H256::random().to_fixed_bytes().to_vec()))
             .collect::<Vec<_>>();
         let key = HistoryStoreKey::from(1u32);
-        store.insert_leaves(key, &generated_leaves).unwrap();
+        let block_number = 20u64;
+        store
+            .insert_leaves_and_last_deposit_block_number(
+                key,
+                &generated_leaves,
+                block_number,
+            )
+            .unwrap();
         let leaves = store.get_leaves_with_range(key, 5..10).unwrap();
         assert_eq!(
             leaves
@@ -325,5 +353,37 @@ mod tests {
                 .map(|v| v.1.clone())
                 .collect::<Vec<_>>()
         );
+    }
+
+    #[test]
+    fn insert_leaves_and_last_deposit_block_number() {
+        // a simple test to show that we can get all the leaves that we inserted.
+        let store = InMemoryStore::default();
+        let generated_leaves = (0..20u32)
+            .map(|i| (i, types::H256::random().to_fixed_bytes().to_vec()))
+            .collect::<Vec<_>>();
+        let key = HistoryStoreKey::from(1u32);
+        let block_number = 20u64;
+        store
+            .insert_leaves_and_last_deposit_block_number(
+                key,
+                &generated_leaves,
+                block_number,
+            )
+            .unwrap();
+        let last_deposit_block_number =
+            store.get_last_deposit_block_number(key).unwrap();
+        assert_eq!(last_deposit_block_number, block_number);
+        let leaves = store.get_leaves(key).unwrap();
+        assert!(leaves
+            .into_iter()
+            .map(|v| v.1.to_fixed_bytes().to_vec())
+            .collect::<Vec<_>>()
+            .iter()
+            .eq(generated_leaves
+                .iter()
+                .map(|v| v.1.clone())
+                .collect::<Vec<_>>()
+                .iter()));
     }
 }

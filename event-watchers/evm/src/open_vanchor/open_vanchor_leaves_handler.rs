@@ -21,8 +21,8 @@ use webb::evm::ethers::prelude::{LogMeta, Middleware};
 use webb_event_watcher_traits::evm::EventHandler;
 use webb_event_watcher_traits::EthersClient;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
-use webb_relayer_store::SledStore;
-use webb_relayer_store::{EventHashStore, LeafCacheStore};
+use webb_relayer_store::EventHashStore;
+use webb_relayer_store::{LeafCacheStore, SledStore};
 use webb_relayer_utils::metric;
 /// An VAnchor Leaves Handler that handles `NewCommitment` events and saves the leaves to the store.
 /// It serves as a cache for leaves that could be used by dApp for proof generation.
@@ -68,9 +68,9 @@ impl EventHandler for OpenVAnchorLeavesHandler {
                 let typed_chain_id = TypedChainId::Evm(chain_id.as_u32());
                 let history_store_key =
                     ResourceId::new(target_system, typed_chain_id);
-                store.insert_leaves(history_store_key, &[value.clone()])?;
-                store.insert_last_deposit_block_number(
+                store.insert_leaves_and_last_deposit_block_number(
                     history_store_key,
+                    &[value.clone()],
                     log.block_number.as_u64(),
                 )?;
                 let events_bytes = serde_json::to_vec(&deposit)?;

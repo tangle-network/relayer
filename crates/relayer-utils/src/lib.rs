@@ -199,6 +199,9 @@ pub enum Error {
     ReadSubstrateStorageError,
     #[error("Cannot convert default leaf scalar into bytes")]
     ConvertLeafScalarError,
+    /// Invalid Merkle root
+    #[error("Invalid Merkle root at index {}", _0)]
+    InvalidMerkleRootError(u32),
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.

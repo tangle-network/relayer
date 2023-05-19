@@ -285,13 +285,6 @@ pub trait LeafCacheStore: HistoryStore {
         range: core::ops::Range<u32>,
     ) -> crate::Result<Self::Output>;
 
-    /// Insert the leaves for the given key.
-    fn insert_leaves<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        leaves: &[(u32, Vec<u8>)],
-    ) -> crate::Result<()>;
-
     /// The last deposit info is sent to the client on leaf request
     /// So they can verify when the last transaction was sent to maintain
     /// their own state of mixers.
@@ -300,12 +293,15 @@ pub trait LeafCacheStore: HistoryStore {
         key: K,
     ) -> crate::Result<u64>;
 
-    /// Set the last deposit block number for the given key.
-    fn insert_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
+    /// Insert leaves and last deposit block number for the given key.
+    fn insert_leaves_and_last_deposit_block_number<
+        K: Into<HistoryStoreKey> + Debug + Clone,
+    >(
         &self,
         key: K,
+        leaves: &[(u32, Vec<u8>)],
         block_number: u64,
-    ) -> crate::Result<u64>;
+    ) -> crate::Result<()>;
 }
 
 /// An Encrypted Output Cache Store is a simple trait that would help in
@@ -327,13 +323,6 @@ pub trait EncryptedOutputCacheStore: HistoryStore {
         range: core::ops::Range<u32>,
     ) -> crate::Result<Self::Output>;
 
-    /// Insert the encrypted output for the given key.
-    fn insert_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
-        &self,
-        key: K,
-        encrypted_output: &[(u32, Vec<u8>)],
-    ) -> crate::Result<()>;
-
     /// The last deposit info is sent to the client on encrypted_output request
     /// So they can verify when the last transaction was sent to maintain
     /// their own state of mixers.
@@ -344,14 +333,15 @@ pub trait EncryptedOutputCacheStore: HistoryStore {
         key: K,
     ) -> crate::Result<u64>;
 
-    /// Set the last deposit block number for the given key.
-    fn insert_last_deposit_block_number_for_encrypted_output<
-        K: Into<HistoryStoreKey> + Debug,
+    /// Insert encrypted output and last deposit block number for the given key.
+    fn insert_encrypted_output_and_last_deposit_block_number<
+        K: Into<HistoryStoreKey> + Debug + Clone,
     >(
         &self,
         key: K,
+        encrypted_output: &[(u32, Vec<u8>)],
         block_number: u64,
-    ) -> crate::Result<u64>;
+    ) -> crate::Result<()>;
 }
 
 /// A Command sent to the Bridge to execute different actions.

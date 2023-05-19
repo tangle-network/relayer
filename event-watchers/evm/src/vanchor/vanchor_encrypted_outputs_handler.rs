@@ -78,12 +78,10 @@ impl EventHandler for VAnchorEncryptedOutputHandler {
                 let typed_chain_id = TypedChainId::Evm(self.chain_id.as_u32());
                 let history_store_key =
                     ResourceId::new(target_system, typed_chain_id);
-                store.insert_encrypted_output(
+
+                store.insert_encrypted_output_and_last_deposit_block_number(
                     history_store_key,
                     &[value.clone()],
-                )?;
-                store.insert_last_deposit_block_number_for_encrypted_output(
-                    history_store_key,
                     log.block_number.as_u64(),
                 )?;
                 let events_bytes = serde_json::to_vec(&deposit)?;
