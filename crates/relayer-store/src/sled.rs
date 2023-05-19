@@ -293,7 +293,7 @@ impl LeafCacheStore for SledStore {
         // This is last deposit event block number
         let set_block_tree1 = self.db.open_tree("last_deposit_block_number")?;
         // This will be used by event watcher to track the block number has been processed
-        let set_block_tree2 = self.db.open_tree("set_last_block_number")?;
+        let set_block_tree2 = self.db.open_tree("last_block_numbers")?;
         let block_number_bytes = block_number.to_le_bytes();
 
         (&leaf_tree, &set_block_tree1, &set_block_tree2).transaction(
@@ -961,5 +961,56 @@ mod tests {
             // remove the event
             store.delete_event(&event_bytes).unwrap();
         }
+    }
+
+    #[test]
+    fn insert_leaves_and_last_deposit_block_number_should_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+        let chain_id = 1u32;
+        let contract =
+            types::H160::from_slice("11111111111111111111".as_bytes());
+        let history_store_key = (
+            TypedChainId::Evm(chain_id),
+            TargetSystem::new_contract_address(contract.to_fixed_bytes()),
+        );
+        let generated_leaves = (0..2u32)
+            .map(|i| (i, types::H256::random().to_fixed_bytes().to_vec()))
+            .collect::<Vec<_>>();
+        let block_number = 20u64;
+        let default_block_number = 1u64;
+        store
+            .insert_leaves_and_last_deposit_block_number(
+                history_store_key,
+                &generated_leaves,
+                block_number,
+            )
+            .unwrap();
+        let leaves = store
+            .get_leaves_with_range(history_store_key, 0..2)
+            .unwrap();
+        assert_eq!(leaves.len(), 2);
+        assert_eq!(
+            leaves
+                .values()
+                .map(|v| v.to_fixed_bytes().to_vec())
+                .collect::<Vec<_>>(),
+            generated_leaves
+                .into_iter()
+                .map(|(_, v)| v)
+                .collect::<Vec<_>>()
+        );
+        assert_eq!(
+            store
+                .get_last_deposit_block_number(history_store_key)
+                .unwrap(),
+            block_number
+        );
+        assert_eq!(
+            store
+                .get_last_block_number(history_store_key, default_block_number)
+                .unwrap(),
+            block_number
+        );
     }
 }
