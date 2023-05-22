@@ -16,6 +16,7 @@ use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::Json;
 use std::{collections::HashMap, sync::Arc};
+use webb::evm::ethers::types;
 
 use ethereum_types::Address;
 use serde::Serialize;
@@ -32,7 +33,7 @@ use super::OptionalRangeQuery;
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LeavesCacheResponse {
-    leaves: Vec<Vec<u8>>,
+    leaves: Vec<types::H256>,
     last_queried_block: u64,
 }
 
@@ -117,11 +118,7 @@ pub async fn handle_leaves_cache_evm(
     let leaves = ctx
         .store()
         .get_leaves_with_range(history_store_key, query_range.into())
-        .map(|tree| {
-            tree.into_values()
-                .map(|v| v.to_fixed_bytes().to_vec())
-                .collect::<Vec<_>>()
-        })?;
+        .map(|tree| tree.into_values().collect::<Vec<_>>())?;
     let last_queried_block = ctx
         .store()
         .get_last_deposit_block_number(history_store_key)?;
@@ -171,11 +168,8 @@ pub async fn handle_leaves_cache_substrate(
     let leaves = ctx
         .store()
         .get_leaves_with_range(history_store_key, query_range.into())
-        .map(|tree| {
-            tree.into_values()
-                .map(|v| v.to_fixed_bytes().to_vec())
-                .collect::<Vec<_>>()
-        })?;
+        .map(|tree| tree.into_values().collect::<Vec<_>>())?;
+
     let last_queried_block = ctx
         .store()
         .get_last_deposit_block_number(history_store_key)?;

@@ -266,7 +266,7 @@ describe('Vanchor Transaction relayer', function () {
     expect(response.status).equal(200);
     const leavesStore = response.json() as Promise<LeavesCacheResponse>;
     await leavesStore.then((resp) => {
-      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
+      const leaves = resp.leaves;
       expect(leaves.length).to.equal(expectedLeaves.length);
       expect(leaves).to.deep.equal(expectedLeaves);
     });
@@ -304,7 +304,7 @@ describe('Vanchor Transaction relayer', function () {
     expect(response2.status).equal(200);
     const leavesStore2 = response2.json() as Promise<LeavesCacheResponse>;
     await leavesStore2.then((resp) => {
-      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
+      const leaves = resp.leaves;
       expect(leaves.length).to.equal(5 - 1);
       const expectedLeavesSlice = expectedLeaves.slice(1, 5);
       expect(leaves).to.deep.equal(expectedLeavesSlice);
@@ -320,7 +320,7 @@ describe('Vanchor Transaction relayer', function () {
     expect(response21.status).equal(200);
     const leavesStore21 = response21.json() as Promise<LeavesCacheResponse>;
     await leavesStore21.then((resp) => {
-      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
+      const leaves = resp.leaves;
       expect(leaves.length).to.equal(7 - 4);
       const expectedLeavesSlice = expectedLeaves.slice(4, 7);
       expect(leaves).to.deep.equal(expectedLeavesSlice);
@@ -335,7 +335,7 @@ describe('Vanchor Transaction relayer', function () {
     expect(response3.status).equal(200);
     const leavesStore3 = response3.json() as Promise<LeavesCacheResponse>;
     await leavesStore3.then((resp) => {
-      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
+      const leaves = resp.leaves;
       expect(leaves.length).to.equal(expectedLeavesCount - 1);
       const expectedLeavesSlice = expectedLeaves.slice(
         1,
@@ -358,7 +358,7 @@ describe('Vanchor Transaction relayer', function () {
     expect(response4.status).equal(200);
     const leavesStore4 = response4.json() as Promise<LeavesCacheResponse>;
     await leavesStore4.then((resp) => {
-      const leaves = resp.leaves.map((el) => u8aToHex(Uint8Array.from(el)));
+      const leaves = resp.leaves;
       expect(leaves.length).to.equal(1);
       const expectedLeavesSlice = expectedLeaves.slice(9);
       expect(leaves).to.deep.equal(expectedLeavesSlice);

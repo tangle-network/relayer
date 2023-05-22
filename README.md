@@ -261,7 +261,8 @@ The relayer has 3 endpoints available to query from. They are outlined below for
   <summary>Expected Response</summary>
   
   ```json
-  {
+{
+  "relayer_config" : {
     "evm": {
         "rinkeby": {
             "enabled": true,
@@ -285,6 +286,13 @@ The relayer has 3 endpoints available to query from. They are outlined below for
     "experimental": {
         "smart-anchor-updates": false,
         "smart-anchor-updates-retries": 0
+    }
+  },
+  "build_info" : {
+    "version": "0.5.0",
+    "commit": "c8875ba78298d34272e40c2e302fcfe33f191147",
+    "branch": "develop",
+    "build_time": "2023-05-19T15:57:40Z"
     }
 }
   ```
@@ -324,30 +332,16 @@ The relayer has 3 endpoints available to query from. They are outlined below for
   ```json
 {
   "leaves": [
-    [
-       42, 255, 162,  80, 180, 134, 202, 153,
-       49, 119,  64, 112, 255, 230,  46, 130,
-      230,  68,  98,  78,  34, 206, 175, 181,
-       18, 112,  14, 188, 166,  72, 115, 130
-    ],
-    [
-        2, 103,  50, 103, 246,  93,  14, 110,
-       51, 252, 154, 157, 102, 157,  16, 237,
-      117,  55, 107, 175, 233, 112, 144,  18,
-      178,  30, 175, 223,  81,  29, 227,  71
-    ],
-    [
-       40,  30,  11, 223,  86,  95, 109,  18,
-       31,  93, 224,  12, 208, 111, 222, 217,
-       80, 195, 194, 100, 220, 183,  40, 142,
-      232,  45,  32, 187,  98, 174, 142, 231
-    ],
-    [
-       31, 141, 59, 100,  22,  69, 177,  39,
-      226,  21, 59, 203,  47, 116,  66, 133,
-       11, 254, 53, 179, 205, 251, 172,  32,
-        8, 228, 96, 148, 230, 134,  80, 122
-    ],
+    "0x015110a4b1a8bf29f7b6b2cb3fe5f52c2eeccd9ff7e8a0fb7d4ff2ae61516562",
+    "0x2fa56e6179d1bf0afc6f3ee2a52dc68cc2076d380a55165578c1c558e1f6f1dc",
+    "0x031317e0fe026ce99cf9b3cf8fefed7ddc21c5f4181e49fd6e8370aea5006da0",
+    "0x07507826af3c90c457222ad0305d90bf8bcfb1d343c2a9c17d280ff648b43582",
+    "0x0ff8f7f0fc798b9b34464ba51a10bdde16d17506f3251f9658335504f07c9c5f",
+    "0x0b92b3c5013eb2374527a167af6464f1ab8b11da1dd36e5a6a2cf76130fee9e3",
+    "0x2bccea444d1078a2b5778f3c8f28013219abfe5c236d1276b87276ec5eec4354",
+    "0x0be7c8578e746b1b7d913c79affb80c715b96a1304edb68d1d7e6dc33f30260f",
+    "0x117dae7ac7b62ed97525cc8541823c2caae25ffaf6168361ac19ca484851744f",
+    "0x0c187c0b413f2c2e8ebaeffbe9351fda6eb46dfa396b0c73298215950439fa75"
   ],
   "lastQueriedBlock": 37
 }

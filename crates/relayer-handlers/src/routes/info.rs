@@ -10,12 +10,35 @@ use webb::evm::ethers::{
 };
 use webb_relayer_context::RelayerContext;
 
+/// Build info data
+#[derive(Debug, Serialize)]
+pub struct BuildInfo {
+    /// Version of the relayer
+    pub version: String,
+    /// Commit hash of the relayer
+    pub commit: String,
+    /// Branch of the relayer
+    pub branch: String,
+    /// Build time of the relayer
+    pub build_time: String,
+}
+
 /// Relayer config data
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RelayerConfig {
+    /// Relayer chain config
+    pub config: webb_relayer_config::WebbRelayerConfig,
+    /// Relayer build info
+    pub build_info: BuildInfo,
+}
+
+/// Relayer configuration response
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RelayerInformationResponse {
     #[serde(flatten)]
-    config: webb_relayer_config::WebbRelayerConfig,
+    relayer_config: RelayerConfig,
 }
 
 /// Handles relayer configuration requests
@@ -53,5 +76,15 @@ pub async fn handle_relayer_info(
             v.beneficiary = Some(suri.public());
             webb_relayer_utils::Result::Ok(())
         });
-    Json(RelayerInformationResponse { config })
+
+    // build info
+    let build_info = BuildInfo {
+        version: std::env::var("CARGO_PKG_VERSION").unwrap_or_default(),
+        commit: std::env::var("GIT_COMMIT").unwrap_or_default(),
+        branch: std::env::var("GIT_BRANCH").unwrap_or_default(),
+        build_time: std::env::var("SOURCE_TIMESTAMP").unwrap_or_default(),
+    };
+    let relayer_config = RelayerConfig { config, build_info };
+
+    Json(RelayerInformationResponse { relayer_config })
 }

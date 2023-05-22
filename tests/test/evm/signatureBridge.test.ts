@@ -324,7 +324,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     });
 
     // now we wait for the tx queue on that chain to execute the transfer ownership transaction.
-     await webbRelayer.waitForEvent({
+    await webbRelayer.waitForEvent({
       kind: 'tx_queue',
       event: {
         ty: 'EVM',
