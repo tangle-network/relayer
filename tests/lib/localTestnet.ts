@@ -37,6 +37,7 @@ import {
   EventsWatcher,
   LinkedAnchor,
   ProposalSigningBackend,
+  SmartAnchorUpdatesConfig,
   WithdrawConfig,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
@@ -58,6 +59,7 @@ export type ExportedConfigOptions = {
   linkedAnchors?: LinkedAnchor[];
   blockConfirmations?: number;
   privateKey?: string;
+  smartAnchorUpdates?: SmartAnchorUpdatesConfig;
 };
 
 // Default Events watcher for the contracts.
@@ -300,8 +302,6 @@ export class LocalChain {
         const chainBridgeSide = this.signatureVBridge.getVBridgeSide(
           Number(entry[0])
         );
-        console.log('entry: ', entry);
-        console.log(await chainBridgeSide.contract.signer.getAddress());
         const nonce = await chainBridgeSide.contract.proposalNonce();
         const initialGovernor = entry[1];
         const governorAddress =
@@ -357,6 +357,7 @@ export class LocalChain {
           printProgressInterval: 7000,
         },
         linkedAnchors: opts.linkedAnchors,
+        smartAnchorUpdates: opts.smartAnchorUpdates,
       },
       {
         contract: 'SignatureBridge',
@@ -418,11 +419,13 @@ export class LocalChain {
       | 'proposal-signing-backend'
       | 'withdraw-config'
       | 'linked-anchors'
+      | 'smart-anchor-updates'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
       'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
       'withdraw-config'?: ConvertToKebabCase<WithdrawConfig>;
       'linked-anchors'?: ConvertedLinkedAnchor[];
+      'smart-anchor-updates'?: ConvertToKebabCase<SmartAnchorUpdatesConfig>;
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -446,48 +449,59 @@ export class LocalChain {
       'block-confirmations': config.blockConfirmations,
       beneficiary: config.beneficiary,
       'private-key': config.privateKey,
-      contracts: config.contracts.map((contract) => ({
-        contract: contract.contract,
-        address: contract.address,
-        'deployed-at': contract.deployedAt,
-        'proposal-signing-backend':
-          contract.proposalSigningBackend?.type === 'Mocked'
-            ? {
+      contracts: config.contracts.map(
+        (contract): ConvertedContract => ({
+          contract: contract.contract,
+          address: contract.address,
+          'deployed-at': contract.deployedAt,
+          'proposal-signing-backend':
+            contract.proposalSigningBackend?.type === 'Mocked'
+              ? {
                 type: 'Mocked',
                 'private-key': contract.proposalSigningBackend?.privateKey,
               }
-            : contract.proposalSigningBackend?.type === 'DKGNode'
-            ? {
-                type: 'DKGNode',
-                'chain-id': contract.proposalSigningBackend?.chainId,
-              }
-            : undefined,
-        'events-watcher': {
-          enabled: contract.eventsWatcher.enabled,
-          'polling-interval': contract.eventsWatcher.pollingInterval,
-          'print-progress-interval':
-            contract.eventsWatcher.printProgressInterval,
-        },
-        'linked-anchors': contract?.linkedAnchors?.map((anchor: LinkedAnchor) =>
-          anchor.type === 'Evm'
-            ? {
-                'chain-id': anchor.chainId,
-                type: 'Evm',
-                address: anchor.address,
-              }
-            : anchor.type === 'Substrate'
-            ? {
-                type: 'Substrate',
-                'chain-id': anchor.chainId,
-                'tree-id': anchor.treeId,
-                pallet: anchor.pallet,
-              }
-            : {
-                type: 'Raw',
-                'resource-id': anchor.resourceId,
-              }
-        ),
-      })),
+              : contract.proposalSigningBackend?.type === 'DKGNode'
+                ? {
+                  type: 'DKGNode',
+                  'chain-id': contract.proposalSigningBackend?.chainId,
+                }
+                : undefined,
+          'events-watcher': {
+            enabled: contract.eventsWatcher.enabled,
+            'polling-interval': contract.eventsWatcher.pollingInterval,
+            'print-progress-interval':
+              contract.eventsWatcher.printProgressInterval,
+          },
+          'smart-anchor-updates': {
+            enabled: contract.smartAnchorUpdates?.enabled,
+            'initial-time-delay': contract.smartAnchorUpdates?.initialTimeDelay,
+            'max-time-delay': contract.smartAnchorUpdates?.maxTimeDelay,
+            'min-time-delay': contract.smartAnchorUpdates?.minTimeDelay,
+            'time-delay-window-size':
+              contract.smartAnchorUpdates?.timeDelayWindowSize,
+          },
+          'linked-anchors': contract?.linkedAnchors?.map(
+            (anchor: LinkedAnchor) =>
+              anchor.type === 'Evm'
+                ? {
+                  'chain-id': anchor.chainId,
+                  type: 'Evm',
+                  address: anchor.address,
+                }
+                : anchor.type === 'Substrate'
+                  ? {
+                    type: 'Substrate',
+                    'chain-id': anchor.chainId,
+                    'tree-id': anchor.treeId,
+                    pallet: anchor.pallet,
+                  }
+                  : {
+                    type: 'Raw',
+                    'resource-id': anchor.resourceId,
+                  }
+          ),
+        })
+      ),
     };
     const fullConfigFile: FullConfigFile = {
       evm: {
