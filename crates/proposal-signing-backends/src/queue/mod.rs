@@ -478,9 +478,9 @@ mod tests {
             let header = mock_proposal_header(r_id, nonce);
             let proposal = mock_evm_anchor_update_proposal(header, src_r_id);
             queue.enqueue(proposal, enqueue_policy.clone()).unwrap();
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            tokio::time::sleep(Duration::from_millis(10)).await;
         }
-        tokio::time::sleep(time_delay_policy.delay()).await;
+        tokio::time::sleep(time_delay_policy.max_delay()).await;
         // all proposals should be handled by now.
         // the queue should be empty.
         assert!(queue.is_empty().unwrap(), "the queue should be empty");
