@@ -640,7 +640,7 @@ export interface WebbRelayerInfo {
 }
 
 export interface LeavesCacheResponse {
-  leaves: number[][];
+  leaves: [`0x${string}`];
   lastQueriedBlock: string;
 }
 
