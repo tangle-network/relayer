@@ -77,7 +77,7 @@ pub async fn handle_relayer_info(
             webb_relayer_utils::Result::Ok(())
         });
 
-    // build info
+    // Build info
     let build_info = BuildInfo {
         version: std::env::var("CARGO_PKG_VERSION").unwrap_or_default(),
         commit: std::env::var("GIT_COMMIT").unwrap_or_default(),
