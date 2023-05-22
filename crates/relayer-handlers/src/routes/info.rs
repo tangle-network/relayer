@@ -17,10 +17,8 @@ pub struct BuildInfo {
     pub version: String,
     /// Commit hash of the relayer
     pub commit: String,
-    /// Branch of the relayer
-    pub branch: String,
     /// Build time of the relayer
-    pub build_time: String,
+    pub build_timestamp: String,
 }
 
 /// Relayer config data
@@ -28,9 +26,10 @@ pub struct BuildInfo {
 #[serde(rename_all = "camelCase")]
 pub struct RelayerConfig {
     /// Relayer chain config
+    #[serde(flatten)]
     pub config: webb_relayer_config::WebbRelayerConfig,
     /// Relayer build info
-    pub build_info: BuildInfo,
+    pub build: BuildInfo,
 }
 
 /// Relayer configuration response
@@ -81,10 +80,12 @@ pub async fn handle_relayer_info(
     let build_info = BuildInfo {
         version: std::env::var("CARGO_PKG_VERSION").unwrap_or_default(),
         commit: std::env::var("GIT_COMMIT").unwrap_or_default(),
-        branch: std::env::var("GIT_BRANCH").unwrap_or_default(),
-        build_time: std::env::var("SOURCE_TIMESTAMP").unwrap_or_default(),
+        build_timestamp: std::env::var("SOURCE_TIMESTAMP").unwrap_or_default(),
     };
-    let relayer_config = RelayerConfig { config, build_info };
+    let relayer_config = RelayerConfig {
+        config,
+        build: build_info,
+    };
 
     Json(RelayerInformationResponse { relayer_config })
 }

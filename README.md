@@ -261,8 +261,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
   <summary>Expected Response</summary>
   
   ```json
-{
-  "relayer_config" : {
+  {
     "evm": {
         "rinkeby": {
             "enabled": true,
@@ -286,13 +285,16 @@ The relayer has 3 endpoints available to query from. They are outlined below for
     "experimental": {
         "smart-anchor-updates": false,
         "smart-anchor-updates-retries": 0
-    }
-  },
-  "build_info" : {
-    "version": "0.5.0",
-    "commit": "c8875ba78298d34272e40c2e302fcfe33f191147",
-    "branch": "develop",
-    "build_time": "2023-05-19T15:57:40Z"
+    },
+    "features": { "dataQuery": true, "governanceRelay": true, "privateTxRelay": true },
+    "assets": {
+        "TNT": { "price": 0.1, "name": "Tangle Network Token", "decimals": 18 },
+        "tTNT": { "price": 0.1, "name": "Test Tangle Network Token", "decimals": 18 }
+    },
+    "build" : {
+        "version": "0.5.0",
+        "commit": "c8875ba78298d34272e40c2e302fcfe33f191147",
+        "build_time": "2023-05-19T15:57:40Z"
     }
 }
   ```
