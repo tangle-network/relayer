@@ -18,7 +18,7 @@ pub struct BuildInfo {
     /// Commit hash of the relayer
     pub commit: String,
     /// Build time of the relayer
-    pub build_timestamp: String,
+    pub timestamp: String,
 }
 
 /// Relayer config data
@@ -80,7 +80,7 @@ pub async fn handle_relayer_info(
     let build_info = BuildInfo {
         version: std::env::var("CARGO_PKG_VERSION").unwrap_or_default(),
         commit: std::env::var("GIT_COMMIT").unwrap_or_default(),
-        build_timestamp: std::env::var("SOURCE_TIMESTAMP").unwrap_or_default(),
+        timestamp: std::env::var("SOURCE_TIMESTAMP").unwrap_or_default(),
     };
     let relayer_config = RelayerConfig {
         config,

@@ -294,7 +294,7 @@ The relayer has 3 endpoints available to query from. They are outlined below for
     "build" : {
         "version": "0.5.0",
         "commit": "c8875ba78298d34272e40c2e302fcfe33f191147",
-        "build_time": "2023-05-19T15:57:40Z"
+        "timestamp": "2023-05-19T15:57:40Z"
     }
 }
   ```
