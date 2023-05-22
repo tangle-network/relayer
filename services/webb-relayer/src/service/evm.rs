@@ -22,7 +22,8 @@ use webb_ew_evm::{
 use webb_proposal_signing_backends::queue::{self, policy};
 use webb_proposals::TypedChainId;
 use webb_relayer_config::evm::{
-    Contract, SignatureBridgeContractConfig, VAnchorContractConfig,
+    Contract, SignatureBridgeContractConfig, SmartAnchorUpdatesConfig,
+    VAnchorContractConfig,
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::handle_evm_fee_info;
@@ -184,12 +185,33 @@ async fn start_vanchor_events_watcher(
         zero_hash.to_big_endian(&mut zero_hash_bytes);
 
         let proposals_queue = queue::mem::InMemoryProposalsQueue::new();
-        let time_delay_policy = policy::TimeDelayPolicy::builder()
-            .initial_delay(my_config.smart_anchor_updates.initial_time_delay)
-            .min_delay(my_config.smart_anchor_updates.min_time_delay)
-            .max_delay(my_config.smart_anchor_updates.max_time_delay)
-            .window_size(my_config.smart_anchor_updates.time_delay_window_size)
-            .build();
+        let time_delay_policy = {
+            let defaults = SmartAnchorUpdatesConfig::default();
+            let v = &my_config.smart_anchor_updates;
+            let initial_delay = v
+                .initial_time_delay
+                .or(defaults.initial_time_delay)
+                .expect("initial time delay is set by default");
+            let min_delay = v
+                .min_time_delay
+                .or(defaults.min_time_delay)
+                .expect("min time delay is set by default");
+            let max_delay = v
+                .max_time_delay
+                .or(defaults.max_time_delay)
+                .expect("max time delay is set by default");
+            let window_size = v
+                .time_delay_window_size
+                .or(defaults.time_delay_window_size)
+                .expect("time delay window size is set by default");
+
+            policy::TimeDelayPolicy::builder()
+                .initial_delay(initial_delay)
+                .min_delay(min_delay)
+                .max_delay(max_delay)
+                .window_size(window_size)
+                .build()
+        };
 
         if my_config.smart_anchor_updates.enabled {
             tracing::info!(

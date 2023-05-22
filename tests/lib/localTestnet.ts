@@ -76,6 +76,7 @@ type LocalChainOpts = {
   populatedAccounts: GanacheAccounts[];
   enableLogging?: boolean;
   enabledContracts: EnabledContracts[];
+  evmOptions?: any;
 };
 
 export class LocalChain {
@@ -94,7 +95,8 @@ export class LocalChain {
     const evmChain = await LocalEvmChain.init(
       opts.name,
       opts.chainId,
-      opts.populatedAccounts
+      opts.populatedAccounts,
+      opts.evmOptions
     );
     const localChain = new LocalChain(opts, evmChain);
     return localChain;
@@ -129,6 +131,7 @@ export class LocalChain {
       symbol,
     };
   }
+
   public async deployVBridge(
     localToken: TokenConfig,
     unwrappedToken: MintableToken,
@@ -327,6 +330,89 @@ export class LocalChain {
         }
       }
     }
+
+    return vBridge;
+  }
+
+  public static async deployManySignatureVBridge(
+    chains: LocalChain[],
+    wrappedTokens: TokenConfig[],
+    unwrappedTokens: string[],
+    deployerWallets: ethers.Wallet[],
+    initialGovernors: GovernorConfig
+  ): Promise<VBridge.VBridge> {
+    const gitRoot = child
+      .execSync('git rev-parse --show-toplevel')
+      .toString()
+      .trim();
+    const tokenConfigs = new Map<number, TokenConfig | undefined>();
+    for (let i = 0; i < chains.length; i++) {
+      tokenConfigs.set(chains[i]!.chainId, wrappedTokens[i]);
+    }
+    const asset: VBridge.VBridgeInput['vAnchorInputs']['asset'] = {};
+    for (let i = 0; i < chains.length; i++) {
+      asset[chains[i]!.chainId] = [unwrappedTokens[i]!];
+    }
+    const vBridgeInput: VBridge.VBridgeInput = {
+      vAnchorInputs: {
+        asset,
+      },
+      chainIDs: chains.map((chain) => chain.chainId),
+      tokenConfigs: tokenConfigs,
+      webbTokens: new Map<number, FungibleTokenWrapper | undefined>(),
+    };
+    const deployerConfig: DeployerConfig = {};
+    for (let i = 0; i < chains.length; i++) {
+      deployerConfig[chains[i]!.chainId] = deployerWallets[i]!;
+    }
+
+    const witnessCalculatorCjsPath_2 = path.join(
+      gitRoot,
+      'tests',
+      'solidity-fixtures/vanchor_2/8/witness_calculator.cjs'
+    );
+
+    const witnessCalculatorCjsPath_16 = path.join(
+      gitRoot,
+      'tests',
+      'solidity-fixtures/vanchor_16/8/witness_calculator.cjs'
+    );
+
+    const zkComponents_2 = await fetchComponentsFromFilePaths(
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_2/8/poseidon_vanchor_2_8.wasm'
+      ),
+      witnessCalculatorCjsPath_2,
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_2/8/circuit_final.zkey'
+      )
+    );
+
+    const zkComponents_16 = await fetchComponentsFromFilePaths(
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_16/8/poseidon_vanchor_16_8.wasm'
+      ),
+      witnessCalculatorCjsPath_16,
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_16/8/circuit_final.zkey'
+      )
+    );
+
+    const vBridge = await VBridge.VBridge.deployVariableAnchorBridge(
+      vBridgeInput,
+      deployerConfig,
+      initialGovernors,
+      zkComponents_2,
+      zkComponents_16
+    );
 
     return vBridge;
   }

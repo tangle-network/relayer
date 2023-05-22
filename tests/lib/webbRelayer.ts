@@ -61,21 +61,6 @@ export class WebbRelayer {
   readonly #logs: RawEvent[] = [];
   readonly #eventEmitter = new EventEmitter();
   constructor(private readonly opts: WebbRelayerOptions) {
-    // read the files and contents
-    fs.readdir(opts.configDir, (err, files) => {
-      if (err) {
-        console.log('error while reading directory');
-      }
-
-      files.map((fileName) => {
-        const fileContents = fs.readFileSync(
-          path.resolve(opts.configDir, fileName),
-          { encoding: 'ascii' }
-        );
-        console.log(`file: ${fileName} \n contents: \n ${fileContents} \n\n`);
-      });
-    });
-
     // Write the folder-wide configuration for this relayer instance
     type WrittenCommonConfig = {
       features?: ConvertToKebabCase<FeaturesConfig>;

@@ -114,13 +114,17 @@ pub struct SmartAnchorUpdatesConfig {
     /// Enables smart anchor updates
     pub enabled: bool,
     /// Minimum time delay for the time delay sliding window
-    pub min_time_delay: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_time_delay: Option<u64>,
     /// Maximum time delay for the time delay sliding window
-    pub max_time_delay: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_time_delay: Option<u64>,
     /// Initial time delay for the time delay sliding window
-    pub initial_time_delay: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initial_time_delay: Option<u64>,
     /// Time delay sliding window size
-    pub time_delay_window_size: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_delay_window_size: Option<usize>,
 }
 
 impl Default for SmartAnchorUpdatesConfig {
@@ -129,10 +133,10 @@ impl Default for SmartAnchorUpdatesConfig {
             // Disabled by default
             // Experimental feature
             enabled: false,
-            min_time_delay: 30,
-            max_time_delay: 300,
-            initial_time_delay: 10,
-            time_delay_window_size: 5,
+            min_time_delay: Some(30),
+            max_time_delay: Some(300),
+            initial_time_delay: Some(10),
+            time_delay_window_size: Some(5),
         }
     }
 }

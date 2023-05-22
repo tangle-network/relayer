@@ -12,6 +12,7 @@
     "test": "mocha test test/*/*.test.*",
     "test-evm": "mocha test test/evm/*.test.*",
     "test-substrate": "mocha test test/substrate/*.test.*",
+    "sim": "mocha test sim/*.sim.*",
     "format": "prettier -w '**/*.ts'",
     "ts-check": "npx tsc --noEmit"
   },
