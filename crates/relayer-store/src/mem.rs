@@ -32,8 +32,8 @@ type MemStoreForMap = HashMap<HistoryStoreKey, BTreeMap<u32, types::H256>>;
 #[derive(Clone, Default)]
 pub struct InMemoryStore {
     _store: Arc<RwLock<MemStore>>,
-    store_for_vec: Arc<RwLock<MemStoreForVec>>,
-    store_for_map: Arc<RwLock<MemStoreForMap>>,
+    leaf_store: Arc<RwLock<MemStoreForMap>>,
+    encrypted_output_store: Arc<RwLock<MemStoreForVec>>,
     last_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
     target_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
     last_deposit_block_numbers: Arc<RwLock<HashMap<HistoryStoreKey, u64>>>,
@@ -119,7 +119,7 @@ impl LeafCacheStore for InMemoryStore {
         &self,
         key: K,
     ) -> crate::Result<()> {
-        let mut guard = self.store_for_map.write();
+        let mut guard = self.leaf_store.write();
         guard.clear();
         Ok(())
     }
@@ -129,7 +129,7 @@ impl LeafCacheStore for InMemoryStore {
         &self,
         key: K,
     ) -> crate::Result<Self::Output> {
-        let guard = self.store_for_map.read();
+        let guard = self.leaf_store.read();
         let val = guard.get(&key.into()).cloned().unwrap_or_default();
         Ok(val)
     }
@@ -139,7 +139,7 @@ impl LeafCacheStore for InMemoryStore {
         key: K,
         range: core::ops::Range<u32>,
     ) -> crate::Result<Self::Output> {
-        let guard = self.store_for_map.read();
+        let guard = self.leaf_store.read();
         let val = guard.get(&key.into()).cloned().unwrap_or_default();
         let iter = val
             .into_iter()
@@ -171,7 +171,7 @@ impl LeafCacheStore for InMemoryStore {
         leaves: &[(u32, Vec<u8>)],
         block_number: u64,
     ) -> crate::Result<()> {
-        let mut guard1 = self.store_for_map.write();
+        let mut guard1 = self.leaf_store.write();
         let mut guard2 = self.last_deposit_block_numbers.write();
         let mut guard3 = self.last_block_numbers.write();
         {
@@ -207,7 +207,7 @@ impl EncryptedOutputCacheStore for InMemoryStore {
         &self,
         key: K,
     ) -> crate::Result<Self::Output> {
-        let guard = self.store_for_vec.read();
+        let guard = self.encrypted_output_store.read();
         let val = guard.get(&key.into()).cloned().unwrap_or_default();
         Ok(val)
     }
@@ -218,7 +218,7 @@ impl EncryptedOutputCacheStore for InMemoryStore {
         key: K,
         range: core::ops::Range<u32>,
     ) -> crate::Result<Self::Output> {
-        let guard = self.store_for_vec.read();
+        let guard = self.encrypted_output_store.read();
         let val = guard.get(&key.into()).cloned().unwrap_or_default();
         let iter = val
             .into_iter()
@@ -252,7 +252,7 @@ impl EncryptedOutputCacheStore for InMemoryStore {
         encrypted_outputs: &[(u32, Vec<u8>)],
         block_number: u64,
     ) -> crate::Result<()> {
-        let mut guard1 = self.store_for_vec.write();
+        let mut guard1 = self.encrypted_output_store.write();
         let mut guard2 = self.last_deposit_block_numbers.write();
         {
             guard1

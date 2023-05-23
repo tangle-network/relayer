@@ -301,7 +301,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     );
 
     const feeInfoResponse = await webbRelayer.getEvmFeeInfo(
-      localChain2.chainId,
+      localChain2.underlyingChainId,
       vanchor2.getAddress(),
       gas_amount
     );

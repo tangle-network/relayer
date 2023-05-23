@@ -1,6 +1,6 @@
 [package]
 name = "webb-relayer"
-version = "0.5.0"
+version = "0.5.0-dev"
 description = "The Webb Relayer toolkit"
 exclude = ["tests", "config", ".github", "ci", "assets", "docker"]
 authors = { workspace = true }
@@ -9,6 +9,9 @@ license = { workspace = true }
 documentation = { workspace = true }
 homepage = { workspace = true }
 repository = { workspace = true }
+
+[build-dependencies]
+build-data = "0.1.4"
 
 [lib]
 doctest = false

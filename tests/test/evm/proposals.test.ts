@@ -352,8 +352,8 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       section: 'dkgProposalHandler',
       method: 'ProposalSigned',
     });
- 
-   // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
+
+    // now we wait for the proposal to be executed by the relayer then by the Signature Bridge.
     await webbRelayer.waitForEvent({
       kind: 'signature_bridge',
       event: {
@@ -392,7 +392,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     });
 
     // now we wait for the tx queue on that chain to execute the transfer ownership transaction.
-     await webbRelayer.waitForEvent({
+    await webbRelayer.waitForEvent({
       kind: 'tx_queue',
       event: {
         ty: 'EVM',
@@ -440,7 +440,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       data: u8aToHex(tokenRemoveProposal.toU8a()),
     });
     console.log(' TokenRemove Proposal submitted');
-    
+
     // now we wait for the proposal to be signed.
     charlieNode.waitForEvent({
       section: 'dkgProposalHandler',
@@ -471,10 +471,10 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   });
 
   it('should handle WrappingFeeUpdateProposal', async () => {
-   // we need to wait until the public key is changed.
-   await charlieNode.waitForEvent({
-    section: 'dkg',
-    method: 'PublicKeySignatureChanged',
+    // we need to wait until the public key is changed.
+    await charlieNode.waitForEvent({
+      section: 'dkg',
+      method: 'PublicKeySignatureChanged',
     });
     // wait until the signature bridge receives the transfer ownership call.
     await webbRelayer.waitForEvent({
@@ -519,7 +519,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       functionSignature,
       nonce.add(1).toNumber()
     );
-    
+
     const newFee = ethers.utils.hexValue(50);
     const wrappingFeeProposalPayload = new WrappingFeeUpdateProposal(
       proposalHeader,

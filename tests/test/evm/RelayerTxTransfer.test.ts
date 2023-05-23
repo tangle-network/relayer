@@ -299,7 +299,7 @@ describe('Relayer transfer assets', function () {
     );
 
     const feeInfoResponse = await webbRelayer.getEvmFeeInfo(
-      localChain1.chainId,
+      localChain1.underlyingChainId,
       vanchor1.getAddress(),
       gas_amount
     );
