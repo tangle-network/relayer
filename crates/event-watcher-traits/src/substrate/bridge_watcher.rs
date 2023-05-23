@@ -22,8 +22,7 @@ pub trait SubstrateBridgeWatcher<RuntimeConfig>:
     SubstrateEventWatcher<RuntimeConfig>
 where
     RuntimeConfig: subxt::Config + Send + Sync + 'static,
-    Self::Store: ProposalStore<Proposal = ()>
-        + QueueStore<BridgeCommand, Key = SledQueueKey>,
+    Self::Store: QueueStore<BridgeCommand, Key = SledQueueKey>,
 {
     /// A method that is called when a command is received that needs to be
     /// handled and executed.

@@ -19,9 +19,11 @@ use webb_ew_evm::{
     OpenVAnchorContractWatcher, OpenVAnchorContractWrapper,
     VAnchorContractWatcher, VAnchorContractWrapper,
 };
+use webb_proposal_signing_backends::queue::{self, policy};
 use webb_proposals::TypedChainId;
 use webb_relayer_config::evm::{
-    Contract, SignatureBridgeContractConfig, VAnchorContractConfig,
+    Contract, SignatureBridgeContractConfig, SmartAnchorUpdatesConfig,
+    VAnchorContractConfig,
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::handle_evm_fee_info;
@@ -181,16 +183,70 @@ async fn start_vanchor_events_watcher(
         );
         let mut zero_hash_bytes = [0u8; 32];
         zero_hash.to_big_endian(&mut zero_hash_bytes);
+
+        let proposals_queue = queue::mem::InMemoryProposalsQueue::new();
+        let time_delay_policy = {
+            let defaults = SmartAnchorUpdatesConfig::default();
+            let v = &my_config.smart_anchor_updates;
+            let initial_delay = v
+                .initial_time_delay
+                .or(defaults.initial_time_delay)
+                .expect("initial time delay is set by default");
+            let min_delay = v
+                .min_time_delay
+                .or(defaults.min_time_delay)
+                .expect("min time delay is set by default");
+            let max_delay = v
+                .max_time_delay
+                .or(defaults.max_time_delay)
+                .expect("max time delay is set by default");
+            let window_size = v
+                .time_delay_window_size
+                .or(defaults.time_delay_window_size)
+                .expect("time delay window size is set by default");
+
+            policy::TimeDelayPolicy::builder()
+                .initial_delay(initial_delay)
+                .min_delay(min_delay)
+                .max_delay(max_delay)
+                .window_size(window_size)
+                .build()
+        };
+
+        if my_config.smart_anchor_updates.enabled {
+            tracing::info!(
+                %chain_id,
+                %contract_address,
+                "Smart Anchor Updates enabled",
+            );
+        } else {
+            tracing::info!(
+                chain_id,
+                %contract_address,
+                "Smart Anchor Updates disabled",
+            );
+        }
+
+        let enqueue_policy = my_config.smart_anchor_updates.enabled.then_some(
+            (policy::AlwaysHigherNoncePolicy, time_delay_policy.clone()),
+        );
+        let dequeue_policy = my_config
+            .smart_anchor_updates
+            .enabled
+            .then_some(time_delay_policy);
+
+        let metrics = my_ctx.metrics.clone();
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
                 let bridge_registry =
                     DkgBridgeRegistryBackend::new(backend.client.clone());
-                let deposit_handler = VAnchorDepositHandler::new(
-                    chain_id.into(),
-                    store.clone(),
-                    backend,
-                    bridge_registry,
-                );
+                let deposit_handler = VAnchorDepositHandler::builder()
+                    .chain_id(chain_id)
+                    .store(store.clone())
+                    .bridge_registry_backend(bridge_registry)
+                    .proposals_queue(proposals_queue.clone())
+                    .policy(enqueue_policy)
+                    .build();
                 let leaves_handler = VAnchorLeavesHandler::new(
                     chain_id.into(),
                     contract_address,
@@ -210,7 +266,21 @@ async fn start_vanchor_events_watcher(
                     ],
                     &my_ctx,
                 );
+
+                let proposals_queue_task = queue::run(
+                    proposals_queue,
+                    dequeue_policy,
+                    backend,
+                    metrics,
+                );
+
                 tokio::select! {
+                    _ = proposals_queue_task => {
+                        tracing::warn!(
+                            "Proposals queue task stopped for ({})",
+                            contract_address,
+                        );
+                    },
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
                             "VAnchor watcher task stopped for ({})",
@@ -228,12 +298,13 @@ async fn start_vanchor_events_watcher(
             ProposalSigningBackendSelector::Mocked(backend) => {
                 let bridge_registry =
                     MockedBridgeRegistryBackend::builder().build();
-                let deposit_handler = VAnchorDepositHandler::new(
-                    chain_id.into(),
-                    store.clone(),
-                    backend,
-                    bridge_registry,
-                );
+                let deposit_handler = VAnchorDepositHandler::builder()
+                    .chain_id(chain_id)
+                    .store(store.clone())
+                    .bridge_registry_backend(bridge_registry)
+                    .proposals_queue(proposals_queue.clone())
+                    .policy(enqueue_policy)
+                    .build();
                 let leaves_handler = VAnchorLeavesHandler::new(
                     chain_id.into(),
                     contract_address,
@@ -253,7 +324,21 @@ async fn start_vanchor_events_watcher(
                     ],
                     &my_ctx,
                 );
+
+                let proposals_queue_task = queue::run(
+                    proposals_queue,
+                    dequeue_policy,
+                    backend,
+                    metrics,
+                );
+
                 tokio::select! {
+                    _ = proposals_queue_task => {
+                        tracing::warn!(
+                            "Proposals queue task stopped for ({})",
+                            contract_address,
+                        );
+                    },
                     _ = vanchor_watcher_task => {
                         tracing::warn!(
                             "VAnchor watcher task stopped for ({})",

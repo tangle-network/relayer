@@ -30,8 +30,7 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::{
-    BridgeCommand, BridgeKey, EventHashStore, HistoryStore, ProposalStore,
-    QueueStore,
+    BridgeCommand, BridgeKey, EventHashStore, HistoryStore, QueueStore,
 };
 use webb_relayer_utils::metric;
 

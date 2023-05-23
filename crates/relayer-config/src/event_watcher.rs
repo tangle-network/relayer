@@ -20,5 +20,6 @@ pub struct EventsWatcherConfig {
     #[serde(default = "defaults::print_progress_interval")]
     pub print_progress_interval: u64,
     /// Sync blocks from
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sync_blocks_from: Option<u64>,
 }

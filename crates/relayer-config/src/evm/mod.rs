@@ -60,6 +60,7 @@ pub struct EvmChainConfig {
     #[serde(skip_serializing)]
     pub private_key: Option<PrivateKey>,
     /// Optionally, a user can specify an account to receive rewards for relaying
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub beneficiary: Option<Address>,
     /// Supported contracts over this chain.
     #[serde(default)]
@@ -104,6 +105,42 @@ pub struct CommonContractConfig {
     pub deployed_at: u64,
 }
 
+/// Smart Anchor Updates applies polices to the AnchorUpdate Proposals
+/// which helps to reduce the number of updates, hence the number of
+/// transactions and gas fees.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
+pub struct SmartAnchorUpdatesConfig {
+    /// Enables smart anchor updates
+    pub enabled: bool,
+    /// Minimum time delay for the time delay sliding window
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_time_delay: Option<u64>,
+    /// Maximum time delay for the time delay sliding window
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_time_delay: Option<u64>,
+    /// Initial time delay for the time delay sliding window
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub initial_time_delay: Option<u64>,
+    /// Time delay sliding window size
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub time_delay_window_size: Option<usize>,
+}
+
+impl Default for SmartAnchorUpdatesConfig {
+    fn default() -> Self {
+        Self {
+            // Disabled by default
+            // Experimental feature
+            enabled: false,
+            min_time_delay: Some(30),
+            max_time_delay: Some(300),
+            initial_time_delay: Some(10),
+            time_delay_window_size: Some(5),
+        }
+    }
+}
+
 /// VAnchorContractConfig represents the configuration for the VAnchor contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
@@ -114,11 +151,14 @@ pub struct VAnchorContractConfig {
     /// Controls the events watcher
     pub events_watcher: EventsWatcherConfig,
     /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    #[serde(rename(serialize = "proposalSigningBackend"))]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
+    /// For configuring the smart anchor updates
+    #[serde(default)]
+    pub smart_anchor_updates: SmartAnchorUpdatesConfig,
 }
 
 /// Signature Bridge contract configuration.

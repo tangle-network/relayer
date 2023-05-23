@@ -33,6 +33,7 @@ webb-circom-proving = { path = "crates/circom-proving" }
 thiserror = "^1"
 anyhow = "^1"
 tracing = { version = "^0.1", features = ["log"] }
+tracing-subscriber = { version = "0.3.16", features = ["parking_lot", "env-filter"] }
 url = { version = "^2.3", features = ["serde"] }
 sled = "^0.34"
 tokio = { version = "^1", features = ["full"] }
@@ -53,6 +54,9 @@ reqwest = { version = "0.11", default-features = false, features = ["json", "rus
 tempfile = "^3.3"
 async-trait = "^0.1"
 futures = { version = "^0.3", default-features = false }
+parking_lot = "^0.12"
+rand = { version = "0.8", default-features = false, features = ["getrandom"] }
+typed-builder = "0.14.0"
 backoff = { version = "0.4.0", features = ["tokio"] }
 hex = { version = "0.4", default-features = false }
 libsecp256k1 = "0.7.1"

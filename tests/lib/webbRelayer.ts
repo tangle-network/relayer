@@ -61,21 +61,6 @@ export class WebbRelayer {
   readonly #logs: RawEvent[] = [];
   readonly #eventEmitter = new EventEmitter();
   constructor(private readonly opts: WebbRelayerOptions) {
-    // read the files and contents
-    fs.readdir(opts.configDir, (err, files) => {
-      if (err) {
-        console.log('error while reading directory');
-      }
-
-      files.map((fileName) => {
-        const fileContents = fs.readFileSync(
-          path.resolve(opts.configDir, fileName),
-          { encoding: 'ascii' }
-        );
-        console.log(`file: ${fileName} \n contents: \n ${fileContents} \n\n`);
-      });
-    });
-
     // Write the folder-wide configuration for this relayer instance
     type WrittenCommonConfig = {
       features?: ConvertToKebabCase<FeaturesConfig>;
@@ -614,6 +599,14 @@ export interface FeaturesConfig {
   privateTxRelay?: boolean;
 }
 
+export interface SmartAnchorUpdatesConfig {
+  enabled?: boolean;
+  minTimeDelay?: number;
+  maxTimeDelay?: number;
+  initialTimeDelay?: number;
+  timeDelayWindowSize?: number;
+}
+
 export interface EtherscanApiConfig {
   chainId: number;
   apiKey: string;
@@ -696,6 +689,7 @@ export interface Contract {
   withdrawConfig?: WithdrawConfig;
   proposalSigningBackend?: ProposalSigningBackend;
   linkedAnchors?: LinkedAnchor[];
+  smartAnchorUpdates?: SmartAnchorUpdatesConfig;
 }
 
 export interface EventsWatcher {
@@ -788,26 +782,26 @@ type NetworkMessage = {
   kind: 'network';
 } & {
   network:
-    | 'connecting'
-    | 'connected'
-    | { failed: { reason: string } }
-    | 'disconnected'
-    | 'unsupportedContract'
-    | 'unsupportedChain'
-    | 'invalidRelayerAddress';
+  | 'connecting'
+  | 'connected'
+  | { failed: { reason: string } }
+  | 'disconnected'
+  | 'unsupportedContract'
+  | 'unsupportedChain'
+  | 'invalidRelayerAddress';
 };
 
 type WithdrawMessage = {
   kind: 'withdraw';
 } & {
   withdraw:
-    | 'sent'
-    | { submitted: { txHash: string } }
-    | { finalized: { txHash: string } }
-    | 'valid'
-    | 'invalidMerkleRoots'
-    | 'droppedFromMemPool'
-    | { errored: { code: number; reason: string } };
+  | 'sent'
+  | { submitted: { txHash: string } }
+  | { finalized: { txHash: string } }
+  | 'valid'
+  | 'invalidMerkleRoots'
+  | 'droppedFromMemPool'
+  | { errored: { code: number; reason: string } };
 };
 
 type ErrorMessage = {

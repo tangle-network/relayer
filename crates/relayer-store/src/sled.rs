@@ -15,7 +15,7 @@
 use super::HistoryStoreKey;
 use super::{
     EncryptedOutputCacheStore, EventHashStore, HistoryStore, LeafCacheStore,
-    ProposalStore, QueueStore, TokenPriceCacheStore,
+    QueueStore, TokenPriceCacheStore,
 };
 use crate::{BridgeKey, QueueKey};
 use core::fmt;
@@ -620,37 +620,6 @@ where
             None => {
                 // not found!
                 tracing::trace!("item with key {} not found in queue", key);
-                Ok(None)
-            }
-        }
-    }
-}
-
-impl ProposalStore for SledStore {
-    type Proposal = ();
-
-    #[tracing::instrument(skip_all)]
-    fn insert_proposal(&self, proposal: Self::Proposal) -> crate::Result<()> {
-        let tree = self.db.open_tree("proposal_store")?;
-        tree.insert("TODO", serde_json::to_vec(&proposal)?.as_slice())?;
-        Ok(())
-    }
-
-    #[tracing::instrument(
-        skip_all,
-        fields(data_hash = %hex::encode(data_hash))
-    )]
-    fn remove_proposal(
-        &self,
-        data_hash: &[u8],
-    ) -> crate::Result<Option<Self::Proposal>> {
-        let tree = self.db.open_tree("proposal_store")?;
-        match tree.get(data_hash)? {
-            Some(bytes) => Ok(Some(serde_json::from_slice(&bytes)?)),
-            None => {
-                tracing::warn!(
-                    "Proposal not seen yet; not found in the proposal storage."
-                );
                 Ok(None)
             }
         }

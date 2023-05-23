@@ -88,6 +88,7 @@ async fn main() -> anyhow::Result<()> {
                             ),
                         ),
                         linked_anchors: None,
+                        smart_anchor_updates: Default::default(),
                     }),
                     Contract::SignatureBridge(SignatureBridgeContractConfig {
                         common: CommonContractConfig {

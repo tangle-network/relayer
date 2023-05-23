@@ -20,13 +20,14 @@ use webb::evm::ethers::prelude::EthCall;
 use webb_proposals::ProposalTrait;
 use webb_relayer_utils::metric;
 
-pub async fn handle_proposal<P>(
+#[tracing::instrument(skip_all)]
+pub async fn handle_proposal<PB>(
     proposal: &(impl ProposalTrait + Sync + Send + 'static),
-    proposal_signing_backend: &P,
+    proposal_signing_backend: &PB,
     metrics: Arc<Mutex<metric::Metrics>>,
 ) -> webb_relayer_utils::Result<()>
 where
-    P: ProposalSigningBackend,
+    PB: ProposalSigningBackend,
 {
     let can_sign_proposal = proposal_signing_backend
         .can_handle_proposal(proposal)
@@ -38,13 +39,23 @@ where
     } else {
         tracing::warn!(
             proposal = ?hex::encode(proposal.to_vec()),
-            "Anchor update proposal is not supported by the signing backend"
+            "the proposal is not supported by the signing backend"
         );
     }
     Ok(())
 }
 
 // create anchor update proposal for Evm target system
+#[tracing::instrument(
+    skip_all,
+    fields(
+        proposal_type = "AnchorUpdateProposal",
+        from = ?src_resource_id.typed_chain_id(),
+        to = ?target_resource_id.typed_chain_id(),
+        leaf_index,
+        merkle_root = ?hex::encode(merkle_root),
+    )
+)]
 pub fn evm_anchor_update_proposal(
     merkle_root: [u8; 32],
     leaf_index: u32,
@@ -62,6 +73,7 @@ pub fn evm_anchor_update_proposal(
         function_signature,
         nonce.into(),
     );
+    tracing::debug!("created anchor update proposal");
     webb_proposals::evm::AnchorUpdateProposal::new(
         header,
         merkle_root,

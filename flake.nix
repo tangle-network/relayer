@@ -45,7 +45,9 @@
             # Finally the toolchain
             toolchain
           ];
-          packages = [ ];
+          packages = [
+            pkgs.cargo-nextest
+          ];
 
           # Runs DVC pull in the fixtures
           # we do not install dvc globally, since it

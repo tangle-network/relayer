@@ -28,7 +28,7 @@ sp-runtime = { workspace = true, optional = true }
 native-tls = { workspace = true, optional = true }
 ethereum-types = { workspace = true }
 
-rand = { version = "0.8", default-features = false, features = ["getrandom"] }
+rand = { workspace = true, default-features = false, features = ["getrandom"] }
 
 
 [features]

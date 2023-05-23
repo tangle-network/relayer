@@ -428,18 +428,6 @@ where
         S::remove_item(self, key)
     }
 }
-/// ProposalStore is a simple trait for inserting and removing proposals.
-pub trait ProposalStore {
-    /// The type of the Proposal.
-    type Proposal: Serialize + DeserializeOwned;
-    /// Insert a proposal into the store.
-    fn insert_proposal(&self, proposal: Self::Proposal) -> crate::Result<()>;
-    /// Remove a proposal from the store.
-    fn remove_proposal(
-        &self,
-        data_hash: &[u8],
-    ) -> crate::Result<Option<Self::Proposal>>;
-}
 
 /// A trait for Cached Token Price.
 pub trait TokenPriceCacheStore<CachedTokenPrice>

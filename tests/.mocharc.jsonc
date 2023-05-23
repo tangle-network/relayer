@@ -1,9 +1,13 @@
 {
   "loader": "ts-node/esm",
-  "extensions": ["ts"],
+  "extensions": [
+    "ts"
+  ],
   "exit": true,
-  "ignore": ["node_modules/**"],
-  "slow": 90000,
+  "ignore": [
+    "node_modules/**"
+  ],
+  "slow": 120000,
   "timeout": 600000,
   // jobs (how many tests run in parallel)
   // for now it is 1, since running many nodes at the same time causes

@@ -22,8 +22,10 @@ use webb::evm::ethers::types;
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::evm::EventHandler;
 use webb_event_watcher_traits::EthersClient;
-use webb_proposal_signing_backends::{
-    proposal_handler, ProposalSigningBackend,
+use webb_proposal_signing_backends::proposal_handler;
+use webb_proposal_signing_backends::queue::policy::ProposalPolicy;
+use webb_proposal_signing_backends::queue::{
+    ProposalsQueue, QueuedAnchorUpdateProposal,
 };
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_store::SledStore;
@@ -31,37 +33,22 @@ use webb_relayer_store::{EventHashStore, HistoryStore};
 use webb_relayer_utils::metric;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
-pub struct VAnchorDepositHandler<B, C> {
+#[derive(typed_builder::TypedBuilder)]
+pub struct VAnchorDepositHandler<Q, P, C> {
+    #[builder(setter(into))]
     chain_id: types::U256,
+    #[builder(setter(into))]
     store: Arc<SledStore>,
-    proposal_signing_backend: B,
+    proposals_queue: Q,
+    policy: P,
     bridge_registry_backend: C,
 }
 
-impl<B, C> VAnchorDepositHandler<B, C>
-where
-    B: ProposalSigningBackend,
-    C: BridgeRegistryBackend,
-{
-    pub fn new(
-        chain_id: types::U256,
-        store: Arc<SledStore>,
-        proposal_signing_backend: B,
-        bridge_registry_backend: C,
-    ) -> Self {
-        Self {
-            chain_id,
-            store,
-            proposal_signing_backend,
-            bridge_registry_backend,
-        }
-    }
-}
-
 #[async_trait::async_trait]
-impl<B, C> EventHandler for VAnchorDepositHandler<B, C>
+impl<Q, P, C> EventHandler for VAnchorDepositHandler<Q, P, C>
 where
-    B: ProposalSigningBackend + Send + Sync,
+    Q: ProposalsQueue<Proposal = QueuedAnchorUpdateProposal> + Send + Sync,
+    P: ProposalPolicy + Send + Sync + Clone,
     C: BridgeRegistryBackend + Send + Sync,
 {
     type Contract = VAnchorContractWrapper<EthersClient>;
@@ -110,7 +97,6 @@ where
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         use VAnchorContractEvents::*;
-        let metrics_clone = metrics.clone();
         let event_data = match event {
             NewCommitmentFilter(data) => {
                 let commitment: [u8; 32] = data.commitment.into();
@@ -177,37 +163,29 @@ where
             // Anchor update proposal proposed metric
             metrics.lock().await.anchor_update_proposals.inc();
 
-            let _ = match target_resource_id.target_system() {
+            let proposal = match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
-                    let proposal = proposal_handler::evm_anchor_update_proposal(
+                    let p = proposal_handler::evm_anchor_update_proposal(
                         root,
                         leaf_index,
                         target_resource_id,
                         src_resource_id,
                     );
-                    proposal_handler::handle_proposal(
-                        &proposal,
-                        &self.proposal_signing_backend,
-                        metrics_clone.clone(),
-                    )
-                    .await
+                    QueuedAnchorUpdateProposal::new(p)
                 }
                 webb_proposals::TargetSystem::Substrate(_) => {
-                    let proposal =
-                        proposal_handler::substrate_anchor_update_proposal(
-                            root,
-                            leaf_index,
-                            target_resource_id,
-                            src_resource_id,
-                        );
-                    proposal_handler::handle_proposal(
-                        &proposal,
-                        &self.proposal_signing_backend,
-                        metrics_clone.clone(),
-                    )
-                    .await
+                    let p = proposal_handler::substrate_anchor_update_proposal(
+                        root,
+                        leaf_index,
+                        target_resource_id,
+                        src_resource_id,
+                    );
+                    QueuedAnchorUpdateProposal::new(p)
                 }
             };
+
+            self.proposals_queue
+                .enqueue(proposal, self.policy.clone())?;
         }
         // mark this event as processed.
         let events_bytes = serde_json::to_vec(&event_data)?;

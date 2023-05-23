@@ -22,8 +22,7 @@ use super::{event_watcher::EventWatcher, *};
 #[async_trait::async_trait]
 pub trait BridgeWatcher: EventWatcher
 where
-    Self::Store: ProposalStore<Proposal = ()>
-        + QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
+    Self::Store: QueueStore<transaction::eip2718::TypedTransaction, Key = SledQueueKey>
         + QueueStore<BridgeCommand, Key = SledQueueKey>,
 {
     /// A method to be called with the [`BridgeCommand`] information to
