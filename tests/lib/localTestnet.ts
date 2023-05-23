@@ -559,7 +559,7 @@ export class LocalChain {
               contract.eventsWatcher.printProgressInterval,
           },
           'smart-anchor-updates': {
-            enabled: contract.smartAnchorUpdates?.enabled,
+            enabled: contract.smartAnchorUpdates?.enabled ?? false,
             'initial-time-delay': contract.smartAnchorUpdates?.initialTimeDelay,
             'max-time-delay': contract.smartAnchorUpdates?.maxTimeDelay,
             'min-time-delay': contract.smartAnchorUpdates?.minTimeDelay,
