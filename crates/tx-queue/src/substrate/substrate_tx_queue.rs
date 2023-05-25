@@ -100,7 +100,7 @@ where
 
         let metrics_clone = self.ctx.metrics.clone();
         let task = || async {
-            //  protocol-substrate client
+            //  Tangle node connection
             let maybe_client = self
                 .ctx
                 .substrate_provider::<PolkadotConfig>(&chain_id.to_string())

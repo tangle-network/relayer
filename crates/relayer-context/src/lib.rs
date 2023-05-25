@@ -216,16 +216,6 @@ impl RelayerContext {
             node_config.ws_endpoint.to_string(),
         )
         .await?;
-        // let ws_client =  jsonrpsee_ws_client::WsClientBuilder::default()
-        //     .build(node_config.ws_endpoint.to_string())
-        //     .await
-        //     .unwrap();
-        // // wait for ws_client to be connected
-        // loop {
-        //     ws_client.is_connected();
-        // }
-        // let client = subxt::OnlineClient::<C>::from(ws_client);
-
         Ok(client)
     }
     /// Sets up and returns a Substrate wallet for the relayer.
