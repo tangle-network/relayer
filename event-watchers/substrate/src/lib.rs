@@ -27,7 +27,7 @@ pub use vanchor_encrypted_output_handler::*;
 pub use vanchor_leaves_handler::*;
 use webb::substrate::subxt::events::StaticEvent;
 use webb::substrate::{
-    subxt::{OnlineClient, PolkadotConfig},
+    subxt::PolkadotConfig,
     tangle_runtime::api::v_anchor_bn254::events::Transaction,
 };
 use webb_event_watcher_traits::SubstrateEventWatcher;
@@ -41,8 +41,6 @@ impl SubstrateEventWatcher<PolkadotConfig> for SubstrateVAnchorEventWatcher {
     const TAG: &'static str = "Substrate VAnchor Event Watcher";
 
     const PALLET_NAME: &'static str = Transaction::PALLET;
-
-    type Client = OnlineClient<PolkadotConfig>;
 
     type Store = SledStore;
 }

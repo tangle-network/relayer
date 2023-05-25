@@ -13,8 +13,9 @@
 // limitations under the License.
 
 use tokio::sync::Mutex;
-use webb::substrate::subxt::config::Header;
+use webb::substrate::subxt::{config::Header, OnlineClient};
 use webb_relayer_config::event_watcher::EventsWatcherConfig;
+use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::{metric, retry};
 
 use super::*;
@@ -23,7 +24,7 @@ use super::*;
 pub type EventHandlerFor<W, RuntimeConfig> = Box<
     dyn EventHandler<
             RuntimeConfig,
-            Client = <W as SubstrateEventWatcher<RuntimeConfig>>::Client,
+            Client = OnlineClient<RuntimeConfig>,
             Store = <W as SubstrateEventWatcher<RuntimeConfig>>::Store,
         > + Send
         + Sync,
@@ -125,8 +126,6 @@ where
 
     /// The name of the pallet that this event watcher is watching.
     const PALLET_NAME: &'static str;
-    /// The Runtime Client that can be used to perform API calls.
-    type Client: OnlineClientT<RuntimeConfig> + Send + Sync;
 
     /// The Storage backend, used by the event watcher to store its state.
     type Store: HistoryStore;
@@ -143,7 +142,7 @@ where
     async fn run(
         &self,
         chain_id: u32,
-        client: Arc<Self::Client>,
+        ctx: RelayerContext,
         store: Arc<Self::Store>,
         event_watcher_config: EventsWatcherConfig,
         handlers: Vec<EventHandlerFor<Self, RuntimeConfig>>,
@@ -151,9 +150,26 @@ where
     ) -> webb_relayer_utils::Result<()> {
         const MAX_RETRY_COUNT: usize = 5;
 
-        let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
+        let backoff = backoff::ExponentialBackoff {
+            max_elapsed_time: None,
+            ..Default::default()
+        };
         let metrics_clone = metrics.clone();
         let task = || async {
+            let maybe_client = ctx
+                .substrate_provider::<RuntimeConfig>(&chain_id.to_string())
+                .await;
+            let client = match maybe_client {
+                Ok(client) => client,
+                Err(err) => {
+                    tracing::error!(
+                        "Failed to connect with substrate client for chain_id: {}, retrying...!",
+                        chain_id
+                    );
+                    return Err(backoff::Error::transient(err));
+                }
+            };
+            let client = Arc::new(client);
             let mut instant = std::time::Instant::now();
             let step = 1u64;
             let rpc = client.rpc();

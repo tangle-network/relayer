@@ -26,7 +26,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 http = "0.2.9"
 regex = { version = "1" }
-
+jsonrpsee-ws-client = "0.18.1"
 [features]
 default = ["std", "evm", "substrate"]
 std = []

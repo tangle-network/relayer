@@ -33,8 +33,6 @@ impl SubstrateEventWatcher<PolkadotConfig> for TestEventsWatcher {
 
     const PALLET_NAME: &'static str = "System";
 
-    type Client = OnlineClient<PolkadotConfig>;
-
     type Store = SledStore;
 }
 
@@ -83,7 +81,6 @@ async fn substrate_event_watcher_should_work() -> webb_relayer_utils::Result<()>
 {
     let chain_id = 5u32;
     let store = SledStore::temporary()?;
-    let client = OnlineClient::<PolkadotConfig>::new().await?;
     let watcher = TestEventsWatcher::default();
     let config = webb_relayer_config::WebbRelayerConfig::default();
     let ctx = RelayerContext::new(config, store.clone())?;
@@ -92,7 +89,7 @@ async fn substrate_event_watcher_should_work() -> webb_relayer_utils::Result<()>
     watcher
         .run(
             chain_id,
-            client.into(),
+            ctx,
             Arc::new(store),
             event_watcher_config,
             vec![Box::<RemarkedEventHandler>::default()],

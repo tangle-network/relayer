@@ -28,7 +28,7 @@ webb-proposals = { workspace = true }
 tracing-test = "0.2"
 sled = { version = "^0.34" }
 sp-core = { workspace = true }
-
+jsonrpsee-ws-client = "0.18.1"
 [features]
 default = ["std", "evm", "substrate"]
 std = []
