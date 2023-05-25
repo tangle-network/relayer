@@ -9360,7 +9360,6 @@ name = "webb-relayer-context"
 version = "0.1.0"
 dependencies = [
  "http",
- "jsonrpsee-ws-client",
  "native-tls",
  "regex",
  "serde",
