@@ -136,6 +136,6 @@ async fn main() -> anyhow::Result<()> {
     service::build_web_services(ctx.clone()).await?;
     // and also the background services:
     // this does not block, will fire the services on background tasks.
-    service::ignite(&ctx, Arc::new(store)).await?;
+    service::ignite(ctx, Arc::new(store)).await?;
     Ok(())
 }
