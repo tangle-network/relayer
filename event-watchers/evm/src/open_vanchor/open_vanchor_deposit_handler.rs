@@ -131,7 +131,7 @@ where
                 _ => unreachable!("unsupported"),
             };
 
-            let _ = match target_resource_id.target_system() {
+            match target_resource_id.target_system() {
                 webb_proposals::TargetSystem::ContractAddress(_) => {
                     let proposal = proposal_handler::evm_anchor_update_proposal(
                         root,
@@ -144,7 +144,7 @@ where
                         &self.proposal_signing_backend,
                         metrics.clone(),
                     )
-                    .await
+                    .await?
                 }
                 webb_proposals::TargetSystem::Substrate(_) => {
                     let proposal =
@@ -159,7 +159,7 @@ where
                         &self.proposal_signing_backend,
                         metrics.clone(),
                     )
-                    .await
+                    .await?
                 }
             };
         }
