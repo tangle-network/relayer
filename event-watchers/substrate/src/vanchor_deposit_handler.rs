@@ -152,7 +152,7 @@ where
                 };
                 // Proposal proposed metric
                 metrics.lock().await.anchor_update_proposals.inc();
-                let _ = match target_resource_id.target_system() {
+                match target_resource_id.target_system() {
                     webb_proposals::TargetSystem::ContractAddress(_) => {
                         let proposal =
                             proposal_handler::evm_anchor_update_proposal(
@@ -166,7 +166,7 @@ where
                             &self.proposal_signing_backend,
                             metrics_clone.clone(),
                         )
-                        .await
+                        .await?
                     }
                     webb_proposals::TargetSystem::Substrate(_) => {
                         let proposal =
@@ -181,7 +181,7 @@ where
                             &self.proposal_signing_backend,
                             metrics_clone.clone(),
                         )
-                        .await
+                        .await?
                     }
                 };
             }
