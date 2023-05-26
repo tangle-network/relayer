@@ -18,6 +18,7 @@ use rand::Rng;
 use webb::substrate::subxt;
 use webb::substrate::subxt::config::ExtrinsicParams;
 use webb::substrate::subxt::tx::SubmittableExtrinsic;
+use webb::substrate::subxt::PolkadotConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::QueueStore;
@@ -87,11 +88,6 @@ where
             max_elapsed_time: None,
             ..Default::default()
         };
-        //  protocol-substrate client
-        let client = self
-            .ctx
-            .substrate_provider::<X>(&chain_id.to_string())
-            .await?;
 
         tracing::event!(
             target: webb_relayer_utils::probe::TARGET,
@@ -104,6 +100,21 @@ where
 
         let metrics_clone = self.ctx.metrics.clone();
         let task = || async {
+            //  Tangle node connection
+            let maybe_client = self
+                .ctx
+                .substrate_provider::<PolkadotConfig>(&chain_id.to_string())
+                .await;
+            let client = match maybe_client {
+                Ok(client) => client,
+                Err(err) => {
+                    tracing::error!(
+                        "Failed to connect with substrate client for chain_id: {}, retrying...!",
+                        chain_id
+                    );
+                    return Err(backoff::Error::transient(err));
+                }
+            };
             loop {
                 tracing::trace!("Checking for any txs in the queue ...");
                 // dequeue signed transaction

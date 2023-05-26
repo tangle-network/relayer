@@ -18,11 +18,7 @@ use futures::prelude::*;
 use std::cmp;
 use std::sync::Arc;
 use std::time::Duration;
-use webb::substrate::subxt::{
-    self,
-    client::{OfflineClientT, OnlineClientT},
-    config::Header,
-};
+use webb::substrate::subxt::{self, client::OnlineClientT, config::Header};
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };

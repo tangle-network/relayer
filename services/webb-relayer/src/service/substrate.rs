@@ -59,43 +59,38 @@ pub fn build_web_services() -> Router<Arc<RelayerContext>> {
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub async fn ignite(
-    ctx: &RelayerContext,
+    ctx: RelayerContext,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
-    for (node_name, node_config) in &ctx.config.substrate {
+    for (_, node_config) in ctx.clone().config.substrate {
         if !node_config.enabled {
             continue;
         }
-        ignite_tangle_runtime(ctx, store.clone(), node_name, node_config)
-            .await?;
+        ignite_tangle_runtime(ctx.clone(), store.clone(), &node_config).await?;
     }
     Ok(())
 }
 
 async fn ignite_tangle_runtime(
-    ctx: &RelayerContext,
+    ctx: RelayerContext,
     store: Arc<super::Store>,
-    node_name: &str,
     node_config: &SubstrateConfig,
 ) -> crate::Result<()> {
-    let client = ctx.substrate_provider::<PolkadotConfig>(node_name).await?;
     let chain_id = node_config.chain_id;
     for pallet in &node_config.pallets {
         match pallet {
             Pallet::DKGProposalHandler(config) => {
                 start_dkg_proposal_handler(
-                    ctx,
+                    ctx.clone(),
                     config,
-                    client.clone(),
                     chain_id,
                     store.clone(),
                 )?;
             }
             Pallet::Dkg(config) => {
                 start_dkg_pallet_watcher(
-                    ctx,
+                    ctx.clone(),
                     config,
-                    client.clone(),
                     chain_id,
                     store.clone(),
                 )?;
@@ -107,7 +102,6 @@ async fn ignite_tangle_runtime(
                 start_substrate_signature_bridge_events_watcher(
                     ctx.clone(),
                     config,
-                    client.clone(),
                     chain_id,
                     store.clone(),
                 )
@@ -115,9 +109,8 @@ async fn ignite_tangle_runtime(
             }
             Pallet::VAnchorBn254(config) => {
                 start_substrate_vanchor_event_watcher(
-                    ctx,
+                    ctx.clone(),
                     config,
-                    client.clone(),
                     chain_id,
                     store.clone(),
                 )?;
@@ -141,9 +134,8 @@ async fn ignite_tangle_runtime(
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_dkg_proposal_handler(
-    ctx: &RelayerContext,
+    ctx: RelayerContext,
     config: &DKGProposalHandlerPalletConfig,
-    client: TangleClient,
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
@@ -167,7 +159,7 @@ pub fn start_dkg_proposal_handler(
         let proposal_signed_handler = ProposalSignedHandler::default();
         let proposal_handler_watcher_task = proposal_handler_watcher.run(
             chain_id,
-            client.into(),
+            ctx.clone(),
             store,
             my_config.events_watcher,
             vec![Box::new(proposal_signed_handler)],
@@ -205,9 +197,8 @@ pub fn start_dkg_proposal_handler(
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_dkg_pallet_watcher(
-    ctx: &RelayerContext,
+    ctx: RelayerContext,
     config: &DKGPalletConfig,
-    client: TangleClient,
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
@@ -231,7 +222,7 @@ pub fn start_dkg_pallet_watcher(
 
         let dkg_event_watcher_task = dkg_event_watcher.run(
             chain_id,
-            client.into(),
+            ctx.clone(),
             store,
             my_config.events_watcher,
             vec![Box::new(public_key_changed_handler)],
@@ -269,9 +260,8 @@ pub fn start_dkg_pallet_watcher(
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_substrate_vanchor_event_watcher(
-    ctx: &RelayerContext,
+    ctx: RelayerContext,
     config: &VAnchorBn254PalletConfig,
-    client: TangleClient,
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
@@ -316,7 +306,7 @@ pub fn start_substrate_vanchor_event_watcher(
                 let watcher = SubstrateVAnchorEventWatcher::default();
                 let substrate_vanchor_watcher_task = watcher.run(
                     chain_id,
-                    client.clone().into(),
+                    ctx.clone(),
                     store.clone(),
                     my_config.events_watcher,
                     vec![
@@ -359,7 +349,7 @@ pub fn start_substrate_vanchor_event_watcher(
                 let watcher = SubstrateVAnchorEventWatcher::default();
                 let substrate_vanchor_watcher_task = watcher.run(
                     chain_id,
-                    client.clone().into(),
+                    ctx.clone(),
                     store.clone(),
                     my_config.events_watcher,
                     vec![
@@ -392,7 +382,7 @@ pub fn start_substrate_vanchor_event_watcher(
                 let watcher = SubstrateVAnchorEventWatcher::default();
                 let substrate_vanchor_watcher_task = watcher.run(
                     chain_id,
-                    client.clone().into(),
+                    ctx.clone(),
                     store.clone(),
                     my_config.events_watcher,
                     vec![
@@ -417,6 +407,8 @@ pub fn start_substrate_vanchor_event_watcher(
                 }
             }
         };
+
+        tracing::debug!("Task resturned");
         crate::Result::Ok(())
     };
     // kick off the watcher.
@@ -428,7 +420,6 @@ pub fn start_substrate_vanchor_event_watcher(
 pub async fn start_substrate_signature_bridge_events_watcher(
     ctx: RelayerContext,
     config: &SignatureBridgePalletConfig,
-    client: TangleClient,
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
@@ -452,7 +443,7 @@ pub async fn start_substrate_signature_bridge_events_watcher(
         let events_watcher_task = SubstrateEventWatcher::run(
             &substrate_bridge_watcher,
             chain_id,
-            client.clone().into(),
+            ctx.clone(),
             store.clone(),
             my_config.events_watcher,
             vec![Box::new(bridge_event_handler)],
@@ -461,7 +452,7 @@ pub async fn start_substrate_signature_bridge_events_watcher(
         let cmd_handler_task = SubstrateBridgeWatcher::run(
             &substrate_bridge_watcher,
             chain_id,
-            client.into(),
+            ctx.clone(),
             pair.clone(),
             store.clone(),
         );

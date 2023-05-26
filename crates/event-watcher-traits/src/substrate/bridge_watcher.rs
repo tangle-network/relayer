@@ -14,6 +14,8 @@
 
 use super::{event_watcher::SubstrateEventWatcher, *};
 use sp_core::sr25519::Pair as Sr25519Pair;
+use webb::substrate::subxt::OnlineClient;
+use webb_relayer_context::RelayerContext;
 // A Substrate Bridge Watcher is a trait for Signature Bridge Pallet that is not specific for watching events from that pallet,
 /// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers
 /// from the actual action that should be taken depending on the event.
@@ -30,7 +32,7 @@ where
         &self,
         chain_id: u32,
         store: Arc<Self::Store>,
-        client: Arc<Self::Client>,
+        client: Arc<OnlineClient<RuntimeConfig>>,
         pair: Sr25519Pair,
         cmd: BridgeCommand,
     ) -> webb_relayer_utils::Result<()>;
@@ -47,7 +49,7 @@ where
     async fn run(
         &self,
         chain_id: u32,
-        client: Arc<Self::Client>,
+        ctx: RelayerContext,
         pair: Sr25519Pair,
         store: Arc<Self::Store>,
     ) -> webb_relayer_utils::Result<()> {
@@ -58,6 +60,11 @@ where
                 webb_proposals::TypedChainId::Substrate(chain_id);
             let bridge_key = BridgeKey::new(typed_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
+            let client = ctx
+                .substrate_provider::<RuntimeConfig>(&chain_id.to_string())
+                .await?;
+            let client = Arc::new(client);
+
             loop {
                 let result = match store.dequeue_item(key)? {
                     Some(cmd) => {

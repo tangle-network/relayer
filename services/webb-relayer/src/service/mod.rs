@@ -86,15 +86,15 @@ pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub async fn ignite(
-    ctx: &RelayerContext,
+    ctx: RelayerContext,
     store: Arc<Store>,
 ) -> crate::Result<()> {
     tracing::trace!(
         "Relayer configuration: {}",
         serde_json::to_string_pretty(&ctx.config)?
     );
-    evm::ignite(ctx, store.clone()).await?;
-    substrate::ignite(ctx, store.clone()).await?;
+    evm::ignite(&ctx, store.clone()).await?;
+    substrate::ignite(ctx.clone(), store.clone()).await?;
     Ok(())
 }
 

@@ -76,7 +76,8 @@ async fn main(args: Opts) -> anyhow::Result<()> {
     let server_handle = tokio::spawn(build_web_services(ctx.clone()));
     // start all background services.
     // this does not block, will fire the services on background tasks.
-    webb_relayer::service::ignite(&ctx, Arc::new(store)).await?;
+    webb_relayer::service::ignite(ctx.clone(), Arc::new(store)).await?;
+
     tracing::event!(
         target: webb_relayer_utils::probe::TARGET,
         tracing::Level::DEBUG,

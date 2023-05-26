@@ -98,7 +98,6 @@ pub struct SubstrateBridgeEventWatcher;
 impl SubstrateEventWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
     const TAG: &'static str = "Substrate bridge pallet Watcher";
     const PALLET_NAME: &'static str = MaintainerSet::PALLET;
-    type Client = OnlineClient<PolkadotConfig>;
     type Store = SledStore;
 }
 
@@ -109,7 +108,7 @@ impl SubstrateBridgeWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
         &self,
         chain_id: u32,
         store: Arc<Self::Store>,
-        client: Arc<Self::Client>,
+        client: Arc<OnlineClient<PolkadotConfig>>,
         pair: Sr25519Pair,
         cmd: BridgeCommand,
     ) -> webb_relayer_utils::Result<()> {
@@ -154,7 +153,7 @@ where
         &self,
         chain_id: u32,
         store: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Client>,
+        api: Arc<OnlineClient<PolkadotConfig>>,
         pair: Sr25519Pair,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
@@ -252,7 +251,7 @@ where
         &self,
         chain_id: u32,
         store: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Store>,
-        api: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Client>,
+        api: Arc<OnlineClient<PolkadotConfig>>,
         pair: Sr25519Pair,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
