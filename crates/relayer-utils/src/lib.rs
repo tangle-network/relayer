@@ -27,6 +27,8 @@ pub mod metric;
 pub mod probe;
 /// Retry functionality
 pub mod retry;
+/// type-erased StaticTxPayload for Substrate Transaction queue.
+pub mod static_tx_payload;
 
 /// An enum of all possible errors that could be encountered during the execution of the Webb
 /// Relayer.
@@ -202,6 +204,11 @@ pub enum Error {
     /// Invalid Merkle root
     #[error("Invalid Merkle root at index {}", _0)]
     InvalidMerkleRootError(u32),
+    /// Missing Static Transaction Validation Details
+    /// This error is raised when the static transaction validation details
+    /// are missing.
+    #[error("Missing Substrate Static Transaction Validation Details")]
+    MissingValidationDetails,
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.

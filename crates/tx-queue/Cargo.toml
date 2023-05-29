@@ -36,3 +36,8 @@ default = ["std", "evm", "substrate"]
 std = []
 evm = ["webb-relayer-context/evm"]
 substrate = ["webb-relayer-context/substrate", "sp-core", "sp-runtime"]
+
+[dev-dependencies]
+webb-relayer-config = { workspace = true }
+url = { workspace = true }
+tracing-subscriber = { workspace = true }

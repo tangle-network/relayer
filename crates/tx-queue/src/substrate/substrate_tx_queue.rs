@@ -17,11 +17,11 @@ use futures::TryFutureExt;
 use rand::Rng;
 use webb::substrate::subxt;
 use webb::substrate::subxt::config::ExtrinsicParams;
-use webb::substrate::subxt::tx::SubmittableExtrinsic;
 use webb::substrate::subxt::PolkadotConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::QueueStore;
+use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -36,15 +36,16 @@ use webb::substrate::subxt::tx::TxStatus as TransactionStatus;
 #[derive(Clone)]
 pub struct SubstrateTxQueue<S>
 where
-    S: QueueStore<Vec<u8>, Key = SledQueueKey>,
+    S: QueueStore<TypeErasedStaticTxPayload, Key = SledQueueKey>,
 {
     ctx: RelayerContext,
     chain_id: u32,
     store: Arc<S>,
 }
+
 impl<S> SubstrateTxQueue<S>
 where
-    S: QueueStore<Vec<u8>, Key = SledQueueKey>,
+    S: QueueStore<TypeErasedStaticTxPayload, Key = SledQueueKey>,
 {
     /// Creates a new SubstrateTxQueue instance.
     ///
@@ -115,18 +116,21 @@ where
                     return Err(backoff::Error::transient(err));
                 }
             };
+            let pair = self.ctx.substrate_wallet(chain_id).await?;
+            let signer =
+                subxt::tx::PairSigner::<PolkadotConfig, _>::new(pair);
             loop {
-                tracing::trace!("Checking for any txs in the queue ...");
                 // dequeue signed transaction
-                let maybe_call_data = store.dequeue_item(
+                let tx_call_data = store.dequeue_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),
                 )?;
-                if let Some(payload) = maybe_call_data {
-                    let signed_extrinsic = SubmittableExtrinsic::from_bytes(
-                        client.clone(),
-                        payload,
-                    );
-
+                if let Some(payload) = tx_call_data {
+                    let signed_extrinsic = client
+                        .tx()
+                        .create_signed(&payload, &signer, Default::default())
+                        .map_err(Into::into)
+                        .map_err(backoff::Error::transient)
+                        .await?;
                     // dry run test
                     let dry_run_outcome = signed_extrinsic.dry_run(None).await;
                     match dry_run_outcome {
@@ -137,6 +141,7 @@ where
                                 kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                 ty = "SUBSTRATE",
                                 chain_id = %chain_id,
+                                tx = %payload,
                                 dry_run = "passed"
                             );
                         }
@@ -147,6 +152,7 @@ where
                                 kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                 ty = "SUBSTRATE",
                                 chain_id = %chain_id,
+                                tx = %payload,
                                 errored = true,
                                 error = %err,
                                 dry_run = "failed"
@@ -157,6 +163,19 @@ where
                     // watch_extrinsic submits and returns transaction subscription
                     let mut progress = signed_extrinsic
                         .submit_and_watch()
+                        .inspect_err(|e| {
+                            tracing::event!(
+                                target: webb_relayer_utils::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                                ty = "SUBSTRATE",
+                                chain_id = %chain_id,
+                                tx = %payload,
+                                errored = true,
+                                error = %e,
+                                progress = "failed",
+                            );
+                        })
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;
@@ -171,6 +190,7 @@ where
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id,
+                                    tx = %payload,
                                     errored = true,
                                     error = %err,
                                 );
@@ -185,6 +205,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
+                                    tx = %payload,
                                     chain_id = %chain_id,
                                     status = "Future",
                                 );
@@ -195,6 +216,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
+                                    tx = %payload,
                                     chain_id = %chain_id,
                                     status = "Ready",
                                 );
@@ -205,6 +227,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
+                                    tx = %payload,
                                     chain_id = %chain_id,
                                     status = "Broadcast",
                                 );
@@ -215,6 +238,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
+                                    tx = %payload,
                                     chain_id = %chain_id,
                                     block_hash = ?data.block_hash(),
                                     status = "InBlock",
@@ -225,6 +249,7 @@ where
                                     target: webb_relayer_utils::probe::TARGET,
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                                    tx = %payload,
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id,
                                     status = "Retracted",
@@ -235,6 +260,7 @@ where
                                     target: webb_relayer_utils::probe::TARGET,
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                                    tx = %payload,
                                     ty = "SUBSTRATE",
                                     chain_id = %chain_id,
                                     status = "FinalityTimeout",
@@ -246,6 +272,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
+                                    tx = %payload,
                                     chain_id = %chain_id,
                                     status = "Finalized",
                                     finalized = true,
@@ -264,6 +291,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
+                                    tx = %payload,
                                     chain_id = %chain_id,
                                     status = "Usurped",
                                 );
@@ -274,6 +302,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
+                                    tx = %payload,
                                     chain_id = %chain_id,
                                     status = "Dropped",
                                 );
@@ -284,6 +313,7 @@ where
                                     tracing::Level::DEBUG,
                                     kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                     ty = "SUBSTRATE",
+                                    tx = %payload,
                                     chain_id = %chain_id,
                                     status = "Invalid",
                                 );
