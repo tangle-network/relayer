@@ -25,7 +25,7 @@ impl std::fmt::Debug for TypeErasedStaticTxPayload {
 
 impl fmt::Display for TypeErasedStaticTxPayload {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(
+        write!(
             f,
             "{}.{}({})",
             self.pallet_name,
