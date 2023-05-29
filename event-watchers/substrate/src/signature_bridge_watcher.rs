@@ -20,7 +20,6 @@ use webb::substrate::subxt::config::PolkadotConfig;
 use webb::substrate::subxt::events::StaticEvent;
 
 use sp_core::sr25519::Pair as Sr25519Pair;
-use webb::substrate::subxt::tx::PairSigner;
 use webb::substrate::subxt::{self, OnlineClient};
 use webb_event_watcher_traits::substrate::{
     EventHandler, SubstrateBridgeWatcher,
@@ -34,6 +33,7 @@ use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::tangle_runtime::api::signature_bridge::events::MaintainerSet;
 
 use webb::substrate::scale::Encode;
+use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 use webb_relayer_utils::{metric, Error};
 
 use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
@@ -109,7 +109,7 @@ impl SubstrateBridgeWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
         chain_id: u32,
         store: Arc<Self::Store>,
         client: Arc<OnlineClient<PolkadotConfig>>,
-        pair: Sr25519Pair,
+        _pair: Sr25519Pair,
         cmd: BridgeCommand,
     ) -> webb_relayer_utils::Result<()> {
         use BridgeCommand::*;
@@ -120,7 +120,6 @@ impl SubstrateBridgeWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
                     chain_id,
                     store,
                     client.clone(),
-                    pair.clone(),
                     (data, signature),
                 )
                 .await?
@@ -134,7 +133,6 @@ impl SubstrateBridgeWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
                     chain_id,
                     store,
                     client.clone(),
-                    pair.clone(),
                     (public_key, nonce, signature),
                 )
                 .await?
@@ -154,7 +152,6 @@ where
         chain_id: u32,
         store: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Store>,
         api: Arc<OnlineClient<PolkadotConfig>>,
-        pair: Sr25519Pair,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let proposal_data_hex = hex::encode(&proposal_data);
@@ -162,7 +159,7 @@ where
         if proposal_data.len() < 40 {
             tracing::warn!(
                 proposal_data = ?proposal_data_hex,
-                "Skipping execution of this proposal :  Invalid Proposal",
+                "Skipping execution of this proposal: Invalid Proposal",
             );
             return Ok(());
         }
@@ -220,13 +217,6 @@ where
                 BoundedVec(signature),
             );
 
-        let signer: PairSigner<PolkadotConfig, Sr25519Pair> =
-            subxt::tx::PairSigner::new(pair);
-        let signed_execute_proposal_tx = api
-            .tx()
-            .create_signed(&execute_proposal_tx, &signer, Default::default())
-            .await?;
-
         // Enqueue transaction in protocol-substrate transaction queue
         let data_hash =
             utils::keccak256(execute_proposal_tx.call_data().encode());
@@ -234,11 +224,8 @@ where
             chain_id,
             make_execute_proposal_key(data_hash),
         );
-        QueueStore::<Vec<u8>>::enqueue_item(
-            &store,
-            tx_key,
-            signed_execute_proposal_tx.into_encoded(),
-        )?;
+        let tx = TypeErasedStaticTxPayload::try_from(execute_proposal_tx)?;
+        QueueStore::enqueue_item(&store, tx_key, tx)?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
             "Enqueued execute-proposal tx for execution through protocol-substrate tx queue",
@@ -252,7 +239,6 @@ where
         chain_id: u32,
         store: Arc<<Self as SubstrateEventWatcher<PolkadotConfig>>::Store>,
         api: Arc<OnlineClient<PolkadotConfig>>,
-        pair: Sr25519Pair,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let new_maintainer = public_key.clone();
@@ -323,25 +309,16 @@ where
             .signature_bridge()
             .set_maintainer(BoundedVec(message), BoundedVec(signature));
 
-        let signer: PairSigner<PolkadotConfig, Sr25519Pair> =
-            subxt::tx::PairSigner::new(pair);
-        let signed_set_maintainer_tx = api
-            .tx()
-            .create_signed(&set_maintainer_tx, &signer, Default::default())
-            .await?;
-
         let data_hash =
             utils::keccak256(set_maintainer_tx.call_data().encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
             make_execute_proposal_key(data_hash),
         );
+
+        let tx = TypeErasedStaticTxPayload::try_from(set_maintainer_tx)?;
         // Enqueue transaction in protocol-substrate transaction queue
-        QueueStore::<Vec<u8>>::enqueue_item(
-            &store,
-            tx_key,
-            signed_set_maintainer_tx.into_encoded(),
-        )?;
+        QueueStore::enqueue_item(&store, tx_key, tx)?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
             "Enqueued set-maintainer tx for execution through protocol-substrate tx queue",
