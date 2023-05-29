@@ -103,7 +103,7 @@ where
             //  Tangle node connection
             let maybe_client = self
                 .ctx
-                .substrate_provider::<PolkadotConfig>(&chain_id.to_string())
+                .substrate_provider::<PolkadotConfig, _>(chain_id)
                 .await;
             let client = match maybe_client {
                 Ok(client) => client,

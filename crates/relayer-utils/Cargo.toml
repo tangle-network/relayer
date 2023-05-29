@@ -17,6 +17,8 @@ backoff = { workspace = true }
 serde_path_to_error = { workspace = true }
 webb-proposals = { workspace = true }
 webb = { workspace = true }
+serde = { workspace = true }
+serde_bytes = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true, optional = true }
 glob = { workspace = true }

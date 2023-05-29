@@ -27,14 +27,14 @@ pub async fn handle_substrate_mixer_relay_tx<'a>(
 
     let requested_chain = cmd.chain_id;
     let client = ctx
-        .substrate_provider::<PolkadotConfig>(&requested_chain.to_string())
+        .substrate_provider::<PolkadotConfig, _>(requested_chain)
         .await
         .map_err(|e| {
             Error(format!("Error while getting Substrate client: {e}"))
         })?;
 
     let pair = ctx
-        .substrate_wallet(&cmd.chain_id.to_string())
+        .substrate_wallet(requested_chain)
         .await
         .map_err(|e| {
             Error(format!("Misconfigured Network {:?}: {e}", cmd.chain_id))

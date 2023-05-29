@@ -202,12 +202,14 @@ impl RelayerContext {
     ///
     /// * `chain_id` - A string representing the chain ID.
     #[cfg(feature = "substrate")]
-    pub async fn substrate_provider<C: subxt::Config>(
+    pub async fn substrate_provider<C: subxt::Config, I: Into<types::U256>>(
         &self,
-        chain_id: &str,
+        chain_id: I,
     ) -> webb_relayer_utils::Result<subxt::OnlineClient<C>> {
+        let chain_id: types::U256 = chain_id.into();
+        let chain_name = chain_id.to_string();
         let node_config =
-            self.config.substrate.get(chain_id).ok_or_else(|| {
+            self.config.substrate.get(&chain_name).ok_or_else(|| {
                 webb_relayer_utils::Error::NodeNotFound {
                     chain_id: chain_id.to_string(),
                 }
@@ -224,14 +226,16 @@ impl RelayerContext {
     ///
     /// * `chain_id` - A string representing the chain ID.
     #[cfg(feature = "substrate")]
-    pub async fn substrate_wallet(
+    pub async fn substrate_wallet<I: Into<types::U256>>(
         &self,
-        chain_id: &str,
+        chain_id: I,
     ) -> webb_relayer_utils::Result<Sr25519Pair> {
+        let chain_id: types::U256 = chain_id.into();
+        let chain_name = chain_id.to_string();
         let node_config = self
             .config
             .substrate
-            .get(chain_id)
+            .get(&chain_name)
             .cloned()
             .ok_or_else(|| webb_relayer_utils::Error::NodeNotFound {
                 chain_id: chain_id.to_string(),

@@ -61,7 +61,7 @@ where
             let bridge_key = BridgeKey::new(typed_chain_id);
             let key = SledQueueKey::from_bridge_key(bridge_key);
             let client = ctx
-                .substrate_provider::<RuntimeConfig>(&chain_id.to_string())
+                .substrate_provider::<RuntimeConfig, _>(chain_id)
                 .await?;
             let client = Arc::new(client);
 
