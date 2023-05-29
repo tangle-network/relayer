@@ -4,7 +4,6 @@ use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bo
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
-use sp_core::sr25519::Pair as Sr25519Pair;
 use webb::evm::ethers::utils;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::{Proposal, ProposalKind};
 use webb_proposals::ProposalTrait;
@@ -13,7 +12,7 @@ use webb_relayer_utils::metric;
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb_relayer_store::{QueueStore, SledStore};
 use webb_relayer_store::sled::SledQueueKey;
-use webb::substrate::subxt::tx::PairSigner;
+use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
 type DkgConfig = PolkadotConfig;
 type DkgClient = OnlineClient<DkgConfig>;
@@ -22,7 +21,6 @@ type DkgClient = OnlineClient<DkgConfig>;
 pub struct DkgProposalSigningBackend {
     #[builder(setter(into))]
     pub client: DkgClient,
-    pub pair: PairSigner<PolkadotConfig, Sr25519Pair>,
     /// Something that implements the QueueStore trait.
     #[builder(setter(into))]
     store: Arc<SledStore>,
@@ -102,10 +100,10 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         let src_chain_id =
             webb_proposals_typed_chain_converter(self.src_chain_id);
         tracing::debug!(
-            ?nonce,
-            resource_id = %hex::encode(resource_id.into_bytes()),
+            nonce = nonce.0,
+            resource_id = hex::encode(resource_id.into_bytes()),
             src_chain_id = ?self.src_chain_id,
-            proposal = %hex::encode(proposal.to_vec()),
+            proposal = hex::encode(proposal.to_vec()),
             "sending proposal to DKG runtime"
         );
 
@@ -115,41 +113,21 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             data: BoundedVec(proposal.to_vec()),
         };
         let acknowledge_proposal_tx = tx_api.acknowledge_proposal(
-            nonce.clone(),
+            nonce,
             src_chain_id,
             ResourceId(resource_id.into_bytes()),
             unsigned_proposal,
         );
 
-        let signer = &self.pair;
-        let maybe_signed_acknowledge_proposal_tx = self
-            .client
-            .tx()
-            .create_signed(&acknowledge_proposal_tx, signer, Default::default())
-            .await;
-        let signed_acknowledge_proposal_tx =
-            match maybe_signed_acknowledge_proposal_tx {
-                Ok(tx) => tx,
-                Err(e) => {
-                    tracing::error!(?e, "failed to sign tx");
-                    return Err(webb_relayer_utils::Error::Generic(
-                        "failed to sign tx",
-                    ));
-                }
-            };
         let data_hash =
             utils::keccak256(acknowledge_proposal_tx.call_data().encode());
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             my_chain_id,
             make_acknowledge_proposal_key(data_hash),
         );
+        let tx = TypeErasedStaticTxPayload::try_from(acknowledge_proposal_tx)?;
         // Enqueue transaction in protocol-substrate transaction queue
-        QueueStore::<Vec<u8>>::enqueue_item(
-            &self.store,
-            tx_key,
-            signed_acknowledge_proposal_tx.into_encoded(),
-        )?;
-
+        QueueStore::enqueue_item(&self.store, tx_key, tx)?;
         Ok(())
     }
 }

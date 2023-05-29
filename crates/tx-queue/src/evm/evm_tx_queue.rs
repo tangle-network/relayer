@@ -105,7 +105,6 @@ where
         let metrics_clone = self.ctx.metrics.clone();
         let task = || async {
             loop {
-                // tracing::trace!("Checking for any txs in the queue ...");
                 let maybe_tx = store
                     .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))?;
                 let maybe_explorer = &chain_config.explorer;
@@ -115,6 +114,7 @@ where
                         raw_tx.set_chain_id(U64::from(chain_id)).clone();
                     let my_tx_hash = raw_tx.sighash();
                     tx_hash = my_tx_hash;
+                    tracing::debug!(?tx_hash, tx = ?raw_tx, "Found tx in queue");
                     // dry run test
                     let dry_run_outcome =
                         client.call(&raw_tx.clone(), None).await;

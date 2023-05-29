@@ -4,7 +4,7 @@ use sp_core::Pair;
 
 /// [`Substrate Uri`](https://polkadot.js.org/docs/keyring/start/suri/)
 #[derive(Clone)]
-pub struct Suri(Sr25519Pair);
+pub struct Suri(pub Sr25519Pair);
 
 impl std::fmt::Debug for Suri {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

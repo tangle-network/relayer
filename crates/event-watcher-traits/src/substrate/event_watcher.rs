@@ -156,9 +156,8 @@ where
         };
         let metrics_clone = metrics.clone();
         let task = || async {
-            let maybe_client = ctx
-                .substrate_provider::<RuntimeConfig>(&chain_id.to_string())
-                .await;
+            let maybe_client =
+                ctx.substrate_provider::<RuntimeConfig, _>(chain_id).await;
             let client = match maybe_client {
                 Ok(client) => client,
                 Err(err) => {

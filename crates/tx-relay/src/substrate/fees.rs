@@ -32,7 +32,7 @@ pub async fn get_substrate_fee_info(
     ctx: &RelayerContext,
 ) -> webb_relayer_utils::Result<SubstrateFeeInfo> {
     let client = ctx
-        .substrate_provider::<PolkadotConfig>(&chain_id.to_string())
+        .substrate_provider::<PolkadotConfig, _>(chain_id)
         .await?;
     let decimals: i32 = client
         .rpc()
@@ -50,7 +50,7 @@ pub async fn get_substrate_fee_info(
     let refund_exchange_rate = native_token_to_unit(1., decimals);
     let max_refund =
         native_token_to_unit(MAX_REFUND_USD / TOKEN_PRICE_USD, decimals);
-    let pair = ctx.substrate_wallet(&chain_id.to_string()).await?;
+    let pair = ctx.substrate_wallet(chain_id).await?;
     let signer = PairSigner::new(pair.clone());
 
     let max_refund =
