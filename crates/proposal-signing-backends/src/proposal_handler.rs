@@ -82,6 +82,16 @@ pub fn evm_anchor_update_proposal(
 }
 
 // create anchor update proposal for substrate system
+#[tracing::instrument(
+    skip_all,
+    fields(
+        proposal_type = "AnchorUpdateProposal",
+        from = ?src_resource_id.typed_chain_id(),
+        to = ?target_resource_id.typed_chain_id(),
+        leaf_index,
+        merkle_root = ?hex::encode(merkle_root),
+    )
+)]
 pub fn substrate_anchor_update_proposal(
     merkle_root: [u8; 32],
     leaf_index: u32,
