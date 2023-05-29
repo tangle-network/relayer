@@ -232,14 +232,12 @@ impl RelayerContext {
     ) -> webb_relayer_utils::Result<Sr25519Pair> {
         let chain_id: types::U256 = chain_id.into();
         let chain_name = chain_id.to_string();
-        let node_config = self
-            .config
-            .substrate
-            .get(&chain_name)
-            .cloned()
-            .ok_or_else(|| webb_relayer_utils::Error::NodeNotFound {
-                chain_id: chain_id.to_string(),
-            })?;
+        let node_config =
+            self.config.substrate.get(&chain_name).cloned().ok_or_else(
+                || webb_relayer_utils::Error::NodeNotFound {
+                    chain_id: chain_id.to_string(),
+                },
+            )?;
         let suri_key = node_config
             .suri
             .ok_or(webb_relayer_utils::Error::MissingSecrets)?;

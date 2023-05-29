@@ -117,8 +117,7 @@ where
                 }
             };
             let pair = self.ctx.substrate_wallet(chain_id).await?;
-            let signer =
-                subxt::tx::PairSigner::<PolkadotConfig, _>::new(pair);
+            let signer = subxt::tx::PairSigner::<PolkadotConfig, _>::new(pair);
             loop {
                 // dequeue signed transaction
                 let tx_call_data = store.dequeue_item(

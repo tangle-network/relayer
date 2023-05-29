@@ -89,7 +89,8 @@ mod tests {
         let tx_count = 5;
         let tx_api = RuntimeApi::tx().system();
         for i in 0..tx_count {
-            let tx = tx_api.remark_with_event(format!("tx {}", i).as_bytes().to_vec());
+            let tx = tx_api
+                .remark_with_event(format!("tx {}", i).as_bytes().to_vec());
             let tx = TypeErasedStaticTxPayload::try_from(tx)?;
             let tx_key = SledQueueKey::from_substrate_chain_id(chain_id);
             QueueStore::enqueue_item(&store, tx_key, tx)?;

@@ -68,12 +68,9 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         Error(format!("Error while getting Substrate client: {e}"))
     })?;
 
-    let pair = ctx
-        .substrate_wallet(requested_chain)
-        .await
-        .map_err(|e| {
-            Error(format!("Misconfigured Network {:?}: {e}", cmd.chain_id))
-        })?;
+    let pair = ctx.substrate_wallet(requested_chain).await.map_err(|e| {
+        Error(format!("Misconfigured Network {:?}: {e}", cmd.chain_id))
+    })?;
 
     let signer = PairSigner::new(pair.clone());
 
