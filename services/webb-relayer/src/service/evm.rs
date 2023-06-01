@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use axum::routing::get;
 use axum::Router;
-use webb::evm::ethers::prelude::timelag;
+use webb::evm::ethers::prelude::TimeLag;
 use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
 use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
 use webb_event_watcher_traits::{
@@ -80,10 +80,8 @@ pub async fn ignite(
         let client = ctx.evm_provider(chain_id).await?;
         // Time lag offset tip.
         let block_confirmations = chain_config.block_confirmations;
-        let timelag_client = Arc::new(timelag::TimeLag::new(
-            client.clone(),
-            block_confirmations,
-        ));
+        let timelag_client =
+            Arc::new(TimeLag::new(client.clone(), block_confirmations));
         tracing::debug!(
             "Starting Background Services for ({}) chain.",
             chain_name

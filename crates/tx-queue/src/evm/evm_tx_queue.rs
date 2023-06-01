@@ -20,7 +20,7 @@ use futures::TryFutureExt;
 use rand::Rng;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::middleware::SignerMiddleware;
-use webb::evm::ethers::prelude::timelag;
+use webb::evm::ethers::prelude::TimeLag;
 use webb::evm::ethers::providers::Middleware;
 
 use webb::evm::ethers::types;
@@ -82,11 +82,9 @@ where
                 chain_id: self.chain_id.to_string(),
             })?;
 
-        // time lag client
-        let client = timelag::TimeLag::new(
-            signer_client,
-            chain_config.block_confirmations,
-        );
+        // TimeLag client
+        let client =
+            TimeLag::new(signer_client, chain_config.block_confirmations);
         let chain_id = client
             .get_chainid()
             .map_err(|_| {

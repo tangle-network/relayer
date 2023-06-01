@@ -22,7 +22,7 @@ use super::*;
 pub type EthersClient =
     providers::Provider<providers::RetryClient<providers::Http>>;
 
-/// Ethereum client using Ethers, that includes a retry strategy.
+/// Ethereum TimeLag client using Ethers, that includes a retry strategy.
 pub type EthersTimeLagClient =
     TimeLag<Arc<providers::Provider<providers::RetryClient<providers::Http>>>>;
 
@@ -76,7 +76,6 @@ pub trait EventWatcher {
     async fn run(
         &self,
         client: Arc<EthersTimeLagClient>,
-        // chainId: types::U256,
         store: Arc<Self::Store>,
         contract: Self::Contract,
         handlers: Vec<EventHandlerFor<Self>>,

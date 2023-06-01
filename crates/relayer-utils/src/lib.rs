@@ -139,7 +139,7 @@ pub enum Error {
         >,
     ),
 
-    /// Smart contract error.
+    /// Ether contract error for TimeLag provider.
     #[error(transparent)]
     EthersContractCallWithTimeLagRetryClient(
         #[from]
@@ -152,7 +152,7 @@ pub enum Error {
         >,
     ),
 
-    /// Smart contract error.
+    /// Ether contract error for TimeLag provider.
     #[error(transparent)]
     EthersContractCallWithTimeLagRetryClientCloneable(
         #[from]
