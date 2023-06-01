@@ -48,7 +48,7 @@ where
     )]
     async fn run(
         &self,
-        client: Arc<EthersClient>,
+        client: Arc<EthersTimeLagClient>,
         store: Arc<Self::Store>,
         contract: Self::Contract,
         metrics: Arc<Mutex<metric::Metrics>>,

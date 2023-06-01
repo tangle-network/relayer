@@ -43,7 +43,6 @@ use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use webb_relayer_tx_relay::substrate::fees::{
     get_substrate_fee_info, SubstrateFeeInfo,
 };
-use webb_relayer_tx_relay::substrate::mixer::handle_substrate_mixer_relay_tx;
 use webb_relayer_tx_relay::substrate::vanchor::handle_substrate_vanchor_relay_tx;
 use webb_relayer_utils::HandlerError;
 
@@ -180,9 +179,6 @@ pub async fn handle_cmd(
         Command::Substrate(substrate) => match substrate {
             SubstrateCommandType::VAnchor(vanchor) => {
                 handle_substrate_vanchor_relay_tx(ctx, vanchor, stream).await
-            }
-            SubstrateCommandType::Mixer(mixer) => {
-                handle_substrate_mixer_relay_tx(ctx, mixer, stream).await
             }
         },
         Command::Evm(evm) => match evm {

@@ -249,9 +249,7 @@ export type TypedEvent =
   | PublicKeySubmitted
   | PublicKeyChanged
   | PublicKeySignatureChanged
-  | ProposalSigned
-  | MixerBn254DepositEvent
-  | MixerBn254WithdrawEvent;
+  | ProposalSigned;
 
 type NewSession = { section: 'session'; method: 'NewSession' };
 type NextPublicKeySubmitted = {
@@ -273,5 +271,3 @@ type ProposalSigned = {
   section: 'dkgProposalHandler';
   method: 'ProposalSigned';
 };
-type MixerBn254DepositEvent = { section: 'mixerBn254'; method: 'Deposit' };
-type MixerBn254WithdrawEvent = { section: 'mixerBn254'; method: 'Withdraw' };

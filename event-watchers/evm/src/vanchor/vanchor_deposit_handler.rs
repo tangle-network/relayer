@@ -21,7 +21,7 @@ use webb::evm::ethers::prelude::LogMeta;
 use webb::evm::ethers::types;
 use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::evm::EventHandler;
-use webb_event_watcher_traits::EthersClient;
+use webb_event_watcher_traits::EthersTimeLagClient;
 use webb_proposal_signing_backends::proposal_handler;
 use webb_proposal_signing_backends::queue::policy::ProposalPolicy;
 use webb_proposal_signing_backends::queue::{
@@ -51,7 +51,7 @@ where
     P: ProposalPolicy + Send + Sync + Clone,
     C: BridgeRegistryBackend + Send + Sync,
 {
-    type Contract = VAnchorContractWrapper<EthersClient>;
+    type Contract = VAnchorContractWrapper<EthersTimeLagClient>;
 
     type Events = VAnchorContractEvents;
 

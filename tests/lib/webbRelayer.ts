@@ -351,39 +351,7 @@ export class WebbRelayer {
     return txHashOrReject(ws, cmd);
   }
 
-  public async substrateMixerWithdraw(inputs: {
-    chainId: number;
-    id: number;
-    proof: number[];
-    root: number[];
-    nullifierHash: number[];
-    recipient: string;
-    relayer: string;
-    fee: number;
-    refund: number;
-  }): Promise<`0x${string}`> {
-    const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
-    // create a new websocket connection to the relayer.
-    const ws = new WebSocket(wsEndpoint);
-    await new Promise((resolve) => ws.once('open', resolve));
-    const cmd = {
-      substrate: {
-        mixer: {
-          chainId: inputs.chainId,
-          id: inputs.id,
-          proof: inputs.proof,
-          root: inputs.root,
-          nullifierHash: inputs.nullifierHash,
-          recipient: inputs.recipient,
-          relayer: inputs.relayer,
-          fee: inputs.fee,
-          refund: inputs.refund,
-        },
-      },
-    };
-    return substrateTxHashOrReject(ws, cmd);
-  }
-
+ 
   public async substrateVAnchorWithdraw(
     chainId: number,
     id: number,
@@ -751,8 +719,7 @@ type ContractKind =
   | 'Anchor'
   | 'SignatureBridge'
   | 'GovernanceBravoDelegate'
-  | 'VAnchor'
-  | 'OpenVAnchor';
+  | 'VAnchor';
 
 type PalletKind =
   | 'DKG'

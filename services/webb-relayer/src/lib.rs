@@ -37,14 +37,14 @@
 //!
 //! #### Private Transaction Relaying
 //!
-//! The relayer allows for submitting proofs for privacy-preserving transactions against the Mixer, Anchor and
-//! VAnchor protocols. The users generate zero-knowledge proof data, format a proper payload, and submit
+//! The relayer allows for submitting proofs for privacy-preserving transactions against the VAnchor protocols.
+//! The users generate zero-knowledge proof data, format a proper payload, and submit
 //! it to a compatible relayer for submission.
 //!
 //! #### Data Querying
 //!
 //! The relayer also supplements users who need to generate witness data for their zero-knowledge proofs.
-//! The relayers cache the leaves of the trees of Mixer, Anchor or VAnchor that they are supporting.
+//! The relayers cache the leaves of the trees of VAnchor that they are supporting.
 //! This allows users to query for the leaf data faster than querying from a chain directly.
 //!
 //! #### Data Proposing and Signature Relaying

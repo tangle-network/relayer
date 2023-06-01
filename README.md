@@ -103,9 +103,9 @@ cargo run --bin webb-relayer --features cli -- -c ./config/development/evm-local
 
 > Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
 
-#### Local Substrate Mixer
+#### Local Substrate Setup
 
-To use the relayer for our Substrate mixer, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer.
+To use the relayer for our Substrate based chains, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer.
 
 ```
 cargo run --bin webb-relayer --features cli -- -c ./config/development/local-substrate -vvv
@@ -507,7 +507,7 @@ Here is the basic setup you will need:
 4. failing tests will keep retry before giving up, up to 5 times. To disable that use `yarn test --retries=0`.
 5. You can combine all the tips above together, for more options see [here](https://mochajs.org/#command-line-usage)
 
-For the Substrate Mixer test, you can connect to your local chain manually by:
+For the Substrate test, you can connect to your local chain manually by:
 
 1. Specifying the Alice node ports such as:
 

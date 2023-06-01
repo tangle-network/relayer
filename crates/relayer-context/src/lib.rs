@@ -126,9 +126,10 @@ impl RelayerContext {
                 .timeout_retries(u32::MAX)
                 .rate_limit_retries(u32::MAX)
                 .build(client, WebbHttpRetryPolicy::boxed());
-            let proivder = Arc::new(Provider::new(retry_client));
+
+            let provider = Arc::new(Provider::new(retry_client));
             evm_providers
-                .insert(chain_config.chain_id.into(), proivder.clone());
+                .insert(chain_config.chain_id.into(), provider.clone());
         }
 
         Ok(Self {
