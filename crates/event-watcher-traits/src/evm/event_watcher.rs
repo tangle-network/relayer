@@ -92,7 +92,21 @@ pub trait EventWatcher {
                 .map_err(backoff::Error::transient)
                 .await?
                 .as_u32();
-            // now we start polling for new events.
+
+            // let chain_id = 5001u32;
+            // let client = ctx.evm_provider(chain_id).await?;
+            // let chain_config =
+            //     ctx.config.evm.get(&chain_id.to_string()).ok_or_else(|| {
+            //     webb_relayer_utils::Error::ChainNotFound {
+            //         chain_id: chain_id.to_string(),
+            //     }
+            // })?;
+
+            // // Time lag offset tip.
+            // let block_confirmations = chain_config.block_confirmations;
+            // let timelag_client =
+            //     Arc::new(TimeLag::new(client.clone(), block_confirmations));
+            // // now we start polling for new events.
             // create history store key
             let src_target_system = TargetSystem::new_contract_address(
                 contract.address().to_fixed_bytes(),

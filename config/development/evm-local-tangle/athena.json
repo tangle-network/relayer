@@ -2,7 +2,7 @@
   "evm": {
     "athena": {
       "name": "athena",
-      "http-endpoint": "http://localhost:5002",
+      "http-endpoints": ["http://localhost:5002"],
       "ws-endpoint": "ws://localhost:5002",
       "chain-id": 5002,
       "private-key": "$ATHENA_PRIVATE_KEY",

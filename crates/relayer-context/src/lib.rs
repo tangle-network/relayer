@@ -70,7 +70,7 @@ pub struct RelayerContext {
     etherscan_clients: Arc<HashMap<types::U256, ethers::etherscan::Client>>,
 
     /// Evm Providers Cache.
-    evm_providers: Arc<HashMap<types::U256, Arc<EthersClient>>>,
+    evm_providers: Arc<Mutex<HashMap<types::U256, Arc<EthersClient>>>>,
 }
 
 impl RelayerContext {
@@ -118,20 +118,7 @@ impl RelayerContext {
         }
 
         // Create a Map for all EVM Chains
-        let mut evm_providers = HashMap::new();
-        for (_, chain_config) in config.evm.iter() {
-            let client = Http::new(chain_config.http_endpoint.clone());
-            // Wrap the provider with a retry client.
-            let retry_client = RetryClientBuilder::default()
-                .timeout_retries(u32::MAX)
-                .rate_limit_retries(u32::MAX)
-                .build(client, WebbHttpRetryPolicy::boxed());
-
-            let provider = Arc::new(Provider::new(retry_client));
-            evm_providers
-                .insert(chain_config.chain_id.into(), provider.clone());
-        }
-
+        let evm_providers = HashMap::new();
         Ok(Self {
             config,
             notify_shutdown,
@@ -139,7 +126,7 @@ impl RelayerContext {
             store,
             price_oracle,
             etherscan_clients: Arc::new(etherscan_clients),
-            evm_providers: Arc::new(evm_providers),
+            evm_providers: Arc::new(Mutex::new(evm_providers)),
         })
     }
     /// Returns a broadcast receiver handle for the shutdown signal.
@@ -150,6 +137,7 @@ impl RelayerContext {
     pub fn shutdown(&self) {
         let _ = self.notify_shutdown.send(());
     }
+
     /// Returns a new `EthereumProvider` for the relayer.
     ///
     /// # Arguments
@@ -161,15 +149,86 @@ impl RelayerContext {
         chain_id: I,
     ) -> webb_relayer_utils::Result<Arc<EthersClient>> {
         let chain_id: types::U256 = chain_id.into();
-        if let Some(provider) = self.evm_providers.get(&chain_id) {
-            Ok(provider.clone())
+        // Check if the provider is already in the cache or else create new provider from http_endpoint array.
+        // If the provider is not working, try creating a new provider from http_endpoint array.
+
+        if let Some(provider) = self.evm_providers.lock().await.get(&chain_id) {
+            // get block number to check if the provider is working
+            let response = provider.get_gas_price().await;
+            match response {
+                Ok(_) => Ok(provider.clone()),
+                Err(e) => {
+                    tracing::error!(
+                        "EVM Provider for chain {} is not working: {}.Connecting with other http_endpoints, if any.",
+                        chain_id,
+                        e
+                    );
+                    self.create_evm_provider(chain_id).await
+                }
+            }
         } else {
-            let chain_id_string = chain_id.clone().to_string();
-            Err(webb_relayer_utils::Error::ChainNotFound {
-                chain_id: chain_id_string,
-            })
+            self.create_evm_provider(chain_id).await
         }
     }
+    /// Returns a new ether `Provider` for the relayer.
+    /// This function is used to create a new provider from http_endpoint array
+    #[cfg(feature = "evm")]
+    pub async fn create_evm_provider<I: Into<types::U256>>(
+        &self,
+        chain_id: I,
+    ) -> webb_relayer_utils::Result<Arc<EthersClient>> {
+        let chain_id: types::U256 = chain_id.into();
+        let chain_config =
+            self.config.evm.get(&chain_id.to_string()).ok_or_else(|| {
+                webb_relayer_utils::Error::ChainNotFound {
+                    chain_id: chain_id.to_string(),
+                }
+            })?;
+
+        for http_endpoint in chain_config.http_endpoints.iter() {
+            tracing::debug!(
+                "Connecting to chain {:?} .. at {}",
+                chain_config.chain_id,
+                http_endpoint
+            );
+            let client = Http::new(http_endpoint.clone());
+            let retry_client = RetryClientBuilder::default()
+                .timeout_retries(u32::MAX)
+                .rate_limit_retries(u32::MAX)
+                .build(client.clone(), WebbHttpRetryPolicy::boxed());
+            let provider = Arc::new(Provider::new(retry_client));
+            let new_client = Provider::new(client.clone());
+            // Check if the provider is working by getting the block number.
+            let response: Result<U64, ProviderError> =
+                new_client.request("eth_blockNumber", ()).await;
+            tracing::debug!("Response: {:?}", response);
+            match response {
+                Ok(_) => {
+                    tracing::debug!(
+                        "Connection established for chain {}..!",
+                        chain_config.chain_id
+                    );
+                    self.evm_providers
+                        .lock()
+                        .await
+                        .insert(chain_config.chain_id.into(), provider.clone());
+                    return Ok(provider.clone());
+                }
+                Err(e) => {
+                    tracing::error!(
+                        "Connection failed for chain {} with error: {}",
+                        chain_config.chain_id,
+                        e
+                    );
+                }
+            }
+        }
+        // return RPC error if all endpoints failed
+        Err(webb_relayer_utils::Error::RpcConnectionError(
+            "Connection failed for all rpc endpoints".to_string(),
+        ))
+    }
+
     /// Sets up and returns an EVM wallet for the relayer.
     ///
     /// # Arguments

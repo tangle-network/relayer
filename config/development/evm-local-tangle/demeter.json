@@ -2,7 +2,7 @@
   "evm": {
     "demeter": {
       "name": "demeter",
-      "http-endpoint": "http://localhost:5003",
+      "http-endpoints": ["http://localhost:5003"],
       "ws-endpoint": "ws://localhost:5003",
       "chain-id": 5003,
       "private-key": "$DEMETER_PRIVATE_KEY",

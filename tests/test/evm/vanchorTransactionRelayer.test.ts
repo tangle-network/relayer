@@ -127,15 +127,18 @@ describe('Vanchor Transaction relayer', function () {
         [localChain2.chainId]: govWallet.address,
       }
     );
-
+    
     // save the chain configs.
+    const dummyEndpoint = 'http://127.0.0.1:1080'; // Relayer should fail and try connecting other endpoints.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+      httpEndpoints: [dummyEndpoint,localChain1.endpoint],
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
+      httpEndpoints: [dummyEndpoint,localChain2.endpoint],
     });
 
     // get the vanhor on localchain1
@@ -183,6 +186,7 @@ describe('Vanchor Transaction relayer', function () {
       tmp: true,
       configDir: tmpDirPath,
       showLogs: true,
+      verbosity: 4,
     });
     await webbRelayer.waitUntilReady();
   });

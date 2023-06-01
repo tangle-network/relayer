@@ -261,6 +261,10 @@ pub enum Error {
     /// are missing.
     #[error("Missing Substrate Static Transaction Validation Details")]
     MissingValidationDetails,
+    /// Rpc connection error.
+    /// This error is raised when the rpc connection fails.
+    #[error("Rpc connection Error: {}", _0)]
+    RpcConnectionError(String),
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.

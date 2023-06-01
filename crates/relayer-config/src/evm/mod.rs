@@ -20,7 +20,7 @@ pub struct EvmChainConfig {
     pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
     #[serde(skip_serializing)]
-    pub http_endpoint: RpcUrl,
+    pub http_endpoints: Vec<RpcUrl>,
     /// Websocket Endpoint for long living connections
     #[serde(skip_serializing)]
     pub ws_endpoint: RpcUrl,

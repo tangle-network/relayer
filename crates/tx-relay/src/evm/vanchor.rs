@@ -69,11 +69,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
         return Err(Withdraw(WithdrawStatus::InvalidMerkleRoots));
     }
 
-    tracing::debug!(
-        "Connecting to chain {:?} .. at {}",
-        cmd.chain_id,
-        chain.http_endpoint
-    );
     let _ = stream.send(Network(NetworkStatus::Connecting)).await;
     let provider = ctx.evm_provider(cmd.chain_id).await.map_err(|e| {
         Network(NetworkStatus::Failed {

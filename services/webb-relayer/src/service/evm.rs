@@ -77,7 +77,7 @@ pub async fn ignite(
         }
         let chain_name = &chain_config.name;
         let chain_id = chain_config.chain_id;
-        let client = ctx.evm_provider(chain_id).await?;
+        let client = ctx.create_evm_provider(chain_id).await?;
         // Time lag offset tip.
         let block_confirmations = chain_config.block_confirmations;
         let timelag_client =
