@@ -287,7 +287,7 @@ pub trait LeafCacheStore: HistoryStore {
 
     /// The last deposit info is sent to the client on leaf request
     /// So they can verify when the last transaction was sent to maintain
-    /// their own state of mixers.
+    /// their own state of vanchors.
     fn get_last_deposit_block_number<K: Into<HistoryStoreKey> + Debug>(
         &self,
         key: K,
@@ -325,7 +325,7 @@ pub trait EncryptedOutputCacheStore: HistoryStore {
 
     /// The last deposit info is sent to the client on encrypted_output request
     /// So they can verify when the last transaction was sent to maintain
-    /// their own state of mixers.
+    /// their own state of vanchors.
     fn get_last_deposit_block_number_for_encrypted_output<
         K: Into<HistoryStoreKey> + Debug,
     >(

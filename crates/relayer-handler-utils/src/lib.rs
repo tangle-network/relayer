@@ -23,9 +23,7 @@ use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::types::Bytes;
 use webb::evm::ethers::types::{H256, U256};
 use webb::substrate::subxt::utils::AccountId32;
-use webb_relayer_tx_relay_utils::{
-    MixerRelayTransaction, VAnchorRelayTransaction,
-};
+use webb_relayer_tx_relay_utils::VAnchorRelayTransaction;
 
 /// Representation for IP address response
 #[derive(Debug, Serialize)]
@@ -95,8 +93,6 @@ pub enum EvmCommandType {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum SubstrateCommandType {
-    /// Webb Mixer.
-    Mixer(SubstrateMixerCommand),
     /// Webb Variable Anchors.
     VAnchor(SubstrateVAchorCommand),
 }
@@ -192,8 +188,6 @@ type B = U128; // Substrate balance type
 type A = WebbI128; // Substrate signed amount type
 type T = u32; // Substrate assetId
 
-/// The command type for Substrate mixer txes
-pub type SubstrateMixerCommand = MixerRelayTransaction<Id, P, E, I, B>;
 /// The command type for Substrate vanchor txes
 pub type SubstrateVAchorCommand =
     VAnchorRelayTransaction<Id, P, R, E, I, B, A, T>;
