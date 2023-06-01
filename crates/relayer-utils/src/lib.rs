@@ -115,6 +115,58 @@ pub enum Error {
             >,
         >,
     ),
+    /// Ethers Timelag provider error.
+    #[error(transparent)]
+    EthersTimelagRetryClientError(
+        #[from]
+        ethers::middleware::timelag::TimeLagError<
+            ethers::providers::Provider<
+                ethers::providers::RetryClient<ethers::providers::Http>,
+            >,
+        >,
+    ),
+
+    /// Ethers Timelag provider error.
+    #[error(transparent)]
+    EthersTimelagRetryClientClonableError(
+        #[from]
+        ethers::middleware::timelag::TimeLagError<
+            std::sync::Arc<
+                ethers::providers::Provider<
+                    ethers::providers::RetryClient<ethers::providers::Http>,
+                >,
+            >,
+        >,
+    ),
+
+    /// Smart contract error.
+    #[error(transparent)]
+    EthersContractCallWithTimeLagRetryClient(
+        #[from]
+        ethers::contract::ContractError<
+            ethers::middleware::timelag::TimeLag<
+                ethers::providers::Provider<
+                    ethers::providers::RetryClient<ethers::providers::Http>,
+                >,
+            >,
+        >,
+    ),
+
+    /// Smart contract error.
+    #[error(transparent)]
+    EthersContractCallWithTimeLagRetryClientCloneable(
+        #[from]
+        ethers::contract::ContractError<
+            ethers::middleware::timelag::TimeLag<
+                Arc<
+                    ethers::providers::Provider<
+                        ethers::providers::RetryClient<ethers::providers::Http>,
+                    >,
+                >,
+            >,
+        >,
+    ),
+
     /// SCALE Codec error.
     #[error(transparent)]
     ScaleCodec(#[from] webb::substrate::scale::Error),

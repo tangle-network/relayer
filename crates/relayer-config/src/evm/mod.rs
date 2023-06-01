@@ -26,7 +26,7 @@ pub struct EvmChainConfig {
     pub ws_endpoint: RpcUrl,
     /// Block confirmations
     #[serde(skip_serializing, default)]
-    pub block_confirmations: u32,
+    pub block_confirmations: u8,
     /// Block Explorer for this chain.
     ///
     /// Optional, and only used for printing a clickable links
@@ -89,8 +89,6 @@ pub struct EvmLinkedAnchorConfig {
 pub enum Contract {
     /// The VAnchor contract configuration.
     VAnchor(VAnchorContractConfig),
-    /// The Open VAnchor contract configuration.
-    OpenVAnchor(VAnchorContractConfig),
     /// The Signature Bridge contract configuration.
     SignatureBridge(SignatureBridgeContractConfig),
 }

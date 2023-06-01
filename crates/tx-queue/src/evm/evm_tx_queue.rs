@@ -20,6 +20,7 @@ use futures::TryFutureExt;
 use rand::Rng;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::middleware::SignerMiddleware;
+use webb::evm::ethers::prelude::timelag;
 use webb::evm::ethers::providers::Middleware;
 
 use webb::evm::ethers::types;
@@ -70,7 +71,8 @@ where
     pub async fn run(self) -> webb_relayer_utils::Result<()> {
         let provider = self.ctx.evm_provider(&self.chain_id).await?;
         let wallet = self.ctx.evm_wallet(self.chain_id).await?;
-        let client = Arc::new(SignerMiddleware::new(provider, wallet));
+        let signer_client = SignerMiddleware::new(provider, wallet);
+
         let chain_config = self
             .ctx
             .config
@@ -79,6 +81,12 @@ where
             .ok_or_else(|| webb_relayer_utils::Error::ChainNotFound {
                 chain_id: self.chain_id.to_string(),
             })?;
+
+        // time lag client
+        let client = timelag::TimeLag::new(
+            signer_client,
+            chain_config.block_confirmations,
+        );
         let chain_id = client
             .get_chainid()
             .map_err(|_| {

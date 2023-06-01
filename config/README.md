@@ -497,7 +497,6 @@ configuration, and different internal service that will handle the contract oper
 - Type: `enum`
 - Possible values:
   - `VAnchor`
-  - `OpenVAnchor`
   - `SignatureBridge`
 - Required: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_CONTRACT`

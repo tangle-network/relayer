@@ -751,8 +751,7 @@ type ContractKind =
   | 'Anchor'
   | 'SignatureBridge'
   | 'GovernanceBravoDelegate'
-  | 'VAnchor'
-  | 'OpenVAnchor';
+  | 'VAnchor';
 
 type PalletKind =
   | 'DKG'

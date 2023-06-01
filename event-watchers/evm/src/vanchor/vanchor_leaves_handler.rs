@@ -28,7 +28,7 @@ use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::LogMeta;
 use webb::evm::ethers::types;
 use webb_event_watcher_traits::evm::EventHandler;
-use webb_event_watcher_traits::EthersClient;
+use webb_event_watcher_traits::EthersTimeLagClient;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, LeafCacheStore};
@@ -101,7 +101,7 @@ impl VAnchorLeavesHandler {
 
 #[async_trait::async_trait]
 impl EventHandler for VAnchorLeavesHandler {
-    type Contract = VAnchorContractWrapper<EthersClient>;
+    type Contract = VAnchorContractWrapper<EthersTimeLagClient>;
 
     type Events = VAnchorContractEvents;
 

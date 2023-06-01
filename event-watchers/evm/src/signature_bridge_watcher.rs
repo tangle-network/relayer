@@ -29,7 +29,7 @@ use webb::evm::ethers::utils;
 use webb_event_watcher_traits::evm::{
     BridgeWatcher, EventHandler, EventWatcher, WatchableContract,
 };
-use webb_event_watcher_traits::EthersClient;
+use webb_event_watcher_traits::EthersTimeLagClient;
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, QueueStore};
 use webb_relayer_utils::metric;
@@ -104,7 +104,7 @@ pub struct SignatureBridgeGovernanceOwnershipTransferredHandler;
 impl EventWatcher for SignatureBridgeContractWatcher {
     const TAG: &'static str = "Signature Bridge Watcher";
 
-    type Contract = SignatureBridgeContractWrapper<EthersClient>;
+    type Contract = SignatureBridgeContractWrapper<EthersTimeLagClient>;
 
     type Events = SignatureBridgeContractEvents;
 
@@ -113,7 +113,7 @@ impl EventWatcher for SignatureBridgeContractWatcher {
 
 #[async_trait::async_trait]
 impl EventHandler for SignatureBridgeGovernanceOwnershipTransferredHandler {
-    type Contract = SignatureBridgeContractWrapper<EthersClient>;
+    type Contract = SignatureBridgeContractWrapper<EthersTimeLagClient>;
 
     type Events = SignatureBridgeContractEvents;
 
@@ -212,7 +212,7 @@ where
     async fn execute_proposal_with_signature(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
-        contract: &SignatureBridgeContract<EthersClient>,
+        contract: &SignatureBridgeContract<EthersTimeLagClient>,
         (proposal_data, signature): (Vec<u8>, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         let proposal_data_hex = hex::encode(&proposal_data);
@@ -298,7 +298,7 @@ where
     async fn transfer_ownership_with_signature(
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
-        contract: &SignatureBridgeContract<EthersClient>,
+        contract: &SignatureBridgeContract<EthersTimeLagClient>,
         (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         // before doing anything, we need to do just two things:

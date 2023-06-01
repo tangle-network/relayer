@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use tokio::sync::Mutex;
+use webb::evm::ethers::prelude::TimeLag;
 use webb_relayer_utils::retry;
 
 use super::*;
@@ -20,6 +21,10 @@ use super::*;
 /// Ethereum client using Ethers, that includes a retry strategy.
 pub type EthersClient =
     providers::Provider<providers::RetryClient<providers::Http>>;
+
+/// Ethereum client using Ethers, that includes a retry strategy.
+pub type EthersTimeLagClient =
+    TimeLag<Arc<providers::Provider<providers::RetryClient<providers::Http>>>>;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {
@@ -53,7 +58,7 @@ pub trait EventWatcher {
     /// A Helper tag used to identify the event watcher during the logs.
     const TAG: &'static str;
     /// The contract that this event watcher is watching.
-    type Contract: Deref<Target = contract::Contract<EthersClient>>
+    type Contract: Deref<Target = contract::Contract<EthersTimeLagClient>>
         + WatchableContract;
     /// The Events that this event watcher is interested in.
     type Events: contract::EthLogDecode + Clone;
@@ -70,7 +75,8 @@ pub trait EventWatcher {
     )]
     async fn run(
         &self,
-        client: Arc<EthersClient>,
+        client: Arc<EthersTimeLagClient>,
+        // chainId: types::U256,
         store: Arc<Self::Store>,
         contract: Self::Contract,
         handlers: Vec<EventHandlerFor<Self>>,
@@ -81,6 +87,7 @@ pub trait EventWatcher {
             let step = contract.max_blocks_per_step().as_u64();
             let metrics = &ctx.metrics;
             let chain_id: u32 = client
+                .inner()
                 .get_chainid()
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
@@ -99,12 +106,14 @@ pub trait EventWatcher {
             let mut instant = std::time::Instant::now();
             // we only query this once, at the start of the events watcher.
             // then we will update it later once we fully synced.
+
             let mut target_block_number = client
                 .get_block_number()
                 .map_err(Into::into)
                 .map_err(backoff::Error::transient)
                 .await?
                 .as_u64();
+
             // Save the target block number in the store
             // so other things can use it.
             store.set_target_block_number(
@@ -252,7 +261,7 @@ pub trait EventWatcher {
 pub trait EventHandler {
     /// The Type of contract this handler is for, Must be the same as the contract type in the
     /// watcher.
-    type Contract: Deref<Target = contract::Contract<EthersClient>>
+    type Contract: Deref<Target = contract::Contract<EthersTimeLagClient>>
         + WatchableContract;
     /// The type of event this handler is for.
     type Events: contract::EthLogDecode + Clone;
