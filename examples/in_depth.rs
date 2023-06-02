@@ -55,9 +55,10 @@ async fn main() -> anyhow::Result<()> {
             EvmChainConfig {
                 name: String::from("polygon"),
                 enabled: true,
-                http_endpoint: "https://polygon-rpc.com/"
-                    .parse::<url::Url>()?
-                    .into(),
+                http_endpoints: vec!["https://polygon-rpc.com/"]
+                    .iter()
+                    .map(|x| x.parse::<url::Url>().unwrap())
+                    .collect(),
                 ws_endpoint: "wss://polygon-rpc.com/"
                     .parse::<url::Url>()?
                     .into(),
