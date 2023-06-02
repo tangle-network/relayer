@@ -57,7 +57,7 @@ async fn main() -> anyhow::Result<()> {
                 enabled: true,
                 http_endpoints: vec!["https://polygon-rpc.com/"]
                     .iter()
-                    .map(|x| x.parse::<url::Url>().unwrap())
+                    .map(|x| x.parse::<url::Url>().unwrap().into())
                     .collect(),
                 ws_endpoint: "wss://polygon-rpc.com/"
                     .parse::<url::Url>()?
