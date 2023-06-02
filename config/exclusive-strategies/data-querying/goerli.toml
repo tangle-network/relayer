@@ -1,7 +1,7 @@
 [evm.goerli]
 name = "goerli"
-# Http(s) Endpoint for quick Req/Res
-http-endpoint = "$GOERLI_HTTPS_URL"
+# Http(s) Endpoints for quick Req/Res
+http-endpoints = ["$GOERLI_HTTPS_URL"]
 # Websocket Endpoint for long living connections
 ws-endpoint = "$GOERLI_WSS_URL"
 # Block Explorer

@@ -2,8 +2,8 @@
 enabled = true
 # The name that the chain is indexed on, for linkable anchors
 name = "sepolia-testnet"
-# Http(s) Endpoint for quick Req/Res
-http-endpoint = "$SEPOLIA_HTTP_URL"
+# Http(s) Endpoints for quick Req/Res
+http-endpoints = ["$SEPOLIA_HTTP_URL"]
 # Websocket Endpoint for long living connections
 ws-endpoint = "$SEPOLIA_WS_URL"
 # chain specific id from evm opcode

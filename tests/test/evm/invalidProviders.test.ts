@@ -78,7 +78,7 @@ describe('Invalid EVM Providers', () => {
             name: 'rate-limited-provider',
             enabled: true,
             'chain-id': 1,
-            'http-endpoint': provider.url,
+            'http-endpoints': [provider.url],
             'ws-endpoint': 'ws://localhost:8546',
             'block-confirmations': 0,
             contracts: [

@@ -159,7 +159,7 @@ impl RelayerContext {
                 Ok(_) => Ok(provider.clone()),
                 Err(e) => {
                     tracing::error!(
-                        "EVM Provider for chain {} is not working: {}.Connecting with other http_endpoints, if any.",
+                        "EVM Provider for chain {} is not working: {}.Try Connecting with other http_endpoints, if any.",
                         chain_id,
                         e
                     );
@@ -177,6 +177,8 @@ impl RelayerContext {
         &self,
         chain_id: I,
     ) -> webb_relayer_utils::Result<Arc<EthersClient>> {
+        use webb::evm::ethers::prelude::rand::Rng;
+
         let chain_id: types::U256 = chain_id.into();
         let chain_config =
             self.config.evm.get(&chain_id.to_string()).ok_or_else(|| {
@@ -185,48 +187,46 @@ impl RelayerContext {
                 }
             })?;
 
-        for http_endpoint in chain_config.http_endpoints.iter() {
-            tracing::debug!(
-                "Connecting to chain {:?} .. at {}",
-                chain_config.chain_id,
-                http_endpoint
-            );
-            let client = Http::new(http_endpoint.clone());
-            let retry_client = RetryClientBuilder::default()
-                .timeout_retries(u32::MAX)
-                .rate_limit_retries(u32::MAX)
-                .build(client.clone(), WebbHttpRetryPolicy::boxed());
-            let provider = Arc::new(Provider::new(retry_client));
-            let new_client = Provider::new(client.clone());
-            // Check if the provider is working by getting the block number.
-            let response: Result<U64, ProviderError> =
-                new_client.request("eth_blockNumber", ()).await;
-            tracing::debug!("Response: {:?}", response);
-            match response {
-                Ok(_) => {
-                    tracing::debug!(
-                        "Connection established for chain {}..!",
-                        chain_config.chain_id
-                    );
-                    self.evm_providers
-                        .lock()
-                        .await
-                        .insert(chain_config.chain_id.into(), provider.clone());
-                    return Ok(provider.clone());
-                }
-                Err(e) => {
-                    tracing::error!(
-                        "Connection failed for chain {} with error: {}",
-                        chain_config.chain_id,
-                        e
-                    );
+        loop {
+            for http_endpoint in chain_config.http_endpoints.iter() {
+                tracing::info!(
+                    "Connecting to chain {:?} .. at {}",
+                    chain_config.chain_id,
+                    http_endpoint
+                );
+                let client = Http::new(http_endpoint.clone());
+                let retry_client = RetryClientBuilder::default()
+                    .timeout_retries(50)
+                    .rate_limit_retries(50)
+                    .build(client.clone(), WebbHttpRetryPolicy::boxed());
+                let provider = Arc::new(Provider::new(retry_client));
+                let response = provider.get_gas_price().await;
+                match response {
+                    Ok(_) => {
+                        tracing::info!(
+                            "Connection established for chain {}..!",
+                            chain_config.chain_id
+                        );
+                        self.evm_providers.lock().await.insert(
+                            chain_config.chain_id.into(),
+                            provider.clone(),
+                        );
+                        return Ok(provider.clone());
+                    }
+                    Err(e) => {
+                        tracing::error!(
+                            "Connection failed for chain {} with error: {}",
+                            chain_config.chain_id,
+                            e
+                        );
+                    }
                 }
             }
+            tracing::error!("Connection failed for all rpc endpoints..!");
+            // sleep for a random amount of time.
+            let s = rand::thread_rng().gen_range(1_000..=1_0000);
+            tokio::time::sleep(Duration::from_millis(s)).await;
         }
-        // return RPC error if all endpoints failed
-        Err(webb_relayer_utils::Error::RpcConnectionError(
-            "Connection failed for all rpc endpoints".to_string(),
-        ))
     }
 
     /// Sets up and returns an EVM wallet for the relayer.

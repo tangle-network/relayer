@@ -75,15 +75,27 @@ pub trait EventWatcher {
     )]
     async fn run(
         &self,
-        client: Arc<EthersTimeLagClient>,
+        _client: Arc<EthersTimeLagClient>,
+        chain_id: types::U256,
         store: Arc<Self::Store>,
         contract: Self::Contract,
         handlers: Vec<EventHandlerFor<Self>>,
         ctx: &RelayerContext,
     ) -> webb_relayer_utils::Result<()> {
         let backoff = backoff::backoff::Constant::new(Duration::from_secs(1));
+        let chain_config =
+            ctx.config.evm.get(&chain_id.to_string()).ok_or_else(|| {
+                webb_relayer_utils::Error::ChainNotFound {
+                    chain_id: chain_id.to_string(),
+                }
+            })?;
         let task = || async {
             let step = contract.max_blocks_per_step().as_u64();
+            let provider = ctx.evm_provider(chain_id).await?;
+            let client = Arc::new(TimeLag::new(
+                provider,
+                chain_config.block_confirmations,
+            ));
             let metrics = &ctx.metrics;
             let chain_id: u32 = client
                 .inner()

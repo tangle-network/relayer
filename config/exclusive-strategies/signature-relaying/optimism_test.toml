@@ -1,8 +1,8 @@
 # Block which represents properties for a network
 [evm.optimismtestnet]
 name = "optimismtestnet"
-# Http(s) Endpoint for quick Req/Res
-http-endpoint = "$OPTIMISM_TESTNET_HTTPS_URL"
+# Http(s) Endpoints for quick Req/Res
+http-endpoints = ["$OPTIMISM_TESTNET_HTTPS_URL"]
 # Websocket Endpoint for long living connections
 ws-endpoint = "$OPTIMISM_TESTNET_WSS_URL"
 # Block Explorer

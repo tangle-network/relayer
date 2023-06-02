@@ -1,8 +1,8 @@
 # Block which represents properties for a network
 [evm.sepolia]
 name = "sepolia"
-# Http(s) Endpoint for quick Req/Res
-http-endpoint = "$SEPOLIA_HTTPS_URL"
+# Http(s) Endpoints for quick Req/Res
+http-endpoints = ["$SEPOLIA_HTTPS_URL"]
 # Websocket Endpoint for long living connections
 ws-endpoint = "$SEPOLIA_WSS_URL"
 # Block Explorer

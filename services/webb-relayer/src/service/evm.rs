@@ -103,6 +103,7 @@ pub async fn ignite(
                     start_signature_bridge_events_watcher(
                         ctx,
                         config,
+                        chain_id,
                         timelag_client.clone(),
                         store.clone(),
                     )
@@ -251,6 +252,7 @@ async fn start_vanchor_events_watcher(
                     VAnchorEncryptedOutputHandler::new(chain_id.into());
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
+                    chain_id.into(),
                     store,
                     wrapper,
                     vec![
@@ -309,6 +311,7 @@ async fn start_vanchor_events_watcher(
                     VAnchorEncryptedOutputHandler::new(chain_id.into());
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
+                    chain_id.into(),
                     store,
                     wrapper,
                     vec![
@@ -358,6 +361,7 @@ async fn start_vanchor_events_watcher(
                     VAnchorEncryptedOutputHandler::new(chain_id.into());
                 let vanchor_watcher_task = contract_watcher.run(
                     client,
+                    chain_id.into(),
                     store,
                     wrapper,
                     vec![
@@ -394,6 +398,7 @@ async fn start_vanchor_events_watcher(
 pub async fn start_signature_bridge_events_watcher(
     ctx: &RelayerContext,
     config: &SignatureBridgeContractConfig,
+    chain_id: u32,
     client: Arc<TimeLagClient>,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
@@ -422,6 +427,7 @@ pub async fn start_signature_bridge_events_watcher(
         let events_watcher_task = EventWatcher::run(
             &bridge_contract_watcher,
             client.clone(),
+            chain_id.into(),
             store.clone(),
             wrapper.clone(),
             vec![Box::new(governance_transfer_handler)],

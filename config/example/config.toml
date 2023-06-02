@@ -27,9 +27,9 @@ private-tx-relay = true
 # The following block defines an EVM network (in this case, Goerli) that the relayer will connect to.
 [evm.goerli]
 name = "goerli"
-# Http(s) Endpoint for quick Req/Res
+# Http(s) Endpoints for quick Req/Res
 # env: WEBB_EVM_GOERLI_HTTP_ENDPOINT
-http-endpoint = "https://rpc.ankr.com/eth_goerli"
+http-endpoints = ["https://rpc.ankr.com/eth_goerli"]
 # Websocket Endpoint for long living connections
 # env: WEBB_EVM_GOERLI_WS_ENDPOINT
 ws-endpoint = "wss://rpc.ankr.com/eth_goerli"
