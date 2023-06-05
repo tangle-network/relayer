@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use webb::evm::ethers::providers::HttpClientError;
+use webb::evm::ethers::providers::ProviderError;
 use webb::evm::ethers::providers::{JsonRpcError, RetryPolicy};
 
 /// Implements [RetryPolicy] that will retry requests that errored with
@@ -56,16 +56,27 @@ fn should_retry_json_rpc_error(err: &JsonRpcError) -> bool {
     }
 }
 
-impl RetryPolicy<HttpClientError> for WebbHttpRetryPolicy {
-    fn should_retry(&self, error: &HttpClientError) -> bool {
+impl RetryPolicy<ProviderError> for WebbHttpRetryPolicy {
+    fn should_retry(&self, error: &ProviderError) -> bool {
         match error {
-            HttpClientError::ReqwestError(err) => {
+            ProviderError::HTTPError(err) => {
                 err.status() == Some(http::StatusCode::TOO_MANY_REQUESTS)
             }
-            HttpClientError::JsonRpcError(err) => {
-                should_retry_json_rpc_error(err)
+            ProviderError::JsonRpcClientError(err) => {
+                match err.as_error_response() {
+                    Some(e) => should_retry_json_rpc_error(e),
+                    None => false,
+                }
             }
-            HttpClientError::SerdeJson { text, .. } => {
+            ProviderError::EnsError(_) => true,
+            ProviderError::EnsNotOwned(_) => true,
+            ProviderError::HexError(_) => false,
+            ProviderError::CustomError(_) => false,
+            ProviderError::UnsupportedRPC => false,
+            ProviderError::UnsupportedNodeClient => false,
+            ProviderError::SignerUnavailable => false,
+
+            ProviderError::SerdeJson(err) => {
                 // some providers send invalid JSON RPC in the error case (no `id:u64`), but the
                 // text should be a `JsonRpcError`
                 #[derive(serde::Deserialize)]
@@ -73,11 +84,12 @@ impl RetryPolicy<HttpClientError> for WebbHttpRetryPolicy {
                     error: JsonRpcError,
                 }
 
-                if let Ok(resp) = serde_json::from_str::<Resp>(text) {
+                if let Ok(resp) = serde_json::from_str::<Resp>(&err.to_string())
+                {
                     return should_retry_json_rpc_error(&resp.error);
                 }
 
-                let err_text = text.to_lowercase();
+                let err_text = err.to_string().to_lowercase();
                 // last resort, some providers send the error message in the text
                 // and the text itself is not a valid json response either.
                 // check if we have the word "rate", or "limit" in the error message
@@ -95,24 +107,26 @@ impl RetryPolicy<HttpClientError> for WebbHttpRetryPolicy {
         }
     }
 
-    fn backoff_hint(&self, error: &HttpClientError) -> Option<Duration> {
+    fn backoff_hint(&self, error: &ProviderError) -> Option<Duration> {
         const DEFAULT_BACKOFF: Duration = Duration::from_secs(5);
 
-        if let HttpClientError::JsonRpcError(JsonRpcError { data, .. }) = error
-        {
-            let data = data.as_ref()?;
-
-            // if daily rate limit exceeded, infura returns the requested backoff in the error
-            // response
-            let Some(backoff_seconds) = data.get("rate").and_then(|v| v.get("backoff_seconds")) else {
-                return Some(DEFAULT_BACKOFF);
-            };
-            // infura rate limit error
-            if let Some(seconds) = backoff_seconds.as_u64() {
-                return Some(Duration::from_secs(seconds));
-            }
-            if let Some(seconds) = backoff_seconds.as_f64() {
-                return Some(Duration::from_secs(seconds as u64 + 1));
+        if let ProviderError::JsonRpcClientError(err) = error {
+            let json_rpc_error = err.as_error_response();
+            if let Some(json_rpc_error) = json_rpc_error {
+                if let Some(data) = &json_rpc_error.data {
+                    // if daily rate limit exceeded, infura returns the requested backoff in the error
+                    // response
+                    let Some(backoff_seconds) = data.get("rate").and_then(|v| v.get("backoff_seconds")) else {
+                        return Some(DEFAULT_BACKOFF);
+                    };
+                    // infura rate limit error
+                    if let Some(seconds) = backoff_seconds.as_u64() {
+                        return Some(Duration::from_secs(seconds));
+                    }
+                    if let Some(seconds) = backoff_seconds.as_f64() {
+                        return Some(Duration::from_secs(seconds as u64 + 1));
+                    }
+                }
             }
         }
 

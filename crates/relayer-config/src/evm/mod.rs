@@ -1,4 +1,7 @@
+use core::fmt;
+
 use ethereum_types::Address;
+use url::Url;
 use webb_relayer_types::{private_key::PrivateKey, rpc_url::RpcUrl};
 
 use crate::{
@@ -20,7 +23,7 @@ pub struct EvmChainConfig {
     pub enabled: bool,
     /// Http(s) Endpoint for quick Req/Res
     #[serde(skip_serializing)]
-    pub http_endpoint: RpcUrl,
+    pub http_endpoint: HttpEndpoint,
     /// Websocket Endpoint for long living connections
     #[serde(skip_serializing)]
     pub ws_endpoint: RpcUrl,
@@ -71,6 +74,35 @@ pub struct EvmChainConfig {
     /// Block poller/listening configuration
     #[serde(skip_serializing, default)]
     pub block_poller: Option<BlockPollerConfig>,
+}
+
+/// configuration for adding http endpoints.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+pub enum HttpEndpoint {
+    /// Single http endpoint
+    Single(RpcUrl),
+    /// Multiple http endpoints
+    Multiple(Vec<RpcUrl>),
+}
+
+impl fmt::Display for HttpEndpoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            HttpEndpoint::Single(url) => write!(f, "{}", url),
+            HttpEndpoint::Multiple(urls) => {
+                let urls: Vec<String> =
+                    urls.iter().map(ToString::to_string).collect();
+                write!(f, "{}", urls.join(", "))
+            }
+        }
+    }
+}
+
+impl From<Url> for HttpEndpoint {
+    fn from(url: Url) -> Self {
+        HttpEndpoint::Single(url.into())
+    }
 }
 
 /// Linked anchor config for Evm based target system
