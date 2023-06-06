@@ -27,9 +27,6 @@ import child from 'child_process';
 import {
   WebbRelayer,
   Pallet,
-  SubstrateVAnchorExtData,
-  SubstrateVAnchorProofData,
-  SubstrateFeeInfo,
 } from '../../lib/webbRelayer.js';
 
 import { BigNumber, ethers } from 'ethers';
@@ -75,7 +72,7 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
       : {
           mode: 'host',
           nodePath: path.resolve(
-            '../..//protocol-substrat/release/webb-standalone-node'
+            '../../protocol-substrate/target/release/webb-standalone-node'
           ),
         };
     const enabledPallets: Pallet[] = [
@@ -102,7 +99,7 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
     });
 
     charlieNode = await LocalTangle.start({
-      name: 'dkg-charlie',
+      name: 'substrate-charlie',
       authority: 'charlie',
       usageMode,
       ports: 'auto',
