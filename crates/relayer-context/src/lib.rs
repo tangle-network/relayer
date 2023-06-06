@@ -120,7 +120,6 @@ impl RelayerContext {
         // Create a Map for all EVM Chains
         let mut evm_providers = HashMap::new();
         for (_, chain_config) in config.evm.iter() {
-            // match http endoint single or multiple
             let mut providers = Vec::new();
             match chain_config.http_endpoint.clone() {
                 webb_relayer_config::evm::HttpEndpoint::Single(rpc_url) => {
@@ -139,7 +138,7 @@ impl RelayerContext {
 
             let q_provider = QuorumProvider::builder()
                 .add_providers(providers)
-                .quorum(Quorum::Majority)
+                .quorum(Quorum::Weight(1))
                 .build();
             // Wrap the provider with a retry client.
             let retry_client = RetryClientBuilder::default()
