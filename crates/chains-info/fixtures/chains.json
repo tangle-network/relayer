@@ -14035,8 +14035,8 @@
     "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
     "infoURL": "https://webb.tools",
     "shortName": "athena",
-    "chainId": 5001,
-    "networkId": 5001,
+    "chainId": 3884533461,
+    "networkId": 3884533461,
     "status": "testnet",
     "explorers": [
       {
@@ -14054,8 +14054,8 @@
     "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
     "infoURL": "https://webb.tools",
     "shortName": "hermes",
-    "chainId": 5002,
-    "networkId": 5002,
+    "chainId": 3884533462,
+    "networkId": 3884533462,
     "status": "testnet",
     "explorers": [
       {
@@ -14073,8 +14073,8 @@
     "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
     "infoURL": "https://webb.tools",
     "shortName": "demeter",
-    "chainId": 5003,
-    "networkId": 5003,
+    "chainId": 3884533463,
+    "networkId": 3884533463,
     "status": "testnet",
     "explorers": [
       {
