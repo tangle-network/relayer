@@ -5,7 +5,7 @@ use std::time::Duration;
 use webb_relayer_config::block_poller::BlockPollerConfig;
 
 use webb::evm::ethers::{
-    providers::{self, Middleware},
+    providers::{self, Middleware, QuorumProvider},
     types::{Block, TxHash},
 };
 
@@ -91,7 +91,9 @@ pub trait BlockPoller {
     async fn run(
         &self,
         client: Arc<
-            providers::Provider<providers::RetryClient<providers::Http>>,
+            providers::Provider<
+                providers::RetryClient<QuorumProvider<providers::Http>>,
+            >,
         >,
         store: Arc<Self::Store>,
         listener_config: BlockPollerConfig,

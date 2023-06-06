@@ -128,14 +128,17 @@ describe('Vanchor Transaction relayer', function () {
       }
     );
 
+    const dummyEndpoint = 'http://127.0.0.1:1080';
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK1 },
+      httpEndpoints: [dummyEndpoint,localChain1.endpoint],
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge,
       proposalSigningBackend: { type: 'Mocked', privateKey: PK2 },
+      httpEndpoints: [dummyEndpoint,localChain2.endpoint],
     });
 
     // get the vanhor on localchain1

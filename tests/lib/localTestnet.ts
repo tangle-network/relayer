@@ -60,6 +60,7 @@ export type ExportedConfigOptions = {
   blockConfirmations?: number;
   privateKey?: string;
   smartAnchorUpdates?: SmartAnchorUpdatesConfig;
+  httpEndpoints?: string[];
 };
 
 // Default Events watcher for the contracts.
@@ -459,7 +460,7 @@ export class LocalChain {
     const chainInfo: FullChainInfo = {
       name: this.underlyingChainId.toString(),
       enabled: true,
-      httpEndpoint: this.endpoint,
+      httpEndpoint: opts.httpEndpoints ?? [this.endpoint],
       wsEndpoint: this.endpoint.replace('http', 'ws'),
       blockConfirmations: opts.blockConfirmations ?? 0,
       chainId: this.underlyingChainId,
@@ -476,7 +477,7 @@ export class LocalChain {
     const chainInfo: FullChainInfo = {
       name: this.underlyingChainId.toString(),
       enabled: true,
-      httpEndpoint: this.endpoint,
+      httpEndpoint: opts.httpEndpoints ?? [this.endpoint],
       wsEndpoint: this.endpoint.replace('http', 'ws'),
       blockConfirmations: opts.blockConfirmations ?? 1,
       chainId: this.underlyingChainId,
@@ -600,7 +601,7 @@ export class LocalChain {
 }
 
 export type FullChainInfo = ChainInfo & {
-  httpEndpoint: string;
+  httpEndpoint: string[];
   wsEndpoint: string;
   privateKey: string;
   blockConfirmations: number;

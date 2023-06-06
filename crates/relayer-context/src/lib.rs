@@ -45,7 +45,7 @@ use webb_relayer_utils::metric::{self, Metrics};
 mod ethers_retry_policy;
 use ethers_retry_policy::WebbHttpRetryPolicy;
 
-type EthersClient = Provider<RetryClient<Http>>;
+type EthersClient = Provider<RetryClient<QuorumProvider<Http>>>;
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
@@ -120,16 +120,35 @@ impl RelayerContext {
         // Create a Map for all EVM Chains
         let mut evm_providers = HashMap::new();
         for (_, chain_config) in config.evm.iter() {
-            let client = Http::new(chain_config.http_endpoint.clone());
+            let mut providers = Vec::new();
+            match chain_config.http_endpoint.clone() {
+                webb_relayer_config::evm::HttpEndpoint::Single(rpc_url) => {
+                    let client = Http::new(rpc_url);
+                    let provider = WeightedProvider::new(client);
+                    providers.push(provider);
+                }
+                webb_relayer_config::evm::HttpEndpoint::Multiple(rpc_urls) => {
+                    for rpc_url in rpc_urls {
+                        let client = Http::new(rpc_url);
+                        let provider = WeightedProvider::new(client);
+                        providers.push(provider);
+                    }
+                }
+            }
+
+            let q_provider = QuorumProvider::builder()
+                .add_providers(providers)
+                .quorum(Quorum::Weight(1))
+                .build();
             // Wrap the provider with a retry client.
             let retry_client = RetryClientBuilder::default()
                 .timeout_retries(u32::MAX)
                 .rate_limit_retries(u32::MAX)
-                .build(client, WebbHttpRetryPolicy::boxed());
+                .build(q_provider, WebbHttpRetryPolicy::boxed());
 
             let provider = Arc::new(Provider::new(retry_client));
-            evm_providers
-                .insert(chain_config.chain_id.into(), provider.clone());
+
+            evm_providers.insert(chain_config.chain_id.into(), provider);
         }
 
         Ok(Self {

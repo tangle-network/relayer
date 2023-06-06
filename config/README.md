@@ -327,10 +327,16 @@ The HTTP(s) RPC endpoint for this chain, used for watching events, and sending t
 - env: `WEBB_EVM_<CHAIN_NAME>_HTTP_ENDPOINT`
 
 Example:
-
+- Single Endpoint
 ```toml
 http-endpoint = "https://mainnet.infura.io/v3/<project-id>"
 ```
+
+- Multiple Endpoints
+```toml
+http-endpoint = ["https://mainnet.infura.io/v3/<project-id>","https://rpc.testnet.network"]
+```
+
 
 #### ws-endpoint
 

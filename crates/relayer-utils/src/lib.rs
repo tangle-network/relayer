@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
+use webb::evm::ethers::providers::QuorumProvider;
 use webb::{evm::ethers, substrate::subxt};
 use webb_proposals::ResourceId;
 
@@ -30,6 +31,9 @@ pub mod retry;
 /// type-erased StaticTxPayload for Substrate Transaction queue.
 pub mod static_tx_payload;
 
+type RetryClientProvider = ethers::providers::Provider<
+    ethers::providers::RetryClient<QuorumProvider<ethers::providers::Http>>,
+>;
 /// An enum of all possible errors that could be encountered during the execution of the Webb
 /// Relayer.
 #[derive(Debug, thiserror::Error)]
@@ -96,34 +100,17 @@ pub enum Error {
     /// Smart contract error.
     #[error(transparent)]
     EthersContractCallWithRetry(
-        #[from]
-        ethers::contract::ContractError<
-            ethers::providers::Provider<
-                ethers::providers::RetryClient<ethers::providers::Http>,
-            >,
-        >,
+        #[from] ethers::contract::ContractError<RetryClientProvider>,
     ),
     /// Smart contract error.
     #[error(transparent)]
     EthersContractCallWithRetryCloneable(
-        #[from]
-        ethers::contract::ContractError<
-            Arc<
-                ethers::providers::Provider<
-                    ethers::providers::RetryClient<ethers::providers::Http>,
-                >,
-            >,
-        >,
+        #[from] ethers::contract::ContractError<Arc<RetryClientProvider>>,
     ),
     /// Ethers Timelag provider error.
     #[error(transparent)]
     EthersTimelagRetryClientError(
-        #[from]
-        ethers::middleware::timelag::TimeLagError<
-            ethers::providers::Provider<
-                ethers::providers::RetryClient<ethers::providers::Http>,
-            >,
-        >,
+        #[from] ethers::middleware::timelag::TimeLagError<RetryClientProvider>,
     ),
 
     /// Ethers Timelag provider error.
@@ -131,11 +118,7 @@ pub enum Error {
     EthersTimelagRetryClientClonableError(
         #[from]
         ethers::middleware::timelag::TimeLagError<
-            std::sync::Arc<
-                ethers::providers::Provider<
-                    ethers::providers::RetryClient<ethers::providers::Http>,
-                >,
-            >,
+            std::sync::Arc<RetryClientProvider>,
         >,
     ),
 
@@ -144,11 +127,7 @@ pub enum Error {
     EthersContractCallWithTimeLagRetryClient(
         #[from]
         ethers::contract::ContractError<
-            ethers::middleware::timelag::TimeLag<
-                ethers::providers::Provider<
-                    ethers::providers::RetryClient<ethers::providers::Http>,
-                >,
-            >,
+            ethers::middleware::timelag::TimeLag<RetryClientProvider>,
         >,
     ),
 
@@ -157,13 +136,7 @@ pub enum Error {
     EthersContractCallWithTimeLagRetryClientCloneable(
         #[from]
         ethers::contract::ContractError<
-            ethers::middleware::timelag::TimeLag<
-                Arc<
-                    ethers::providers::Provider<
-                        ethers::providers::RetryClient<ethers::providers::Http>,
-                    >,
-                >,
-            >,
+            ethers::middleware::timelag::TimeLag<Arc<RetryClientProvider>>,
         >,
     ),
 
