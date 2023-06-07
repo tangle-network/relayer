@@ -45,7 +45,7 @@ Chai.use(ChaiAsPromised);
 
 // FIXME: This test is currently broken. It needs to be fixed.
 // The node hangs at 30 blocks and does not proceed further.
-describe.skip('SignatureBridge Governor Updates', function() {
+describe.skip('SignatureBridge Governor Updates', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -65,11 +65,11 @@ describe.skip('SignatureBridge Governor Updates', function() {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../tangle/target/release/tangle-standalone'
-        ),
-      };
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../tangle/target/release/tangle-standalone'
+          ),
+        };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'DKGProposalHandler',

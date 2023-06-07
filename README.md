@@ -178,7 +178,7 @@ api-key = "$POLYGONSCAN_MAINNET_API_KEY"
 
 | Field           | Description                                                                                                                        | Optionality            |
 | --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `http-endpoint` | Http(s) Endpoint for quick Req/Res                                                                                                 | Required               |
+| `http-endpoint` | Http(s) Endpoint for quick Req/Res. Input can be single http-endpoint or array of multiple http-endpoints.                                                                                                | Required               |
 | `ws-endpoint`   | Websocket Endpoint for long living connections                                                                                     | Required               |
 | `name`          | The Chain/Node name                                                                                                                | Required               |
 | `explorer`      | Block explorer, used for generating clickable links for transactions that happens on this chain.                                   | Optional               |

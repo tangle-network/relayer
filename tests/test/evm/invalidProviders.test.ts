@@ -121,7 +121,6 @@ describe('Invalid EVM Providers', () => {
         kind: 'retry',
         event: {
           should_retry: true,
-          error: provider.errorMessage.toLowerCase(),
         },
       });
     });

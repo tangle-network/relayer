@@ -56,17 +56,65 @@ fn should_retry_json_rpc_error(err: &JsonRpcError) -> bool {
     }
 }
 
+// check json rpc error in serde error
+fn should_retry_json_rpc_error_from_serde(
+    err: &serde_json::Error,
+    err_regex: regex::Regex,
+) -> bool {
+    // some providers send invalid JSON RPC in the error case (no `id:u64`), but the
+    // text should be a `JsonRpcError`
+    #[derive(serde::Deserialize)]
+    struct Resp {
+        error: JsonRpcError,
+    }
+
+    if let Ok(resp) = serde_json::from_str::<Resp>(&err.to_string()) {
+        return should_retry_json_rpc_error(&resp.error);
+    }
+
+    let err_text = err.to_string().to_lowercase();
+
+    // last resort, some providers send the error message in the text
+    // and the text itself is not a valid json response either.
+    // check if we have the word "rate", or "limit" in the error message
+    // and if so, we should retry
+
+    let should_retry = err_regex.is_match(&err_text)
+        || matches!(err_text.as_str(), "expected value at line 1 column 1");
+
+    tracing::event!(
+        target: webb_relayer_utils::probe::TARGET,
+        tracing::Level::DEBUG,
+        kind = %webb_relayer_utils::probe::Kind::Retry,
+        should_retry = should_retry,
+        error = %err_text,
+    );
+    should_retry
+}
+
 impl RetryPolicy<ProviderError> for WebbHttpRetryPolicy {
     fn should_retry(&self, error: &ProviderError) -> bool {
+        tracing::debug!("should_retry: {:?}", error);
         match error {
             ProviderError::HTTPError(err) => {
                 err.status() == Some(http::StatusCode::TOO_MANY_REQUESTS)
             }
             ProviderError::JsonRpcClientError(err) => {
-                match err.as_error_response() {
-                    Some(e) => should_retry_json_rpc_error(e),
-                    None => false,
+                if let Some(e) = err.as_error_response() {
+                    return should_retry_json_rpc_error(e);
+                };
+
+                tracing::debug!("Error source: {:?}", err.source());
+                if let Some(e) = err.as_serde_error() {
+                    // let new_err = SerdeJson::from(err).into();
+                    tracing::debug!("Serede error: {:?}", e);
+                    return should_retry_json_rpc_error_from_serde(
+                        e,
+                        self.err_regex.clone(),
+                    );
                 }
+
+                false
             }
             ProviderError::EnsError(_) => true,
             ProviderError::EnsNotOwned(_) => true,
@@ -77,32 +125,10 @@ impl RetryPolicy<ProviderError> for WebbHttpRetryPolicy {
             ProviderError::SignerUnavailable => false,
 
             ProviderError::SerdeJson(err) => {
-                // some providers send invalid JSON RPC in the error case (no `id:u64`), but the
-                // text should be a `JsonRpcError`
-                #[derive(serde::Deserialize)]
-                struct Resp {
-                    error: JsonRpcError,
-                }
-
-                if let Ok(resp) = serde_json::from_str::<Resp>(&err.to_string())
-                {
-                    return should_retry_json_rpc_error(&resp.error);
-                }
-
-                let err_text = err.to_string().to_lowercase();
-                // last resort, some providers send the error message in the text
-                // and the text itself is not a valid json response either.
-                // check if we have the word "rate", or "limit" in the error message
-                // and if so, we should retry
-                let should_retry = self.err_regex.is_match(&err_text);
-                tracing::event!(
-                    target: webb_relayer_utils::probe::TARGET,
-                    tracing::Level::DEBUG,
-                    kind = %webb_relayer_utils::probe::Kind::Retry,
-                    should_retry = should_retry,
-                    error = %err_text,
-                );
-                should_retry
+                should_retry_json_rpc_error_from_serde(
+                    err,
+                    self.err_regex.clone(),
+                )
             }
         }
     }

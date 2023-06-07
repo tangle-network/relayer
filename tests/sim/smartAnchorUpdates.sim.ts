@@ -72,7 +72,7 @@ type SimulationMetrics = {
   totalWaitTimeToRelayAllRoots: number;
 };
 
-describe('Smart Anchor Updates Simulation', function() {
+describe('Smart Anchor Updates Simulation', function () {
   // Disable mocha time-out because these tests take a long time.
   this.timeout(0);
   this.slow(Number.MAX_SAFE_INTEGER);
