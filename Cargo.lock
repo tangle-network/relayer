@@ -9448,10 +9448,12 @@ name = "webb-relayer-utils"
 version = "0.1.0"
 dependencies = [
  "ark-std",
+ "async-trait",
  "axum",
  "backoff",
  "config",
  "derive_more",
+ "futures",
  "glob",
  "hex",
  "hyper 0.14.25",
@@ -9465,6 +9467,7 @@ dependencies = [
  "serde_path_to_error",
  "sled",
  "thiserror",
+ "tokio 1.28.1",
  "url",
  "webb 0.5.24",
  "webb-proposals",

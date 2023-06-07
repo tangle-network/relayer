@@ -13,21 +13,20 @@
 // limitations under the License.
 
 use tokio::sync::Mutex;
-use webb::evm::ethers::{prelude::TimeLag, providers::QuorumProvider};
-use webb_relayer_utils::retry;
+use webb::evm::ethers::prelude::TimeLag;
+use webb_relayer_utils::{multi_provider::MultiProvider, retry};
 
 use super::*;
 
 /// Ethereum client using Ethers, that includes a retry strategy.
-pub type EthersClient = providers::Provider<
-    providers::RetryClient<QuorumProvider<providers::Http>>,
->;
+pub type EthersClient =
+    providers::Provider<providers::RetryClient<MultiProvider<providers::Http>>>;
 
 /// Ethereum TimeLag client using Ethers, that includes a retry strategy.
 pub type EthersTimeLagClient = TimeLag<
     Arc<
         providers::Provider<
-            providers::RetryClient<QuorumProvider<providers::Http>>,
+            providers::RetryClient<MultiProvider<providers::Http>>,
         >,
     >,
 >;

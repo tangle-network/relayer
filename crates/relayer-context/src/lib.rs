@@ -18,7 +18,6 @@
 //! A module for managing the context of the relayer.
 use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
-
 use tokio::sync::{broadcast, Mutex};
 
 use webb::evm::ethers;
@@ -44,8 +43,9 @@ use webb_relayer_utils::metric::{self, Metrics};
 
 mod ethers_retry_policy;
 use ethers_retry_policy::WebbHttpRetryPolicy;
+use webb_relayer_utils::multi_provider::MultiProvider;
 
-type EthersClient = Provider<RetryClient<QuorumProvider<Http>>>;
+type EthersClient = Provider<RetryClient<MultiProvider<Http>>>;
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
@@ -123,28 +123,23 @@ impl RelayerContext {
             let mut providers = Vec::new();
             match chain_config.http_endpoint.clone() {
                 webb_relayer_config::evm::HttpEndpoint::Single(rpc_url) => {
-                    let client = Http::new(rpc_url);
-                    let provider = WeightedProvider::new(client);
+                    let provider = Arc::new(Http::new(rpc_url));
                     providers.push(provider);
                 }
                 webb_relayer_config::evm::HttpEndpoint::Multiple(rpc_urls) => {
-                    for rpc_url in rpc_urls {
-                        let client = Http::new(rpc_url);
-                        let provider = WeightedProvider::new(client);
+                    rpc_urls.iter().for_each(|rpc_url| {
+                        let provider = Arc::new(Http::new(rpc_url.clone()));
                         providers.push(provider);
-                    }
+                    });
                 }
             }
 
-            let q_provider = QuorumProvider::builder()
-                .add_providers(providers)
-                .quorum(Quorum::Weight(1))
-                .build();
+            let multi_provider = MultiProvider::new(providers);
             // Wrap the provider with a retry client.
             let retry_client = RetryClientBuilder::default()
                 .timeout_retries(u32::MAX)
                 .rate_limit_retries(u32::MAX)
-                .build(q_provider, WebbHttpRetryPolicy::boxed());
+                .build(multi_provider, WebbHttpRetryPolicy::boxed());
 
             let provider = Arc::new(Provider::new(retry_client));
 

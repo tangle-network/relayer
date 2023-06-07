@@ -16,7 +16,7 @@ use std::sync::Arc;
 
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use webb::evm::ethers::providers::QuorumProvider;
+use multi_provider::MultiProvider;
 use webb::{evm::ethers, substrate::subxt};
 use webb_proposals::ResourceId;
 
@@ -24,6 +24,8 @@ pub mod clickable_link;
 
 /// Metrics functionality
 pub mod metric;
+/// Multi provider for ethers.
+pub mod multi_provider;
 /// A module used for debugging relayer lifecycle, sync state, or other relayer state.
 pub mod probe;
 /// Retry functionality
@@ -32,7 +34,7 @@ pub mod retry;
 pub mod static_tx_payload;
 
 type RetryClientProvider = ethers::providers::Provider<
-    ethers::providers::RetryClient<QuorumProvider<ethers::providers::Http>>,
+    ethers::providers::RetryClient<MultiProvider<ethers::providers::Http>>,
 >;
 /// An enum of all possible errors that could be encountered during the execution of the Webb
 /// Relayer.
@@ -234,6 +236,9 @@ pub enum Error {
     /// are missing.
     #[error("Missing Substrate Static Transaction Validation Details")]
     MissingValidationDetails,
+    /// Provider not found error.
+    #[error("Provider not found for index {0}")]
+    ProviderNotFound(usize),
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.
