@@ -1,7 +1,7 @@
 # Block which represents properties for a network
 [evm.optimismtestnet]
 name = "optimismtestnet"
-# Http(s) Endpoint for quick Req/Res
+# Http(s) Endpoint for quick Req/Res. Input can be single http-endpoint or array of multiple http-endpoints.
 http-endpoint = "$OPTIMISM_TESTNET_HTTPS_URL"
 # Websocket Endpoint for long living connections
 ws-endpoint = "$OPTIMISM_TESTNET_WSS_URL"

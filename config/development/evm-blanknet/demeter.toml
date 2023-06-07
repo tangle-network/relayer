@@ -2,7 +2,7 @@
 [evm.demeter]
 # The name that the chain is indexed on, for linkable anchors
 name = "demeter"
-# Http(s) Endpoint for quick Req/Res
+# Http(s) Endpoint for quick Req/Res. Input can be single http-endpoint or array of multiple http-endpoints.
 http-endpoint = "http://localhost:5003"
 # Websocket Endpoint for long living connections
 ws-endpoint = "ws://localhost:5003"

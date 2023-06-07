@@ -10,12 +10,12 @@ use webb::evm::ethers::providers::{JsonRpcClient, ProviderError};
 /// MultiProvider is a JsonRpcClient that will round-robin requests to the underlying providers.
 #[derive(Debug, Clone)]
 pub struct MultiProvider<P> {
-    providers: Vec<Arc<P>>,
+    providers: Arc<Vec<P>>,
     last_used: Arc<AtomicUsize>,
 }
 
 impl<P> MultiProvider<P> {
-    pub fn new(providers: Vec<Arc<P>>) -> Self {
+    pub fn new(providers: Arc<Vec<P>>) -> Self {
         Self {
             providers,
             last_used: Default::default(),
@@ -72,7 +72,7 @@ mod tests {
         let p1 = Http::from_str("https://eth.llamarpc.com").unwrap();
         let p2 = Http::from_str("https://1rpc.io/eth").unwrap();
 
-        let multi_provider = MultiProvider::new(vec![p1.into(), p2.into()]);
+        let multi_provider = MultiProvider::new(vec![p1, p2].into());
         assert_eq!(multi_provider.providers.len(), 2);
         assert_eq!(multi_provider.last_used.load(Ordering::SeqCst), 0);
         let provider = providers::Provider::new(multi_provider.clone());

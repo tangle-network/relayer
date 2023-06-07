@@ -123,18 +123,18 @@ impl RelayerContext {
             let mut providers = Vec::new();
             match chain_config.http_endpoint.clone() {
                 webb_relayer_config::evm::HttpEndpoint::Single(rpc_url) => {
-                    let provider = Arc::new(Http::new(rpc_url));
+                    let provider = Http::new(rpc_url);
                     providers.push(provider);
                 }
                 webb_relayer_config::evm::HttpEndpoint::Multiple(rpc_urls) => {
                     rpc_urls.iter().for_each(|rpc_url| {
-                        let provider = Arc::new(Http::new(rpc_url.clone()));
+                        let provider = Http::new(rpc_url.clone());
                         providers.push(provider);
                     });
                 }
             }
 
-            let multi_provider = MultiProvider::new(providers);
+            let multi_provider = MultiProvider::new(Arc::new(providers));
             // Wrap the provider with a retry client.
             let retry_client = RetryClientBuilder::default()
                 .timeout_retries(u32::MAX)
