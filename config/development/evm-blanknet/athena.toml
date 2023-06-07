@@ -2,7 +2,7 @@
 [evm.athena]
 # The name that the chain is indexed on, for linkable anchors
 name = "athena"
-# Http(s) Endpoint for quick Req/Res
+# Http(s) Endpoint for quick Req/Res. Input can be single http-endpoint or array of multiple http-endpoints.
 http-endpoint = "http://localhost:5002"
 # Websocket Endpoint for long living connections
 ws-endpoint = "ws://localhost:5002"

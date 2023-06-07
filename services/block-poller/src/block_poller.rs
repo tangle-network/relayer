@@ -2,10 +2,11 @@ use futures::prelude::*;
 use std::cmp;
 use std::sync::Arc;
 use std::time::Duration;
+use webb_relayer::service::evm::Client;
 use webb_relayer_config::block_poller::BlockPollerConfig;
 
 use webb::evm::ethers::{
-    providers::{self, Middleware},
+    providers::Middleware,
     types::{Block, TxHash},
 };
 
@@ -90,9 +91,7 @@ pub trait BlockPoller {
     )]
     async fn run(
         &self,
-        client: Arc<
-            providers::Provider<providers::RetryClient<providers::Http>>,
-        >,
+        client: Arc<Client>,
         store: Arc<Self::Store>,
         listener_config: BlockPollerConfig,
         handlers: Vec<BlockPollingHandlerFor<Self>>,

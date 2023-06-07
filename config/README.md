@@ -320,17 +320,23 @@ chain-id = 1
 
 #### http-endpoint
 
-The HTTP(s) RPC endpoint for this chain, used for watching events, and sending transactions.
+The HTTP(s) RPC endpoint for this chain, used for watching events, and sending transactions. Input can be single http-endpoint or array of multiple http-endpoints.
 
-- Type: `string`
+- Type: `string | string[]`
 - Required: `true`
 - env: `WEBB_EVM_<CHAIN_NAME>_HTTP_ENDPOINT`
 
 Example:
-
+- Single Endpoint
 ```toml
 http-endpoint = "https://mainnet.infura.io/v3/<project-id>"
 ```
+
+- Multiple Endpoints
+```toml
+http-endpoint = ["https://mainnet.infura.io/v3/<project-id>","https://rpc.testnet.network"]
+```
+
 
 #### ws-endpoint
 

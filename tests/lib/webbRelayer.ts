@@ -351,7 +351,6 @@ export class WebbRelayer {
     return txHashOrReject(ws, cmd);
   }
 
- 
   public async substrateVAnchorWithdraw(
     chainId: number,
     id: number,
@@ -749,26 +748,26 @@ type NetworkMessage = {
   kind: 'network';
 } & {
   network:
-  | 'connecting'
-  | 'connected'
-  | { failed: { reason: string } }
-  | 'disconnected'
-  | 'unsupportedContract'
-  | 'unsupportedChain'
-  | 'invalidRelayerAddress';
+    | 'connecting'
+    | 'connected'
+    | { failed: { reason: string } }
+    | 'disconnected'
+    | 'unsupportedContract'
+    | 'unsupportedChain'
+    | 'invalidRelayerAddress';
 };
 
 type WithdrawMessage = {
   kind: 'withdraw';
 } & {
   withdraw:
-  | 'sent'
-  | { submitted: { txHash: string } }
-  | { finalized: { txHash: string } }
-  | 'valid'
-  | 'invalidMerkleRoots'
-  | 'droppedFromMemPool'
-  | { errored: { code: number; reason: string } };
+    | 'sent'
+    | { submitted: { txHash: string } }
+    | { finalized: { txHash: string } }
+    | 'valid'
+    | 'invalidMerkleRoots'
+    | 'droppedFromMemPool'
+    | { errored: { code: number; reason: string } };
 };
 
 type ErrorMessage = {

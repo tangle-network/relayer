@@ -1,6 +1,6 @@
 [evm.sepolia]
 name = "sepolia"
-# Http(s) Endpoint for quick Req/Res
+# Http(s) Endpoint for quick Req/Res. Input can be single http-endpoint or array of multiple http-endpoints.
 http-endpoint = "$SEPOLIA_HTTPS_URL"
 # Websocket Endpoint for long living connections
 ws-endpoint = "$SEPOLIA_WSS_URL"

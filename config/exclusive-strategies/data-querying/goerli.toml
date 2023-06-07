@@ -1,6 +1,6 @@
 [evm.goerli]
 name = "goerli"
-# Http(s) Endpoint for quick Req/Res
+# Http(s) Endpoint for quick Req/Res. Input can be single http-endpoint or array of multiple http-endpoints.
 http-endpoint = "$GOERLI_HTTPS_URL"
 # Websocket Endpoint for long living connections
 ws-endpoint = "$GOERLI_WSS_URL"

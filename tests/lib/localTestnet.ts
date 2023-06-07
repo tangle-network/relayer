@@ -60,6 +60,7 @@ export type ExportedConfigOptions = {
   blockConfirmations?: number;
   privateKey?: string;
   smartAnchorUpdates?: SmartAnchorUpdatesConfig;
+  httpEndpoints?: string[];
 };
 
 // Default Events watcher for the contracts.
@@ -459,7 +460,7 @@ export class LocalChain {
     const chainInfo: FullChainInfo = {
       name: this.underlyingChainId.toString(),
       enabled: true,
-      httpEndpoint: this.endpoint,
+      httpEndpoint: opts.httpEndpoints ?? [this.endpoint],
       wsEndpoint: this.endpoint.replace('http', 'ws'),
       blockConfirmations: opts.blockConfirmations ?? 0,
       chainId: this.underlyingChainId,
@@ -476,7 +477,7 @@ export class LocalChain {
     const chainInfo: FullChainInfo = {
       name: this.underlyingChainId.toString(),
       enabled: true,
-      httpEndpoint: this.endpoint,
+      httpEndpoint: opts.httpEndpoints ?? [this.endpoint],
       wsEndpoint: this.endpoint.replace('http', 'ws'),
       blockConfirmations: opts.blockConfirmations ?? 1,
       chainId: this.underlyingChainId,
@@ -543,15 +544,15 @@ export class LocalChain {
           'proposal-signing-backend':
             contract.proposalSigningBackend?.type === 'Mocked'
               ? {
-                type: 'Mocked',
-                'private-key': contract.proposalSigningBackend?.privateKey,
-              }
+                  type: 'Mocked',
+                  'private-key': contract.proposalSigningBackend?.privateKey,
+                }
               : contract.proposalSigningBackend?.type === 'DKGNode'
-                ? {
+              ? {
                   type: 'DKGNode',
                   'chain-id': contract.proposalSigningBackend?.chainId,
                 }
-                : undefined,
+              : undefined,
           'events-watcher': {
             enabled: contract.eventsWatcher.enabled,
             'polling-interval': contract.eventsWatcher.pollingInterval,
@@ -570,18 +571,18 @@ export class LocalChain {
             (anchor: LinkedAnchor) =>
               anchor.type === 'Evm'
                 ? {
-                  'chain-id': anchor.chainId,
-                  type: 'Evm',
-                  address: anchor.address,
-                }
+                    'chain-id': anchor.chainId,
+                    type: 'Evm',
+                    address: anchor.address,
+                  }
                 : anchor.type === 'Substrate'
-                  ? {
+                ? {
                     type: 'Substrate',
                     'chain-id': anchor.chainId,
                     'tree-id': anchor.treeId,
                     pallet: anchor.pallet,
                   }
-                  : {
+                : {
                     type: 'Raw',
                     'resource-id': anchor.resourceId,
                   }
@@ -600,7 +601,7 @@ export class LocalChain {
 }
 
 export type FullChainInfo = ChainInfo & {
-  httpEndpoint: string;
+  httpEndpoint: string[];
   wsEndpoint: string;
   privateKey: string;
   blockConfirmations: number;
