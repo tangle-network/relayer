@@ -2300,8 +2300,8 @@ dependencies = [
  "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "webb 0.5.21",
  "webb-proposals",
- "webb-relayer-types 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
- "webb-relayer-utils 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
+ "webb-relayer-types 0.1.0",
+ "webb-relayer-utils 0.1.0",
 ]
 
 [[package]]
@@ -2447,7 +2447,7 @@ dependencies = [
  "warp",
  "webb 0.5.21",
  "webb-proposals",
- "webb-relayer-utils 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
+ "webb-relayer-utils 0.1.0",
 ]
 
 [[package]]
@@ -8931,7 +8931,7 @@ dependencies = [
 
 [[package]]
 name = "webb-block-poller"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8949,12 +8949,12 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-bridge-registry-backends"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "ethereum-types 0.14.1",
@@ -8968,12 +8968,12 @@ dependencies = [
  "webb 0.5.24",
  "webb-proposals",
  "webb-relayer-config",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-chains-info"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "prettyplease 0.2.4",
@@ -9012,7 +9012,7 @@ dependencies = [
 
 [[package]]
 name = "webb-event-watcher-traits"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "backoff",
@@ -9028,12 +9028,12 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-ew-dkg"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "ethereum-types 0.14.1",
@@ -9047,12 +9047,12 @@ dependencies = [
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-ew-evm"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "ark-bls12-381",
  "ark-bn254",
@@ -9077,12 +9077,12 @@ dependencies = [
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-ew-substrate"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "hex",
@@ -9100,8 +9100,8 @@ dependencies = [
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
@@ -9138,13 +9138,13 @@ dependencies = [
  "webb-relayer-store",
  "webb-relayer-tx-queue",
  "webb-relayer-tx-relay",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-price-oracle-backends"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -9158,7 +9158,7 @@ dependencies = [
  "webb 0.5.24",
  "webb-chains-info",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
@@ -9184,7 +9184,7 @@ dependencies = [
 
 [[package]]
 name = "webb-proposal-signing-backends"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "async-trait",
  "ethereum-types 0.14.1",
@@ -9203,8 +9203,8 @@ dependencies = [
  "webb 0.5.24",
  "webb-proposals",
  "webb-relayer-store",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
@@ -9225,7 +9225,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer"
-version = "0.5.0-dev"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "axum",
@@ -9257,12 +9257,12 @@ dependencies = [
  "webb-relayer-handlers",
  "webb-relayer-store",
  "webb-relayer-tx-queue",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-relayer-config"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "anyhow",
  "config",
@@ -9283,13 +9283,13 @@ dependencies = [
  "webb 0.5.24",
  "webb-proposals",
  "webb-relayer-store",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-relayer-context"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "http",
  "native-tls",
@@ -9303,12 +9303,12 @@ dependencies = [
  "webb-price-oracle-backends",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-relayer-handler-utils"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "native-tls",
  "serde",
@@ -9319,7 +9319,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-handlers"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "axum",
  "axum-client-ip",
@@ -9339,12 +9339,12 @@ dependencies = [
  "webb-relayer-handler-utils",
  "webb-relayer-store",
  "webb-relayer-tx-relay",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-relayer-store"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "hex",
  "native-tls",
@@ -9356,12 +9356,12 @@ dependencies = [
  "tracing",
  "webb 0.5.24",
  "webb-proposals",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-relayer-tx-queue"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "backoff",
  "ethereum-types 0.14.1",
@@ -9379,13 +9379,13 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-relayer-tx-relay"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "chrono",
  "ethereum-types 0.14.1",
@@ -9403,29 +9403,15 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-handler-utils",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0",
 ]
 
 [[package]]
 name = "webb-relayer-tx-relay-utils"
-version = "0.1.0"
+version = "0.5.0"
 dependencies = [
  "native-tls",
  "serde",
-]
-
-[[package]]
-name = "webb-relayer-types"
-version = "0.1.0"
-dependencies = [
- "ethereum-types 0.14.1",
- "native-tls",
- "serde",
- "sp-core",
- "tiny-bip39",
- "tracing",
- "url",
- "webb 0.5.24",
 ]
 
 [[package]]
@@ -9444,8 +9430,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb-relayer-types"
+version = "0.5.0"
+dependencies = [
+ "ethereum-types 0.14.1",
+ "native-tls",
+ "serde",
+ "sp-core",
+ "tiny-bip39",
+ "tracing",
+ "url",
+ "webb 0.5.24",
+]
+
+[[package]]
 name = "webb-relayer-utils"
 version = "0.1.0"
+source = "git+https://github.com/webb-tools/relayer.git#1e7bb7f51cf666eedd4df18a922694cdf8f88ed4"
+dependencies = [
+ "ark-std",
+ "axum",
+ "backoff",
+ "config",
+ "derive_more",
+ "glob",
+ "hex",
+ "hyper 0.14.25",
+ "libsecp256k1",
+ "prometheus 0.13.3",
+ "reqwest",
+ "serde_json",
+ "serde_path_to_error",
+ "sled",
+ "thiserror",
+ "url",
+ "webb 0.5.21",
+ "webb-proposals",
+]
+
+[[package]]
+name = "webb-relayer-utils"
+version = "0.5.0"
 dependencies = [
  "ark-std",
  "async-trait",
@@ -9470,31 +9495,6 @@ dependencies = [
  "tokio 1.28.1",
  "url",
  "webb 0.5.24",
- "webb-proposals",
-]
-
-[[package]]
-name = "webb-relayer-utils"
-version = "0.1.0"
-source = "git+https://github.com/webb-tools/relayer.git#1e7bb7f51cf666eedd4df18a922694cdf8f88ed4"
-dependencies = [
- "ark-std",
- "axum",
- "backoff",
- "config",
- "derive_more",
- "glob",
- "hex",
- "hyper 0.14.25",
- "libsecp256k1",
- "prometheus 0.13.3",
- "reqwest",
- "serde_json",
- "serde_path_to_error",
- "sled",
- "thiserror",
- "url",
- "webb 0.5.21",
  "webb-proposals",
 ]
 
