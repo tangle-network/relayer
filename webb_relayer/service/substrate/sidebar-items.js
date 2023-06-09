@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["build_web_services","ignite","start_dkg_pallet_watcher","start_dkg_proposal_handler","start_substrate_signature_bridge_events_watcher","start_substrate_vanchor_event_watcher","start_tx_queue"],"type":["TangleClient"]};

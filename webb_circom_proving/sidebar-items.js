@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ProofError"],"fn":["circom_from_folder","circom_from_raw","generate_proof","verify_proof"],"struct":["ProverPath"]};

@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"webb_relayer_utils":[["impl TxPayload for <a class=\"struct\" href=\"webb_relayer_utils/static_tx_payload/struct.TypeErasedStaticTxPayload.html\" title=\"struct webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload\">TypeErasedStaticTxPayload</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

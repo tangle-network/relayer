@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["PACKAGE_ID"],"fn":["create_store","load_config","setup_logger"],"struct":["Opts"]};

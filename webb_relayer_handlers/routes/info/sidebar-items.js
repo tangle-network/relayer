@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["handle_relayer_info"],"struct":["BuildInfo","RelayerConfig","RelayerInformationResponse"]};

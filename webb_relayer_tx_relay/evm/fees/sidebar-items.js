@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_evm_fee_info"],"struct":["EvmFeeInfo"]};

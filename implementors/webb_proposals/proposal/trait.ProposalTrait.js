@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"webb_proposal_signing_backends":[["impl ProposalTrait for <a class=\"struct\" href=\"webb_proposal_signing_backends/queue/struct.QueuedAnchorUpdateProposal.html\" title=\"struct webb_proposal_signing_backends::queue::QueuedAnchorUpdateProposal\">QueuedAnchorUpdateProposal</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"webb_ew_evm":[["impl EventWatcher for <a class=\"struct\" href=\"webb_ew_evm/signature_bridge_watcher/struct.SignatureBridgeContractWatcher.html\" title=\"struct webb_ew_evm::signature_bridge_watcher::SignatureBridgeContractWatcher\">SignatureBridgeContractWatcher</a>"],["impl EventWatcher for <a class=\"struct\" href=\"webb_ew_evm/struct.VAnchorContractWatcher.html\" title=\"struct webb_ew_evm::VAnchorContractWatcher\">VAnchorContractWatcher</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

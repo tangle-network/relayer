@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["FiatCurrency"],"struct":["CachedPriceBackend","CoinGeckoBackend","DummyPriceBackend","PriceOracleMerger"],"trait":["PriceBackend"]};

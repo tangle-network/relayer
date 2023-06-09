@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["handle_cmd","handle_evm_fee_info","handle_socket_info","handle_substrate_fee_info","handle_text","websocket_handler"],"mod":["routes"]};

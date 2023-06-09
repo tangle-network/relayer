@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"struct":["AnchorRelayTransaction","ExtData","ProofData","VAnchorRelayTransaction"]};

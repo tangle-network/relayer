@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["get_substrate_fee_info"],"struct":["SubstrateFeeInfo"]};

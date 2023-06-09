@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"trait":["BridgeWatcher","EventHandler","EventHandlerWithRetry","EventWatcher","WatchableContract"],"type":["EthersClient","EthersTimeLagClient","EventHandlerFor"]};

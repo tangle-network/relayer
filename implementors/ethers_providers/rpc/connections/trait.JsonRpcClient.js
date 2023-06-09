@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"webb_relayer_utils":[["impl&lt;P: JsonRpcClient&gt; JsonRpcClient for <a class=\"struct\" href=\"webb_relayer_utils/multi_provider/struct.MultiProvider.html\" title=\"struct webb_relayer_utils::multi_provider::MultiProvider\">MultiProvider</a>&lt;P&gt;<span class=\"where fmt-newline\">where\n    P::Error: <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/convert/trait.Into.html\" title=\"trait core::convert::Into\">Into</a>&lt;ProviderError&gt;,</span>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

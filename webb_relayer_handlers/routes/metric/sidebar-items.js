@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["handle_evm_metric_info","handle_metric_info","handle_substrate_metric_info"],"struct":["ResourceMetricResponse"]};

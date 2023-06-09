@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Pallet"],"struct":["DKGPalletConfig","DKGProposalHandlerPalletConfig","DKGProposalsPalletConfig","SignatureBridgePalletConfig","SubstrateConfig","SubstrateLinkedAnchorConfig","VAnchorBn254PalletConfig"]};

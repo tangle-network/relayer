@@ -1,0 +1,3 @@
+(function() {var implementors = {
+"webb_relayer_utils":[["impl&lt;CallData: Encode&gt; <a class=\"trait\" href=\"https://doc.rust-lang.org/nightly/core/convert/trait.TryFrom.html\" title=\"trait core::convert::TryFrom\">TryFrom</a>&lt;StaticTxPayload&lt;CallData&gt;&gt; for <a class=\"struct\" href=\"webb_relayer_utils/static_tx_payload/struct.TypeErasedStaticTxPayload.html\" title=\"struct webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload\">TypeErasedStaticTxPayload</a>"]]
+};if (window.register_implementors) {window.register_implementors(implementors);} else {window.pending_implementors = implementors;}})()

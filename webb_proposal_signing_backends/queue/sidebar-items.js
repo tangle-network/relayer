@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["run"],"mod":["mem","policy"],"struct":["QueuedAnchorUpdateProposal","QueuedProposalMetadata"],"trait":["ProposalHash","ProposalMetadata","ProposalsQueue"]};

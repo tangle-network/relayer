@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["handle_evm_tx"],"mod":["fees","vanchor"]};
