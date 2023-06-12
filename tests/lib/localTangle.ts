@@ -123,8 +123,9 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
   // get chainId
   public async getChainId(): Promise<number> {
     const api = await super.api();
-    const chainId = api.consts.linkableTreeBn254.chainIdentifier.toNumber();
-    return chainId;
+    const chainId =
+      api.consts.linkableTreeArkworksBn254!.chainIdentifier!.toString();
+    return Number(chainId);
   }
 
   public async exportConfig(
@@ -198,31 +199,31 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
           'proposal-signing-backend':
             c.proposalSigningBackend?.type === 'Mocked'
               ? {
-                  type: 'Mocked',
-                  'private-key': c.proposalSigningBackend?.privateKey,
-                }
+                type: 'Mocked',
+                'private-key': c.proposalSigningBackend?.privateKey,
+              }
               : c.proposalSigningBackend?.type === 'DKGNode'
-              ? {
+                ? {
                   type: 'DKGNode',
                   'chain-id': c.proposalSigningBackend?.chainId,
                 }
-              : undefined,
+                : undefined,
 
           'linked-anchors': c.linkedAnchors?.map((anchor: LinkedAnchor) =>
             anchor.type === 'Evm'
               ? {
-                  'chain-id': anchor.chainId,
-                  type: 'Evm',
-                  address: anchor.address,
-                }
+                'chain-id': anchor.chainId,
+                type: 'Evm',
+                address: anchor.address,
+              }
               : anchor.type === 'Substrate'
-              ? {
+                ? {
                   type: 'Substrate',
                   'chain-id': anchor.chainId,
                   'tree-id': anchor.treeId,
                   pallet: anchor.pallet,
                 }
-              : {
+                : {
                   type: 'Raw',
                   'resource-id': anchor.resourceId,
                 }

@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-// This our basic Substrate VAnchor Transaction Relayer Tests.
+// This our basic Substrate VAnchor Transaction Relayer Tests (Circom).
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
 import { assert, expect } from 'chai';
@@ -24,10 +24,7 @@ import path from 'path';
 import fs from 'fs';
 import isCi from 'is-ci';
 import child from 'child_process';
-import {
-  WebbRelayer,
-  Pallet,
-} from '../../lib/webbRelayer.js';
+import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
 
 import { BigNumber, ethers } from 'ethers';
 import { ApiPromise } from '@polkadot/api';
@@ -58,7 +55,7 @@ import { LocalTangle } from '../../lib/localTangle.js';
 import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
 
-describe.skip('Substrate VAnchor Private Transaction Relayer Tests Using Circom', function () {
+describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom', function() {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let bobNode: LocalTangle;
@@ -70,11 +67,11 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../protocol-substrate/target/release/webb-standalone-node'
-          ),
-        };
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../protocol-substrate/target/release/webb-standalone-node'
+        ),
+      };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'VAnchorBn254',
@@ -135,11 +132,11 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
   it('should withdraw using private transaction ', async () => {
     const api = await aliceNode.api();
     // 1. Create vanchor on Substrate chain with height 30 and maxEdges = 1
-    const createVAnchorCall = api.tx.vAnchorBn254.create(1, 30, 0);
+    const createVAnchorCall = api.tx.vAnchorCircomBn254!.create!(1, 30, 0);
     // execute sudo transaction.
     await aliceNode.sudoExecuteTransaction(createVAnchorCall);
-    const nextTreeId = await api.query.merkleTreeBn254.nextTreeId();
-    const treeId = nextTreeId.toNumber() - 1;
+    const nextTreeId = await api.query.merkleTreeCircomBn254!.nextTreeId!();
+    const treeId = Number(nextTreeId.toHuman()) - 1;
 
     // ChainId of the substrate chain
     const substrateChainId = await aliceNode.getChainId();
@@ -157,6 +154,7 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
       api,
       aliceNode
     );
+    console.log('data', data);
     // now we wait for all deposit to be saved in LeafStorageCache.
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
@@ -493,7 +491,8 @@ async function vanchorDeposit(
   const refund = BigNumber.from(0);
   // Initially leaves will be empty
   leavesMap[typedTargetChainId.toString()] = [];
-  const tree = await api.query.merkleTreeBn254.trees(treeId);
+  const tree = await api.query.merkleTreeCircomBn254!.trees!(treeId);
+  //@ts-ignore
   const root = tree.unwrap().root.toHex();
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore
@@ -634,15 +633,15 @@ async function setupTransaction(
   let provingManager: CircomProvingManager;
   inputs.length > 2
     ? (provingManager = new CircomProvingManager(
-        zkComponents_16.wasm,
-        30,
-        null
-      ))
+      zkComponents_16.wasm,
+      30,
+      null
+    ))
     : (provingManager = new CircomProvingManager(
-        zkComponents_2.wasm,
-        30,
-        null
-      ));
+      zkComponents_2.wasm,
+      30,
+      null
+    ));
 
   const proof = await provingManager.prove('vanchor', proofInput);
   const publicInputs: IVariableAnchorPublicInputs = generatePublicInputs(
