@@ -89,7 +89,7 @@ describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
       authority: 'alice',
       usageMode,
       ports: 'auto',
-      enableLogging: false,
+      enableLogging: true,
     });
 
     bobNode = await LocalTangle.start({
@@ -129,7 +129,7 @@ describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: true,
+      showLogs: false,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -459,33 +459,22 @@ async function vanchorDeposit(
 ): Promise<{ depositUtxos: [Utxo, Utxo] }> {
   const account = createAccount('//Dave');
 
-  // dummy Deposit Note. Input note is directed toward source chain
-  const depositNote = await generateVAnchorNote(
-    0,
-    Number(typedSourceChainId),
-    Number(typedSourceChainId),
-    0
-  );
-
-  const note1 = depositNote;
-  const note2 = await note1.getDefaultUtxoNote();
   const publicAmount = currencyToUnitI128(publicAmountUint);
-  const notes = [note1, note2];
   // Output UTXOs configs
-  const output1 = await Utxo.generateUtxo({
+  const output1 = await CircomUtxo.generateUtxo({
     curve: 'Bn254',
-    backend: 'Arkworks',
+    backend: 'Circom',
     amount: publicAmount.toString(),
     chainId: typedTargetChainId,
   });
-  const output2 = await Utxo.generateUtxo({
+  const output2 = await CircomUtxo.generateUtxo({
     curve: 'Bn254',
-    backend: 'Arkworks',
+    backend: 'Circom',
     amount: '0',
     chainId: typedTargetChainId,
   });
 
-  const inputUtxos = notes.map((n) => new Utxo(n.note.getUtxo()));
+  const inputUtxos = [];
   const outputUtxos: [Utxo, Utxo] = [output1, output2];
 
   const leavesMap = {};
@@ -496,7 +485,7 @@ async function vanchorDeposit(
   const refund = BigNumber.from(0);
   // Initially leaves will be empty
   leavesMap[typedTargetChainId.toString()] = [];
-  const tree = await api.query.merkleTreeCircomBn254!.trees!(treeId);
+  const tree = await api.query.merkleTreeBn254.trees(treeId);
   //@ts-ignore
   const root = tree.unwrap().root.toHex();
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -505,7 +494,7 @@ async function vanchorDeposit(
     .getNeighborRoots(treeId)
     .then((roots: any) => roots.toHuman());
 
-  const rootsSet: string[] = [root, neighborRoots[0]!];
+  const rootsSet = [hexToU8a(root), hexToU8a(neighborRoots[0])];
   const decodedAddress = u8aToHex(decodeAddress(address));
 
   const data = await setupTransaction(
@@ -586,7 +575,7 @@ async function setupTransaction(
   outputs: [Utxo, Utxo],
   fee: BigNumber,
   refund: BigNumber,
-  roots: string[],
+  roots: Uint8Array[],
   recipient: string,
   relayer: string,
   wrapUnwrapToken: string,
@@ -597,6 +586,14 @@ async function setupTransaction(
 }> {
   // first, check if the merkle root is known on chain - if not, then update
   inputs = await padUtxos(typedChainId, inputs, 16);
+
+  if (wrapUnwrapToken.length === 0) {
+    throw new Error('No asset id provided');
+  }
+
+  if (outputs.length !== 2) {
+    throw new Error('Only two outputs are supported');
+  }
   // outputs = await padUtxos(chainId, outputs, 2) ?? []];
   const extAmount = getExtAmount(inputs, outputs, fee);
 
@@ -618,13 +615,6 @@ async function setupTransaction(
   ];
 
   const { zkComponents_2 } = await getFixtures();
-  if (wrapUnwrapToken.length === 0) {
-    throw new Error('No asset id provided');
-  }
-
-  if (outputs.length !== 2) {
-    throw new Error('Only two outputs are supported');
-  }
 
   const fieldSize = FIELD_SIZE.toBigInt();
   const publicAmount =
@@ -642,9 +632,9 @@ async function setupTransaction(
   );
 
   console.log('extData', extData);
-
+  console.log('extDataHashBigInt', extDataHash);
   const proofInputs = await generateProofInputs(
-    roots.map((r) => BigInt(r)),
+    roots.map((r) => BigInt(u8aToHex(r))),
     BigInt(typedChainId),
     inputs,
     outputs,
@@ -689,14 +679,14 @@ function generateExtData(
 } {
   const extData: IVariableAnchorExtData = {
     // For recipient, since it is an AccountId (32 bytes) we use toFixedHex to pad it to 32 bytes.
-    recipient: toFixedHex(u8aToHex(decodeAddress(recipient))),
+    recipient: toFixedHex(recipient),
     // For relayer, since it is an AccountId (32 bytes) we use toFixedHex to pad it to 32 bytes.
-    relayer: toFixedHex(u8aToHex(decodeAddress(relayer))),
+    relayer: toFixedHex(relayer),
     // For extAmount, since it is an Amount (i128) it should be 16 bytes
     extAmount: toFixedHex(extAmount, 16),
     // For fee, since it is a Balance (u128) it should be 16 bytes
     fee: toFixedHex(fee, 16),
-    // For refund, since it is a Balance (u128) it should be 16 bytes
+    // For refund, since it is a Balance (i128) it should be 16 bytes
     refund: toFixedHex(refund, 16),
     // For token, since it is an AssetId (u32) it should be 4 bytes
     token: toFixedHex(wrapUnwrapToken, 4),
@@ -728,10 +718,10 @@ function getVAnchorExtDataHash(extData: IVariableAnchorExtData): bigint {
       },
     ]
   );
-
-  const hash = ethers.utils.keccak256(encodedData);
-
-  return BigNumber.from(hash).mod(FIELD_SIZE).toBigInt();
+  let hash = ethers.utils.keccak256(encodedData);
+  console.log('extDataHash', hash);
+  let hashBigInt = BigNumber.from(hash);
+  return hashBigInt.mod(FIELD_SIZE).toBigInt();
 }
 
 function ensureHex(maybeHex: string): `0x${string}` {
@@ -880,9 +870,10 @@ async function generatePublicInputs(
   const proofBytesHex = u8aToHex(proofBytes);
 
   const proofStr = `0x${encodeSolidityProof(callDataBytes)}` as const;
+  console.log('Grot16 proof: ', proof.proof);
 
   return {
-    proof: proofStr,
+    proof: proofBytesHex,
     roots: rootsBytes,
     inputNullifiers: inputNullifiersBytes,
     outputCommitments: [outputCommitmentsBytes[0]!, outputCommitmentsBytes[1]!],
