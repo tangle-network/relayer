@@ -26,7 +26,7 @@ import isCi from 'is-ci';
 import child from 'child_process';
 import * as snarkjs from 'snarkjs';
 import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
-import { BigNumber, ethers } from 'ethers';
+import { BigNumber, BigNumberish, ethers } from 'ethers';
 import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a, BN } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
@@ -50,11 +50,7 @@ import {
   MerkleTree,
 } from '@webb-tools/sdk-core';
 import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
-import {
-  createAccount,
-  defaultEventsWatcherValue,
-  generateVAnchorNote,
-} from '../../lib/utils.js';
+import { createAccount, defaultEventsWatcherValue } from '../../lib/utils.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
@@ -160,13 +156,6 @@ describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
       aliceNode
     );
     console.log('data', data);
-    // now we wait for all deposit to be saved in LeafStorageCache.
-    await webbRelayer.waitForEvent({
-      kind: 'leaves_store',
-      event: {
-        leaf_index: 2,
-      },
-    });
 
     // Withdraw Flow
     /*
@@ -652,9 +641,11 @@ async function setupTransaction(
 
   const publicInputs = await generatePublicInputs(
     proof,
-    inputs.length,
-    outputs.length,
-    roots.length
+    roots,
+    inputs,
+    outputs,
+    publicAmount,
+    extDataHash
   );
 
   console.log('publicInputs', publicInputs);
@@ -765,122 +756,49 @@ async function generateProofInputs(
     vanchorMerkleProof
   );
 
-  witnessInput['inputNullifier'] = witnessInput['inputNullifier'].map(
-    (el: HexString) => BigInt(el).toString()
-  );
-
-  witnessInput['inPrivateKey'] = witnessInput['inPrivateKey'].map(
-    (el: HexString) => BigInt(el).toString()
-  );
-
-  witnessInput['inPathElements'] = (
-    witnessInput['inPathElements'] as BigNumber[][]
-  ).reduce((prev, current) => {
-    prev.push(...current.map((el) => el.toString()));
-    return prev;
-  }, [] as string[]);
-
   return witnessInput;
 }
+
 async function generatePublicInputs(
   proof: Groth16Proof,
-  numInputs: number,
-  numOutputs: number,
-  numRoots: number
+  roots: Uint8Array[],
+  inputs: Utxo[],
+  outputs: Utxo[],
+  publicAmount: bigint,
+  extDataHash: bigint
 ): Promise<IVAnchorPublicInputs> {
-  const callDataBytes = await snarkjs.groth16.exportSolidityCallData(
-    proof.proof,
-    proof.publicSignals
+  // convert the proof object into arkworks serialization format.
+  const proofBytes = await groth16ProofToBytes(proof);
+  const publicAmountHex = ensureHex(toFixedHex(publicAmount));
+  const extDataHashHex = ensureHex(toFixedHex(extDataHash));
+  const inputNullifiers = inputs.map((x) =>
+    ensureHex(toFixedHex('0x' + x.nullifier))
   );
-  // Public amount + extDataHash + inputNullifiers + outputCommitments + typedChainId + roots
-  const publicInputs: HexString[] = JSON.parse('[' + callDataBytes + ']')[3];
-  let index = 0;
-
-  // First element is the public amount
-  const publicAmount = publicInputs[index++];
-  const publicAmountBytes = hexToU8a(publicAmount);
-
-  // Second element is the extDataHash
-  const extDataHash = publicInputs[index++];
-  const extDataHashBytes = hexToU8a(extDataHash);
-
-  // Next are the input nullifiers
-  const inputNullifiers = publicInputs.slice(index, index + numInputs);
-  const inputNullifiersBytes = inputNullifiers.map((inputNullifier) =>
-    hexToU8a(inputNullifier)
-  );
-  index += numInputs;
-
-  // Next are the output commitments
-  const outputCommitments = publicInputs.slice(index, index + numOutputs);
-  const outputCommitmentsBytes = outputCommitments.map((outputCommitment) =>
-    hexToU8a(outputCommitment)
-  );
-  index += numOutputs;
-
-  // Next is the typedChainId
-  const typedChainId = publicInputs[index++]; // Ignore typedChainId
-  const typedChainIdBytes = hexToU8a(typedChainId);
-
-  // Next are the roots
-  const roots = publicInputs.slice(index, index + numRoots);
-  const rootsBytes = roots.map((root) => hexToU8a(root));
-
-  // Calculate proof bytes
-  const proofBytes = new Uint8Array(
-    publicAmountBytes.length +
-    extDataHashBytes.length +
-    inputNullifiersBytes.reduce(
-      (acc, inputNullifier) => acc + inputNullifier.length,
-      0
-    ) +
-    outputCommitmentsBytes.reduce(
-      (acc, outputCommitment) => acc + outputCommitment.length,
-      0
-    ) +
-    typedChainIdBytes.length +
-    rootsBytes.reduce((acc, root) => acc + root.length, 0)
-  );
-
-  let offset = 0;
-  proofBytes.set(publicAmountBytes, offset);
-  offset += publicAmountBytes.length;
-
-  proofBytes.set(extDataHashBytes, offset);
-  offset += extDataHashBytes.length;
-
-  inputNullifiersBytes.forEach((inputNullifier) => {
-    proofBytes.set(inputNullifier, offset);
-    offset += inputNullifier.length;
-  });
-
-  outputCommitmentsBytes.forEach((outputCommitment) => {
-    proofBytes.set(outputCommitment, offset);
-    offset += outputCommitment.length;
-  });
-
-  proofBytes.set(typedChainIdBytes, offset);
-  offset += typedChainIdBytes.length;
-
-  rootsBytes.forEach((root) => {
-    proofBytes.set(root, offset);
-    offset += root.length;
-  });
-
-  const proofBytesHex = u8aToHex(proofBytes);
-
-  const proofStr = `0x${encodeSolidityProof(callDataBytes)}` as const;
+  const outputCommitments = [
+    ensureHex(toFixedHex(u8aToHex(outputs[0]!.commitment))),
+    ensureHex(toFixedHex(u8aToHex(outputs[1]!.commitment))),
+  ];
+  const rootsHex = roots.map((r) => ensureHex(toFixedHex(u8aToHex(r))));
   console.log('Grot16 proof: ', proof.proof);
-
+  console.log('Groth16 proof bytes:', u8aToHex(proofBytes));
+  const publicInputsList = [
+    publicAmountHex,
+    extDataHashHex,
+    ...inputNullifiers,
+    ...outputCommitments,
+    ...rootsHex,
+  ];
+  console.log('Public inputs: ', publicInputsList);
   return {
-    proof: proofBytesHex,
-    roots: rootsBytes,
-    inputNullifiers: inputNullifiersBytes,
-    outputCommitments: [outputCommitmentsBytes[0]!, outputCommitmentsBytes[1]!],
-    publicAmount: publicAmountBytes,
-    extDataHash: extDataHashBytes,
+    proof: ensureHex(u8aToHex(proofBytes)),
+    roots: rootsHex,
+    inputNullifiers,
+    outputCommitments: [outputCommitments[0]!, outputCommitments[1]!],
+    publicAmount: publicAmountHex,
+    extDataHash: extDataHashHex,
   };
 }
+
 async function getSnarkJsWitness(
   witnessInput: any,
   circuitWasm: Buffer
@@ -904,7 +822,7 @@ async function getSnarkJsProof(
   const vKey = await snarkjs.zKey.exportVerificationKey(zkey);
 
   const isValid = await snarkjs.groth16.verify(vKey, publicSignals, proof);
-
+  console.log('Proof is valid: ', isValid);
   assert.strictEqual(isValid, true, 'Invalid proof');
 
   return proofOutput;
@@ -1023,9 +941,9 @@ function getMerkleProof(
 
 interface Groth16Proof {
   proof: {
-    pi_a: string[];
-    pi_b: string[][];
-    pi_c: string[];
+    pi_a: [string, string];
+    pi_b: [[string, string], [string, string]];
+    pi_c: [string, string];
     curve: string;
     prococol: 'groth16';
   };
@@ -1034,11 +952,11 @@ interface Groth16Proof {
 
 interface IVAnchorPublicInputs {
   proof: HexString;
-  roots: Uint8Array[];
-  inputNullifiers: Uint8Array[];
-  outputCommitments: [Uint8Array, Uint8Array];
-  publicAmount: Uint8Array;
-  extDataHash: Uint8Array;
+  roots: HexString[];
+  inputNullifiers: HexString[];
+  outputCommitments: [HexString, HexString];
+  publicAmount: HexString;
+  extDataHash: HexString;
 }
 
 interface VAnchorGroth16ProofInput {
@@ -1060,4 +978,37 @@ interface VAnchorGroth16ProofInput {
   outAmount: bigint[];
   outPubkey: bigint[];
   outBlinding: bigint[];
+}
+
+async function groth16ProofToBytes(proof: Groth16Proof): Promise<Uint8Array> {
+  const callData = await snarkjs.groth16.exportSolidityCallData(
+    proof.proof,
+    proof.publicSignals
+  );
+
+  const parsedCalldata = JSON.parse('[' + callData + ']');
+  const pi_a = parsedCalldata[0] as Groth16Proof['proof']['pi_a'];
+  const pi_b = parsedCalldata[1] as Groth16Proof['proof']['pi_b'];
+  const pi_c = parsedCalldata[2] as Groth16Proof['proof']['pi_c'];
+
+  const abi = new ethers.utils.AbiCoder();
+  const fnAbi = '(uint[2] a,uint[2][2] b,uint[2] c)';
+  const encodedData = abi.encode(
+    [fnAbi],
+    [
+      {
+        a: pi_a,
+        b: pi_b,
+        c: pi_c,
+      },
+    ]
+  );
+  // for debugging
+  const decodedData = abi.decode([fnAbi], encodedData);
+  const data = decodedData[0];
+  const a = data.a.map((x: BigNumber) => x.toString());
+  const b = data.b.map((x: BigNumber[]) => x.map((y) => y.toString()));
+  const c = data.c.map((x: BigNumber) => x.toString());
+  console.log({ a, b, c });
+  return hexToU8a(encodedData);
 }
