@@ -34,6 +34,7 @@
           ];
           buildInputs = [
             # Used for DVC
+            # Run `pipx run dvc <command>` to use it
             pkgs.python311
             pkgs.python311Packages.pipx
             # We want the unwrapped version, wrapped comes with nixpkgs' toolchain
@@ -48,15 +49,6 @@
           packages = [
             pkgs.cargo-nextest
           ];
-
-          # Runs DVC pull in the fixtures
-          # we do not install dvc globally, since it
-          # is broken on nixos
-          shellHook = ''
-            ROOT=$(git rev-parse --show-toplevel)
-            cd $ROOT/tests && pipx run dvc pull
-            cd $ROOT
-          '';
 
           # Environment variables
           RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
