@@ -22,7 +22,6 @@ use webb::evm::ethers::prelude::{ContractError, I256, U128};
 use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::types::Bytes;
 use webb::evm::ethers::types::{H256, U256};
-use webb::substrate::subxt::utils::AccountId32;
 use webb_relayer_tx_relay_utils::VAnchorRelayTransaction;
 
 /// Representation for IP address response
@@ -180,10 +179,10 @@ pub type EvmVanchorCommand = VAnchorRelayTransaction<
 >;
 
 type Id = u32; //  Substrate tree Id
-type P = Vec<u8>; // Substrate raw proof bytes
-type R = Vec<[u8; 32]>; // Substrate roots format
-type E = [u8; 32]; // Substrate element type
-type I = AccountId32; // Substrate account identifier
+type P = Bytes; // Substrate raw proof bytes
+type R = Vec<H256>; // Substrate roots format
+type E = H256; // Substrate element type
+type I = H256; // Substrate account identifier (32 bytes)
 type B = U128; // Substrate balance type
 type A = WebbI128; // Substrate signed amount type
 type T = u32; // Substrate assetId
