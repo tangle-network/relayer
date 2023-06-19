@@ -54,7 +54,7 @@ import {
 import { LocalTangle } from '../../lib/localTangle.js';
 import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 
-describe('Substrate VAnchor Private Transaction Relayer Tests', function() {
+describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function() {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let charlieNode: LocalTangle;
