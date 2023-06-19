@@ -54,7 +54,7 @@ import {
 import { LocalTangle } from '../../lib/localTangle.js';
 import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 
-describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
+describe('Substrate VAnchor Private Transaction Relayer Tests', function() {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let charlieNode: LocalTangle;
@@ -65,11 +65,11 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../tangle/target/release/tangle-standalone'
-          ),
-        };
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../tangle/target/release/tangle-standalone'
+        ),
+      };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'VAnchorBn254',
@@ -234,8 +234,8 @@ describe('Substrate VAnchor Private Transaction Relayer Tests', function () {
     await webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
-      substrateExtData,
-      substrateProofData
+      substrateExtData as any,
+      substrateProofData as any
     );
 
     // now we wait for relayer to execute private transaction.
