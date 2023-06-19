@@ -33,11 +33,10 @@ export async function vanchorDeposit(
   treeId: number,
   typedTargetChainId: string,
   typedSourceChainId: string,
-  publicAmountUint: number,
+  publicAmount: BigNumber,
   aliceNode: LocalTangle
 ): Promise<{ depositUtxos: [Utxo, Utxo] }> {
   const api = await aliceNode.api();
-  const publicAmount = currencyToUnitI128(publicAmountUint);
   // Output UTXOs configs
   const output1 = await CircomUtxo.generateUtxo({
     curve: 'Bn254',
@@ -117,12 +116,15 @@ export async function vanchorWithdraw(
   const leavesMap = {};
 
   const address = account.address;
-  const assetId = new Uint8Array([0, 0, 0, 0]); // WEBB native token asset Id.
   const fee = BigNumber.from(0);
   const refund = BigNumber.from(0);
   // Initially leaves will be empty
   leavesMap[typedSourceChainId.toString()] = [];
   const tree = await api.query.merkleTreeBn254.trees(treeId);
+
+  const vanchor = await api.query.vAnchorBn254.vAnchors(treeId);
+  const asset = vanchor.unwrap().asset;
+  const assetId = asset.toU8a();
   //@ts-ignore
   const root = tree.unwrap().root.toHex();
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
@@ -226,7 +228,7 @@ export async function setupTransaction(
   leavesMap: Record<string, Uint8Array[]>
 ): Promise<{
   extData: IVariableAnchorExtData;
-  publicInputs: IVAnchorPublicInputs;
+  publicInputs: IVariableAnchorPublicInputs;
 }> {
   // first, check if the merkle root is known on chain - if not, then update
   inputs = await padUtxos(typedChainId, inputs, 16);
@@ -238,7 +240,6 @@ export async function setupTransaction(
   if (outputs.length !== 2) {
     throw new Error('Only two outputs are supported');
   }
-  const extAmount = getExtAmount(inputs, outputs, fee);
 
   // calculate the sum of input notes (for calculating the public amount)
   let sumInputs: BigNumber = BigNumber.from(0);
@@ -252,17 +253,36 @@ export async function setupTransaction(
     });
   }
 
+  let sumOutputs: BigNumber = BigNumber.from(0);
+  for (const outputUtxo of outputs) {
+    sumOutputs = BigNumber.from(sumOutputs).add(outputUtxo.amount);
+  }
+
+  const extAmount = getExtAmount(inputs, outputs, fee);
+  {
+    const extAmountPostive = extAmount.isNegative()
+      ? extAmount.mul(-1)
+      : extAmount;
+
+    if (extAmountPostive.lte(fee)) {
+      throw new Error('Fee is too high');
+    }
+  }
+  const publicAmountBigInt = extAmount.sub(fee);
+  const publicAmount = publicAmountBigInt.add(FIELD_SIZE).mod(FIELD_SIZE);
+  // const publicAmount = publicAmountBigInt;
+
+  // Double check that the public amount is correct
+  // sumInputs + publicAmount == sumOutputs
+  assert.strictEqual(
+    sumInputs.add(publicAmountBigInt).toBigInt(),
+    sumOutputs.toBigInt()
+  );
+
   const encryptedCommitments: [Uint8Array, Uint8Array] = [
     hexToU8a(outputs[0].encrypt()),
     hexToU8a(outputs[1].encrypt()),
   ];
-
-  const { zkComponents_2 } = await getFixtures();
-
-  const fieldSize = FIELD_SIZE.toBigInt();
-  const publicAmount =
-    (extAmount.toBigInt() - fee.toBigInt() + fieldSize) % fieldSize;
-
   const { extData, extDataHash } = generateExtData(
     recipient,
     relayer,
@@ -279,12 +299,13 @@ export async function setupTransaction(
     BigInt(typedChainId),
     inputs,
     outputs,
-    publicAmount,
+    extAmount.toBigInt(),
     fee.toBigInt(),
     extDataHash,
     leavesMap
   );
 
+  const { zkComponents_2 } = await getFixtures();
   const witness = await getSnarkJsWitness(proofInputs, zkComponents_2.wasm);
 
   const proof = await getSnarkJsProof(zkComponents_2.zkey, witness);
@@ -294,7 +315,7 @@ export async function setupTransaction(
     roots,
     inputs,
     outputs,
-    publicAmount,
+    publicAmount.toBigInt(),
     extDataHash
   );
   // For Substrate, specifically, we need the extAmount to not be in hex value,
@@ -394,7 +415,7 @@ async function generateProofInputs(
     inputUtxos,
     outputUtxos,
     publicAmount,
-    fee,
+    BigNumber.from(fee),
     BigNumber.from(extDataHash), // Temporary use of `BigNumber`, need to change to `BigInt`
     vanchorMerkleProof
   );
@@ -409,10 +430,9 @@ export async function generatePublicInputs(
   outputs: Utxo[],
   publicAmount: bigint,
   extDataHash: bigint
-): Promise<IVAnchorPublicInputs> {
-  // convert the proof object into arkworks serialization format.
+): Promise<IVariableAnchorPublicInputs> {
   const proofBytes = await groth16ProofToBytes(proof);
-  const publicAmountHex = ensureHex(toFixedHex(publicAmount));
+  const publicAmountHex = toFixedHex(publicAmount, 32);
   const extDataHashHex = ensureHex(toFixedHex(extDataHash));
   const inputNullifiers = inputs.map((x) =>
     ensureHex(toFixedHex('0x' + x.nullifier))
@@ -427,7 +447,7 @@ export async function generatePublicInputs(
     roots: rootsHex,
     inputNullifiers,
     outputCommitments: [outputCommitments[0]!, outputCommitments[1]!],
-    publicAmount: publicAmountHex,
+    publicAmount: publicAmountHex as HexString,
     extDataHash: extDataHashHex,
   };
 }
@@ -460,7 +480,7 @@ async function getSnarkJsProof(
   return proofOutput;
 }
 
-async function padUtxos(
+export async function padUtxos(
   chainId: number,
   utxos: Utxo[],
   maxLen: number
@@ -536,7 +556,7 @@ function getMerkleProof(
   };
 }
 
-interface Groth16Proof {
+export interface Groth16Proof {
   proof: {
     pi_a: [string, string];
     pi_b: [[string, string], [string, string]];
@@ -547,7 +567,7 @@ interface Groth16Proof {
   publicSignals: string[];
 }
 
-interface IVAnchorPublicInputs {
+export interface IVariableAnchorPublicInputs {
   proof: HexString;
   roots: HexString[];
   inputNullifiers: HexString[];
