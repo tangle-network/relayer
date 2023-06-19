@@ -17,37 +17,28 @@
 // This our basic Substrate VAnchor Transaction Relayer Tests (Circom).
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
-import { assert } from 'chai';
+import { assert, expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
 import isCi from 'is-ci';
-import { WebbRelayer, Pallet } from '../../lib/webbRelayer.js';
+import {
+  WebbRelayer,
+  Pallet,
+  SubstrateFeeInfo,
+} from '../../lib/webbRelayer.js';
 import { BigNumber, ethers } from 'ethers';
-import { ApiPromise } from '@polkadot/api';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { decodeAddress } from '@polkadot/util-crypto';
-import {
-  Utxo,
-  calculateTypedChainId,
-  ChainType,
-  Keypair,
-  CircomUtxo,
-  randomBN,
-  toFixedHex,
-  LeafIdentifier,
-  FIELD_SIZE,
-  buildVariableWitnessCalculator,
-  generateVariableWitnessInput,
-  MerkleProof,
-  MerkleTree,
-} from '@webb-tools/sdk-core';
-import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
+import { Utxo, calculateTypedChainId, ChainType } from '@webb-tools/sdk-core';
+import { UsageMode } from '@webb-tools/test-utils';
 import { createAccount, defaultEventsWatcherValue } from '../../lib/utils.js';
-import { vanchorDeposit, vanchorWithdraw } from '../../lib/substrateVAnchor.js';
+import {
+  padUtxos,
+  setupTransaction,
+  vanchorDeposit,
+} from '../../lib/substrateVAnchor.js';
 import { LocalTangle } from '../../lib/localTangle.js';
-import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
-import { HexString } from '@polkadot/util/types';
 
 describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom', function() {
   const tmpDirPath = temp.mkdirSync();
@@ -63,7 +54,7 @@ describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
       : {
         mode: 'host',
         nodePath: path.resolve(
-          '../../protocol-substrate/target/release/webb-standalone-node'
+          '../../tangle/target/release/tangle-standalone'
         ),
       };
     const enabledPallets: Pallet[] = [
@@ -118,7 +109,7 @@ describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
       },
       tmp: true,
       configDir: tmpDirPath,
-      showLogs: false,
+      showLogs: true,
     });
     await webbRelayer.waitUntilReady();
   });
@@ -139,114 +130,115 @@ describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
       substrateChainId
     );
 
+    const typedTargetChainId = calculateTypedChainId(
+      ChainType.Substrate,
+      substrateChainId
+    );
     const account = createAccount('//Dave');
-    const amount = 1000000000;
+    const amount = BigNumber.from(1000).mul(BigNumber.from(10).pow(18));
 
     // 2. Deposit amount on substrate chain.
     const data = await vanchorDeposit(
       account,
       treeId,
       typedSourceChainId.toString(), // source chain Id
-      typedSourceChainId.toString(), // target chain Id
+      typedTargetChainId.toString(), // target chain Id
       amount, // public amount
       aliceNode
     );
 
-    // 3. Now we withdraw it.
-    await vanchorWithdraw(
-      treeId,
-      typedSourceChainId.toString(),
-      typedSourceChainId.toString(),
-      data.depositUtxos,
-      aliceNode
+    // 3. Now we withdraw it using the relayer.
+    const relayerInfo = await webbRelayer.info();
+    const relayerBeneficiary =
+      relayerInfo.substrate[substrateChainId.toString()]!.beneficiary;
+    expect(relayerBeneficiary).to.not.be.undefined;
+
+    const inputUtxos = data.depositUtxos;
+    const outputUtxos = await padUtxos(Number(typedSourceChainId), [], 2);
+
+    const leavesMap = {};
+
+    const address = account.address;
+    // Initially leaves will be empty
+    leavesMap[typedSourceChainId.toString()] = [];
+    const tree = await api.query.merkleTreeBn254.trees(treeId);
+
+    const vanchor = await api.query.vAnchorBn254.vAnchors(treeId);
+    const asset = vanchor.unwrap().asset;
+    const assetId = asset.toU8a();
+    const root = tree.unwrap().root.toHex();
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const neighborRoots: string[] = await api.rpc.lt
+      .getNeighborRoots(treeId)
+      .then((roots: any) => roots.toHuman());
+
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-ignore
+    const leaves: string[] = await api.rpc.mt
+      .getLeaves(treeId, 0, 256)
+      .then((leaves: any) => leaves.toHuman());
+    leavesMap[typedTargetChainId.toString()] = leaves;
+
+    const rootsSet = [hexToU8a(root), hexToU8a(neighborRoots[0])];
+    const recipientAddress = u8aToHex(decodeAddress(address));
+    const relayerAddress = u8aToHex(decodeAddress(relayerBeneficiary));
+    const dummyTx = await setupTransaction(
+      Number(typedTargetChainId),
+      inputUtxos,
+      outputUtxos as [Utxo, Utxo],
+      BigNumber.from(0), // fee
+      BigNumber.from(0), // refund
+      rootsSet,
+      recipientAddress, // recipient address
+      relayerAddress, // relayer address
+      u8aToHex(assetId),
+      leavesMap
     );
 
-    // Withdraw Flow
-    /*
-    // 3. Now we withdraw it on bob's account using private transaction.
-    const account = createAccount('//Bob');
-    // Bob's balance after withdrawal
-    const bobBalanceBefore = await api.query.system.account(account.address);
+    console.log({ dummyTx });
 
-    const dummyVanchorData = await vanchorWithdraw(
-      typedSourceChainId.toString(),
-      typedSourceChainId.toString(),
-      account.address,
-      data.depositUtxos,
-      treeId,
-      BigInt(0),
-      // TODO: need to convert this once there is exchange rate between native
-      //       token and wrapped token
-      BigInt(0),
-      api
-    );
-    const token = new DataView(dummyVanchorData.extData.token.buffer, 0);
-
-    const info = await api.tx.vAnchorBn254
-      .transact(treeId, dummyVanchorData.proofData, dummyVanchorData.extData)
+    // estimate fee
+    const estimatedFeeInfo = await api.tx.vAnchorBn254
+      .transact(treeId, dummyTx.publicInputs, dummyTx.extData)
       .paymentInfo(account);
-    const feeInfoResponse2 = await webbRelayer.getSubstrateFeeInfo(
-      substrateChainId,
-      info.partialFee.toBn()
-    );
-    expect(feeInfoResponse2.status).equal(200);
-    const feeInfo2 =
-      await (feeInfoResponse2.json() as Promise<SubstrateFeeInfo>);
-    const estimatedFee = BigInt(feeInfo2.estimatedFee);
 
+    const feeInfoResponse = await webbRelayer.getSubstrateFeeInfo(
+      substrateChainId,
+      estimatedFeeInfo.partialFee.toBn()
+    );
+    expect(feeInfoResponse.status).equal(200);
+    const feeInfo = await (feeInfoResponse.json() as Promise<SubstrateFeeInfo>);
+    const estimatedFee = BigInt(feeInfo.estimatedFee);
     const refund = BigInt(0);
     const feeTotal = estimatedFee + refund;
-    const vanchorData = await vanchorWithdraw(
-      typedSourceChainId.toString(),
-      typedSourceChainId.toString(),
-      account.address,
-      data.depositUtxos,
-      treeId,
-      feeTotal,
-      // TODO: need to convert this once there is exchange rate between native
-      //       token and wrapped token
-      refund,
-      api
+    // check that the fee is less than the amount
+    expect(
+      BigNumber.from(feeTotal).lt(amount),
+      `Fee ${feeTotal} should be less than amount ${amount.toBigInt()} `
     );
-    const substrateExtData: SubstrateVAnchorExtData = {
-      recipient: vanchorData.extData.recipient,
-      relayer: vanchorData.extData.relayer,
-      extAmount: BigNumber.from(vanchorData.extData.extAmount)
-        .toHexString()
-        .replace('0x', ''),
-      fee: BigNumber.from(feeTotal.toString()).toHexString(),
-      encryptedOutput1: Array.from(
-        hexToU8a(vanchorData.extData.encryptedOutput1)
-      ),
-      encryptedOutput2: Array.from(
-        hexToU8a(vanchorData.extData.encryptedOutput2)
-      ),
-      refund: BigNumber.from(refund.toString()).toHexString(),
-      token: token.getUint32(0, true),
-    };
 
-    const substrateProofData: SubstrateVAnchorProofData = {
-      proof: Array.from(hexToU8a(vanchorData.proofData.proof)),
-      extDataHash: Array.from(vanchorData.proofData.extDataHash),
-      extensionRoots: vanchorData.proofData.roots.map((root) =>
-        Array.from(root)
-      ),
-      publicAmount: Array.from(vanchorData.proofData.publicAmount),
-      roots: vanchorData.proofData.roots.map((root) => Array.from(root)),
-      outputCommitments: vanchorData.proofData.outputCommitments.map((com) =>
-        Array.from(com)
-      ),
-      inputNullifiers: vanchorData.proofData.inputNullifiers.map((com) =>
-        Array.from(hexToU8a(com))
-      ),
-    };
+    const actualTx = await setupTransaction(
+      Number(typedTargetChainId),
+      inputUtxos,
+      outputUtxos as [Utxo, Utxo],
+      BigNumber.from(feeTotal), // fee
+      BigNumber.from(refund), // refund
+      rootsSet,
+      recipientAddress,
+      relayerAddress,
+      u8aToHex(assetId),
+      leavesMap
+    );
+    console.log({ actualTx });
 
+    const balanceBefore = await api.query.system.account(account.address);
     // now we withdraw using private transaction
     await webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
-      substrateExtData,
-      substrateProofData
+      actualTx.publicInputs,
+      actualTx.extData
     );
 
     // now we wait for relayer to execute private transaction.
@@ -260,15 +252,8 @@ describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
       },
     });
 
-    // Bob's balance after withdrawal.
-    const BobBalanceAfter = await api.query.system.account(account.address);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore
-    console.log('balance after : ', BobBalanceAfter.data.free);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    //@ts-ignore
-    assert(BobBalanceAfter.data.free > bobBalanceBefore.data.free);
-    */
+    const balanceAfter = await api.query.system.account(account.address);
+    expect(balanceAfter.data.free.gt(balanceBefore.data.free)).to.be.true;
   });
 
   after(async () => {
