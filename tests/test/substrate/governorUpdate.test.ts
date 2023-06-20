@@ -33,6 +33,7 @@ describe('Substrate SignatureBridge Governor Update', function () {
   const tmpDirPath = temp.mkdirSync();
   // Tangle nodes
   let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
@@ -65,6 +66,14 @@ describe('Substrate SignatureBridge Governor Update', function () {
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
+      usageMode,
+      ports: 'auto',
+      enableLogging: false,
+    });
+
+    bobNode = await LocalTangle.start({
+      name: 'substrate-bob',
+      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -161,6 +170,7 @@ describe('Substrate SignatureBridge Governor Update', function () {
 
   after(async () => {
     await aliceNode?.stop();
+    await bobNode?.stop();
     await charlieNode?.stop();
     await webbRelayer?.stop();
   });
