@@ -19,12 +19,13 @@
 use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{broadcast, Mutex};
-
 use webb::evm::ethers;
 #[cfg(feature = "evm")]
 use webb::evm::ethers::core::k256::SecretKey;
 #[cfg(feature = "evm")]
 use webb::evm::ethers::prelude::*;
+#[cfg(feature = "evm")]
+use webb::evm::ethers::providers::Ws;
 
 #[cfg(feature = "substrate")]
 use sp_core::sr25519::Pair as Sr25519Pair;
@@ -46,6 +47,7 @@ use ethers_retry_policy::WebbHttpRetryPolicy;
 use webb_relayer_utils::multi_provider::MultiProvider;
 
 type EthersClient = Provider<RetryClient<MultiProvider<Http>>>;
+type EthersWsClient = Provider<Ws>;
 
 /// RelayerContext contains Relayer's configuration and shutdown signal.
 #[derive(Clone)]
@@ -184,6 +186,31 @@ impl RelayerContext {
             })
         }
     }
+    /// Returns a new `Ethereum Ws Provider` for the relayer.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_id` - A string representing the chain id.
+    #[cfg(feature = "evm")]
+    pub async fn evm_ws_provider<I: Into<types::U256>>(
+        &self,
+        chain_id: I,
+    ) -> webb_relayer_utils::Result<Arc<EthersWsClient>> {
+        let chain_id: types::U256 = chain_id.into();
+        let chain_config =
+            self.config.evm.get(&chain_id.to_string()).ok_or_else(|| {
+                webb_relayer_utils::Error::ChainNotFound {
+                    chain_id: chain_id.to_string(),
+                }
+            })?;
+        // ws provider from ethers
+        let client =
+            Ws::connect(chain_config.ws_endpoint.clone().as_str()).await?;
+        // Wrap the provider with a ws client.
+        let proivder = Provider::<Ws>::new(client);
+        Ok(Arc::new(proivder))
+    }
+
     /// Sets up and returns an EVM wallet for the relayer.
     ///
     /// # Arguments

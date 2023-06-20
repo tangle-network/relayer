@@ -2300,8 +2300,8 @@ dependencies = [
  "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "webb 0.5.21",
  "webb-proposals",
- "webb-relayer-types 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
- "webb-relayer-utils 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
+ "webb-relayer-types 0.1.0",
+ "webb-relayer-utils 0.1.0",
 ]
 
 [[package]]
@@ -2447,7 +2447,7 @@ dependencies = [
  "warp",
  "webb 0.5.21",
  "webb-proposals",
- "webb-relayer-utils 0.1.0 (git+https://github.com/webb-tools/relayer.git)",
+ "webb-relayer-utils 0.1.0",
 ]
 
 [[package]]
@@ -2566,28 +2566,14 @@ version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "697aba1bec98cb86e7bebd69f9bb365218871464137af9e93e7a72bd6dc421d0"
 dependencies = [
- "ethers-addressbook 2.0.2",
- "ethers-contract 2.0.2",
+ "ethers-addressbook",
+ "ethers-contract",
  "ethers-core 2.0.2",
- "ethers-etherscan 2.0.2",
- "ethers-middleware 2.0.2",
- "ethers-providers 2.0.2",
- "ethers-signers 2.0.2",
+ "ethers-etherscan",
+ "ethers-middleware",
+ "ethers-providers",
+ "ethers-signers",
  "ethers-solc",
-]
-
-[[package]]
-name = "ethers"
-version = "2.0.4"
-source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e58e95a8467f"
-dependencies = [
- "ethers-addressbook 2.0.4",
- "ethers-contract 2.0.4",
- "ethers-core 2.0.4",
- "ethers-etherscan 2.0.4",
- "ethers-middleware 2.0.4",
- "ethers-providers 2.0.4",
- "ethers-signers 2.0.4",
 ]
 
 [[package]]
@@ -2603,44 +2589,15 @@ dependencies = [
 ]
 
 [[package]]
-name = "ethers-addressbook"
-version = "2.0.4"
-source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e58e95a8467f"
-dependencies = [
- "ethers-core 2.0.4",
- "once_cell",
- "serde",
- "serde_json",
-]
-
-[[package]]
 name = "ethers-contract"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4e8ed7c2b2a22e07b65ae0eb426c948a7448f1be15c66e4813e02c423751fc9"
 dependencies = [
- "ethers-contract-abigen 2.0.2",
- "ethers-contract-derive 2.0.2",
+ "ethers-contract-abigen",
+ "ethers-contract-derive",
  "ethers-core 2.0.2",
- "ethers-providers 2.0.2",
- "futures-util",
- "hex",
- "once_cell",
- "pin-project 1.0.12",
- "serde",
- "serde_json",
- "thiserror",
-]
-
-[[package]]
-name = "ethers-contract"
-version = "2.0.4"
-source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e58e95a8467f"
-dependencies = [
- "ethers-contract-abigen 2.0.4",
- "ethers-contract-derive 2.0.4",
- "ethers-core 2.0.4",
- "ethers-providers 2.0.4",
+ "ethers-providers",
  "futures-util",
  "hex",
  "once_cell",
@@ -2659,7 +2616,7 @@ dependencies = [
  "Inflector",
  "dunce",
  "ethers-core 2.0.2",
- "ethers-etherscan 2.0.2",
+ "ethers-etherscan",
  "eyre",
  "getrandom 0.2.8",
  "hex",
@@ -2678,54 +2635,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "ethers-contract-abigen"
-version = "2.0.4"
-source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e58e95a8467f"
-dependencies = [
- "Inflector",
- "dunce",
- "ethers-core 2.0.4",
- "eyre",
- "getrandom 0.2.8",
- "hex",
- "prettyplease 0.2.4",
- "proc-macro2",
- "quote",
- "regex",
- "serde",
- "serde_json",
- "syn 2.0.13",
- "toml 0.7.3",
- "walkdir",
-]
-
-[[package]]
 name = "ethers-contract-derive"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "914e9211077a1b590af1ee6b8dfbd54515c808119546c95da69479908dc3d4de"
 dependencies = [
- "ethers-contract-abigen 2.0.2",
+ "ethers-contract-abigen",
  "ethers-core 2.0.2",
  "hex",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "ethers-contract-derive"
-version = "2.0.4"
-source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e58e95a8467f"
-dependencies = [
- "Inflector",
- "ethers-contract-abigen 2.0.4",
- "ethers-core 2.0.4",
- "hex",
- "proc-macro2",
- "quote",
- "serde_json",
- "syn 2.0.13",
 ]
 
 [[package]]
@@ -2768,7 +2688,6 @@ source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e
 dependencies = [
  "arrayvec 0.7.2",
  "bytes 1.4.0",
- "cargo_metadata",
  "chrono",
  "elliptic-curve 0.13.4",
  "ethabi",
@@ -2777,14 +2696,12 @@ dependencies = [
  "hex",
  "k256 0.13.1",
  "num_enum 0.6.1",
- "once_cell",
  "open-fastrlp",
  "rand 0.8.5",
  "rlp",
  "serde",
  "serde_json",
  "strum",
- "syn 2.0.13",
  "tempfile",
  "thiserror",
  "tiny-keccak",
@@ -2809,21 +2726,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ethers-etherscan"
-version = "2.0.4"
-source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e58e95a8467f"
-dependencies = [
- "ethers-core 2.0.4",
- "getrandom 0.2.8",
- "reqwest",
- "semver 1.0.17",
- "serde",
- "serde_json",
- "thiserror",
- "tracing",
-]
-
-[[package]]
 name = "ethers-middleware"
 version = "2.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2831,37 +2733,11 @@ checksum = "c54b30f67c1883ed68bd38aedbdd321831382c12e1b95089c8261c79bb85e4da"
 dependencies = [
  "async-trait",
  "auto_impl",
- "ethers-contract 2.0.2",
+ "ethers-contract",
  "ethers-core 2.0.2",
- "ethers-etherscan 2.0.2",
- "ethers-providers 2.0.2",
- "ethers-signers 2.0.2",
- "futures-channel",
- "futures-locks",
- "futures-util",
- "instant",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror",
- "tokio 1.28.1",
- "tracing",
- "tracing-futures",
- "url",
-]
-
-[[package]]
-name = "ethers-middleware"
-version = "2.0.4"
-source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e58e95a8467f"
-dependencies = [
- "async-trait",
- "auto_impl",
- "ethers-contract 2.0.4",
- "ethers-core 2.0.4",
- "ethers-etherscan 2.0.4",
- "ethers-providers 2.0.4",
- "ethers-signers 2.0.4",
+ "ethers-etherscan",
+ "ethers-providers",
+ "ethers-signers",
  "futures-channel",
  "futures-locks",
  "futures-util",
@@ -2888,6 +2764,7 @@ dependencies = [
  "bytes 1.4.0",
  "enr",
  "ethers-core 2.0.2",
+ "futures-channel",
  "futures-core",
  "futures-timer",
  "futures-util",
@@ -2903,41 +2780,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio 1.28.1",
- "tracing",
- "tracing-futures",
- "url",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "ws_stream_wasm",
-]
-
-[[package]]
-name = "ethers-providers"
-version = "2.0.4"
-source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e58e95a8467f"
-dependencies = [
- "async-trait",
- "auto_impl",
- "base64 0.21.0",
- "bytes 1.4.0",
- "enr",
- "ethers-core 2.0.4",
- "futures-core",
- "futures-timer",
- "futures-util",
- "getrandom 0.2.8",
- "hashers",
- "hex",
- "http",
- "instant",
- "once_cell",
- "pin-project 1.0.12",
- "reqwest",
- "serde",
- "serde_json",
- "thiserror",
- "tokio 1.28.1",
+ "tokio-tungstenite 0.18.0",
  "tracing",
  "tracing-futures",
  "url",
@@ -2959,24 +2802,6 @@ dependencies = [
  "elliptic-curve 0.13.4",
  "eth-keystore",
  "ethers-core 2.0.2",
- "hex",
- "rand 0.8.5",
- "sha2 0.10.6",
- "thiserror",
- "tracing",
-]
-
-[[package]]
-name = "ethers-signers"
-version = "2.0.4"
-source = "git+https://github.com/gakonst/ethers-rs#3031efb2380483dd6bc5a6599519e58e95a8467f"
-dependencies = [
- "async-trait",
- "coins-bip32",
- "coins-bip39",
- "elliptic-curve 0.13.4",
- "eth-keystore",
- "ethers-core 2.0.4",
  "hex",
  "rand 0.8.5",
  "sha2 0.10.6",
@@ -8899,7 +8724,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "426649fd51964143b49326891ba1d5a10f166645f7b5a16794a0045e8361ad27"
 dependencies = [
  "async-trait",
- "ethers 2.0.2",
+ "ethers",
  "hex",
  "parity-scale-codec",
  "rand 0.8.5",
@@ -8913,11 +8738,10 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.5.24"
-source = "git+https://github.com/webb-tools/webb-rs#19a8d4c4bd5b24e68e2838ed43b8f26f13e91e28"
+version = "0.5.25"
 dependencies = [
  "async-trait",
- "ethers 2.0.4",
+ "ethers",
  "hex",
  "parity-scale-codec",
  "rand 0.8.5",
@@ -8931,7 +8755,7 @@ dependencies = [
 
 [[package]]
 name = "webb-block-poller"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -8944,17 +8768,17 @@ dependencies = [
  "tempfile",
  "tokio 1.28.1",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-relayer",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-bridge-registry-backends"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "async-trait",
  "ethereum-types 0.14.1",
@@ -8965,15 +8789,15 @@ dependencies = [
  "sp-core",
  "tokio 1.28.1",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-proposals",
  "webb-relayer-config",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-chains-info"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "anyhow",
  "prettyplease 0.2.4",
@@ -9012,7 +8836,7 @@ dependencies = [
 
 [[package]]
 name = "webb-event-watcher-traits"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "async-trait",
  "backoff",
@@ -9023,17 +8847,17 @@ dependencies = [
  "tokio 1.28.1",
  "tracing",
  "tracing-test",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-ew-dkg"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "async-trait",
  "ethereum-types 0.14.1",
@@ -9042,17 +8866,17 @@ dependencies = [
  "sled",
  "tokio 1.28.1",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-event-watcher-traits",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-ew-evm"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "ark-bls12-381",
  "ark-bn254",
@@ -9070,19 +8894,19 @@ dependencies = [
  "tokio 1.28.1",
  "tracing",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-ew-substrate"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "async-trait",
  "hex",
@@ -9093,15 +8917,15 @@ dependencies = [
  "tokio 1.28.1",
  "tracing",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0-dev",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
@@ -9127,7 +8951,7 @@ dependencies = [
  "thiserror",
  "tokio 1.28.1",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-proposal-signing-backends",
  "webb-proposals",
  "webb-relayer",
@@ -9138,13 +8962,13 @@ dependencies = [
  "webb-relayer-store",
  "webb-relayer-tx-queue",
  "webb-relayer-tx-relay",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0-dev",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-price-oracle-backends"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "async-trait",
  "axum",
@@ -9155,10 +8979,10 @@ dependencies = [
  "serde",
  "tokio 1.28.1",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-chains-info",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
@@ -9178,13 +9002,13 @@ dependencies = [
  "serde",
  "serde_json",
  "wasmer",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-circom-proving",
 ]
 
 [[package]]
 name = "webb-proposal-signing-backends"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "async-trait",
  "ethereum-types 0.14.1",
@@ -9200,11 +9024,11 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-proposals",
  "webb-relayer-store",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0-dev",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
@@ -9244,7 +9068,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "url",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-ew-dkg",
@@ -9257,12 +9081,12 @@ dependencies = [
  "webb-relayer-handlers",
  "webb-relayer-store",
  "webb-relayer-tx-queue",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-relayer-config"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "anyhow",
  "config",
@@ -9280,16 +9104,16 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "url",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-proposals",
  "webb-relayer-store",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0-dev",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-relayer-context"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "http",
  "native-tls",
@@ -9299,27 +9123,27 @@ dependencies = [
  "sp-core",
  "tokio 1.28.1",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-price-oracle-backends",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-relayer-handler-utils"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "native-tls",
  "serde",
  "tokio 1.28.1",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-relayer-tx-relay-utils",
 ]
 
 [[package]]
 name = "webb-relayer-handlers"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "axum",
  "axum-client-ip",
@@ -9332,19 +9156,19 @@ dependencies = [
  "tokio 1.28.1",
  "tokio-stream",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-handler-utils",
  "webb-relayer-store",
  "webb-relayer-tx-relay",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-relayer-store"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "hex",
  "native-tls",
@@ -9354,14 +9178,14 @@ dependencies = [
  "sled",
  "tempfile",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-proposals",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-relayer-tx-queue"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "backoff",
  "ethereum-types 0.14.1",
@@ -9375,17 +9199,17 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "url",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
- "webb-relayer-types 0.1.0",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-types 0.5.0-dev",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-relayer-tx-relay"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "chrono",
  "ethereum-types 0.14.1",
@@ -9396,36 +9220,22 @@ dependencies = [
  "sp-core",
  "tokio 1.28.1",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25",
  "webb-chains-info",
  "webb-price-oracle-backends",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-handler-utils",
- "webb-relayer-utils 0.1.0",
+ "webb-relayer-utils 0.5.0-dev",
 ]
 
 [[package]]
 name = "webb-relayer-tx-relay-utils"
-version = "0.1.0"
+version = "0.5.0-dev"
 dependencies = [
  "native-tls",
  "serde",
-]
-
-[[package]]
-name = "webb-relayer-types"
-version = "0.1.0"
-dependencies = [
- "ethereum-types 0.14.1",
- "native-tls",
- "serde",
- "sp-core",
- "tiny-bip39",
- "tracing",
- "url",
- "webb 0.5.24",
 ]
 
 [[package]]
@@ -9444,8 +9254,47 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb-relayer-types"
+version = "0.5.0-dev"
+dependencies = [
+ "ethereum-types 0.14.1",
+ "native-tls",
+ "serde",
+ "sp-core",
+ "tiny-bip39",
+ "tracing",
+ "url",
+ "webb 0.5.25",
+]
+
+[[package]]
 name = "webb-relayer-utils"
 version = "0.1.0"
+source = "git+https://github.com/webb-tools/relayer.git#1e7bb7f51cf666eedd4df18a922694cdf8f88ed4"
+dependencies = [
+ "ark-std",
+ "axum",
+ "backoff",
+ "config",
+ "derive_more",
+ "glob",
+ "hex",
+ "hyper 0.14.25",
+ "libsecp256k1",
+ "prometheus 0.13.3",
+ "reqwest",
+ "serde_json",
+ "serde_path_to_error",
+ "sled",
+ "thiserror",
+ "url",
+ "webb 0.5.21",
+ "webb-proposals",
+]
+
+[[package]]
+name = "webb-relayer-utils"
+version = "0.5.0-dev"
 dependencies = [
  "ark-std",
  "async-trait",
@@ -9469,32 +9318,7 @@ dependencies = [
  "thiserror",
  "tokio 1.28.1",
  "url",
- "webb 0.5.24",
- "webb-proposals",
-]
-
-[[package]]
-name = "webb-relayer-utils"
-version = "0.1.0"
-source = "git+https://github.com/webb-tools/relayer.git#1e7bb7f51cf666eedd4df18a922694cdf8f88ed4"
-dependencies = [
- "ark-std",
- "axum",
- "backoff",
- "config",
- "derive_more",
- "glob",
- "hex",
- "hyper 0.14.25",
- "libsecp256k1",
- "prometheus 0.13.3",
- "reqwest",
- "serde_json",
- "serde_path_to_error",
- "sled",
- "thiserror",
- "url",
- "webb 0.5.21",
+ "webb 0.5.25",
  "webb-proposals",
 ]
 

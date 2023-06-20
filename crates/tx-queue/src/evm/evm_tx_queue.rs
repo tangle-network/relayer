@@ -69,9 +69,9 @@ where
     /// Returns a future that resolves `Ok(())` on success, otherwise returns an error.
     #[tracing::instrument(skip_all, fields(chain = %self.chain_id))]
     pub async fn run(self) -> webb_relayer_utils::Result<()> {
-        let provider = self.ctx.evm_provider(&self.chain_id).await?;
+        let provider = self.ctx.evm_ws_provider(&self.chain_id).await?;
         let wallet = self.ctx.evm_wallet(self.chain_id).await?;
-        let signer_client = SignerMiddleware::new(provider, wallet);
+        let client = SignerMiddleware::new(provider, wallet);
 
         let chain_config = self
             .ctx

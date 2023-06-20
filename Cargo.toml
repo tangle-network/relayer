@@ -41,8 +41,7 @@ tokio = { version = "^1", features = ["full"] }
 config = { version = "0.13", default-features = false, features = ["toml", "json"] }
 serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0" }
-# webb = { version = "0.5.21", default-features = false }
-webb = { version = "0.5.24", git = "https://github.com/webb-tools/webb-rs", default-features = false }
+webb = { version = "0.5.25", path = "/Users/salman01zz/Webb-Tools/webb-rs", default-features = false }
 sp-core = { version = "16.0.0", default-features = false }
 sp-runtime = { version = "18.0.0", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).

@@ -17,6 +17,7 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use multi_provider::MultiProvider;
+use webb::evm::ethers::providers::WsClientError;
 use webb::{evm::ethers, substrate::subxt};
 use webb_proposals::ResourceId;
 
@@ -79,6 +80,9 @@ pub enum Error {
     /// Error in Http Provider (ethers client).
     #[error(transparent)]
     EthersProvider(#[from] ethers::providers::ProviderError),
+    ///Error in Ws Client Provider (ethers client).
+    #[error(transparent)]
+    EthersWsClient(#[from] WsClientError),
     /// Smart contract error.
     #[error(transparent)]
     EthersContractCall(
