@@ -17,7 +17,7 @@
 // This our basic Substrate VAnchor Transaction Relayer Tests (Circom).
 // These are for testing the basic relayer functionality. which is just to relay transactions for us.
 
-import { assert, expect } from 'chai';
+import { expect } from 'chai';
 import getPort, { portNumbers } from 'get-port';
 import temp from 'temp';
 import path from 'path';
@@ -40,7 +40,7 @@ import {
 } from '../../lib/substrateVAnchor.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 
-describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom', function() {
+describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let bobNode: LocalTangle;
@@ -52,11 +52,11 @@ describe.only('Substrate VAnchor Private Transaction Relayer Tests Using Circom'
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../tangle/target/release/tangle-standalone'
-        ),
-      };
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../tangle/target/release/tangle-standalone'
+          ),
+        };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'VAnchorBn254',
