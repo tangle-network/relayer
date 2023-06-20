@@ -61,6 +61,7 @@ export type ExportedConfigOptions = {
   privateKey?: string;
   smartAnchorUpdates?: SmartAnchorUpdatesConfig;
   httpEndpoints?: string[];
+  txQueueConfig?: TxQueueConfig;
 };
 
 // Default Events watcher for the contracts.
@@ -69,6 +70,18 @@ export const defaultEventsWatcherValue: EventsWatcher = {
   pollingInterval: 1000,
   printProgressInterval: 60_000,
 };
+
+// Default configuration for Evm Tx queue
+export const defaultEvmTxQueueConfig: TxQueueConfig = {
+  maxSleepInterval: 10000,
+  pollingInterval: 15000,
+};
+
+// Tx queue configurations
+export interface TxQueueConfig {
+  maxSleepInterval: number;
+  pollingInterval: number;
+}
 
 type LocalChainOpts = {
   name: string;
@@ -467,6 +480,7 @@ export class LocalChain {
       beneficiary: (wallet as ethers.Wallet).address,
       privateKey: (wallet as ethers.Wallet).privateKey,
       contracts: contracts,
+      txQueue: opts.txQueueConfig ?? defaultEvmTxQueueConfig,
     };
     return chainInfo;
   }
@@ -484,6 +498,7 @@ export class LocalChain {
       beneficiary: '',
       privateKey: opts.privateKey ?? '',
       contracts: [],
+      txQueue: defaultEvmTxQueueConfig,
     };
     for (const contract of this.opts.enabledContracts) {
       if (contract.contract == 'VAnchor') {
@@ -514,11 +529,13 @@ export class LocalChain {
       'linked-anchors'?: ConvertedLinkedAnchor[];
       'smart-anchor-updates'?: ConvertToKebabCase<SmartAnchorUpdatesConfig>;
     };
+    type ConvertedTxQueueConfig = ConvertToKebabCase<TxQueueConfig>;
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
-      'contracts'
+      'contracts' | 'tx-queue'
     > & {
       contracts: ConvertedContract[];
+      'tx-queue': ConvertedTxQueueConfig;
     };
     type FullConfigFile = {
       evm: {
@@ -536,6 +553,10 @@ export class LocalChain {
       'block-confirmations': config.blockConfirmations,
       beneficiary: config.beneficiary,
       'private-key': config.privateKey,
+      'tx-queue': {
+        'max-sleep-interval': config.txQueue.maxSleepInterval,
+        'polling-interval': config.txQueue.pollingInterval,
+      },
       contracts: config.contracts.map(
         (contract): ConvertedContract => ({
           contract: contract.contract,
@@ -605,6 +626,7 @@ export type FullChainInfo = ChainInfo & {
   wsEndpoint: string;
   privateKey: string;
   blockConfirmations: number;
+  txQueue: TxQueueConfig;
 };
 
 export async function setupVanchorEvmTx(
