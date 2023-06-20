@@ -57,6 +57,7 @@
     "babyjubjub": "^1.0.4",
     "get-port": "6.1.2",
     "keccak": "^3.0.2",
+    "snarkjs": "^0.6.10",
     "node-cron": "^3.0.0",
     "node-fetch": "^3.2.1",
     "temp": "^0.9.4",

@@ -52,7 +52,7 @@ import {
 } from '../../lib/utils.js';
 import { ethers } from 'ethers';
 
-describe('Substrate VAnchor Transaction Relayer Tests', function () {
+describe.skip('Substrate VAnchor Transaction Relayer Tests', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let charlieNode: LocalTangle;

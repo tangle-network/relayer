@@ -19,14 +19,15 @@ import path from 'path';
 import WebSocket from 'ws';
 import fetch from 'node-fetch';
 import {
-  IVariableAnchorExtData,
-  IVariableAnchorPublicInputs,
+  type IVariableAnchorExtData,
+  type IVariableAnchorPublicInputs as IEvmVariableAnchorPublicInputs,
 } from '@webb-tools/interfaces';
 import { ChildProcess, spawn } from 'child_process';
 import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
+import { IVariableAnchorPublicInputs as ISubstrateVariableAnchorPublicInputs } from '../lib/substrateVAnchor.js';
 import { padHexString } from '../lib/utils.js';
 import * as BN from 'bn.js';
 
@@ -309,7 +310,7 @@ export class WebbRelayer {
   public async vanchorWithdraw(
     chainId: number,
     vanchorAddress: string,
-    publicInputs: IVariableAnchorPublicInputs,
+    publicInputs: IEvmVariableAnchorPublicInputs,
     extData: IVariableAnchorExtData
   ): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
@@ -354,8 +355,8 @@ export class WebbRelayer {
   public async substrateVAnchorWithdraw(
     chainId: number,
     id: number,
-    extData: SubstrateVAnchorExtData,
-    proofData: SubstrateVAnchorProofData
+    publicInputs: ISubstrateVariableAnchorPublicInputs,
+    extData: IVariableAnchorExtData
   ): Promise<`0x${string}`> {
     const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
     // create a new websocket connection to the relayer.
@@ -364,10 +365,33 @@ export class WebbRelayer {
     const cmd = {
       substrate: {
         vAnchor: {
-          chainId: chainId,
+          chainId,
           id,
-          extData,
-          proofData,
+          extData: {
+            recipient: extData.recipient,
+            relayer: extData.relayer,
+            extAmount: BigNumber.from(extData.extAmount)
+              .toHexString()
+              .replace('0x', ''),
+            fee: extData.fee,
+            refund: extData.refund,
+            token: BigNumber.from(extData.token).toNumber(),
+            encryptedOutput1: extData.encryptedOutput1,
+            encryptedOutput2: extData.encryptedOutput2,
+          },
+          proofData: {
+            proof: publicInputs.proof,
+            extDataHash: padHexString(publicInputs.extDataHash),
+            publicAmount: publicInputs.publicAmount,
+            roots: publicInputs.roots,
+            extensionRoots: [],
+            outputCommitments: publicInputs.outputCommitments.map((output) =>
+              padHexString(output)
+            ),
+            inputNullifiers: publicInputs.inputNullifiers.map((nullifier) =>
+              padHexString(nullifier)
+            ),
+          },
         },
       },
     };
@@ -694,6 +718,8 @@ export interface Substrate {
 
 export interface NodeInfo {
   enabled: boolean;
+  chainId: number;
+  beneficiary?: string;
   pallets: Pallet[];
 }
 
