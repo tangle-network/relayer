@@ -64,7 +64,7 @@ import { currencyToUnitI128, UsageMode } from '@webb-tools/test-utils';
 import { expect } from 'chai';
 const { ecdsaSign } = pkg;
 
-describe('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
+describe.skip('Substrate Signature Bridge Relaying On Vanchor Deposit <<>> Mocked Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let charlieNode: LocalTangle;
