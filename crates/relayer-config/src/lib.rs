@@ -175,12 +175,15 @@ pub struct TxQueueConfig {
     /// Maximum number of milliseconds to wait before dequeuing a transaction from
     /// the queue.
     pub max_sleep_interval: u64,
+    /// Polling interval in milliseconds to wait before checking pending tx state on chain.
+    pub polling_interval: u64,
 }
 
 impl Default for TxQueueConfig {
     fn default() -> Self {
         Self {
             max_sleep_interval: 10_000,
+            polling_interval: 12_000,
         }
     }
 }
