@@ -27,7 +27,7 @@ chain-id = 5002
 #    then we should process it as a mnemonic string: 'word two three four ...'
 private-key = "$ATHENA_PRIVATE_KEY"
 
-tx-queue = { max-sleep-interval = 1500 }
+tx-queue = { max-sleep-interval = 1500, polling-interval = 12000 }
 # Value to indicate that the relayer should enable services for this chain
 enabled = true
 
