@@ -463,7 +463,7 @@ sends transactions to the chain.
 - Type: `number`
 - Required: `false`
 - Default: `10000ms`
-- env: `WEBB_EVM_<CHAIN_NAME>_TX_QUEUE_max_sleep_interval`
+- env: `WEBB_EVM_<CHAIN_NAME>_TX_QUEUE_MAX_SLEEP_INTERVAL`
 
 ##### polling-interval
 Polling interval for checking pending transaction state. This configuration controls the rate at which RPC client queries on chain for transaction status.
@@ -471,7 +471,7 @@ Polling interval for checking pending transaction state. This configuration cont
 - Type: `number`
 - Required: `false`
 - Default: `12000ms`
-- env: `WEBB_EVM_<CHAIN_NAME>_TX_QUEUE_polling_interval`
+- env: `WEBB_EVM_<CHAIN_NAME>_TX_QUEUE_POLLING_INTERVAL`
 
 
 Example:
