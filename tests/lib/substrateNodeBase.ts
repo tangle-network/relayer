@@ -111,14 +111,14 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     const api = await this.api();
 
     return new Promise<void>((resolve) => {
-      api.query.system.events((events) => {
+      const unsub = api.query.system.events((events) => {
         events.forEach((record) => {
           const { event } = record;
           if (
             event.section === typedEvent.section &&
             event.method === typedEvent.method
           ) {
-            resolve();
+            unsub.then(() => resolve());
           }
         });
       });
@@ -162,7 +162,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
     const sudoKey = keyring.addFromUri('//Alice');
     const sudoCall = api.tx.sudo.sudo(tx);
     return new Promise((resolve, reject) => {
-      sudoCall
+      const unsub = sudoCall
         .signAndSend(sudoKey, { nonce: -1 }, ({ dispatchError, status }) => {
           // status would still be set, but in the case of error we can shortcut
           // to just check it (so an error would indicate InBlock or Finalized)
@@ -174,15 +174,17 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
               );
               const { docs, name, section } = decoded;
 
-              reject(new Error(`${section}.${name}: ${docs.join(' ')}`));
+              unsub.then(() =>
+                reject(new Error(`${section}.${name}: ${docs.join(' ')}`))
+              );
             } else {
               // Other, CannotLookup, BadOrigin, no extra info
-              reject(dispatchError.toString());
+              unsub.then(() => reject(dispatchError.toString()));
             }
           }
 
           if (status.isFinalized && !dispatchError) {
-            resolve(status.asFinalized.toString());
+            unsub.then(() => resolve(status.asFinalized.toString()));
           }
         })
         .catch((e) => reject(e));

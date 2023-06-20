@@ -63,6 +63,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
 
   // dkg nodes
   let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
@@ -92,6 +93,14 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
+      usageMode,
+      ports: 'auto',
+      enableLogging: false,
+    });
+
+    bobNode = await LocalTangle.start({
+      name: 'substrate-bob',
+      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,

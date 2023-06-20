@@ -101,24 +101,24 @@ impl EventHandler<PolkadotConfig> for SubstrateVAnchorEncryptedOutputHandler {
                 [event.encrypted_output1, event.encrypted_output2]
             {
                 let value = (index, encrypted_output.clone());
+                tracing::event!(
+                    target: webb_relayer_utils::probe::TARGET,
+                    tracing::Level::DEBUG,
+                    kind = %webb_relayer_utils::probe::Kind::EncryptedOutputStore,
+                    chain_id = %chain_id,
+                    index = %index,
+                    encrypted_output = %hex::encode(&encrypted_output),
+                    tree_id = %tree_id,
+                    block_number = %block_number
+                );
                 store.insert_encrypted_output_and_last_deposit_block_number(
                     history_store_key,
                     &[value],
                     block_number,
                 )?;
-                index += 1;
                 output_store.push(encrypted_output);
+                index += 1;
             }
-            tracing::event!(
-                target: webb_relayer_utils::probe::TARGET,
-                tracing::Level::DEBUG,
-                kind = %webb_relayer_utils::probe::Kind::EncryptedOutputStore,
-                chain_id = %chain_id,
-                index = index,
-                encrypted_outputs = %format!("{output_store:?}"),
-                tree_id = %tree_id,
-                block_number = %block_number
-            );
         }
         Ok(())
     }

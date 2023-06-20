@@ -7,7 +7,8 @@ use webb::substrate::tangle_runtime::api::runtime_types::tangle_standalone_runti
 use webb::substrate::{
     subxt::{PolkadotConfig, tx::PairSigner},
     tangle_runtime::api::runtime_types::webb_primitives::types::vanchor,
-};use ethereum_types::U256;
+};
+use ethereum_types::U256;
 use sp_core::{Decode, Encode};
 use webb::substrate::scale::Compact;
 use webb_proposals::{
@@ -31,31 +32,36 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     use CommandResponse::*;
 
     let proof_elements: vanchor::ProofData<Element> = vanchor::ProofData {
-        proof: cmd.proof_data.proof,
-        public_amount: Element(cmd.proof_data.public_amount),
-        roots: cmd.proof_data.roots.iter().map(|r| Element(*r)).collect(),
+        proof: cmd.proof_data.proof.to_vec(),
+        public_amount: Element(cmd.proof_data.public_amount.to_fixed_bytes()),
+        roots: cmd
+            .proof_data
+            .roots
+            .iter()
+            .map(|r| Element(r.to_fixed_bytes()))
+            .collect(),
         input_nullifiers: cmd
             .proof_data
             .input_nullifiers
             .iter()
-            .map(|r| Element(*r))
+            .map(|r| Element(r.to_fixed_bytes()))
             .collect(),
         output_commitments: cmd
             .proof_data
             .output_commitments
             .iter()
-            .map(|r| Element(*r))
+            .map(|r| Element(r.to_fixed_bytes()))
             .collect(),
-        ext_data_hash: Element(cmd.proof_data.ext_data_hash),
+        ext_data_hash: Element(cmd.proof_data.ext_data_hash.to_fixed_bytes()),
     };
     let ext_data_elements: vanchor::ExtData<AccountId32, i128, u128, _> =
         vanchor::ExtData {
-            recipient: cmd.ext_data.recipient,
-            relayer: cmd.ext_data.relayer,
+            recipient: cmd.ext_data.recipient.to_fixed_bytes().into(),
+            relayer: cmd.ext_data.relayer.to_fixed_bytes().into(),
             fee: cmd.ext_data.fee.as_u128(),
             ext_amount: cmd.ext_data.ext_amount.0,
-            encrypted_output1: cmd.ext_data.encrypted_output1.clone(),
-            encrypted_output2: cmd.ext_data.encrypted_output2.clone(),
+            encrypted_output1: cmd.ext_data.encrypted_output1.to_vec(),
+            encrypted_output2: cmd.ext_data.encrypted_output2.to_vec(),
             refund: cmd.ext_data.refund.as_u128(),
             token: cmd.ext_data.token,
         };
@@ -73,7 +79,6 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     })?;
 
     let signer = PairSigner::new(pair.clone());
-
     let transact_tx = RuntimeApi::tx().v_anchor_bn254().transact(
         cmd.id,
         proof_elements,

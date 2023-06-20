@@ -94,24 +94,24 @@ impl EventHandler<PolkadotConfig> for SubstrateVAnchorLeavesHandler {
             let mut leaf_store = Vec::with_capacity(leaf_count);
             for leaf in event.leafs {
                 let value = (leaf_index, leaf.0.to_vec());
+                tracing::event!(
+                    target: webb_relayer_utils::probe::TARGET,
+                    tracing::Level::DEBUG,
+                    kind = %webb_relayer_utils::probe::Kind::LeavesStore,
+                    chain_id = %chain_id,
+                    leaf_index = leaf_index,
+                    leaf = %hex::encode(leaf.0),
+                    tree_id = %tree_id,
+                    block_number = %block_number
+                );
                 store.insert_leaves_and_last_deposit_block_number(
                     history_store_key,
                     &[value],
                     block_number,
                 )?;
-                leaf_index += 1;
                 leaf_store.push(leaf.0);
+                leaf_index += 1;
             }
-            tracing::event!(
-                target: webb_relayer_utils::probe::TARGET,
-                tracing::Level::DEBUG,
-                kind = %webb_relayer_utils::probe::Kind::LeavesStore,
-                chain_id = %chain_id,
-                leaf_index = leaf_index,
-                leafs = %format!("{leaf_store:?}"),
-                tree_id = %tree_id,
-                block_number = %block_number
-            );
         }
         Ok(())
     }
