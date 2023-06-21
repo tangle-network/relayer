@@ -151,11 +151,13 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       signatureVBridge,
       withdrawConfig: defaultWithdrawConfigValue,
       relayerWallet: relayerWallet1,
+      txQueueConfig: { maxSleepInterval: 1500, pollingInterval: 7000 },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge,
       withdrawConfig: defaultWithdrawConfigValue,
       relayerWallet: relayerWallet2,
+      txQueueConfig: { maxSleepInterval: 1500, pollingInterval: 7000 },
     });
 
     // get the vanhor on localchain1

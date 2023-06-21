@@ -7,7 +7,8 @@
       "chain-id": 5003,
       "private-key": "$DEMETER_PRIVATE_KEY",
       "tx-queue": {
-        "max-sleep-interval": 1500
+        "max-sleep-interval": 1500,
+        "polling-interval": 12000
       },
       "enabled": true,
       "contracts": [

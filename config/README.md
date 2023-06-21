@@ -449,7 +449,6 @@ Example:
 ```toml
 beneficiary = "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
 ```
-
 #### Tx Queue
 
 The tx queue is used to store the transactions that are waiting to be sent to the chain. The relayer
@@ -466,10 +465,19 @@ sends transactions to the chain.
 - Default: `10000ms`
 - env: `WEBB_EVM_<CHAIN_NAME>_TX_QUEUE_MAX_SLEEP_INTERVAL`
 
+##### polling-interval
+Polling interval for checking pending transaction state. This configuration controls the rate at which RPC client queries on chain for transaction status.
+
+- Type: `number`
+- Required: `false`
+- Default: `12000ms`
+- env: `WEBB_EVM_<CHAIN_NAME>_TX_QUEUE_POLLING_INTERVAL`
+
+
 Example:
 
 ```toml
-tx-queue = { max-sleep-interval = 5000 }
+tx-queue = { max-sleep-interval = 5000, polling-interval = 12000 }
 ```
 
 #### Contracts

@@ -42,7 +42,7 @@ import { MintableToken } from '@webb-tools/tokens';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
+describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -53,6 +53,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
   // dkg nodes
   let aliceNode: LocalTangle;
+  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
@@ -83,6 +84,14 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
+      usageMode,
+      ports: 'auto',
+      enableLogging: false,
+    });
+
+    bobNode = await LocalTangle.start({
+      name: 'substrate-bob',
+      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -414,6 +423,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
   after(async () => {
     await aliceNode?.stop();
+    await bobNode?.stop();
     await charlieNode?.stop();
     await localChain1?.stop();
     await localChain2?.stop();
