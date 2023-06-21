@@ -73,7 +73,7 @@ export const defaultEventsWatcherValue: EventsWatcher = {
 
 // Default configuration for Evm Tx queue
 export const defaultEvmTxQueueConfig: TxQueueConfig = {
-  maxSleepInterval: 10000,
+  maxSleepInterval: 1500,
   pollingInterval: 15000,
 };
 
