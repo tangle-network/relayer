@@ -239,6 +239,9 @@ pub enum Error {
     /// Provider not found error.
     #[error("Provider not found for index {0}")]
     ProviderNotFound(usize),
+    /// Invalid Proposal bytes.
+    #[error("Invalid proposal bytes")]
+    InvalidProposalBytes,
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.
