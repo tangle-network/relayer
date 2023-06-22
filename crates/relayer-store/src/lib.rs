@@ -407,12 +407,11 @@ impl TryFrom<(Vec<u8>, Vec<u8>)> for BridgeCommand {
     type Error = webb_relayer_utils::Error;
     fn try_from((data, signature): (Vec<u8>, Vec<u8>)) -> Result<Self> {
         use webb::evm::ethers::prelude::*;
-        if data.len() < 40 {
-            return Err(webb_relayer_utils::Error::InvalidProposalBytes);
-        }
-
+        let data_header_bytes = data
+            .get(0..40)
+            .ok_or(webb_relayer_utils::Error::InvalidProposalBytes)?;
         let mut header_bytes = [0u8; 40];
-        header_bytes.copy_from_slice(&data[..40]);
+        header_bytes.copy_from_slice(data_header_bytes);
 
         let header = webb_proposals::ProposalHeader::from(header_bytes);
         let function_sig = header.function_signature().into_bytes();
