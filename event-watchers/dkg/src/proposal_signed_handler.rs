@@ -16,14 +16,10 @@ use std::sync::Arc;
 
 use tokio::sync::Mutex;
 
-use webb::evm::ethers::prelude::*;
-use webb::evm::contract::protocol_solidity::AdminSetResourceWithSignatureCall;
 use webb::substrate::tangle_runtime::api::dkg_proposal_handler;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::subxt::{self, OnlineClient, PolkadotConfig};
 
-use webb_proposals::evm::ResourceIdUpdateProposal;
-use webb_proposals::ProposalHeader;
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};
 use webb_relayer_utils::metric;
@@ -156,69 +152,11 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
             );
             // Proposal signed metric
             metrics.lock().await.proposals_signed.inc();
-            // Depending on the chain, we need to send different commands to the bridge.
-            let item = if matches!(&event.target_chain, TypedChainId::Evm(_)) {
-                evm_proposal_to_cmd(event)?
-            } else {
-                BridgeCommand::ExecuteProposalWithSignature {
-                    data: event.data,
-                    signature: event.signature,
-                }
-            };
             store.enqueue_item(
                 SledQueueKey::from_bridge_key(bridge_key),
-                item,
+                BridgeCommand::try_from(event)?,
             )?;
         }
         Ok(())
-    }
-}
-
-/// Parses a proposal header from the given data.
-///
-/// The proposal header is the first 40 bytes of the data.
-/// Returns an error if the data is not long enough.
-fn proposal_header_from(
-    data: &[u8],
-) -> webb_relayer_utils::Result<ProposalHeader> {
-    if data.len() < 40 {
-        return Err(webb_relayer_utils::Error::InvalidProposalBytes);
-    }
-
-    let mut header_bytes = [0u8; 40];
-    header_bytes.copy_from_slice(&data[..40]);
-    Ok(ProposalHeader::from(header_bytes))
-}
-
-/// Converts an EVM proposal to a bridge command.
-/// Returns an error if the proposal is not valid.
-fn evm_proposal_to_cmd(
-    event: dkg_proposal_handler::events::ProposalSigned,
-) -> webb_relayer_utils::Result<BridgeCommand> {
-    let header = proposal_header_from(&event.data)?;
-    let function_sig = header.function_signature().into_bytes();
-    // checks whether the proposal is a resource id update by using
-    // the function signature.
-    if function_sig == AdminSetResourceWithSignatureCall::selector() {
-        if event.data.len() != ResourceIdUpdateProposal::LENGTH {
-            return Err(webb_relayer_utils::Error::InvalidProposalBytes);
-        }
-        // Decode the proposal data
-        let mut proposal_bytes = [0u8; ResourceIdUpdateProposal::LENGTH];
-        proposal_bytes.copy_from_slice(&event.data[..]);
-        let proposal = ResourceIdUpdateProposal::from(proposal_bytes);
-
-        Ok(BridgeCommand::AdminSetResourceWithSignature {
-            resource_id: header.resource_id().into_bytes(),
-            new_resource_id: proposal.new_resource_id().into_bytes(),
-            handler_address: proposal.handler_address(),
-            nonce: header.nonce().to_u32(),
-            signature: event.signature,
-        })
-    } else {
-        Ok(BridgeCommand::ExecuteProposalWithSignature {
-            data: event.data,
-            signature: event.signature,
-        })
     }
 }

@@ -109,11 +109,7 @@ impl EventHandler<PolkadotConfig> for DKGPublicKeyChangedHandler {
                 );
                 store.enqueue_item(
                     SledQueueKey::from_bridge_key(bridge_key),
-                    BridgeCommand::TransferOwnershipWithSignature {
-                        public_key: public_key_uncompressed.clone(),
-                        nonce,
-                        signature: event.pub_key_sig.clone(),
-                    },
+                    BridgeCommand::from(event.clone()),
                 )?;
             }
         }
