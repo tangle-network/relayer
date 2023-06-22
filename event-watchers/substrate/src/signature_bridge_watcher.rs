@@ -137,6 +137,9 @@ impl SubstrateBridgeWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
                 )
                 .await?
             }
+            AdminSetResourceWithSignature { .. } => {
+                unreachable!("AdminSetMaintainerWithSignature is not supported on substrate");
+            }
         };
         Ok(())
     }

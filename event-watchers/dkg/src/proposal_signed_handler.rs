@@ -147,17 +147,14 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
                 kind = %webb_relayer_utils::probe::Kind::SigningBackend,
                 backend = "DKG",
                 signal_bridge = %bridge_key,
-                data = ?hex::encode(&event.data),
-                signature = ?hex::encode(&event.signature),
+                data = %hex::encode(&event.data),
+                signature = %hex::encode(&event.signature),
             );
             // Proposal signed metric
             metrics.lock().await.proposals_signed.inc();
             store.enqueue_item(
                 SledQueueKey::from_bridge_key(bridge_key),
-                BridgeCommand::ExecuteProposalWithSignature {
-                    data: event.data.clone(),
-                    signature: event.signature,
-                },
+                BridgeCommand::try_from(event)?,
             )?;
         }
         Ok(())
