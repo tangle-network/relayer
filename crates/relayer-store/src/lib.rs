@@ -365,6 +365,20 @@ pub enum BridgeCommand {
         /// backend.
         signature: Vec<u8>,
     },
+    /// A Command sent to the Signature Bridge to Add a new Resource with signature.
+    /// Sets a new resource for handler contracts that use the IExecutor interface.
+    AdminSetResourceWithSignature {
+        /// Target resource ID of the proposal header.
+        resource_id: [u8; 32],
+        /// Secondary resourceID begin mapped to a handler address.
+        new_resource_id: [u8; 32],
+        /// Address of handler resource will be set for.
+        handler_address: [u8; 20],
+        /// The nonce of this proposal.
+        nonce: u32,
+        /// The signature from the governor of the encoded set resource proposal.
+        signature: Vec<u8>,
+    },
 }
 
 /// A trait for retrieving queue keys
