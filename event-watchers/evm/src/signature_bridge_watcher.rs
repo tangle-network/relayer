@@ -532,7 +532,6 @@ fn make_transfer_ownership_key(new_owner_address: [u8; 20]) -> [u8; 64] {
     result
 }
 
-
 fn make_admin_set_resource_key(data_hash: [u8; 32]) -> [u8; 64] {
     let mut result = [0u8; 64];
     let prefix = b"admin_set_resource_with_sig_key_";
