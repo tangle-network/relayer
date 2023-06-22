@@ -28,9 +28,10 @@ use webb::evm::ethers::{
 };
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
+use webb_relayer_store::queue::QueueStore;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::{
-    BridgeCommand, BridgeKey, EventHashStore, HistoryStore, QueueStore,
+    BridgeCommand, BridgeKey, EventHashStore, HistoryStore,
 };
 use webb_relayer_utils::metric;
 

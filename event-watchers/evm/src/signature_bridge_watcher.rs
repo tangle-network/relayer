@@ -30,8 +30,9 @@ use webb_event_watcher_traits::evm::{
     BridgeWatcher, EventHandler, EventWatcher, WatchableContract,
 };
 use webb_event_watcher_traits::EthersTimeLagClient;
+use webb_relayer_store::queue::{QueueItem, QueueStore};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
-use webb_relayer_store::{BridgeCommand, QueueStore};
+use webb_relayer_store::BridgeCommand;
 use webb_relayer_utils::metric;
 
 /// A Wrapper around the `SignatureBridgeContract` contract.
@@ -286,7 +287,8 @@ where
             proposal_data.into(),
             signature.into(),
         );
-        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
+        let item = QueueItem::new(call.tx);
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
             proposal_data_hash = ?hex::encode(proposal_data_hash),
             "Enqueued execute-proposal call for execution through evm tx queue",
@@ -392,7 +394,8 @@ where
             )
             .gas(estimate_gas.saturating_mul(U256::from(2)));
 
-        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
+        let item = QueueItem::new(call.tx);
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
             chain_id = %chain_id.as_u64(),
             "Enqueued the ownership transfer for execution in the tx queue",

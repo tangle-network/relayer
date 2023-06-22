@@ -17,8 +17,9 @@ use tokio::sync::Mutex;
 use webb::substrate::subxt::{self, OnlineClient, PolkadotConfig};
 use webb::substrate::tangle_runtime::api::dkg;
 
+use webb_relayer_store::queue::{QueueItem, QueueStore};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
-use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};
+use webb_relayer_store::{BridgeCommand, BridgeKey};
 use webb_relayer_utils::metric;
 
 use webb_event_watcher_traits::substrate::EventHandler;
@@ -107,13 +108,16 @@ impl EventHandler<PolkadotConfig> for DKGPublicKeyChangedHandler {
                     nonce = %nonce,
                     signature = %hex::encode(&event.pub_key_sig),
                 );
-                store.enqueue_item(
-                    SledQueueKey::from_bridge_key(bridge_key),
+                let item = QueueItem::new(
                     BridgeCommand::TransferOwnershipWithSignature {
                         public_key: public_key_uncompressed.clone(),
                         nonce,
                         signature: event.pub_key_sig.clone(),
                     },
+                );
+                store.enqueue_item(
+                    SledQueueKey::from_bridge_key(bridge_key),
+                    item,
                 )?;
             }
         }

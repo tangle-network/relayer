@@ -19,8 +19,8 @@ use webb::substrate::subxt;
 use webb::substrate::subxt::config::ExtrinsicParams;
 use webb::substrate::subxt::PolkadotConfig;
 use webb_relayer_context::RelayerContext;
+use webb_relayer_store::queue::QueueStore;
 use webb_relayer_store::sled::SledQueueKey;
-use webb_relayer_store::QueueStore;
 use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
 use std::sync::Arc;
@@ -120,10 +120,11 @@ where
             let signer = subxt::tx::PairSigner::<PolkadotConfig, _>::new(pair);
             loop {
                 // dequeue signed transaction
-                let tx_call_data = store.dequeue_item(
+                let maybe_item = store.dequeue_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),
                 )?;
-                if let Some(payload) = tx_call_data {
+                if let Some(item) = maybe_item {
+                    let payload = item.inner;
                     let signed_extrinsic = client
                         .tx()
                         .create_signed(&payload, &signer, Default::default())

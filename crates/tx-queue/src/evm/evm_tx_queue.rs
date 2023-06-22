@@ -25,8 +25,8 @@ use webb::evm::ethers::providers::Middleware;
 
 use webb::evm::ethers::types;
 use webb_relayer_context::RelayerContext;
+use webb_relayer_store::queue::{QueueItem, QueueStore};
 use webb_relayer_store::sled::SledQueueKey;
-use webb_relayer_store::QueueStore;
 use webb_relayer_utils::clickable_link::ClickableLink;
 
 /// The TxQueue stores transaction requests so the relayer can process them later.
@@ -111,13 +111,13 @@ where
         let metrics_clone = self.ctx.metrics.clone();
         let task = || async {
             loop {
-                let maybe_tx = store
+                let maybe_item = store
                     .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))?;
                 let maybe_explorer = &chain_config.explorer;
                 let mut tx_hash: H256;
-                if let Some(mut raw_tx) = maybe_tx {
-                    let raw_tx =
-                        raw_tx.set_chain_id(U64::from(chain_id)).clone();
+                if let Some(item) = maybe_item {
+                    let mut raw_tx = item.inner;
+                    raw_tx.set_chain_id(U64::from(chain_id));
                     let my_tx_hash = raw_tx.sighash();
                     tx_hash = my_tx_hash;
                     tracing::debug!(?tx_hash, tx = ?raw_tx, "Found tx in queue");
@@ -281,9 +281,10 @@ where
                                 tx_hash_string
                             );
                             // enquing the tx again
+                            let item = QueueItem::new(raw_tx);
                             store.enqueue_item(
                                 SledQueueKey::from_evm_chain_id(chain_id),
-                                raw_tx,
+                                item,
                             )?;
                         }
                         Err(e) => {
