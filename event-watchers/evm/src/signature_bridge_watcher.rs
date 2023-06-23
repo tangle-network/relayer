@@ -18,7 +18,8 @@ use std::time::Duration;
 
 use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::{
-    SignatureBridgeContract, SignatureBridgeContractEvents,
+    AdminSetResourceWithSignatureCall, SignatureBridgeContract,
+    SignatureBridgeContractEvents,
 };
 use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
@@ -202,6 +203,26 @@ impl BridgeWatcher for SignatureBridgeContractWatcher {
                 )
                 .await?
             }
+            AdminSetResourceWithSignature {
+                resource_id,
+                new_resource_id,
+                handler_address,
+                nonce,
+                signature,
+            } => {
+                self.admin_set_resource_with_signature(
+                    store,
+                    &wrapper.contract,
+                    (
+                        resource_id,
+                        new_resource_id,
+                        handler_address,
+                        nonce,
+                        signature,
+                    ),
+                )
+                .await?
+            }
         };
         Ok(())
     }
@@ -222,8 +243,8 @@ where
         // 1. Verify proposal length. Proposal lenght should be greater than 40 bytes (proposal header(40B) + proposal body).
         if proposal_data.len() < 40 {
             tracing::warn!(
-                proposal_data = ?proposal_data_hex,
-                "Skipping execution of this proposal :  Invalid Proposal",
+                proposal_data = %proposal_data_hex,
+                "Skipping execution of this proposal: Invalid Proposal",
             );
             return Ok(());
         }
@@ -231,21 +252,6 @@ where
         // 2. Verify if proposal already exists in transaction queue
         let chain_id = contract.get_chain_id().call().await?;
         let proposal_data_hash = utils::keccak256(&proposal_data);
-        let tx_key = SledQueueKey::from_evm_with_custom_key(
-            chain_id.as_u32(),
-            make_execute_proposal_key(proposal_data_hash),
-        );
-
-        // check if we already have a queued tx for this proposal.
-        // if we do, we should not enqueue it again.
-        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
-        if qq {
-            tracing::debug!(
-                proposal_data_hash = ?hex::encode(proposal_data_hash),
-                "Skipping execution of this proposal :  Already Exists in Queue",
-            );
-            return Ok(());
-        }
 
         // 3. Verify proposal signature. Proposal should be signed by active maintainer/dkg-key
         let (proposal_data_clone, signature_clone) =
@@ -260,14 +266,14 @@ where
 
         let governor = contract.governor().call().await?;
         tracing::debug!(
-            governor = ?hex::encode(governor),
+            governor = %hex::encode(governor),
             "GOVERNOR",
         );
         let signature_hex = hex::encode(&signature);
         if !is_signature_valid {
             tracing::warn!(
-                proposal_data = ?proposal_data_hex,
-                signature = ?signature_hex,
+                proposal_data = %proposal_data_hex,
+                signature = %signature_hex,
                 "Skipping execution of this proposal : Invalid Signature ",
             );
             return Ok(());
@@ -280,9 +286,9 @@ where
             kind = %webb_relayer_utils::probe::Kind::SignatureBridge,
             call = "execute_proposal_with_signature",
             chain_id = %chain_id.as_u64(),
-            proposal_data = ?proposal_data_hex,
-            signature = ?signature_hex,
-            proposal_data_hash = ?hex::encode(proposal_data_hash),
+            proposal_data = %proposal_data_hex,
+            signature = %signature_hex,
+            proposal_data_hash = %hex::encode(proposal_data_hash),
         );
         // Enqueue transaction call data in evm transaction queue
         let call = contract.execute_proposal_with_signature(
@@ -296,6 +302,17 @@ where
             chain_id.as_u32(),
             typed_tx.item_key(typed_tx.sighash().0),
         );
+
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+        if qq {
+            tracing::debug!(
+                proposal_data_hash = %hex::encode(proposal_data_hash),
+                "Skipping execution of this proposal: Already Exists in Queue",
+            );
+            return Ok(());
+        }
 
         QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
@@ -410,19 +427,109 @@ where
         );
         Ok(())
     }
-}
 
-fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
-    let mut result = [0u8; 64];
-    let prefix = b"execute_proposal_with_signature_";
-    result[0..32].copy_from_slice(prefix);
-    result[32..64].copy_from_slice(&data_hash);
-    result
+    #[tracing::instrument(skip_all)]
+    async fn admin_set_resource_with_signature(
+        &self,
+        store: Arc<<Self as EventWatcher>::Store>,
+        contract: &SignatureBridgeContract<EthersTimeLagClient>,
+        (resource_id, new_resource_id, handler_address, nonce, signature): (
+            [u8; 32],
+            [u8; 32],
+            [u8; 20],
+            u32,
+            Vec<u8>,
+        ),
+    ) -> webb_relayer_utils::Result<()> {
+        let function_sig = AdminSetResourceWithSignatureCall::selector();
+        let mut proposal_data = Vec::with_capacity(32 + 32 + 20);
+        proposal_data.extend_from_slice(resource_id.as_slice());
+        proposal_data.extend_from_slice(function_sig.as_slice());
+        proposal_data.extend_from_slice(&nonce.to_be_bytes());
+        proposal_data.extend_from_slice(new_resource_id.as_slice());
+        proposal_data.extend_from_slice(handler_address.as_slice());
+        let proposal_data_hash = utils::keccak256(&proposal_data);
+
+        let chain_id = contract.get_chain_id().call().await?;
+
+        // Verify proposal signature. Proposal should be signed by active maintainer/dkg-key
+        let (proposal_data_clone, signature_clone) =
+            (proposal_data.clone(), signature.clone());
+        let is_signature_valid = contract
+            .is_signature_from_governor(
+                proposal_data_clone.into(),
+                signature_clone.into(),
+            )
+            .call()
+            .await?;
+
+        let governor = contract.governor().call().await?;
+        tracing::debug!(
+            governor = %hex::encode(governor),
+            "GOVERNOR",
+        );
+        let proposal_data_hex = hex::encode(&proposal_data);
+        let signature_hex = hex::encode(&signature);
+        if !is_signature_valid {
+            tracing::warn!(
+                proposal_data = %proposal_data_hex,
+                signature = %signature_hex,
+                "Skipping execution of this proposal: Invalid Signature",
+            );
+            return Ok(());
+        }
+
+        // 3. Enqueue proposal for execution.
+        tracing::event!(
+            target: webb_relayer_utils::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %webb_relayer_utils::probe::Kind::SignatureBridge,
+            call = "admin_set_resource_with_signature",
+            chain_id = %chain_id.as_u64(),
+            proposal_data = %proposal_data_hex,
+            signature = %signature_hex,
+            proposal_data_hash = %hex::encode(proposal_data_hash),
+        );
+        // Enqueue transaction call data in evm transaction queue
+        let call = contract.admin_set_resource_with_signature(
+            resource_id,
+            function_sig,
+            nonce,
+            new_resource_id,
+            handler_address.into(),
+            signature.into(),
+        );
+
+        let typed_tx: TypedTransaction = call.tx;
+        let item = QueueItem::new(typed_tx.clone());
+        let tx_key = SledQueueKey::from_evm_with_custom_key(
+            chain_id.as_u32(),
+            typed_tx.item_key(typed_tx.sighash().0),
+        );
+
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+        if qq {
+            tracing::debug!(
+                proposal_data_hash = %hex::encode(proposal_data_hash),
+                "Skipping execution of this proposal: Already Exists in Queue",
+            );
+            return Ok(());
+        }
+
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
+        tracing::debug!(
+            proposal_data_hash = %hex::encode(proposal_data_hash),
+            "Enqueued admin_set_resource_with_signature call for execution through evm tx queue",
+        );
+        Ok(())
+    }
 }
 
 fn make_transfer_ownership_key(new_owner_address: [u8; 20]) -> [u8; 64] {
     let mut result = [0u8; 64];
-    let prefix = b"transfer_ownership_wt_signature_";
+    let prefix = b"transfer_ownership_with_sig_key_";
     result[0..32].copy_from_slice(prefix);
     result[32..52].copy_from_slice(&new_owner_address);
     result

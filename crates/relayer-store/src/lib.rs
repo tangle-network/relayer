@@ -24,7 +24,10 @@
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
+use webb::evm::contract::protocol_solidity::AdminSetResourceWithSignatureCall;
 use webb::evm::ethers::types;
+use webb::substrate::tangle_runtime::api::{dkg, dkg_proposal_handler};
+use webb_proposals::evm::ResourceIdUpdateProposal;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_utils::Result;
 /// A module for managing in-memory storage of the relayer.
@@ -364,6 +367,75 @@ pub enum BridgeCommand {
         /// backend.
         signature: Vec<u8>,
     },
+    /// A Command sent to the Signature Bridge to Add a new Resource with signature.
+    /// Sets a new resource for handler contracts that use the IExecutor interface.
+    AdminSetResourceWithSignature {
+        /// Target resource ID of the proposal header.
+        resource_id: [u8; 32],
+        /// Secondary resourceID begin mapped to a handler address.
+        new_resource_id: [u8; 32],
+        /// Address of handler resource will be set for.
+        handler_address: [u8; 20],
+        /// The nonce of this proposal.
+        nonce: u32,
+        /// The signature from the governor of the encoded set resource proposal.
+        signature: Vec<u8>,
+    },
+}
+
+impl From<dkg::events::PublicKeySignatureChanged> for BridgeCommand {
+    fn from(event: dkg::events::PublicKeySignatureChanged) -> Self {
+        Self::TransferOwnershipWithSignature {
+            public_key: event.uncompressed_pub_key,
+            nonce: event.nonce,
+            signature: event.pub_key_sig,
+        }
+    }
+}
+
+impl TryFrom<dkg_proposal_handler::events::ProposalSigned> for BridgeCommand {
+    type Error = webb_relayer_utils::Error;
+    fn try_from(
+        event: dkg_proposal_handler::events::ProposalSigned,
+    ) -> Result<Self> {
+        Self::try_from((event.data, event.signature))
+    }
+}
+
+impl TryFrom<(Vec<u8>, Vec<u8>)> for BridgeCommand {
+    type Error = webb_relayer_utils::Error;
+    fn try_from((data, signature): (Vec<u8>, Vec<u8>)) -> Result<Self> {
+        use webb::evm::ethers::prelude::*;
+        let data_header_bytes = data
+            .get(0..40)
+            .ok_or(webb_relayer_utils::Error::InvalidProposalBytes)?;
+        let mut header_bytes = [0u8; 40];
+        header_bytes.copy_from_slice(data_header_bytes);
+
+        let header = webb_proposals::ProposalHeader::from(header_bytes);
+        let function_sig = header.function_signature().into_bytes();
+        // checks whether the proposal is a resource id update by using
+        // the function signature.
+        if function_sig == AdminSetResourceWithSignatureCall::selector() {
+            if data.len() != ResourceIdUpdateProposal::LENGTH {
+                return Err(webb_relayer_utils::Error::InvalidProposalBytes);
+            }
+            // Decode the proposal data
+            let mut proposal_bytes = [0u8; ResourceIdUpdateProposal::LENGTH];
+            proposal_bytes.copy_from_slice(&data[..]);
+            let proposal = ResourceIdUpdateProposal::from(proposal_bytes);
+
+            Ok(BridgeCommand::AdminSetResourceWithSignature {
+                resource_id: header.resource_id().into_bytes(),
+                new_resource_id: proposal.new_resource_id().into_bytes(),
+                handler_address: proposal.handler_address(),
+                nonce: header.nonce().to_u32(),
+                signature,
+            })
+        } else {
+            Ok(BridgeCommand::ExecuteProposalWithSignature { data, signature })
+        }
+    }
 }
 
 /// A trait for Cached Token Price.

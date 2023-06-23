@@ -73,7 +73,7 @@ where
         let bridge_key = BridgeKey::new(dest_chain_id);
         tracing::debug!(
             %bridge_key,
-            proposal = ?hex::encode(proposal.to_vec()),
+            proposal = %hex::encode(proposal.to_vec()),
             "Signaling Signature Bridge to execute proposal",
         );
         let signature_bytes = signature.to_vec();
@@ -83,8 +83,8 @@ where
             kind = %webb_relayer_utils::probe::Kind::SigningBackend,
             backend = "Mocked",
             signal_bridge = %bridge_key,
-            data = ?hex::encode(&proposal_bytes),
-            signature = ?hex::encode(&signature_bytes),
+            data = %hex::encode(&proposal_bytes),
+            signature = %hex::encode(&signature_bytes),
         );
         // Proposal signed metric
         metrics.lock().await.proposals_signed.inc();
