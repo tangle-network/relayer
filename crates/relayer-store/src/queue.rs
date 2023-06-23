@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
+use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
 /// A trait for retrieving queue keys
 pub trait QueueKey {
@@ -18,17 +20,27 @@ pub trait QueueKey {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct QueueItem<T> {
     /// The inner value wrapped by the Queue Item.
-    pub inner: T,
+    inner: T,
     /// The current state of the item in the queue.
-    pub state: QueueItemState,
+    state: QueueItemState,
+    /// The time when the item was enqueued.
+    enqueued_at: u128,
+    /// Time to live
+    ttl: u128,
 }
 
 impl<T> QueueItem<T> {
     /// Creates a new QueueItem with the provided inner value.
     pub fn new(inner: T) -> Self {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("Time went backwards");
+
         Self {
             inner,
             state: Default::default(),
+            enqueued_at: now.as_millis(),
+            ttl: 3 * 60 * 60 * 1000, // 3 hours
         }
     }
     /// Returns the state of the QueueItem.
@@ -37,8 +49,22 @@ impl<T> QueueItem<T> {
     }
 
     /// Unwraps the QueueItem and returns the inner value.
-    pub fn unwrap(self) -> T {
+    pub fn inner(self) -> T {
         self.inner
+    }
+    /// set item state.
+    pub fn set_state(&mut self, state: QueueItemState) {
+        self.state = state;
+    }
+    /// Checks if item has been expired.
+    pub fn is_expired(&self) -> bool {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("SystemTime before UNIX EPOCH!");
+
+        let current_time = now.as_millis();
+        let expiration_time = self.enqueued_at + self.ttl;
+        current_time > expiration_time
     }
 }
 
@@ -60,6 +86,8 @@ pub enum QueueItemState {
         /// The error message.
         reason: String,
     },
+    /// The item was successfully processed.
+    Processed,
 }
 
 /// A Queue Store is a simple trait that help storing items in a queue.
@@ -100,6 +128,11 @@ where
     /// To update an item in the queue, you MUST provide the [`QueueKey::item_key`].
     /// Otherwise, the implementation does not know which item to update.
     fn update_item<F>(&self, key: Self::Key, f: F) -> crate::Result<bool>
+    where
+        F: FnMut(&mut QueueItem<Item>) -> crate::Result<()>;
+
+    /// Shift item to the end of the queue.
+    fn shift_item_to_end<F>(&self, key: Self::Key, f: F) -> crate::Result<bool>
     where
         F: FnMut(&mut QueueItem<Item>) -> crate::Result<()>;
 }
@@ -146,5 +179,37 @@ where
         F: FnMut(&mut QueueItem<T>) -> crate::Result<()>,
     {
         S::update_item(self, key, f)
+    }
+
+    fn shift_item_to_end<F>(&self, key: Self::Key, f: F) -> crate::Result<bool>
+    where
+        F: FnMut(&mut QueueItem<T>) -> crate::Result<()>,
+    {
+        S::shift_item_to_end(self, key, f)
+    }
+}
+
+/// Create unique key for queue item, which can we used to update and remove item from queue.
+pub trait TransactionQueueItemKey {
+    fn item_key(&self, data_hash: [u8; 32]) -> [u8; 64];
+}
+
+impl TransactionQueueItemKey for TypedTransaction {
+    fn item_key(&self, data_hash: [u8; 32]) -> [u8; 64] {
+        let mut key = [0u8; 64];
+        let prefix = b"evm_transaction_item_key_";
+        key[0..32].copy_from_slice(prefix);
+        key[32..].copy_from_slice(&data_hash);
+        key
+    }
+}
+
+impl TransactionQueueItemKey for TypeErasedStaticTxPayload {
+    fn item_key(&self, data_hash: [u8; 32]) -> [u8; 64] {
+        let mut key = [0u8; 64];
+        let prefix = b"substrate_transaction_item_key_";
+        key[0..32].copy_from_slice(prefix);
+        key[32..].copy_from_slice(&data_hash);
+        key
     }
 }

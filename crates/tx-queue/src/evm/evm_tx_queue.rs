@@ -25,7 +25,9 @@ use webb::evm::ethers::providers::Middleware;
 
 use webb::evm::ethers::types;
 use webb_relayer_context::RelayerContext;
-use webb_relayer_store::queue::{QueueItem, QueueStore};
+use webb_relayer_store::queue::{
+    QueueItem, QueueItemState, QueueStore, TransactionQueueItemKey,
+};
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::clickable_link::ClickableLink;
 
@@ -112,15 +114,58 @@ where
         let task = || async {
             loop {
                 let maybe_item = store
-                    .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))?;
+                    .peek_item(SledQueueKey::from_evm_chain_id(chain_id))?;
                 let maybe_explorer = &chain_config.explorer;
                 let mut tx_hash: H256;
                 if let Some(item) = maybe_item {
-                    let mut raw_tx = item.inner;
+                    let mut raw_tx = item.clone().inner();
                     raw_tx.set_chain_id(U64::from(chain_id));
                     let my_tx_hash = raw_tx.sighash();
                     tx_hash = my_tx_hash;
                     tracing::debug!(?tx_hash, tx = ?raw_tx, "Found tx in queue");
+
+                    let tx_item_key =
+                        item.clone().inner().item_key(my_tx_hash.into());
+
+                    // Remove tx item from queue if expired.
+                    if item.is_expired() {
+                        tracing::warn!(
+                            ?tx_hash,
+                            "Tx is expired, removing it from queue"
+                        );
+                        store.remove_item(
+                            SledQueueKey::from_evm_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                        )?;
+                        continue;
+                    }
+
+                    // Process transactions only when in pending state.
+                    if item.state() != QueueItemState::Pending {
+                        tracing::debug!(
+                            ?tx_hash,
+                            item_state = ?item.state(),
+                            "Tx is not in processing state, skipping"
+                        );
+                        continue;
+                    }
+                    // update transaction status as Processing.
+                    store.update_item(
+                        SledQueueKey::from_evm_with_custom_key(
+                            chain_id,
+                            tx_item_key,
+                        ),
+                        |item: &mut QueueItem<TypedTransaction>| {
+                            let state = QueueItemState::Processing {
+                                step: "Item picked, processing".to_string(),
+                                progress: Some(0.0),
+                            };
+                            item.set_state(state);
+                            Ok(())
+                        },
+                    )?;
                     // dry run test
                     let dry_run_outcome =
                         client.call(&raw_tx.clone(), None).await;
@@ -135,6 +180,21 @@ where
                                 dry_run = "passed",
                                 %tx_hash,
                             );
+                            // update transaction status as Processing and set progress.
+                            store.update_item(
+                                SledQueueKey::from_evm_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<TypedTransaction>| {
+                                    let state = QueueItemState::Processing {
+                                        step: "Dry run passed".to_string(),
+                                        progress: Some(0.5),
+                                    };
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            )?;
                         }
                         Err(err) => {
                             tracing::event!(
@@ -148,6 +208,21 @@ where
                                 dry_run = "failed",
                                 %tx_hash,
                             );
+                            // update transaction status as Failed and re insert into queue.
+                            store.shift_item_to_end(
+                                SledQueueKey::from_evm_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<TypedTransaction>| {
+                                    let state = QueueItemState::Failed {
+                                        reason: err.to_string(),
+                                    };
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            )?;
+
                             continue; // keep going.
                         }
                     }
@@ -184,6 +259,23 @@ where
                                     tx_hash_string,
                                 );
                             }
+                            // update transaction progress.
+                            store.update_item(
+                                SledQueueKey::from_evm_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<TypedTransaction>| {
+                                    let state = QueueItemState::Processing {
+                                        step:
+                                            "Transaction submitted on chain.."
+                                                .to_string(),
+                                        progress: Some(0.8),
+                                    };
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            )?;
                             pending.interval(Duration::from_millis(1000)).await
                         }
                         Err(e) => {
@@ -216,6 +308,21 @@ where
                                 %tx_hash,
                                 error = %e,
                             );
+
+                            // update transaction status as Failed
+                            store.shift_item_to_end(
+                                SledQueueKey::from_evm_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<TypedTransaction>| {
+                                    let state = QueueItemState::Failed {
+                                        reason: e.to_string(),
+                                    };
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            )?;
 
                             continue; // keep going.
                         }
@@ -268,6 +375,19 @@ where
                                 finalized = true,
                                 %tx_hash,
                             );
+
+                            // update transaction progress as processed
+                            store.shift_item_to_end(
+                                SledQueueKey::from_evm_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<TypedTransaction>| {
+                                    let state = QueueItemState::Processed;
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            )?;
                         }
                         Ok(None) => {
                             // this should never happen
@@ -280,11 +400,17 @@ where
                                 "Tx {} Dropped from Mempool!!",
                                 tx_hash_string
                             );
-                            // enquing the tx again
-                            let item = QueueItem::new(raw_tx);
-                            store.enqueue_item(
-                                SledQueueKey::from_evm_chain_id(chain_id),
-                                item,
+                            // Re insert transaction in the queue.
+                            store.shift_item_to_end(
+                                SledQueueKey::from_evm_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<TypedTransaction>| {
+                                    let state = QueueItemState::Pending;
+                                    item.set_state(state);
+                                    Ok(())
+                                },
                             )?;
                         }
                         Err(e) => {
@@ -308,7 +434,6 @@ where
                                     reason,
                                 );
                             }
-
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -319,6 +444,20 @@ where
                                 %tx_hash,
                                 error = %e,
                             );
+                            // Update transaction status and re insert in the queue.
+                            store.shift_item_to_end(
+                                SledQueueKey::from_evm_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<TypedTransaction>| {
+                                    let state = QueueItemState::Failed {
+                                        reason: e.to_string(),
+                                    };
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            )?;
                         }
                     };
                 }

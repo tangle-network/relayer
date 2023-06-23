@@ -124,7 +124,7 @@ where
                     SledQueueKey::from_substrate_chain_id(chain_id),
                 )?;
                 if let Some(item) = maybe_item {
-                    let payload = item.inner;
+                    let payload = item.clone().inner();
                     let signed_extrinsic = client
                         .tx()
                         .create_signed(&payload, &signer, Default::default())

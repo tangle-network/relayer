@@ -67,7 +67,7 @@ where
             loop {
                 let result = match store.dequeue_item(key)? {
                     Some(item) => {
-                        self.handle_cmd(store.clone(), &contract, item.inner)
+                        self.handle_cmd(store.clone(), &contract, item.inner())
                             .await
                     }
                     None => {

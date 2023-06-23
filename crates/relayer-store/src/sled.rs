@@ -653,10 +653,36 @@ where
                 f(&mut item)?;
                 let updated_item_bytes = serde_json::to_vec(&item)?;
                 tree.insert(item_key, updated_item_bytes)?;
+                self.db.flush()?;
                 return Ok(true);
             }
         }
 
+        Ok(false)
+    }
+
+    #[tracing::instrument(skip_all, fields(key = %key))]
+    fn shift_item_to_end<F>(&self, key: Self::Key, f: F) -> crate::Result<bool>
+    where
+        F: FnOnce(&mut QueueItem<T>) -> crate::Result<()>,
+    {
+        let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
+        let inner_key = match key.item_key() {
+            Some(k) => k,
+            None => return Ok(false),
+        };
+        if let Some(item_key) = tree.get(&inner_key[..])? {
+            if let Some(item_bytes) = tree.remove(&item_key)? {
+                tree.remove(&item_key[..])?;
+                tracing::trace!("removed item from the queue..");
+                let mut item: QueueItem<T> =
+                    serde_json::from_slice(&item_bytes)?;
+                f(&mut item)?;
+                self.enqueue_item(key, item)?;
+                self.db.flush()?;
+                return Ok(true);
+            }
+        }
         Ok(false)
     }
 }
@@ -703,7 +729,6 @@ mod tests {
                 bytes[..32].copy_from_slice(tx_hash.as_fixed_bytes());
                 bytes
             };
-            println!("SLED IETM key is : {:?}", key);
             Self::from_evm_with_custom_key(chain_id, key)
         }
     }
@@ -991,15 +1016,16 @@ mod tests {
             .unwrap()
             .unwrap();
         // default state of item should be pending
-        assert_eq!(item1.state, QueueItemState::Pending);
+        assert_eq!(item1.state(), QueueItemState::Pending);
         store
             .update_item(
                 SledQueueKey::from_evm_tx(chain_id, &tx1),
                 |item1: &mut QueueItem<TypedTransaction>| {
-                    item1.state = QueueItemState::Processing {
+                    let state = QueueItemState::Processing {
                         step: "Dry run passed".to_string(),
                         progress: Some(0.5),
                     };
+                    item1.set_state(state);
                     Ok(())
                 },
             )
@@ -1011,7 +1037,7 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(
-            item1_updated.state,
+            item1_updated.state(),
             QueueItemState::Processing {
                 step: "Dry run passed".to_string(),
                 progress: Some(0.5)

@@ -72,7 +72,7 @@ where
                             store.clone(),
                             client.clone(),
                             pair.clone(),
-                            item.inner,
+                            item.inner(),
                         )
                         .await
                     }
