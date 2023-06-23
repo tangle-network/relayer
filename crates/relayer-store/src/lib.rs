@@ -24,7 +24,7 @@
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
-use webb::evm::contract::protocol_solidity::AdminSetResourceWithSignatureCall;
+use webb::evm::contract::protocol_solidity::signature_bridge::AdminSetResourceWithSignatureCall;
 use webb::evm::ethers::types;
 use webb::substrate::tangle_runtime::api::{dkg, dkg_proposal_handler};
 use webb_proposals::evm::ResourceIdUpdateProposal;
