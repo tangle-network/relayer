@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
+use webb::evm::ethers::{types::transaction::eip2718::TypedTransaction, utils};
 use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
 /// A trait for retrieving queue keys
@@ -191,13 +191,14 @@ where
 
 /// Create unique key for queue item, which can we used to update and remove item from queue.
 pub trait TransactionQueueItemKey {
-    fn item_key(&self, data_hash: [u8; 32]) -> [u8; 64];
+    fn item_key(&self) -> [u8; 64];
 }
 
 impl TransactionQueueItemKey for TypedTransaction {
-    fn item_key(&self, data_hash: [u8; 32]) -> [u8; 64] {
+    fn item_key(&self) -> [u8; 64] {
+        let data_hash = self.sighash().0;
         let mut key = [0u8; 64];
-        let prefix = b"evm_transaction_item_key_";
+        let prefix = b"evm_transaction_queue_item_key__";
         key[0..32].copy_from_slice(prefix);
         key[32..].copy_from_slice(&data_hash);
         key
@@ -205,9 +206,10 @@ impl TransactionQueueItemKey for TypedTransaction {
 }
 
 impl TransactionQueueItemKey for TypeErasedStaticTxPayload {
-    fn item_key(&self, data_hash: [u8; 32]) -> [u8; 64] {
+    fn item_key(&self) -> [u8; 64] {
+        let data_hash = utils::keccak256(self.clone().call_data);
         let mut key = [0u8; 64];
-        let prefix = b"substrate_transaction_item_key_";
+        let prefix = b"substrate_transaction_item_key__";
         key[0..32].copy_from_slice(prefix);
         key[32..].copy_from_slice(&data_hash);
         key

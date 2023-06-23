@@ -15,7 +15,6 @@
 use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
-use webb::evm::ethers::utils;
 use webb::substrate::subxt;
 use webb::substrate::subxt::config::ExtrinsicParams;
 use webb::substrate::subxt::PolkadotConfig;
@@ -128,12 +127,11 @@ where
                 )?;
                 if let Some(item) = maybe_item {
                     let payload = item.clone().inner();
-                    let tx_hash = utils::keccak256(payload.clone().call_data);
-                    let tx_item_key = payload.item_key(tx_hash);
+                    let tx_item_key = payload.item_key();
                     // Remove tx item from queue if expired.
                     if item.is_expired() {
                         tracing::warn!(
-                            ?tx_hash,
+                            ?payload,
                             "Tx is expired, removing it from queue"
                         );
                         store.remove_item(
@@ -148,7 +146,7 @@ where
                     // Process transactions only when in pending state.
                     if item.state() != QueueItemState::Pending {
                         tracing::debug!(
-                            ?tx_hash,
+                            ?payload,
                             item_state = ?item.state(),
                             "Tx is not in pending state, skipping"
                         );

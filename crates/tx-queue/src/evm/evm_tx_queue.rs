@@ -124,8 +124,7 @@ where
                     tx_hash = my_tx_hash;
                     tracing::debug!(?tx_hash, tx = ?raw_tx, "Found tx in queue");
 
-                    let tx_item_key =
-                        item.clone().inner().item_key(my_tx_hash.into());
+                    let tx_item_key = item.clone().inner().item_key();
 
                     // Remove tx item from queue if expired.
                     if item.is_expired() {

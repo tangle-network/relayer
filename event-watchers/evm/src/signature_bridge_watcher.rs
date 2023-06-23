@@ -300,7 +300,7 @@ where
         let item = QueueItem::new(typed_tx.clone());
         let tx_key = SledQueueKey::from_evm_with_custom_key(
             chain_id.as_u32(),
-            typed_tx.item_key(typed_tx.sighash().0),
+            typed_tx.item_key(),
         );
 
         // check if we already have a queued tx for this proposal.
@@ -504,7 +504,7 @@ where
         let item = QueueItem::new(typed_tx.clone());
         let tx_key = SledQueueKey::from_evm_with_custom_key(
             chain_id.as_u32(),
-            typed_tx.item_key(typed_tx.sighash().0),
+            typed_tx.item_key(),
         );
 
         // check if we already have a queued tx for this proposal.

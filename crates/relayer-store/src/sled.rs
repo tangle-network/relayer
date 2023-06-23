@@ -708,7 +708,7 @@ where
 }
 #[cfg(test)]
 mod tests {
-    use crate::queue::QueueItemState;
+    use crate::queue::{QueueItemState, TransactionQueueItemKey};
 
     use super::*;
     use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
@@ -993,7 +993,7 @@ mod tests {
         store
             .enqueue_item(
                 SledQueueKey::from_evm_tx(chain_id, &tx1),
-                queue_item1.clone(),
+                queue_item1,
             )
             .unwrap();
         let tx2: TypedTransaction = TransactionRequest::pay(
@@ -1041,6 +1041,72 @@ mod tests {
             QueueItemState::Processing {
                 step: "Dry run passed".to_string(),
                 progress: Some(0.5)
+            }
+        );
+    }
+
+    #[test]
+    fn shift_item_to_end_should_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+        let chain_id = 1u32;
+        let tx1: TypedTransaction = TransactionRequest::pay(
+            types::Address::random(),
+            types::U256::one(),
+        )
+        .from(types::Address::random())
+        .into();
+        let queue_item1 = QueueItem::new(tx1.clone());
+        store
+            .enqueue_item(
+                SledQueueKey::from_evm_with_custom_key(
+                    chain_id,
+                    tx1.item_key(),
+                ),
+                queue_item1,
+            )
+            .unwrap();
+
+        // peak at tx1 item.
+        let item1: QueueItem<TypedTransaction> = store
+            .peek_item(SledQueueKey::from_evm_with_custom_key(
+                chain_id,
+                tx1.item_key(),
+            ))
+            .unwrap()
+            .unwrap();
+        // default state of item should be pending.
+        assert_eq!(item1.state(), QueueItemState::Pending);
+
+        //  Update state as failed and shift item to the end of queue.
+        store
+            .shift_item_to_end(
+                SledQueueKey::from_evm_with_custom_key(
+                    chain_id,
+                    tx1.item_key(),
+                ),
+                |item1: &mut QueueItem<TypedTransaction>| {
+                    let state = QueueItemState::Failed {
+                        reason: "Out of gas".to_string(),
+                    };
+                    item1.set_state(state);
+                    Ok(())
+                },
+            )
+            .unwrap();
+
+        // Peak the tx1 item again to check if the state is updated.
+        let item1_updated: QueueItem<TypedTransaction> = store
+            .peek_item(SledQueueKey::from_evm_with_custom_key(
+                chain_id,
+                tx1.item_key(),
+            ))
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            item1_updated.state(),
+            QueueItemState::Failed {
+                reason: "Out of gas".to_string()
             }
         );
     }

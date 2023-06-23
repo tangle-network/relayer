@@ -322,7 +322,7 @@ where
         let tx = TypeErasedStaticTxPayload::try_from(set_maintainer_tx)?;
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
-            tx.item_key(data_hash),
+            tx.item_key(),
         );
         // Enqueue transaction in protocol-substrate transaction queue.
         QueueStore::enqueue_item(&store, tx_key, QueueItem::new(tx))?;
