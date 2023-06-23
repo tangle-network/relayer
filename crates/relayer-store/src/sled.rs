@@ -548,7 +548,6 @@ where
             // then we save it.
             db.insert(&item_key, item_bytes.as_slice())?;
             if let Some(k) = key.item_key() {
-                println!("HAS INNER KEY INSERTING for key : {:?}", k);
                 // also save the key where we can find it by special key.
                 db.insert(&k[..], &item_key)?;
             }
@@ -828,7 +827,7 @@ mod tests {
         store
             .enqueue_item(
                 SledQueueKey::from_evm_tx(chain_id, &tx1),
-                queue_item1,
+                queue_item1.clone(),
             )
             .unwrap();
         let tx2: TypedTransaction = TransactionRequest::pay(
@@ -841,7 +840,7 @@ mod tests {
         store
             .enqueue_item(
                 SledQueueKey::from_evm_tx(chain_id, &tx2),
-                queue_item2,
+                queue_item2.clone(),
             )
             .unwrap();
 
@@ -850,13 +849,13 @@ mod tests {
             store
                 .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))
                 .unwrap(),
-            Some(QueueItem::new(tx1))
+            Some(queue_item1)
         );
         assert_eq!(
             store
                 .dequeue_item(SledQueueKey::from_evm_chain_id(chain_id))
                 .unwrap(),
-            Some(QueueItem::new(tx2))
+            Some(queue_item2)
         );
 
         let tx3: TypedTransaction = TransactionRequest::pay(
@@ -869,14 +868,14 @@ mod tests {
         store
             .enqueue_item(
                 SledQueueKey::from_evm_tx(chain_id, &tx3),
-                queue_item3,
+                queue_item3.clone(),
             )
             .unwrap();
         assert_eq!(
             store
                 .peek_item(SledQueueKey::from_evm_chain_id(chain_id))
                 .unwrap(),
-            Some(QueueItem::new(tx3.clone()))
+            Some(queue_item3)
         );
         assert!(QueueStore::<TypedTransaction>::has_item(
             &store,
