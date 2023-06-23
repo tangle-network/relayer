@@ -15,11 +15,15 @@
 use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
+use webb::evm::ethers::utils;
 use webb::substrate::subxt;
 use webb::substrate::subxt::config::ExtrinsicParams;
 use webb::substrate::subxt::PolkadotConfig;
 use webb_relayer_context::RelayerContext;
+use webb_relayer_store::queue::QueueItem;
+use webb_relayer_store::queue::QueueItemState;
 use webb_relayer_store::queue::QueueStore;
+use webb_relayer_store::queue::TransactionQueueItemKey;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
@@ -119,12 +123,54 @@ where
             let pair = self.ctx.substrate_wallet(chain_id).await?;
             let signer = subxt::tx::PairSigner::<PolkadotConfig, _>::new(pair);
             loop {
-                // dequeue signed transaction
-                let maybe_item = store.dequeue_item(
+                let maybe_item = store.peek_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),
                 )?;
                 if let Some(item) = maybe_item {
                     let payload = item.clone().inner();
+                    let tx_hash = utils::keccak256(payload.clone().call_data);
+                    let tx_item_key = payload.item_key(tx_hash);
+                    // Remove tx item from queue if expired.
+                    if item.is_expired() {
+                        tracing::warn!(
+                            ?tx_hash,
+                            "Tx is expired, removing it from queue"
+                        );
+                        store.remove_item(
+                            SledQueueKey::from_substrate_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                        )?;
+                        continue;
+                    }
+
+                    // Process transactions only when in pending state.
+                    if item.state() != QueueItemState::Pending {
+                        tracing::debug!(
+                            ?tx_hash,
+                            item_state = ?item.state(),
+                            "Tx is not in pending state, skipping"
+                        );
+                        continue;
+                    }
+
+                    // update transaction status as Processing.
+                    store.update_item(
+                        SledQueueKey::from_substrate_with_custom_key(
+                            chain_id,
+                            tx_item_key,
+                        ),
+                        |item: &mut QueueItem<TypeErasedStaticTxPayload>| {
+                            let state = QueueItemState::Processing {
+                                step: "Item picked, processing".to_string(),
+                                progress: Some(0.0),
+                            };
+                            item.set_state(state);
+                            Ok(())
+                        },
+                    )?;
+
                     let signed_extrinsic = client
                         .tx()
                         .create_signed(&payload, &signer, Default::default())
@@ -144,6 +190,23 @@ where
                                 tx = %payload,
                                 dry_run = "passed"
                             );
+                            // update transaction status as Processing and set progress.
+                            store.update_item(
+                                SledQueueKey::from_substrate_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<
+                                    TypeErasedStaticTxPayload,
+                                >| {
+                                    let state = QueueItemState::Processing {
+                                        step: "Dry run passed".to_string(),
+                                        progress: Some(0.3),
+                                    };
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            )?;
                         }
                         Err(err) => {
                             tracing::event!(
@@ -157,6 +220,23 @@ where
                                 error = %err,
                                 dry_run = "failed"
                             );
+                            // update transaction status as Failed and re insert into queue.
+                            store.shift_item_to_end(
+                                SledQueueKey::from_substrate_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<
+                                    TypeErasedStaticTxPayload,
+                                >| {
+                                    let state = QueueItemState::Failed {
+                                        reason: err.to_string(),
+                                    };
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            )?;
+
                             continue; // keep going.
                         }
                     }
@@ -175,10 +255,39 @@ where
                                 error = %e,
                                 progress = "failed",
                             );
+                            store.shift_item_to_end(
+                                SledQueueKey::from_substrate_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<TypeErasedStaticTxPayload>| {
+                                    let state = QueueItemState::Failed {
+                                        reason: e.to_string(),
+                                    };
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            ).unwrap_or_default();
                         })
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;
+
+                    store.update_item(
+                        SledQueueKey::from_substrate_with_custom_key(
+                            chain_id,
+                            tx_item_key,
+                        ),
+                        |item: &mut QueueItem<TypeErasedStaticTxPayload>| {
+                            let state = QueueItemState::Processing {
+                                step: "Transaction submitted on chain.."
+                                    .to_string(),
+                                progress: Some(0.4),
+                            };
+                            item.set_state(state);
+                            Ok(())
+                        },
+                    )?;
 
                     while let Some(event) = progress.next().await {
                         let e = match event {
@@ -194,6 +303,21 @@ where
                                     errored = true,
                                     error = %err,
                                 );
+
+                                store.shift_item_to_end(
+                                    SledQueueKey::from_substrate_with_custom_key(
+                                        chain_id,
+                                        tx_item_key,
+                                    ),
+                                    |item: &mut QueueItem<TypeErasedStaticTxPayload>| {
+                                        let state = QueueItemState::Failed {
+                                            reason: err.to_string(),
+                                        };
+                                        item.set_state(state);
+                                        Ok(())
+                                    },
+                                )?;
+
                                 continue; // keep going.
                             }
                         };
@@ -209,6 +333,20 @@ where
                                     chain_id = %chain_id,
                                     status = "Future",
                                 );
+                                store.update_item(
+                                    SledQueueKey::from_substrate_with_custom_key(
+                                        chain_id,
+                                        tx_item_key,
+                                    ),
+                                    |item: &mut QueueItem<TypeErasedStaticTxPayload>| {
+                                        let state = QueueItemState::Processing {
+                                            step: "Transaction status: Future".to_string(),     
+                                            progress: Some(0.5),
+                                        };
+                                        item.set_state(state);
+                                        Ok(())
+                                    },
+                                )?;
                             }
                             TransactionStatus::Ready => {
                                 tracing::event!(
@@ -220,6 +358,20 @@ where
                                     chain_id = %chain_id,
                                     status = "Ready",
                                 );
+                                store.update_item(
+                                    SledQueueKey::from_substrate_with_custom_key(
+                                        chain_id,
+                                        tx_item_key,
+                                    ),
+                                    |item: &mut QueueItem<TypeErasedStaticTxPayload>| {
+                                        let state = QueueItemState::Processing {
+                                            step: "Transaction status: Ready".to_string(),     
+                                            progress: Some(0.6),
+                                        };
+                                        item.set_state(state);
+                                        Ok(())
+                                    },
+                                )?;
                             }
                             TransactionStatus::Broadcast(_) => {
                                 tracing::event!(
@@ -231,6 +383,20 @@ where
                                     chain_id = %chain_id,
                                     status = "Broadcast",
                                 );
+                                store.update_item(
+                                    SledQueueKey::from_substrate_with_custom_key(
+                                        chain_id,
+                                        tx_item_key,
+                                    ),
+                                    |item: &mut QueueItem<TypeErasedStaticTxPayload>| {
+                                        let state = QueueItemState::Processing {
+                                            step: "Transaction status: Broadcast".to_string(),     
+                                            progress: Some(0.7),
+                                        };
+                                        item.set_state(state);
+                                        Ok(())
+                                    },
+                                )?;
                             }
                             TransactionStatus::InBlock(data) => {
                                 tracing::event!(
@@ -243,6 +409,20 @@ where
                                     block_hash = ?data.block_hash(),
                                     status = "InBlock",
                                 );
+                                store.update_item(
+                                    SledQueueKey::from_substrate_with_custom_key(
+                                        chain_id,
+                                        tx_item_key,
+                                    ),
+                                    |item: &mut QueueItem<TypeErasedStaticTxPayload>| {
+                                        let state = QueueItemState::Processing {
+                                            step: "Transaction status: InBlock".to_string(),     
+                                            progress: Some(0.8),
+                                        };
+                                        item.set_state(state);
+                                        Ok(())
+                                    },
+                                )?;
                             }
                             TransactionStatus::Retracted(_) => {
                                 tracing::event!(
@@ -277,6 +457,21 @@ where
                                     status = "Finalized",
                                     finalized = true,
                                 );
+                                store.update_item(
+                                    SledQueueKey::from_substrate_with_custom_key(
+                                        chain_id,
+                                        tx_item_key,
+                                    ),
+                                    |item: &mut QueueItem<TypeErasedStaticTxPayload>| {
+                                        let state = QueueItemState::Processing {
+                                            step: "Transaction status: Finalized".to_string(),     
+                                            progress: Some(1.0),
+                                        };
+                                        item.set_state(state);
+                                        Ok(())
+                                    },
+                                )?;
+
                                 // metrics for proposal processed by substrate tx queue
                                 let metrics = metrics_clone.lock().await;
                                 metrics.proposals_processed_tx_queue.inc();

@@ -147,7 +147,7 @@ where
                         tracing::debug!(
                             ?tx_hash,
                             item_state = ?item.state(),
-                            "Tx is not in processing state, skipping"
+                            "Tx is not in pending state, skipping"
                         );
                         continue;
                     }

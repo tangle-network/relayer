@@ -30,7 +30,9 @@ use webb_event_watcher_traits::evm::{
     BridgeWatcher, EventHandler, EventWatcher, WatchableContract,
 };
 use webb_event_watcher_traits::EthersTimeLagClient;
-use webb_relayer_store::queue::{QueueItem, QueueStore};
+use webb_relayer_store::queue::{
+    QueueItem, QueueStore, TransactionQueueItemKey,
+};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::BridgeCommand;
 use webb_relayer_utils::metric;
@@ -287,7 +289,14 @@ where
             proposal_data.into(),
             signature.into(),
         );
-        let item = QueueItem::new(call.tx);
+
+        let typed_tx: TypedTransaction = call.tx;
+        let item = QueueItem::new(typed_tx.clone());
+        let tx_key = SledQueueKey::from_evm_with_custom_key(
+            chain_id.as_u32(),
+            typed_tx.item_key(typed_tx.sighash().0),
+        );
+
         QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
             proposal_data_hash = ?hex::encode(proposal_data_hash),
