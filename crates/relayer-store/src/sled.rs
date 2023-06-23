@@ -652,7 +652,7 @@ mod tests {
     use webb::evm::ethers::types;
     use webb::evm::ethers::types::transaction::request::TransactionRequest;
     use webb::evm::{
-        contract::protocol_solidity::v_anchor_contract::NewNullifierFilter,
+        contract::protocol_solidity::variable_anchor::v_anchor_contract::NewNullifierFilter,
         ethers::types::U64,
     };
     use webb_proposals::{TargetSystem, TypedChainId};
