@@ -128,7 +128,7 @@ where
 
                     // Remove tx item from queue if expired.
                     if item.is_expired() {
-                        tracing::warn!(
+                        tracing::info!(
                             ?tx_hash,
                             "Tx is expired, removing it from queue"
                         );
@@ -143,7 +143,7 @@ where
 
                     // Process transactions only when in pending state.
                     if item.state() != QueueItemState::Pending {
-                        tracing::debug!(
+                        tracing::info!(
                             ?tx_hash,
                             item_state = ?item.state(),
                             "Tx is not in pending state, skipping"
