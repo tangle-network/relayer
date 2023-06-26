@@ -382,6 +382,15 @@ pub enum BridgeCommand {
         /// The signature from the governor of the encoded set resource proposal.
         signature: Vec<u8>,
     },
+    /// A Command sent to Executes a batch of proposals signed by the governor in a single tx.
+    /// This is used to batch multiple proposals into a single tx to save gas.
+    BatchExecuteProposalsWithSignature {
+        /// The proposals to execute (encoded as bytes).
+        data: Vec<Vec<u8>>,
+        /// The signatures of the hash of the proposal bytes, Signed by the proposal signing
+        /// backend.
+        signature: Vec<u8>,
+    }
 }
 
 impl From<dkg::events::PublicKeySignatureChanged> for BridgeCommand {

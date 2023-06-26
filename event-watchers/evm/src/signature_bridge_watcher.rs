@@ -220,6 +220,14 @@ impl BridgeWatcher for SignatureBridgeContractWatcher {
                 )
                 .await?
             }
+            BatchExecuteProposalsWithSignature { data, signature } => {
+                self.batch_execute_proposals_with_signature(
+                    store,
+                    &wrapper.contract,
+                    (data, signature),
+                )
+                .await?
+            }
         };
         Ok(())
     }
@@ -514,11 +522,69 @@ where
         );
         Ok(())
     }
+
+    async fn batch_execute_proposals_with_signature(
+        &self,
+        store: Arc<<Self as EventWatcher>::Store>,
+        contract: &SignatureBridgeContract<EthersTimeLagClient>,
+        (proposals_data, signature): (Vec<Vec<u8>>, Vec<u8>),
+    ) -> webb_relayer_utils::Result<()> {
+        let proposals_hash = proposals_data
+            .iter()
+            .map(utils::keccak256)
+            .reduce(|a, b| utils::keccak256([a, b].concat()))
+            .expect("should have at least one proposal");
+        // 2. Verify if proposal already exists in transaction queue
+        let chain_id = contract.get_chain_id().call().await?;
+        let tx_key = SledQueueKey::from_evm_with_custom_key(
+            chain_id.as_u32(),
+            make_batch_execute_proposals(proposals_hash),
+        );
+
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+        if qq {
+            tracing::debug!(
+                proposals_data_hash = %hex::encode(proposals_hash),
+                "Skipping execution of this batch: Already Exists in Queue",
+            );
+            return Ok(());
+        }
+
+        tracing::event!(
+            target: webb_relayer_utils::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %webb_relayer_utils::probe::Kind::SignatureBridge,
+            call = "batch_execute_proposals_with_signature",
+            chain_id = %chain_id.as_u64(),
+            proposal_data_hash = %hex::encode(proposals_hash),
+        );
+        // Enqueue transaction call data in evm transaction queue
+        let call = contract.batch_execute_proposals_with_signature(
+            proposals_data.into_iter().map(Into::into).collect(),
+            signature.into(),
+        );
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
+        tracing::debug!(
+            proposal_data_hash = ?hex::encode(proposals_hash),
+            "Enqueued batch execute proposals call for execution through evm tx queue",
+        );
+        Ok(())
+    }
 }
 
 fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
     let mut result = [0u8; 64];
     let prefix = b"execute_proposal_with_signature_";
+    result[0..32].copy_from_slice(prefix);
+    result[32..64].copy_from_slice(&data_hash);
+    result
+}
+
+fn make_batch_execute_proposals(data_hash: [u8; 32]) -> [u8; 64] {
+    let mut result = [0u8; 64];
+    let prefix = b"batch_execute_proposals_with_sig";
     result[0..32].copy_from_slice(prefix);
     result[32..64].copy_from_slice(&data_hash);
     result
