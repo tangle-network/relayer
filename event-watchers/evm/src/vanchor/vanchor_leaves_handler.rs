@@ -24,7 +24,7 @@ use ethereum_types::{H256, U256};
 use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::evm::contract::protocol_solidity::variable_anchor::VAnchorContractEvents;
+use webb::evm::contract::protocol_solidity::VAnchorContractEvents;
 use webb::evm::ethers::prelude::LogMeta;
 use webb::evm::ethers::types;
 use webb_event_watcher_traits::evm::EventHandler;

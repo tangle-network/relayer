@@ -8,9 +8,10 @@ use webb::evm::ethers::utils;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::{Proposal, ProposalKind};
 use webb_proposals::ProposalTrait;
 use webb::substrate::scale::{Encode, Decode};
+use webb_relayer_store::queue::{QueueStore, QueueItem};
 use webb_relayer_utils::metric;
 use webb::substrate::tangle_runtime::api as RuntimeApi;
-use webb_relayer_store::{QueueStore, SledStore};
+use webb_relayer_store::SledStore;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
@@ -127,7 +128,8 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         );
         let tx = TypeErasedStaticTxPayload::try_from(acknowledge_proposal_tx)?;
         // Enqueue transaction in protocol-substrate transaction queue
-        QueueStore::enqueue_item(&self.store, tx_key, tx)?;
+        let item = QueueItem::new(tx);
+        QueueStore::enqueue_item(&self.store, tx_key, item)?;
         Ok(())
     }
 }

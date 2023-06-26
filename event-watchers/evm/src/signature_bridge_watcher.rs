@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::sync::Mutex;
-use webb::evm::contract::protocol_solidity::signature_bridge::{
+use webb::evm::contract::protocol_solidity::{
     AdminSetResourceWithSignatureCall, SignatureBridgeContract,
     SignatureBridgeContractEvents,
 };
@@ -31,8 +31,11 @@ use webb_event_watcher_traits::evm::{
     BridgeWatcher, EventHandler, EventWatcher, WatchableContract,
 };
 use webb_event_watcher_traits::EthersTimeLagClient;
+use webb_relayer_store::queue::{
+    QueueItem, QueueStore, TransactionQueueItemKey,
+};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
-use webb_relayer_store::{BridgeCommand, QueueStore};
+use webb_relayer_store::BridgeCommand;
 use webb_relayer_utils::metric;
 
 /// A Wrapper around the `SignatureBridgeContract` contract.
@@ -257,21 +260,6 @@ where
         // 2. Verify if proposal already exists in transaction queue
         let chain_id = contract.get_chain_id().call().await?;
         let proposal_data_hash = utils::keccak256(&proposal_data);
-        let tx_key = SledQueueKey::from_evm_with_custom_key(
-            chain_id.as_u32(),
-            make_execute_proposal_key(proposal_data_hash),
-        );
-
-        // check if we already have a queued tx for this proposal.
-        // if we do, we should not enqueue it again.
-        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
-        if qq {
-            tracing::debug!(
-                proposal_data_hash = %hex::encode(proposal_data_hash),
-                "Skipping execution of this proposal: Already Exists in Queue",
-            );
-            return Ok(());
-        }
 
         // 3. Verify proposal signature. Proposal should be signed by active maintainer/dkg-key
         let (proposal_data_clone, signature_clone) =
@@ -315,7 +303,26 @@ where
             proposal_data.into(),
             signature.into(),
         );
-        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
+
+        let typed_tx: TypedTransaction = call.tx;
+        let item = QueueItem::new(typed_tx.clone());
+        let tx_key = SledQueueKey::from_evm_with_custom_key(
+            chain_id.as_u32(),
+            typed_tx.item_key(),
+        );
+
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+        if qq {
+            tracing::debug!(
+                proposal_data_hash = %hex::encode(proposal_data_hash),
+                "Skipping execution of this proposal: Already Exists in Queue",
+            );
+            return Ok(());
+        }
+
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
             proposal_data_hash = ?hex::encode(proposal_data_hash),
             "Enqueued execute-proposal call for execution through evm tx queue",
@@ -420,8 +427,8 @@ where
                 signature.into(),
             )
             .gas(estimate_gas.saturating_mul(U256::from(2)));
-
-        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
+        let item = QueueItem::new(call.tx);
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
             chain_id = %chain_id.as_u64(),
             "Enqueued the ownership transfer for execution in the tx queue",
@@ -452,21 +459,6 @@ where
         let proposal_data_hash = utils::keccak256(&proposal_data);
 
         let chain_id = contract.get_chain_id().call().await?;
-
-        let tx_key = SledQueueKey::from_evm_with_custom_key(
-            chain_id.as_u32(),
-            make_admin_set_resource_key(proposal_data_hash),
-        );
-        // check if we already have a queued tx for this proposal.
-        // if we do, we should not enqueue it again.
-        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
-        if qq {
-            tracing::debug!(
-                proposal_data_hash = %hex::encode(proposal_data_hash),
-                "Skipping execution of this proposal: Already Exists in Queue",
-            );
-            return Ok(());
-        }
 
         // Verify proposal signature. Proposal should be signed by active maintainer/dkg-key
         let (proposal_data_clone, signature_clone) =
@@ -515,7 +507,26 @@ where
             handler_address.into(),
             signature.into(),
         );
-        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
+
+        let typed_tx: TypedTransaction = call.tx;
+        let item = QueueItem::new(typed_tx.clone());
+        let tx_key = SledQueueKey::from_evm_with_custom_key(
+            chain_id.as_u32(),
+            typed_tx.item_key(),
+        );
+
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+        if qq {
+            tracing::debug!(
+                proposal_data_hash = %hex::encode(proposal_data_hash),
+                "Skipping execution of this proposal: Already Exists in Queue",
+            );
+            return Ok(());
+        }
+
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
             proposal_data_hash = %hex::encode(proposal_data_hash),
             "Enqueued admin_set_resource_with_signature call for execution through evm tx queue",
@@ -574,14 +585,6 @@ where
     }
 }
 
-fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
-    let mut result = [0u8; 64];
-    let prefix = b"execute_proposal_with_signature_";
-    result[0..32].copy_from_slice(prefix);
-    result[32..64].copy_from_slice(&data_hash);
-    result
-}
-
 fn make_batch_execute_proposals(data_hash: [u8; 32]) -> [u8; 64] {
     let mut result = [0u8; 64];
     let prefix = b"batch_execute_proposals_with_sig";
@@ -595,14 +598,6 @@ fn make_transfer_ownership_key(new_owner_address: [u8; 20]) -> [u8; 64] {
     let prefix = b"transfer_ownership_with_sig_key_";
     result[0..32].copy_from_slice(prefix);
     result[32..52].copy_from_slice(&new_owner_address);
-    result
-}
-
-fn make_admin_set_resource_key(data_hash: [u8; 32]) -> [u8; 64] {
-    let mut result = [0u8; 64];
-    let prefix = b"admin_set_resource_with_sig_key_";
-    result[0..32].copy_from_slice(prefix);
-    result[32..64].copy_from_slice(&data_hash);
     result
 }
 

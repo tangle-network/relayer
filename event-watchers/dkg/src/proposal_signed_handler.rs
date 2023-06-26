@@ -20,8 +20,9 @@ use webb::substrate::tangle_runtime::api::dkg_proposal_handler;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
 use webb::substrate::subxt::{self, OnlineClient, PolkadotConfig};
 
+use webb_relayer_store::queue::{QueueItem, QueueStore};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
-use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};
+use webb_relayer_store::{BridgeCommand, BridgeKey};
 use webb_relayer_utils::metric;
 
 use webb_event_watcher_traits::substrate::EventHandler;
@@ -152,9 +153,14 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
             );
             // Proposal signed metric
             metrics.lock().await.proposals_signed.inc();
+            let item =
+                QueueItem::new(BridgeCommand::ExecuteProposalWithSignature {
+                    data: event.data.clone(),
+                    signature: event.signature,
+                });
             store.enqueue_item(
                 SledQueueKey::from_bridge_key(bridge_key),
-                BridgeCommand::try_from(event)?,
+                item,
             )?;
         }
         Ok(())

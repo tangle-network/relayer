@@ -21,11 +21,9 @@
 //! The relayer store module stores the history of events. Manages the setting
 //! and retrieving operations of events.
 //!
-use std::fmt::{Debug, Display};
-use std::sync::Arc;
-
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::fmt::{Debug, Display};
 use webb::evm::contract::protocol_solidity::signature_bridge::AdminSetResourceWithSignatureCall;
 use webb::evm::ethers::types;
 use webb::substrate::tangle_runtime::api::{dkg, dkg_proposal_handler};
@@ -38,6 +36,7 @@ pub mod mem;
 #[cfg(feature = "sled")]
 pub mod sled;
 
+pub mod queue;
 /// A store that uses [`sled`](https://sled.rs) as the backend.
 #[cfg(feature = "sled")]
 pub use self::sled::SledStore;
@@ -445,68 +444,6 @@ impl TryFrom<(Vec<u8>, Vec<u8>)> for BridgeCommand {
         } else {
             Ok(BridgeCommand::ExecuteProposalWithSignature { data, signature })
         }
-    }
-}
-
-/// A trait for retrieving queue keys
-pub trait QueueKey {
-    /// The Queue name, used as a prefix for the keys.
-    fn queue_name(&self) -> String;
-    /// an _optional_ different key for the same value stored in the queue.
-    ///
-    /// This useful for the case when you want to have a direct access to a specific key in the queue.
-    /// For example, if you want to remove an item from the queue, you can use this key to directly
-    /// remove it from the queue.
-    fn item_key(&self) -> Option<[u8; 64]>;
-}
-
-/// A Queue Store is a simple trait that help storing items in a queue.
-/// The queue is a FIFO queue, that can be used to store anything that can be serialized.
-///
-/// There is a simple API to get the items from the queue, from a background task for example.
-pub trait QueueStore<Item>
-where
-    Item: Serialize + DeserializeOwned + Clone,
-{
-    /// The type of the queue key.
-    type Key: QueueKey;
-    /// Insert an item into the queue.
-    fn enqueue_item(&self, key: Self::Key, item: Item) -> crate::Result<()>;
-    /// Get an item from the queue, and removes it.
-    fn dequeue_item(&self, key: Self::Key) -> crate::Result<Option<Item>>;
-    /// Get an item from the queue, without removing it.
-    fn peek_item(&self, key: Self::Key) -> crate::Result<Option<Item>>;
-    /// Check if the item is in the queue.
-    fn has_item(&self, key: Self::Key) -> crate::Result<bool>;
-    /// Remove an item from the queue.
-    fn remove_item(&self, key: Self::Key) -> crate::Result<Option<Item>>;
-}
-
-impl<S, T> QueueStore<T> for Arc<S>
-where
-    S: QueueStore<T>,
-    T: Serialize + DeserializeOwned + Clone,
-{
-    type Key = S::Key;
-
-    fn enqueue_item(&self, key: Self::Key, item: T) -> crate::Result<()> {
-        S::enqueue_item(self, key, item)
-    }
-
-    fn dequeue_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
-        S::dequeue_item(self, key)
-    }
-
-    fn peek_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
-        S::peek_item(self, key)
-    }
-
-    fn has_item(&self, key: Self::Key) -> crate::Result<bool> {
-        S::has_item(self, key)
-    }
-
-    fn remove_item(&self, key: Self::Key) -> crate::Result<Option<T>> {
-        S::remove_item(self, key)
     }
 }
 

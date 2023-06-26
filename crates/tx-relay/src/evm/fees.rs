@@ -9,8 +9,7 @@ use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
 use webb::evm::contract::protocol_solidity::{
-    fungible_token_wrapper::FungibleTokenWrapperContract,
-    variable_anchor::VAnchorContract,
+    FungibleTokenWrapperContract, VAnchorContract,
 };
 use webb::evm::ethers::middleware::gas_oracle::GasOracle;
 use webb::evm::ethers::prelude::U256;

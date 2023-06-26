@@ -6,8 +6,9 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 use webb::evm::ethers::utils::keccak256;
 use webb_proposals::{ProposalTrait, ResourceId, TypedChainId};
+use webb_relayer_store::queue::{QueueItem, QueueStore};
 use webb_relayer_store::sled::SledQueueKey;
-use webb_relayer_store::{BridgeCommand, BridgeKey, QueueStore};
+use webb_relayer_store::{BridgeCommand, BridgeKey};
 use webb_relayer_types::private_key::PrivateKey;
 use webb_relayer_utils::metric;
 
@@ -88,11 +89,13 @@ where
         // Proposal signed metric
         metrics.lock().await.proposals_signed.inc();
         // now all we have to do is to send the data and the signature to the signature bridge.
-        self.store.enqueue_item(
-            SledQueueKey::from_bridge_key(bridge_key),
-            BridgeCommand::try_from((proposal_bytes.clone(), signature_bytes))?,
-        )?;
-
+        let item =
+            QueueItem::new(BridgeCommand::ExecuteProposalWithSignature {
+                data: proposal_bytes.clone(),
+                signature: signature_bytes,
+            });
+        self.store
+            .enqueue_item(SledQueueKey::from_bridge_key(bridge_key), item)?;
         Ok(())
     }
 }
