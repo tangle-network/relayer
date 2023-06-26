@@ -17,7 +17,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::sync::Mutex;
-use webb::evm::contract::protocol_solidity::signature_bridge::{
+use webb::evm::contract::protocol_solidity::{
     AdminSetResourceWithSignatureCall, SignatureBridgeContract,
     SignatureBridgeContractEvents,
 };

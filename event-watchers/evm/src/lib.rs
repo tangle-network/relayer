@@ -15,7 +15,7 @@
 use std::ops;
 use std::sync::Arc;
 use std::time::Duration;
-use webb::evm::contract::protocol_solidity::variable_anchor::{
+use webb::evm::contract::protocol_solidity::{
     VAnchorContract, VAnchorContractEvents,
 };
 use webb::evm::ethers::contract::Contract;
