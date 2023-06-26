@@ -52,6 +52,12 @@ impl<T> QueueItem<T> {
     pub fn inner(self) -> T {
         self.inner
     }
+
+    /// set ttl duration in milliseconds.
+    pub fn set_ttl(&mut self, ttl: u128) {
+        self.ttl = ttl;
+    }
+
     /// set item state.
     pub fn set_state(&mut self, state: QueueItemState) {
         self.state = state;
@@ -132,6 +138,9 @@ where
         F: FnMut(&mut QueueItem<Item>) -> crate::Result<()>;
 
     /// Shift item to the end of the queue.
+    ///
+    /// Once item has been processed we update its status and shift it to end of the queue.
+    /// To to this we will be removing the item from the queue and then re-enqueue it.
     fn shift_item_to_end<F>(&self, key: Self::Key, f: F) -> crate::Result<bool>
     where
         F: FnMut(&mut QueueItem<Item>) -> crate::Result<()>;

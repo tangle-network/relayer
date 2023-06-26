@@ -1109,4 +1109,54 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn item_should_expire() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+        let chain_id = 1u32;
+        let tx1: TypedTransaction = TransactionRequest::pay(
+            types::Address::random(),
+            types::U256::one(),
+        )
+        .from(types::Address::random())
+        .into();
+        let mut queue_item1 = QueueItem::new(tx1.clone());
+        queue_item1.set_ttl(10 * 1000);
+        store
+            .enqueue_item(
+                SledQueueKey::from_evm_tx(chain_id, &tx1),
+                queue_item1.clone(),
+            )
+            .unwrap();
+        assert!(!queue_item1.is_expired());
+        //sleep for 10 seconds
+        std::thread::sleep(std::time::Duration::from_secs(10));
+        assert!(queue_item1.is_expired());
+    }
+
+    #[test]
+    fn item_should_not_expire() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+        let chain_id = 1u32;
+        let tx1: TypedTransaction = TransactionRequest::pay(
+            types::Address::random(),
+            types::U256::one(),
+        )
+        .from(types::Address::random())
+        .into();
+        let mut queue_item1 = QueueItem::new(tx1.clone());
+        queue_item1.set_ttl(10 * 1000);
+        store
+            .enqueue_item(
+                SledQueueKey::from_evm_tx(chain_id, &tx1),
+                queue_item1.clone(),
+            )
+            .unwrap();
+        assert!(!queue_item1.is_expired());
+        //sleep for 5 seconds
+        std::thread::sleep(std::time::Duration::from_secs(5));
+        assert!(!queue_item1.is_expired());
+    }
 }
