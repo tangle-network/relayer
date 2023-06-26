@@ -163,6 +163,9 @@ jobs:
         with:
           fetch-depth: 50
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        
       - name: Download fixtures
         run: |
           mkdir -p ./tests/solidity-fixtures/vanchor_2/2
