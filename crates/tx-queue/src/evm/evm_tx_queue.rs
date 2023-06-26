@@ -122,7 +122,6 @@ where
                     raw_tx.set_chain_id(U64::from(chain_id));
                     let my_tx_hash = raw_tx.sighash();
                     tx_hash = my_tx_hash;
-                    tracing::debug!(?tx_hash, tx = ?raw_tx, "Found tx in queue");
 
                     let tx_item_key = item.clone().inner().item_key();
 
@@ -143,13 +142,9 @@ where
 
                     // Process transactions only when in pending state.
                     if item.state() != QueueItemState::Pending {
-                        tracing::info!(
-                            ?tx_hash,
-                            item_state = ?item.state(),
-                            "Tx is not in pending state, skipping"
-                        );
                         continue;
                     }
+                    tracing::info!(?tx_hash, tx = ?raw_tx, "Found tx in queue");
                     // update transaction status as Processing.
                     store.update_item(
                         SledQueueKey::from_evm_with_custom_key(
