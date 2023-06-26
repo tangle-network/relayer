@@ -163,14 +163,16 @@ jobs:
         with:
           fetch-depth: 50
 
-      - name: Setup DVC
-        uses: iterative/setup-dvc@v1
-
-      - name: Rust Cache
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/cache"
+      - name: Download fixtures
+        run: |
+          mkdir -p ./tests/solidity-fixtures/vanchor_2/2
+          mkdir -p ./tests/solidity-fixtures/vanchor_16/2
+          curl -L -o ./tests/solidity-fixtures/vanchor_2/2/witness_calculator.cjs https://dapp-fixtures.s3.amazonaws.com/develop/vanchor_2/2/witness_calculator.cjs
+          curl -L -o ./tests/solidity-fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm https://dapp-fixtures.s3.amazonaws.com/develop/vanchor_2/2/poseidon_vanchor_2_2.wasm
+          curl -L -o ./tests/solidity-fixtures/vanchor_2/2/circuit_final.zkey https://dapp-fixtures.s3.amazonaws.com/develop/vanchor_2/2/circuit_final.zkey
+          curl -L -o ./tests/solidity-fixtures/vanchor_16/2/witness_calculator.cjs https://dapp-fixtures.s3.amazonaws.com/develop/vanchor_16/2/witness_calculator.cjs
+          curl -L -o ./tests/solidity-fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm https://dapp-fixtures.s3.amazonaws.com/develop/vanchor_16/2/poseidon_vanchor_16_2.wasm
+          curl -L -o ./tests/solidity-fixtures/vanchor_16/2/circuit_final.zkey https://dapp-fixtures.s3.amazonaws.com/develop/vanchor_16/2/circuit_final.zkey
 
       - name: Use Node.js
         uses: actions/setup-node@v3
@@ -191,6 +193,11 @@ jobs:
 
       - name: Webb Relayer Integration tests.
         run: cd tests && yarn ${{ matrix.test-type }}
+
+      - name: Cleanup fixtures
+        run: |
+          rm -rf ./tests/solidity-fixtures
+          rm -rf ./tests/solidity-fixtures
 
     strategy:
       fail-fast: false
