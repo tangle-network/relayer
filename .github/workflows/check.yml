@@ -33,7 +33,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Build Checking on ${{ matrix.target }}
         run: cargo check --target=${{ matrix.target }} --features native-tls/vendored --locked
@@ -65,7 +64,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Testing on ${{ matrix.target }}
         run: cargo test --target=${{ matrix.target }} --locked
@@ -133,7 +131,6 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/cache"
 
       - name: Create Env file
         run: |
@@ -165,6 +162,8 @@ jobs:
 
       - name: Rust Cache
         uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: "rust"
         
       - name: Download fixtures
         run: |
