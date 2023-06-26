@@ -1,10 +1,10 @@
 use super::*;
 use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
-use crate::evm::handle_evm_tx;
 use ethereum_types::U256;
 use futures::TryFutureExt;
 use std::{collections::HashMap, sync::Arc};
-use webb::evm::ethers::utils::{format_units, parse_ether};
+use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
+use webb::evm::ethers::utils::{format_units, hex, parse_ether};
 use webb::evm::{
     contract::protocol_solidity::{
         variable_anchor::{CommonExtData, Encryptions, PublicInputs},
@@ -16,6 +16,10 @@ use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::EvmVanchorCommand;
 use webb_relayer_handler_utils::{CommandStream, NetworkStatus};
+use webb_relayer_store::queue::{
+    QueueItem, QueueItemState, QueueStore, TransactionQueueItemKey,
+};
+use webb_relayer_store::sled::SledQueueKey;
 
 /// Handler for VAnchor commands
 ///
@@ -30,7 +34,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
     stream: CommandStream,
 ) -> Result<(), CommandResponse> {
     use CommandResponse::*;
-
     let requested_chain = cmd.chain_id;
     let chain = ctx
         .config
@@ -186,9 +189,71 @@ pub async fn handle_vanchor_relay_tx<'a>(
     );
     let resource_id = ResourceId::new(target_system, typed_chain_id);
 
-    tracing::trace!("About to send Tx to {:?} Chain", cmd.chain_id);
-    handle_evm_tx(call, stream, cmd.chain_id, ctx.metrics.clone(), resource_id)
-        .await?;
+    let typed_tx: TypedTransaction = call.tx;
+    let item = QueueItem::new(typed_tx.clone());
+    let tx_key = SledQueueKey::from_evm_with_custom_key(
+        chain.chain_id,
+        typed_tx.item_key(),
+    );
+    let store = ctx.store();
+    QueueStore::<TypedTransaction>::enqueue_item(store, tx_key, item.clone())
+        .map_err(|_| {
+        Error(format!(
+            "Transaction item with key : {} failed to enqueue",
+            tx_key
+        ))
+    })?;
+
+    tracing::trace!(
+            tx_call = %hex::encode(typed_tx.sighash()),
+            "Enqueued private withdraw transaction call for execution through evm tx queue",
+    );
+    loop {
+        let maybe_item = QueueStore::<TypedTransaction>::peek_item(
+            store, tx_key,
+        )
+        .map_err(|_| {
+            Error(format!(
+                "Transaction item for key : {} found in queue",
+                tx_key
+            ))
+        })?;
+
+        if let Some(item) = maybe_item {
+            match item.state() {
+                QueueItemState::Processed { tx_hash } => {
+                    // Transaction is processed
+                    tracing::trace!(
+                        tx_call = %hex::encode(typed_tx.sighash()),
+                        "Private withdraw transaction call processed through evm tx queue",
+                    );
+                    let _ = stream
+                        .send(Withdraw(WithdrawStatus::Finalized { tx_hash }))
+                        .await;
+                    break;
+                }
+                QueueItemState::Failed { reason } => {
+                    // Transaction failed
+                    tracing::trace!(
+                        tx_call = %hex::encode(typed_tx.sighash()),
+                        "Private withdraw transaction call failed through evm tx queue",
+                    );
+                    let _ = stream.send(Withdraw(WithdrawStatus::Errored {
+                        reason: format!("Private withdraw transaction call failed through evm tx queue with error: {:?}", reason),
+                        code: 4,
+                    })).await;
+                }
+                _ => {
+                    // Transaction is still in the queue
+                    tracing::trace!(
+                        tx_call = %hex::encode(typed_tx.sighash()),
+                        "Private withdraw transaction call is still in queue",
+                    );
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                }
+            }
+        }
+    }
 
     // update metric
     let metrics_clone = ctx.metrics.clone();

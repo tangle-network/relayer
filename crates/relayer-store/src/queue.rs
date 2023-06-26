@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use webb::evm::ethers::types::H256;
 use webb::evm::ethers::{types::transaction::eip2718::TypedTransaction, utils};
 use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
@@ -93,7 +94,10 @@ pub enum QueueItemState {
         reason: String,
     },
     /// The item was successfully processed.
-    Processed,
+    Processed {
+        /// Transaction hash.
+        tx_hash: H256,
+    },
 }
 
 /// A Queue Store is a simple trait that help storing items in a queue.

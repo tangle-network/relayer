@@ -474,8 +474,10 @@ pub fn start_tx_queue(
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
-    // Start tx_queue only when governance relaying feature is enabled for relayer.
-    if !ctx.config.features.governance_relay {
+    // Start tx_queue only when governance relaying or private tx relaying is enabled for relayer.
+    if !ctx.config.features.governance_relay
+        && !ctx.config.features.private_tx_relay
+    {
         tracing::warn!("Tx Queue disabled for ({})", chain_id,);
         return Ok(());
     }
