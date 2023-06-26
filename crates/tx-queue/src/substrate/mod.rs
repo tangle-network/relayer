@@ -23,8 +23,8 @@ mod tests {
     use sp_core::{sr25519::Pair as Sr25519Pair, Pair};
     use webb::substrate::subxt::PolkadotConfig;
     use webb::substrate::tangle_runtime::api as RuntimeApi;
+    use webb_relayer_store::queue::{QueueItem, QueueStore};
     use webb_relayer_store::sled::SledQueueKey;
-    use webb_relayer_store::QueueStore;
     use webb_relayer_types::suri::Suri;
     use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
@@ -93,7 +93,8 @@ mod tests {
                 .remark_with_event(format!("tx {}", i).as_bytes().to_vec());
             let tx = TypeErasedStaticTxPayload::try_from(tx)?;
             let tx_key = SledQueueKey::from_substrate_chain_id(chain_id);
-            QueueStore::enqueue_item(&store, tx_key, tx)?;
+            let item = QueueItem::new(tx);
+            QueueStore::enqueue_item(&store, tx_key, item)?;
         }
         // Wait for txs to be processed.
         tokio::time::sleep(tokio::time::Duration::from_secs(120)).await;

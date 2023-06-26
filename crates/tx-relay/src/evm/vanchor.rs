@@ -6,8 +6,9 @@ use futures::TryFutureExt;
 use std::{collections::HashMap, sync::Arc};
 use webb::evm::ethers::utils::{format_units, parse_ether};
 use webb::evm::{
-    contract::protocol_solidity::variable_anchor::{
-        CommonExtData, Encryptions, PublicInputs, VAnchorContract,
+    contract::protocol_solidity::{
+        variable_anchor::{CommonExtData, Encryptions, PublicInputs},
+        VAnchorContract,
     },
     ethers::prelude::{Signer, SignerMiddleware},
 };

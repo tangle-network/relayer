@@ -66,13 +66,13 @@ where
 
             loop {
                 let result = match store.dequeue_item(key)? {
-                    Some(cmd) => {
+                    Some(item) => {
                         self.handle_cmd(
                             chain_id,
                             store.clone(),
                             client.clone(),
                             pair.clone(),
-                            cmd,
+                            item.inner(),
                         )
                         .await
                     }

@@ -25,8 +25,11 @@ use webb_event_watcher_traits::substrate::{
     EventHandler, SubstrateBridgeWatcher,
 };
 use webb_event_watcher_traits::SubstrateEventWatcher;
+use webb_relayer_store::queue::{
+    QueueItem, QueueStore, TransactionQueueItemKey,
+};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
-use webb_relayer_store::{BridgeCommand, QueueStore};
+use webb_relayer_store::BridgeCommand;
 
 use webb::evm::ethers::utils;
 use webb::substrate::tangle_runtime::api as RuntimeApi;
@@ -228,7 +231,8 @@ where
             make_execute_proposal_key(data_hash),
         );
         let tx = TypeErasedStaticTxPayload::try_from(execute_proposal_tx)?;
-        QueueStore::enqueue_item(&store, tx_key, tx)?;
+
+        QueueStore::enqueue_item(&store, tx_key, QueueItem::new(tx))?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
             "Enqueued execute-proposal tx for execution through protocol-substrate tx queue",
@@ -314,14 +318,14 @@ where
 
         let data_hash =
             utils::keccak256(set_maintainer_tx.call_data().encode());
-        let tx_key = SledQueueKey::from_substrate_with_custom_key(
-            chain_id,
-            make_execute_proposal_key(data_hash),
-        );
 
         let tx = TypeErasedStaticTxPayload::try_from(set_maintainer_tx)?;
-        // Enqueue transaction in protocol-substrate transaction queue
-        QueueStore::enqueue_item(&store, tx_key, tx)?;
+        let tx_key = SledQueueKey::from_substrate_with_custom_key(
+            chain_id,
+            tx.item_key(),
+        );
+        // Enqueue transaction in protocol-substrate transaction queue.
+        QueueStore::enqueue_item(&store, tx_key, QueueItem::new(tx))?;
         tracing::debug!(
             data_hash = ?hex::encode(data_hash),
             "Enqueued set-maintainer tx for execution through protocol-substrate tx queue",

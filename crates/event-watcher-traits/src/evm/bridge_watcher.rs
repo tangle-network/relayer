@@ -66,8 +66,9 @@ where
             let key = SledQueueKey::from_bridge_key(bridge_key);
             loop {
                 let result = match store.dequeue_item(key)? {
-                    Some(cmd) => {
-                        self.handle_cmd(store.clone(), &contract, cmd).await
+                    Some(item) => {
+                        self.handle_cmd(store.clone(), &contract, item.inner())
+                            .await
                     }
                     None => {
                         // yeild back to the runtime, to allow for other tasks
