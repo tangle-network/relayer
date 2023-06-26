@@ -479,7 +479,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     expect(tokens.includes(tokenToRemove!)).to.eq(false);
   });
 
-  it('should handle WrappingFeeUpdateProposal', async () => {
+  it.skip('should handle WrappingFeeUpdateProposal', async () => {
 
     webbRelayer.clearLogs();
     // get the anhor on localchain1

@@ -1122,7 +1122,7 @@ mod tests {
         .from(types::Address::random())
         .into();
         let mut queue_item1 = QueueItem::new(tx1.clone());
-        queue_item1.set_ttl(10 * 1000);
+        queue_item1.set_ttl(5 * 1000);
         store
             .enqueue_item(
                 SledQueueKey::from_evm_tx(chain_id, &tx1),
@@ -1131,7 +1131,7 @@ mod tests {
             .unwrap();
         assert!(!queue_item1.is_expired());
         //sleep for 10 seconds
-        std::thread::sleep(std::time::Duration::from_secs(10));
+        std::thread::sleep(std::time::Duration::from_millis(5 * 1000));
         assert!(queue_item1.is_expired());
     }
 
