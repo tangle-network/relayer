@@ -8653,24 +8653,6 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.5.24"
-source = "git+https://github.com/webb-tools/webb-rs?rev=13390b9#13390b931834e6890676ee9605f064a893cb6eb5"
-dependencies = [
- "async-trait",
- "ethers",
- "hex",
- "parity-scale-codec",
- "rand 0.8.5",
- "scale-info",
- "serde",
- "serde_json",
- "subxt",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "webb"
 version = "0.5.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e8c76407deeefaeb1315e0024317c84f5562777cc0fa2d6dba0ef323dd043d4"
@@ -8719,7 +8701,7 @@ dependencies = [
  "sp-core",
  "tokio 1.28.2",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-utils 0.5.0-dev",
@@ -8777,7 +8759,7 @@ dependencies = [
  "tokio 1.28.2",
  "tracing",
  "tracing-test",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -8796,7 +8778,7 @@ dependencies = [
  "sled",
  "tokio 1.28.2",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-event-watcher-traits",
  "webb-proposals",
  "webb-relayer-config",
@@ -8824,7 +8806,7 @@ dependencies = [
  "tokio 1.28.2",
  "tracing",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
@@ -8847,7 +8829,7 @@ dependencies = [
  "tokio 1.28.2",
  "tracing",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
@@ -8871,7 +8853,7 @@ dependencies = [
  "serde",
  "tokio 1.28.2",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-chains-info",
  "webb-relayer-store",
  "webb-relayer-utils 0.5.0-dev",
@@ -8894,7 +8876,7 @@ dependencies = [
  "serde",
  "serde_json",
  "wasmer",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-circom-proving",
 ]
 
@@ -8916,7 +8898,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.17",
  "typed-builder 0.14.0",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types 0.5.0-dev",
@@ -8960,7 +8942,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "url",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-ew-dkg",
@@ -8996,7 +8978,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.17",
  "url",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types 0.5.0-dev",
@@ -9015,7 +8997,7 @@ dependencies = [
  "sp-core",
  "tokio 1.28.2",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-price-oracle-backends",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -9029,7 +9011,7 @@ dependencies = [
  "native-tls",
  "serde",
  "tokio 1.28.2",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-relayer-tx-relay-utils",
 ]
 
@@ -9048,7 +9030,7 @@ dependencies = [
  "tokio 1.28.2",
  "tokio-stream",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -9070,7 +9052,7 @@ dependencies = [
  "sled",
  "tempfile",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-proposals",
  "webb-relayer-utils 0.5.0-dev",
 ]
@@ -9091,7 +9073,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.17",
  "url",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
@@ -9112,7 +9094,7 @@ dependencies = [
  "sp-core",
  "tokio 1.28.2",
  "tracing",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-chains-info",
  "webb-price-oracle-backends",
  "webb-proposals",
@@ -9141,7 +9123,7 @@ dependencies = [
  "tiny-bip39",
  "tracing",
  "url",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -9185,7 +9167,7 @@ dependencies = [
  "thiserror",
  "tokio 1.28.2",
  "url",
- "webb 0.5.24",
+ "webb 0.5.25 (registry+https://github.com/rust-lang/crates.io-index)",
  "webb-proposals",
 ]
 

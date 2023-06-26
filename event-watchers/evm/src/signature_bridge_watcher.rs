@@ -17,10 +17,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use tokio::sync::Mutex;
-use webb::evm::contract::protocol_solidity::{
-    AdminSetResourceWithSignatureCall, SignatureBridgeContract,
-    SignatureBridgeContractEvents,
-};
+use webb::evm::contract::protocol_solidity::signature_bridge::AdminSetResourceWithSignatureCall;
+use webb::evm::contract::protocol_solidity::signature_bridge::SignatureBridgeContract;
+use webb::evm::contract::protocol_solidity::signature_bridge::SignatureBridgeContractEvents;
 use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::prelude::*;
@@ -547,21 +546,6 @@ where
             .expect("should have at least one proposal");
         // 2. Verify if proposal already exists in transaction queue
         let chain_id = contract.get_chain_id().call().await?;
-        let tx_key = SledQueueKey::from_evm_with_custom_key(
-            chain_id.as_u32(),
-            make_batch_execute_proposals(proposals_hash),
-        );
-
-        // check if we already have a queued tx for this proposal.
-        // if we do, we should not enqueue it again.
-        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
-        if qq {
-            tracing::debug!(
-                proposals_data_hash = %hex::encode(proposals_hash),
-                "Skipping execution of this batch: Already Exists in Queue",
-            );
-            return Ok(());
-        }
 
         tracing::event!(
             target: webb_relayer_utils::probe::TARGET,
@@ -576,21 +560,20 @@ where
             proposals_data.into_iter().map(Into::into).collect(),
             signature.into(),
         );
-        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, call.tx)?;
+
+        let typed_tx: TypedTransaction = call.tx;
+        let item = QueueItem::new(typed_tx.clone());
+        let tx_key = SledQueueKey::from_evm_with_custom_key(
+            chain_id.as_u32(),
+            typed_tx.item_key(),
+        );
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
             proposal_data_hash = ?hex::encode(proposals_hash),
             "Enqueued batch execute proposals call for execution through evm tx queue",
         );
         Ok(())
     }
-}
-
-fn make_batch_execute_proposals(data_hash: [u8; 32]) -> [u8; 64] {
-    let mut result = [0u8; 64];
-    let prefix = b"batch_execute_proposals_with_sig";
-    result[0..32].copy_from_slice(prefix);
-    result[32..64].copy_from_slice(&data_hash);
-    result
 }
 
 fn make_transfer_ownership_key(new_owner_address: [u8; 20]) -> [u8; 64] {

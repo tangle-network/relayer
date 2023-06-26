@@ -389,7 +389,7 @@ pub enum BridgeCommand {
         /// The signatures of the hash of the proposal bytes, Signed by the proposal signing
         /// backend.
         signature: Vec<u8>,
-    }
+    },
 }
 
 impl From<dkg::events::PublicKeySignatureChanged> for BridgeCommand {

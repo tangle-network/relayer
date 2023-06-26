@@ -4,13 +4,12 @@ use chrono::Duration;
 use chrono::Utc;
 use once_cell::sync::Lazy;
 use serde::Serialize;
+use webb::evm::contract::protocol_solidity::fungible_token_wrapper::FungibleTokenWrapperContract;
+use webb::evm::contract::protocol_solidity::variable_anchor::VAnchorContract;
 use std::cmp::min;
 use std::collections::HashMap;
 use std::ops::Add;
 use std::sync::{Arc, Mutex};
-use webb::evm::contract::protocol_solidity::{
-    FungibleTokenWrapperContract, VAnchorContract,
-};
 use webb::evm::ethers::middleware::gas_oracle::GasOracle;
 use webb::evm::ethers::prelude::U256;
 use webb::evm::ethers::providers::Middleware;
