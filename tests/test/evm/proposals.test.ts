@@ -480,29 +480,6 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   });
 
   it('should handle WrappingFeeUpdateProposal', async () => {
-    // we need to wait until the public key is changed.
-    await charlieNode.waitForEvent({
-      section: 'dkg',
-      method: 'PublicKeySignatureChanged',
-    });
-    // wait until the signature bridge receives the transfer ownership call.
-    await webbRelayer.waitForEvent({
-      kind: 'signature_bridge',
-      event: {
-        chain_id: localChain2.underlyingChainId.toString(),
-        call: 'transfer_ownership_with_signature_pub_key',
-      },
-    });
-
-    // now we wait for the tx queue on that chain to execute the transfer ownership transaction.
-    await webbRelayer.waitForEvent({
-      kind: 'tx_queue',
-      event: {
-        ty: 'EVM',
-        chain_id: localChain2.underlyingChainId.toString(),
-        finalized: true,
-      },
-    });
 
     webbRelayer.clearLogs();
     // get the anhor on localchain1
