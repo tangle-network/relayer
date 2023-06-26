@@ -390,6 +390,22 @@ pub enum BridgeCommand {
         /// backend.
         signature: Vec<u8>,
     },
+    /// A Command sent to Set a batch of new resources for handler contracts that use the IExecutor interface.
+    /// This is used to batch multiple proposals into a single tx to save gas.
+    ///
+    /// Only callable by an address that currently has the admin role.
+    BatchAdminSetResourceWithSignature {
+        /// Target resource ID of the proposal header.
+        resource_id: [u8; 32],
+        /// Secondary resourceIDs begin mapped to a handler addresses.
+        new_resource_ids: Vec<[u8; 32]>,
+        /// Addresses of handlers resource will be set for.
+        handler_addresses: Vec<[u8; 20]>,
+        /// Nonces of the proposal headers.
+        nonces: Vec<u32>,
+        /// The signature from the governor of the encoded set resource proposal.
+        signature: Vec<u8>,
+    },
 }
 
 impl From<dkg::events::PublicKeySignatureChanged> for BridgeCommand {

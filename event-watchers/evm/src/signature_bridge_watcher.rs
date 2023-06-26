@@ -230,6 +230,26 @@ impl BridgeWatcher for SignatureBridgeContractWatcher {
                 )
                 .await?
             }
+            BatchAdminSetResourceWithSignature {
+                resource_id,
+                new_resource_ids,
+                handler_addresses,
+                nonces,
+                signature,
+            } => {
+                self.batch_admin_set_resource_with_signature(
+                    store,
+                    &wrapper.contract,
+                    (
+                        resource_id,
+                        new_resource_ids,
+                        handler_addresses,
+                        nonces,
+                        signature,
+                    ),
+                )
+                .await?
+            }
         };
         Ok(())
     }
@@ -567,10 +587,109 @@ where
             chain_id.as_u32(),
             typed_tx.item_key(),
         );
+
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+        if qq {
+            tracing::debug!(
+                proposal_data_hash = %hex::encode(proposals_hash),
+                "Skipping execution of this proposal: Already Exists in Queue",
+            );
+            return Ok(());
+        }
         QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
             proposal_data_hash = ?hex::encode(proposals_hash),
             "Enqueued batch execute proposals call for execution through evm tx queue",
+        );
+        Ok(())
+    }
+
+    #[tracing::instrument(skip_all)]
+    #[allow(clippy::type_complexity)]
+    async fn batch_admin_set_resource_with_signature(
+        &self,
+        store: Arc<<Self as EventWatcher>::Store>,
+        contract: &SignatureBridgeContract<EthersTimeLagClient>,
+        (resource_id, new_resource_ids, handler_addresses, nonces, signature): (
+            [u8; 32],
+            Vec<[u8; 32]>,
+            Vec<[u8; 20]>,
+            Vec<u32>,
+            Vec<u8>,
+        ),
+    ) -> webb_relayer_utils::Result<()> {
+        let function_sig = AdminSetResourceWithSignatureCall::selector();
+        if !(nonces.len() == new_resource_ids.len()
+            && new_resource_ids.len() == handler_addresses.len())
+        {
+            tracing::warn!(
+                nonces = %nonces.len(),
+                new_resource_ids = %new_resource_ids.len(),
+                handler_addresses = %handler_addresses.len(),
+                "Skipping execution of this proposal: Array lengths must match",
+            );
+            return Ok(());
+        }
+        let encoded_data = nonces
+            .iter()
+            .zip(&new_resource_ids)
+            .zip(&handler_addresses)
+            .flat_map(|((nonce, new_resource_id), handler_address)| {
+                let mut proposal_data = Vec::with_capacity(32 + 32 + 20);
+                proposal_data.extend_from_slice(resource_id.as_slice());
+                proposal_data.extend_from_slice(function_sig.as_slice());
+                proposal_data.extend_from_slice(&nonce.to_be_bytes());
+                proposal_data.extend_from_slice(new_resource_id);
+                proposal_data.extend_from_slice(handler_address);
+                proposal_data
+            })
+            .collect::<Vec<_>>();
+        let hashed_data = utils::keccak256(&encoded_data);
+        let chain_id = contract.get_chain_id().call().await?;
+
+        tracing::event!(
+            target: webb_relayer_utils::probe::TARGET,
+            tracing::Level::DEBUG,
+            kind = %webb_relayer_utils::probe::Kind::SignatureBridge,
+            call = "batch_admin_set_resource_with_signature",
+            chain_id = %chain_id.as_u64(),
+            proposal_data_hash = %hex::encode(hashed_data),
+        );
+        // Enqueue transaction call data in evm transaction queue
+        let call = contract.batch_admin_set_resource_with_signature(
+            resource_id,
+            function_sig,
+            nonces,
+            new_resource_ids,
+            handler_addresses.into_iter().map(Into::into).collect(),
+            hashed_data,
+            signature.into(),
+        );
+
+        let typed_tx: TypedTransaction = call.tx;
+        let item = QueueItem::new(typed_tx.clone());
+        let tx_key = SledQueueKey::from_evm_with_custom_key(
+            chain_id.as_u32(),
+            typed_tx.item_key(),
+        );
+
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        let qq = QueueStore::<TypedTransaction>::has_item(&store, tx_key)?;
+        if qq {
+            tracing::debug!(
+                proposal_data_hash = %hex::encode(hashed_data),
+                "Skipping execution of this proposal: Already Exists in Queue",
+            );
+            return Ok(());
+        }
+
+        QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
+        tracing::debug!(
+            proposal_data_hash = %hex::encode(hashed_data),
+            "Enqueued admin_set_resource_with_signature call for execution through evm tx queue",
         );
         Ok(())
     }

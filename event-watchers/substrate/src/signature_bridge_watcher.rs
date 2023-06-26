@@ -146,6 +146,9 @@ impl SubstrateBridgeWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
             BatchExecuteProposalsWithSignature { .. } => {
                 unreachable!("BatchExecuteProposalsWithSignature is not supported on substrate");
             }
+            BatchAdminSetResourceWithSignature { .. } => {
+                unreachable!("BatchSetResourceWithSignature is not supported on substrate");
+            }
         };
         Ok(())
     }
