@@ -238,6 +238,13 @@ export class WebbRelayer {
     return response;
   }
 
+  // API to get transaction status
+  public async getTxStatusEvm(chainId: string, transactionItemKey: string) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/tx/evm/${chainId}/${transactionItemKey}`;
+    const response = await fetch(endpoint);
+    return response;
+  }
+
   public async stop(): Promise<void> {
     this.#process.kill('SIGINT');
   }
@@ -443,6 +450,10 @@ async function txHashOrReject(ws: WebSocket, cmd: any): Promise<`0x${string}`> {
       } else if (msg.kind === 'unimplemented') {
         ws.close();
         reject(msg.message);
+      } else if (msg.kind === 'txStatus') {
+        const item = msg as TxStatusMessage;
+        ws.close();
+        resolve(item.itemKey as `0x${string}`);
       } else if (msg.kind === 'unknown') {
         ws.close();
         console.log(o);
@@ -643,6 +654,17 @@ export interface ResourceMetricResponse {
   accountBalance: string;
 }
 
+export interface TransactionStatusResponse {
+  status: TxStatus;
+  itemKey: string;
+}
+
+type TxStatus =
+  | { kind: 'pending' }
+  | { kind: 'processing'; step: string; progress: number }
+  | { kind: 'failed'; reason: string }
+  | { kind: 'processed'; txHash: string };
+
 export interface Evm {
   [key: string]: ChainInfo;
 }
@@ -796,6 +818,12 @@ type WithdrawMessage = {
     | { errored: { code: number; reason: string } };
 };
 
+type TxStatusMessage = {
+  kind: 'txStatus';
+  itemKey: string;
+  status: string;
+};
+
 type ErrorMessage = {
   kind: 'error';
 } & { message: string };
@@ -810,6 +838,7 @@ type ParsedRelayerMessage =
   | WithdrawMessage
   | ErrorMessage
   | UnimplementedMessage
+  | TxStatusMessage
   | { kind: 'unknown' };
 
 function parseRelayTxMessage(o: any): ParsedRelayerMessage {
@@ -819,6 +848,12 @@ function parseRelayTxMessage(o: any): ParsedRelayerMessage {
     return {
       kind: 'network',
       network: o.network,
+    };
+  } else if (o.txStatus) {
+    return {
+      kind: 'txStatus',
+      itemKey: o.txStatus.itemKey,
+      status: o.txStatus.status,
     };
   } else if (o.withdraw) {
     return {

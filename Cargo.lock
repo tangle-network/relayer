@@ -9030,6 +9030,7 @@ dependencies = [
  "serde",
  "tokio 1.28.2",
  "webb 0.5.24",
+ "webb-relayer-store",
  "webb-relayer-tx-relay-utils",
 ]
 
@@ -9119,6 +9120,7 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-handler-utils",
+ "webb-relayer-store",
  "webb-relayer-utils 0.5.0-dev",
 ]
 

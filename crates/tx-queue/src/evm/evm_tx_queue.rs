@@ -127,7 +127,7 @@ where
 
                     // Remove tx item from queue if expired.
                     if item.is_expired() {
-                        tracing::info!(
+                        tracing::trace!(
                             ?tx_hash,
                             "Tx is expired, removing it from queue"
                         );
@@ -377,7 +377,9 @@ where
                                     tx_item_key,
                                 ),
                                 |item: &mut QueueItem<TypedTransaction>| {
-                                    let state = QueueItemState::Processed;
+                                    let state = QueueItemState::Processed {
+                                        tx_hash: receipt.transaction_hash,
+                                    };
                                     item.set_state(state);
                                     Ok(())
                                 },
