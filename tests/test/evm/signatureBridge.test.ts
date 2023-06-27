@@ -42,7 +42,7 @@ import { MintableToken } from '@webb-tools/tokens';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
+describe('Signature Bridge <> DKG Proposal Signing Backend', function() {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -53,12 +53,11 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
   // dkg nodes
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
 
-  before(async function () {
+  before(async function() {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
@@ -66,11 +65,11 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../tangle/target/release/tangle-standalone'
-          ),
-        };
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../tangle/target/release/tangle-standalone'
+        ),
+      };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'DKGProposalHandler',
@@ -84,14 +83,6 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -423,7 +414,6 @@ describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
     await charlieNode?.stop();
     await localChain1?.stop();
     await localChain2?.stop();

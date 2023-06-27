@@ -52,7 +52,7 @@ import { MintableToken } from '@webb-tools/tokens';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
+describe('Proposals (DKG <=> Relayer <=> SigBridge)', function() {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -63,23 +63,22 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
 
   // dkg nodes
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
 
   let webbRelayer: WebbRelayer;
 
-  before(async function () {
+  before(async function() {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../tangle/target/release/tangle-standalone'
-          ),
-        };
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../tangle/target/release/tangle-standalone'
+        ),
+      };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'DKGProposalHandler',
@@ -93,14 +92,6 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -385,7 +376,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     expect(tokens.includes(testToken.contract.address)).to.eq(true);
   });
 
-  it.skip('should handle TokenRemoveProposal', async () => {
+  it('should handle TokenRemoveProposal', async () => {
     // we need to wait until the public key is changed.
     await charlieNode.waitForEvent({
       section: 'dkg',
@@ -479,8 +470,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     expect(tokens.includes(tokenToRemove!)).to.eq(false);
   });
 
-  it.skip('should handle WrappingFeeUpdateProposal', async () => {
-
+  it('should handle WrappingFeeUpdateProposal', async () => {
     webbRelayer.clearLogs();
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);

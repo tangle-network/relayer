@@ -40,10 +40,9 @@ import {
 } from '../../lib/substrateVAnchor.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 
-describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', function () {
+describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', function() {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
-  let bobNode: LocalTangle;
   let charlieNode: LocalTangle;
   let webbRelayer: WebbRelayer;
   const PK1 = u8aToHex(ethers.utils.randomBytes(32));
@@ -52,11 +51,11 @@ describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', fun
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../tangle/target/release/tangle-standalone'
-          ),
-        };
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../tangle/target/release/tangle-standalone'
+        ),
+      };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'VAnchorBn254',
@@ -67,14 +66,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', fun
     aliceNode = await LocalTangle.start({
       name: 'substrate-alice',
       authority: 'alice',
-      usageMode,
-      ports: 'auto',
-      enableLogging: false,
-    });
-
-    bobNode = await LocalTangle.start({
-      name: 'substrate-bob',
-      authority: 'bob',
       usageMode,
       ports: 'auto',
       enableLogging: false,
@@ -258,7 +249,6 @@ describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', fun
 
   after(async () => {
     await aliceNode?.stop();
-    await bobNode?.stop();
     await charlieNode?.stop();
     await webbRelayer?.stop();
   });

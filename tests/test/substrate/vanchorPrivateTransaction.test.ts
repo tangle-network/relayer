@@ -54,7 +54,7 @@ import {
 import { LocalTangle } from '../../lib/localTangle.js';
 import { verify_js_proof } from '@webb-tools/wasm-utils/njs/wasm-utils-njs.js';
 
-describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function () {
+describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function() {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let charlieNode: LocalTangle;
@@ -65,11 +65,11 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function ()
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../tangle/target/release/tangle-standalone'
-          ),
-        };
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../tangle/target/release/tangle-standalone'
+        ),
+      };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'VAnchorBn254',
@@ -261,7 +261,6 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function ()
 
   after(async () => {
     await aliceNode?.stop();
-    // await bobNode?.stop();
     await charlieNode?.stop();
     await webbRelayer?.stop();
   });
