@@ -663,7 +663,7 @@ type TxStatus =
   | { kind: 'pending' }
   | { kind: 'processing'; step: string; progress: number }
   | { kind: 'failed'; reason: string }
-  | { kind: 'processed'; tx_hash: string };
+  | { kind: 'processed'; txHash: string };
 
 export interface Evm {
   [key: string]: ChainInfo;
