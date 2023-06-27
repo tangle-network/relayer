@@ -25,7 +25,9 @@ use webb_relayer_config::evm::{
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::handle_evm_fee_info;
-use webb_relayer_handlers::routes::{encrypted_outputs, leaves, metric, transaction_status};
+use webb_relayer_handlers::routes::{
+    encrypted_outputs, leaves, metric, transaction_status,
+};
 use webb_relayer_tx_queue::evm::TxQueue;
 
 use super::make_proposal_signing_backend;
