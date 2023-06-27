@@ -96,7 +96,7 @@ pub enum QueueItemState {
     /// The item was successfully processed.
     Processed {
         /// Transaction hash.
-       #[serde(rename = "txHash")]
+        #[serde(rename = "txHash")]
         tx_hash: H256,
     },
 }
