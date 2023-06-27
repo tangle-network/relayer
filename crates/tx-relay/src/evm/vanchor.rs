@@ -1,6 +1,6 @@
 use super::*;
 use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
-use ethereum_types::U256;
+use ethereum_types::{H512, U256};
 use futures::TryFutureExt;
 use std::{collections::HashMap, sync::Arc};
 use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
@@ -17,7 +17,7 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::EvmVanchorCommand;
 use webb_relayer_handler_utils::{CommandStream, NetworkStatus};
 use webb_relayer_store::queue::{
-    QueueItem, QueueItemState, QueueStore, TransactionQueueItemKey,
+    QueueItem, QueueStore, TransactionQueueItemKey,
 };
 use webb_relayer_store::sled::SledQueueKey;
 
@@ -208,52 +208,14 @@ pub async fn handle_vanchor_relay_tx<'a>(
             tx_call = %hex::encode(typed_tx.sighash()),
             "Enqueued private withdraw transaction call for execution through evm tx queue",
     );
-    loop {
-        let maybe_item = QueueStore::<TypedTransaction>::peek_item(
-            store, tx_key,
-        )
-        .map_err(|_| {
-            Error(format!(
-                "Transaction item for key : {} found in queue",
-                tx_key
-            ))
-        })?;
 
-        if let Some(item) = maybe_item {
-            match item.state() {
-                QueueItemState::Processed { tx_hash } => {
-                    // Transaction is processed
-                    tracing::trace!(
-                        tx_call = %hex::encode(typed_tx.sighash()),
-                        "Private withdraw transaction call processed through evm tx queue",
-                    );
-                    let _ = stream
-                        .send(Withdraw(WithdrawStatus::Finalized { tx_hash }))
-                        .await;
-                    break;
-                }
-                QueueItemState::Failed { reason } => {
-                    // Transaction failed
-                    tracing::trace!(
-                        tx_call = %hex::encode(typed_tx.sighash()),
-                        "Private withdraw transaction call failed through evm tx queue",
-                    );
-                    let _ = stream.send(Withdraw(WithdrawStatus::Errored {
-                        reason: format!("Private withdraw transaction call failed through evm tx queue with error: {:?}", reason),
-                        code: 4,
-                    })).await;
-                }
-                _ => {
-                    // Transaction is still in the queue
-                    tracing::trace!(
-                        tx_call = %hex::encode(typed_tx.sighash()),
-                        "Private withdraw transaction call is still in queue",
-                    );
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                }
-            }
-        }
-    }
+    let item_key_hex = H512::from_slice(typed_tx.item_key().as_slice());
+    let _ = stream
+        .send(TxStatus {
+            item_key: item_key_hex,
+            status: item.state(),
+        })
+        .await;
 
     // update metric
     let metrics_clone = ctx.metrics.clone();

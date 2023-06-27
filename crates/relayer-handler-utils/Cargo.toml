@@ -12,7 +12,7 @@ repository = { workspace = true }
 
 [dependencies]
 webb-relayer-tx-relay-utils = { path = "../tx-relay-utils" }
-
+webb-relayer-store = { path = "../relayer-store" }
 serde = { workspace = true }
 tokio = { workspace = true }
 webb = { workspace = true }

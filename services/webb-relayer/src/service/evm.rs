@@ -25,7 +25,7 @@ use webb_relayer_config::evm::{
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::handle_evm_fee_info;
-use webb_relayer_handlers::routes::{encrypted_outputs, leaves, metric};
+use webb_relayer_handlers::routes::{encrypted_outputs, leaves, metric, transaction_status};
 use webb_relayer_tx_queue::evm::TxQueue;
 
 use super::make_proposal_signing_backend;
@@ -42,6 +42,10 @@ pub fn build_web_services() -> Router<Arc<RelayerContext>> {
         .route(
             "/leaves/evm/:chain_id/:contract",
             get(leaves::handle_leaves_cache_evm),
+        )
+        .route(
+            "/tx/evm/:chain_id/:item_key",
+            get(transaction_status::handle_transaction_status_evm),
         )
         .route(
             "/encrypted_outputs/evm/:chain_id/:contract_address",
