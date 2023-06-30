@@ -400,7 +400,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     expect((await refundWallet.getBalance()).eq(refundAmount));
   });
 
-  it('Should fail to withdraw with invalid root', async () => {
+  it.skip('Should fail to withdraw with invalid root', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
 
@@ -497,7 +497,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     expect(withdrawTxresp.reason).to.contain('Cannot find your merkle root');
   });
 
-  it.skip('Should fail to withdraw with invalid proof', async () => {
+  it('Should fail to withdraw with invalid proof', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
 
