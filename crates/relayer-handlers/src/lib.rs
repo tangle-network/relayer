@@ -34,12 +34,11 @@ use webb_proposals::TypedChainId;
 
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::{
-    Command, CommandResponse, CommandStream, EvmCommandType,
-    IpInformationResponse, SubstrateCommandType,
+    Command, CommandResponse, CommandStream, IpInformationResponse,
+    SubstrateCommandType,
 };
 use webb_relayer_tx_relay::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 
-use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
 use webb_relayer_tx_relay::substrate::fees::{
     get_substrate_fee_info, SubstrateFeeInfo,
 };
@@ -181,14 +180,12 @@ pub async fn handle_cmd(
                 handle_substrate_vanchor_relay_tx(ctx, vanchor, stream).await
             }
         },
-        Command::Evm(evm) => match evm {
-            EvmCommandType::VAnchor(vanchor) => {
-                handle_vanchor_relay_tx(ctx, vanchor, stream).await
-            }
-        },
         Command::Ping() => {
             let _ = stream.send(CommandResponse::Pong()).await;
             Ok(())
+        }
+        _ => {
+            unimplemented!()
         }
     }
 }

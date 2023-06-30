@@ -97,6 +97,30 @@ pub enum SubstrateCommandType {
     VAnchor(SubstrateVAchorCommand),
 }
 
+/// Vanchor tx relaying errors.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransactionRelayingError {
+    /// Unsupported chain
+    UnsupportedChain,
+    /// Unsupported contract address
+    UnsupportedContract,
+    /// Invalid relayer address
+    InvalidRelayerAddress,
+    /// Invalid Merkle root
+    InvalidMerkleRoots,
+    /// Invalid refund amount
+    InvalidRefundAmount(String),
+    /// Error while wrapping fee
+    WrappingFeeError(String),
+    /// Transaction queue error
+    TransactionQueueError(String),
+    /// Network Error
+    NetworkConfigurationError(String),
+    /// Client Error
+    ClientError(String),
+}
+
 /// Enumerates the command responses
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
