@@ -5,7 +5,7 @@ use webb::substrate::{
     subxt::{
         self,
         error::MetadataError,
-        ext::scale_encode::{self, EncodeAsFields},
+        ext::scale_encode::EncodeAsFields,
         tx::{Payload, TxPayload},
     },
 };
