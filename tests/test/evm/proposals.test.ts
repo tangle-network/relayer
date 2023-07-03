@@ -480,7 +480,6 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   });
 
   it.skip('should handle WrappingFeeUpdateProposal', async () => {
-
     webbRelayer.clearLogs();
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use webb::evm::ethers::prelude::TimeLag;
 use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
@@ -26,7 +26,7 @@ use webb_relayer_config::evm::{
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::handle_evm_fee_info;
 use webb_relayer_handlers::routes::{
-    encrypted_outputs, leaves, metric, transaction_status,
+    encrypted_outputs, leaves, metric, private_tx_withdraw, transaction_status,
 };
 use webb_relayer_tx_queue::evm::TxQueue;
 
@@ -44,6 +44,10 @@ pub fn build_web_services() -> Router<Arc<RelayerContext>> {
         .route(
             "/leaves/evm/:chain_id/:contract",
             get(leaves::handle_leaves_cache_evm),
+        )
+        .route(
+            "/send/evm/:chain_id/:contract",
+            post(private_tx_withdraw::handle_private_tx_withdraw_evm),
         )
         .route(
             "/tx/evm/:chain_id/:item_key",

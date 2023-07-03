@@ -327,21 +327,31 @@ describe('Relayer transfer assets', function () {
       }
     );
 
-    await webbRelayer.vanchorWithdraw(
+    const payload = webbRelayer.vanchorWithdrawPayload(
       localChain1.underlyingChainId,
       vanchor1.getAddress(),
       publicInputs,
       extData
     );
-    // now we wait for relayer to execute private transaction.
+
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain1.underlyingChainId,
+      vanchor1.getAddress(),
+      payload
+    );
+
+    expect(withdrawTxResponse.status).equal(200);
+
+    // now we wait for the tx queue on that chain to execute the private transaction.
     await webbRelayer.waitForEvent({
-      kind: 'private_tx',
+      kind: 'tx_queue',
       event: {
         ty: 'EVM',
         chain_id: localChain1.underlyingChainId.toString(),
         finalized: true,
       },
     });
+
     // Step 7. Check recipient(Bob) balance. This account is used to receive funds after withdrawal
     const bobBalanceAfter = await token.getBalance(bobWallet.address);
     console.log('Balance after ', bobBalanceAfter);

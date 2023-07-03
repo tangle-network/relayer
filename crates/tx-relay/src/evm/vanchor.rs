@@ -15,11 +15,14 @@ use webb::evm::{
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::EvmVanchorCommand;
-use webb_relayer_handler_utils::{CommandStream, NetworkStatus};
 use webb_relayer_store::queue::{
     QueueItem, QueueStore, TransactionQueueItemKey,
 };
 use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_utils::TransactionRelayingError;
+
+/// Type alias for transaction item key.
+pub type TransactionItemKey = H512;
 
 /// Handler for VAnchor commands
 ///
@@ -29,17 +32,16 @@ use webb_relayer_store::sled::SledQueueKey;
 /// * `cmd` - The command to execute
 /// * `stream` - The stream to write the response to
 pub async fn handle_vanchor_relay_tx<'a>(
-    ctx: RelayerContext,
+    ctx: Arc<RelayerContext>,
     cmd: EvmVanchorCommand,
-    stream: CommandStream,
-) -> Result<(), CommandResponse> {
-    use CommandResponse::*;
+) -> Result<TransactionItemKey, TransactionRelayingError> {
+    use TransactionRelayingError::*;
     let requested_chain = cmd.chain_id;
     let chain = ctx
         .config
         .evm
         .get(&requested_chain.to_string())
-        .ok_or(Network(NetworkStatus::UnsupportedChain))?;
+        .ok_or(UnsupportedChain(requested_chain))?;
     let supported_contracts: HashMap<_, _> = chain
         .contracts
         .iter()
@@ -53,37 +55,30 @@ pub async fn handle_vanchor_relay_tx<'a>(
     // get the contract configuration
     let contract_config = supported_contracts
         .get(&cmd.id)
-        .ok_or(Network(NetworkStatus::UnsupportedContract))?;
+        .ok_or(UnsupportedContract(cmd.id.to_string()))?;
 
-    let wallet = ctx.evm_wallet(cmd.chain_id).await.map_err(|e| {
-        Error(format!("Misconfigured Network: {:?}, {e}", cmd.chain_id))
-    })?;
+    let wallet = ctx
+        .evm_wallet(cmd.chain_id)
+        .await
+        .map_err(|e| NetworkConfigurationError(e.to_string(), cmd.chain_id))?;
     // validate the relayer address first before trying
     // send the transaction.
     let reward_address = chain.beneficiary.unwrap_or(wallet.address());
 
     if cmd.ext_data.relayer != reward_address {
-        return Err(Network(NetworkStatus::InvalidRelayerAddress));
+        return Err(InvalidRelayerAddress(cmd.ext_data.relayer.to_string()));
     }
 
     // validate that the roots are multiple of 32s
     let roots = cmd.proof_data.roots.to_vec();
     if roots.len() % 32 != 0 {
-        return Err(Withdraw(WithdrawStatus::InvalidMerkleRoots));
+        return Err(InvalidMerkleRoots);
     }
 
-    tracing::debug!(
-        "Connecting to chain {:?} .. at {}",
-        cmd.chain_id,
-        chain.http_endpoint
-    );
-    let _ = stream.send(Network(NetworkStatus::Connecting)).await;
-    let provider = ctx.evm_provider(cmd.chain_id).await.map_err(|e| {
-        Network(NetworkStatus::Failed {
-            reason: e.to_string(),
-        })
-    })?;
-    let _ = stream.send(Network(NetworkStatus::Connected)).await;
+    let provider = ctx
+        .evm_provider(cmd.chain_id)
+        .await
+        .map_err(|e| NetworkConfigurationError(e.to_string(), cmd.chain_id))?;
 
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
     let contract = VAnchorContract::new(cmd.id, client.clone());
@@ -138,12 +133,10 @@ pub async fn handle_vanchor_relay_tx<'a>(
         call = call.value(cmd.ext_data.refund);
     }
 
-    let gas_amount =
-        client.estimate_gas(&call.tx, None).await.map_err(|e| {
-            Network(NetworkStatus::Failed {
-                reason: e.to_string(),
-            })
-        })?;
+    let gas_amount = client
+        .estimate_gas(&call.tx, None)
+        .await
+        .map_err(|e| ClientError(e.to_string()))?;
     let typed_chain_id = TypedChainId::Evm(chain.chain_id);
     let fee_info = get_evm_fee_info(
         typed_chain_id,
@@ -152,11 +145,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         &ctx,
     )
     .await
-    .map_err(|e| {
-        Network(NetworkStatus::Failed {
-            reason: e.to_string(),
-        })
-    })?;
+    .map_err(|e| ClientError(e.to_string()))?;
 
     // validate refund amount
     if cmd.ext_data.refund > fee_info.max_refund {
@@ -164,7 +153,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
             "User requested a refund which is higher than the maximum of {}",
             fee_info.max_refund
         );
-        return Err(Error(msg));
+        return Err(InvalidRefundAmount(msg));
     }
 
     // check the fee
@@ -173,7 +162,9 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let wrapped_amount =
         calculate_wrapped_refund_amount(cmd.ext_data.refund, &fee_info)
             .map_err(|e| {
-                Error(format!("Failed to calculate wrapped refund amount: {e}"))
+                WrappingFeeError(format!(
+                    "Failed to calculate wrapped refund amount: {e}"
+                ))
             })?;
     if cmd.ext_data.fee < adjusted_fee + wrapped_amount {
         let msg = format!(
@@ -181,7 +172,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
             cmd.ext_data.fee,
             adjusted_fee + wrapped_amount
         );
-        return Err(Error(msg));
+        return Err(InvalidRefundAmount(msg));
     }
 
     let target_system = TargetSystem::new_contract_address(
@@ -198,7 +189,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let store = ctx.store();
     QueueStore::<TypedTransaction>::enqueue_item(store, tx_key, item.clone())
         .map_err(|_| {
-        Error(format!(
+        TransactionQueueError(format!(
             "Transaction item with key : {} failed to enqueue",
             tx_key
         ))
@@ -210,12 +201,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
     );
 
     let item_key_hex = H512::from_slice(typed_tx.item_key().as_slice());
-    let _ = stream
-        .send(TxStatus {
-            item_key: item_key_hex,
-            status: item.state(),
-        })
-        .await;
 
     // update metric
     let metrics_clone = ctx.metrics.clone();
@@ -239,7 +224,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     metrics
         .account_balance_entry(typed_chain_id)
         .set(wei_to_gwei(relayer_balance));
-    Ok(())
+    Ok(item_key_hex)
 }
 
 fn calculate_wrapped_refund_amount(

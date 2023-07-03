@@ -1131,7 +1131,7 @@ mod tests {
             .unwrap();
         assert!(!queue_item1.is_expired());
         //sleep for 10 seconds
-        std::thread::sleep(std::time::Duration::from_millis(5 * 1000));
+        std::thread::sleep(std::time::Duration::from_millis(10 * 1000));
         assert!(queue_item1.is_expired());
     }
 

@@ -32,6 +32,8 @@ import {
   ResourceMetricResponse,
   WebbRelayer,
   TransactionStatusResponse,
+  WithdrawTxSuccessResponse,
+  WithdrawTxFailureResponse,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
@@ -332,12 +334,23 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       refundWallet.address
     );
 
-    const itemKey = await webbRelayer.vanchorWithdraw(
+    const payload = webbRelayer.vanchorWithdrawPayload(
       localChain2.underlyingChainId,
       vanchor2.getAddress(),
       output.publicInputs,
       output.extData
     );
+
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain2.underlyingChainId,
+      vanchor2.getAddress(),
+      payload
+    );
+
+    expect(withdrawTxResponse.status).equal(200);
+    const withdrawTxresp =
+      (await withdrawTxResponse.json()) as WithdrawTxSuccessResponse;
+    const itemKey = withdrawTxresp.itemKey;
 
     // fetch transaction status, it should be in pending state.
     const txStatusResponse = await webbRelayer.getTxStatusEvm(
@@ -465,17 +478,23 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const invalidRootBytes = u8aToHex(rootBytes);
     expect(output.publicInputs.roots).to.not.eq(invalidRootBytes);
     output.publicInputs.roots = invalidRootBytes;
-    try {
-      await webbRelayer.vanchorWithdraw(
-        localChain2.underlyingChainId,
-        vanchor2.getAddress(),
-        output.publicInputs,
-        output.extData
-      );
-    } catch (e) {
-      // should fail since private transaction since invalid merkle root is provided.
-      expect(JSON.stringify(e)).to.contain('Cannot find your merkle root');
-    }
+    const payload = webbRelayer.vanchorWithdrawPayload(
+      localChain2.underlyingChainId,
+      vanchor2.getAddress(),
+      output.publicInputs,
+      output.extData
+    );
+
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain2.underlyingChainId,
+      vanchor2.getAddress(),
+      payload
+    );
+
+    expect(withdrawTxResponse.status).equal(200);
+    const withdrawTxresp =
+      (await withdrawTxResponse.json()) as WithdrawTxFailureResponse;
+    expect(withdrawTxresp.reason).to.contain('Cannot find your merkle root');
   });
 
   it('Should fail to withdraw with invalid proof', async () => {
@@ -555,19 +574,25 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const invalidProofBytes = u8aToHex(proofBytes);
     expect(output.publicInputs.proof).to.not.eq(invalidProofBytes);
     output.publicInputs.proof = invalidProofBytes;
-    try {
-      await webbRelayer.vanchorWithdraw(
-        localChain2.underlyingChainId,
-        vanchor2.getAddress(),
-        output.publicInputs,
-        output.extData
-      );
-    } catch (e) {
-      // should fail since private transaction since invalid proof is provided
-      expect(JSON.stringify(e)).to.contain(
-        'Exception while processing transaction'
-      );
-    }
+    const payload = webbRelayer.vanchorWithdrawPayload(
+      localChain2.underlyingChainId,
+      vanchor2.getAddress(),
+      output.publicInputs,
+      output.extData
+    );
+
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain2.underlyingChainId,
+      vanchor2.getAddress(),
+      payload
+    );
+
+    expect(withdrawTxResponse.status).equal(200);
+    const withdrawTxresp =
+      (await withdrawTxResponse.json()) as WithdrawTxFailureResponse;
+    expect(withdrawTxresp.reason).to.contain(
+      'Exception while processing transaction'
+    );
   });
 
   it('Should fail to withdraw with invalid nullifier hash', async () => {
@@ -652,19 +677,26 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       invalidnullifierHash
     );
     output.publicInputs.inputNullifiers[0] = invalidnullifierHash;
-    try {
-      await webbRelayer.vanchorWithdraw(
-        localChain2.underlyingChainId,
-        vanchor2.getAddress(),
-        output.publicInputs,
-        output.extData
-      );
-    } catch (e) {
-      // should fail since private transaction since invalid proof is provided
-      expect(JSON.stringify(e)).to.contain(
-        'Exception while processing transaction'
-      );
-    }
+    const payload = webbRelayer.vanchorWithdrawPayload(
+      localChain2.underlyingChainId,
+      vanchor2.getAddress(),
+      output.publicInputs,
+      output.extData
+    );
+
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain2.underlyingChainId,
+      vanchor2.getAddress(),
+      payload
+    );
+
+    expect(withdrawTxResponse.status).equal(200);
+    const withdrawTxresp =
+      (await withdrawTxResponse.json()) as WithdrawTxFailureResponse;
+    console.log(withdrawTxresp);
+    expect(withdrawTxresp.reason).to.contain(
+      'Exception while processing transaction'
+    );
   });
 
   it('should fail to query leaves data api', async () => {
