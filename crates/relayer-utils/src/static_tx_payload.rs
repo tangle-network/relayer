@@ -78,12 +78,6 @@ impl TxPayload for TypeErasedStaticTxPayload {
 
         pallet_index.encode_to(out);
         call_index.encode_to(out);
-
-        let mut fields = call
-            .fields
-            .iter()
-            .map(|f| scale_encode::Field::new(f.ty.id, f.name.as_deref()));
-
         self.call_data.encode_to(out);
         Ok(())
     }
