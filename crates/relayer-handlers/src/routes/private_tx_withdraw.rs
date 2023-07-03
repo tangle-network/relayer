@@ -52,7 +52,7 @@ pub async fn handle_private_tx_withdraw_evm(
     Path((chain_id, contract)): Path<(u32, Address)>,
     Json(payload): Json<EvmVanchorCommand>,
 ) -> Result<Json<WithdrawTxResponse>, HandlerError> {
-    tracing::info!("Received withdrawal request for chain : {} vanchor contract : {} with payload: {:?} ",
+    tracing::debug!("Received withdrawal request for chain : {} vanchor contract : {} with payload: {:?} ",
         chain_id, contract, payload
     );
     let response = handle_vanchor_relay_tx(ctx, payload).await;

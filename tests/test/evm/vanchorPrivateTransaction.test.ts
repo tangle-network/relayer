@@ -341,15 +341,15 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       output.extData
     );
 
-    const WithdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
-      localChain2.underlyingChainId.toString(),
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain2.underlyingChainId,
       vanchor2.getAddress(),
       payload
     );
 
-    expect(WithdrawTxResponse.status).equal(200);
+    expect(withdrawTxResponse.status).equal(200);
     const withdrawTxresp =
-      (await WithdrawTxResponse.json()) as WithdrawTxSuccessResponse;
+      (await withdrawTxResponse.json()) as WithdrawTxSuccessResponse;
     const itemKey = withdrawTxresp.itemKey;
 
     // fetch transaction status, it should be in pending state.
@@ -400,7 +400,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     expect((await refundWallet.getBalance()).eq(refundAmount));
   });
 
-  it.skip('Should fail to withdraw with invalid root', async () => {
+  it('Should fail to withdraw with invalid root', async () => {
     const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
     await vanchor1.setSigner(govWallet1);
 
@@ -485,15 +485,15 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       output.extData
     );
 
-    const WithdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
-      localChain2.underlyingChainId.toString(),
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain2.underlyingChainId,
       vanchor2.getAddress(),
       payload
     );
 
-    expect(WithdrawTxResponse.status).equal(200);
+    expect(withdrawTxResponse.status).equal(200);
     const withdrawTxresp =
-      (await WithdrawTxResponse.json()) as WithdrawTxFailureResponse;
+      (await withdrawTxResponse.json()) as WithdrawTxFailureResponse;
     expect(withdrawTxresp.reason).to.contain('Cannot find your merkle root');
   });
 
@@ -581,15 +581,15 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       output.extData
     );
 
-    const WithdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
-      localChain2.underlyingChainId.toString(),
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain2.underlyingChainId,
       vanchor2.getAddress(),
       payload
     );
 
-    expect(WithdrawTxResponse.status).equal(200);
+    expect(withdrawTxResponse.status).equal(200);
     const withdrawTxresp =
-      (await WithdrawTxResponse.json()) as WithdrawTxFailureResponse;
+      (await withdrawTxResponse.json()) as WithdrawTxFailureResponse;
     expect(withdrawTxresp.reason).to.contain(
       'Exception while processing transaction'
     );
@@ -684,15 +684,15 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       output.extData
     );
 
-    const WithdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
-      localChain2.underlyingChainId.toString(),
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain2.underlyingChainId,
       vanchor2.getAddress(),
       payload
     );
 
-    expect(WithdrawTxResponse.status).equal(200);
+    expect(withdrawTxResponse.status).equal(200);
     const withdrawTxresp =
-      (await WithdrawTxResponse.json()) as WithdrawTxFailureResponse;
+      (await withdrawTxResponse.json()) as WithdrawTxFailureResponse;
     console.log(withdrawTxresp);
     expect(withdrawTxresp.reason).to.contain(
       'Exception while processing transaction'

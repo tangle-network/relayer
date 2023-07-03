@@ -334,13 +334,13 @@ describe('Relayer transfer assets', function () {
       extData
     );
 
-    const WithdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
-      localChain1.underlyingChainId.toString(),
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
+      localChain1.underlyingChainId,
       vanchor1.getAddress(),
       payload
     );
 
-    expect(WithdrawTxResponse.status).equal(200);
+    expect(withdrawTxResponse.status).equal(200);
 
     // now we wait for the tx queue on that chain to execute the private transaction.
     await webbRelayer.waitForEvent({

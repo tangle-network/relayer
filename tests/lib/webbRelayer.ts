@@ -240,7 +240,7 @@ export class WebbRelayer {
 
   // Post API to send private withdrawal tx to relayer for evm chain
   public async sendPrivateTxEvm(
-    chainId: string,
+    chainId: number,
     contractAddress: string,
     payload: any
   ) {

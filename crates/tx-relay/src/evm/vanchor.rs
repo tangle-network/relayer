@@ -225,7 +225,6 @@ pub async fn handle_vanchor_relay_tx<'a>(
     metrics
         .account_balance_entry(typed_chain_id)
         .set(wei_to_gwei(relayer_balance));
-    tracing::debug!("Vanchor item_key_hex : {} ", item_key_hex);
     Ok(item_key_hex)
 }
 
