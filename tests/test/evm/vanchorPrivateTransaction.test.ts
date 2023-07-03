@@ -354,7 +354,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
     // fetch transaction status, it should be in pending state.
     const txStatusResponse = await webbRelayer.getTxStatusEvm(
-      localChain2.underlyingChainId.toString(),
+      localChain2.underlyingChainId,
       itemKey
     );
     expect(txStatusResponse.status).equal(200);
@@ -376,7 +376,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
     // fetch transaction status, it should be in processed state.
     const txStatusResponse2 = await webbRelayer.getTxStatusEvm(
-      localChain2.underlyingChainId.toString(),
+      localChain2.underlyingChainId,
       itemKey
     );
     expect(txStatusResponse2.status).equal(200);
