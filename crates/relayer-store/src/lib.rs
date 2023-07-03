@@ -26,6 +26,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 use webb::evm::contract::protocol_solidity::signature_bridge::AdminSetResourceWithSignatureCall;
 use webb::evm::ethers::types;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal;
 use webb::substrate::tangle_runtime::api::{dkg, dkg_proposal_handler};
 use webb_proposals::evm::ResourceIdUpdateProposal;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
@@ -418,15 +419,40 @@ impl From<dkg::events::PublicKeySignatureChanged> for BridgeCommand {
     }
 }
 
-impl TryFrom<dkg_proposal_handler::events::ProposalSigned> for BridgeCommand {
+impl TryFrom<dkg_proposal_handler::events::ProposalBatchSigned>
+    for BridgeCommand
+{
     type Error = webb_relayer_utils::Error;
     fn try_from(
-        event: dkg_proposal_handler::events::ProposalSigned,
+        mut event: dkg_proposal_handler::events::ProposalBatchSigned,
     ) -> Result<Self> {
-        Self::try_from((event.data, event.signature))
+        match event.proposals.len() as u32 {
+            1 => {
+                let prop =
+                    event.proposals.pop().expect("proposal should exist");
+                Self::try_from((prop.data, event.signature))
+            }
+            2.. => {
+                // ASSUMPTION: All proposals in a batch are of the same kind.
+                let kind = event
+                    .proposals
+                    .first()
+                    .map(|p| p.kind.clone())
+                    .expect("proposal should exist");
+                let data = event
+                    .proposals
+                    .into_iter()
+                    .map(|p| p.data)
+                    .collect::<Vec<_>>();
+                let signature = event.signature;
+                Self::try_from((kind, data, signature))
+            }
+            0 => Err(webb_relayer_utils::Error::InvalidProposalsBatch),
+        }
     }
 }
 
+// *** For single proposal ***
 impl TryFrom<(Vec<u8>, Vec<u8>)> for BridgeCommand {
     type Error = webb_relayer_utils::Error;
     fn try_from((data, signature): (Vec<u8>, Vec<u8>)) -> Result<Self> {
@@ -459,6 +485,66 @@ impl TryFrom<(Vec<u8>, Vec<u8>)> for BridgeCommand {
             })
         } else {
             Ok(BridgeCommand::ExecuteProposalWithSignature { data, signature })
+        }
+    }
+}
+
+// *** For batch proposal ***
+impl TryFrom<(proposal::ProposalKind, Vec<Vec<u8>>, Vec<u8>)>
+    for BridgeCommand
+{
+    type Error = webb_relayer_utils::Error;
+
+    fn try_from(
+        (kind, data, signature): (
+            proposal::ProposalKind,
+            Vec<Vec<u8>>,
+            Vec<u8>,
+        ),
+    ) -> std::result::Result<Self, Self::Error> {
+        match kind {
+            proposal::ProposalKind::ResourceIdUpdate => {
+                let proposals = data
+                    .into_iter()
+                    .map(|data_part| {
+                        if data_part.len() != ResourceIdUpdateProposal::LENGTH {
+                            Err(webb_relayer_utils::Error::InvalidProposalBytes)
+                        } else {
+                            // Decode the proposal data
+                            let mut proposal_bytes =
+                                [0u8; ResourceIdUpdateProposal::LENGTH];
+                            proposal_bytes.copy_from_slice(&data_part[..]);
+                            Ok(ResourceIdUpdateProposal::from(proposal_bytes))
+                        }
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+
+                // ASSUMPTION: All proposals in a batch are targeting the same resource.
+                let resource_id = proposals
+                    .first()
+                    .map(|p| p.header().resource_id().into_bytes())
+                    .expect("proposal should exist");
+
+                Ok(Self::BatchAdminSetResourceWithSignature {
+                    resource_id,
+                    new_resource_ids: proposals
+                        .iter()
+                        .map(|p| p.new_resource_id().into_bytes())
+                        .collect(),
+                    handler_addresses: proposals
+                        .iter()
+                        .map(|p| p.handler_address())
+                        .collect(),
+                    nonces: proposals
+                        .iter()
+                        .map(|p| p.header().nonce().to_u32())
+                        .collect(),
+                    signature,
+                })
+            }
+            _ => {
+                Ok(Self::BatchExecuteProposalsWithSignature { data, signature })
+            }
         }
     }
 }

@@ -62,8 +62,7 @@ impl EventHandler<PolkadotConfig> for SubstrateVAnchorLeavesHandler {
                 .next_leaf_index(event.tree_id);
             let next_leaf_index = api
                 .storage()
-                .at(Some(at_hash))
-                .await?
+                .at(at_hash)
                 .fetch(&next_leaf_index_addr)
                 .await?
                 .ok_or(Error::ReadSubstrateStorageError)?;
@@ -78,7 +77,8 @@ impl EventHandler<PolkadotConfig> for SubstrateVAnchorLeavesHandler {
             // pallet index
             let pallet_index = {
                 let metadata = api.metadata();
-                let pallet = metadata.pallet("VAnchorHandlerBn254")?;
+                let pallet =
+                    metadata.pallet_by_name_err("VAnchorHandlerBn254")?;
                 pallet.index()
             };
             let src_chain_id = TypedChainId::Substrate(chain_id as u32);

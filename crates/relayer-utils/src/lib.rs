@@ -242,6 +242,9 @@ pub enum Error {
     /// Invalid Proposal bytes.
     #[error("Invalid proposal bytes")]
     InvalidProposalBytes,
+    /// Invalid Proposals batch.
+    #[error("Invalid proposals batch")]
+    InvalidProposalsBatch,
 }
 
 /// A type alias for the result for webb relayer, that uses the `Error` enum.

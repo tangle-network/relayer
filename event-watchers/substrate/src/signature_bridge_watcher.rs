@@ -185,7 +185,7 @@ where
 
         let current_maintainer = api
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
@@ -261,7 +261,7 @@ where
 
         let current_maintainer = api
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
@@ -287,7 +287,7 @@ where
 
         let current_nonce = api
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&current_nonce)
             .await?

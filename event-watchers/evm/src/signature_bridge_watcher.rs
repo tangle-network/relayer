@@ -180,7 +180,7 @@ impl BridgeWatcher for SignatureBridgeContractWatcher {
         cmd: BridgeCommand,
     ) -> webb_relayer_utils::Result<()> {
         use BridgeCommand::*;
-        tracing::trace!("Got cmd {:?}", cmd);
+        tracing::debug!("Got cmd {:?}", cmd);
         match cmd {
             ExecuteProposalWithSignature { data, signature } => {
                 self.execute_proposal_with_signature(
