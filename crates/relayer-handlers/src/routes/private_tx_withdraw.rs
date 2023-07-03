@@ -70,7 +70,7 @@ pub async fn handle_private_tx_withdraw_evm(
             let response = WithdrawTxFailureResponse {
                 status: "Failed".to_string(),
                 message: "Transaction request failed".to_string(),
-                reason: format!("{:?}", e),
+                reason: format!("{}", e),
             };
 
             Ok(Json(WithdrawTxResponse::Failure(response)))
