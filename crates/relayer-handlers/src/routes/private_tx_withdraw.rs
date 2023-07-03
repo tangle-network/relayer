@@ -89,11 +89,11 @@ pub async fn handle_private_tx_withdraw_evm(
 /// * `contract` - An address of the contract to query.
 pub async fn handle_private_tx_withdraw_substrate(
     State(ctx): State<Arc<RelayerContext>>,
-    Path((chain_id, contract)): Path<(u32, Address)>,
+    Path((chain_id, tree_id)): Path<(u32, u32)>,
     Json(payload): Json<SubstrateVAchorCommand>,
 ) -> Result<Json<WithdrawTxResponse>, HandlerError> {
-    tracing::debug!("Received withdrawal request for chain : {} vanchor contract : {} with payload: {:?} ",
-        chain_id, contract, payload
+    tracing::debug!("Received withdrawal request for chain : {} vanchor tree : {} with payload: {:?} ",
+        chain_id, tree_id, payload
     );
     let response = handle_substrate_vanchor_relay_tx(ctx, payload).await;
 
