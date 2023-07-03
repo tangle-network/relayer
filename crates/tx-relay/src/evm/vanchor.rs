@@ -14,11 +14,12 @@ use webb::evm::{
 };
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handler_utils::{EvmVanchorCommand, TransactionRelayingError};
+use webb_relayer_handler_utils::EvmVanchorCommand;
 use webb_relayer_store::queue::{
     QueueItem, QueueStore, TransactionQueueItemKey,
 };
 use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_utils::TransactionRelayingError;
 
 /// Type alias for transaction item key.
 pub type TransactionItemKey = H512;
@@ -40,7 +41,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .config
         .evm
         .get(&requested_chain.to_string())
-        .ok_or(UnsupportedChain)?;
+        .ok_or(UnsupportedChain(requested_chain))?;
     let supported_contracts: HashMap<_, _> = chain
         .contracts
         .iter()
@@ -54,20 +55,18 @@ pub async fn handle_vanchor_relay_tx<'a>(
     // get the contract configuration
     let contract_config = supported_contracts
         .get(&cmd.id)
-        .ok_or(UnsupportedContract)?;
+        .ok_or(UnsupportedContract(cmd.id.to_string()))?;
 
-    let wallet = ctx.evm_wallet(cmd.chain_id).await.map_err(|e| {
-        NetworkConfigurationError(format!(
-            "Misconfigured Network: {:?}, {e}",
-            cmd.chain_id
-        ))
-    })?;
+    let wallet = ctx
+        .evm_wallet(cmd.chain_id)
+        .await
+        .map_err(|e| NetworkConfigurationError(e.to_string(), cmd.chain_id))?;
     // validate the relayer address first before trying
     // send the transaction.
     let reward_address = chain.beneficiary.unwrap_or(wallet.address());
 
     if cmd.ext_data.relayer != reward_address {
-        return Err(InvalidRelayerAddress);
+        return Err(InvalidRelayerAddress(cmd.ext_data.relayer.to_string()));
     }
 
     // validate that the roots are multiple of 32s
@@ -79,7 +78,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let provider = ctx
         .evm_provider(cmd.chain_id)
         .await
-        .map_err(|e| NetworkConfigurationError(e.to_string()))?;
+        .map_err(|e| NetworkConfigurationError(e.to_string(), cmd.chain_id))?;
 
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
     let contract = VAnchorContract::new(cmd.id, client.clone());
