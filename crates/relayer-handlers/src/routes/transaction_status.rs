@@ -48,3 +48,34 @@ pub async fn handle_transaction_status_evm(
         format!("Transaction item for key : {} not found in queue", item_key),
     ))
 }
+
+/// Handles transaction progress of item in queue for substrate chains.
+///
+/// Returns a Result with the `TransactionStatusResponse` on success
+///
+/// # Arguments
+///
+/// * `chain_id` - An u32 representing the chain id of the chain to query
+/// * `item_key` - An 64 bytes hash string, used to access transaction item from queue.
+pub async fn handle_transaction_status_substrate(
+    State(ctx): State<Arc<RelayerContext>>,
+    Path((chain_id, item_key)): Path<(u32, H512)>,
+) -> Result<Json<TransactionStatusResponse>, HandlerError> {
+    let store = ctx.store();
+    let maybe_item: Option<QueueItem<TypedTransaction>> = store
+        .peek_item(SledQueueKey::from_substrate_with_custom_key(
+            chain_id, item_key.0,
+        ))
+        .unwrap_or(None);
+
+    if let Some(item) = maybe_item {
+        return Ok(Json(TransactionStatusResponse {
+            status: item.state(),
+            item_key: item_key.to_string(),
+        }));
+    }
+    Err(HandlerError(
+        StatusCode::NOT_FOUND,
+        format!("Transaction item for key : {} not found in queue", item_key),
+    ))
+}
