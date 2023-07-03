@@ -242,7 +242,7 @@ export class WebbRelayer {
   public async sendPrivateTxEvm(
     chainId: number,
     contractAddress: string,
-    payload: any
+    payload: WithdrawRequestPayloadEVM
   ) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/send/evm/${chainId}/${contractAddress}`;
     const response = fetch(endpoint, {
@@ -336,7 +336,7 @@ export class WebbRelayer {
     vanchorAddress: string,
     publicInputs: IEvmVariableAnchorPublicInputs,
     extData: IVariableAnchorExtData
-  ) {
+  ): WithdrawRequestPayloadEVM {
     const cmd = {
       evm: {
         vAnchor: {
@@ -619,6 +619,30 @@ export interface WithdrawTxFailureResponse {
   message: string;
   reason: string;
 }
+
+export type WithdrawRequestPayloadEVM = {
+  chainId: number;
+  id: string;
+  extData: {
+    recipient: string;
+    relayer: string;
+    extAmount: string;
+    fee: string;
+    refund: string;
+    token: string;
+    encryptedOutput1: string;
+    encryptedOutput2: string;
+  };
+  proofData: {
+    proof: string;
+    extensionRoots: string;
+    extDataHash: string;
+    publicAmount: string;
+    roots: string;
+    outputCommitments: string[];
+    inputNullifiers: string[];
+  };
+};
 
 export interface TransactionStatusResponse {
   status: TxStatus;
