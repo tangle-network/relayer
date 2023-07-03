@@ -52,7 +52,7 @@ import { MintableToken } from '@webb-tools/tokens';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Proposals (DKG <=> Relayer <=> SigBridge)', function() {
+describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -67,18 +67,18 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function() {
 
   let webbRelayer: WebbRelayer;
 
-  before(async function() {
+  before(async function () {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../tangle/target/release/tangle-standalone'
-        ),
-      };
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../tangle/target/release/tangle-standalone'
+          ),
+        };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'DKGProposalHandler',

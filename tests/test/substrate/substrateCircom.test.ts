@@ -40,7 +40,7 @@ import {
 } from '../../lib/substrateVAnchor.js';
 import { LocalTangle } from '../../lib/localTangle.js';
 
-describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', function() {
+describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', function () {
   const tmpDirPath = temp.mkdirSync();
   let aliceNode: LocalTangle;
   let charlieNode: LocalTangle;
@@ -51,11 +51,11 @@ describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', fun
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../tangle/target/release/tangle-standalone'
-        ),
-      };
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../tangle/target/release/tangle-standalone'
+          ),
+        };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'VAnchorBn254',

@@ -29,7 +29,7 @@ import { u8aToHex } from '@polkadot/util';
 import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
 
-describe('Substrate SignatureBridge Governor Update', function() {
+describe('Substrate SignatureBridge Governor Update', function () {
   const tmpDirPath = temp.mkdirSync();
   // Tangle nodes
   let aliceNode: LocalTangle;
@@ -41,11 +41,11 @@ describe('Substrate SignatureBridge Governor Update', function() {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-        mode: 'host',
-        nodePath: path.resolve(
-          '../../tangle/target/release/tangle-standalone'
-        ),
-      };
+          mode: 'host',
+          nodePath: path.resolve(
+            '../../tangle/target/release/tangle-standalone'
+          ),
+        };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'SignatureBridge',
