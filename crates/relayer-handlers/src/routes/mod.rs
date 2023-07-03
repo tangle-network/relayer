@@ -15,6 +15,9 @@ pub mod info;
 /// Module for handling transaction status API
 pub mod transaction_status;
 
+/// Module for handling private tx withdraw API
+pub mod private_tx_withdraw;
+
 /// A (half-open) range bounded inclusively below and exclusively above
 /// (`start..end`).
 ///

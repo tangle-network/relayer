@@ -247,6 +247,38 @@ pub enum Error {
     InvalidProposalsBatch,
 }
 
+/// Vanchor withdraw tx relaying errors.
+#[derive(thiserror::Error, Debug)]
+pub enum TransactionRelayingError {
+    /// Unsupported chain
+    #[error("Unsupported chain: {0}")]
+    UnsupportedChain(u64),
+    /// Unsupported contract address
+    #[error("Unsupported contract address: {0}")]
+    UnsupportedContract(String),
+    /// Invalid relayer address
+    #[error("Invalid relayer address: {0}")]
+    InvalidRelayerAddress(String),
+    /// Invalid Merkle root
+    #[error("Invalid Merkle roots")]
+    InvalidMerkleRoots,
+    /// Invalid refund amount
+    #[error("InvalidRefundAmount: {0}")]
+    InvalidRefundAmount(String),
+    /// Error while wrapping fee
+    #[error("WrappingFeeError: {0}")]
+    WrappingFeeError(String),
+    /// Transaction queue error
+    #[error("TransactionQueueError: {0}")]
+    TransactionQueueError(String),
+    /// Network Error
+    #[error("Network configuration error: {0} for chain: {1}")]
+    NetworkConfigurationError(String, u64),
+    /// Client Error
+    #[error("ClientError: {0}")]
+    ClientError(String),
+}
+
 /// A type alias for the result for webb relayer, that uses the `Error` enum.
 pub type Result<T> = std::result::Result<T, Error>;
 

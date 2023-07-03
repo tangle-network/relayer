@@ -238,6 +238,23 @@ export class WebbRelayer {
     return response;
   }
 
+  // Post API to send private withdrawal tx to relayer for evm chain
+  public async sendPrivateTxEvm(
+    chainId: number,
+    contractAddress: string,
+    payload: WithdrawRequestPayloadEVM
+  ) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/send/evm/${chainId}/${contractAddress}`;
+    const response = fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    return response;
+  }
+
   // API to get transaction status
   public async getTxStatusEvm(chainId: string, transactionItemKey: string) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/tx/evm/${chainId}/${transactionItemKey}`;
@@ -314,17 +331,12 @@ export class WebbRelayer {
     });
   }
 
-  public async vanchorWithdraw(
+  public vanchorWithdrawPayload(
     chainId: number,
     vanchorAddress: string,
     publicInputs: IEvmVariableAnchorPublicInputs,
     extData: IVariableAnchorExtData
-  ): Promise<`0x${string}`> {
-    const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
-    // create a new websocket connection to the relayer.
-    const ws = new WebSocket(wsEndpoint);
-    await new Promise((resolve) => ws.once('open', resolve));
-
+  ): WithdrawRequestPayloadEVM {
     const cmd = {
       evm: {
         vAnchor: {
@@ -356,7 +368,7 @@ export class WebbRelayer {
         },
       },
     };
-    return txHashOrReject(ws, cmd);
+    return cmd.evm.vAnchor;
   }
 
   public async substrateVAnchorWithdraw(
@@ -418,66 +430,6 @@ export function calculateRelayerFees(
   const feeBigMill = principleBig.mul(withdrawFeeMillBig);
   const feeBig = feeBigMill.div(BigNumber.from(1000000));
   return feeBig;
-}
-
-async function txHashOrReject(ws: WebSocket, cmd: any): Promise<`0x${string}`> {
-  return new Promise((resolve, reject) => {
-    ws.on('error', reject);
-    ws.on('message', (data) => {
-      const o = JSON.parse(data.toString());
-      const msg = parseRelayTxMessage(o);
-      if (msg.kind === 'error') {
-        ws.close();
-        reject(msg.message);
-      } else if (msg.kind === 'pong') {
-        ws.close();
-        // unreachable.
-        reject('unreachable');
-      } else if (msg.kind === 'network') {
-        const networkError =
-          msg.network === 'unsupportedChain' ||
-          msg.network === 'unsupportedContract' ||
-          msg.network === 'disconnected' ||
-          msg.network === 'invalidRelayerAddress';
-        const maybeFailed = msg.network as { failed: { reason: string } };
-        if (networkError) {
-          ws.close();
-          reject(msg.network);
-        } else if (maybeFailed.failed) {
-          ws.close();
-          reject(maybeFailed.failed.reason);
-        }
-      } else if (msg.kind === 'unimplemented') {
-        ws.close();
-        reject(msg.message);
-      } else if (msg.kind === 'txStatus') {
-        const item = msg as TxStatusMessage;
-        ws.close();
-        resolve(item.itemKey as `0x${string}`);
-      } else if (msg.kind === 'unknown') {
-        ws.close();
-        console.log(o);
-        reject('Got unknown response from the relayer!');
-      } else if (msg.kind === 'withdraw') {
-        const isError =
-          msg.withdraw === 'invalidMerkleRoots' ||
-          msg.withdraw === 'droppedFromMemPool' ||
-          (msg.withdraw as { errored: any }).errored;
-        const success = msg.withdraw as {
-          finalized: { txHash: `0x${string}` };
-        };
-        if (isError) {
-          ws.close();
-          reject(msg.withdraw);
-        } else if (success.finalized) {
-          ws.close();
-          resolve(success.finalized.txHash);
-        }
-      }
-    });
-
-    ws.send(JSON.stringify(cmd));
-  });
 }
 
 async function substrateTxHashOrReject(
@@ -653,6 +605,44 @@ export interface ResourceMetricResponse {
   totalFeeEarned: string;
   accountBalance: string;
 }
+
+export interface WithdrawTxSuccessResponse {
+  kind: 'success';
+  status: string;
+  message: string;
+  itemKey: string;
+}
+
+export interface WithdrawTxFailureResponse {
+  kind: 'failure';
+  status: string;
+  message: string;
+  reason: string;
+}
+
+export type WithdrawRequestPayloadEVM = {
+  chainId: number;
+  id: string;
+  extData: {
+    recipient: string;
+    relayer: string;
+    extAmount: string;
+    fee: string;
+    refund: string;
+    token: string;
+    encryptedOutput1: string;
+    encryptedOutput2: string;
+  };
+  proofData: {
+    proof: string;
+    extensionRoots: string;
+    extDataHash: string;
+    publicAmount: string;
+    roots: string;
+    outputCommitments: string[];
+    inputNullifiers: string[];
+  };
+};
 
 export interface TransactionStatusResponse {
   status: TxStatus;
