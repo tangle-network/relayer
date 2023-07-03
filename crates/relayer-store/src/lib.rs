@@ -533,7 +533,7 @@ impl TryFrom<(proposal::ProposalKind, Vec<Vec<u8>>, Vec<u8>)>
                         .collect(),
                     handler_addresses: proposals
                         .iter()
-                        .map(|p| p.handler_address())
+                        .map(ResourceIdUpdateProposal::handler_address)
                         .collect(),
                     nonces: proposals
                         .iter()
