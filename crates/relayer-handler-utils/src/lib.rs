@@ -21,7 +21,8 @@ use webb::evm::ethers::abi::Address;
 use webb::evm::ethers::prelude::{ContractError, I256, U128};
 use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::types::Bytes;
-use webb::evm::ethers::types::{H256, U256};
+use webb::evm::ethers::types::{H256, H512, U256};
+use webb_relayer_store::queue::QueueItemState;
 use webb_relayer_tx_relay_utils::VAnchorRelayTransaction;
 
 /// Representation for IP address response
@@ -97,7 +98,7 @@ pub enum SubstrateCommandType {
 }
 
 /// Enumerates the command responses
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub enum CommandResponse {
     /// Pong?
@@ -108,6 +109,13 @@ pub enum CommandResponse {
     Withdraw(WithdrawStatus),
     /// An error occurred
     Error(String),
+    /// Tx status
+    TxStatus {
+        /// The transaction item key.
+        #[serde(rename = "itemKey")]
+        item_key: H512,
+        status: QueueItemState,
+    },
 }
 /// Enumerates the network status response of the relayer
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

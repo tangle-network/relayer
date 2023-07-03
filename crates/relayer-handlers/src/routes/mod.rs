@@ -12,6 +12,9 @@ pub mod metric;
 /// Module for handling relayer info API
 pub mod info;
 
+/// Module for handling transaction status API
+pub mod transaction_status;
+
 /// A (half-open) range bounded inclusively below and exclusively above
 /// (`start..end`).
 ///

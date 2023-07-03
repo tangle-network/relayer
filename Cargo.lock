@@ -9886,6 +9886,7 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-handler-utils",
+ "webb-relayer-store",
  "webb-relayer-utils 0.5.0-dev",
 ]
 

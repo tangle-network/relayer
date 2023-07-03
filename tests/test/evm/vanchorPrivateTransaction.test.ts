@@ -31,6 +31,7 @@ import {
   EvmEtherscanConfig,
   ResourceMetricResponse,
   WebbRelayer,
+  TransactionStatusResponse,
 } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
@@ -331,21 +332,47 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       refundWallet.address
     );
 
-    await webbRelayer.vanchorWithdraw(
+    const itemKey = await webbRelayer.vanchorWithdraw(
       localChain2.underlyingChainId,
       vanchor2.getAddress(),
       output.publicInputs,
       output.extData
     );
-    // now we wait for relayer to execute private transaction.
+
+    // fetch transaction status, it should be in pending state.
+    const txStatusResponse = await webbRelayer.getTxStatusEvm(
+      localChain2.underlyingChainId.toString(),
+      itemKey
+    );
+    expect(txStatusResponse.status).equal(200);
+    const txStatus =
+      txStatusResponse.json() as Promise<TransactionStatusResponse>;
+    txStatus.then((resp) => {
+      expect(resp.status.kind).equal('pending');
+    });
+
+    // now we wait for the tx queue on that chain to execute the private transaction.
     await webbRelayer.waitForEvent({
-      kind: 'private_tx',
+      kind: 'tx_queue',
       event: {
         ty: 'EVM',
         chain_id: localChain2.underlyingChainId.toString(),
         finalized: true,
       },
     });
+
+    // fetch transaction status, it should be in processed state.
+    const txStatusResponse2 = await webbRelayer.getTxStatusEvm(
+      localChain2.underlyingChainId.toString(),
+      itemKey
+    );
+    expect(txStatusResponse2.status).equal(200);
+    const txStatus2 =
+      txStatusResponse2.json() as Promise<TransactionStatusResponse>;
+    txStatus2.then((resp) => {
+      expect(resp.status.kind).equal('processed');
+    });
+
     // fetch resource metrics.
     const response = await webbRelayer.getResourceMetricsEvm(
       localChain2.underlyingChainId.toString(),
