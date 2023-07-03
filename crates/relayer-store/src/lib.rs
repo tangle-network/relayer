@@ -26,6 +26,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 use webb::evm::contract::protocol_solidity::signature_bridge::AdminSetResourceWithSignatureCall;
 use webb::evm::ethers::types;
+use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal;
 use webb::substrate::tangle_runtime::api::{dkg, dkg_proposal_handler};
 use webb_proposals::evm::ResourceIdUpdateProposal;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
@@ -381,6 +382,31 @@ pub enum BridgeCommand {
         /// The signature from the governor of the encoded set resource proposal.
         signature: Vec<u8>,
     },
+    /// A Command sent to Executes a batch of proposals signed by the governor in a single tx.
+    /// This is used to batch multiple proposals into a single tx to save gas.
+    BatchExecuteProposalsWithSignature {
+        /// The proposals to execute (encoded as bytes).
+        data: Vec<Vec<u8>>,
+        /// The signatures of the hash of the proposal bytes, Signed by the proposal signing
+        /// backend.
+        signature: Vec<u8>,
+    },
+    /// A Command sent to Set a batch of new resources for handler contracts that use the IExecutor interface.
+    /// This is used to batch multiple proposals into a single tx to save gas.
+    ///
+    /// Only callable by an address that currently has the admin role.
+    BatchAdminSetResourceWithSignature {
+        /// Target resource ID of the proposal header.
+        resource_id: [u8; 32],
+        /// Secondary resourceIDs begin mapped to a handler addresses.
+        new_resource_ids: Vec<[u8; 32]>,
+        /// Addresses of handlers resource will be set for.
+        handler_addresses: Vec<[u8; 20]>,
+        /// Nonces of the proposal headers.
+        nonces: Vec<u32>,
+        /// The signature from the governor of the encoded set resource proposal.
+        signature: Vec<u8>,
+    },
 }
 
 impl From<dkg::events::PublicKeySignatureChanged> for BridgeCommand {
@@ -393,15 +419,40 @@ impl From<dkg::events::PublicKeySignatureChanged> for BridgeCommand {
     }
 }
 
-impl TryFrom<dkg_proposal_handler::events::ProposalSigned> for BridgeCommand {
+impl TryFrom<dkg_proposal_handler::events::ProposalBatchSigned>
+    for BridgeCommand
+{
     type Error = webb_relayer_utils::Error;
     fn try_from(
-        event: dkg_proposal_handler::events::ProposalSigned,
+        mut event: dkg_proposal_handler::events::ProposalBatchSigned,
     ) -> Result<Self> {
-        Self::try_from((event.data, event.signature))
+        match event.proposals.len() as u32 {
+            1 => {
+                let prop =
+                    event.proposals.pop().expect("proposal should exist");
+                Self::try_from((prop.data, event.signature))
+            }
+            2.. => {
+                // ASSUMPTION: All proposals in a batch are of the same kind.
+                let kind = event
+                    .proposals
+                    .first()
+                    .map(|p| p.kind.clone())
+                    .expect("proposal should exist");
+                let data = event
+                    .proposals
+                    .into_iter()
+                    .map(|p| p.data)
+                    .collect::<Vec<_>>();
+                let signature = event.signature;
+                Self::try_from((kind, data, signature))
+            }
+            0 => Err(webb_relayer_utils::Error::InvalidProposalsBatch),
+        }
     }
 }
 
+// *** For single proposal ***
 impl TryFrom<(Vec<u8>, Vec<u8>)> for BridgeCommand {
     type Error = webb_relayer_utils::Error;
     fn try_from((data, signature): (Vec<u8>, Vec<u8>)) -> Result<Self> {
@@ -434,6 +485,66 @@ impl TryFrom<(Vec<u8>, Vec<u8>)> for BridgeCommand {
             })
         } else {
             Ok(BridgeCommand::ExecuteProposalWithSignature { data, signature })
+        }
+    }
+}
+
+// *** For batch proposal ***
+impl TryFrom<(proposal::ProposalKind, Vec<Vec<u8>>, Vec<u8>)>
+    for BridgeCommand
+{
+    type Error = webb_relayer_utils::Error;
+
+    fn try_from(
+        (kind, data, signature): (
+            proposal::ProposalKind,
+            Vec<Vec<u8>>,
+            Vec<u8>,
+        ),
+    ) -> std::result::Result<Self, Self::Error> {
+        match kind {
+            proposal::ProposalKind::ResourceIdUpdate => {
+                let proposals = data
+                    .into_iter()
+                    .map(|data_part| {
+                        if data_part.len() != ResourceIdUpdateProposal::LENGTH {
+                            Err(webb_relayer_utils::Error::InvalidProposalBytes)
+                        } else {
+                            // Decode the proposal data
+                            let mut proposal_bytes =
+                                [0u8; ResourceIdUpdateProposal::LENGTH];
+                            proposal_bytes.copy_from_slice(&data_part[..]);
+                            Ok(ResourceIdUpdateProposal::from(proposal_bytes))
+                        }
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+
+                // ASSUMPTION: All proposals in a batch are targeting the same resource.
+                let resource_id = proposals
+                    .first()
+                    .map(|p| p.header().resource_id().into_bytes())
+                    .expect("proposal should exist");
+
+                Ok(Self::BatchAdminSetResourceWithSignature {
+                    resource_id,
+                    new_resource_ids: proposals
+                        .iter()
+                        .map(|p| p.new_resource_id().into_bytes())
+                        .collect(),
+                    handler_addresses: proposals
+                        .iter()
+                        .map(ResourceIdUpdateProposal::handler_address)
+                        .collect(),
+                    nonces: proposals
+                        .iter()
+                        .map(|p| p.header().nonce().to_u32())
+                        .collect(),
+                    signature,
+                })
+            }
+            _ => {
+                Ok(Self::BatchExecuteProposalsWithSignature { data, signature })
+            }
         }
     }
 }

@@ -1,6 +1,7 @@
 use super::*;
 use crate::substrate::fees::get_substrate_fee_info;
 use crate::substrate::handle_substrate_tx;
+use futures::TryFutureExt;
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::subxt::utils::AccountId32;
 use webb::substrate::tangle_runtime::api::runtime_types::tangle_standalone_runtime::protocol_substrate_config::Element;
@@ -9,8 +10,6 @@ use webb::substrate::{
     tangle_runtime::api::runtime_types::webb_primitives::types::vanchor,
 };
 use ethereum_types::U256;
-use sp_core::{Decode, Encode};
-use webb::substrate::scale::Compact;
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };
@@ -92,25 +91,13 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .create_signed(&transact_tx, &signer, Default::default())
         .await
         .map_err(|e| Error(format!("Failed to sign transaction: {e}")))?;
-    let mut params = signed.encoded().to_vec();
-    (signed.encoded().len() as u32).encode_to(&mut params);
-    let bytes = client
-        .rpc()
-        .state_call("TransactionPaymentApi_query_info", Some(&params), None)
-        .await
-        .map_err(|e| {
-            Error(format!(
-                "RPC call TransactionPaymentApi_query_info failed: {e}"
-            ))
-        })?;
-    let cursor = &mut &bytes[..];
-    let payment_info: (Compact<u64>, Compact<u64>, u8, u128) =
-        Decode::decode(cursor).map_err(|e| {
-            Error(format!("Failed to decode payment info: {e}"))
-        })?;
+    let estimated_fee = signed
+        .partial_fee_estimate()
+        .map_err(|e| Error(format!("Failed to estimate fee: {e}")))
+        .await?;
     let fee_info = get_substrate_fee_info(
         requested_chain,
-        U256::from(payment_info.3),
+        U256::from(estimated_fee),
         &ctx,
     )
     .await
@@ -150,7 +137,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
 
     let target = client
         .metadata()
-        .pallet("VAnchorHandlerBn254")
+        .pallet_by_name_err("VAnchorHandlerBn254")
         .map(|pallet| {
             SubstrateTargetSystem::builder()
                 .pallet_index(pallet.index())
@@ -201,7 +188,7 @@ mod test {
         let client = subxt::OnlineClient::<SubstrateConfig>::default().await?;
         let balance = client
             .storage()
-            .at(None)
+            .at_latest()
             .await
             .unwrap()
             .fetch(&account)

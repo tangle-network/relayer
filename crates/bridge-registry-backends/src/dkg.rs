@@ -21,7 +21,7 @@ impl super::BridgeRegistryBackend for DkgBridgeRegistryBackend {
         Ok(self
             .client
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&next_bridge_index)
             .await?
@@ -38,7 +38,7 @@ impl super::BridgeRegistryBackend for DkgBridgeRegistryBackend {
             storage.resource_to_bridge_index(resource_id2);
         self.client
             .storage()
-            .at(None)
+            .at_latest()
             .await
             .ok()?
             .fetch(&resource_to_bridge_index)
@@ -55,7 +55,7 @@ impl super::BridgeRegistryBackend for DkgBridgeRegistryBackend {
         Ok(self
             .client
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&bridges)
             .await?)

@@ -41,8 +41,9 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
         &self,
         events: subxt::events::Events<PolkadotConfig>,
     ) -> webb_relayer_utils::Result<bool> {
-        let has_event =
-            events.has::<dkg_proposal_handler::events::ProposalSigned>()?;
+        let has_event = events
+            .has::<dkg_proposal_handler::events::ProposalBatchSigned>(
+        )?;
         Ok(has_event)
     }
 
@@ -54,7 +55,7 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let proposal_signed_events = events
-            .find::<dkg_proposal_handler::events::ProposalSigned>()
+            .find::<dkg_proposal_handler::events::ProposalBatchSigned>()
             .flatten()
             .collect::<Vec<_>>();
         for event in proposal_signed_events {
@@ -63,29 +64,29 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
                 tracing::Level::DEBUG,
                 kind = %webb_relayer_utils::probe::Kind::SigningBackend,
                 backend = "DKG",
-                ty = "ProposalSigned",
+                ty = "ProposalBatchSigned",
                 ?event.target_chain,
-                ?event.key,
+                ?event.batch_id,
                 ?block_number,
             );
             let maybe_bridge_key = match event.target_chain {
                 TypedChainId::None => {
                     tracing::debug!(
-                        "Received `ProposalSigned` Event with no chain id, ignoring",
+                        "Received `ProposalBatchSigned` Event with no chain id, ignoring",
                     );
                     None
                 }
                 TypedChainId::Evm(id) => {
                     tracing::trace!(
-                        "`ProposalSigned` Event with evm chain id : {}",
-                        id
+                        chain_id = %id,
+                        "`ProposalBatchSigned` Event with evm",
                     );
                     Some(BridgeKey::new(webb_proposals::TypedChainId::Evm(id)))
                 }
                 TypedChainId::Substrate(id) => {
                     tracing::trace!(
-                        "`ProposalSigned` Event with substrate chain id : {}",
-                        id
+                        chain_id = %id,
+                        "`ProposalBatchSigned` Event with substrate",
                     );
                     Some(BridgeKey::new(
                         webb_proposals::TypedChainId::Substrate(id),
@@ -148,16 +149,11 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
                 kind = %webb_relayer_utils::probe::Kind::SigningBackend,
                 backend = "DKG",
                 signal_bridge = %bridge_key,
-                data = %hex::encode(&event.data),
                 signature = %hex::encode(&event.signature),
             );
             // Proposal signed metric
             metrics.lock().await.proposals_signed.inc();
-            let item =
-                QueueItem::new(BridgeCommand::ExecuteProposalWithSignature {
-                    data: event.data.clone(),
-                    signature: event.signature,
-                });
+            let item = QueueItem::new(BridgeCommand::try_from(event)?);
             store.enqueue_item(
                 SledQueueKey::from_bridge_key(bridge_key),
                 item,

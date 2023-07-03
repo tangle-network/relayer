@@ -143,6 +143,12 @@ impl SubstrateBridgeWatcher<PolkadotConfig> for SubstrateBridgeEventWatcher {
             AdminSetResourceWithSignature { .. } => {
                 unreachable!("AdminSetMaintainerWithSignature is not supported on substrate");
             }
+            BatchExecuteProposalsWithSignature { .. } => {
+                unreachable!("BatchExecuteProposalsWithSignature is not supported on substrate");
+            }
+            BatchAdminSetResourceWithSignature { .. } => {
+                unreachable!("BatchSetResourceWithSignature is not supported on substrate");
+            }
         };
         Ok(())
     }
@@ -179,7 +185,7 @@ where
 
         let current_maintainer = api
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
@@ -255,7 +261,7 @@ where
 
         let current_maintainer = api
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&current_maintainer_addrs)
             .await?
@@ -281,7 +287,7 @@ where
 
         let current_nonce = api
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&current_nonce)
             .await?
