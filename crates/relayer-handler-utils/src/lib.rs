@@ -17,7 +17,7 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 use webb::evm::ethers::abi::Address;
-use webb::evm::ethers::prelude::{I256, U128};
+use webb::evm::ethers::prelude::I256;
 
 use webb::evm::ethers::types::Bytes;
 use webb::evm::ethers::types::{H256, U256};
@@ -79,16 +79,3 @@ pub type EvmVanchorCommand = VAnchorRelayTransaction<
     WebbI256, // Signed amount type
     Address,  // Token Address
 >;
-
-type Id = u32; //  Substrate tree Id
-type P = Bytes; // Substrate raw proof bytes
-type R = Vec<H256>; // Substrate roots format
-type E = H256; // Substrate element type
-type I = H256; // Substrate account identifier (32 bytes)
-type B = U128; // Substrate balance type
-type A = WebbI128; // Substrate signed amount type
-type T = u32; // Substrate assetId
-
-/// The command type for Substrate vanchor txes
-pub type SubstrateVAchorCommand =
-    VAnchorRelayTransaction<Id, P, R, E, I, B, A, T>;
