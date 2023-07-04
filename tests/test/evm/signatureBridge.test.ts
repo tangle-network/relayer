@@ -110,7 +110,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     // we need to wait until the public key is on chain.
     await charlieNode.waitForEvent({
       section: 'dkg',
-      method: 'PublicKeySignatureChanged',
+      method: 'PublicKeySubmitted',
     });
 
     // next we need to start local evm node.

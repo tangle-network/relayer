@@ -280,7 +280,10 @@ export class WebbRelayer {
   }
 
   // API to get transaction status for substrate chain.
-  public async getTxStatusSubstrate(chainId: number, transactionItemKey: string) {
+  public async getTxStatusSubstrate(
+    chainId: number,
+    transactionItemKey: string
+  ) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/tx/substrate/${chainId}/${transactionItemKey}`;
     const response = await fetch(endpoint);
     return response;
@@ -400,7 +403,7 @@ export class WebbRelayer {
     id: number,
     publicInputs: ISubstrateVariableAnchorPublicInputs,
     extData: IVariableAnchorExtData
-  ):WithdrawRequestPayloadSubstrate {
+  ): WithdrawRequestPayloadSubstrate {
     const cmd = {
       substrate: {
         vAnchor: {
@@ -662,7 +665,7 @@ export type WithdrawRequestPayloadEVM = {
   };
 };
 
-export type WithdrawRequestPayloadSubstrate= {
+export type WithdrawRequestPayloadSubstrate = {
   chainId: number;
   id: number;
   extData: {
