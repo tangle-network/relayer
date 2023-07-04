@@ -301,7 +301,7 @@ where
             tracing::warn!(
                 proposal_data = %proposal_data_hex,
                 signature = %signature_hex,
-                "Skipping execution of this proposal : Invalid Signature ",
+                "Skipping execution of this proposal: Invalid Signature",
             );
             return Ok(());
         }
@@ -343,7 +343,7 @@ where
 
         QueueStore::<TypedTransaction>::enqueue_item(&store, tx_key, item)?;
         tracing::debug!(
-            proposal_data_hash = ?hex::encode(proposal_data_hash),
+            proposal_data_hash = %hex::encode(proposal_data_hash),
             "Enqueued execute-proposal call for execution through evm tx queue",
         );
         Ok(())
