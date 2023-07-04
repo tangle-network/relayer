@@ -70,7 +70,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
     let requested_chain = cmd.chain_id;
     let chain_config = ctx
         .config
-        .evm
+        .substrate
         .get(&requested_chain.to_string())
         .ok_or(UnsupportedChain(requested_chain))?;
     let maybe_client = ctx
