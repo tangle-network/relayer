@@ -1,7 +1,7 @@
 use config::{Config, File};
 use std::path::{Path, PathBuf};
 
-use crate::{anchor::LinkedAnchorConfig, evm::Contract, substrate::Pallet};
+use crate::{anchor::LinkedAnchorConfig, evm::Contract};
 
 use super::*;
 
@@ -157,25 +157,7 @@ pub fn postloading_process(
             }
         })
     }
-    // Convert linked anchor to Raw ResourceId type for substrate chains
-    for (_, network_chain) in config.substrate.iter_mut() {
-        let typed_chain_id =
-            webb_proposals::TypedChainId::Substrate(network_chain.chain_id);
-        chain_list.insert(typed_chain_id);
-        network_chain.pallets.iter_mut().for_each(|c| {
-            if let Pallet::VAnchorBn254(cfg) = c {
-                let linked_anchors = cfg.linked_anchors.clone();
-                if let Some(linked_anchors) = linked_anchors {
-                    let linked_anchors: Vec<LinkedAnchorConfig> =
-                        linked_anchors
-                            .into_iter()
-                            .map(LinkedAnchorConfig::into_raw_resource_id)
-                            .collect();
-                    cfg.linked_anchors = Some(linked_anchors);
-                }
-            }
-        })
-    }
+
     // check that all required chains are already present in the config.
     for (chain_id, chain_config) in &config.evm {
         let vanchors = chain_config.contracts.iter().filter_map(|c| match c {

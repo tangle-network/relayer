@@ -64,8 +64,6 @@ async fn ignite_tangle_runtime(
             }
             Pallet::DKGProposals(_) => {
                 // TODO(@shekohex): start the dkg proposals service
-            }
-            _ => {
                 unimplemented!()
             }
         }

@@ -1,8 +1,6 @@
 use ethereum_types::H256;
 
-use crate::{
-    evm::EvmLinkedAnchorConfig, substrate::SubstrateLinkedAnchorConfig,
-};
+use crate::evm::EvmLinkedAnchorConfig;
 
 use super::*;
 
@@ -22,8 +20,6 @@ pub enum LinkedAnchorConfig {
     Raw(RawResourceId),
     /// Linked anchor configuration for evm based chains
     Evm(EvmLinkedAnchorConfig),
-    /// Linked anchor configuration for substrate based chains
-    Substrate(SubstrateLinkedAnchorConfig),
 }
 
 impl LinkedAnchorConfig {
@@ -37,26 +33,6 @@ impl LinkedAnchorConfig {
                     );
                 let typed_chain_id =
                     webb_proposals::TypedChainId::Evm(config.chain_id);
-                let resource_id = webb_proposals::ResourceId::new(
-                    target_system,
-                    typed_chain_id,
-                );
-                let raw_resource_id = RawResourceId {
-                    resource_id: H256::from_slice(
-                        resource_id.to_bytes().as_slice(),
-                    ),
-                };
-                LinkedAnchorConfig::Raw(raw_resource_id)
-            }
-            LinkedAnchorConfig::Substrate(config) => {
-                let target = webb_proposals::SubstrateTargetSystem::builder()
-                    .pallet_index(config.pallet)
-                    .tree_id(config.tree_id)
-                    .build();
-                let target_system =
-                    webb_proposals::TargetSystem::Substrate(target);
-                let typed_chain_id =
-                    webb_proposals::TypedChainId::Substrate(config.chain_id);
                 let resource_id = webb_proposals::ResourceId::new(
                     target_system,
                     typed_chain_id,
