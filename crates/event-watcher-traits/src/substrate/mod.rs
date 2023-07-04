@@ -22,17 +22,11 @@ use webb::substrate::subxt::{self, client::OnlineClientT, config::Header};
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };
-use webb_relayer_store::queue::QueueStore;
-use webb_relayer_store::sled::SledQueueKey;
-use webb_relayer_store::{BridgeCommand, BridgeKey, HistoryStore};
+use webb_relayer_store::HistoryStore;
 
 /// Event watching traits
 mod event_watcher;
 pub use event_watcher::*;
-
-/// Bridge watching traits
-mod bridge_watcher;
-pub use bridge_watcher::*;
 
 /// Type alias for Substrate block number.
 pub type BlockNumberOf<T> = <<T as subxt::Config>::Hasher as Header>::Number;
