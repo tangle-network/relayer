@@ -1,6 +1,8 @@
 use axum::extract::State;
 use axum::Json;
+use axum_client_ip::InsecureClientIp;
 use std::sync::Arc;
+use webb_relayer_handler_utils::IpInformationResponse;
 
 use serde::Serialize;
 use sp_core::Pair;
@@ -88,4 +90,17 @@ pub async fn handle_relayer_info(
     };
 
     Json(RelayerInformationResponse { relayer_config })
+}
+
+/// Handles the socket address response
+///
+/// Returns a Result with the `IpInformationResponse` on success
+///
+/// # Arguments
+///
+/// * `ip` - Extractor for client IP, taking into account x-forwarded-for and similar headers
+pub async fn handle_socket_info(
+    InsecureClientIp(ip): InsecureClientIp,
+) -> Json<IpInformationResponse> {
+    Json(IpInformationResponse { ip: ip.to_string() })
 }

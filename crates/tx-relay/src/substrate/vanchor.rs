@@ -1,7 +1,9 @@
+use std::sync::Arc;
+
 use super::*;
+use crate::TransactionItemKey;
 use crate::substrate::fees::get_substrate_fee_info;
-use crate::substrate::handle_substrate_tx;
-use futures::TryFutureExt;
+use webb::evm::ethers::utils::hex;
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::subxt::utils::AccountId32;
 use webb::substrate::tangle_runtime::api::runtime_types::tangle_standalone_runtime::protocol_substrate_config::Element;
@@ -9,12 +11,16 @@ use webb::substrate::{
     subxt::{PolkadotConfig, tx::PairSigner},
     tangle_runtime::api::runtime_types::webb_primitives::types::vanchor,
 };
-use ethereum_types::U256;
+use ethereum_types::{U256, H512};
 use webb_proposals::{
     ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::SubstrateVAchorCommand;
+use webb_relayer_store::queue::{QueueItem, TransactionQueueItemKey, QueueStore};
+use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_utils::TransactionRelayingError;
+use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
 /// Handler for Substrate Anchor commands
 ///
@@ -22,14 +28,11 @@ use webb_relayer_handler_utils::SubstrateVAchorCommand;
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `cmd` - The command to execute
-/// * `stream` - The stream to write the response to
 pub async fn handle_substrate_vanchor_relay_tx<'a>(
-    ctx: RelayerContext,
+    ctx: Arc<RelayerContext>,
     cmd: SubstrateVAchorCommand,
-    stream: CommandStream,
-) -> Result<(), CommandResponse> {
-    use CommandResponse::*;
-
+) -> Result<TransactionItemKey, TransactionRelayingError> {
+    use TransactionRelayingError::*;
     let proof_elements: vanchor::ProofData<Element> = vanchor::ProofData {
         proof: cmd.proof_data.proof.to_vec(),
         public_amount: Element(cmd.proof_data.public_amount.to_fixed_bytes()),
@@ -64,18 +67,23 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             refund: cmd.ext_data.refund.as_u128(),
             token: cmd.ext_data.token,
         };
-
     let requested_chain = cmd.chain_id;
+    let chain_config = ctx
+        .config
+        .substrate
+        .get(&requested_chain.to_string())
+        .ok_or(UnsupportedChain(requested_chain))?;
     let maybe_client = ctx
         .substrate_provider::<PolkadotConfig, _>(requested_chain)
         .await;
     let client = maybe_client.map_err(|e| {
-        Error(format!("Error while getting Substrate client: {e}"))
+        ClientError(format!("Error while getting Substrate client: {e}"))
     })?;
 
-    let pair = ctx.substrate_wallet(requested_chain).await.map_err(|e| {
-        Error(format!("Misconfigured Network {:?}: {e}", cmd.chain_id))
-    })?;
+    let pair = ctx
+        .substrate_wallet(requested_chain)
+        .await
+        .map_err(|e| NetworkConfigurationError(e.to_string(), cmd.chain_id))?;
 
     let signer = PairSigner::new(pair.clone());
     let transact_tx = RuntimeApi::tx().v_anchor_bn254().transact(
@@ -90,18 +98,18 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .tx()
         .create_signed(&transact_tx, &signer, Default::default())
         .await
-        .map_err(|e| Error(format!("Failed to sign transaction: {e}")))?;
+        .map_err(|e| ClientError(format!("Failed to sign transaction: {e}")))?;
     let estimated_fee = signed
         .partial_fee_estimate()
-        .map_err(|e| Error(format!("Failed to estimate fee: {e}")))
-        .await?;
+        .await
+        .map_err(|e| ClientError(format!("Failed to estimate fee: {e}")))?;
     let fee_info = get_substrate_fee_info(
         requested_chain,
         U256::from(estimated_fee),
         &ctx,
     )
     .await
-    .map_err(|e| Error(format!("Get substrate fee info failed: {e}")))?;
+    .map_err(|e| ClientError(format!("Get substrate fee info failed: {e}")))?;
 
     // validate refund amount
     if U256::from(cmd.ext_data.refund) > fee_info.max_refund {
@@ -111,7 +119,7 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             "User requested a refund which is higher than the maximum of {}",
             fee_info.max_refund
         );
-        return Err(Error(msg));
+        return Err(InvalidRefundAmount(msg));
     }
 
     // Check that transaction fee is enough to cover network fee and relayer fee
@@ -125,15 +133,38 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
             cmd.ext_data.fee,
             fee_info.estimated_fee + cmd.ext_data.refund
         );
-        return Err(Error(msg));
+        return Err(InvalidRefundAmount(msg));
     }
 
-    let transact_tx_hash = signed.submit_and_watch().await;
+    let typed_tx =
+        TypeErasedStaticTxPayload::try_from(transact_tx).map_err(|e| {
+            ClientError(format!("Failed to construct tx payload: {e}"))
+        })?;
 
-    let event_stream = transact_tx_hash
-        .map_err(|e| Error(format!("Error while sending Tx: {e}")))?;
+    let item = QueueItem::new(typed_tx.clone());
+    let tx_key = SledQueueKey::from_substrate_with_custom_key(
+        chain_config.chain_id,
+        typed_tx.item_key(),
+    );
+    let store = ctx.store();
+    QueueStore::<TypeErasedStaticTxPayload>::enqueue_item(
+        store,
+        tx_key,
+        item.clone(),
+    )
+    .map_err(|_| {
+        TransactionQueueError(format!(
+            "Transaction item with key : {} failed to enqueue",
+            tx_key
+        ))
+    })?;
 
-    handle_substrate_tx(event_stream, stream, cmd.chain_id).await?;
+    tracing::trace!(
+            tx_call = %hex::encode(typed_tx.clone().call_data),
+            "Enqueued private withdraw transaction call for execution through substrate tx queue",
+    );
+
+    let item_key_hex = H512::from_slice(typed_tx.item_key().as_slice());
 
     let target = client
         .metadata()
@@ -144,7 +175,9 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
                 .tree_id(cmd.id)
                 .build()
         })
-        .map_err(|e| Error(format!("Vanchor handler pallet not found: {e}")))?;
+        .map_err(|e| {
+            ClientError(format!("Vanchor handler pallet not found: {e}"))
+        })?;
 
     let target_system = TargetSystem::Substrate(target);
     let typed_chain_id = TypedChainId::Substrate(cmd.chain_id as u32);
@@ -163,13 +196,13 @@ pub async fn handle_substrate_vanchor_relay_tx<'a>(
         .total_fee_earned
         .inc_by(wei_to_gwei(cmd.ext_data.fee.as_u128()));
 
-    let balance = balance(client, signer)
-        .await
-        .map_err(|e| Error(format!("Failed to read substrate balance: {e}")))?;
+    let balance = balance(client, signer).await.map_err(|e| {
+        ClientError(format!("Failed to read substrate balance: {e}"))
+    })?;
     metrics
         .account_balance_entry(typed_chain_id)
         .set(wei_to_gwei(balance));
-    Ok(())
+    Ok(item_key_hex)
 }
 
 #[cfg(tests)]

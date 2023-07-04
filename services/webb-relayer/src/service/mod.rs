@@ -39,7 +39,7 @@ use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_config::signing_backend::ProposalSigningBackendConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::routes::info::handle_relayer_info;
-use webb_relayer_handlers::{handle_socket_info, websocket_handler};
+use webb_relayer_handlers::routes::info::handle_socket_info;
 use webb_relayer_store::SledStore;
 
 /// EVM Specific Services
@@ -66,7 +66,6 @@ pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
 
     let app = Router::new()
         .nest("/api/v1", api)
-        .route("/ws", get(websocket_handler))
         .layer(CorsLayer::new().allow_origin(Any))
         .layer(TraceLayer::new_for_http())
         .with_state(Arc::new(ctx))

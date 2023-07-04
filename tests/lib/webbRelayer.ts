@@ -255,9 +255,33 @@ export class WebbRelayer {
     return response;
   }
 
-  // API to get transaction status
-  public async getTxStatusEvm(chainId: string, transactionItemKey: string) {
+  // Post API to send private withdrawal tx to relayer for substrate chain.
+  public async sendPrivateTxSubstrate(
+    chainId: number,
+    treeId: number,
+    payload: WithdrawRequestPayloadSubstrate
+  ) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/send/substrate/${chainId}/${treeId}`;
+    const response = fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+    return response;
+  }
+
+  // API to get transaction status for evm chain.
+  public async getTxStatusEvm(chainId: number, transactionItemKey: string) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/tx/evm/${chainId}/${transactionItemKey}`;
+    const response = await fetch(endpoint);
+    return response;
+  }
+
+  // API to get transaction status for substrate chain.
+  public async getTxStatusSubstrate(chainId: number, transactionItemKey: string) {
+    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/tx/substrate/${chainId}/${transactionItemKey}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -371,16 +395,12 @@ export class WebbRelayer {
     return cmd.evm.vAnchor;
   }
 
-  public async substrateVAnchorWithdraw(
+  public substrateVAnchorWithdraw(
     chainId: number,
     id: number,
     publicInputs: ISubstrateVariableAnchorPublicInputs,
     extData: IVariableAnchorExtData
-  ): Promise<`0x${string}`> {
-    const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
-    // create a new websocket connection to the relayer.
-    const ws = new WebSocket(wsEndpoint);
-    await new Promise((resolve) => ws.once('open', resolve));
+  ):WithdrawRequestPayloadSubstrate {
     const cmd = {
       substrate: {
         vAnchor: {
@@ -414,9 +434,7 @@ export class WebbRelayer {
         },
       },
     };
-
-    console.log(JSON.stringify(cmd));
-    return substrateTxHashOrReject(ws, cmd);
+    return cmd.substrate.vAnchor;
   }
 }
 
@@ -639,6 +657,30 @@ export type WithdrawRequestPayloadEVM = {
     extDataHash: string;
     publicAmount: string;
     roots: string;
+    outputCommitments: string[];
+    inputNullifiers: string[];
+  };
+};
+
+export type WithdrawRequestPayloadSubstrate= {
+  chainId: number;
+  id: number;
+  extData: {
+    recipient: string;
+    relayer: string;
+    extAmount: string;
+    fee: string;
+    refund: string;
+    token: number;
+    encryptedOutput1: string;
+    encryptedOutput2: string;
+  };
+  proofData: {
+    proof: `0x${string}`;
+    extDataHash: string;
+    publicAmount: `0x${string}`;
+    roots: `0x${string}`[];
+    extensionRoots: never[];
     outputCommitments: string[];
     inputNullifiers: string[];
   };

@@ -12,6 +12,9 @@ pub mod metric;
 /// Module for handling relayer info API
 pub mod info;
 
+/// Module for handling fee info API
+pub mod fee_info;
+
 /// Module for handling transaction status API
 pub mod transaction_status;
 

@@ -1,8 +1,10 @@
 use super::*;
 use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
+use crate::TransactionItemKey;
 use ethereum_types::{H512, U256};
 use futures::TryFutureExt;
 use std::{collections::HashMap, sync::Arc};
+use webb::evm::ethers::prelude::Middleware;
 use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::utils::{format_units, hex, parse_ether};
 use webb::evm::{
@@ -19,9 +21,6 @@ use webb_relayer_store::queue::{
 };
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::TransactionRelayingError;
-
-/// Type alias for transaction item key.
-pub type TransactionItemKey = H512;
 
 /// Handler for VAnchor commands
 ///

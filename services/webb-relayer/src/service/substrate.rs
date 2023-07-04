@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use sp_core::sr25519;
 use webb::substrate::subxt::config::ExtrinsicParams;
@@ -24,8 +24,10 @@ use webb_relayer_config::substrate::{
     SignatureBridgePalletConfig, SubstrateConfig, VAnchorBn254PalletConfig,
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handlers::handle_substrate_fee_info;
-use webb_relayer_handlers::routes::{leaves, metric};
+use webb_relayer_handlers::routes::fee_info::handle_substrate_fee_info;
+use webb_relayer_handlers::routes::{
+    leaves, metric, private_tx_withdraw, transaction_status,
+};
 use webb_relayer_tx_queue::substrate::SubstrateTxQueue;
 
 use super::ProposalSigningBackendSelector;
@@ -39,6 +41,14 @@ pub fn build_web_services() -> Router<Arc<RelayerContext>> {
         .route(
             "/leaves/substrate/:chain_id/:tree_id/:pallet_id",
             get(leaves::handle_leaves_cache_substrate),
+        )
+        .route(
+            "/send/substrate/:chain_id/:tree_id",
+            post(private_tx_withdraw::handle_private_tx_withdraw_substrate),
+        )
+        .route(
+            "/tx/substrate/:chain_id/:item_key",
+            get(transaction_status::handle_transaction_status_substrate),
         )
         .route(
             "/metrics/substrate/:chain_id/:tree_id/:pallet_id",

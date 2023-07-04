@@ -16,13 +16,12 @@
 #![allow(missing_docs)]
 
 use serde::{Deserialize, Deserializer, Serialize};
-use tokio::sync::mpsc;
 use webb::evm::ethers::abi::Address;
-use webb::evm::ethers::prelude::{ContractError, I256, U128};
-use webb::evm::ethers::providers::Middleware;
+use webb::evm::ethers::prelude::{I256, U128};
+
 use webb::evm::ethers::types::Bytes;
-use webb::evm::ethers::types::{H256, H512, U256};
-use webb_relayer_store::queue::QueueItemState;
+use webb::evm::ethers::types::{H256, U256};
+
 use webb_relayer_tx_relay_utils::VAnchorRelayTransaction;
 
 /// Representation for IP address response
@@ -69,111 +68,6 @@ impl<'de> Deserialize<'de> for WebbI128 {
     }
 }
 
-/// Type of Command to use
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum Command {
-    /// Substrate specific subcommand.
-    Substrate(SubstrateCommandType),
-    /// EVM specific subcommand.
-    Evm(EvmCommandType),
-    /// Ping?
-    Ping(),
-}
-
-/// Enumerates the supported evm commands for relaying transactions
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum EvmCommandType {
-    /// Webb Variable Anchors.
-    VAnchor(EvmVanchorCommand),
-}
-
-/// Enumerates the supported substrate commands for relaying transactions
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum SubstrateCommandType {
-    /// Webb Variable Anchors.
-    VAnchor(SubstrateVAchorCommand),
-}
-
-/// Enumerates the command responses
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum CommandResponse {
-    /// Pong?
-    Pong(),
-    /// Network Status
-    Network(NetworkStatus),
-    /// Withdrawal Status
-    Withdraw(WithdrawStatus),
-    /// An error occurred
-    Error(String),
-    /// Tx status
-    TxStatus {
-        /// The transaction item key.
-        #[serde(rename = "itemKey")]
-        item_key: H512,
-        status: QueueItemState,
-    },
-}
-/// Enumerates the network status response of the relayer
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum NetworkStatus {
-    /// Relayer is connecting to the network.
-    Connecting,
-    /// Relayer is connected to the network.
-    Connected,
-    /// Network failure with error message.
-    Failed {
-        /// Error message
-        reason: String,
-    },
-    /// Relayer is disconnected from the network.
-    Disconnected,
-    /// This contract is not supported by the relayer.
-    UnsupportedContract,
-    /// This network (chain) is not supported by the relayer.
-    UnsupportedChain,
-    /// Invalid Relayer address in the proof
-    InvalidRelayerAddress,
-}
-/// Enumerates the withdraw status response of the relayer
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub enum WithdrawStatus {
-    /// The transaction is sent to the network.
-    Sent,
-    /// The transaction is submitted to the network.
-    Submitted {
-        /// The transaction hash.
-        #[serde(rename = "txHash")]
-        tx_hash: H256,
-    },
-    /// The transaction is in the block.
-    Finalized {
-        /// The transaction hash.
-        #[serde(rename = "txHash")]
-        tx_hash: H256,
-    },
-    /// Valid transaction.
-    Valid,
-    /// Invalid Merkle roots.
-    InvalidMerkleRoots,
-    /// Transaction dropped from mempool, send it again.
-    DroppedFromMemPool,
-    /// Invalid transaction.
-    Errored {
-        /// Error Code.
-        code: i32,
-        /// Error Message.
-        reason: String,
-    },
-}
-
-/// Type alias for mpsc::Sender<CommandResponse>
-pub type CommandStream = mpsc::Sender<CommandResponse>;
 /// The command type for EVM vanchor transactions
 pub type EvmVanchorCommand = VAnchorRelayTransaction<
     Address,  // Contract address
@@ -198,38 +92,3 @@ type T = u32; // Substrate assetId
 /// The command type for Substrate vanchor txes
 pub type SubstrateVAchorCommand =
     VAnchorRelayTransaction<Id, P, R, E, I, B, A, T>;
-
-/// A helper function to extract the error code and the reason from EVM errors.
-pub fn into_withdraw_error<M: Middleware>(
-    e: ContractError<M>,
-) -> WithdrawStatus {
-    // a poor man error parser
-    // WARNING: **don't try this at home**.
-    let msg = format!("{e}");
-    // split the error into words, lazily.
-    let mut words = msg.split_whitespace();
-    let mut reason = "unknown".to_string();
-    let mut code = -1;
-
-    while let Some(current_word) = words.next() {
-        if current_word == "(code:" {
-            code = match words.next() {
-                Some(val) => {
-                    let mut v = val.to_string();
-                    v.pop(); // remove ","
-                    v.parse().unwrap_or(-1)
-                }
-                _ => -1, // unknown code
-            };
-        } else if current_word == "message:" {
-            // next we need to collect all words in between "message:"
-            // and "data:", that would be the error message.
-            let msg: Vec<_> =
-                words.clone().take_while(|v| *v != "data:").collect();
-            reason = msg.join(" ");
-            reason.pop(); // remove the "," at the end.
-        }
-    }
-
-    WithdrawStatus::Errored { reason, code }
-}

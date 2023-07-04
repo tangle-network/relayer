@@ -232,11 +232,11 @@ where
         // Enqueue transaction in protocol-substrate transaction queue
         let data_hash =
             utils::keccak256(execute_proposal_tx.call_data().encode());
+        let tx = TypeErasedStaticTxPayload::try_from(execute_proposal_tx)?;
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             chain_id,
-            make_execute_proposal_key(data_hash),
+            tx.item_key(),
         );
-        let tx = TypeErasedStaticTxPayload::try_from(execute_proposal_tx)?;
 
         QueueStore::enqueue_item(&store, tx_key, QueueItem::new(tx))?;
         tracing::debug!(
@@ -376,13 +376,4 @@ fn secp256k1_ecdsa_recover(
     let mut res = [0u8; 64];
     res.copy_from_slice(&pubkey.serialize()[1..65]);
     Ok(res)
-}
-
-fn make_execute_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
-    let mut result = [0u8; 64];
-    let prefix = b"execute_proposal_with_signature_";
-    debug_assert!(prefix.len() == 32);
-    result[0..32].copy_from_slice(prefix);
-    result[32..64].copy_from_slice(&data_hash);
-    result
 }

@@ -26,6 +26,8 @@ import {
   WebbRelayer,
   Pallet,
   SubstrateFeeInfo,
+  WithdrawTxSuccessResponse,
+  TransactionStatusResponse,
 } from '../../lib/webbRelayer.js';
 import { BigNumber, ethers } from 'ethers';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
@@ -225,22 +227,56 @@ describe('Substrate VAnchor Private Transaction Relayer Tests Using Circom', fun
 
     const balanceBefore = await api.query.system.account(account.address);
     // now we withdraw using private transaction
-    await webbRelayer.substrateVAnchorWithdraw(
+    const withdrawTxPayload =  webbRelayer.substrateVAnchorWithdraw(
       substrateChainId,
       treeId,
       actualTx.publicInputs,
       actualTx.extData
     );
 
-    // now we wait for relayer to execute private transaction.
+    const withdrawTxResponse = await webbRelayer.sendPrivateTxSubstrate(
+      substrateChainId,
+      treeId,
+      withdrawTxPayload
+    );
 
+    expect(withdrawTxResponse.status).equal(200);
+    const withdrawTxresp =
+      (await withdrawTxResponse.json()) as WithdrawTxSuccessResponse;
+    const itemKey = withdrawTxresp.itemKey;
+
+    // fetch transaction status, it should be in pending state.
+    const txStatusResponse = await webbRelayer.getTxStatusSubstrate(
+      substrateChainId,
+      itemKey
+    );
+    expect(txStatusResponse.status).equal(200);
+    const txStatus =
+      txStatusResponse.json() as Promise<TransactionStatusResponse>;
+    txStatus.then((resp) => {
+      expect(resp.status.kind).equal('pending');
+    });
+
+    // now we wait for the substrate tx queue on that chain to execute the private transaction.
     await webbRelayer.waitForEvent({
-      kind: 'private_tx',
+      kind: 'tx_queue',
       event: {
         ty: 'SUBSTRATE',
         chain_id: substrateChainId.toString(),
         finalized: true,
       },
+    });
+
+    // fetch transaction status, it should be in processed state.
+    const txStatusResponse2 = await webbRelayer.getTxStatusSubstrate(
+      substrateChainId,
+      itemKey
+    );
+    expect(txStatusResponse2.status).equal(200);
+    const txStatus2 =
+      txStatusResponse2.json() as Promise<TransactionStatusResponse>;
+    txStatus2.then((resp) => {
+      expect(resp.status.kind).equal('processed');
     });
 
     const balanceAfter = await api.query.system.account(account.address);
