@@ -7,9 +7,8 @@ use std::{collections::HashMap, sync::Arc};
 use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::utils::{format_units, hex, parse_ether};
 use webb::evm::{
-    contract::protocol_solidity::{
-        variable_anchor::{CommonExtData, Encryptions, PublicInputs},
-        VAnchorContract,
+    contract::protocol_solidity::variable_anchor::{
+        CommonExtData, Encryptions, PublicInputs, VAnchorContract,
     },
     ethers::prelude::{Signer, SignerMiddleware},
 };

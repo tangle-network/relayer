@@ -11,7 +11,7 @@ use webb_proposals::ResourceId;
 use webb_relayer_handler_utils::{
     into_withdraw_error, CommandResponse, CommandStream, WithdrawStatus,
 };
-use webb_relayer_utils::metric::{self};
+use webb_relayer_utils::metric;
 
 pub mod fees;
 /// Variable Anchor transaction relayer.

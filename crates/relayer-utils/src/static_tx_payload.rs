@@ -2,7 +2,12 @@ use core::fmt;
 
 use webb::substrate::{
     scale::Encode,
-    subxt::tx::{StaticTxPayload, TxPayload},
+    subxt::{
+        self,
+        error::MetadataError,
+        ext::scale_encode::EncodeAsFields,
+        tx::{Payload, TxPayload},
+    },
 };
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
@@ -35,13 +40,11 @@ impl fmt::Display for TypeErasedStaticTxPayload {
     }
 }
 
-impl<CallData: Encode> TryFrom<StaticTxPayload<CallData>>
+impl<CallData: EncodeAsFields + Encode> TryFrom<Payload<CallData>>
     for TypeErasedStaticTxPayload
 {
     type Error = super::Error;
-    fn try_from(
-        payload: StaticTxPayload<CallData>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(payload: Payload<CallData>) -> Result<Self, Self::Error> {
         let details = payload
             .validation_details()
             .ok_or_else(|| Self::Error::MissingValidationDetails)?;
@@ -57,16 +60,25 @@ impl<CallData: Encode> TryFrom<StaticTxPayload<CallData>>
 impl TxPayload for TypeErasedStaticTxPayload {
     fn encode_call_data_to(
         &self,
-        metadata: &webb::substrate::subxt::Metadata,
+        metadata: &subxt::Metadata,
         out: &mut Vec<u8>,
     ) -> Result<(), webb::substrate::subxt::Error> {
-        let pallet = metadata.pallet(&self.pallet_name)?;
+        let pallet = metadata.pallet_by_name_err(&self.pallet_name)?;
+        let call =
+            pallet
+                .call_variant_by_name(&self.call_name)
+                .ok_or_else(|| {
+                    MetadataError::CallNameNotFound(
+                        (*self.call_name).to_owned(),
+                    )
+                })?;
+
         let pallet_index = pallet.index();
-        let call_index = pallet.call_index(&self.call_name)?;
+        let call_index = call.index;
 
         pallet_index.encode_to(out);
         call_index.encode_to(out);
-        out.extend_from_slice(&self.call_data);
+        self.call_data.encode_to(out);
         Ok(())
     }
 }

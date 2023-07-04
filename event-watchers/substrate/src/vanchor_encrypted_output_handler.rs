@@ -64,8 +64,7 @@ impl EventHandler<PolkadotConfig> for SubstrateVAnchorEncryptedOutputHandler {
                 .next_leaf_index(event.tree_id);
             let next_leaf_index = client
                 .storage()
-                .at(Some(at_hash))
-                .await?
+                .at(at_hash)
                 .fetch(&next_leaf_index_addr)
                 .await?
                 .ok_or(Error::ReadSubstrateStorageError)?;
@@ -82,7 +81,8 @@ impl EventHandler<PolkadotConfig> for SubstrateVAnchorEncryptedOutputHandler {
             // pallet index
             let pallet_index = {
                 let metadata = client.metadata();
-                let pallet = metadata.pallet("VAnchorHandlerBn254")?;
+                let pallet =
+                    metadata.pallet_by_name_err("VAnchorHandlerBn254")?;
                 pallet.index()
             };
 

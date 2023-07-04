@@ -125,7 +125,7 @@ async fn balance(
     let account = api::storage().system().account(signer.account_id());
     let balance = client
         .storage()
-        .at(None)
+        .at_latest()
         .await?
         .fetch(&account)
         .await?

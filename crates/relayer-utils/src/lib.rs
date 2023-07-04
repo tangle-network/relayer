@@ -242,6 +242,9 @@ pub enum Error {
     /// Invalid Proposal bytes.
     #[error("Invalid proposal bytes")]
     InvalidProposalBytes,
+    /// Invalid Proposals batch.
+    #[error("Invalid proposals batch")]
+    InvalidProposalsBatch,
 }
 
 /// Vanchor withdraw tx relaying errors.

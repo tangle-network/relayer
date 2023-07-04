@@ -49,7 +49,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         let maybe_whitelisted = self
             .client
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&chain_nonce_addrs)
             .await?;
@@ -64,7 +64,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         let maybe_resource_id = self
             .client
             .storage()
-            .at(None)
+            .at_latest()
             .await?
             .fetch(&resource_id_addrs)
             .await?;

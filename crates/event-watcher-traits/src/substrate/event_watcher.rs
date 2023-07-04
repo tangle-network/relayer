@@ -176,7 +176,7 @@ where
             let pallet_index = {
                 let metadata = client.metadata();
                 let pallet = metadata
-                    .pallet(Self::PALLET_NAME)
+                    .pallet_by_name_err(Self::PALLET_NAME)
                     .map_err(Into::into)
                     .map_err(backoff::Error::permanent)?;
                 pallet.index()
@@ -252,7 +252,7 @@ where
                     tracing::trace!(?from, "Querying events");
                     let events = client
                         .events()
-                        .at(Some(from))
+                        .at(from)
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;

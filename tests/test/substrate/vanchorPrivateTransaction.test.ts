@@ -261,7 +261,6 @@ describe.skip('Substrate VAnchor Private Transaction Relayer Tests', function ()
 
   after(async () => {
     await aliceNode?.stop();
-    // await bobNode?.stop();
     await charlieNode?.stop();
     await webbRelayer?.stop();
   });

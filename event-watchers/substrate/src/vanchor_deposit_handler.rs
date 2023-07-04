@@ -96,12 +96,7 @@ where
             let tree_addrs = RuntimeApi::storage()
                 .merkle_tree_bn254()
                 .trees(event.tree_id);
-            let tree = client
-                .storage()
-                .at(Some(at_hash))
-                .await?
-                .fetch(&tree_addrs)
-                .await?;
+            let tree = client.storage().at(at_hash).fetch(&tree_addrs).await?;
 
             let tree = match tree {
                 Some(t) => t,
@@ -114,7 +109,8 @@ where
             // pallet index
             let pallet_index = {
                 let metadata = client.metadata();
-                let pallet = metadata.pallet("VAnchorHandlerBn254")?;
+                let pallet =
+                    metadata.pallet_by_name_err("VAnchorHandlerBn254")?;
                 pallet.index()
             };
 
