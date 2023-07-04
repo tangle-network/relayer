@@ -38,7 +38,6 @@ webb-relayer-utils = { workspace = true }
 webb-event-watcher-traits = { workspace = true }
 webb-ew-dkg = { workspace = true }
 webb-ew-evm = { workspace = true }
-webb-ew-substrate = { workspace = true }
 
 anyhow = { workspace = true, optional = true }
 tracing = { workspace = true }
