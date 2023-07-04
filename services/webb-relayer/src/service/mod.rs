@@ -45,7 +45,7 @@ use webb_relayer_store::SledStore;
 /// EVM Specific Services
 pub mod evm;
 /// Substrate Specific Services
-pub mod substrate;
+pub mod tangle;
 
 /// Type alias for [Sled](https://sled.rs)-based database store
 pub type Store = SledStore;
@@ -92,7 +92,7 @@ pub async fn ignite(
         serde_json::to_string_pretty(&ctx.config)?
     );
     evm::ignite(&ctx, store.clone()).await?;
-    substrate::ignite(ctx.clone(), store.clone()).await?;
+    tangle::ignite(ctx.clone(), store.clone()).await?;
     Ok(())
 }
 
