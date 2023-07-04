@@ -42,7 +42,6 @@ jobs:
     strategy:
       matrix:
         platform: [linux-musl]
-
   push:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
@@ -50,11 +49,10 @@ jobs:
     permissions:
       packages: write
       contents: read
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-push
+      cancel-in-progress: true
     steps:
-      - name: Cancel Previous Runs
-        uses: styfle/cancel-workflow-action@0.9.1
-        with:
-          access_token: ${{ github.token }}
       - name: install system build dependencies
         run: sudo apt-get update && sudo apt-get install ${DEV_PACKAGES}
       - uses: actions/checkout@v2
@@ -62,9 +60,9 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           shared-key: "rust"
-          cache-directories: ".dvc/tmp\n.dvc/cache"
 
-      - uses: actions/download-artifact@v1
+      - name: Download Cross
+        uses: actions/download-artifact@v1
         with:
           name: cross-linux-musl
           path: /tmp/
@@ -99,4 +97,3 @@ jobs:
           echo VERSION=$VERSION
           docker tag $IMAGE_NAME $IMAGE_ID:$VERSION
           docker push $IMAGE_ID:$VERSION
-
