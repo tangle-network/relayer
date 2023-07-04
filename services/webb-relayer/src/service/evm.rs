@@ -24,7 +24,8 @@ use webb_relayer_config::evm::{
     VAnchorContractConfig,
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handlers::handle_evm_fee_info;
+
+use webb_relayer_handlers::routes::fee_info::handle_evm_fee_info;
 use webb_relayer_handlers::routes::{
     encrypted_outputs, leaves, metric, private_tx_withdraw, transaction_status,
 };

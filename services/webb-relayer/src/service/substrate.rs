@@ -24,7 +24,7 @@ use webb_relayer_config::substrate::{
     SignatureBridgePalletConfig, SubstrateConfig, VAnchorBn254PalletConfig,
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handlers::handle_substrate_fee_info;
+use webb_relayer_handlers::routes::fee_info::handle_substrate_fee_info;
 use webb_relayer_handlers::routes::{
     leaves, metric, private_tx_withdraw, transaction_status,
 };
