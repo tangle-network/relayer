@@ -1,8 +1,5 @@
-use std::sync::Arc;
-
-use axum::routing::{get, post};
-use axum::Router;
 use sp_core::sr25519;
+use std::sync::Arc;
 use webb::substrate::subxt::config::ExtrinsicParams;
 use webb::substrate::subxt::{self, PolkadotConfig};
 use webb_event_watcher_traits::SubstrateEventWatcher;
@@ -11,42 +8,14 @@ use webb_ew_dkg::{
     ProposalSignedHandler,
 };
 use webb_relayer_config::substrate::{
-    DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet, SubstrateConfig
+    DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet, SubstrateConfig,
 };
 use webb_relayer_context::RelayerContext;
-use webb_relayer_handlers::routes::fee_info::handle_substrate_fee_info;
-use webb_relayer_handlers::routes::{
-    leaves, metric, private_tx_withdraw, transaction_status,
-};
+
 use webb_relayer_tx_queue::substrate::SubstrateTxQueue;
 
 /// Type alias for the Tangle DefaultConfig
 pub type TangleClient = subxt::OnlineClient<PolkadotConfig>;
-
-/// Setup and build all the Substrate web services and handlers.
-pub fn build_web_services() -> Router<Arc<RelayerContext>> {
-    Router::new()
-        .route(
-            "/leaves/substrate/:chain_id/:tree_id/:pallet_id",
-            get(leaves::handle_leaves_cache_substrate),
-        )
-        .route(
-            "/send/substrate/:chain_id/:tree_id",
-            post(private_tx_withdraw::handle_private_tx_withdraw_substrate),
-        )
-        .route(
-            "/tx/substrate/:chain_id/:item_key",
-            get(transaction_status::handle_transaction_status_substrate),
-        )
-        .route(
-            "/metrics/substrate/:chain_id/:tree_id/:pallet_id",
-            get(metric::handle_substrate_metric_info),
-        )
-        .route(
-            "/fee_info/substrate/:chain_id/:estimated_tx_fees",
-            get(handle_substrate_fee_info),
-        )
-}
 
 /// Fires up all background services for all Substrate chains configured in the config file.
 ///
@@ -96,7 +65,9 @@ async fn ignite_tangle_runtime(
             Pallet::DKGProposals(_) => {
                 // TODO(@shekohex): start the dkg proposals service
             }
-            _=> { unimplemented!()}
+            _ => {
+                unimplemented!()
+            }
         }
     }
     // start the transaction queue for dkg-substrate extrinsics after starting other tasks.
