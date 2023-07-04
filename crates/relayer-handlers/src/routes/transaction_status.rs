@@ -26,7 +26,7 @@ pub struct TransactionStatusResponse {
 ///
 /// # Arguments
 ///
-/// * `chain_id` - An u32 representing the chain id of the chain to query
+/// * `chain_id` - An u32 representing the chain id of the chain.
 /// * `item_key` - An 64 bytes hash string, used to access transaction item from queue.
 pub async fn handle_transaction_status_evm(
     State(ctx): State<Arc<RelayerContext>>,
@@ -55,7 +55,7 @@ pub async fn handle_transaction_status_evm(
 ///
 /// # Arguments
 ///
-/// * `chain_id` - An u32 representing the chain id of the chain to query
+/// * `chain_id` - An u32 representing the chain id of the chain.
 /// * `item_key` - An 64 bytes hash string, used to access transaction item from queue.
 pub async fn handle_transaction_status_substrate(
     State(ctx): State<Arc<RelayerContext>>,

@@ -46,8 +46,8 @@ pub enum WithdrawTxResponse {
 ///
 /// # Arguments
 ///
-/// * `chain_id` - An u32 representing the chain id of the chain to query.
-/// * `contract` - An address of the contract to query.
+/// * `chain_id` - An u32 representing the chain id of the chain.
+/// * `contract` - An address of the contract to submit transaction.
 pub async fn handle_private_tx_withdraw_evm(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, contract)): Path<(u32, Address)>,
@@ -85,8 +85,8 @@ pub async fn handle_private_tx_withdraw_evm(
 ///
 /// # Arguments
 ///
-/// * `chain_id` - An u32 representing the chain id of the chain to query.
-/// * `contract` - An address of the contract to query.
+/// * `chain_id` - An u32 representing the chain id of the chain.
+/// * `tree_id` - An u32 representing vanchor tree id.
 pub async fn handle_private_tx_withdraw_substrate(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, tree_id)): Path<(u32, u32)>,
