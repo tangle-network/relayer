@@ -9602,30 +9602,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "webb-ew-substrate"
-version = "0.5.0-dev"
-dependencies = [
- "async-trait",
- "hex",
- "libsecp256k1",
- "native-tls",
- "sled",
- "sp-core 21.0.0",
- "tokio 1.29.1",
- "tracing",
- "typed-builder 0.14.0",
- "webb 0.6.1",
- "webb-bridge-registry-backends",
- "webb-event-watcher-traits",
- "webb-proposal-signing-backends",
- "webb-proposals",
- "webb-relayer-config",
- "webb-relayer-store",
- "webb-relayer-types 0.5.0-dev",
- "webb-relayer-utils 0.5.0-dev",
-]
-
-[[package]]
 name = "webb-price-oracle-backends"
 version = "0.5.0-dev"
 dependencies = [
@@ -9732,7 +9708,6 @@ dependencies = [
  "webb-event-watcher-traits",
  "webb-ew-dkg",
  "webb-ew-evm",
- "webb-ew-substrate",
  "webb-proposal-signing-backends",
  "webb-proposals",
  "webb-relayer-config",
