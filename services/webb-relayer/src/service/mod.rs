@@ -61,8 +61,7 @@ pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
     let api = Router::new()
         .route("/ip", get(handle_socket_info))
         .route("/info", get(handle_relayer_info))
-        .merge(evm::build_web_services())
-        .merge(substrate::build_web_services());
+        .merge(evm::build_web_services());
 
     let app = Router::new()
         .nest("/api/v1", api)

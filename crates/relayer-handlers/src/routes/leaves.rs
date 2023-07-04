@@ -20,9 +20,7 @@ use webb::evm::ethers::types;
 
 use ethereum_types::Address;
 use serde::Serialize;
-use webb_proposals::{
-    ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
-};
+use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::LeafCacheStore;
 use webb_relayer_utils::HandlerError;
@@ -118,57 +116,6 @@ pub async fn handle_leaves_cache_evm(
         .store()
         .get_leaves_with_range(history_store_key, query_range.into())
         .map(|tree| tree.into_values().collect::<Vec<_>>())?;
-    let last_queried_block = ctx
-        .store()
-        .get_last_deposit_block_number(history_store_key)?;
-
-    Ok(Json(LeavesCacheResponse {
-        leaves,
-        last_queried_block,
-    }))
-}
-
-/// Handles leaf data requests for substrate
-///
-/// Returns a Result with the `LeafDataResponse` on success
-///
-/// # Arguments
-///
-/// * `chain_id` - An u32 representing the chain id of the chain to query
-/// * `tree_id` - Tree id of the the source system to query
-/// * `pallet_id` - Pallet id of the the source system to query
-/// * `query_range` - An Optional Query range.
-/// * `ctx` - RelayContext reference that holds the configuration
-pub async fn handle_leaves_cache_substrate(
-    State(ctx): State<Arc<RelayerContext>>,
-    Path((chain_id, tree_id, pallet_id)): Path<(u32, u32, u8)>,
-    Query(query_range): Query<OptionalRangeQuery>,
-) -> Result<Json<LeavesCacheResponse>, HandlerError> {
-    let config = ctx.config.clone();
-    // check if data querying is enabled
-    if !config.features.data_query {
-        tracing::warn!("Data query is not enabled for relayer.");
-        return Err(HandlerError(
-            StatusCode::FORBIDDEN,
-            "Data query is not enabled for relayer.".to_string(),
-        ));
-    }
-
-    // create history store key
-    let src_typed_chain_id = TypedChainId::Substrate(chain_id);
-    let target = SubstrateTargetSystem::builder()
-        .pallet_index(pallet_id)
-        .tree_id(tree_id)
-        .build();
-    let src_target_system = TargetSystem::Substrate(target);
-    let history_store_key =
-        ResourceId::new(src_target_system, src_typed_chain_id);
-
-    let leaves = ctx
-        .store()
-        .get_leaves_with_range(history_store_key, query_range.into())
-        .map(|tree| tree.into_values().collect::<Vec<_>>())?;
-
     let last_queried_block = ctx
         .store()
         .get_last_deposit_block_number(history_store_key)?;
