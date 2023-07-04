@@ -309,30 +309,6 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
   });
 
   it('should handle AnchorUpdateProposal when a deposit happens using DKG proposal backend', async () => {
-    // we need to wait until the public key is changed.
-    await charlieNode.waitForEvent({
-      section: 'dkg',
-      method: 'PublicKeySignatureChanged',
-    });
-    // wait until the signature bridge receives the transfer ownership call.
-    await webbRelayer.waitForEvent({
-      kind: 'signature_bridge',
-      event: {
-        chain_id: localChain2.underlyingChainId.toString(),
-        call: 'transfer_ownership_with_signature_pub_key',
-      },
-    });
-
-    // now we wait for the tx queue on that chain to execute the transfer ownership transaction.
-    await webbRelayer.waitForEvent({
-      kind: 'tx_queue',
-      event: {
-        ty: 'EVM',
-        chain_id: localChain2.underlyingChainId.toString(),
-        finalized: true,
-      },
-    });
-
     webbRelayer.clearLogs();
     // we will use chain1 as an example here.
     const anchor1 = signatureBridge.getVAnchor(localChain1.chainId);
@@ -374,7 +350,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     // now we wait for the proposal to be signed.
     charlieNode.waitForEvent({
       section: 'dkgProposalHandler',
-      method: 'ProposalSigned',
+      method: 'ProposalBatchSigned',
     });
 
     // wait until the signature bridge receives the execute call.
