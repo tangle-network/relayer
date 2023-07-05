@@ -30,7 +30,6 @@ use axum::Router;
 use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use webb::substrate::subxt;
 use webb_proposal_signing_backends::{
     DkgProposalSigningBackend, MockedProposalSigningBackend,
 };
@@ -41,6 +40,7 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::routes::info::handle_relayer_info;
 use webb_relayer_handlers::routes::info::handle_socket_info;
 use webb_relayer_store::SledStore;
+use webb_relayer_utils::TangleRuntimeConfig;
 
 /// EVM Specific Services
 pub mod evm;
@@ -126,7 +126,7 @@ pub async fn make_proposal_signing_backend(
             // if it is the dkg backend, we will need to connect to that node first,
             // and then use the DkgProposalSigningBackend to sign the proposal.
             let dkg_client = ctx
-                .substrate_provider::<subxt::PolkadotConfig, _>(c.chain_id)
+                .substrate_provider::<TangleRuntimeConfig, _>(c.chain_id)
                 .await?;
             let backend = DkgProposalSigningBackend::builder()
                 .client(dkg_client)

@@ -17,6 +17,7 @@ use futures::TryFutureExt;
 use rand::Rng;
 use webb::substrate::subxt;
 use webb::substrate::subxt::config::ExtrinsicParams;
+use webb::substrate::subxt::rpc::types::DryRunResult;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::queue::QueueItem;
 use webb_relayer_store::queue::QueueItemState;
@@ -188,7 +189,7 @@ where
                 // dry run test
                 let dry_run_outcome = signed_extrinsic.dry_run(None).await;
                 match dry_run_outcome {
-                    Ok(_) => {
+                    Ok(DryRunResult::Success) => {
                         tracing::event!(
                             target: webb_relayer_utils::probe::TARGET,
                             tracing::Level::DEBUG,
@@ -216,6 +217,70 @@ where
                             },
                         )?;
                     }
+                    Ok(DryRunResult::TransactionValidityError) => {
+                        tracing::event!(
+                            target: webb_relayer_utils::probe::TARGET,
+                            tracing::Level::DEBUG,
+                            kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                            ty = "SUBSTRATE",
+                            chain_id = %chain_id,
+                            tx = %payload,
+                            errored = true,
+                            error = "The transaction could not be included in the block.",
+                            signed_extrinsic = %hex::encode(signed_extrinsic.encoded()),
+                            dry_run = "transaction_validity_error"
+                        );
+                        // update transaction status as Failed and re insert into queue.
+                        store.shift_item_to_end(
+                            SledQueueKey::from_substrate_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                            |item: &mut QueueItem<
+                                TypeErasedStaticTxPayload,
+                            >| {
+                                let state = QueueItemState::Failed {
+                                    reason: "Transaction validity error".to_string(),
+                                };
+                                item.set_state(state);
+                                Ok(())
+                            },
+                        )?;
+
+                        continue; // keep going.
+                    }
+                    Ok(DryRunResult::DispatchError(err)) => {
+                        tracing::event!(
+                            target: webb_relayer_utils::probe::TARGET,
+                            tracing::Level::DEBUG,
+                            kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                            ty = "SUBSTRATE",
+                            chain_id = %chain_id,
+                            tx = %payload,
+                            errored = true,
+                            error = %err,
+                            signed_extrinsic = %hex::encode(signed_extrinsic.encoded()),
+                            dry_run = "dispatch_error",
+                        );
+                        // update transaction status as Failed and re insert into queue.
+                        store.shift_item_to_end(
+                            SledQueueKey::from_substrate_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                            |item: &mut QueueItem<
+                                TypeErasedStaticTxPayload,
+                            >| {
+                                let state = QueueItemState::Failed {
+                                    reason: err.to_string(),
+                                };
+                                item.set_state(state);
+                                Ok(())
+                            },
+                        )?;
+
+                        continue; // keep going.
+                    }
                     Err(err) => {
                         tracing::event!(
                             target: webb_relayer_utils::probe::TARGET,
@@ -226,6 +291,7 @@ where
                             tx = %payload,
                             errored = true,
                             error = %err,
+                            signed_extrinsic = %hex::encode(signed_extrinsic.encoded()),
                             dry_run = "failed"
                         );
                         // update transaction status as Failed and re insert into queue.

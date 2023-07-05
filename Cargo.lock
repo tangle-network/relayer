@@ -9807,6 +9807,7 @@ dependencies = [
  "backoff",
  "ethereum-types 0.14.1",
  "futures",
+ "hex",
  "native-tls",
  "rand 0.8.5",
  "sled",

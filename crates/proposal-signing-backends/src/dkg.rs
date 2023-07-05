@@ -3,19 +3,18 @@ use tokio::sync::Mutex;
 use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
-use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
+use webb::substrate::subxt::OnlineClient;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::{Proposal, ProposalKind};
 use webb_proposals::ProposalTrait;
 use webb::substrate::scale::{Encode, Decode};
 use webb_relayer_store::queue::{QueueStore, QueueItem, TransactionQueueItemKey};
-use webb_relayer_utils::metric;
+use webb_relayer_utils::{metric, TangleRuntimeConfig};
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb_relayer_store::SledStore;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 
-type DkgConfig = PolkadotConfig;
-type DkgClient = OnlineClient<DkgConfig>;
+type DkgClient = OnlineClient<TangleRuntimeConfig>;
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
 #[derive(typed_builder::TypedBuilder)]
 pub struct DkgProposalSigningBackend {
@@ -118,8 +117,8 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             ResourceId(resource_id.into_bytes()),
             unsigned_proposal,
         );
-
-        let tx = TypeErasedStaticTxPayload::try_from(acknowledge_proposal_tx)?;
+        let metadata = self.client.metadata();
+        let tx = TypeErasedStaticTxPayload::try_from((&metadata, acknowledge_proposal_tx))?;
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             my_chain_id,
             tx.item_key(),

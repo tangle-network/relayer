@@ -221,7 +221,7 @@ impl TransactionQueueItemKey for TypedTransaction {
 
 impl TransactionQueueItemKey for TypeErasedStaticTxPayload {
     fn item_key(&self) -> [u8; 64] {
-        let data_hash = utils::keccak256(self.clone().call_data);
+        let data_hash = utils::keccak256(self.tx_data());
         let mut key = [0u8; 64];
         let prefix = b"substrate_transaction_item_key__";
         key[0..32].copy_from_slice(prefix);
