@@ -80,36 +80,3 @@ pub fn evm_anchor_update_proposal(
         src_resource_id,
     )
 }
-
-// create anchor update proposal for substrate system
-#[tracing::instrument(
-    skip_all,
-    fields(
-        proposal_type = "AnchorUpdateProposal",
-        from = ?src_resource_id.typed_chain_id(),
-        to = ?target_resource_id.typed_chain_id(),
-        nonce = leaf_index,
-        merkle_root = hex::encode(merkle_root),
-    )
-)]
-pub fn substrate_anchor_update_proposal(
-    merkle_root: [u8; 32],
-    leaf_index: u32,
-    target_resource_id: webb_proposals::ResourceId,
-    src_resource_id: webb_proposals::ResourceId,
-) -> webb_proposals::substrate::AnchorUpdateProposal {
-    let nonce = webb_proposals::Nonce::new(leaf_index);
-    let function_signature =
-        webb_proposals::FunctionSignature::new([0, 0, 0, 1]);
-    let header = webb_proposals::ProposalHeader::new(
-        target_resource_id,
-        function_signature,
-        nonce,
-    );
-    // create anchor update proposal
-    webb_proposals::substrate::AnchorUpdateProposal::builder()
-        .header(header)
-        .merkle_root(merkle_root)
-        .src_resource_id(src_resource_id)
-        .build()
-}
