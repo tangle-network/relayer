@@ -4,11 +4,10 @@ use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bo
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
-use webb::evm::ethers::utils;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::{Proposal, ProposalKind};
 use webb_proposals::ProposalTrait;
 use webb::substrate::scale::{Encode, Decode};
-use webb_relayer_store::queue::{QueueStore, QueueItem};
+use webb_relayer_store::queue::{QueueStore, QueueItem, TransactionQueueItemKey};
 use webb_relayer_utils::metric;
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb_relayer_store::SledStore;
@@ -120,13 +119,11 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             unsigned_proposal,
         );
 
-        let data_hash =
-            utils::keccak256(acknowledge_proposal_tx.call_data().encode());
+        let tx = TypeErasedStaticTxPayload::try_from(acknowledge_proposal_tx)?;
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             my_chain_id,
-            make_acknowledge_proposal_key(data_hash),
+            tx.item_key(),
         );
-        let tx = TypeErasedStaticTxPayload::try_from(acknowledge_proposal_tx)?;
         // Enqueue transaction in protocol-substrate transaction queue
         let item = QueueItem::new(tx);
         QueueStore::enqueue_item(&self.store, tx_key, item)?;
@@ -158,11 +155,3 @@ fn webb_proposals_typed_chain_converter(
     }
 }
 
-pub fn make_acknowledge_proposal_key(data_hash: [u8; 32]) -> [u8; 64] {
-    let mut result = [0u8; 64];
-    let prefix = b"acknowledge_proposal_fixed_key__";
-    debug_assert!(prefix.len() == 32);
-    result[0..32].copy_from_slice(prefix);
-    result[32..64].copy_from_slice(&data_hash);
-    result
-}

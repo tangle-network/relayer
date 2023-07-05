@@ -18,7 +18,6 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import {
   CircomUtxo,
   Keypair,
@@ -41,6 +40,8 @@ import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { MintableToken } from '@webb-tools/tokens';
 import { formatEther, parseEther } from 'ethers/lib/utils.js';
+import { type VAnchor } from '@webb-tools/contracts';
+import { VBridge } from '@webb-tools/vbridge';
 
 dotenv.config({ path: '../.env' });
 // This test is meant to prove that utxo transfer flows are possible, and the receiver
@@ -48,7 +49,7 @@ dotenv.config({ path: '../.env' });
 describe('Relayer transfer assets', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
-  let signatureVBridge: VBridge.VBridge;
+  let signatureVBridge: VBridge<VAnchor>;
   let govWallet1: ethers.Wallet;
   let relayerWallet1: ethers.Wallet;
 
@@ -127,7 +128,7 @@ describe('Relayer transfer assets', function () {
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
+    const token = await MintableToken.tokenFromAddress(
       tokenAddress,
       govWallet1
     );
@@ -174,15 +175,13 @@ describe('Relayer transfer assets', function () {
   });
 
   it('should be able to transfer Utxo', async () => {
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
-    await vanchor1.setSigner(govWallet1);
-
+    const vanchor1 = await localChain1.getVAnchor(govWallet1);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
 
-    const token = await Tokens.MintableToken.tokenFromAddress(
+    const token = await MintableToken.tokenFromAddress(
       tokenAddress,
       govWallet1
     );

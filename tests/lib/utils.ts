@@ -1,15 +1,14 @@
 import { Keyring } from '@polkadot/api';
 import { KeyringPair } from '@polkadot/keyring/types';
 import { Keypair, Note, Utxo } from '@webb-tools/sdk-core';
-import { BigNumber } from 'ethers';
 import { EventsWatcher } from './webbRelayer';
 
 // Default Events watcher for the pallets.
 export const defaultEventsWatcherValue: EventsWatcher = {
   enabled: true,
   pollingInterval: 3000,
-  printProgressInterval: 7000,
-  syncBlocksFrom: 1,
+  printProgressInterval: 60_000,
+  syncBlocksFrom: 0,
 };
 
 // Pad hexString with zero to make it of length 64.
