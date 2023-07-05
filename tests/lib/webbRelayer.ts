@@ -16,7 +16,6 @@
  */
 import fs from 'fs';
 import path from 'path';
-import WebSocket from 'ws';
 import fetch from 'node-fetch';
 import {
   type IVariableAnchorExtData,
@@ -27,9 +26,7 @@ import { EventEmitter } from 'events';
 import JSONStream from 'JSONStream';
 import { BigNumber } from 'ethers';
 import { ConvertToKebabCase } from './tsHacks';
-import { IVariableAnchorPublicInputs as ISubstrateVariableAnchorPublicInputs } from '../lib/substrateVAnchor.js';
 import { padHexString } from '../lib/utils.js';
-import * as BN from 'bn.js';
 
 export type CommonConfig = {
   features?: FeaturesConfig;
@@ -180,16 +177,7 @@ export class WebbRelayer {
     const response = await fetch(endpoint.toString());
     return response;
   }
-  // data querying api for substrate
-  public async getLeavesSubstrate(
-    chainId: string,
-    treeId: string,
-    palletId: string
-  ) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/leaves/substrate/${chainId}/${treeId}/${palletId}`;
-    const response = await fetch(endpoint);
-    return response;
-  }
+
   public async getEncryptedOutputsEvm(
     chainId: string,
     contractAddress: string,
@@ -232,12 +220,6 @@ export class WebbRelayer {
     return response;
   }
 
-  public async getSubstrateFeeInfo(chainId: number, partialFee: BN) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/fee_info/substrate/${chainId}/${partialFee}`;
-    const response = await fetch(endpoint);
-    return response;
-  }
-
   // Post API to send private withdrawal tx to relayer for evm chain
   public async sendPrivateTxEvm(
     chainId: number,
@@ -255,33 +237,9 @@ export class WebbRelayer {
     return response;
   }
 
-  // Post API to send private withdrawal tx to relayer for substrate chain.
-  public async sendPrivateTxSubstrate(
-    chainId: number,
-    treeId: number,
-    payload: WithdrawRequestPayloadSubstrate
-  ) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/send/substrate/${chainId}/${treeId}`;
-    const response = fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-    return response;
-  }
-
   // API to get transaction status for evm chain.
   public async getTxStatusEvm(chainId: number, transactionItemKey: string) {
     const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/tx/evm/${chainId}/${transactionItemKey}`;
-    const response = await fetch(endpoint);
-    return response;
-  }
-
-  // API to get transaction status for substrate chain.
-  public async getTxStatusSubstrate(chainId: number, transactionItemKey: string) {
-    const endpoint = `http://127.0.0.1:${this.opts.commonConfig.port}/api/v1/tx/substrate/${chainId}/${transactionItemKey}`;
     const response = await fetch(endpoint);
     return response;
   }
@@ -336,25 +294,6 @@ export class WebbRelayer {
     });
   }
 
-  public async ping(): Promise<void> {
-    const wsEndpoint = `ws://127.0.0.1:${this.opts.commonConfig.port}/ws`;
-    const ws = new WebSocket(wsEndpoint);
-    await new Promise((resolve) => ws.once('open', resolve));
-    return new Promise((resolve, reject) => {
-      ws.on('error', reject);
-      ws.on('message', (data) => {
-        const o = JSON.parse(data.toString());
-        const msg = parseRelayTxMessage(o);
-        if (msg.kind === 'pong') {
-          resolve();
-        } else {
-          reject(new Error(`Unexpected message: ${msg.kind}: ${data}`));
-        }
-      });
-      ws.send(JSON.stringify({ ping: [] }));
-    });
-  }
-
   public vanchorWithdrawPayload(
     chainId: number,
     vanchorAddress: string,
@@ -394,48 +333,6 @@ export class WebbRelayer {
     };
     return cmd.evm.vAnchor;
   }
-
-  public substrateVAnchorWithdraw(
-    chainId: number,
-    id: number,
-    publicInputs: ISubstrateVariableAnchorPublicInputs,
-    extData: IVariableAnchorExtData
-  ):WithdrawRequestPayloadSubstrate {
-    const cmd = {
-      substrate: {
-        vAnchor: {
-          chainId,
-          id,
-          extData: {
-            recipient: extData.recipient,
-            relayer: extData.relayer,
-            extAmount: BigNumber.from(extData.extAmount)
-              .toHexString()
-              .replace('0x', ''),
-            fee: extData.fee,
-            refund: extData.refund,
-            token: BigNumber.from(extData.token).toNumber(),
-            encryptedOutput1: extData.encryptedOutput1,
-            encryptedOutput2: extData.encryptedOutput2,
-          },
-          proofData: {
-            proof: publicInputs.proof,
-            extDataHash: padHexString(publicInputs.extDataHash),
-            publicAmount: publicInputs.publicAmount,
-            roots: publicInputs.roots,
-            extensionRoots: [],
-            outputCommitments: publicInputs.outputCommitments.map((output) =>
-              padHexString(output)
-            ),
-            inputNullifiers: publicInputs.inputNullifiers.map((nullifier) =>
-              padHexString(nullifier)
-            ),
-          },
-        },
-      },
-    };
-    return cmd.substrate.vAnchor;
-  }
 }
 
 export function calculateRelayerFees(
@@ -448,65 +345,6 @@ export function calculateRelayerFees(
   const feeBigMill = principleBig.mul(withdrawFeeMillBig);
   const feeBig = feeBigMill.div(BigNumber.from(1000000));
   return feeBig;
-}
-
-async function substrateTxHashOrReject(
-  ws: WebSocket,
-  cmd: any
-): Promise<`0x${string}`> {
-  return new Promise((resolve, reject) => {
-    ws.on('error', reject);
-    ws.on('message', (data) => {
-      const o = JSON.parse(data.toString());
-      const msg = parseRelayTxMessage(o);
-      if (msg.kind === 'error') {
-        ws.close();
-        reject(msg.message);
-      } else if (msg.kind === 'pong') {
-        ws.close();
-        // unreachable.
-        reject('unreachable');
-      } else if (msg.kind === 'network') {
-        const networkError =
-          msg.network === 'unsupportedChain' ||
-          msg.network === 'unsupportedContract' ||
-          msg.network === 'disconnected' ||
-          msg.network === 'invalidRelayerAddress';
-        const maybeFailed = msg.network as { failed: { reason: string } };
-        if (networkError) {
-          ws.close();
-          reject(msg.network);
-        } else if (maybeFailed.failed) {
-          ws.close();
-          reject(maybeFailed.failed.reason);
-        }
-      } else if (msg.kind === 'unimplemented') {
-        ws.close();
-        reject(msg.message);
-      } else if (msg.kind === 'unknown') {
-        ws.close();
-        console.log(o);
-        reject('Got unknown response from the relayer!');
-      } else if (msg.kind === 'withdraw') {
-        const isError =
-          msg.withdraw === 'invalidMerkleRoots' ||
-          msg.withdraw === 'droppedFromMemPool' ||
-          (msg.withdraw as { errored: any }).errored;
-        const success = msg.withdraw as {
-          finalized: { txHash: `0x${string}` };
-        };
-        if (isError) {
-          ws.close();
-          reject(msg.withdraw);
-        } else if (success.finalized) {
-          ws.close();
-          resolve(success.finalized.txHash);
-        }
-      }
-    });
-
-    ws.send(JSON.stringify(cmd));
-  });
 }
 
 interface UnparsedRawEvent {
@@ -542,27 +380,6 @@ type EventTarget = 'webb_probe';
 export type EventSelector = {
   kind: EventKind;
   event?: any;
-};
-
-export type SubstrateVAnchorExtData = {
-  recipient: string;
-  relayer: string;
-  extAmount: string;
-  fee: string;
-  encryptedOutput1: number[];
-  encryptedOutput2: number[];
-  refund: string;
-  token: number;
-};
-
-export type SubstrateVAnchorProofData = {
-  proof: number[];
-  extDataHash: number[];
-  extensionRoots: number[];
-  publicAmount: number[];
-  roots: number[][];
-  outputCommitments: number[][];
-  inputNullifiers: number[][];
 };
 
 export interface FeaturesConfig {
@@ -662,30 +479,6 @@ export type WithdrawRequestPayloadEVM = {
   };
 };
 
-export type WithdrawRequestPayloadSubstrate= {
-  chainId: number;
-  id: number;
-  extData: {
-    recipient: string;
-    relayer: string;
-    extAmount: string;
-    fee: string;
-    refund: string;
-    token: number;
-    encryptedOutput1: string;
-    encryptedOutput2: string;
-  };
-  proofData: {
-    proof: `0x${string}`;
-    extDataHash: string;
-    publicAmount: `0x${string}`;
-    roots: `0x${string}`[];
-    extensionRoots: never[];
-    outputCommitments: string[];
-    inputNullifiers: string[];
-  };
-};
-
 export interface TransactionStatusResponse {
   status: TxStatus;
   itemKey: string;
@@ -713,13 +506,6 @@ export interface ChainInfo {
 export interface EvmFeeInfo {
   estimatedFee: string;
   gasPrice: string;
-  refundExchangeRate: string;
-  maxRefund: string;
-  timestamp: string;
-}
-
-export interface SubstrateFeeInfo {
-  estimatedFee: string;
   refundExchangeRate: string;
   maxRefund: string;
   timestamp: string;
@@ -755,16 +541,7 @@ export type EvmLinkedAnchor = {
   address: string;
 };
 
-export type SubstrateLinkedAnchor = {
-  type: 'Substrate';
-  chainId: number;
-  pallet: number;
-  treeId: number;
-};
-export type LinkedAnchor =
-  | RawResourceId
-  | EvmLinkedAnchor
-  | SubstrateLinkedAnchor;
+export type LinkedAnchor = RawResourceId | EvmLinkedAnchor;
 
 export interface Substrate {
   [key: string]: NodeInfo;
@@ -780,8 +557,6 @@ export interface NodeInfo {
 export interface Pallet {
   pallet: PalletKind;
   eventsWatcher: EventsWatcher;
-  proposalSigningBackend?: ProposalSigningBackend;
-  linkedAnchors?: LinkedAnchor[];
 }
 
 export interface EnabledContracts {
@@ -800,109 +575,18 @@ type ContractKind =
   | 'GovernanceBravoDelegate'
   | 'VAnchor';
 
-type PalletKind =
-  | 'DKG'
-  | 'DKGProposals'
-  | 'DKGProposalHandler'
-  | 'AnchorBn254'
-  | 'VAnchorBn254'
-  | 'SignatureBridge';
+type PalletKind = 'DKG' | 'DKGProposals' | 'DKGProposalHandler';
 
 export type DKGProposalSigningBackend = {
   type: 'DKGNode';
   chainId: number;
 }; /** DKG Node name in the config */
+
 export type MockedProposalSigningBackend = {
   type: 'Mocked';
   privateKey: string;
 }; /** Signer private key */
+
 export type ProposalSigningBackend =
   | DKGProposalSigningBackend
   | MockedProposalSigningBackend;
-
-type PongMessage = {
-  kind: 'pong';
-};
-
-type NetworkMessage = {
-  kind: 'network';
-} & {
-  network:
-    | 'connecting'
-    | 'connected'
-    | { failed: { reason: string } }
-    | 'disconnected'
-    | 'unsupportedContract'
-    | 'unsupportedChain'
-    | 'invalidRelayerAddress';
-};
-
-type WithdrawMessage = {
-  kind: 'withdraw';
-} & {
-  withdraw:
-    | 'sent'
-    | { submitted: { txHash: string } }
-    | { finalized: { txHash: string } }
-    | 'valid'
-    | 'invalidMerkleRoots'
-    | 'droppedFromMemPool'
-    | { errored: { code: number; reason: string } };
-};
-
-type TxStatusMessage = {
-  kind: 'txStatus';
-  itemKey: string;
-  status: string;
-};
-
-type ErrorMessage = {
-  kind: 'error';
-} & { message: string };
-
-type UnimplementedMessage = {
-  kind: 'unimplemented';
-} & { message: string };
-
-type ParsedRelayerMessage =
-  | PongMessage
-  | NetworkMessage
-  | WithdrawMessage
-  | ErrorMessage
-  | UnimplementedMessage
-  | TxStatusMessage
-  | { kind: 'unknown' };
-
-function parseRelayTxMessage(o: any): ParsedRelayerMessage {
-  if (o.pong) {
-    return { kind: 'pong' };
-  } else if (o.network) {
-    return {
-      kind: 'network',
-      network: o.network,
-    };
-  } else if (o.txStatus) {
-    return {
-      kind: 'txStatus',
-      itemKey: o.txStatus.itemKey,
-      status: o.txStatus.status,
-    };
-  } else if (o.withdraw) {
-    return {
-      kind: 'withdraw',
-      withdraw: o.withdraw,
-    };
-  } else if (o.error) {
-    return {
-      kind: 'error',
-      message: o.error,
-    };
-  } else if (o.unimplemented) {
-    return {
-      kind: 'unimplemented',
-      message: o.unimplemented,
-    };
-  } else {
-    return { kind: 'unknown' };
-  }
-}

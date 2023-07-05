@@ -15,21 +15,21 @@
  *
  */
 import fs from 'fs';
+import path from 'path';
+import child from 'child_process';
 import { BigNumberish, ethers, Wallet } from 'ethers';
-import { Anchors, Utility, VBridge } from '@webb-tools/protocol-solidity';
 import {
   IVariableAnchorExtData,
   IVariableAnchorPublicInputs,
-} from '@webb-tools/interfaces/dist/vanchor';
-import {
-  DeployerConfig,
-  GovernorConfig,
-} from '@webb-tools/interfaces/dist/bridge';
+} from '@webb-tools/interfaces';
+import { VAnchor as VAnchorClass } from '@webb-tools/anchors';
+import { type VAnchor } from '@webb-tools/contracts';
+import { DeployerConfig, GovernorConfig } from '@webb-tools/interfaces';
 import { FungibleTokenWrapper, MintableToken } from '@webb-tools/tokens';
-import { fetchComponentsFromFilePaths } from '@webb-tools/utils';
-
-import path from 'path';
-import child from 'child_process';
+import {
+  fetchComponentsFromFilePaths,
+  getChainIdType,
+} from '@webb-tools/utils';
 import {
   ChainInfo,
   Contract,
@@ -43,7 +43,7 @@ import {
 import { ConvertToKebabCase } from './tsHacks';
 import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
-import { TokenConfig } from '@webb-tools/vbridge/dist/VBridge';
+import { TokenConfig, VBridge, VBridgeInput } from '@webb-tools/vbridge';
 import { LocalEvmChain } from '@webb-tools/evm-test-utils';
 
 export type GanacheAccounts = {
@@ -52,7 +52,7 @@ export type GanacheAccounts = {
 };
 
 export type ExportedConfigOptions = {
-  signatureVBridge?: VBridge.VBridge;
+  signatureVBridge?: VBridge<VAnchor>;
   proposalSigningBackend?: ProposalSigningBackend;
   withdrawConfig?: WithdrawConfig;
   relayerWallet?: Wallet;
@@ -96,7 +96,7 @@ type LocalChainOpts = {
 export class LocalChain {
   private localEvmChain: LocalEvmChain;
   public readonly endpoint: string;
-  private signatureVBridge: VBridge.VBridge | null = null;
+  private signatureVBridge: VBridge<VAnchor> | null = null;
   private constructor(
     private readonly opts: LocalChainOpts,
     localEvmChain: LocalEvmChain
@@ -121,7 +121,7 @@ export class LocalChain {
   }
 
   public get chainId(): number {
-    return Utility.getChainIdType(this.opts.chainId);
+    return getChainIdType(this.opts.chainId);
   }
 
   public get underlyingChainId(): number {
@@ -151,20 +151,20 @@ export class LocalChain {
     unwrappedToken: MintableToken,
     localWallet: ethers.Wallet,
     initialGovernor: ethers.Wallet
-  ): Promise<VBridge.VBridge> {
+  ): Promise<VBridge<VAnchor>> {
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
       .toString()
       .trim();
     const tokenConfigs = new Map<number, TokenConfig | undefined>();
     tokenConfigs.set(this.chainId, localToken);
-    const vBridgeInput: VBridge.VBridgeInput = {
+    const vBridgeInput: VBridgeInput = {
       vAnchorInputs: {
         asset: {
           [this.chainId]: [unwrappedToken.contract.address],
         },
       },
-      chainIDs: [this.chainId],
+      chainIds: [this.chainId],
       webbTokens: new Map<number, FungibleTokenWrapper | undefined>(),
       tokenConfigs: tokenConfigs,
     };
@@ -215,7 +215,7 @@ export class LocalChain {
       )
     );
 
-    const vBridge = await VBridge.VBridge.deployVariableAnchorBridge(
+    const vBridge = await VBridge.deployVariableAnchorBridge<VAnchor>(
       vBridgeInput,
       deployerConfig,
       deployerGovernors,
@@ -235,7 +235,7 @@ export class LocalChain {
     unwrappedToken1: MintableToken,
     unwrappedToken2: MintableToken,
     initialGovernors?: GovernorConfig
-  ): Promise<VBridge.VBridge> {
+  ): Promise<VBridge<VAnchor>> {
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
       .toString()
@@ -243,14 +243,14 @@ export class LocalChain {
     const tokenConfigs = new Map<number, TokenConfig | undefined>();
     tokenConfigs.set(this.chainId, wrappedToken1);
     tokenConfigs.set(otherChain.chainId, wrappedToken2);
-    const vBridgeInput: VBridge.VBridgeInput = {
+    const vBridgeInput: VBridgeInput = {
       vAnchorInputs: {
         asset: {
           [this.chainId]: [unwrappedToken1.contract.address],
           [otherChain.chainId]: [unwrappedToken2.contract.address],
         },
       },
-      chainIDs: [this.chainId, otherChain.chainId],
+      chainIds: [this.chainId, otherChain.chainId],
       tokenConfigs: tokenConfigs,
       webbTokens: new Map<number, FungibleTokenWrapper | undefined>(),
     };
@@ -303,7 +303,7 @@ export class LocalChain {
       )
     );
 
-    const vBridge = await VBridge.VBridge.deployVariableAnchorBridge(
+    const vBridge = await VBridge.deployVariableAnchorBridge<VAnchor>(
       vBridgeInput,
       deployerConfig,
       deployerGovernors,
@@ -354,7 +354,7 @@ export class LocalChain {
     unwrappedTokens: string[],
     deployerWallets: ethers.Wallet[],
     initialGovernors: GovernorConfig
-  ): Promise<VBridge.VBridge> {
+  ): Promise<VBridge<VAnchor>> {
     const gitRoot = child
       .execSync('git rev-parse --show-toplevel')
       .toString()
@@ -363,15 +363,15 @@ export class LocalChain {
     for (let i = 0; i < chains.length; i++) {
       tokenConfigs.set(chains[i]!.chainId, wrappedTokens[i]);
     }
-    const asset: VBridge.VBridgeInput['vAnchorInputs']['asset'] = {};
+    const asset: VBridgeInput['vAnchorInputs']['asset'] = {};
     for (let i = 0; i < chains.length; i++) {
       asset[chains[i]!.chainId] = [unwrappedTokens[i]!];
     }
-    const vBridgeInput: VBridge.VBridgeInput = {
+    const vBridgeInput: VBridgeInput = {
       vAnchorInputs: {
         asset,
       },
-      chainIDs: chains.map((chain) => chain.chainId),
+      chainIds: chains.map((chain) => chain.chainId),
       tokenConfigs: tokenConfigs,
       webbTokens: new Map<number, FungibleTokenWrapper | undefined>(),
     };
@@ -420,7 +420,7 @@ export class LocalChain {
       )
     );
 
-    const vBridge = await VBridge.VBridge.deployVariableAnchorBridge(
+    const vBridge = await VBridge.deployVariableAnchorBridge<VAnchor>(
       vBridgeInput,
       deployerConfig,
       initialGovernors,
@@ -596,13 +596,6 @@ export class LocalChain {
                     type: 'Evm',
                     address: anchor.address,
                   }
-                : anchor.type === 'Substrate'
-                ? {
-                    type: 'Substrate',
-                    'chain-id': anchor.chainId,
-                    'tree-id': anchor.treeId,
-                    pallet: anchor.pallet,
-                  }
                 : {
                     type: 'Raw',
                     'resource-id': anchor.resourceId,
@@ -619,6 +612,63 @@ export class LocalChain {
     const configString = JSON.stringify(fullConfigFile, null, 2);
     fs.writeFileSync(path, configString);
   }
+
+  public async getVAnchor(signer: ethers.Wallet): Promise<VAnchorClass> {
+    if (!this.signatureVBridge) {
+      throw new Error('Signature VBridge not initialized');
+    }
+    const gitRoot = child
+      .execSync('git rev-parse --show-toplevel')
+      .toString()
+      .trim();
+    const witnessCalculatorCjsPath_2 = path.join(
+      gitRoot,
+      'tests',
+      'solidity-fixtures/vanchor_2/2/witness_calculator.cjs'
+    );
+
+    const witnessCalculatorCjsPath_16 = path.join(
+      gitRoot,
+      'tests',
+      'solidity-fixtures/vanchor_16/2/witness_calculator.cjs'
+    );
+
+    const zkComponents_2 = await fetchComponentsFromFilePaths(
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_2/2/poseidon_vanchor_2_2.wasm'
+      ),
+      witnessCalculatorCjsPath_2,
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_2/2/circuit_final.zkey'
+      )
+    );
+
+    const zkComponents_16 = await fetchComponentsFromFilePaths(
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_16/2/poseidon_vanchor_16_2.wasm'
+      ),
+      witnessCalculatorCjsPath_16,
+      path.join(
+        gitRoot,
+        'tests',
+        'solidity-fixtures/vanchor_16/2/circuit_final.zkey'
+      )
+    );
+
+    const vanchorContract = this.signatureVBridge.getVAnchor(this.chainId);
+    return VAnchorClass.connect(
+      vanchorContract.getAddress(),
+      zkComponents_2,
+      zkComponents_16,
+      signer
+    );
+  }
 }
 
 export type FullChainInfo = ChainInfo & {
@@ -634,8 +684,8 @@ export async function setupVanchorEvmTx(
   srcChain: LocalChain,
   destChain: LocalChain,
   randomKeypair: Keypair,
-  srcVanchor: Anchors.VAnchor,
-  destVanchor: Anchors.VAnchor,
+  srcVanchor: VAnchorClass,
+  destVanchor: VAnchorClass,
   relayerWallet2: Wallet,
   tokenAddress: string,
   fee: BigNumberish,

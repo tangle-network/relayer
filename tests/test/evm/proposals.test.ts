@@ -19,7 +19,6 @@
 import '@webb-tools/tangle-substrate-types';
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
-import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { u8aToHex } from '@polkadot/util';
 import { ethers } from 'ethers';
 import temp from 'temp';
@@ -47,7 +46,9 @@ import { hexToU8a } from '@polkadot/util';
 import { ChainType } from '@webb-tools/sdk-core';
 import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
-import { MintableToken } from '@webb-tools/tokens';
+import { FungibleTokenWrapper, MintableToken } from '@webb-tools/tokens';
+import { type VAnchor } from '@webb-tools/contracts';
+import { VBridge } from '@webb-tools/vbridge';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -56,7 +57,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
-  let signatureBridge: VBridge.VBridge;
+  let signatureBridge: VBridge<VAnchor>;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
   let relayerWallet1: ethers.Wallet;
@@ -249,10 +250,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const tokenAddress = signatureBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      wallet1
-    );
+    const token = await MintableToken.tokenFromAddress(tokenAddress, wallet1);
     let tx = await token.approveSpending(
       anchor.contract.address,
       ethers.utils.parseEther('1000')
@@ -266,10 +264,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
       localChain2.chainId
     )!;
-    const token2 = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress2,
-      wallet2
-    );
+    const token2 = await MintableToken.tokenFromAddress(tokenAddress2, wallet2);
 
     tx = await token2.approveSpending(
       anchor2.contract.address,
@@ -281,7 +276,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     const resourceId1 = await anchor.createResourceId();
     const resourceId2 = await anchor2.createResourceId();
     const governedTokenAddress = anchor.token!;
-    const governedToken = Tokens.FungibleTokenWrapper.connect(
+    const governedToken = FungibleTokenWrapper.connect(
       governedTokenAddress,
       wallet1
     );
@@ -312,13 +307,13 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     //Create an ERC20 Token
-    const testToken = await Tokens.MintableToken.createToken(
+    const testToken = await MintableToken.createToken(
       'testToken',
       'TEST',
       wallet1
     );
     const governedTokenAddress = anchor.token!;
-    const governedToken = Tokens.FungibleTokenWrapper.connect(
+    const governedToken = FungibleTokenWrapper.connect(
       governedTokenAddress,
       wallet1
     );
@@ -381,7 +376,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // get the anchor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
-    const governedToken = Tokens.FungibleTokenWrapper.connect(
+    const governedToken = FungibleTokenWrapper.connect(
       governedTokenAddress,
       wallet1
     );
@@ -451,7 +446,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     // get the anhor on localchain1
     const anchor = signatureBridge.getVAnchor(localChain1.chainId);
     const governedTokenAddress = anchor.token!;
-    const governedToken = Tokens.FungibleTokenWrapper.connect(
+    const governedToken = FungibleTokenWrapper.connect(
       governedTokenAddress,
       wallet1
     );

@@ -16,7 +16,6 @@
  */
 
 import { expect } from 'chai';
-import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { CircomUtxo } from '@webb-tools/sdk-core';
 import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
@@ -25,12 +24,14 @@ import { EnabledContracts, WebbRelayer } from '../../lib/webbRelayer.js';
 import getPort, { portNumbers } from 'get-port';
 import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { MintableToken } from '@webb-tools/tokens';
+import { VBridge } from '@webb-tools/vbridge';
+import { type VAnchor } from '@webb-tools/contracts';
 
 describe('VAnchor Governance Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
-  let signatureVBridge: VBridge.VBridge;
+  let signatureVBridge: VBridge<VAnchor>;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
 
@@ -139,10 +140,7 @@ describe('VAnchor Governance Relayer', function () {
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      wallet1
-    );
+    const token = await MintableToken.tokenFromAddress(tokenAddress, wallet1);
     let tx = await token.approveSpending(
       vanchor.contract.address,
       ethers.utils.parseEther('1000')
@@ -156,10 +154,7 @@ describe('VAnchor Governance Relayer', function () {
     const tokenAddress2 = signatureVBridge.getWebbTokenAddress(
       localChain2.chainId
     )!;
-    const token2 = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress2,
-      wallet2
-    );
+    const token2 = await MintableToken.tokenFromAddress(tokenAddress2, wallet2);
 
     tx = await token2.approveSpending(
       vanchor2.contract.address,
@@ -198,17 +193,12 @@ describe('VAnchor Governance Relayer', function () {
 
   it('should handle AnchorUpdateProposal when a deposit happens', async () => {
     // we will use chain1 as an example here.
-    const vanchor1 = signatureVBridge.getVAnchor(localChain1.chainId);
-    const vanchor2 = signatureVBridge.getVAnchor(localChain2.chainId);
-    await vanchor1.setSigner(wallet1);
-    await vanchor2.setSigner(wallet2);
+    const vanchor1 = await localChain1.getVAnchor(wallet1);
+    const vanchor2 = await localChain2.getVAnchor(wallet2);
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      wallet1
-    );
+    const token = await MintableToken.tokenFromAddress(tokenAddress, wallet1);
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     const webbBalance = await token.getBalance(wallet1.address);
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to

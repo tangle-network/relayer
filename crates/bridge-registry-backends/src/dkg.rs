@@ -1,14 +1,15 @@
-use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
+use webb::substrate::subxt::OnlineClient;
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::tangle_runtime::api::runtime_types::pallet_bridge_registry::types::BridgeMetadata;
 use webb_proposals::ResourceId;
+use webb_relayer_utils::TangleRuntimeConfig;
 
 pub struct DkgBridgeRegistryBackend {
-    client: OnlineClient<PolkadotConfig>,
+    client: OnlineClient<TangleRuntimeConfig>,
 }
 
 impl DkgBridgeRegistryBackend {
-    pub fn new(client: OnlineClient<PolkadotConfig>) -> Self {
+    pub fn new(client: OnlineClient<TangleRuntimeConfig>) -> Self {
         Self { client }
     }
 }

@@ -4,9 +4,7 @@ use axum::Json;
 use ethereum_types::Address;
 use serde::Serialize;
 use std::sync::Arc;
-use webb_proposals::{
-    ResourceId, SubstrateTargetSystem, TargetSystem, TypedChainId,
-};
+use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::metric::Metrics;
 use webb_relayer_utils::HandlerError;
@@ -46,37 +44,6 @@ pub async fn handle_evm_metric_info(
         TargetSystem::new_contract_address(contract.to_fixed_bytes());
     let typed_chain_id = TypedChainId::Evm(chain_id);
     let resource_id = ResourceId::new(target_system, typed_chain_id);
-    // fetch metric for given resource_id
-    let account_balance = metrics
-        .account_balance_entry(typed_chain_id)
-        .get()
-        .to_string();
-    let resource_metric = metrics.resource_metric_entry(resource_id);
-
-    Json(ResourceMetricResponse {
-        total_gas_spent: resource_metric.total_gas_spent.get().to_string(),
-        total_fee_earned: resource_metric.total_fee_earned.get().to_string(),
-        account_balance,
-    })
-}
-
-/// Handles relayer metric requests for substrate based resource
-///
-/// Returns a Result with the `ResourceMetricResponse` on success
-pub async fn handle_substrate_metric_info(
-    State(ctx): State<Arc<RelayerContext>>,
-    Path((chain_id, tree_id, pallet_id)): Path<(u32, u32, u8)>,
-) -> Json<ResourceMetricResponse> {
-    let mut metrics = ctx.metrics.lock().await;
-    // create resource_id for substrate target system
-    let target = SubstrateTargetSystem::builder()
-        .pallet_index(pallet_id)
-        .tree_id(tree_id)
-        .build();
-    let target_system = TargetSystem::Substrate(target);
-    let typed_chain_id = TypedChainId::Substrate(chain_id);
-    let resource_id = ResourceId::new(target_system, typed_chain_id);
-
     // fetch metric for given resource_id
     let account_balance = metrics
         .account_balance_entry(typed_chain_id)

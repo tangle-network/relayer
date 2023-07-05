@@ -21,17 +21,17 @@ mod public_key_changed_handler;
 #[doc(hidden)]
 pub use public_key_changed_handler::*;
 use webb::substrate::subxt::events::StaticEvent;
-use webb::substrate::subxt::PolkadotConfig;
 use webb::substrate::tangle_runtime::api::dkg::events::PublicKeySignatureChanged;
 use webb::substrate::tangle_runtime::api::dkg_proposal_handler::events::ProposalBatchSigned;
 use webb_event_watcher_traits::SubstrateEventWatcher;
+use webb_relayer_utils::TangleRuntimeConfig;
 
 /// The DKGMetadataWatcher watches for the events from Dkg Pallet.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct DKGMetadataWatcher;
 
 #[async_trait::async_trait]
-impl SubstrateEventWatcher<PolkadotConfig> for DKGMetadataWatcher {
+impl SubstrateEventWatcher<TangleRuntimeConfig> for DKGMetadataWatcher {
     const TAG: &'static str = "DKG Pallet Event Watcher";
 
     const PALLET_NAME: &'static str = PublicKeySignatureChanged::PALLET;
@@ -44,7 +44,7 @@ impl SubstrateEventWatcher<PolkadotConfig> for DKGMetadataWatcher {
 pub struct DKGProposalHandlerWatcher;
 
 #[async_trait::async_trait]
-impl SubstrateEventWatcher<PolkadotConfig> for DKGProposalHandlerWatcher {
+impl SubstrateEventWatcher<TangleRuntimeConfig> for DKGProposalHandlerWatcher {
     const TAG: &'static str = "DKG Proposal Handler Pallet Event Watcher";
 
     const PALLET_NAME: &'static str = ProposalBatchSigned::PALLET;

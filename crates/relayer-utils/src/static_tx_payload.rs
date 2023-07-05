@@ -1,21 +1,23 @@
 use core::fmt;
 
-use webb::substrate::{
-    scale::Encode,
-    subxt::{
-        self,
-        error::MetadataError,
-        ext::scale_encode::EncodeAsFields,
-        tx::{Payload, TxPayload},
-    },
+use webb::substrate::subxt::{
+    self,
+    ext::scale_encode::EncodeAsFields,
+    tx::{Payload, TxPayload},
 };
 
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct TypeErasedStaticTxPayload {
-    pub pallet_name: String,
-    pub call_name: String,
+    pallet_name: String,
+    call_name: String,
     #[serde(with = "serde_bytes")]
-    pub call_data: Vec<u8>,
+    tx_data: Vec<u8>,
+}
+
+impl TypeErasedStaticTxPayload {
+    pub fn tx_data(&self) -> &[u8] {
+        self.tx_data.as_slice()
+    }
 }
 
 impl std::fmt::Debug for TypeErasedStaticTxPayload {
@@ -23,7 +25,7 @@ impl std::fmt::Debug for TypeErasedStaticTxPayload {
         f.debug_struct("TypeErasedStaticTxPayload")
             .field("pallet_name", &self.pallet_name)
             .field("call_name", &self.call_name)
-            .field("call_data", &hex::encode(&self.call_data))
+            .field("tx_data", &hex::encode(&self.tx_data))
             .finish()
     }
 }
@@ -35,24 +37,28 @@ impl fmt::Display for TypeErasedStaticTxPayload {
             "{}.{}({})",
             self.pallet_name,
             self.call_name,
-            hex::encode(&self.call_data)
+            hex::encode(&self.tx_data)
         )
     }
 }
 
-impl<CallData: EncodeAsFields + Encode> TryFrom<Payload<CallData>>
+impl<'a, CallData: EncodeAsFields>
+    TryFrom<(&'a subxt::Metadata, Payload<CallData>)>
     for TypeErasedStaticTxPayload
 {
     type Error = super::Error;
-    fn try_from(payload: Payload<CallData>) -> Result<Self, Self::Error> {
+    fn try_from(
+        (metadata, payload): (&'a subxt::Metadata, Payload<CallData>),
+    ) -> Result<Self, Self::Error> {
         let details = payload
             .validation_details()
             .ok_or_else(|| Self::Error::MissingValidationDetails)?;
-        let call_data = payload.call_data().encode();
+        let mut tx_data = Vec::new();
+        payload.encode_call_data_to(metadata, &mut tx_data)?;
         Ok(Self {
             pallet_name: details.pallet_name.to_owned(),
             call_name: details.call_name.to_owned(),
-            call_data,
+            tx_data,
         })
     }
 }
@@ -60,25 +66,10 @@ impl<CallData: EncodeAsFields + Encode> TryFrom<Payload<CallData>>
 impl TxPayload for TypeErasedStaticTxPayload {
     fn encode_call_data_to(
         &self,
-        metadata: &subxt::Metadata,
+        _metadata: &subxt::Metadata,
         out: &mut Vec<u8>,
     ) -> Result<(), webb::substrate::subxt::Error> {
-        let pallet = metadata.pallet_by_name_err(&self.pallet_name)?;
-        let call =
-            pallet
-                .call_variant_by_name(&self.call_name)
-                .ok_or_else(|| {
-                    MetadataError::CallNameNotFound(
-                        (*self.call_name).to_owned(),
-                    )
-                })?;
-
-        let pallet_index = pallet.index();
-        let call_index = call.index;
-
-        pallet_index.encode_to(out);
-        call_index.encode_to(out);
-        self.call_data.encode_to(out);
+        *out = self.tx_data.clone();
         Ok(())
     }
 }

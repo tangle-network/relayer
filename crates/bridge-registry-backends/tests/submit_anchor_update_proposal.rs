@@ -7,7 +7,7 @@ use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header:
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce as DkgNonce;
 use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 use webb::substrate::subxt::tx::{PairSigner, TxProgress, TxStatus};
-use webb::substrate::subxt::{OnlineClient, PolkadotConfig};
+use webb::substrate::subxt::OnlineClient;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::Proposal;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::ProposalKind;
 use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
@@ -15,6 +15,7 @@ use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_proposals::evm::AnchorUpdateProposal;
 use webb_proposals::ResourceId;
 use webb_proposals::{FunctionSignature, Nonce, ProposalHeader};
+use webb_relayer_utils::TangleRuntimeConfig;
 
 /// Rust reimplementation of DKG submit proposal test
 ///
@@ -22,7 +23,7 @@ use webb_proposals::{FunctionSignature, Nonce, ProposalHeader};
 #[tokio::test]
 #[ignore = "requires running dkg-substrate standalone node"]
 async fn submit_anchor_update_proposal() {
-    let api = OnlineClient::<PolkadotConfig>::new().await.unwrap();
+    let api = OnlineClient::<TangleRuntimeConfig>::new().await.unwrap();
     let bridge_registry = DkgBridgeRegistryBackend::new(api.clone());
 
     // retrieve resource ids from bridge registry
@@ -40,7 +41,7 @@ async fn submit_anchor_update_proposal() {
     println!("Source Resource ID: {}", hex::encode(src_resource_id.0));
 
     let tx_api = RuntimeApi::tx().dkg_proposals();
-    let sudo_account: PairSigner<PolkadotConfig, Pair> =
+    let sudo_account: PairSigner<TangleRuntimeConfig, Pair> =
         PairSigner::new(Pair::from_string("//Alice", None).unwrap());
     let account_nonce = api
         .rpc()
@@ -87,7 +88,10 @@ async fn submit_anchor_update_proposal() {
 }
 
 async fn watch_events(
-    progress: &mut TxProgress<PolkadotConfig, OnlineClient<PolkadotConfig>>,
+    progress: &mut TxProgress<
+        TangleRuntimeConfig,
+        OnlineClient<TangleRuntimeConfig>,
+    >,
 ) {
     while let Some(event) = progress.next().await {
         let e = match event {

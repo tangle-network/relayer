@@ -21,12 +21,12 @@ mod tests {
     use std::{collections::HashMap, sync::Arc};
 
     use sp_core::{sr25519::Pair as Sr25519Pair, Pair};
-    use webb::substrate::subxt::PolkadotConfig;
     use webb::substrate::tangle_runtime::api as RuntimeApi;
     use webb_relayer_store::queue::{QueueItem, QueueStore};
     use webb_relayer_store::sled::SledQueueKey;
     use webb_relayer_types::suri::Suri;
     use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
+    use webb_relayer_utils::TangleRuntimeConfig;
 
     use super::*;
 
@@ -83,15 +83,19 @@ mod tests {
         let store = webb_relayer_store::SledStore::temporary()?;
         let context =
             webb_relayer_context::RelayerContext::new(config, store.clone())?;
+        let client = context
+            .substrate_provider::<TangleRuntimeConfig, _>(chain_id)
+            .await?;
         let store = Arc::new(store);
         let tx_queue = SubstrateTxQueue::new(context, chain_id, store.clone());
-        let _handle = tokio::spawn(tx_queue.run::<PolkadotConfig>());
+        let _handle = tokio::spawn(tx_queue.run::<TangleRuntimeConfig>());
         let tx_count = 5;
         let tx_api = RuntimeApi::tx().system();
+        let meatadata = client.metadata();
         for i in 0..tx_count {
             let tx = tx_api
                 .remark_with_event(format!("tx {}", i).as_bytes().to_vec());
-            let tx = TypeErasedStaticTxPayload::try_from(tx)?;
+            let tx = TypeErasedStaticTxPayload::try_from((&meatadata, tx))?;
             let tx_key = SledQueueKey::from_substrate_chain_id(chain_id);
             let item = QueueItem::new(tx);
             QueueStore::enqueue_item(&store, tx_key, item)?;

@@ -17,6 +17,7 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use multi_provider::MultiProvider;
+use webb::substrate::subxt::PolkadotConfig;
 use webb::{evm::ethers, substrate::subxt};
 use webb_proposals::ResourceId;
 
@@ -36,6 +37,9 @@ pub mod static_tx_payload;
 type RetryClientProvider = ethers::providers::Provider<
     ethers::providers::RetryClient<MultiProvider<ethers::providers::Http>>,
 >;
+/// Type alias for runtime config of Tangle client.
+pub type TangleRuntimeConfig = PolkadotConfig;
+
 /// An enum of all possible errors that could be encountered during the execution of the Webb
 /// Relayer.
 #[derive(Debug, thiserror::Error)]

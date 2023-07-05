@@ -26,7 +26,7 @@ use webb::evm::ethers::providers::Middleware;
 use webb::evm::ethers::types;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::queue::{
-    QueueItem, QueueItemState, QueueStore, TransactionQueueItemKey,
+    QueueItemState, QueueStore, TransactionQueueItemKey,
 };
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::clickable_link::ClickableLink;
@@ -117,346 +117,347 @@ where
                     .peek_item(SledQueueKey::from_evm_chain_id(chain_id))?;
                 let maybe_explorer = &chain_config.explorer;
                 let mut tx_hash: H256;
-                if let Some(item) = maybe_item {
-                    let mut raw_tx = item.clone().inner();
-                    raw_tx.set_chain_id(U64::from(chain_id));
-                    let my_tx_hash = raw_tx.sighash();
-                    tx_hash = my_tx_hash;
+                let Some(item) = maybe_item else {
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    continue;
+                };
+                let mut raw_tx = item.clone().inner();
+                raw_tx.set_chain_id(U64::from(chain_id));
+                let my_tx_hash = raw_tx.sighash();
+                tx_hash = my_tx_hash;
 
-                    let tx_item_key = item.clone().inner().item_key();
+                let tx_item_key = item.clone().inner().item_key();
 
-                    // Remove tx item from queue if expired.
-                    if item.is_expired() {
-                        tracing::trace!(
-                            ?tx_hash,
-                            "Tx is expired, removing it from queue"
-                        );
-                        store.remove_item(
-                            SledQueueKey::from_evm_with_custom_key(
-                                chain_id,
-                                tx_item_key,
-                            ),
-                        )?;
-                        continue;
-                    }
-
-                    // Process transactions only when in pending state.
-                    if item.state() != QueueItemState::Pending {
-                        continue;
-                    }
-                    tracing::info!(?tx_hash, tx = ?raw_tx, "Found tx in queue");
-                    // update transaction status as Processing.
-                    store.update_item(
+                // Remove tx item from queue if expired.
+                if item.is_expired() {
+                    tracing::trace!(
+                        ?tx_hash,
+                        "Tx is expired, removing it from queue"
+                    );
+                    store.remove_item(
                         SledQueueKey::from_evm_with_custom_key(
                             chain_id,
                             tx_item_key,
                         ),
-                        |item: &mut QueueItem<TypedTransaction>| {
-                            let state = QueueItemState::Processing {
-                                step: "Item picked, processing".to_string(),
-                                progress: Some(0.0),
-                            };
-                            item.set_state(state);
-                            Ok(())
-                        },
                     )?;
-                    // dry run test
-                    let dry_run_outcome =
-                        client.call(&raw_tx.clone(), None).await;
-                    match dry_run_outcome {
-                        Ok(_) => {
-                            tracing::event!(
-                                target: webb_relayer_utils::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
-                                ty = "EVM",
-                                chain_id = %chain_id,
-                                dry_run = "passed",
-                                %tx_hash,
-                            );
-                            // update transaction status as Processing and set progress.
-                            store.update_item(
-                                SledQueueKey::from_evm_with_custom_key(
-                                    chain_id,
-                                    tx_item_key,
-                                ),
-                                |item: &mut QueueItem<TypedTransaction>| {
-                                    let state = QueueItemState::Processing {
-                                        step: "Dry run passed".to_string(),
-                                        progress: Some(0.5),
-                                    };
-                                    item.set_state(state);
-                                    Ok(())
-                                },
-                            )?;
-                        }
-                        Err(err) => {
-                            tracing::event!(
-                                target: webb_relayer_utils::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
-                                ty = "EVM",
-                                chain_id = %chain_id,
-                                errored = true,
-                                error = %err,
-                                dry_run = "failed",
-                                %tx_hash,
-                            );
-                            // update transaction status as Failed and re insert into queue.
-                            store.shift_item_to_end(
-                                SledQueueKey::from_evm_with_custom_key(
-                                    chain_id,
-                                    tx_item_key,
-                                ),
-                                |item: &mut QueueItem<TypedTransaction>| {
-                                    let state = QueueItemState::Failed {
-                                        reason: err.to_string(),
-                                    };
-                                    item.set_state(state);
-                                    Ok(())
-                                },
-                            )?;
-
-                            continue; // keep going.
-                        }
-                    }
-
-                    let pending_tx =
-                        client.send_transaction(raw_tx.clone(), None);
-                    let tx = match pending_tx.await {
-                        Ok(pending) => {
-                            tx_hash = *pending;
-                            tracing::event!(
-                                target: webb_relayer_utils::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
-                                ty = "EVM",
-                                chain_id = %chain_id,
-                                pending = true,
-                                %tx_hash,
-                            );
-
-                            let tx_hash_string = format!("0x{tx_hash:x}");
-                            if let Some(mut url) = maybe_explorer.clone() {
-                                url.set_path(&format!("tx/{tx_hash_string}"));
-                                let clickable_link = ClickableLink::new(
-                                    &tx_hash_string,
-                                    url.as_str(),
-                                );
-                                tracing::info!(
-                                    "Tx {} is submitted and pending!",
-                                    clickable_link,
-                                );
-                            } else {
-                                tracing::info!(
-                                    "Tx {} is submitted and pending!",
-                                    tx_hash_string,
-                                );
-                            }
-                            // update transaction progress.
-                            store.update_item(
-                                SledQueueKey::from_evm_with_custom_key(
-                                    chain_id,
-                                    tx_item_key,
-                                ),
-                                |item: &mut QueueItem<TypedTransaction>| {
-                                    let state = QueueItemState::Processing {
-                                        step:
-                                            "Transaction submitted on chain.."
-                                                .to_string(),
-                                        progress: Some(0.8),
-                                    };
-                                    item.set_state(state);
-                                    Ok(())
-                                },
-                            )?;
-                            pending.interval(Duration::from_millis(1000)).await
-                        }
-                        Err(e) => {
-                            let tx_hash_string = format!("0x{tx_hash:x}");
-                            if let Some(mut url) = maybe_explorer.clone() {
-                                url.set_path(&format!("tx/{tx_hash_string}"));
-                                let clickable_link = ClickableLink::new(
-                                    &tx_hash_string,
-                                    url.as_str(),
-                                );
-                                tracing::error!(
-                                    "Error while sending tx {}, {}",
-                                    clickable_link,
-                                    e,
-                                );
-                            } else {
-                                tracing::error!(
-                                    "Error while sending tx {}, {}",
-                                    tx_hash_string,
-                                    e
-                                );
-                            }
-                            tracing::event!(
-                                target: webb_relayer_utils::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
-                                ty = "EVM",
-                                chain_id = %chain_id,
-                                errored = true,
-                                %tx_hash,
-                                error = %e,
-                            );
-
-                            // update transaction status as Failed
-                            store.shift_item_to_end(
-                                SledQueueKey::from_evm_with_custom_key(
-                                    chain_id,
-                                    tx_item_key,
-                                ),
-                                |item: &mut QueueItem<TypedTransaction>| {
-                                    let state = QueueItemState::Failed {
-                                        reason: e.to_string(),
-                                    };
-                                    item.set_state(state);
-                                    Ok(())
-                                },
-                            )?;
-
-                            continue; // keep going.
-                        }
-                    };
-                    match tx {
-                        Ok(Some(receipt)) => {
-                            let tx_hash_string =
-                                format!("0x{:x}", receipt.transaction_hash);
-                            match receipt.status {
-                                Some(v) if v.is_zero() => {
-                                    tracing::info!(
-                                        "Tx {} Failed",
-                                        tx_hash_string,
-                                    );
-                                    continue;
-                                }
-                                _ => {}
-                            }
-
-                            if let Some(mut url) = maybe_explorer.clone() {
-                                url.set_path(&format!("tx/{tx_hash_string}"));
-                                let clickable_link = ClickableLink::new(
-                                    &tx_hash_string,
-                                    url.as_str(),
-                                );
-                                tracing::info!(
-                                    "Tx {} Finalized",
-                                    clickable_link
-                                );
-                            } else {
-                                tracing::info!(
-                                    "Tx {} Finalized",
-                                    tx_hash_string,
-                                );
-                            }
-                            let gas_price =
-                                receipt.gas_used.unwrap_or_default();
-                            // metrics for  transaction processed by evm tx queue
-                            let metrics = metrics_clone.lock().await;
-                            metrics.proposals_processed_tx_queue.inc();
-                            metrics.proposals_processed_evm_tx_queue.inc();
-                            // gas spent metric
-                            metrics.gas_spent.inc_by(gas_price.as_u64() as f64);
-                            tracing::event!(
-                                target: webb_relayer_utils::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
-                                ty = "EVM",
-                                chain_id = %chain_id,
-                                finalized = true,
-                                %tx_hash,
-                            );
-
-                            // update transaction progress as processed
-                            store.shift_item_to_end(
-                                SledQueueKey::from_evm_with_custom_key(
-                                    chain_id,
-                                    tx_item_key,
-                                ),
-                                |item: &mut QueueItem<TypedTransaction>| {
-                                    let state = QueueItemState::Processed {
-                                        tx_hash: receipt.transaction_hash,
-                                    };
-                                    item.set_state(state);
-                                    Ok(())
-                                },
-                            )?;
-                        }
-                        Ok(None) => {
-                            // this should never happen
-                            // as we already know that is a bug in ethers
-                            // about timeing, so we already wait a bit
-                            // and increased the time interval for checking for
-                            // transaction status.
-                            let tx_hash_string = format!("0x{tx_hash:x}");
-                            tracing::warn!(
-                                "Tx {} Dropped from Mempool!!",
-                                tx_hash_string
-                            );
-                            // Re insert transaction in the queue.
-                            store.shift_item_to_end(
-                                SledQueueKey::from_evm_with_custom_key(
-                                    chain_id,
-                                    tx_item_key,
-                                ),
-                                |item: &mut QueueItem<TypedTransaction>| {
-                                    let state = QueueItemState::Pending;
-                                    item.set_state(state);
-                                    Ok(())
-                                },
-                            )?;
-                        }
-                        Err(e) => {
-                            let reason = e.to_string();
-                            let tx_hash_string = format!("0x{tx_hash:x}");
-                            if let Some(mut url) = maybe_explorer.clone() {
-                                url.set_path(&format!("tx/{tx_hash_string}"));
-                                let clickable_link = ClickableLink::new(
-                                    &tx_hash_string,
-                                    url.as_str(),
-                                );
-                                tracing::error!(
-                                    "Tx {} Errored: {}",
-                                    clickable_link,
-                                    reason,
-                                );
-                            } else {
-                                tracing::error!(
-                                    "Tx {} Errored: {}",
-                                    tx_hash_string,
-                                    reason,
-                                );
-                            }
-                            tracing::event!(
-                                target: webb_relayer_utils::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
-                                ty = "EVM",
-                                chain_id = %chain_id,
-                                errored = true,
-                                %tx_hash,
-                                error = %e,
-                            );
-                            // Update transaction status and re insert in the queue.
-                            store.shift_item_to_end(
-                                SledQueueKey::from_evm_with_custom_key(
-                                    chain_id,
-                                    tx_item_key,
-                                ),
-                                |item: &mut QueueItem<TypedTransaction>| {
-                                    let state = QueueItemState::Failed {
-                                        reason: e.to_string(),
-                                    };
-                                    item.set_state(state);
-                                    Ok(())
-                                },
-                            )?;
-                        }
-                    };
+                    continue;
                 }
+
+                // Process transactions only when in pending state.
+                if item.state() != QueueItemState::Pending {
+                    // Shift it back to the end of the queue
+                    // so that we can process other items.
+                    store.shift_item_to_end(
+                        SledQueueKey::from_evm_with_custom_key(
+                            chain_id,
+                            tx_item_key,
+                        ),
+                        // Do not update the state.
+                        |_| Ok(()),
+                    )?;
+                    tokio::time::sleep(Duration::from_millis(100)).await;
+                    continue;
+                }
+                tracing::info!(?tx_hash, tx = ?raw_tx, "Found tx in queue");
+                // update transaction status as Processing.
+                store.update_item(
+                    SledQueueKey::from_evm_with_custom_key(
+                        chain_id,
+                        tx_item_key,
+                    ),
+                    |item| {
+                        let state = QueueItemState::Processing {
+                            step: "Item picked, processing".to_string(),
+                            progress: Some(0.0),
+                        };
+                        item.set_state(state);
+                        Ok(())
+                    },
+                )?;
+                // dry run test
+                let dry_run_outcome = client.call(&raw_tx.clone(), None).await;
+                match dry_run_outcome {
+                    Ok(_) => {
+                        tracing::event!(
+                            target: webb_relayer_utils::probe::TARGET,
+                            tracing::Level::DEBUG,
+                            kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                            ty = "EVM",
+                            chain_id = %chain_id,
+                            dry_run = "passed",
+                            %tx_hash,
+                        );
+                        // update transaction status as Processing and set progress.
+                        store.update_item(
+                            SledQueueKey::from_evm_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                            |item| {
+                                let state = QueueItemState::Processing {
+                                    step: "Dry run passed".to_string(),
+                                    progress: Some(0.5),
+                                };
+                                item.set_state(state);
+                                Ok(())
+                            },
+                        )?;
+                    }
+                    Err(err) => {
+                        tracing::event!(
+                            target: webb_relayer_utils::probe::TARGET,
+                            tracing::Level::DEBUG,
+                            kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                            ty = "EVM",
+                            chain_id = %chain_id,
+                            errored = true,
+                            error = %err,
+                            dry_run = "failed",
+                            %tx_hash,
+                        );
+                        // update transaction status as Failed and re insert into queue.
+                        store.shift_item_to_end(
+                            SledQueueKey::from_evm_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                            |item| {
+                                let state = QueueItemState::Failed {
+                                    reason: err.to_string(),
+                                };
+                                item.set_state(state);
+                                Ok(())
+                            },
+                        )?;
+                        continue; // keep going.
+                    }
+                }
+
+                let pending_tx = client.send_transaction(raw_tx.clone(), None);
+                let tx = match pending_tx.await {
+                    Ok(pending) => {
+                        tx_hash = *pending;
+                        tracing::event!(
+                            target: webb_relayer_utils::probe::TARGET,
+                            tracing::Level::DEBUG,
+                            kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                            ty = "EVM",
+                            chain_id = %chain_id,
+                            pending = true,
+                            %tx_hash,
+                        );
+
+                        let tx_hash_string = format!("0x{tx_hash:x}");
+                        if let Some(mut url) = maybe_explorer.clone() {
+                            url.set_path(&format!("tx/{tx_hash_string}"));
+                            let clickable_link = ClickableLink::new(
+                                &tx_hash_string,
+                                url.as_str(),
+                            );
+                            tracing::info!(
+                                "Tx {} is submitted and pending!",
+                                clickable_link,
+                            );
+                        } else {
+                            tracing::info!(
+                                "Tx {} is submitted and pending!",
+                                tx_hash_string,
+                            );
+                        }
+                        // update transaction progress.
+                        store.update_item(
+                            SledQueueKey::from_evm_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                            |item| {
+                                let state = QueueItemState::Processing {
+                                    step: "Transaction submitted on chain.."
+                                        .to_string(),
+                                    progress: Some(0.8),
+                                };
+                                item.set_state(state);
+                                Ok(())
+                            },
+                        )?;
+                        pending.interval(Duration::from_millis(1000)).await
+                    }
+                    Err(e) => {
+                        let tx_hash_string = format!("0x{tx_hash:x}");
+                        if let Some(mut url) = maybe_explorer.clone() {
+                            url.set_path(&format!("tx/{tx_hash_string}"));
+                            let clickable_link = ClickableLink::new(
+                                &tx_hash_string,
+                                url.as_str(),
+                            );
+                            tracing::error!(
+                                "Error while sending tx {}, {}",
+                                clickable_link,
+                                e,
+                            );
+                        } else {
+                            tracing::error!(
+                                "Error while sending tx {}, {}",
+                                tx_hash_string,
+                                e
+                            );
+                        }
+                        tracing::event!(
+                            target: webb_relayer_utils::probe::TARGET,
+                            tracing::Level::DEBUG,
+                            kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                            ty = "EVM",
+                            chain_id = %chain_id,
+                            errored = true,
+                            %tx_hash,
+                            error = %e,
+                        );
+
+                        // update transaction status as Failed
+                        store.shift_item_to_end(
+                            SledQueueKey::from_evm_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                            |item| {
+                                let state = QueueItemState::Failed {
+                                    reason: e.to_string(),
+                                };
+                                item.set_state(state);
+                                Ok(())
+                            },
+                        )?;
+
+                        continue; // keep going.
+                    }
+                };
+
+                match tx {
+                    Ok(Some(receipt)) => {
+                        let tx_hash_string =
+                            format!("0x{:x}", receipt.transaction_hash);
+                        match receipt.status {
+                            Some(v) if v.is_zero() => {
+                                tracing::info!("Tx {} Failed", tx_hash_string);
+                                continue;
+                            }
+                            _ => {}
+                        }
+
+                        if let Some(mut url) = maybe_explorer.clone() {
+                            url.set_path(&format!("tx/{tx_hash_string}"));
+                            let clickable_link = ClickableLink::new(
+                                &tx_hash_string,
+                                url.as_str(),
+                            );
+                            tracing::info!("Tx {} Finalized", clickable_link);
+                        } else {
+                            tracing::info!("Tx {} Finalized", tx_hash_string,);
+                        }
+                        let gas_price = receipt.gas_used.unwrap_or_default();
+                        // metrics for  transaction processed by evm tx queue
+                        let metrics = metrics_clone.lock().await;
+                        metrics.proposals_processed_tx_queue.inc();
+                        metrics.proposals_processed_evm_tx_queue.inc();
+                        // gas spent metric
+                        metrics.gas_spent.inc_by(gas_price.as_u64() as f64);
+                        tracing::event!(
+                            target: webb_relayer_utils::probe::TARGET,
+                            tracing::Level::DEBUG,
+                            kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                            ty = "EVM",
+                            chain_id = %chain_id,
+                            finalized = true,
+                            %tx_hash,
+                        );
+
+                        // update transaction progress as processed
+                        store.shift_item_to_end(
+                            SledQueueKey::from_evm_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                            |item| {
+                                let state = QueueItemState::Processed {
+                                    tx_hash: receipt.transaction_hash,
+                                };
+                                item.set_state(state);
+                                Ok(())
+                            },
+                        )?;
+                    }
+                    Ok(None) => {
+                        // this should never happen
+                        // as we already know that is a bug in ethers
+                        // about timeing, so we already wait a bit
+                        // and increased the time interval for checking for
+                        // transaction status.
+                        let tx_hash_string = format!("0x{tx_hash:x}");
+                        tracing::warn!(
+                            "Tx {} Dropped from Mempool!!",
+                            tx_hash_string
+                        );
+                        // Re insert transaction in the queue.
+                        store.shift_item_to_end(
+                            SledQueueKey::from_evm_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                            |item| {
+                                let state = QueueItemState::Pending;
+                                item.set_state(state);
+                                Ok(())
+                            },
+                        )?;
+                    }
+                    Err(e) => {
+                        let reason = e.to_string();
+                        let tx_hash_string = format!("0x{tx_hash:x}");
+                        if let Some(mut url) = maybe_explorer.clone() {
+                            url.set_path(&format!("tx/{tx_hash_string}"));
+                            let clickable_link = ClickableLink::new(
+                                &tx_hash_string,
+                                url.as_str(),
+                            );
+                            tracing::error!(
+                                "Tx {} Errored: {}",
+                                clickable_link,
+                                reason,
+                            );
+                        } else {
+                            tracing::error!(
+                                "Tx {} Errored: {}",
+                                tx_hash_string,
+                                reason,
+                            );
+                        }
+                        tracing::event!(
+                            target: webb_relayer_utils::probe::TARGET,
+                            tracing::Level::DEBUG,
+                            kind = %webb_relayer_utils::probe::Kind::TxQueue,
+                            ty = "EVM",
+                            chain_id = %chain_id,
+                            errored = true,
+                            %tx_hash,
+                            error = %e,
+                        );
+                        // Update transaction status and re insert in the queue.
+                        store.shift_item_to_end(
+                            SledQueueKey::from_evm_with_custom_key(
+                                chain_id,
+                                tx_item_key,
+                            ),
+                            |item| {
+                                let state = QueueItemState::Failed {
+                                    reason: e.to_string(),
+                                };
+                                item.set_state(state);
+                                Ok(())
+                            },
+                        )?;
+                    }
+                };
+
                 // sleep for a random amount of time.
                 let max_sleep_interval =
                     chain_config.tx_queue.max_sleep_interval;

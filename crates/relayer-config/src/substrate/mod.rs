@@ -2,10 +2,7 @@ use super::*;
 use sp_core::sr25519::Public;
 use webb_relayer_types::{rpc_url::RpcUrl, suri::Suri};
 
-use crate::{
-    anchor::LinkedAnchorConfig, event_watcher::EventsWatcherConfig,
-    signing_backend::ProposalSigningBackendConfig,
-};
+use crate::event_watcher::EventsWatcherConfig;
 
 /// SubstrateConfig is the relayer configuration for the Substrate based networks.
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -71,18 +68,6 @@ pub struct SubstrateConfig {
     pub tx_queue: TxQueueConfig,
 }
 
-/// Linked anchor config for Substrate based target system
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
-pub struct SubstrateLinkedAnchorConfig {
-    /// chain Id
-    pub chain_id: u32,
-    /// pallet index
-    pub pallet: u8,
-    /// tree Id
-    pub tree_id: u32,
-}
-
 /// Enumerates the supported pallets configurations.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "pallet")]
@@ -94,10 +79,6 @@ pub enum Pallet {
     DKGProposals(DKGProposalsPalletConfig),
     /// `dkg-proposal-handler` or as named in the runtime as `DKGProposalHandler` pallet.
     DKGProposalHandler(DKGProposalHandlerPalletConfig),
-    /// `signature-bridge` or as named in the runtime as `SignatureBridge` pallet.
-    SignatureBridge(SignatureBridgePalletConfig),
-    /// `vanchor-bn256` or as named in the runtime as `VAnchorBn256` pallet.
-    VAnchorBn254(VAnchorBn254PalletConfig),
 }
 
 /// DKGProposalsPalletConfig represents the configuration for the DKGProposals pallet.
@@ -121,25 +102,4 @@ pub struct DKGPalletConfig {
 pub struct DKGProposalHandlerPalletConfig {
     /// Controls the events watcher
     pub events_watcher: EventsWatcherConfig,
-}
-
-/// SignatureBridgePalletConfig represents the configuration for the SignatureBridge pallet.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
-pub struct SignatureBridgePalletConfig {
-    /// Controls the events watcher
-    pub events_watcher: EventsWatcherConfig,
-}
-
-/// VAnchorBn254PalletConfig represents the configuration for the VAnchorBn254 pallet.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
-pub struct VAnchorBn254PalletConfig {
-    /// Controls the events watcher
-    pub events_watcher: EventsWatcherConfig,
-    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
-    /// A List of linked Anchor on this chain.
-    #[serde(default)]
-    pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
 }

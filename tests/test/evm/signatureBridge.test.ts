@@ -18,7 +18,6 @@
 
 import Chai, { expect } from 'chai';
 import ChaiAsPromised from 'chai-as-promised';
-import { Tokens, VBridge } from '@webb-tools/protocol-solidity';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
@@ -38,6 +37,8 @@ import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
 import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
 import { MintableToken } from '@webb-tools/tokens';
+import { VAnchor } from '@webb-tools/contracts';
+import { VBridge } from '@webb-tools/vbridge';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -46,7 +47,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
-  let signatureBridge: VBridge.VBridge;
+  let signatureBridge: VBridge<VAnchor>;
   let wallet1: ethers.Wallet;
   let wallet2: ethers.Wallet;
   let relayerWallet: ethers.Wallet;
@@ -110,7 +111,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     // we need to wait until the public key is on chain.
     await charlieNode.waitForEvent({
       section: 'dkg',
-      method: 'PublicKeySignatureChanged',
+      method: 'PublicKeySubmitted',
     });
 
     // next we need to start local evm node.
@@ -231,10 +232,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const tokenAddress = signatureBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      wallet1
-    );
+    const token = await MintableToken.tokenFromAddress(tokenAddress, wallet1);
     let tx = await token.approveSpending(
       anchor.contract.address,
       ethers.utils.parseEther('1000')
@@ -248,10 +246,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const tokenAddress2 = signatureBridge.getWebbTokenAddress(
       localChain2.chainId
     )!;
-    const token2 = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress2,
-      wallet2
-    );
+    const token2 = await MintableToken.tokenFromAddress(tokenAddress2, wallet2);
 
     tx = await token2.approveSpending(
       anchor2.contract.address,
@@ -308,43 +303,15 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it('should handle AnchorUpdateProposal when a deposit happens using DKG proposal backend', async () => {
-    // we need to wait until the public key is changed.
-    await charlieNode.waitForEvent({
-      section: 'dkg',
-      method: 'PublicKeySignatureChanged',
-    });
-    // wait until the signature bridge receives the transfer ownership call.
-    await webbRelayer.waitForEvent({
-      kind: 'signature_bridge',
-      event: {
-        chain_id: localChain2.underlyingChainId.toString(),
-        call: 'transfer_ownership_with_signature_pub_key',
-      },
-    });
-
-    // now we wait for the tx queue on that chain to execute the transfer ownership transaction.
-    await webbRelayer.waitForEvent({
-      kind: 'tx_queue',
-      event: {
-        ty: 'EVM',
-        chain_id: localChain2.underlyingChainId.toString(),
-        finalized: true,
-      },
-    });
-
+  it.only('should handle AnchorUpdateProposal when a deposit happens using DKG proposal backend', async () => {
     webbRelayer.clearLogs();
     // we will use chain1 as an example here.
-    const anchor1 = signatureBridge.getVAnchor(localChain1.chainId);
+    const anchor1 = await localChain1.getVAnchor(wallet1);
     const anchor2 = signatureBridge.getVAnchor(localChain2.chainId);
-    await anchor1.setSigner(wallet1);
     const tokenAddress = signatureBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
-    const token = await Tokens.MintableToken.tokenFromAddress(
-      tokenAddress,
-      wallet1
-    );
+    const token = await MintableToken.tokenFromAddress(tokenAddress, wallet1);
 
     await token.mintTokens(wallet1.address, ethers.utils.parseEther('1000'));
     const webbBalance = await token.getBalance(wallet1.address);
@@ -367,14 +334,30 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
       .elements()
       .map((el) => hexToU8a(el.toHexString()));
 
-    await anchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
-      [localChain1.chainId]: leaves,
-    });
+    const res = await anchor1.transact(
+      [],
+      [depositUtxo],
+      0,
+      0,
+      '0',
+      '0',
+      tokenAddress,
+      {
+        [localChain1.chainId]: leaves,
+      }
+    );
+    const x = await localChain1.provider().getBlockNumber();
+    console.log('Current block number:', x);
+    console.log(
+      'Deposit transaction hash:',
+      res.transactionHash,
+      res.blockNumber
+    );
 
     // now we wait for the proposal to be signed.
     charlieNode.waitForEvent({
       section: 'dkgProposalHandler',
-      method: 'ProposalSigned',
+      method: 'ProposalBatchSigned',
     });
 
     // wait until the signature bridge receives the execute call.

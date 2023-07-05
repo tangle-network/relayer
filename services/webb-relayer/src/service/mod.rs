@@ -30,7 +30,6 @@ use axum::Router;
 use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use webb::substrate::subxt;
 use webb_proposal_signing_backends::{
     DkgProposalSigningBackend, MockedProposalSigningBackend,
 };
@@ -41,11 +40,12 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::routes::info::handle_relayer_info;
 use webb_relayer_handlers::routes::info::handle_socket_info;
 use webb_relayer_store::SledStore;
+use webb_relayer_utils::TangleRuntimeConfig;
 
 /// EVM Specific Services
 pub mod evm;
 /// Substrate Specific Services
-pub mod substrate;
+pub mod tangle;
 
 /// Type alias for [Sled](https://sled.rs)-based database store
 pub type Store = SledStore;
@@ -61,8 +61,7 @@ pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
     let api = Router::new()
         .route("/ip", get(handle_socket_info))
         .route("/info", get(handle_relayer_info))
-        .merge(evm::build_web_services())
-        .merge(substrate::build_web_services());
+        .merge(evm::build_web_services());
 
     let app = Router::new()
         .nest("/api/v1", api)
@@ -93,7 +92,7 @@ pub async fn ignite(
         serde_json::to_string_pretty(&ctx.config)?
     );
     evm::ignite(&ctx, store.clone()).await?;
-    substrate::ignite(ctx.clone(), store.clone()).await?;
+    tangle::ignite(ctx.clone(), store.clone()).await?;
     Ok(())
 }
 
@@ -127,7 +126,7 @@ pub async fn make_proposal_signing_backend(
             // if it is the dkg backend, we will need to connect to that node first,
             // and then use the DkgProposalSigningBackend to sign the proposal.
             let dkg_client = ctx
-                .substrate_provider::<subxt::PolkadotConfig, _>(c.chain_id)
+                .substrate_provider::<TangleRuntimeConfig, _>(c.chain_id)
                 .await?;
             let backend = DkgProposalSigningBackend::builder()
                 .client(dkg_client)

@@ -14,12 +14,12 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::subxt::{self, Config, OnlineClient, PolkadotConfig};
+use webb::substrate::subxt::{self, Config, OnlineClient};
 use webb::substrate::tangle_runtime::api::system;
 use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledStore;
-use webb_relayer_utils::metric;
+use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
 use crate::substrate::EventHandler;
 use crate::SubstrateEventWatcher;
@@ -28,7 +28,7 @@ use crate::SubstrateEventWatcher;
 struct TestEventsWatcher;
 
 #[async_trait::async_trait]
-impl SubstrateEventWatcher<PolkadotConfig> for TestEventsWatcher {
+impl SubstrateEventWatcher<TangleRuntimeConfig> for TestEventsWatcher {
     const TAG: &'static str = "Test Event Watcher";
 
     const PALLET_NAME: &'static str = "System";
@@ -40,15 +40,15 @@ impl SubstrateEventWatcher<PolkadotConfig> for TestEventsWatcher {
 struct RemarkedEventHandler;
 
 #[async_trait::async_trait]
-impl<PolkadotConfig: Sync + Send + Config> EventHandler<PolkadotConfig>
-    for RemarkedEventHandler
+impl<TangleRuntimeConfig: Sync + Send + Config>
+    EventHandler<TangleRuntimeConfig> for RemarkedEventHandler
 {
-    type Client = OnlineClient<PolkadotConfig>;
+    type Client = OnlineClient<TangleRuntimeConfig>;
     type Store = SledStore;
 
     async fn can_handle_events(
         &self,
-        events: subxt::events::Events<PolkadotConfig>,
+        events: subxt::events::Events<TangleRuntimeConfig>,
     ) -> webb_relayer_utils::Result<bool> {
         let has_event = events.has::<system::events::Remarked>()?;
         Ok(has_event)
@@ -57,7 +57,10 @@ impl<PolkadotConfig: Sync + Send + Config> EventHandler<PolkadotConfig>
         &self,
         _store: Arc<Self::Store>,
         _client: Arc<Self::Client>,
-        (events, block_number): (subxt::events::Events<PolkadotConfig>, u64),
+        (events, block_number): (
+            subxt::events::Events<TangleRuntimeConfig>,
+            u64,
+        ),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // find the `Remarked` event(s) in the events

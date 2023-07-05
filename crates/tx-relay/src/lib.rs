@@ -1,9 +1,6 @@
 /// EVM Transactional Relayer.
 #[cfg(feature = "evm")]
 pub mod evm;
-/// Substrate Transactional Relayer.
-#[cfg(feature = "substrate")]
-pub mod substrate;
 
 /// Maximum refund amount per relay transaction in USD.
 const MAX_REFUND_USD: f64 = 5.;

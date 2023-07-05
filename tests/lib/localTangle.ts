@@ -132,22 +132,12 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
     opts: ExportedConfigOptions
   ): Promise<FullNodeInfo> {
     const ports = this.opts.ports as { ws: number; http: number; p2p: number };
-    const enabledPallets: Pallet[] = [];
-    for (const p of opts.enabledPallets ?? []) {
-      if (p.pallet != 'SignatureBridge') {
-        (p.linkedAnchors = opts.linkedAnchors),
-          (p.proposalSigningBackend = opts.proposalSigningBackend);
-        enabledPallets.push(p);
-      } else {
-        enabledPallets.push(p);
-      }
-    }
     const nodeInfo: FullNodeInfo = {
       name: 'localSubstrate',
       enabled: true,
       httpEndpoint: `http://127.0.0.1:${ports.http}`,
       wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
-      pallets: enabledPallets,
+      pallets: opts.enabledPallets ?? [],
       suri: opts.suri,
       chainId: opts.chainId,
     };
@@ -159,15 +149,11 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
     opts: ExportedConfigOptions
   ): Promise<void> {
     const config = await this.exportConfig(opts);
-    // don't mind my typescript typing here XD
-    type ConvertedLinkedAnchor = ConvertToKebabCase<LinkedAnchor>;
     type ConvertedPallet = Omit<
       ConvertToKebabCase<Pallet>,
-      'events-watcher' | 'proposal-signing-backend' | 'linked-anchors'
+      'events-watcher'
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
-      'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
-      'linked-anchors'?: ConvertedLinkedAnchor[];
     };
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
@@ -196,38 +182,6 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
             'print-progress-interval': c.eventsWatcher.printProgressInterval,
             'sync-blocks-from': c.eventsWatcher.syncBlocksFrom,
           },
-          'proposal-signing-backend':
-            c.proposalSigningBackend?.type === 'Mocked'
-              ? {
-                  type: 'Mocked',
-                  'private-key': c.proposalSigningBackend?.privateKey,
-                }
-              : c.proposalSigningBackend?.type === 'DKGNode'
-              ? {
-                  type: 'DKGNode',
-                  'chain-id': c.proposalSigningBackend?.chainId,
-                }
-              : undefined,
-
-          'linked-anchors': c.linkedAnchors?.map((anchor: LinkedAnchor) =>
-            anchor.type === 'Evm'
-              ? {
-                  'chain-id': anchor.chainId,
-                  type: 'Evm',
-                  address: anchor.address,
-                }
-              : anchor.type === 'Substrate'
-              ? {
-                  type: 'Substrate',
-                  'chain-id': anchor.chainId,
-                  'tree-id': anchor.treeId,
-                  pallet: anchor.pallet,
-                }
-              : {
-                  type: 'Raw',
-                  'resource-id': anchor.resourceId,
-                }
-          ),
         };
         return convertedPallet;
       }),

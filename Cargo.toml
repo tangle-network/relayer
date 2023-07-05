@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.5.0-dev"
+version = "0.5.5-dev"
 authors = ["Webb Developers <drew@webb.tools>"]
 license = "Apache-2.0"
 documentation = "https://docs.rs/webb-relayer"
@@ -24,7 +24,7 @@ webb-chains-info = { path = "crates/chains-info" }
 webb-event-watcher-traits = { path = "crates/event-watcher-traits" }
 webb-ew-dkg = { path = "event-watchers/dkg" }
 webb-ew-evm = { path = "event-watchers/evm" }
-webb-ew-substrate = { path = "event-watchers/substrate" }
+
 webb-relayer-handler-utils = { path = "crates/relayer-handler-utils" }
 webb-relayer-types = { path = "crates/relayer-types" }
 webb-relayer = { path = "services/webb-relayer" }

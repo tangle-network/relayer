@@ -14,13 +14,13 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::subxt::{self, OnlineClient, PolkadotConfig};
+use webb::substrate::subxt::{self, OnlineClient};
 use webb::substrate::tangle_runtime::api::dkg;
 
 use webb_relayer_store::queue::{QueueItem, QueueStore};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, BridgeKey};
-use webb_relayer_utils::metric;
+use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
 use webb_event_watcher_traits::substrate::EventHandler;
 
@@ -38,14 +38,14 @@ impl DKGPublicKeyChangedHandler {
 }
 
 #[async_trait::async_trait]
-impl EventHandler<PolkadotConfig> for DKGPublicKeyChangedHandler {
-    type Client = OnlineClient<PolkadotConfig>;
+impl EventHandler<TangleRuntimeConfig> for DKGPublicKeyChangedHandler {
+    type Client = OnlineClient<TangleRuntimeConfig>;
 
     type Store = SledStore;
 
     async fn can_handle_events(
         &self,
-        events: subxt::events::Events<PolkadotConfig>,
+        events: subxt::events::Events<TangleRuntimeConfig>,
     ) -> webb_relayer_utils::Result<bool> {
         let has_event =
             events.has::<dkg::events::PublicKeySignatureChanged>()?;
@@ -56,7 +56,10 @@ impl EventHandler<PolkadotConfig> for DKGPublicKeyChangedHandler {
         &self,
         store: Arc<Self::Store>,
         _client: Arc<Self::Client>,
-        (events, block_number): (subxt::events::Events<PolkadotConfig>, u64),
+        (events, block_number): (
+            subxt::events::Events<TangleRuntimeConfig>,
+            u64,
+        ),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // we got that the signature of the DKG public key changed.

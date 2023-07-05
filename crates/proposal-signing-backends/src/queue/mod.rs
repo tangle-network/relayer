@@ -306,6 +306,7 @@ pub async fn run<Queue, Policy, PSB>(
                 // Sleep for a bit to avoid busy looping
                 tokio::time::sleep(core::time::Duration::from_millis(1100))
                     .await;
+                tokio::task::yield_now().await;
                 continue;
             }
             Err(e) => {

@@ -18,6 +18,7 @@ webb-relayer-utils = { workspace = true }
 
 tracing = { workspace = true }
 sled = { workspace = true }
+hex = { workspace = true }
 futures = { workspace = true }
 backoff = { workspace = true }
 tokio = { workspace = true }

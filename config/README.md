@@ -76,17 +76,6 @@ following section we will describe the different configuration entries and how t
       - [sync-blocks-from](#sync-blocks-from-1)
       - [print-progress-interval](#print-progress-interval-1)
       - [enable-data-query](#enable-data-query-1)
-    - [proposal-signing-backend](#proposal-signing-backend)
-      - [type](#type)
-      - [chain-id](#chain-id-1)
-      - [private-key](#private-key-1)
-    - [linked-anchors](#linked-anchors)
-      - [type](#type-1)
-      - [resource-id](#resource-id)
-      - [chain-id](#chain-id-2)
-      - [address](#address-1)
-      - [pallet](#pallet-1)
-      - [tree-id](#tree-id)
 
 ### Global Configuration
 
@@ -783,7 +772,6 @@ the relayer will convert them to a raw format before using them.
 contract = "VAnchor"
 linked-anchors = [
   { type = "Evm", chain-id = 1, address = "0x..." },
-  { type = "Substrate", chain-id = 1080, pallet = 42, tree-id = 4 },
   { type = "Raw", resource-id = "0x..." },
 ]
 ```
@@ -796,17 +784,16 @@ The type of the linked anchor definition.
 - Required: `true`
 - Possible values:
   - `Evm`
-  - `Substrate`
   - `Raw`
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_LINKED_ANCHORS_<INDEX>_TYPE`
 
 ###### chain-id
 
-The chain-id of the linked anchor definition. Only used by the `Evm` and `Substrate` types.
+The chain-id of the linked anchor definition. Only used by the `Evm` types.
 
 - Type: `number`
 - Required:
-  - `true` if the [type](#type) is `Evm` or `Substrate`
+  - `true` if the [type](#type) is `Evm`
   - `false` otherwise
 - env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_LINKED_ANCHORS_<INDEX>_CHAIN_ID`
 
@@ -817,8 +804,7 @@ Example:
 type = "VAnchor"
 linked-anchors = [
   { type = "Evm", chain-id = 1, address = "0x..." },
-  { type = "Substrate", chain-id = 1080, pallet = 42, tree-id = 4 },
-]
+  ]
 ```
 
 ###### address
@@ -838,46 +824,6 @@ Example:
 type = "VAnchor"
 linked-anchors = [
   { type = "Evm", chain-id = 1, address = "0x..." },
-]
-```
-
-###### pallet
-
-The pallet of the linked anchor definition. Only used by the `Substrate` type.
-
-- Type: `number`
-- Required:
-  - `true` if the [type](#type) is `Substrate`
-  - `false` otherwise
-- env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_LINKED_ANCHORS_<INDEX>_PALLET`
-
-Example:
-
-```toml
-[[evm.ethereum.contracts]]
-type = "VAnchor"
-linked-anchors = [
-  { type = "Substrate", chain-id = 1080, pallet = 42, tree-id = 4 },
-]
-```
-
-###### tree-id
-
-The tree-id of the linked anchor definition. Only used by the `Substrate` type.
-
-- Type: `number`
-- Required:
-  - `true` if the [type](#type) is `Substrate`
-  - `false` otherwise
-- env: `WEBB_EVM_<CHAIN_NAME>_CONTRACTS_<INDEX>_LINKED_ANCHORS_<INDEX>_TREE_ID`
-
-Example:
-
-```toml
-[[evm.ethereum.contracts]]
-type = "VAnchor"
-linked-anchors = [
-  { type = "Substrate", chain-id = 1080, pallet = 42, tree-id = 4 },
 ]
 ```
 
@@ -1123,13 +1069,12 @@ The pallets are the different pallets that are used by the relayer. Each will de
 configuration which will eventually be used by the relayer to start a different service for each
 pallet.
 
-There are currently 5 different pallets that are supported by the relayer:
+There are currently 3 different pallets that are supported by the relayer:
 
 - `DKG`
 - `DkgProposals`
 - `DkgProposalHandler`
-- `SignatureBridge`
-- `VAnchorBn254`
+
 
 - Type: `table`
 - Required: `false`
@@ -1156,8 +1101,6 @@ The type of the pallet. This is used to determine which pallet to use.
   - `DKG`
   - `DkgProposals`
   - `DkgProposalHandler`
-  - `SignatureBridge`
-  - `VAnchorBn254`
 
 Example:
 
@@ -1198,24 +1141,6 @@ Example:
 [[substrate.tangle.pallets]]
 pallet = "DKG"
 events-watcher = { enabled = true }
-```
-
-##### enable-data-query
-
-Whether the data query is enabled or not. If it is not enabled, the relayer will not try to query
-the data from the pallet.
-
-- Type: `bool`
-- Required: `false`
-- Default: `true`
-- env: `WEBB_SUBSTRATE_<NODE_NAME>_PALLET_<INDEX>_EVENTS_WATCHER_ENABLE_DATA_QUERY`
-
-Example:
-
-```toml
-[[substrate.tangle.pallets]]
-pallet = "DKG"
-events-watcher = { enabled = true, enable-data-query = true }
 ```
 
 ##### polling-interval

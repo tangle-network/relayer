@@ -114,7 +114,6 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
       const unsub = api.query.system.events((events) => {
         events.forEach((record) => {
           const { event } = record;
-          console.log(`Received event: ${event.section}.${event.method}`);
           if (
             event.section === typedEvent.section &&
             event.method === typedEvent.method
