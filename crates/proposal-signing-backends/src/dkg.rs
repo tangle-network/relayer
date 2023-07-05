@@ -118,7 +118,10 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             unsigned_proposal,
         );
         let metadata = self.client.metadata();
-        let tx = TypeErasedStaticTxPayload::try_from((&metadata, acknowledge_proposal_tx))?;
+        let tx = TypeErasedStaticTxPayload::try_from((
+            &metadata,
+            acknowledge_proposal_tx,
+        ))?;
         let tx_key = SledQueueKey::from_substrate_with_custom_key(
             my_chain_id,
             tx.item_key(),

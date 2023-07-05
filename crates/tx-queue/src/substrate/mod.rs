@@ -83,7 +83,9 @@ mod tests {
         let store = webb_relayer_store::SledStore::temporary()?;
         let context =
             webb_relayer_context::RelayerContext::new(config, store.clone())?;
-        let client = context.substrate_provider::<TangleRuntimeConfig, _>(chain_id).await?;
+        let client = context
+            .substrate_provider::<TangleRuntimeConfig, _>(chain_id)
+            .await?;
         let store = Arc::new(store);
         let tx_queue = SubstrateTxQueue::new(context, chain_id, store.clone());
         let _handle = tokio::spawn(tx_queue.run::<TangleRuntimeConfig>());

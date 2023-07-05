@@ -240,7 +240,8 @@ where
                                 TypeErasedStaticTxPayload,
                             >| {
                                 let state = QueueItemState::Failed {
-                                    reason: "Transaction validity error".to_string(),
+                                    reason: "Transaction validity error"
+                                        .to_string(),
                                 };
                                 item.set_state(state);
                                 Ok(())
