@@ -154,4 +154,3 @@ fn webb_proposals_typed_chain_converter(
         webb_proposals::TypedChainId::Ink(id) => TypedChainId::Ink(id),
     }
 }
-
