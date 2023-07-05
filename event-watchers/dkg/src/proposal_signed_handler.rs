@@ -18,12 +18,12 @@ use tokio::sync::Mutex;
 
 use webb::substrate::tangle_runtime::api::dkg_proposal_handler;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::TypedChainId;
-use webb::substrate::subxt::{self, OnlineClient, PolkadotConfig};
+use webb::substrate::subxt::{self, OnlineClient};
 
 use webb_relayer_store::queue::{QueueItem, QueueStore};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, BridgeKey};
-use webb_relayer_utils::metric;
+use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
 use webb_event_watcher_traits::substrate::EventHandler;
 
@@ -32,14 +32,14 @@ use webb_event_watcher_traits::substrate::EventHandler;
 pub struct ProposalSignedHandler;
 
 #[async_trait::async_trait]
-impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
-    type Client = OnlineClient<PolkadotConfig>;
+impl EventHandler<TangleRuntimeConfig> for ProposalSignedHandler {
+    type Client = OnlineClient<TangleRuntimeConfig>;
 
     type Store = SledStore;
 
     async fn can_handle_events(
         &self,
-        events: subxt::events::Events<PolkadotConfig>,
+        events: subxt::events::Events<TangleRuntimeConfig>,
     ) -> webb_relayer_utils::Result<bool> {
         let has_event = events
             .has::<dkg_proposal_handler::events::ProposalBatchSigned>(
@@ -51,7 +51,10 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
         &self,
         store: Arc<Self::Store>,
         _api: Arc<Self::Client>,
-        (events, block_number): (subxt::events::Events<PolkadotConfig>, u64),
+        (events, block_number): (
+            subxt::events::Events<TangleRuntimeConfig>,
+            u64,
+        ),
         metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         let proposal_signed_events = events

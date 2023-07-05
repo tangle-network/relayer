@@ -1,7 +1,7 @@
 use sp_core::sr25519;
 use std::sync::Arc;
+use webb::substrate::subxt;
 use webb::substrate::subxt::config::ExtrinsicParams;
-use webb::substrate::subxt::{self, PolkadotConfig};
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_ew_dkg::{
     DKGMetadataWatcher, DKGProposalHandlerWatcher, DKGPublicKeyChangedHandler,
@@ -11,11 +11,12 @@ use webb_relayer_config::substrate::{
     DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet, SubstrateConfig,
 };
 use webb_relayer_context::RelayerContext;
+use webb_relayer_utils::TangleRuntimeConfig;
 
 use webb_relayer_tx_queue::substrate::SubstrateTxQueue;
 
 /// Type alias for the Tangle DefaultConfig
-pub type TangleClient = subxt::OnlineClient<PolkadotConfig>;
+pub type TangleClient = subxt::OnlineClient<TangleRuntimeConfig>;
 
 /// Fires up all background services for all Substrate chains configured in the config file.
 ///
@@ -69,7 +70,7 @@ async fn ignite_tangle_runtime(
         }
     }
     // start the transaction queue for dkg-substrate extrinsics after starting other tasks.
-    start_tx_queue::<PolkadotConfig>(ctx, chain_id, store)?;
+    start_tx_queue::<TangleRuntimeConfig>(ctx, chain_id, store)?;
     Ok(())
 }
 

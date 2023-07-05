@@ -17,7 +17,6 @@ use futures::TryFutureExt;
 use rand::Rng;
 use webb::substrate::subxt;
 use webb::substrate::subxt::config::ExtrinsicParams;
-use webb::substrate::subxt::PolkadotConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::queue::QueueItem;
 use webb_relayer_store::queue::QueueItemState;
@@ -25,6 +24,7 @@ use webb_relayer_store::queue::QueueStore;
 use webb_relayer_store::queue::TransactionQueueItemKey;
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
+use webb_relayer_utils::TangleRuntimeConfig;
 
 use std::sync::Arc;
 use std::time::Duration;
@@ -107,7 +107,7 @@ where
             //  Tangle node connection
             let maybe_client = self
                 .ctx
-                .substrate_provider::<PolkadotConfig, _>(chain_id)
+                .substrate_provider::<TangleRuntimeConfig, _>(chain_id)
                 .await;
             let client = match maybe_client {
                 Ok(client) => client,
@@ -120,7 +120,8 @@ where
                 }
             };
             let pair = self.ctx.substrate_wallet(chain_id).await?;
-            let signer = subxt::tx::PairSigner::<PolkadotConfig, _>::new(pair);
+            let signer =
+                subxt::tx::PairSigner::<TangleRuntimeConfig, _>::new(pair);
             loop {
                 let maybe_item = store.peek_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),

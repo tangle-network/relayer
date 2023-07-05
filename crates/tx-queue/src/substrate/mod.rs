@@ -21,12 +21,12 @@ mod tests {
     use std::{collections::HashMap, sync::Arc};
 
     use sp_core::{sr25519::Pair as Sr25519Pair, Pair};
-    use webb::substrate::subxt::PolkadotConfig;
     use webb::substrate::tangle_runtime::api as RuntimeApi;
     use webb_relayer_store::queue::{QueueItem, QueueStore};
     use webb_relayer_store::sled::SledQueueKey;
     use webb_relayer_types::suri::Suri;
     use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
+    use webb_relayer_utils::TangleRuntimeConfig;
 
     use super::*;
 
@@ -85,7 +85,7 @@ mod tests {
             webb_relayer_context::RelayerContext::new(config, store.clone())?;
         let store = Arc::new(store);
         let tx_queue = SubstrateTxQueue::new(context, chain_id, store.clone());
-        let _handle = tokio::spawn(tx_queue.run::<PolkadotConfig>());
+        let _handle = tokio::spawn(tx_queue.run::<TangleRuntimeConfig>());
         let tx_count = 5;
         let tx_api = RuntimeApi::tx().system();
         for i in 0..tx_count {
