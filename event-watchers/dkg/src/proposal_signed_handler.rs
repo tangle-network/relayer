@@ -83,9 +83,14 @@ impl EventHandler<PolkadotConfig> for ProposalSignedHandler {
                     );
                     Some(BridgeKey::new(webb_proposals::TypedChainId::Evm(id)))
                 }
-                TypedChainId::Substrate(_) => {
-                    tracing::warn!("Unhandled `ProposalSigned` Event with substrate chain id");
-                    None
+                TypedChainId::Substrate(id) => {
+                    tracing::trace!(
+                        chain_id = %id,
+                        "`ProposalBatchSigned` Event with substrate",
+                    );
+                    Some(BridgeKey::new(
+                        webb_proposals::TypedChainId::Substrate(id),
+                    ))
                 }
                 TypedChainId::PolkadotParachain(_) => {
                     tracing::warn!("Unhandled `ProposalSigned` Event with polkadot parachain chain id");

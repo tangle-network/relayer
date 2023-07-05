@@ -15,3 +15,6 @@
 /// EVM Transaction Queue.
 #[cfg(feature = "evm")]
 pub mod evm;
+/// Substrate Transaction Queue.
+#[cfg(feature = "substrate")]
+pub mod substrate;
