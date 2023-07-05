@@ -596,13 +596,6 @@ export class LocalChain {
                     type: 'Evm',
                     address: anchor.address,
                   }
-                : anchor.type === 'Substrate'
-                ? {
-                    type: 'Substrate',
-                    'chain-id': anchor.chainId,
-                    'tree-id': anchor.treeId,
-                    pallet: anchor.pallet,
-                  }
                 : {
                     type: 'Raw',
                     'resource-id': anchor.resourceId,
