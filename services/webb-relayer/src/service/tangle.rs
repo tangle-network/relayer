@@ -1,6 +1,4 @@
-use sp_core::sr25519;
 use std::sync::Arc;
-use webb::substrate::subxt::config::ExtrinsicParams;
 use webb::substrate::subxt::{self, PolkadotConfig};
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_ew_dkg::{
@@ -11,8 +9,6 @@ use webb_relayer_config::substrate::{
     DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet, SubstrateConfig,
 };
 use webb_relayer_context::RelayerContext;
-
-use webb_relayer_tx_queue::substrate::SubstrateTxQueue;
 
 /// Type alias for the Tangle DefaultConfig
 pub type TangleClient = subxt::OnlineClient<PolkadotConfig>;
@@ -68,8 +64,6 @@ async fn ignite_tangle_runtime(
             }
         }
     }
-    // start the transaction queue for dkg-substrate extrinsics after starting other tasks.
-    start_tx_queue::<PolkadotConfig>(ctx, chain_id, store)?;
     Ok(())
 }
 
@@ -195,57 +189,6 @@ pub fn start_dkg_pallet_watcher(
         }
     };
     // kick off the watcher.
-    tokio::task::spawn(task);
-    Ok(())
-}
-
-/// Starts the transaction queue task for Substrate extrinsics
-///
-/// Returns Ok(()) if successful, or an error if not.
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `chain_name` - Name of the chain
-/// * `store` -[Sled](https://sled.rs)-based database store
-pub fn start_tx_queue<X>(
-    ctx: RelayerContext,
-    chain_id: u32,
-    store: Arc<super::Store>,
-) -> crate::Result<()>
-where
-    X: subxt::Config + Send + Sync,
-    <<X>::ExtrinsicParams as ExtrinsicParams<
-        <X>::Index,
-        <X>::Hash,
-    >>::OtherParams: Default + Send + Sync,
-    <X>::Signature: From<sr25519::Signature>,
-    <X>::Address: From<<X>::AccountId>,
-    <X as subxt::Config>::AccountId:
-        From<sp_runtime::AccountId32> + Send + Sync,
-{
-    let mut shutdown_signal = ctx.shutdown_signal();
-
-    let tx_queue = SubstrateTxQueue::new(ctx, chain_id, store);
-
-    tracing::debug!("Transaction Queue for node({}) Started.", chain_id);
-    let task = async move {
-        tokio::select! {
-            _ = tx_queue.run::<X>() => {
-                tracing::warn!(
-                    "Transaction Queue task stopped for node({})",
-                    chain_id
-                );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping Transaction Queue for node({})",
-                    chain_id
-                );
-            },
-        }
-    };
-    // kick off the substrate tx_queue.
     tokio::task::spawn(task);
     Ok(())
 }

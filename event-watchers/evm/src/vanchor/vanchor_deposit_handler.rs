@@ -173,14 +173,8 @@ where
                     );
                     QueuedAnchorUpdateProposal::new(p)
                 }
-                webb_proposals::TargetSystem::Substrate(_) => {
-                    let p = proposal_handler::substrate_anchor_update_proposal(
-                        root,
-                        leaf_index,
-                        target_resource_id,
-                        src_resource_id,
-                    );
-                    QueuedAnchorUpdateProposal::new(p)
+                _ => {
+                    unreachable!("Only evm chains are supported for now")
                 }
             };
 
