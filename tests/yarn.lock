@@ -5051,11 +5051,6 @@
   dependencies:
     "@webb-tools/sdk-core" "0.1.4-126"
 
-"@webb-tools/protocol-solidity@1.0.0":
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/@webb-tools/protocol-solidity/-/protocol-solidity-1.0.0.tgz#d1f9537469bae2c817d03ceaf16ab164f0ed8047"
-  integrity sha512-OBC7tdbXt0+ZLxkv3VrZ9iIz629f9qbA4dJj+KzuVgXQxjKG3sLFRYU7UY/CzNTrw5fy1QXRgiK9sDnDfg3OFg==
-
 "@webb-tools/protocol-substrate-types@0.0.10":
   version "0.0.10"
   resolved "https://registry.yarnpkg.com/@webb-tools/protocol-substrate-types/-/protocol-substrate-types-0.0.10.tgz#1fb383c97f63bfc7e7f302f97cb747b0d79c4276"
