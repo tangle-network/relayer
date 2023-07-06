@@ -19,10 +19,9 @@
   <summary>Table of Contents</summary>
   <ul>
     <li><a href="#start"> Getting Started</a></li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#config"> Configuration</a></li>
-    <li><a href="#api">API</a></li>
-    <li><a href="#test">Testing</a></li>
+    <li><a href="#relayer">How to Run Relayer</a></li>
+    <li><a href="#docker">Docker setup</a></li>
+    <li><a href="#api">Relayer APIs</a></li>
   </ul>  
 </details>
 
@@ -49,6 +48,8 @@ Relayers who fulfill this role do so in conjunction with the transaction relayin
 Relayers who fulfill the role of an oracle listen to the Anchor Protocol instances on the various chains the anchors exist on. When they hear of insertions into the anchors' merkle trees they handle them accordingly (as is implemented in the event watchers). Those playing this role then relay the anchor update information to other connected Anchors, the DKG governance system, and any other integration that gets implemented in this repo. Oracle relayers help keep the state of an Anchor Protocol instance up to date by ensuring that all anchors within an instance know about the latest state of their neighboring anchors.
 
 For additional information, please refer to the [Webb Relayer Rust Docs](https://webb-tools.github.io/relayer/) 📝. Have feedback on how to improve the relayer network? Or have a specific question to ask? Checkout the [Relayer Feedback Discussion](https://github.com/webb-tools/feedback/discussions/categories/webb-relayer-feedback) 💬.
+
+---
 
 ### Prerequisites
 
@@ -77,139 +78,41 @@ Lastly, install
 
 🚀🚀 Your environment is complete! 🚀🚀
 
-### Installation 💻
+---
 
-#### Unix (Linux, macOS, WSL2, ..)
+<h2 id="relayer"> How to run a relayer </h2>
 
-```
+##### 1. Relayer setup
+Clone relayer 
+```bash
 git clone https://github.com/webb-tools/relayer.git
-
-cargo build --release --features cli
+cd relayer
+cargo build --release --features cli -p webb-relayer
 ```
 
-<h2 id="usage"> Usage </h2>
+##### 2. Relayer Configuration
+You need to create configuration files for the relayer. You can find multiple examples [here](./config). Simplest of them is running [evm-blanknet](./config/development/evm-blanknet) configuration which connects to our development environment [Orbit](https://github.com/webb-tools/orbit).
 
-### Quick Start ⚡
+You can either use pre defined configurations or create new config directory.
 
-#### Local EVM Setup
+```
+relayer-config // path to dir containing relayer configuration files
+```
+> **Note**: You could also use the `json` format for the config files if you prefer that!
 
-Eager to try out the Webb Relayer and see it in action? Run a relayer with our preset EVM Local Network configuration to get up and running immediately. You can follow this [guide](https://github.com/webb-tools/webb-dapp/tree/develop/apps/bridge-dapp#run-local-webb-relayer-and-local-network-alongside-hubble-bridge) to use the relayer for the EVM bridge! You will have to configure an `.env` file in the root directory as well. See below configuration section for more details.
+##### 3. Run Relayer
+Once relayer configuration files are created we run relayer using following command
 
 ```bash
-# Update your local env file
-cp ./config/development/evm-localnet/.env.example .env
-cargo run --bin webb-relayer --features cli -- -c ./config/development/evm-localnet -vvv
+./target/release/webb-relayer -vvv -c ./relayer-config
 ```
-
-> Hot Tip 🌶️: To increase the logger verbosity add additional `-vvvv` during start up command. You will now see `TRACE` logs. Happy debugging!
-
-#### Local Substrate Setup
-
-To use the relayer for our Substrate based chains, you will first need to start a local substrate node that integrates with our pallets [webb-standalone-node](https://github.com/webb-tools/protocol-substrate/). Once the Substrate node is started locally you can proceed to start the relayer.
-
+- Example to run relayer with `evm-blanknet` configuration
+```bash
+./target/release/webb-relayer -vvv -c ./config/development/evm-blanknet
 ```
-cargo run --bin webb-relayer --features cli -- -c ./config/development/local-substrate -vvv
-```
+---
 
-### Run 🏃
-
-Webb Relayer is easy to run and with flexible config 👌. The first step is to create a config file.
-
-Example:
-
-- Create an `.env` file with the following values for the networks you wish to support.
-- You also need to request an API key on [etherscan.io](https://docs.etherscan.io/getting-started/viewing-api-usage-statistics) and add it.
-
-```
-ETHERSCAN_API_KEY=your-key
-
-WEBB_EVM_<network>_ENABLED=true
-WEBB_EVM_<network>_PRIVATE_KEY=<0X_PREFIXED_PRIVATE_KEY>
-
-WEBB_EVM_<network>_BENEFICIARY=<0X_PREFIXED_ADDRESS>
-```
-
-> Checkout [config](./config) for useful default configurations for many networks. These config files can be changed to your preferences, and are enabled with the .env configuration listed above.
-
-Then run:
-
-```
-webb-relayer -vv -c ./config
-```
-
-> Hot Tip 🌶️: you could also use the `json` format for the config files if you prefer that!
-
-<h2 id="config"> Configuration </h2>
-
-**Note:** You can also review the different chain configurations for EVM and Substrate.
-
-- [`SubstrateConfig`](https://webb-tools.github.io/relayer/webb_relayer/config/struct.SubstrateConfig.html)
-- [`EvmChainConfig`](https://webb-tools.github.io/relayer/webb_relayer/config/struct.EvmChainConfig.html)
-
-#### Relayer Common Configuration
-
-| Field           | Description                                                                                      | Optionality |
-| --------------- | ------------------------------------------------------------------------------------------------ | ----------- |
-| `port`          | Relayer port number                                                                              | Required    |
-| `features`      | Enable required features by setting them to `true` . All featured are enabled by default         | Optional    |
-| `evm-etherscan` | Etherscan api configuration for chains, required if `private-tx` feature is enabled for relayer. | Optional    |
-
-- `Features` Configuration
-
-```
-[features]
-governance-relay = true
-data-query = true
-private-tx-relay = true
-```
-
-- `Evm-etherscan` Configuration
-
-```
-[evm-etherscan.goerli]
-chain-id = 5
-api-key = "$ETHERSCAN_GOERLI_API_KEY"
-[evm-etherscan.polygon]
-chain-id = 137
-api-key = "$POLYGONSCAN_MAINNET_API_KEY"
-```
-
-#### Chain Configuration
-
-| Field           | Description                                                                                                                        | Optionality            |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
-| `http-endpoint` | Http(s) Endpoint for quick Req/Res. Input can be single http-endpoint or array of multiple http-endpoints.                                                                                                | Required               |
-| `ws-endpoint`   | Websocket Endpoint for long living connections                                                                                     | Required               |
-| `name`          | The Chain/Node name                                                                                                                | Required               |
-| `explorer`      | Block explorer, used for generating clickable links for transactions that happens on this chain.                                   | Optional               |
-| `chain-id`      | Chain specific id.                                                                                                                 | Required               |
-| `private-key`   | The Private Key of this account on this network. See [PrivateKey Docs for secure setup]()                                          | Required               |
-| `beneficiary`   | The address of the account that will receive relayer fees.                                                                         | Optional               |
-| `runtime`       | Indicates Substrate runtime to use                                                                                                 | Required for Substrate |
-| `suri`          | Interprets a string in order to generate a key Pair. In the case that the pair can be expressed as a direct derivation from a seed | Required for Substrate |
-| `pallets`       | Supported pallets for a particular Substrate node                                                                                  | Optional               |
-
-#### Contract Configuration
-
-| Field                      | Description                                                                              | Optionality |
-| -------------------------- | ---------------------------------------------------------------------------------------- | ----------- |
-| `contract`                 | Chain contract. Must be either: </br> - VAnchor </br> - SignatureBridge </br>            | Required    |
-| `address`                  | The address of this contract on this chain.                                              | Required    |
-| `deployed-at`              | The block number where this contract got deployed at.                                    | Required    |
-| `events-watcher`           | Control the events watcher for this contract.                                            | Optional    |
-| `withdraw-config`          | Config the fees and gas limits of your private transaction relayer.                      | Optional    |
-| `proposal-signing-backend` | a value of `ProposalSigingBackend` (for example `{ type = "DKGNode", chain-id = 1080 }`) | Optional    |
-
-#### Event Watcher Configuration
-
-| Field                     | Description                                                                               | Optionality |
-| ------------------------- | ----------------------------------------------------------------------------------------- | ----------- |
-| `enabled`                 | Boolean value. Default set to `true`                                                      | Optional    |
-| `polling-interval`        | Interval between polling next block in millisecond. Default value is `3000ms`             | Optional    |
-| `print-progress-interval` | Interval between printing sync progress in millisecond. Default value is `7000ms`         | Optional    |
-| `sync-blocks-from`        | Block number from which relayer will start syncing. Default will be `latest` block number | Optional    |
-
-### Docker 🐳
+<h2 id="docker"> Run Relayer with Docker🐳 </h2>
 
 To deploy the relayer with Docker, copy the `docker` folder to your server. Add an `.env` file as described above and save it into the `config` directory. You also need to adjust the `server_name` (domain) specified in `user_conf.d/relayer.conf`. When you are ready, start the relayer with `docker compose up -d`. You can see the logs with `docker compose logs -f`. It will automatically request a TLS certificate using Let's Encrypt and start operating.
 
@@ -217,312 +120,14 @@ To deploy the relayer with Docker, copy the `docker` folder to your server. Add 
 
 The Docker setup also includes a preconfigured Grafana installation for monitoring. It is available on `localhost:3000` with login `admin` / `admin`. It includes configuration for Slack alerts, to use it enter a Slack Incoming Webhook URL in `provisioning/alerting/alerting.yaml` where it says `slack-placeholder`.
 
-#### Metrics Information
+---
 
-The Metric information is being handled by prometheus and the Relayer supports the following metrics:
+<h2 id="api"> Relayer API Documentation </h2>
 
-1.  The number of times the `BridgeWatcher` enter backoff
-2.  The number of times the `handle_proposal` executes
-3.  The number of times the Transaction Queue enters backoff
-4.  The number of times a Proposal attempted to be queued
-5.  Total `Fees` Earned by the relayer
-6.  Total `transaction` made
-7.  Total `gas` spent
-8.  Number of `proposals` proposed
-9.  Amount of `data` stored
+Relayer provided API support to query cached leaves, configuration info, metrics.
+To refer more about API support kindly checkout readme docs [here](./crates/relayer-handlers/src/README.md)
 
-<h2 id="api"> API  📡</h2>
-
-The relayer has 3 endpoints available to query from. They are outlined below for your convenience.
-
-**Retrieving nodes IP address:**
-
-```
-/api/v1/ip
-```
-
-<details>
-  <summary>Expected Response</summary>
-  
-  ```json
-{
-    "ip": "127.0.0.1"
-}
-  ```
-</details>
-
-**Retrieve relayer configuration**
-
-```
-/api/v1/info
-```
-
-<details>
-  <summary>Expected Response</summary>
-  
-  ```json
-  {
-    "evm": {
-        "rinkeby": {
-            "enabled": true,
-            "chainId": 4,
-            "beneficiary": "0x58fcd47ece3ed24ace88fee06efd90dcb38f541f",
-            "contracts": [{
-                "contract": "Anchor",
-                "address": "0x9d36b94f245857ec7280415140800dde7642addb",
-                "deployedAt": 8896800,
-                "eventsWatcher": {
-                    "enabled": true,
-                    "pollingInterval": 15000
-                },
-                "size": 0.1,
-                "proposalSigningBackend": { "type": "DKGNode", "node": "dkg-local" },
-                "withdrawFeePercentage": 0.05
-            }]
-        }
-    },
-    "substrate": {},
-    "experimental": {
-        "smart-anchor-updates": false,
-        "smart-anchor-updates-retries": 0
-    },
-    "features": { "dataQuery": true, "governanceRelay": true, "privateTxRelay": true },
-    "assets": {
-        "TNT": { "price": 0.1, "name": "Tangle Network Token", "decimals": 18 },
-        "tTNT": { "price": 0.1, "name": "Test Tangle Network Token", "decimals": 18 }
-    },
-    "build" : {
-        "version": "0.5.0",
-        "commit": "c8875ba78298d34272e40c2e302fcfe33f191147",
-        "timestamp": "2023-05-19T15:57:40Z"
-    }
-}
-  ```
-</details>
-
-**Retrieve historical leaves cache**
-
-##### Parameters
-
-- `target_system`: evm | substrate
-- `chain_id`: ChainId of the system
-- `tree_id`: TreeId applicable in case of substrate based chains.
-- `pallet_id`: PalletId of `VanchorHandler`, applicable for substrate based chains.
-- `contract_address` Contract address of `vanchor`, applicable in case of evm based chains.
-
-##### For evm
-
-```
-/api/v1/leaves/{target_system}/{chain_id}/{contract_address}
-#example
-/api/v1/leaves/evm/4/0x9d36b94f245857ec7280415140800dde7642addb
-```
-
-##### For substrate
-
-> Note: Since substrate doesn't have contract address we use `tree_id`
-
-```
-/api/v1/leaves/{target_system}/{chain_id}/{tree_id}/{pallet_id}
-#example
-/api/v1/leaves/substrate/4/9/44
-```
-
-<details>
-  <summary>Expected Response</summary>
-  
-  ```json
-{
-  "leaves": [
-    "0x015110a4b1a8bf29f7b6b2cb3fe5f52c2eeccd9ff7e8a0fb7d4ff2ae61516562",
-    "0x2fa56e6179d1bf0afc6f3ee2a52dc68cc2076d380a55165578c1c558e1f6f1dc",
-    "0x031317e0fe026ce99cf9b3cf8fefed7ddc21c5f4181e49fd6e8370aea5006da0",
-    "0x07507826af3c90c457222ad0305d90bf8bcfb1d343c2a9c17d280ff648b43582",
-    "0x0ff8f7f0fc798b9b34464ba51a10bdde16d17506f3251f9658335504f07c9c5f",
-    "0x0b92b3c5013eb2374527a167af6464f1ab8b11da1dd36e5a6a2cf76130fee9e3",
-    "0x2bccea444d1078a2b5778f3c8f28013219abfe5c236d1276b87276ec5eec4354",
-    "0x0be7c8578e746b1b7d913c79affb80c715b96a1304edb68d1d7e6dc33f30260f",
-    "0x117dae7ac7b62ed97525cc8541823c2caae25ffaf6168361ac19ca484851744f",
-    "0x0c187c0b413f2c2e8ebaeffbe9351fda6eb46dfa396b0c73298215950439fa75"
-  ],
-  "lastQueriedBlock": 37
-}
-
-```
-</details>
-
-**Retrieve encrypted leaves cache**
-##### For evm
-```
-
-/api/v1/encrypted_outputs/evm/{chain_id}/{contract_address}
-#example
-/api/v1/encrypted_outputs/evm/4/0x9d36b94f245857ec7280415140800dde7642addb
-
-````
-<details>
-  <summary>Expected Response</summary>
-
-  ```json
-   {
-    "encryptedOutputs": [
-      [
-        181, 159,  89,  66, 226,  23, 242, 191, 101, 204, 147,  17,
-        75, 136, 174,  91, 245, 154, 154, 244, 225, 196,  39,  53,
-        88, 220, 105, 105, 207, 215, 161, 254,   4, 196, 154, 209,
-        224, 228,  43, 182, 160, 111,   5,  32,  32,  35, 234,  12,
-        148, 174, 118,  96, 145,   0,  10,  40,  63, 175,  12, 140,
-          6, 173, 243, 183, 111,  46, 204, 140,  19, 228, 203, 201,
-        115, 131, 127,  25, 137, 133,  88, 203, 110,  22, 207,  95,
-        242, 145, 175, 225, 199,  75, 232, 103,  65,  35, 207, 134,
-        65, 177, 244, 142,
-        ... 68 more items
-      ],
-      [
-        40, 193, 119,  88, 204,  93, 235, 206,  18, 101,  57, 108,
-        242, 117, 213,  29,  73,  76, 255,  61, 167, 215, 255,  10,
-        117,  24,  24,  51,  73, 175, 233,  91, 136, 171, 141, 182,
-        21, 144, 230, 102, 207, 232, 134, 134,  30,  94, 113,  48,
-        190,  34, 175, 170, 211,  83, 219, 112,   6,  89, 164,  86,
-        17, 204, 253,  62,  25, 157, 204, 188, 134, 157, 216, 237,
-        116,  27, 105, 181, 240, 185, 222, 140, 223, 238, 220, 187,
-        20,  22, 123, 176, 199,  96, 161, 151, 208,  59,   8, 170,
-        16, 189,  22,  13,
-        ... 68 more items
-      ],
-    ],
-    "lastQueriedBlock": 37
-   }
-
-````
-
-</details>
-
-**Retrieve Metrics information**
-
-```
-/api/v1/metrics
-```
-
-<details>
-  <summary>Expected Response</summary>
-
-```json
-{
-  "metrics": "# HELP bridge_watcher_back_off_metric specifies how many times the bridge watcher backed off\n# TYPE bridge_watcher_back_off_metric counter\nbridge_watcher_back_off_metric 0\n# HELP gas_spent_metric The total number of gas spent\n# TYPE gas_spent_metric counter\ngas_spent_metric 0\n# HELP handle_proposal_execution_metric How many times did the function handle_proposal get executed\n# TYPE handle_proposal_execution_metric counter\nhandle_proposal_execution_metric 0\n# HELP proposal_queue_attempt_metric How many times a proposal is attempted to be queued\n# TYPE proposal_queue_attempt_metric counter\nproposal_queue_attempt_metric 0\n# HELP total_active_relayer_metric The total number of active relayers\n# TYPE total_active_relayer_metric counter\ntotal_active_relayer_metric 0\n# HELP total_fee_earned_metric The total number of fees earned\n# TYPE total_fee_earned_metric counter\ntotal_fee_earned_metric 0\n# HELP total_number_of_data_stored_metric The Total number of data stored\n# TYPE total_number_of_data_stored_metric counter\ntotal_number_of_data_stored_metric 1572864\n# HELP total_number_of_proposals_metric The total number of proposals proposed\n# TYPE total_number_of_proposals_metric counter\ntotal_number_of_proposals_metric 0\n# HELP total_transaction_made_metric The total number of transaction made\n# TYPE total_transaction_made_metric counter\ntotal_transaction_made_metric 0\n# HELP transaction_queue_back_off_metric How many times the transaction queue backed off\n# TYPE transaction_queue_back_off_metric counter\ntransaction_queue_back_off_metric 0\n"
-}
-```
-
-</details>
-
-**Retrieve fee information**
-
-```
-/api/v1/fee_info
-```
-
-##### Parameters
-
-- `chain_id`
-- `contract_address`
-- `gas_amount`
-
-<details>
-  <summary>Expected Response</summary>
-
-```json
-{
-  "estimatedFee": "0x476b26e0f",
-  "gasPrice": "0x11",
-  "refundExchangeRate": "0x28f",
-  "maxRefund": "0xf3e59",
-  "timestamp": "2023-01-19T06:29:49.556114073Z"
-}
-```
-
-</details>
-
-**Retrieve Metrics information for specific resource**
-
-##### For evm
-
-```
-/api/v1/metrics/{target_system}/{chain_id}/{contract_address}
-#example
-/api/v1/metrics/evm/4/0x9d36b94f245857ec7280415140800dde7642addb
-```
-
-##### For substrate
-
-```
-/api/v1/metrics/{target_system}/{chain_id}/{tree_id}/{pallet_id}
-#example
-/api/v1/metrics/substrate/4/9/44
-```
-
-<details>
-  <summary>Expected Response</summary>
-  
-  ```json
-  { 
-    "totalGasSpent": "1733870",
-    "totalFeeEarned": "1787343976",
-    "accountBalance": "10000003900094" 
-  }
-  ```
-</details>
-
-<h2 id="test"> Testing 🧪 </h2>
-
-The following instructions outlines how to run the relayer base test suite and E2E test suite.
-
-### To run base tests
-
-```
-cargo test
-```
-
-### To run E2E tests
-
-First you will need [`protocol-substrate`](https://github.com/webb-tools/protocol-substrate) and [`tangle`](https://github.com/webb-tools/tangle) nodes, compiled locally (in release mode) and both the `protocol-substrate` and `relayer` project must be next to each other. The relayer must be compiled using `--features integration-tests,cli`.
-
-Here is the basic setup you will need:
-
-1. Clone the Relayer repo `git clone https://github.com/webb-tools/relayer.git`
-2. Clone Protocol Substrate node `https://github.com/webb-tools/protocol-substrate.git`
-3. Then fetch the submodules for the node `cd protocol-substrate && git submodule update --init`
-4. While you are there, build the standalone node `cargo build --release -p webb-standalone-node`
-5. Clone Tangle repo `https://github.com/webb-tools/tangle.git`
-6. Build tangle `cd tangle && cargo build --release --features integration-tests -p tangle-standalone`
-7. And then go back to the relayer `cd ../relayer`
-8. Run `cd tests && dvc pull`
-9. Run `yarn install` (in `tests` dir)
-10. `yarn test`
-
-### Tips for E2E tests
-
-1. If you want to run a specific test run `yarn test -fgrep <UNIQUE_PART_OF_TEST_NAME>`.
-2. If you want to make the tests fail fast (fail on first error) run `yarn test --bail`.
-3. by default, tests runs in parallel, to disable that run `yarn test --parallel=false`.
-4. failing tests will keep retry before giving up, up to 5 times. To disable that use `yarn test --retries=0`.
-5. You can combine all the tips above together, for more options see [here](https://mochajs.org/#command-line-usage)
-
-For the Substrate test, you can connect to your local chain manually by:
-
-1. Specifying the Alice node ports such as:
-
-```ts
-const aliceManualPorts = { ws: 9944, http: 9933, p2p: 30333 };
-```
-
-2. Specifying the Bob node ports such as:
-
-```ts
-const bobManualPorts = { ws: 9945, http: 9934, p2p: 30334 };
-```
-
-3. Make the `ports` property value be the `aliceManualPorts` and `bobManualPorts` respectively in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start()` method.
-4. Specifying and setting `isManual` flag to `true` in the `LocalNodeOpts` config which is the parameter in `LocalProtocolSubstrate.start()` method.
+---
 
 ## Contributing
 
