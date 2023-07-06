@@ -29,7 +29,7 @@ use super::OptionalRangeQuery;
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EncryptedOutputsCacheResponse {
-    encrypted_outputs: Vec<Vec<u8>>,
+    encrypted_outputs: Vec<String>,
     last_queried_block: u64,
 }
 
