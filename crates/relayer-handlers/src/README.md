@@ -112,8 +112,8 @@ Return commitment leaves cached by the relayer.
 
 ---
 
-**Retrieve encrypted leaves cache**
-Returns encrypted commitment leaves cached by the relayer.
+**Retrieve encrypted output cache**
+Returns encrypted outputs cached by the relayer.
 - URL : `/api/v1/encrypted_outputs/evm/:chain_id/:contract_address`
 - Method : GET
 
