@@ -270,7 +270,7 @@ impl LeafCacheStore for SledStore {
 }
 
 impl EncryptedOutputCacheStore for SledStore {
-    type Output = Vec<Vec<u8>>;
+    type Output = Vec<String>;
 
     #[tracing::instrument(skip(self))]
     fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
@@ -283,8 +283,12 @@ impl EncryptedOutputCacheStore for SledStore {
             key.chain_id(),
             key.address()
         ))?;
-        let encrypted_outputs: Vec<_> =
-            tree.iter().values().flatten().map(|v| v.to_vec()).collect();
+        let encrypted_outputs: Vec<_> = tree
+            .iter()
+            .values()
+            .flatten()
+            .map(|v| hex::encode(&v))
+            .collect();
         Ok(encrypted_outputs)
     }
 
@@ -306,7 +310,7 @@ impl EncryptedOutputCacheStore for SledStore {
             .range(range_start..range_end)
             .values()
             .flatten()
-            .map(|v| v.to_vec())
+            .map(|v| hex::encode(&v))
             .collect();
         Ok(encrypted_outputs)
     }
@@ -711,6 +715,7 @@ mod tests {
 
     use super::*;
     use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
+    use webb::evm::ethers::prelude::rand::Rng;
     use webb::evm::ethers::types;
     use webb::evm::ethers::types::transaction::request::TransactionRequest;
     use webb::evm::{
@@ -974,6 +979,49 @@ mod tests {
                 .get_last_block_number(history_store_key, default_block_number)
                 .unwrap(),
             block_number
+        );
+    }
+
+    #[test]
+    fn get_encrypted_outputs_should_work() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+        let chain_id = 1u32;
+        let block_number = 20u64;
+        let contract =
+            types::H160::from_slice("11111111111111111111".as_bytes());
+        let history_store_key = (
+            TypedChainId::Evm(chain_id),
+            TargetSystem::new_contract_address(contract.to_fixed_bytes()),
+        );
+        let generated_encrypted_outputs = (0..20u32)
+            .map(|i| {
+                let mut encrypted_output = vec![0u8; 168];
+                for byte in encrypted_output.iter_mut() {
+                    *byte = ethers::prelude::rand::thread_rng().gen();
+                }
+                (i, encrypted_output)
+            })
+            .collect::<Vec<_>>();
+        store
+            .insert_encrypted_output_and_last_deposit_block_number(
+                history_store_key,
+                &generated_encrypted_outputs,
+                block_number,
+            )
+            .unwrap();
+        let encrypted_outputs = store
+            .get_encrypted_output_with_range(history_store_key, 5..10)
+            .unwrap();
+        assert_eq!(encrypted_outputs.len(), 5);
+        assert_eq!(
+            encrypted_outputs,
+            generated_encrypted_outputs
+                .into_iter()
+                .skip(5)
+                .take(5)
+                .map(|(_, v)| hex::encode(v))
+                .collect::<Vec<_>>()
         );
     }
 

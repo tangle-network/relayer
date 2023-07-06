@@ -200,7 +200,7 @@ impl LeafCacheStore for InMemoryStore {
 }
 
 impl EncryptedOutputCacheStore for InMemoryStore {
-    type Output = Vec<Vec<u8>>;
+    type Output = Vec<String>;
 
     #[tracing::instrument(skip(self))]
     fn get_encrypted_output<K: Into<HistoryStoreKey> + Debug>(
@@ -209,6 +209,8 @@ impl EncryptedOutputCacheStore for InMemoryStore {
     ) -> crate::Result<Self::Output> {
         let guard = self.encrypted_output_store.read();
         let val = guard.get(&key.into()).cloned().unwrap_or_default();
+        let val: Vec<String> =
+            val.iter().map(hex::encode).collect();
         Ok(val)
     }
 
@@ -223,7 +225,8 @@ impl EncryptedOutputCacheStore for InMemoryStore {
         let iter = val
             .into_iter()
             .skip(range.start as usize)
-            .take((range.end - range.start) as usize);
+            .take((range.end - range.start) as usize)
+            .map(hex::encode);
         Ok(iter.collect())
     }
 
