@@ -303,7 +303,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     await webbRelayer.waitUntilReady();
   });
 
-  it.only('should handle AnchorUpdateProposal when a deposit happens using DKG proposal backend', async () => {
+  it('should handle AnchorUpdateProposal when a deposit happens using DKG proposal backend', async () => {
     webbRelayer.clearLogs();
     // we will use chain1 as an example here.
     const anchor1 = await localChain1.getVAnchor(wallet1);
