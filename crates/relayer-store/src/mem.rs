@@ -209,8 +209,7 @@ impl EncryptedOutputCacheStore for InMemoryStore {
     ) -> crate::Result<Self::Output> {
         let guard = self.encrypted_output_store.read();
         let val = guard.get(&key.into()).cloned().unwrap_or_default();
-        let val: Vec<String> =
-            val.iter().map(hex::encode).collect();
+        let val: Vec<String> = val.iter().map(hex::encode).collect();
         Ok(val)
     }
 
