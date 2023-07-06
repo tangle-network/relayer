@@ -326,12 +326,7 @@ describe('Relayer transfer assets', function () {
       }
     );
 
-    const payload = webbRelayer.vanchorWithdrawPayload(
-      localChain1.underlyingChainId,
-      vanchor1.getAddress(),
-      publicInputs,
-      extData
-    );
+    const payload = webbRelayer.vanchorWithdrawPayload(publicInputs, extData);
 
     const withdrawTxResponse = await webbRelayer.sendPrivateTxEvm(
       localChain1.underlyingChainId,

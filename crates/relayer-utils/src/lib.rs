@@ -256,7 +256,7 @@ pub enum Error {
 pub enum TransactionRelayingError {
     /// Unsupported chain
     #[error("Unsupported chain: {0}")]
-    UnsupportedChain(u64),
+    UnsupportedChain(u32),
     /// Unsupported contract address
     #[error("Unsupported contract address: {0}")]
     UnsupportedContract(String),
@@ -277,7 +277,7 @@ pub enum TransactionRelayingError {
     TransactionQueueError(String),
     /// Network Error
     #[error("Network configuration error: {0} for chain: {1}")]
-    NetworkConfigurationError(String, u64),
+    NetworkConfigurationError(String, u32),
     /// Client Error
     #[error("ClientError: {0}")]
     ClientError(String),

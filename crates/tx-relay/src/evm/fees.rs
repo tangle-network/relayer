@@ -23,7 +23,8 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
 
 /// Amount of time for which a `FeeInfo` is valid after creation
-static FEE_CACHE_TIME: Lazy<Duration> = Lazy::new(|| Duration::minutes(1));
+const FEE_CACHE_TIME: core::time::Duration =
+    core::time::Duration::from_secs(60);
 
 /// Cache for previously generated fee info. Key consists of the VAnchor address and chain id.
 /// Entries are valid as long as `timestamp` is no older than `FEE_CACHE_TIME`.
@@ -76,7 +77,10 @@ pub async fn get_evm_fee_info(
             FEE_INFO_CACHED.lock().expect("lock fee info cache mutex");
         // Remove all items from cache which are older than `FEE_CACHE_TIME`
         lock.retain(|_, v| {
-            let fee_info_valid_time = v.timestamp.add(*FEE_CACHE_TIME);
+            let fee_info_valid_time =
+                v.timestamp.add(Duration::from_std(FEE_CACHE_TIME).expect(
+                    "FEE_CACHE_TIME must be convertible to chrono::Duration",
+                ));
             fee_info_valid_time > Utc::now()
         });
         lock.get(&(vanchor, chain_id)).cloned()

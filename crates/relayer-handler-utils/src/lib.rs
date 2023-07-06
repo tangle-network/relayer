@@ -70,7 +70,6 @@ impl<'de> Deserialize<'de> for WebbI128 {
 
 /// The command type for EVM vanchor transactions
 pub type EvmVanchorCommand = VAnchorRelayTransaction<
-    Address,  // Contract address
     Bytes,    // Proof bytes
     Bytes,    // Roots format
     H256,     // Element type
