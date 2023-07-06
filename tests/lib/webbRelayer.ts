@@ -295,43 +295,34 @@ export class WebbRelayer {
   }
 
   public vanchorWithdrawPayload(
-    chainId: number,
-    vanchorAddress: string,
     publicInputs: IEvmVariableAnchorPublicInputs,
     extData: IVariableAnchorExtData
   ): WithdrawRequestPayloadEVM {
-    const cmd = {
-      evm: {
-        vAnchor: {
-          chainId: chainId,
-          id: vanchorAddress,
-          extData: {
-            recipient: extData.recipient,
-            relayer: extData.relayer,
-            extAmount: extData.extAmount.replace('0x', ''),
-            fee: extData.fee,
-            refund: extData.refund,
-            token: extData.token,
-            encryptedOutput1: extData.encryptedOutput1,
-            encryptedOutput2: extData.encryptedOutput2,
-          },
-          proofData: {
-            proof: publicInputs.proof,
-            extensionRoots: publicInputs.extensionRoots,
-            extDataHash: padHexString(publicInputs.extDataHash.toHexString()),
-            publicAmount: publicInputs.publicAmount,
-            roots: publicInputs.roots,
-            outputCommitments: publicInputs.outputCommitments.map((output) =>
-              padHexString(output.toHexString())
-            ),
-            inputNullifiers: publicInputs.inputNullifiers.map((nullifier) =>
-              padHexString(nullifier.toHexString())
-            ),
-          },
-        },
+    return {
+      extData: {
+        recipient: extData.recipient,
+        relayer: extData.relayer,
+        extAmount: extData.extAmount.replace('0x', ''),
+        fee: extData.fee,
+        refund: extData.refund,
+        token: extData.token,
+        encryptedOutput1: extData.encryptedOutput1,
+        encryptedOutput2: extData.encryptedOutput2,
+      },
+      proofData: {
+        proof: publicInputs.proof,
+        extensionRoots: publicInputs.extensionRoots,
+        extDataHash: padHexString(publicInputs.extDataHash.toHexString()),
+        publicAmount: publicInputs.publicAmount,
+        roots: publicInputs.roots,
+        outputCommitments: publicInputs.outputCommitments.map((output) =>
+          padHexString(output.toHexString())
+        ),
+        inputNullifiers: publicInputs.inputNullifiers.map((nullifier) =>
+          padHexString(nullifier.toHexString())
+        ),
       },
     };
-    return cmd.evm.vAnchor;
   }
 }
 
@@ -456,8 +447,6 @@ export interface WithdrawTxFailureResponse {
 }
 
 export type WithdrawRequestPayloadEVM = {
-  chainId: number;
-  id: string;
   extData: {
     recipient: string;
     relayer: string;

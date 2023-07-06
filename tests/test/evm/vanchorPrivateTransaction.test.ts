@@ -333,8 +333,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     );
 
     const payload = webbRelayer.vanchorWithdrawPayload(
-      localChain2.underlyingChainId,
-      vanchor2.getAddress(),
       output.publicInputs,
       output.extData
     );
@@ -474,8 +472,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     expect(output.publicInputs.roots).to.not.eq(invalidRootBytes);
     output.publicInputs.roots = invalidRootBytes;
     const payload = webbRelayer.vanchorWithdrawPayload(
-      localChain2.underlyingChainId,
-      vanchor2.getAddress(),
       output.publicInputs,
       output.extData
     );
@@ -567,8 +563,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     expect(output.publicInputs.proof).to.not.eq(invalidProofBytes);
     output.publicInputs.proof = invalidProofBytes;
     const payload = webbRelayer.vanchorWithdrawPayload(
-      localChain2.underlyingChainId,
-      vanchor2.getAddress(),
       output.publicInputs,
       output.extData
     );
@@ -667,8 +661,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     );
     output.publicInputs.inputNullifiers[0] = invalidnullifierHash;
     const payload = webbRelayer.vanchorWithdrawPayload(
-      localChain2.underlyingChainId,
-      vanchor2.getAddress(),
       output.publicInputs,
       output.extData
     );

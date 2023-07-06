@@ -5,6 +5,7 @@ use ethereum_types::{H512, U256};
 use futures::TryFutureExt;
 use std::{collections::HashMap, sync::Arc};
 use webb::evm::ethers::prelude::Middleware;
+use webb::evm::ethers::types;
 use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::utils::{format_units, hex, parse_ether};
 use webb::evm::{
@@ -28,13 +29,15 @@ use webb_relayer_utils::TransactionRelayingError;
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `cmd` - The command to execute
-/// * `stream` - The stream to write the response to
+#[tracing::instrument(skip(ctx))]
 pub async fn handle_vanchor_relay_tx<'a>(
     ctx: Arc<RelayerContext>,
+    chain_id: TypedChainId,
+    contract: types::Address,
     cmd: EvmVanchorCommand,
 ) -> Result<TransactionItemKey, TransactionRelayingError> {
     use TransactionRelayingError::*;
-    let requested_chain = cmd.chain_id;
+    let requested_chain = chain_id.underlying_chain_id();
     let chain = ctx
         .config
         .evm
@@ -52,13 +55,12 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .collect();
     // get the contract configuration
     let contract_config = supported_contracts
-        .get(&cmd.id)
-        .ok_or(UnsupportedContract(cmd.id.to_string()))?;
+        .get(&contract)
+        .ok_or(UnsupportedContract(contract.to_string()))?;
 
-    let wallet = ctx
-        .evm_wallet(cmd.chain_id)
-        .await
-        .map_err(|e| NetworkConfigurationError(e.to_string(), cmd.chain_id))?;
+    let wallet = ctx.evm_wallet(requested_chain).await.map_err(|e| {
+        NetworkConfigurationError(e.to_string(), requested_chain)
+    })?;
     // validate the relayer address first before trying
     // send the transaction.
     let reward_address = chain.beneficiary.unwrap_or(wallet.address());
@@ -73,13 +75,12 @@ pub async fn handle_vanchor_relay_tx<'a>(
         return Err(InvalidMerkleRoots);
     }
 
-    let provider = ctx
-        .evm_provider(cmd.chain_id)
-        .await
-        .map_err(|e| NetworkConfigurationError(e.to_string(), cmd.chain_id))?;
+    let provider = ctx.evm_provider(requested_chain).await.map_err(|e| {
+        NetworkConfigurationError(e.to_string(), requested_chain)
+    })?;
 
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
-    let contract = VAnchorContract::new(cmd.id, client.clone());
+    let contract = VAnchorContract::new(contract, client.clone());
 
     let common_ext_data = CommonExtData {
         recipient: cmd.ext_data.recipient,

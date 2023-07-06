@@ -1,6 +1,7 @@
 use ethereum_types::U256;
 use webb::evm::ethers;
 
+/// For Fees calculation.
 pub mod fees;
 /// Variable Anchor transaction relayer.
 pub mod vanchor;

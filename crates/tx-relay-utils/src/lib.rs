@@ -14,34 +14,6 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Contains data that is relayed to the Anchors
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AnchorRelayTransaction<Id, P, R, E, I, B> {
-    /// one of the supported chains of this relayer
-    pub chain_id: u64,
-    /// The tree id of the vanchor's underlying tree
-    pub id: Id,
-    /// The zero-knowledge proof bytes
-    pub proof: P,
-    /// The target merkle root for the proof
-    pub roots: R,
-    /// The nullifier_hash for the proof
-    pub nullifier_hash: E,
-    /// The recipient of the transaction
-    pub recipient: I,
-    /// The relayer of the transaction
-    pub relayer: I,
-    /// The relayer's fee for the transaction
-    pub fee: B,
-    /// The refund for the transaction in native tokens
-    pub refund: B,
-    /// The refresh commitment
-    pub refresh_commitment: E,
-    /// The external data hash,
-    pub ext_data_hash: E,
-}
-
 /// Proof data object for VAnchor proofs on any chain
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -87,11 +59,7 @@ pub struct ExtData<E, I, B, A, T> {
 /// Contains data that is relayed to the VAnchors
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct VAnchorRelayTransaction<Id, P, R, E, I, B, A, T> {
-    /// one of the supported chains of this relayer
-    pub chain_id: u64,
-    /// The tree id of the vanchor's underlying tree
-    pub id: Id,
+pub struct VAnchorRelayTransaction<P, R, E, I, B, A, T> {
     /// The zero-knowledge proof data structure for VAnchor transactions
     pub proof_data: ProofData<P, R, E>,
     /// The external data structure for arbitrary inputs
