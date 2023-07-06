@@ -240,20 +240,17 @@ You can make a withdraw request to relayer to withdraw amount privately. This ap
 
 - `chain_id`: ChainId of the system
 - `contract_address`: Contract address of `vanchor` system.
-- `item_key` : An 64 byte hex string.
 
 ##### Request Payload
 ```json
-{ 
-  "chainId" : "5001",
-  "id" : "0x9d36b94f245857ec7280415140800dde7642addb",
+{
   "extData": {
-    "recipient": "0x306721211d5404bd9da88e0204360a1a9ab8b87c66c1bc2fcdd37f3c2222cc20",
-    "relayer": "0x90b5ab205c6974c9ea841be688864633dc9ca8a357843eeacf2314649965fe22",
+    "recipient": "0x61f87418b7F93B242FC349a18901511719840f8A",
+    "relayer": "0xC1b634853Cb333D3aD8663715b08f41A3Aec47cc",
     "extAmount": "-32e976941b78c20c6d",
     "fee": "0x00000000000000034c5319aa65ddf393",
     "refund": "0x00000000000000000000000000000000",
-    "token": 0,
+    "token": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
     "encryptedOutput1": "0x84e190004e5a43dde02d3f172fb54a1171cb04e7599baa4b98666df3ca2a717a626f0828e23f9d84278786034793c5a6ef9fe8b3b6595c2e2224f5baa9dcb170ef79a2c6a5604d7d18995d6758a8140abd71c7cb7dde469b132ea3fedbfd33363672224f2dd7923ae681cab59fb24aa6e1e18edb3b58c48ab32b6fa5c25d5bbde58854945f6fb3d150fb0aeeaa313a54540de6ecc5556d417464df959214956f983e0c399666637c",
     "encryptedOutput2": "0x5aace9d7c642b3a67ed92d266e5b5b4c51581b3cef1d2869ca24a6971752d198624a66e5c456db7e7009b7727980ddc278e82c4287c8e81eebb06a4c13a11669382bfe24253c78bc6919ea5864b2cf3369d90bc8faa618c69a97aeee7ddafbe1f1753c5339face258d129565771ad5681ff76c6fef0586823d307098ea9bea68883fdb33fa11afbb67427bc0014dbcdf01b9498f49b3dd62d613dc09764a2a56df97c903eb68571f"
   },
