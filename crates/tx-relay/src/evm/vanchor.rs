@@ -58,10 +58,9 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .get(&contract)
         .ok_or(UnsupportedContract(contract.to_string()))?;
 
-    let wallet = ctx
-        .evm_wallet(requested_chain)
-        .await
-        .map_err(|e| NetworkConfigurationError(e.to_string(), requested_chain))?;
+    let wallet = ctx.evm_wallet(requested_chain).await.map_err(|e| {
+        NetworkConfigurationError(e.to_string(), requested_chain)
+    })?;
     // validate the relayer address first before trying
     // send the transaction.
     let reward_address = chain.beneficiary.unwrap_or(wallet.address());
@@ -76,10 +75,9 @@ pub async fn handle_vanchor_relay_tx<'a>(
         return Err(InvalidMerkleRoots);
     }
 
-    let provider = ctx
-        .evm_provider(requested_chain)
-        .await
-        .map_err(|e| NetworkConfigurationError(e.to_string(), requested_chain))?;
+    let provider = ctx.evm_provider(requested_chain).await.map_err(|e| {
+        NetworkConfigurationError(e.to_string(), requested_chain)
+    })?;
 
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
     let contract = VAnchorContract::new(contract, client.clone());
