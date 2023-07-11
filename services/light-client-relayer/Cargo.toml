@@ -46,7 +46,7 @@ native-tls = { version = "^0.2", features = ["vendored"], optional = true }
 ethereum-types = "0.14.0"
 dotenv = "0.15.0"
 thiserror = "^1"
-prometheus = { version = "0.9", features = ["process"] }
+prometheus = { version = "0.13", features = ["process"] }
 
 [dev-dependencies]
 tempfile = "^3.2"
