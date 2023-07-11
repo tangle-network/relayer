@@ -36,7 +36,7 @@ config = { workspace = true }
 reqwest = { workspace = true }
 ark-std = { version = "^0.3.0", default-features = false }
 derive_more = { version = "0.99", default-features = false, features = ["display"] }
-prometheus = "0.13.3"
+prometheus = { version = "0.13.0", default-features = false }
 hyper = "0.14.24"
 
 [features]
