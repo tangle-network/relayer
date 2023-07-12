@@ -9683,7 +9683,6 @@ version = "0.5.5-dev"
 dependencies = [
  "anyhow",
  "axum",
- "build-data",
  "config",
  "dotenv",
  "ethereum-types 0.14.1",
@@ -9777,6 +9776,7 @@ version = "0.5.5-dev"
 dependencies = [
  "axum",
  "axum-client-ip",
+ "build-data",
  "ethereum-types 0.14.1",
  "futures",
  "native-tls",

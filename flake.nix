@@ -31,6 +31,7 @@
             pkgs.clang
             # Mold Linker for faster builds (only on Linux)
             (lib.optionals pkgs.stdenv.isLinux pkgs.mold)
+            (lib.optionals pkgs.stdenv.isDarwin pkgs.darwin.apple_sdk.frameworks.Security)
           ];
           buildInputs = [
             # Used for DVC
@@ -53,7 +54,7 @@
           # Environment variables
           RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
           # Needed for running DKG/Tangle locally
-          LD_LIBRARY_PATH = "${pkgs.gmp}/lib";
+          LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.gmp ];
         };
       });
 }
