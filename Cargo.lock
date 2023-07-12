@@ -2319,8 +2319,8 @@ dependencies = [
  "tree_hash 0.4.1 (git+https://github.com/webb-tools/pallet-eth2-light-client)",
  "webb 0.5.25",
  "webb-proposals",
- "webb-relayer-types 0.5.5-dev (git+https://github.com/webb-tools/relayer.git)",
- "webb-relayer-utils 0.5.5-dev (git+https://github.com/webb-tools/relayer.git)",
+ "webb-relayer-types 0.5.5-dev",
+ "webb-relayer-utils 0.5.5-dev",
 ]
 
 [[package]]
@@ -2466,7 +2466,7 @@ dependencies = [
  "warp",
  "webb 0.5.25",
  "webb-proposals",
- "webb-relayer-utils 0.5.5-dev (git+https://github.com/webb-tools/relayer.git)",
+ "webb-relayer-utils 0.5.5-dev",
 ]
 
 [[package]]
@@ -9470,7 +9470,7 @@ dependencies = [
 
 [[package]]
 name = "webb-bridge-registry-backends"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "async-trait",
  "ethereum-types 0.14.1",
@@ -9484,12 +9484,12 @@ dependencies = [
  "webb 0.6.1",
  "webb-proposals",
  "webb-relayer-config",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-chains-info"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "anyhow",
  "prettyplease",
@@ -9528,7 +9528,7 @@ dependencies = [
 
 [[package]]
 name = "webb-event-watcher-traits"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "async-trait",
  "backoff",
@@ -9544,12 +9544,12 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-ew-dkg"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "async-trait",
  "ethereum-types 0.14.1",
@@ -9563,12 +9563,12 @@ dependencies = [
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-ew-evm"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "ark-bls12-381",
  "ark-bn254",
@@ -9593,12 +9593,12 @@ dependencies = [
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-price-oracle-backends"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "async-trait",
  "axum",
@@ -9612,7 +9612,7 @@ dependencies = [
  "webb 0.6.1",
  "webb-chains-info",
  "webb-relayer-store",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
@@ -9638,7 +9638,7 @@ dependencies = [
 
 [[package]]
 name = "webb-proposal-signing-backends"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "async-trait",
  "ethereum-types 0.14.1",
@@ -9657,8 +9657,8 @@ dependencies = [
  "webb 0.6.1",
  "webb-proposals",
  "webb-relayer-store",
- "webb-relayer-types 0.5.5-dev",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-types 0.5.6-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
@@ -9679,11 +9679,10 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "anyhow",
  "axum",
- "build-data",
  "config",
  "dotenv",
  "ethereum-types 0.14.1",
@@ -9710,12 +9709,12 @@ dependencies = [
  "webb-relayer-handlers",
  "webb-relayer-store",
  "webb-relayer-tx-queue",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-relayer-config"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "anyhow",
  "config",
@@ -9736,13 +9735,13 @@ dependencies = [
  "webb 0.6.1",
  "webb-proposals",
  "webb-relayer-store",
- "webb-relayer-types 0.5.5-dev",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-types 0.5.6-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-relayer-context"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "http",
  "native-tls",
@@ -9756,12 +9755,12 @@ dependencies = [
  "webb-price-oracle-backends",
  "webb-relayer-config",
  "webb-relayer-store",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-relayer-handler-utils"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "native-tls",
  "serde",
@@ -9773,10 +9772,11 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-handlers"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "axum",
  "axum-client-ip",
+ "build-data",
  "ethereum-types 0.14.1",
  "futures",
  "native-tls",
@@ -9793,12 +9793,12 @@ dependencies = [
  "webb-relayer-handler-utils",
  "webb-relayer-store",
  "webb-relayer-tx-relay",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-relayer-store"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "hex",
  "native-tls",
@@ -9810,12 +9810,12 @@ dependencies = [
  "tracing",
  "webb 0.6.1",
  "webb-proposals",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-relayer-tx-queue"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "backoff",
  "ethereum-types 0.14.1",
@@ -9834,13 +9834,13 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
- "webb-relayer-types 0.5.5-dev",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-types 0.5.6-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-relayer-tx-relay"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "chrono",
  "ethereum-types 0.14.1",
@@ -9859,29 +9859,15 @@ dependencies = [
  "webb-relayer-context",
  "webb-relayer-handler-utils",
  "webb-relayer-store",
- "webb-relayer-utils 0.5.5-dev",
+ "webb-relayer-utils 0.5.6-dev",
 ]
 
 [[package]]
 name = "webb-relayer-tx-relay-utils"
-version = "0.5.5-dev"
+version = "0.5.6-dev"
 dependencies = [
  "native-tls",
  "serde",
-]
-
-[[package]]
-name = "webb-relayer-types"
-version = "0.5.5-dev"
-dependencies = [
- "ethereum-types 0.14.1",
- "native-tls",
- "serde",
- "sp-core 21.0.0",
- "tiny-bip39",
- "tracing",
- "url",
- "webb 0.6.1",
 ]
 
 [[package]]
@@ -9900,8 +9886,51 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb-relayer-types"
+version = "0.5.6-dev"
+dependencies = [
+ "ethereum-types 0.14.1",
+ "native-tls",
+ "serde",
+ "sp-core 21.0.0",
+ "tiny-bip39",
+ "tracing",
+ "url",
+ "webb 0.6.1",
+]
+
+[[package]]
 name = "webb-relayer-utils"
 version = "0.5.5-dev"
+source = "git+https://github.com/webb-tools/relayer.git#2bcce85926fca9d280edebd6b6519becf3162441"
+dependencies = [
+ "ark-std",
+ "async-trait",
+ "axum",
+ "backoff",
+ "config",
+ "derive_more",
+ "futures",
+ "glob",
+ "hex",
+ "hyper 0.14.27",
+ "libsecp256k1",
+ "prometheus 0.13.3",
+ "reqwest",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serde_path_to_error",
+ "sled",
+ "thiserror",
+ "url",
+ "webb 0.6.1",
+ "webb-proposals",
+]
+
+[[package]]
+name = "webb-relayer-utils"
+version = "0.5.6-dev"
 dependencies = [
  "ark-std",
  "async-trait",
@@ -9924,35 +9953,6 @@ dependencies = [
  "sled",
  "thiserror",
  "tokio 1.29.1",
- "url",
- "webb 0.6.1",
- "webb-proposals",
-]
-
-[[package]]
-name = "webb-relayer-utils"
-version = "0.5.5-dev"
-source = "git+https://github.com/webb-tools/relayer.git#2bcce85926fca9d280edebd6b6519becf3162441"
-dependencies = [
- "ark-std",
- "async-trait",
- "axum",
- "backoff",
- "config",
- "derive_more",
- "futures",
- "glob",
- "hex",
- "hyper 0.14.27",
- "libsecp256k1",
- "prometheus 0.13.3",
- "reqwest",
- "serde",
- "serde_bytes",
- "serde_json",
- "serde_path_to_error",
- "sled",
- "thiserror",
  "url",
  "webb 0.6.1",
  "webb-proposals",
