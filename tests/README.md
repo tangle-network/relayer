@@ -18,9 +18,6 @@ Before running the test suites, ensure that you have the following set up:
     git clone https://github.com/webb-tools/relayer.git
 ```
 
-3. Install DVC
-[DVC](https://dvc.org/) is used for fetching large ZK files and managing them alongside git
-
 ---
 ## Running the Test Suites
 
@@ -34,7 +31,7 @@ To run the test suites, perform the following steps:
 
 2. Fetch fixtures
 ```
-    dvc pull
+    yarn fetch-fixtures
 ```
 3. Run E2E tests
 ```
