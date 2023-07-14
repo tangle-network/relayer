@@ -15,7 +15,7 @@
     "sim": "mocha test sim/*.sim.*",
     "format": "prettier -w '**/*.ts'",
     "ts-check": "npx tsc --noEmit",
-    "fetch-fixtures": "sh scripts/fetch-fixtures.sh"
+    "fetch-fixtures": "bash scripts/fetch-fixtures.sh"
   },
   "engines": {
     "node": "18.x.x"
