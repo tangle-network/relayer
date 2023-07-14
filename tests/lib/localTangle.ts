@@ -10,11 +10,10 @@ import {
   Pallet,
   ProposalSigningBackend,
 } from './webbRelayer.js';
-import { LocalNodeOpts } from '@webb-tools/test-utils';
 import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import * as TinySecp256k1 from 'tiny-secp256k1';
 import { ConvertToKebabCase } from './tsHacks.js';
-import { SubstrateNodeBase } from './substrateNodeBase.js';
+import { SubstrateNodeBase, LocalNodeOpts } from './substrateNodeBase.js';
 
 const TANGLE_DOCKER_IMAGE_URL =
   'ghcr.io/webb-tools/tangle/tangle-standalone-integration-tests:main';
@@ -37,7 +36,7 @@ type FullNodeInfo = NodeInfo & {
 
 export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
   public static async start(opts: LocalNodeOpts): Promise<LocalTangle> {
-    opts.ports = await super.makePorts(opts);
+    opts.ports = (await super.makePorts(opts)) as { rpc: number; p2p: number };
     // opts.usageMode.mode = 'docker'
     const startArgs: string[] = [];
     if (opts.usageMode.mode === 'docker') {
@@ -49,11 +48,9 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         'run',
         '--rm',
         '--name',
-        `${opts.authority}-node-${opts.ports.ws}`,
+        `${opts.authority}-node-${opts.ports.rpc}`,
         '-p',
-        `${opts.ports.ws}:9944`,
-        '-p',
-        `${opts.ports.http}:9933`,
+        `${opts.ports.rpc}:9944`,
         '-p',
         `${opts.ports.p2p}:30333`,
         TANGLE_DOCKER_IMAGE_URL,
@@ -62,7 +59,7 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         '--chain=relayer',
         '--rpc-cors',
         'all',
-        '--ws-external',
+        '--rpc-external',
         '--rpc-methods=unsafe',
         `--${opts.authority}`,
         ...startArgs,
@@ -84,9 +81,8 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         '--rpc-cors',
         'all',
         '--rpc-methods=unsafe',
-        '--ws-external',
-        `--ws-port=${opts.ports.ws}`,
-        `--rpc-port=${opts.ports.http}`,
+        '--rpc-external',
+        `--rpc-port=${opts.ports.rpc}`,
         `--port=${opts.ports.p2p}`,
         `--${opts.authority}`
       );
@@ -131,12 +127,12 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
   public async exportConfig(
     opts: ExportedConfigOptions
   ): Promise<FullNodeInfo> {
-    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
+    const ports = this.opts.ports as { rpc: number; p2p: number };
     const nodeInfo: FullNodeInfo = {
       name: 'localSubstrate',
       enabled: true,
-      httpEndpoint: `http://127.0.0.1:${ports.http}`,
-      wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
+      httpEndpoint: `http://127.0.0.1:${ports.rpc}`,
+      wsEndpoint: `ws://127.0.0.1:${ports.rpc}`,
       pallets: opts.enabledPallets ?? [],
       suri: opts.suri,
       chainId: opts.chainId,

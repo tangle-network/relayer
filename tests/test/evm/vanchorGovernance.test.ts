@@ -16,7 +16,6 @@
  */
 
 import { expect } from 'chai';
-import { CircomUtxo } from '@webb-tools/sdk-core';
 import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
@@ -26,8 +25,9 @@ import { u8aToHex, hexToU8a } from '@polkadot/util';
 import { MintableToken } from '@webb-tools/tokens';
 import { VBridge } from '@webb-tools/vbridge';
 import { type VAnchor } from '@webb-tools/contracts';
+import { Utxo } from '@webb-tools/utils';
 
-describe('VAnchor Governance Relayer', function () {
+describe('VAnchor Governance Relayer', function() {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -204,7 +204,7 @@ describe('VAnchor Governance Relayer', function () {
     expect(webbBalance.toBigInt() > ethers.utils.parseEther('1').toBigInt()).to
       .be.true;
 
-    const depositUtxo = await CircomUtxo.generateUtxo({
+    const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: '1',

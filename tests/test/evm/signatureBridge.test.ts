@@ -33,17 +33,17 @@ import { LocalTangle } from '../../lib/localTangle.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
-import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
 import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
 import { MintableToken } from '@webb-tools/tokens';
 import { VAnchor } from '@webb-tools/contracts';
 import { VBridge } from '@webb-tools/vbridge';
+import { Keypair, Utxo } from '@webb-tools/utils';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
+describe('Signature Bridge <> DKG Proposal Signing Backend', function() {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -58,7 +58,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
   let webbRelayer: WebbRelayer;
 
-  before(async function () {
+  before(async function() {
     const PK1 = u8aToHex(ethers.utils.randomBytes(32));
     const PK2 = u8aToHex(ethers.utils.randomBytes(32));
     const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
@@ -66,11 +66,11 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     const usageMode: UsageMode = isCi
       ? { mode: 'docker', forcePullImage: false }
       : {
-          mode: 'host',
-          nodePath: path.resolve(
-            '../../tangle/target/release/tangle-standalone'
-          ),
-        };
+        mode: 'host',
+        nodePath: path.resolve(
+          '../../tangle/target/release/tangle-standalone'
+        ),
+      };
     const enabledPallets: Pallet[] = [
       {
         pallet: 'DKGProposalHandler',
@@ -320,7 +320,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
     // Create a deposit utxo
     const randomKeypair = new Keypair();
-    const depositUtxo = await CircomUtxo.generateUtxo({
+    const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: (1e2).toString(),

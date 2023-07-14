@@ -37,12 +37,11 @@ export type UsageMode = DockerMode | HostMode;
 export type LocalNodeOpts = {
   name: string;
   ports:
-    | {
-        ws: number;
-        http: number;
-        p2p: number;
-      }
-    | 'auto';
+  | {
+    rpc: number;
+    p2p: number;
+  }
+  | 'auto';
   authority: 'alice' | 'bob' | 'charlie';
   usageMode: UsageMode;
   enableLogging?: boolean;
@@ -59,7 +58,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   constructor(
     protected readonly opts: LocalNodeOpts,
     protected readonly proc?: ChildProcess
-  ) {}
+  ) { }
 
   public get name(): string {
     return this.opts.name;
@@ -67,33 +66,32 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
 
   public static async makePorts(
     opts: LocalNodeOpts
-  ): Promise<{ ws: number; http: number; p2p: number }> {
+  ): Promise<LocalNodeOpts['ports']> {
     // Dynamic import used for commonjs compatibility
     const getPort = await import('get-port');
     const { portNumbers } = getPort;
 
     return opts.ports === 'auto'
       ? {
-          http: await getPort.default({ port: portNumbers(9933, 9999) }),
-          p2p: await getPort.default({ port: portNumbers(30333, 30399) }),
-          ws: await getPort.default({ port: portNumbers(9944, 9999) }),
-        }
-      : (opts.ports as { ws: number; http: number; p2p: number });
+        p2p: await getPort.default({ port: portNumbers(30333, 30399) }),
+        rpc: await getPort.default({ port: portNumbers(9944, 9999) }),
+      }
+      : (opts.ports as LocalNodeOpts['ports']);
   }
 
   public async api(): Promise<ApiPromise> {
-    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
+    const ports = this.opts.ports as { rpc: number };
     const host = '127.0.0.1';
 
     if (this.opts.isManual) {
-      return await createApiPromise(`ws://${host}:${ports.ws}`);
+      return await createApiPromise(`ws://${host}:${ports.rpc}`);
     }
 
     if (this.#api) {
       return this.#api;
     }
 
-    this.#api = await createApiPromise(`ws://${host}:${ports.ws}`);
+    this.#api = await createApiPromise(`ws://${host}:${ports.rpc}`);
 
     return this.#api;
   }

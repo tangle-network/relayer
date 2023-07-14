@@ -29,6 +29,8 @@ import { FungibleTokenWrapper, MintableToken } from '@webb-tools/tokens';
 import {
   fetchComponentsFromFilePaths,
   getChainIdType,
+  Keypair,
+  Utxo,
 } from '@webb-tools/utils';
 import {
   ChainInfo,
@@ -41,7 +43,6 @@ import {
   WithdrawConfig,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
-import { CircomUtxo, Keypair, Utxo } from '@webb-tools/sdk-core';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { TokenConfig, VBridge, VBridgeInput } from '@webb-tools/vbridge';
 import { LocalEvmChain } from '@webb-tools/evm-test-utils';
@@ -565,15 +566,15 @@ export class LocalChain {
           'proposal-signing-backend':
             contract.proposalSigningBackend?.type === 'Mocked'
               ? {
-                  type: 'Mocked',
-                  'private-key': contract.proposalSigningBackend?.privateKey,
-                }
+                type: 'Mocked',
+                'private-key': contract.proposalSigningBackend?.privateKey,
+              }
               : contract.proposalSigningBackend?.type === 'DKGNode'
-              ? {
+                ? {
                   type: 'DKGNode',
                   'chain-id': contract.proposalSigningBackend?.chainId,
                 }
-              : undefined,
+                : undefined,
           'events-watcher': {
             enabled: contract.eventsWatcher.enabled,
             'polling-interval': contract.eventsWatcher.pollingInterval,
@@ -592,14 +593,14 @@ export class LocalChain {
             (anchor: LinkedAnchor) =>
               anchor.type === 'Evm'
                 ? {
-                    'chain-id': anchor.chainId,
-                    type: 'Evm',
-                    address: anchor.address,
-                  }
+                  'chain-id': anchor.chainId,
+                  type: 'Evm',
+                  address: anchor.address,
+                }
                 : {
-                    type: 'Raw',
-                    'resource-id': anchor.resourceId,
-                  }
+                  type: 'Raw',
+                  'resource-id': anchor.resourceId,
+                }
           ),
         })
       ),
@@ -695,7 +696,7 @@ export async function setupVanchorEvmTx(
   extData: IVariableAnchorExtData;
   publicInputs: IVariableAnchorPublicInputs;
 }> {
-  const dummyOutput1 = await CircomUtxo.generateUtxo({
+  const dummyOutput1 = Utxo.generateUtxo({
     curve: 'Bn254',
     backend: 'Circom',
     amount: '0',
@@ -703,7 +704,7 @@ export async function setupVanchorEvmTx(
     keypair: randomKeypair,
   });
 
-  const dummyOutput2 = await CircomUtxo.generateUtxo({
+  const dummyOutput2 = Utxo.generateUtxo({
     curve: 'Bn254',
     backend: 'Circom',
     amount: '0',
@@ -711,7 +712,7 @@ export async function setupVanchorEvmTx(
     keypair: randomKeypair,
   });
 
-  const dummyInput = await CircomUtxo.generateUtxo({
+  const dummyInput = Utxo.generateUtxo({
     curve: 'Bn254',
     backend: 'Circom',
     amount: '0',
@@ -734,7 +735,7 @@ export async function setupVanchorEvmTx(
     u8aToHex(depositUtxo.commitment)
   );
 
-  const regeneratedUtxo = await CircomUtxo.generateUtxo({
+  const regeneratedUtxo = Utxo.generateUtxo({
     curve: 'Bn254',
     backend: 'Circom',
     amount: depositUtxo.amount,

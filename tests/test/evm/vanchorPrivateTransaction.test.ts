@@ -18,7 +18,6 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { CircomUtxo, Keypair, parseTypedChainId } from '@webb-tools/sdk-core';
 import dotenv from 'dotenv';
 import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
@@ -40,10 +39,11 @@ import { MintableToken } from '@webb-tools/tokens';
 import { formatEther, parseEther } from 'ethers/lib/utils.js';
 import { type VAnchor } from '@webb-tools/contracts';
 import { VBridge } from '@webb-tools/vbridge';
+import { Keypair, Utxo } from '@webb-tools/utils';
 
 dotenv.config({ path: '../.env' });
 
-describe('Vanchor Private Tx relaying with mocked governor', function () {
+describe('Vanchor Private Tx relaying with mocked governor', function() {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -69,7 +69,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
         contract: 'VAnchor',
       },
     ];
-    parseTypedChainId;
     localChain1 = await LocalChain.init({
       port: localChain1Port,
       chainId: localChain1Port,
@@ -250,7 +249,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
     const randomKeypair = new Keypair();
 
-    const depositUtxo = await CircomUtxo.generateUtxo({
+    const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: ethers.utils.parseEther('1').toString(),
@@ -421,7 +420,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
     const randomKeypair = new Keypair();
 
-    const depositUtxo = await CircomUtxo.generateUtxo({
+    const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: (1e2).toString(),
@@ -513,7 +512,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
     const randomKeypair = new Keypair();
 
-    const depositUtxo = await CircomUtxo.generateUtxo({
+    const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: (1e2).toString(),
@@ -606,7 +605,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
     const randomKeypair = new Keypair();
 
-    const depositUtxo = await CircomUtxo.generateUtxo({
+    const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: (1e2).toString(),

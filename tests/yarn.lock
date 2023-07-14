@@ -4640,10 +4640,10 @@
     ffjavascript "^0.2.57"
     snarkjs "^0.6.10"
 
-"@webb-tools/tangle-substrate-types@0.0.1":
-  version "0.0.1"
-  resolved "https://registry.yarnpkg.com/@webb-tools/tangle-substrate-types/-/tangle-substrate-types-0.0.1.tgz#e90791b383272a61ed335d0888bc416dc4b901ce"
-  integrity sha512-fGQ4a3WEnkBioq25CB5RKLpz6Vuquwj8O211/BrIRaNNZv2351RHYV1kI9f3hB6YXcaDaduKWp2fZS2z4WUdqQ==
+"@webb-tools/tangle-substrate-types@0.3.2":
+  version "0.3.2"
+  resolved "https://registry.yarnpkg.com/@webb-tools/tangle-substrate-types/-/tangle-substrate-types-0.3.2.tgz#ccb3fadff5b9bf2a0d5216824b9f12e25cea1b56"
+  integrity sha512-E0ED0kpUbStiN8GVu2zPxxcszeUFzxWz1GWtB2C3Os6+p45/pE4kZhyjzt+/XrDerxjfPTAMN7fMx9NdkjAbZg==
   dependencies:
     "@babel/cli" "^7.20.7"
     "@babel/core" "^7.20.12"

@@ -42,7 +42,7 @@
     "@webb-tools/sdk-core": "0.1.4-126",
     "@webb-tools/test-utils": "0.1.4-126",
     "@webb-tools/evm-test-utils": "1.0.6",
-    "@webb-tools/tangle-substrate-types": "0.0.1",
+    "@webb-tools/tangle-substrate-types": "0.3.2",
     "@webb-tools/tokens": "1.0.6",
     "@webb-tools/utils": "1.0.6",
     "@webb-tools/vbridge": "1.0.6",

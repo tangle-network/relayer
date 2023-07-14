@@ -18,7 +18,6 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import { CircomUtxo, toFixedHex } from '@webb-tools/sdk-core';
 import { ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
@@ -33,8 +32,9 @@ import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { MintableToken } from '@webb-tools/tokens';
 import { type VAnchor } from '@webb-tools/contracts';
 import { VBridge } from '@webb-tools/vbridge';
+import { toFixedHex, Utxo } from '@webb-tools/utils';
 
-describe('Vanchor Transaction relayer', function () {
+describe('Vanchor Transaction relayer', function() {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
@@ -217,7 +217,7 @@ describe('Vanchor Transaction relayer', function () {
     // Make 5 deposits (10 leaves)
     for (let i = 0; i < depositsToMake; i++) {
       // Define inputs/outputs utxo for transact function
-      const depositUtxo = await CircomUtxo.generateUtxo({
+      const depositUtxo = Utxo.generateUtxo({
         curve: 'Bn254',
         backend: 'Circom',
         amount: (1e2).toString(),
@@ -377,7 +377,7 @@ describe('Vanchor Transaction relayer', function () {
     // Make 5 deposits
     for (let i = 0; i < 5; i++) {
       // Define inputs/outputs utxo for transact function
-      const depositUtxo = await CircomUtxo.generateUtxo({
+      const depositUtxo = Utxo.generateUtxo({
         curve: 'Bn254',
         backend: 'Circom',
         amount: (1e2).toString(),
