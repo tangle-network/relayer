@@ -11,19 +11,19 @@
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/webb-tools/relayer?style=flat-square)](https://github.com/webb-tools/relayer/releases/latest) [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/webb-tools/relayer/check.yml?branch=main&style=flat-square)](https://github.com/webb-tools/relayer/actions) [![License Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square)](https://opensource.org/licenses/Apache-2.0) [![Twitter](https://img.shields.io/twitter/follow/webbprotocol.svg?style=flat-square&label=Twitter&color=1DA1F2)](https://twitter.com/webbprotocol) [![Telegram](https://img.shields.io/badge/Telegram-gray?logo=telegram)](https://t.me/webbprotocol) [![Discord](https://img.shields.io/discord/833784453251596298.svg?style=flat-square&label=Discord&logo=discord)](https://discord.gg/cv8EfJu3Tn)
 
 <!-- TABLE OF CONTENTS -->
-<h2 id="table-of-contents" style=border:0!important> 📖 Table of Contents</h2>
+<h2 id="table-of-contents" style=border:0!important> Table of Contents</h2>
 
 <details open="open">
   <summary>Table of Contents</summary>
   <ul>
     <li><a href="#start"> Getting Started</a></li>
     <li><a href="#relayer">How to Run Relayer</a></li>
-    <li><a href="#docker">Docker setup</a></li>
     <li><a href="#api">Relayer APIs</a></li>
+    <li><a href="#tests">Relayer Integration E2E Tests</a></li>
   </ul>  
 </details>
 
-<h2 id="start"> Getting Started  🎉 </h2>
+<h2 id="start"> Getting Started </h2>
 
 In the Webb Protocol, the relayer plays a variety of roles. This repo contains code for an Anchor System oracle, transaction and data relayer, and protocol governance participant. The aim is that these can all be run exclusive to one another to ensure maximum flexibility of external participants to the Webb Protocol.
 
@@ -45,7 +45,7 @@ Relayers who fulfill this role do so in conjunction with the transaction relayin
 
 Relayers who fulfill the role of an oracle listen to the Anchor Protocol instances on the various chains the anchors exist on. When they hear of insertions into the anchors' merkle trees they handle them accordingly (as is implemented in the event watchers). Those playing this role then relay the anchor update information to other connected Anchors, the DKG governance system, and any other integration that gets implemented in this repo. Oracle relayers help keep the state of an Anchor Protocol instance up to date by ensuring that all anchors within an instance know about the latest state of their neighboring anchors.
 
-For additional information, please refer to the [Webb Relayer Rust Docs](https://webb-tools.github.io/relayer/) 📝. Have feedback on how to improve the relayer network? Or have a specific question to ask? Checkout the [Relayer Feedback Discussion](https://github.com/webb-tools/feedback/discussions/categories/webb-relayer-feedback) 💬.
+For additional information, please refer to the [Webb Relayer Rust Docs](https://webb-tools.github.io/relayer/). Have feedback on how to improve the relayer network? Or have a specific question to ask? Checkout the [Relayer Feedback Discussion](https://github.com/webb-tools/feedback/discussions/categories/webb-relayer-feedback).
 
 ---
 
@@ -67,14 +67,7 @@ rustup default stable
 rustup update
 ```
 
-Great! Now your Rust environment is ready! 🚀🚀
-
-Lastly, install
-
-- [DVC](https://dvc.org/) is used for fetching large ZK files and managing them alongside git
-- [substrate.io](https://docs.substrate.io/main-docs/install/) may require additional dependencies
-
-🚀🚀 Your environment is complete! 🚀🚀
+Great! Now your Rust environment is ready!
 
 ---
 
@@ -110,20 +103,18 @@ Once relayer configuration files are created we run relayer using following comm
 ```
 ---
 
-<h2 id="docker"> Run Relayer with Docker🐳 </h2>
-
-To deploy the relayer with Docker, copy the `docker` folder to your server. Add an `.env` file as described above and save it into the `config` directory. You also need to adjust the `server_name` (domain) specified in `user_conf.d/relayer.conf`. When you are ready, start the relayer with `docker compose up -d`. You can see the logs with `docker compose logs -f`. It will automatically request a TLS certificate using Let's Encrypt and start operating.
-
-> Note: this uses the latest and pre-released version deployed from `develop` branch, change `:edge` to the [latest stable release version](https://github.com/webb-tools/relayer/pkgs/container/relayer). On the other hand if you always want to use the latest development build, set up a cronjob to execute `docker compose pull && docker compose up -d` regularly in the docker folder.
-
-The Docker setup also includes a preconfigured Grafana installation for monitoring. It is available on `localhost:3000` with login `admin` / `admin`. It includes configuration for Slack alerts, to use it enter a Slack Incoming Webhook URL in `provisioning/alerting/alerting.yaml` where it says `slack-placeholder`.
-
----
-
 <h2 id="api"> Relayer API Documentation </h2>
 
-Relayer provided API support to query cached leaves, configuration info, metrics.
+Relayer provides API support to query cached leaves, configuration info, metrics.
+
 To refer more about API support kindly checkout readme docs [here](./crates/relayer-handlers/src/README.md)
+
+---
+<h2 id="tests">Relayer Integration E2E Tests</h2>
+To ensure the proper functioning of the Relayer, integration end-to-end (E2E) tests have been provided. These tests validate the Relayer's behavior in various scenarios.
+
+To learn how to run these integration tests, please follow the step-by-step instructions outlined in the relayer tests readme guide [here](./tests/README.md)
+
 
 ---
 
