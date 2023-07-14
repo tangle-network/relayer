@@ -1,12 +1,10 @@
 <div align="center">
 <a href="https://www.webb.tools/">
-
+    
 ![Webb Logo](./assets/webb_banner_light.png#gh-light-mode-only)
-
 ![Webb Logo](./assets/webb_banner_dark.png#gh-dark-mode-only)
-</a>
-
-  </div>
+  </a>
+</div>
 
 # Webb Relayer
 
