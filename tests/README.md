@@ -18,7 +18,7 @@ Before running the test suites, ensure that you have the following set up:
     git clone https://github.com/webb-tools/relayer.git
 ```
 
-
+---
 ## Running the Test Suites
 
 To run the test suites, perform the following steps:
@@ -31,7 +31,7 @@ To run the test suites, perform the following steps:
 
 2. Fetch fixtures
 ```
-    dvc pull
+    yarn fetch-fixtures
 ```
 3. Run E2E tests
 ```

@@ -4,7 +4,7 @@ The relayer has 8 endpoints available to query from. They are outlined below for
 
 ---
 
-**Retrieving nodes IP address:**
+**1. Retrieving nodes IP address**
 Returns Ip address of the relayer.
 - URL : `/api/v1/ip`
 - Method: `GET`
@@ -18,7 +18,7 @@ Returns Ip address of the relayer.
 ```
 
 ---
-**Retrieve relayer configuration**
+**2. Retrieve relayer configuration**
 Returns relayer configuration.
 - URL : `/api/v1/info`
 - Method : `GET`
@@ -71,7 +71,7 @@ Returns relayer configuration.
 
 ---
 
-**Retrieve historical leaves cache**
+**3. Retrieve historical leaves cache**
 Return commitment leaves cached by the relayer.
 - URL : `/api/v1/leaves/evm/:chain_id/:contract_address`
 - Method : `GET`
@@ -112,7 +112,7 @@ Return commitment leaves cached by the relayer.
 
 ---
 
-**Retrieve encrypted output cache**
+**4. Retrieve encrypted output cache**
 Returns encrypted outputs cached by the relayer.
 - URL : `/api/v1/encrypted_outputs/evm/:chain_id/:contract_address`
 - Method : GET
@@ -139,7 +139,7 @@ Returns encrypted outputs cached by the relayer.
 
 ---
 
-**Retrieve fee information**
+**5. Retrieve fee information**
 Returns estimated fee and max refund amount before making withdrawal request to relayer
 - URL : `/fee_info/evm/:chain_id/:vanchor/:gas_amount`
 - Method : `GET`
@@ -164,7 +164,7 @@ Returns estimated fee and max refund amount before making withdrawal request to 
 
 ---
 
-**Retrieve Metrics information**
+**6. Retrieve Metrics information**
 Returns relayer metrics
 - URL : `/api/v1/metrics`
 - Method : `GET
@@ -181,7 +181,7 @@ Returns relayer metrics
 
 ---
 
-**Retrieve Metrics information for specific target system**
+**7. Retrieve Metrics information for specific target system**
 Returns metrics for particular target system or resource.
 - URL : /api/v1/metrics/evm/:chain_id/:contract_address
 - Method : `GET`
@@ -207,7 +207,7 @@ Returns metrics for particular target system or resource.
 ```
 ---
 
-**Send withdraw transaction request to relayer**
+**8. Send withdraw transaction request to relayer**
 You can make a withdraw request to relayer to withdraw amount privately. This api will return an `item_key` which can be used to track transaction progress.
 
 - URL : `/api/v1/send/evm/:chain_id/:contract_address`
@@ -265,7 +265,7 @@ You can make a withdraw request to relayer to withdraw amount privately. This ap
 
 ---
 
-**Track transaction item progress**
+**9. Track transaction item progress**
 Returns transaction item progress for given `item_key`
 - URL : `/api/v1/tx/evm/:chain_id:/:item_key`
 - Method : `GET`

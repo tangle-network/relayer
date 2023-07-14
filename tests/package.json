@@ -14,7 +14,8 @@
     "test-substrate": "mocha test test/substrate/*.test.*",
     "sim": "mocha test sim/*.sim.*",
     "format": "prettier -w '**/*.ts'",
-    "ts-check": "npx tsc --noEmit"
+    "ts-check": "npx tsc --noEmit",
+    "fetch-fixtures": "bash scripts/fetch-fixtures.sh"
   },
   "engines": {
     "node": "18.x.x"
