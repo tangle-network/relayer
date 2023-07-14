@@ -9469,6 +9469,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb"
+version = "0.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "35c05f05c48444d39b14590e83a2e22b2ba2d8a3597ebd1b97787e1f9664faa3"
+dependencies = [
+ "async-trait",
+ "ethers",
+ "hex",
+ "parity-scale-codec",
+ "prettyplease",
+ "rand 0.8.5",
+ "scale-info",
+ "serde",
+ "serde_json",
+ "subxt 0.29.0",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "webb-bridge-registry-backends"
 version = "0.5.6-dev"
 dependencies = [
@@ -9481,7 +9501,7 @@ dependencies = [
  "sp-core 21.0.0",
  "tokio 1.29.1",
  "typed-builder 0.14.0",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-utils 0.5.6-dev",
@@ -9539,7 +9559,7 @@ dependencies = [
  "tokio 1.29.1",
  "tracing",
  "tracing-test",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -9558,7 +9578,7 @@ dependencies = [
  "sled",
  "tokio 1.29.1",
  "tracing",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-event-watcher-traits",
  "webb-proposals",
  "webb-relayer-config",
@@ -9586,7 +9606,7 @@ dependencies = [
  "tokio 1.29.1",
  "tracing",
  "typed-builder 0.14.0",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
@@ -9609,7 +9629,7 @@ dependencies = [
  "serde",
  "tokio 1.29.1",
  "typed-builder 0.14.0",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-chains-info",
  "webb-relayer-store",
  "webb-relayer-utils 0.5.6-dev",
@@ -9632,7 +9652,7 @@ dependencies = [
  "serde",
  "serde_json",
  "wasmer",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-circom-proving",
 ]
 
@@ -9654,7 +9674,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.17",
  "typed-builder 0.14.0",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types 0.5.6-dev",
@@ -9697,7 +9717,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "url",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-ew-dkg",
@@ -9732,7 +9752,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.17",
  "url",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types 0.5.6-dev",
@@ -9751,7 +9771,7 @@ dependencies = [
  "sp-core 21.0.0",
  "tokio 1.29.1",
  "tracing",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-price-oracle-backends",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -9765,7 +9785,7 @@ dependencies = [
  "native-tls",
  "serde",
  "tokio 1.29.1",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-relayer-store",
  "webb-relayer-tx-relay-utils",
 ]
@@ -9786,7 +9806,7 @@ dependencies = [
  "tokio 1.29.1",
  "tokio-stream",
  "tracing",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
@@ -9808,7 +9828,7 @@ dependencies = [
  "sled",
  "tempfile",
  "tracing",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-proposals",
  "webb-relayer-utils 0.5.6-dev",
 ]
@@ -9830,7 +9850,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.17",
  "url",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
@@ -9851,7 +9871,7 @@ dependencies = [
  "sp-core 21.0.0",
  "tokio 1.29.1",
  "tracing",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-chains-info",
  "webb-price-oracle-backends",
  "webb-proposals",
@@ -9896,7 +9916,7 @@ dependencies = [
  "tiny-bip39",
  "tracing",
  "url",
- "webb 0.6.1",
+ "webb 0.7.2",
 ]
 
 [[package]]
@@ -9954,7 +9974,7 @@ dependencies = [
  "thiserror",
  "tokio 1.29.1",
  "url",
- "webb 0.6.1",
+ "webb 0.7.2",
  "webb-proposals",
 ]
 
