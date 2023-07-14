@@ -190,15 +190,25 @@ impl BridgeWatcher for SignatureBridgeContractWatcher {
                 )
                 .await?;
             }
-            TransferOwnershipWithSignature {
-                public_key,
+            TransferOwnership {
+                pub_key,
                 nonce,
+                voter_merkle_root,
+                voter_count,
+                session_length,
                 signature,
             } => {
                 self.transfer_ownership_with_signature(
                     store,
                     &wrapper.contract,
-                    (public_key, nonce, signature),
+                    (
+                        pub_key,
+                        nonce,
+                        voter_merkle_root,
+                        voter_count,
+                        session_length,
+                        signature,
+                    ),
                 )
                 .await?
             }
@@ -354,7 +364,14 @@ where
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
         contract: &SignatureBridgeContract<EthersTimeLagClient>,
-        (public_key, nonce, signature): (Vec<u8>, u32, Vec<u8>),
+        (
+            public_key,
+            nonce,
+            voter_merkle_root,
+            voter_count,
+            session_length,
+            signature,
+        ): (Vec<u8>, u32, [u8; 32], u32, u64, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         // before doing anything, we need to do just two things:
         // 1. check if we already have this transaction in the queue.
@@ -422,17 +439,23 @@ where
             target: webb_relayer_utils::probe::TARGET,
             tracing::Level::DEBUG,
             kind = %webb_relayer_utils::probe::Kind::SignatureBridge,
-            call = "transfer_ownership_with_signature_pub_key",
+            call = "transfer_ownership_with_signature",
             chain_id = %chain_id.as_u64(),
             public_key = %hex::encode(&public_key),
             %nonce,
+            voter_merkle_root = %hex::encode(voter_merkle_root),
+            %voter_count,
+            %session_length,
             signature = %hex::encode(&signature),
         );
         // estimated gas
         let estimate_gas = contract
-            .transfer_ownership_with_signature_pub_key(
-                public_key.clone().into(),
+            .transfer_ownership_with_signature(
+                voter_merkle_root,
+                session_length,
+                voter_count,
                 nonce,
+                public_key.clone().into(),
                 signature.clone().into(),
             )
             .estimate_gas()
@@ -440,9 +463,12 @@ where
 
         // get the current governor nonce.
         let call = contract
-            .transfer_ownership_with_signature_pub_key(
-                public_key.into(),
+            .transfer_ownership_with_signature(
+                voter_merkle_root,
+                session_length,
+                voter_count,
                 nonce,
+                public_key.into(),
                 signature.into(),
             )
             .gas(estimate_gas.saturating_mul(U256::from(2)));

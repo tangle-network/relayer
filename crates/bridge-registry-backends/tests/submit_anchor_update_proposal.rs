@@ -2,9 +2,6 @@ use futures::StreamExt;
 use sp_core::sr25519::Pair;
 use sp_core::Pair as _;
 use webb::substrate::tangle_runtime::api as RuntimeApi;
-use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::ResourceId as DkgResourceId;
-use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::TypedChainId as DkgTypedChainId;
-use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce as DkgNonce;
 use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 use webb::substrate::subxt::tx::{PairSigner, TxProgress, TxStatus};
 use webb::substrate::subxt::OnlineClient;
@@ -71,12 +68,7 @@ async fn submit_anchor_update_proposal() {
             kind: ProposalKind::AnchorUpdate,
             data: BoundedVec(anchor_update_proposal.to_vec()),
         };
-        let xt = tx_api.acknowledge_proposal(
-            DkgNonce(account_nonce),
-            DkgTypedChainId::Evm(5001),
-            DkgResourceId(resource_id.into_bytes()),
-            unsigned_proposal,
-        );
+        let xt = tx_api.acknowledge_proposal(unsigned_proposal);
 
         let mut progress = api
             .tx()

@@ -358,12 +358,13 @@ pub enum BridgeCommand {
         /// backend.
         signature: Vec<u8>,
     },
-    /// A Command sent to the Signature Bridge to transfer the ownership with a signature.
-    TransferOwnershipWithSignature {
-        /// The new owner public key.
-        public_key: Vec<u8>,
-        /// The nonce of this transfer.
+    /// A Command sent to the Signature Bridge to transfer the ownership of the bridge
+    TransferOwnership {
+        voter_merkle_root: [u8; 32],
+        session_length: u64,
+        voter_count: u32,
         nonce: u32,
+        pub_key: Vec<u8>,
         /// The signature of the hash of the nonce+public key, Signed by the proposal signing
         /// backend.
         signature: Vec<u8>,
@@ -411,10 +412,13 @@ pub enum BridgeCommand {
 
 impl From<dkg::events::PublicKeySignatureChanged> for BridgeCommand {
     fn from(event: dkg::events::PublicKeySignatureChanged) -> Self {
-        Self::TransferOwnershipWithSignature {
-            public_key: event.uncompressed_pub_key,
-            nonce: event.nonce,
-            signature: event.pub_key_sig,
+        Self::TransferOwnership {
+            signature: event.signature,
+            voter_merkle_root: event.refresh_proposal.voter_merkle_root,
+            session_length: event.refresh_proposal.session_length,
+            voter_count: event.refresh_proposal.voter_count,
+            nonce: event.refresh_proposal.nonce.0,
+            pub_key: event.refresh_proposal.pub_key,
         }
     }
 }
