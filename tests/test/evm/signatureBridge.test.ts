@@ -33,12 +33,12 @@ import { LocalTangle } from '../../lib/localTangle.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
-import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
 import { MintableToken } from '@webb-tools/tokens';
 import { VAnchor } from '@webb-tools/contracts';
 import { VBridge } from '@webb-tools/vbridge';
 import { Keypair, Utxo } from '@webb-tools/utils';
+import { UsageMode } from '../../lib/substrateNodeBase.js';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -101,7 +101,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function() {
     console.log(
       'tangle node ready waiting for dkg public key to be set onchain'
     );
-    const chainId = await charlieNode.getChainId();
+    const chainId = 0;
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,

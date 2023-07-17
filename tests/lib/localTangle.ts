@@ -37,8 +37,20 @@ type FullNodeInfo = NodeInfo & {
 export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
   public static async start(opts: LocalNodeOpts): Promise<LocalTangle> {
     opts.ports = (await super.makePorts(opts)) as { rpc: number; p2p: number };
-    // opts.usageMode.mode = 'docker'
     const startArgs: string[] = [];
+    const nodeKeyOrBootNodes: string[] = [];
+    if (opts.authority === 'alice') {
+      opts.ports.p2p = 30333;
+      nodeKeyOrBootNodes.push(
+        '--node-key',
+        '0000000000000000000000000000000000000000000000000000000000000001'
+      );
+    } else {
+      nodeKeyOrBootNodes.push(
+        '--bootnodes',
+        '/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp'
+      );
+    }
     if (opts.usageMode.mode === 'docker') {
       LocalTangle.pullImage({
         forcePull: opts.usageMode.forcePullImage,
@@ -63,6 +75,7 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         '--rpc-methods=unsafe',
         `--${opts.authority}`,
         ...startArgs,
+        ...nodeKeyOrBootNodes,
       ];
       const proc = spawn('docker', dockerArgs);
       if (opts.enableLogging) {
@@ -84,7 +97,8 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         '--rpc-external',
         `--rpc-port=${opts.ports.rpc}`,
         `--port=${opts.ports.p2p}`,
-        `--${opts.authority}`
+        `--${opts.authority}`,
+        ...nodeKeyOrBootNodes
       );
       const proc = spawn(opts.usageMode.nodePath, startArgs);
       if (opts.enableLogging) {
@@ -115,13 +129,6 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
     } else {
       return `0x`;
     }
-  }
-
-  // get chainId
-  public async getChainId(): Promise<number> {
-    const api = await super.api();
-    const chainId = api.consts.linkableTreeBn254.chainIdentifier.toNumber();
-    return chainId;
   }
 
   public async exportConfig(

@@ -15,7 +15,6 @@
  *
  */
 
-import { options, rpcProperties } from '@webb-tools/api';
 import { ChildProcess, execSync } from 'child_process';
 
 import { ApiPromise, Keyring, WsProvider } from '@polkadot/api';
@@ -208,10 +207,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
 }
 
 export async function createApiPromise(endpoint: string) {
-  return ApiPromise.create(
-    options({
-      provider: new WsProvider(endpoint) as any,
-      rpc: rpcProperties,
-    })
-  );
+  return ApiPromise.create({
+    provider: new WsProvider(endpoint) as any,
+  });
 }

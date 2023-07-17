@@ -4057,6 +4057,11 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-16.11.7.tgz#36820945061326978c42a01e56b61cd223dfdc42"
   integrity sha512-QB5D2sqfSjCmTuWcBWyJ+/44bcjO7VbjSbOE0ucoVbAsSNQc4Lt6QkgkVXkTDwkL4z/beecZNDvVX15D4P8Jbw==
 
+"@types/node@18.16.0":
+  version "18.16.0"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-18.16.0.tgz#4668bc392bb6938637b47e98b1f2ed5426f33316"
+  integrity sha512-BsAaKhB+7X+H4GnSjGhJG9Qi8Tw+inU9nJDwmD5CgOmBLEI6ArdhikpLX7DjbjDRDTbqZzU2LSQNZg8WGPiSZQ==
+
 "@types/node@^12.12.6":
   version "12.20.47"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-12.20.47.tgz#ca9237d51f2a2557419688511dab1c8daf475188"
@@ -4588,6 +4593,13 @@
   dependencies:
     "@webb-tools/utils" "^1.0.6"
 
+"@webb-tools/proposals@^1.0.7":
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/@webb-tools/proposals/-/proposals-1.0.7.tgz#393949d6b2f02891301d92e9fbcd5d212ec6940f"
+  integrity sha512-HjatyQAPSTKbBQoMcMzqPc0appwz+GDTdlITFJ1ABLI/36CsyuUmQISy681HRktqGjn1QRl8n83nKXBu+y/TNg==
+  dependencies:
+    "@webb-tools/utils" "^1.0.7"
+
 "@webb-tools/protocol-substrate-types@0.0.10":
   version "0.0.10"
   resolved "https://registry.yarnpkg.com/@webb-tools/protocol-substrate-types/-/protocol-substrate-types-0.0.10.tgz#1fb383c97f63bfc7e7f302f97cb747b0d79c4276"
@@ -4640,10 +4652,10 @@
     ffjavascript "^0.2.57"
     snarkjs "^0.6.10"
 
-"@webb-tools/tangle-substrate-types@0.3.2":
-  version "0.3.2"
-  resolved "https://registry.yarnpkg.com/@webb-tools/tangle-substrate-types/-/tangle-substrate-types-0.3.2.tgz#ccb3fadff5b9bf2a0d5216824b9f12e25cea1b56"
-  integrity sha512-E0ED0kpUbStiN8GVu2zPxxcszeUFzxWz1GWtB2C3Os6+p45/pE4kZhyjzt+/XrDerxjfPTAMN7fMx9NdkjAbZg==
+"@webb-tools/tangle-substrate-types@0.3.2-hotfix.1":
+  version "0.3.2-hotfix.1"
+  resolved "https://registry.yarnpkg.com/@webb-tools/tangle-substrate-types/-/tangle-substrate-types-0.3.2-hotfix.1.tgz#bb3c43d5642a951fc890849838b770bd4de632b0"
+  integrity sha512-nubGtWeouzz3liEgksHMawiZI4hswEXG8tpFArgvahlls2rClikVscNbHX/FWWD049e6Gqib7HHnzwTOtFvCLA==
   dependencies:
     "@babel/cli" "^7.20.7"
     "@babel/core" "^7.20.12"
@@ -4710,6 +4722,17 @@
   version "1.0.6"
   resolved "https://registry.yarnpkg.com/@webb-tools/utils/-/utils-1.0.6.tgz#a8021ceec56a218d474e772b9c4d49ae014de7fa"
   integrity sha512-udWowjZrRwWENAi88yNk8acV2LYvVdT67EGP8Y1uJGwhVAnbifJXFlP0TSPjtWrpeXYY58KHXneU2FtuhYGFqw==
+  dependencies:
+    "@metamask/eth-sig-util" "^6.0.0"
+    circomlibjs "^0.0.8"
+    elliptic "6.5.4"
+    ethers "5.7.0"
+    snarkjs "^0.6.10"
+
+"@webb-tools/utils@^1.0.7":
+  version "1.0.7"
+  resolved "https://registry.yarnpkg.com/@webb-tools/utils/-/utils-1.0.7.tgz#21b81d6ca7cd6fcd7ec11978cf1aba8124743489"
+  integrity sha512-XctVTwd6ZBLJTy6Ql2TP8SVoJB0oduoo2RlV/nrn+C+AJHcpHSC73u5uZFw32IPicTNxIFLV4SfZ3upYirTeng==
   dependencies:
     "@metamask/eth-sig-util" "^6.0.0"
     circomlibjs "^0.0.8"
