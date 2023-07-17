@@ -36,11 +36,11 @@ export type UsageMode = DockerMode | HostMode;
 export type LocalNodeOpts = {
   name: string;
   ports:
-  | {
-    rpc: number;
-    p2p: number;
-  }
-  | 'auto';
+    | {
+        rpc: number;
+        p2p: number;
+      }
+    | 'auto';
   authority: 'alice' | 'bob' | 'charlie';
   usageMode: UsageMode;
   enableLogging?: boolean;
@@ -57,7 +57,7 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
   constructor(
     protected readonly opts: LocalNodeOpts,
     protected readonly proc?: ChildProcess
-  ) { }
+  ) {}
 
   public get name(): string {
     return this.opts.name;
@@ -72,9 +72,9 @@ export abstract class SubstrateNodeBase<TypedEvent extends SubstrateEvent> {
 
     return opts.ports === 'auto'
       ? {
-        p2p: await getPort.default({ port: portNumbers(30333, 30399) }),
-        rpc: await getPort.default({ port: portNumbers(9944, 9999) }),
-      }
+          p2p: await getPort.default({ port: portNumbers(30333, 30399) }),
+          rpc: await getPort.default({ port: portNumbers(9944, 9999) }),
+        }
       : (opts.ports as LocalNodeOpts['ports']);
   }
 

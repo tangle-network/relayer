@@ -566,15 +566,15 @@ export class LocalChain {
           'proposal-signing-backend':
             contract.proposalSigningBackend?.type === 'Mocked'
               ? {
-                type: 'Mocked',
-                'private-key': contract.proposalSigningBackend?.privateKey,
-              }
+                  type: 'Mocked',
+                  'private-key': contract.proposalSigningBackend?.privateKey,
+                }
               : contract.proposalSigningBackend?.type === 'DKGNode'
-                ? {
+              ? {
                   type: 'DKGNode',
                   'chain-id': contract.proposalSigningBackend?.chainId,
                 }
-                : undefined,
+              : undefined,
           'events-watcher': {
             enabled: contract.eventsWatcher.enabled,
             'polling-interval': contract.eventsWatcher.pollingInterval,
@@ -593,14 +593,14 @@ export class LocalChain {
             (anchor: LinkedAnchor) =>
               anchor.type === 'Evm'
                 ? {
-                  'chain-id': anchor.chainId,
-                  type: 'Evm',
-                  address: anchor.address,
-                }
+                    'chain-id': anchor.chainId,
+                    type: 'Evm',
+                    address: anchor.address,
+                  }
                 : {
-                  type: 'Raw',
-                  'resource-id': anchor.resourceId,
-                }
+                    type: 'Raw',
+                    'resource-id': anchor.resourceId,
+                  }
           ),
         })
       ),
