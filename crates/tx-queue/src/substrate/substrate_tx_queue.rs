@@ -218,9 +218,15 @@ where
                         )?;
                     }
                     Ok(DryRunResult::TransactionValidityError) => {
+                        // This kinda bugged in Substrate, as it returns this error
+                        // in multiple scenarios, like when the transaction is mostly will
+                        // exhaust the resources. However, the transaction may still be valid
+                        // and succeed if actually included in the block.
+                        //
+                        // Hence, we are not marking this as an error, instead it is a warning.
                         tracing::event!(
                             target: webb_relayer_utils::probe::TARGET,
-                            tracing::Level::DEBUG,
+                            tracing::Level::WARN,
                             kind = %webb_relayer_utils::probe::Kind::TxQueue,
                             ty = "SUBSTRATE",
                             chain_id = %chain_id,
@@ -230,30 +236,11 @@ where
                             signed_extrinsic = %hex::encode(signed_extrinsic.encoded()),
                             dry_run = "transaction_validity_error"
                         );
-                        // update transaction status as Failed and re insert into queue.
-                        store.shift_item_to_end(
-                            SledQueueKey::from_substrate_with_custom_key(
-                                chain_id,
-                                tx_item_key,
-                            ),
-                            |item: &mut QueueItem<
-                                TypeErasedStaticTxPayload,
-                            >| {
-                                let state = QueueItemState::Failed {
-                                    reason: "Transaction validity error"
-                                        .to_string(),
-                                };
-                                item.set_state(state);
-                                Ok(())
-                            },
-                        )?;
-
-                        continue; // keep going.
                     }
                     Ok(DryRunResult::DispatchError(err)) => {
                         tracing::event!(
                             target: webb_relayer_utils::probe::TARGET,
-                            tracing::Level::DEBUG,
+                            tracing::Level::ERROR,
                             kind = %webb_relayer_utils::probe::Kind::TxQueue,
                             ty = "SUBSTRATE",
                             chain_id = %chain_id,

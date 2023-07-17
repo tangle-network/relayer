@@ -101,7 +101,8 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     console.log(
       'tangle node ready waiting for dkg public key to be set onchain'
     );
-    const chainId = 0;
+    const chainId = await charlieNode.chainId();
+
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,

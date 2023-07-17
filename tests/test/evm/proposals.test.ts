@@ -104,7 +104,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       authority: 'charlie',
       usageMode,
       ports: 'auto',
-      enableLogging: true,
+      enableLogging: false,
     });
 
     const api = await charlieNode.api();
@@ -112,7 +112,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
     console.log(
       'tangle node ready waiting for dkg public key to be set onchain'
     );
-    const chainId = 0;
+    const chainId = await charlieNode.chainId();
 
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',

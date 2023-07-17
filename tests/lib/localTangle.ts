@@ -71,8 +71,9 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         '--chain=relayer',
         '--rpc-cors',
         'all',
-        '--rpc-external',
+        '--unsafe-rpc-external',
         '--rpc-methods=unsafe',
+        '--disable-log-color',
         `--${opts.authority}`,
         ...startArgs,
         ...nodeKeyOrBootNodes,
@@ -93,8 +94,9 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         '--chain=relayer',
         '--rpc-cors',
         'all',
+        '--unsafe-rpc-external',
         '--rpc-methods=unsafe',
-        '--rpc-external',
+        '--disable-log-color',
         `--rpc-port=${opts.ports.rpc}`,
         `--port=${opts.ports.p2p}`,
         `--${opts.authority}`,
@@ -111,6 +113,13 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
       }
       return new LocalTangle(opts, proc);
     }
+  }
+
+  public async chainId(): Promise<number> {
+    const api = await super.api();
+    const chainId =
+      api.consts.dkgProposals.chainIdentifier.asSubstrate.toNumber();
+    return chainId;
   }
 
   public async fetchDkgPublicKey(): Promise<`0x${string}`> {

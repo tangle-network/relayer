@@ -55,7 +55,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
 
   let webbRelayer: WebbRelayer;
 
-  before(async () => {
+  beforeEach(async () => {
     const govPk = u8aToHex(ethers.utils.randomBytes(32));
     const relayerPk = u8aToHex(ethers.utils.randomBytes(32));
 
@@ -243,6 +243,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
   it('should relay private transaction', async () => {
     const vanchor1 = await localChain1.getVAnchor(govWallet1);
     const vanchor2 = await localChain2.getVAnchor(govWallet2);
+
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
@@ -258,24 +259,21 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
       keypair: randomKeypair,
     });
 
-    // SignatureVBridge will transact and update the anchors
-    await signatureVBridge.transact(
-      [],
-      [depositUtxo],
-      0,
-      0,
-      '0',
-      relayerWallet1.address,
-      tokenAddress,
-      govWallet1
-    );
+    const leaves = vanchor1.tree
+      .elements()
+      .map((el) => hexToU8a(el.toHexString()));
+
+    await vanchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
+      [localChain1.chainId]: leaves,
+    });
     // now we wait for the relayer to see the transaction
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
-      event: {
-        leaf_index: '1',
-      },
+      event: {},
     });
+
+    // Update Linked Anchors using Signature VBridge.
+    await signatureVBridge.updateLinkedVAnchors(vanchor1);
 
     const refundPk = u8aToHex(ethers.utils.randomBytes(32));
     const refundWallet = new ethers.Wallet(refundPk, localChain2.provider());
@@ -423,31 +421,27 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
-      amount: (1e2).toString(),
+      amount: ethers.utils.parseEther('1').toString(),
       originChainId: localChain1.chainId.toString(),
       chainId: localChain2.chainId.toString(),
       keypair: randomKeypair,
     });
 
-    // SignatureVBridge will transact and update the anchors
-    await signatureVBridge.transact(
-      [],
-      [depositUtxo],
-      0,
-      0,
-      '0',
-      '0',
-      tokenAddress,
-      govWallet1
-    );
+    const leaves = vanchor1.tree
+      .elements()
+      .map((el) => hexToU8a(el.toHexString()));
+
+    await vanchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
+      [localChain1.chainId]: leaves,
+    });
 
     // now we wait for the relayer to see the transaction
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
-      event: {
-        leaf_index: '1',
-      },
+      event: {},
     });
+
+    await signatureVBridge.updateLinkedVAnchors(vanchor1);
 
     const output = await setupVanchorEvmTx(
       depositUtxo,
@@ -515,31 +509,26 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
-      amount: (1e2).toString(),
+      amount: ethers.utils.parseEther('1').toString(),
       originChainId: localChain1.chainId.toString(),
       chainId: localChain2.chainId.toString(),
       keypair: randomKeypair,
     });
 
-    // SignatureVBridge will transact and update the anchors
-    await signatureVBridge.transact(
-      [],
-      [depositUtxo],
-      0,
-      0,
-      '0',
-      '0',
-      tokenAddress,
-      govWallet1
-    );
+    const leaves = vanchor1.tree
+      .elements()
+      .map((el) => hexToU8a(el.toHexString()));
+    await vanchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
+      [localChain1.chainId]: leaves,
+    });
 
     // now we wait for the relayer to see the transaction
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
-      event: {
-        leaf_index: '1',
-      },
+      event: {},
     });
+
+    await signatureVBridge.updateLinkedVAnchors(vanchor1);
 
     const output = await setupVanchorEvmTx(
       depositUtxo,
@@ -583,7 +572,6 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
   it('Should fail to withdraw with invalid nullifier hash', async () => {
     const vanchor1 = await localChain1.getVAnchor(govWallet1);
     const vanchor2 = await localChain2.getVAnchor(govWallet2);
-
     const tokenAddress = signatureVBridge.getWebbTokenAddress(
       localChain1.chainId
     )!;
@@ -608,31 +596,27 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
-      amount: (1e2).toString(),
+      amount: ethers.utils.parseEther('1').toString(),
       originChainId: localChain1.chainId.toString(),
       chainId: localChain2.chainId.toString(),
       keypair: randomKeypair,
     });
 
-    // SignatureVBridge will transact and update the anchors
-    await signatureVBridge.transact(
-      [],
-      [depositUtxo],
-      0,
-      0,
-      '0',
-      '0',
-      tokenAddress,
-      govWallet1
-    );
+    const leaves = vanchor1.tree
+      .elements()
+      .map((el) => hexToU8a(el.toHexString()));
+
+    await vanchor1.transact([], [depositUtxo], 0, 0, '0', '0', tokenAddress, {
+      [localChain1.chainId]: leaves,
+    });
 
     // now we wait for the relayer to see the transaction
     await webbRelayer.waitForEvent({
       kind: 'leaves_store',
-      event: {
-        leaf_index: '1',
-      },
+      event: {},
     });
+
+    await signatureVBridge.updateLinkedVAnchors(vanchor1);
 
     const output = await setupVanchorEvmTx(
       depositUtxo,
@@ -705,7 +689,7 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     expect(response.status).equal(403);
   });
 
-  after(async () => {
+  afterEach(async () => {
     await localChain1?.stop();
     await localChain2?.stop();
     await webbRelayer?.stop();

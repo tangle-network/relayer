@@ -44,8 +44,8 @@ import { UsageMode } from '../../lib/substrateNodeBase.js';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-// FIXME: This test is currently broken. It needs to be fixed.
-// The node hangs at 30 blocks and does not proceed further.
+// FIXME: once https://github.com/webb-tools/dkg-substrate/issues/685
+// is fixed, we can remove the skip
 describe.skip('SignatureBridge Governor Updates', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
@@ -102,9 +102,10 @@ describe.skip('SignatureBridge Governor Updates', function () {
       'tangle node ready waiting for dkg public key to be set onchain'
     );
 
+    const chainId = await charlieNode.chainId();
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
-      chainId: 0,
+      chainId,
       enabledPallets,
     });
 
@@ -187,11 +188,11 @@ describe.skip('SignatureBridge Governor Updates', function () {
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'DKGNode', chainId: 0 },
+      proposalSigningBackend: { type: 'DKGNode', chainId },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge: signatureBridge,
-      proposalSigningBackend: { type: 'DKGNode', chainId: 0 },
+      proposalSigningBackend: { type: 'DKGNode', chainId },
     });
     // fetch the dkg public key.
     const dkgPublicKey = await charlieNode.fetchDkgPublicKey();

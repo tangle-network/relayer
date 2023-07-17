@@ -313,6 +313,7 @@ export class LocalChain {
     );
 
     this.signatureVBridge = vBridge;
+    otherChain.signatureVBridge = vBridge;
     if (initialGovernors) {
       const govEntries = Object.entries(initialGovernors);
 

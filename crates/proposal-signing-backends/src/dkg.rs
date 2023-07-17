@@ -98,7 +98,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             nonce = nonce.0,
             resource_id = hex::encode(resource_id.into_bytes()),
             src_chain_id = ?self.src_chain_id,
-            proposal = hex::encode(proposal.to_vec()),
+            proposal = format!("0x{}", hex::encode(proposal.to_vec())),
             "sending proposal to DKG runtime"
         );
 
