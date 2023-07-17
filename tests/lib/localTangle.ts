@@ -39,19 +39,19 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
     opts.ports = (await super.makePorts(opts)) as { rpc: number; p2p: number };
     const startArgs: string[] = [];
     const nodeKeyOrBootNodes: string[] = [];
-    if (opts.authority === 'alice') {
-      opts.ports.p2p = 30333;
-      nodeKeyOrBootNodes.push(
-        '--node-key',
-        '0000000000000000000000000000000000000000000000000000000000000001'
-      );
-    } else {
-      nodeKeyOrBootNodes.push(
-        '--bootnodes',
-        '/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp'
-      );
-    }
     if (opts.usageMode.mode === 'docker') {
+      if (opts.authority === 'alice') {
+        opts.ports.p2p = 30333;
+        nodeKeyOrBootNodes.push(
+          '--node-key',
+          '0000000000000000000000000000000000000000000000000000000000000001'
+        );
+      } else {
+        nodeKeyOrBootNodes.push(
+          '--bootnodes',
+          '/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWDd5qBGyJBqweHr9YGtocpuhcvA3Y9JanQuUoetuP4SBa'
+        );
+      }
       LocalTangle.pullImage({
         forcePull: opts.usageMode.forcePullImage,
         image: TANGLE_DOCKER_IMAGE_URL,
@@ -89,6 +89,18 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
       }
       return new LocalTangle(opts, proc);
     } else {
+      if (opts.authority === 'alice') {
+        opts.ports.p2p = 30333;
+        nodeKeyOrBootNodes.push(
+          '--node-key',
+          '0000000000000000000000000000000000000000000000000000000000000001'
+        );
+      } else {
+        nodeKeyOrBootNodes.push(
+          '--bootnodes',
+          '/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp'
+        );
+      }
       startArgs.push(
         '--tmp',
         '--chain=relayer',
