@@ -70,11 +70,11 @@ impl EventHandler<TangleRuntimeConfig> for DKGPublicKeyChangedHandler {
             .collect::<Vec<_>>();
         for event in pub_key_changed_events {
             tracing::debug!(
-                public_key = %hex::encode(&event.refresh_proposal.pub_key),
-                nonce = %event.refresh_proposal.nonce.0,
-                voter_merkle_root = %hex::encode(event.refresh_proposal.voter_merkle_root),
-                voter_count = %event.refresh_proposal.voter_count,
-                session_length = %event.refresh_proposal.session_length,
+                public_key = %hex::encode(&event.pub_key),
+                nonce = %event.nonce.0,
+                voter_merkle_root = %hex::encode(event.voter_merkle_root),
+                voter_count = %event.voter_count,
+                session_length = %event.session_length,
                 signature = %hex::encode(&event.signature),
                 %block_number,
                 "DKG Public Key Changed",
@@ -108,18 +108,18 @@ impl EventHandler<TangleRuntimeConfig> for DKGPublicKeyChangedHandler {
                     kind = %webb_relayer_utils::probe::Kind::SigningBackend,
                     backend = "DKG",
                     signal_bridge = %bridge_key,
-                    public_key = %hex::encode(&event.refresh_proposal.pub_key),
-                    nonce = %event.refresh_proposal.nonce.0,
+                    public_key = %hex::encode(&event.pub_key),
+                    nonce = %event.nonce.0,
                     signature = %hex::encode(&event.signature),
                 );
 
                 let item = QueueItem::new(BridgeCommand::TransferOwnership {
-                    nonce: event.refresh_proposal.nonce.0,
-                    pub_key: event.refresh_proposal.pub_key.clone(),
+                    nonce: event.nonce.0,
+                    pub_key: event.pub_key.clone(),
                     signature: event.signature.clone(),
-                    voter_count: event.refresh_proposal.voter_count,
-                    voter_merkle_root: event.refresh_proposal.voter_merkle_root,
-                    session_length: event.refresh_proposal.session_length,
+                    voter_count: event.voter_count,
+                    voter_merkle_root: event.voter_merkle_root,
+                    session_length: event.session_length,
                 });
 
                 store.enqueue_item(

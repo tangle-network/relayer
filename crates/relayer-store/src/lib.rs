@@ -414,11 +414,11 @@ impl From<dkg::events::PublicKeySignatureChanged> for BridgeCommand {
     fn from(event: dkg::events::PublicKeySignatureChanged) -> Self {
         Self::TransferOwnership {
             signature: event.signature,
-            voter_merkle_root: event.refresh_proposal.voter_merkle_root,
-            session_length: event.refresh_proposal.session_length,
-            voter_count: event.refresh_proposal.voter_count,
-            nonce: event.refresh_proposal.nonce.0,
-            pub_key: event.refresh_proposal.pub_key,
+            voter_merkle_root: event.voter_merkle_root,
+            session_length: event.session_length,
+            voter_count: event.voter_count,
+            nonce: event.nonce.0,
+            pub_key: event.pub_key,
         }
     }
 }

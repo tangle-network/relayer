@@ -44,8 +44,8 @@ import { UsageMode } from '../../lib/substrateNodeBase.js';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-// FIXME: once https://github.com/webb-tools/dkg-substrate/issues/685
-// is fixed, we can remove the skip
+// This test works, however, to run it and make it run fast
+// you need to configure your tangle node to have short sessions.
 describe.skip('SignatureBridge Governor Updates', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
@@ -204,7 +204,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     const sides = signatureBridge.vBridgeSides.values();
     for (const signatureSide of sides) {
       // now we transferOwnership, forcefully.
-      const tx = await signatureSide.transferOwnership(governorAddress, 1);
+      const tx = await signatureSide.transferOwnership(governorAddress, 0);
       await retry(
         async () => {
           await tx.wait();
