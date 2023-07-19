@@ -35,17 +35,17 @@ import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
 import { u8aToHex } from '@polkadot/util';
-import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
 import { MintableToken } from '@webb-tools/tokens';
 import { type VAnchor } from '@webb-tools/contracts';
 import { VBridge } from '@webb-tools/vbridge';
+import { UsageMode } from '../../lib/substrateNodeBase.js';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-// FIXME: This test is currently broken. It needs to be fixed.
-// The node hangs at 30 blocks and does not proceed further.
+// This test works, however, to run it and make it run fast
+// you need to configure your tangle node to have short sessions.
 describe.skip('SignatureBridge Governor Updates', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
@@ -101,11 +101,11 @@ describe.skip('SignatureBridge Governor Updates', function () {
     console.log(
       'tangle node ready waiting for dkg public key to be set onchain'
     );
-    const chainId = await charlieNode.getChainId();
 
+    const chainId = await charlieNode.chainId();
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
-      chainId: chainId,
+      chainId,
       enabledPallets,
     });
 
@@ -204,7 +204,7 @@ describe.skip('SignatureBridge Governor Updates', function () {
     const sides = signatureBridge.vBridgeSides.values();
     for (const signatureSide of sides) {
       // now we transferOwnership, forcefully.
-      const tx = await signatureSide.transferOwnership(governorAddress, 1);
+      const tx = await signatureSide.transferOwnership(governorAddress, 0);
       await retry(
         async () => {
           await tx.wait();

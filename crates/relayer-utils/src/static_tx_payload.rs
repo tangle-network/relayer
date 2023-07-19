@@ -12,6 +12,7 @@ pub struct TypeErasedStaticTxPayload {
     call_name: String,
     #[serde(with = "serde_bytes")]
     tx_data: Vec<u8>,
+    validation_hash: [u8; 32],
 }
 
 impl TypeErasedStaticTxPayload {
@@ -26,6 +27,7 @@ impl std::fmt::Debug for TypeErasedStaticTxPayload {
             .field("pallet_name", &self.pallet_name)
             .field("call_name", &self.call_name)
             .field("tx_data", &hex::encode(&self.tx_data))
+            .field("validation_hash", &hex::encode(self.validation_hash))
             .finish()
     }
 }
@@ -59,6 +61,7 @@ impl<'a, CallData: EncodeAsFields>
             pallet_name: details.pallet_name.to_owned(),
             call_name: details.call_name.to_owned(),
             tx_data,
+            validation_hash: details.hash,
         })
     }
 }

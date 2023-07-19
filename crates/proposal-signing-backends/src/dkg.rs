@@ -2,11 +2,9 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
-use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::nonce::Nonce;
 use webb::substrate::subxt::OnlineClient;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::{Proposal, ProposalKind};
 use webb_proposals::ProposalTrait;
-use webb::substrate::scale::{Encode, Decode};
 use webb_relayer_store::queue::{QueueStore, QueueItem, TransactionQueueItemKey};
 use webb_relayer_utils::{metric, TangleRuntimeConfig};
 use webb::substrate::tangle_runtime::api as RuntimeApi;
@@ -96,27 +94,20 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
-        let src_chain_id =
-            webb_proposals_typed_chain_converter(self.src_chain_id);
         tracing::debug!(
             nonce = nonce.0,
             resource_id = hex::encode(resource_id.into_bytes()),
             src_chain_id = ?self.src_chain_id,
-            proposal = hex::encode(proposal.to_vec()),
+            proposal = format!("0x{}", hex::encode(proposal.to_vec())),
             "sending proposal to DKG runtime"
         );
 
-        let nonce = Nonce::decode(&mut nonce.encode().as_slice())?;
         let unsigned_proposal = Proposal::Unsigned {
             kind: ProposalKind::AnchorUpdate,
             data: BoundedVec(proposal.to_vec()),
         };
-        let acknowledge_proposal_tx = tx_api.acknowledge_proposal(
-            nonce,
-            src_chain_id,
-            ResourceId(resource_id.into_bytes()),
-            unsigned_proposal,
-        );
+        let acknowledge_proposal_tx =
+            tx_api.acknowledge_proposal(unsigned_proposal);
         let metadata = self.client.metadata();
         let tx = TypeErasedStaticTxPayload::try_from((
             &metadata,

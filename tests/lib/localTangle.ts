@@ -10,11 +10,10 @@ import {
   Pallet,
   ProposalSigningBackend,
 } from './webbRelayer.js';
-import { LocalNodeOpts } from '@webb-tools/test-utils';
 import { ECPairAPI, TinySecp256k1Interface, ECPairFactory } from 'ecpair';
 import * as TinySecp256k1 from 'tiny-secp256k1';
 import { ConvertToKebabCase } from './tsHacks.js';
-import { SubstrateNodeBase } from './substrateNodeBase.js';
+import { SubstrateNodeBase, LocalNodeOpts } from './substrateNodeBase.js';
 
 const TANGLE_DOCKER_IMAGE_URL =
   'ghcr.io/webb-tools/tangle/tangle-standalone-integration-tests:main';
@@ -37,10 +36,31 @@ type FullNodeInfo = NodeInfo & {
 
 export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
   public static async start(opts: LocalNodeOpts): Promise<LocalTangle> {
-    opts.ports = await super.makePorts(opts);
-    // opts.usageMode.mode = 'docker'
+    opts.ports = (await super.makePorts(opts)) as { rpc: number; p2p: number };
     const startArgs: string[] = [];
+    const nodeKeyOrBootNodes: string[] = [];
+    const fixedIpArgs: string[] = [];
+    if (opts.authority === 'alice') {
+      opts.ports.p2p = 30333;
+      opts.ports.rpc = 9944;
+      fixedIpArgs.push('--ip=172.20.0.10');
+      nodeKeyOrBootNodes.push(
+        '--node-key=0000000000000000000000000000000000000000000000000000000000000001'
+      );
+    } else {
+      nodeKeyOrBootNodes.push(
+        `--bootnodes=/ip4/172.20.0.10/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp`
+      );
+    }
     if (opts.usageMode.mode === 'docker') {
+      // Create a docker network if it doesn't exist
+      const args = ['network', 'create', '--subnet=172.20.0.0/16', 'tangle'];
+      const createNetworkProc = spawn('docker', args);
+      createNetworkProc.on('close', (code) => {
+        if (code !== 0) {
+          console.error(`docker ${args.join(' ')} exited with code ${code}`);
+        }
+      });
       LocalTangle.pullImage({
         forcePull: opts.usageMode.forcePullImage,
         image: TANGLE_DOCKER_IMAGE_URL,
@@ -49,24 +69,27 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         'run',
         '--rm',
         '--name',
-        `${opts.authority}-node-${opts.ports.ws}`,
+        `${opts.authority}-node-${opts.ports.rpc}`,
+        `--net=tangle`,
         '-p',
-        `${opts.ports.ws}:9944`,
-        '-p',
-        `${opts.ports.http}:9933`,
+        `${opts.ports.rpc}:9944`,
         '-p',
         `${opts.ports.p2p}:30333`,
+        ...fixedIpArgs,
         TANGLE_DOCKER_IMAGE_URL,
         'tangle-standalone',
         '--tmp',
         '--chain=relayer',
         '--rpc-cors',
         'all',
-        '--ws-external',
+        '--unsafe-rpc-external',
         '--rpc-methods=unsafe',
+        '--disable-log-color',
         `--${opts.authority}`,
         ...startArgs,
+        ...nodeKeyOrBootNodes,
       ];
+      console.log('docker', dockerArgs.join(' '));
       const proc = spawn('docker', dockerArgs);
       if (opts.enableLogging) {
         proc.stdout.on('data', (data: Buffer) => {
@@ -83,12 +106,13 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         '--chain=relayer',
         '--rpc-cors',
         'all',
+        '--unsafe-rpc-external',
         '--rpc-methods=unsafe',
-        '--ws-external',
-        `--ws-port=${opts.ports.ws}`,
-        `--rpc-port=${opts.ports.http}`,
+        '--disable-log-color',
+        `--rpc-port=${opts.ports.rpc}`,
         `--port=${opts.ports.p2p}`,
-        `--${opts.authority}`
+        `--${opts.authority}`,
+        ...nodeKeyOrBootNodes
       );
       const proc = spawn(opts.usageMode.nodePath, startArgs);
       if (opts.enableLogging) {
@@ -101,6 +125,13 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
       }
       return new LocalTangle(opts, proc);
     }
+  }
+
+  public async chainId(): Promise<number> {
+    const api = await super.api();
+    const chainId =
+      api.consts.dkgProposals.chainIdentifier.asSubstrate.toNumber();
+    return chainId;
   }
 
   public async fetchDkgPublicKey(): Promise<`0x${string}`> {
@@ -121,22 +152,15 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
     }
   }
 
-  // get chainId
-  public async getChainId(): Promise<number> {
-    const api = await super.api();
-    const chainId = api.consts.linkableTreeBn254.chainIdentifier.toNumber();
-    return chainId;
-  }
-
   public async exportConfig(
     opts: ExportedConfigOptions
   ): Promise<FullNodeInfo> {
-    const ports = this.opts.ports as { ws: number; http: number; p2p: number };
+    const ports = this.opts.ports as { rpc: number; p2p: number };
     const nodeInfo: FullNodeInfo = {
       name: 'localSubstrate',
       enabled: true,
-      httpEndpoint: `http://127.0.0.1:${ports.http}`,
-      wsEndpoint: `ws://127.0.0.1:${ports.ws}`,
+      httpEndpoint: `http://127.0.0.1:${ports.rpc}`,
+      wsEndpoint: `ws://127.0.0.1:${ports.rpc}`,
       pallets: opts.enabledPallets ?? [],
       suri: opts.suri,
       chainId: opts.chainId,

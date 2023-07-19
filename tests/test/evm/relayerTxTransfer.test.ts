@@ -18,13 +18,6 @@
 // These are for testing the basic relayer functionality. which is just relay transactions for us.
 
 import { expect } from 'chai';
-import {
-  CircomUtxo,
-  Keypair,
-  parseTypedChainId,
-  toFixedHex,
-  Utxo,
-} from '@webb-tools/sdk-core';
 import dotenv from 'dotenv';
 import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
@@ -42,6 +35,7 @@ import { MintableToken } from '@webb-tools/tokens';
 import { formatEther, parseEther } from 'ethers/lib/utils.js';
 import { type VAnchor } from '@webb-tools/contracts';
 import { VBridge } from '@webb-tools/vbridge';
+import { Keypair, toFixedHex, Utxo } from '@webb-tools/utils';
 
 dotenv.config({ path: '../.env' });
 // This test is meant to prove that utxo transfer flows are possible, and the receiver
@@ -68,7 +62,6 @@ describe('Relayer transfer assets', function () {
         contract: 'VAnchor',
       },
     ];
-    parseTypedChainId;
     localChain1 = await LocalChain.init({
       port: localChain1Port,
       chainId: localChain1Port,
@@ -205,7 +198,7 @@ describe('Relayer transfer assets', function () {
     const bobPublicKeypair = Keypair.fromString(registeredKeydata);
 
     // Step 3. Generate a UTXO that is only spendable by recipient(Bob)
-    const transferUtxo = await CircomUtxo.generateUtxo({
+    const transferUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: ethers.utils.parseEther('10').toString(),
@@ -238,7 +231,7 @@ describe('Relayer transfer assets', function () {
     const utxos = await Promise.all(
       encryptedCommitments.map(async (enc, index) => {
         try {
-          const decryptedUtxo = await CircomUtxo.decrypt(bobKeypair, enc);
+          const decryptedUtxo = Utxo.decrypt(bobKeypair, enc);
           // In order to properly calculate the nullifier, an index is required.
           decryptedUtxo.setIndex(index);
           decryptedUtxo.setOriginChainId(localChain1.chainId.toString());
@@ -263,7 +256,7 @@ describe('Relayer transfer assets', function () {
     console.log('Balance before ', bobBalanceBefore);
 
     // Step 5. Get Estimated Fee
-    const dummyUtxo = await CircomUtxo.generateUtxo({
+    const dummyUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: '0',

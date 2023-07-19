@@ -33,12 +33,12 @@ import { LocalTangle } from '../../lib/localTangle.js';
 import isCi from 'is-ci';
 import path from 'path';
 import { ethAddressFromUncompressedPublicKey } from '../../lib/ethHelperFunctions.js';
-import { CircomUtxo, Keypair } from '@webb-tools/sdk-core';
-import { UsageMode } from '@webb-tools/test-utils';
 import { defaultEventsWatcherValue } from '../../lib/utils.js';
 import { MintableToken } from '@webb-tools/tokens';
 import { VAnchor } from '@webb-tools/contracts';
 import { VBridge } from '@webb-tools/vbridge';
+import { Keypair, Utxo } from '@webb-tools/utils';
+import { UsageMode } from '../../lib/substrateNodeBase.js';
 
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
@@ -101,7 +101,8 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
     console.log(
       'tangle node ready waiting for dkg public key to be set onchain'
     );
-    const chainId = await charlieNode.getChainId();
+    const chainId = await charlieNode.chainId();
+
     await charlieNode.writeConfig(`${tmpDirPath}/${charlieNode.name}.json`, {
       suri: '//Charlie',
       chainId: chainId,
@@ -320,7 +321,7 @@ describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
 
     // Create a deposit utxo
     const randomKeypair = new Keypair();
-    const depositUtxo = await CircomUtxo.generateUtxo({
+    const depositUtxo = Utxo.generateUtxo({
       curve: 'Bn254',
       backend: 'Circom',
       amount: (1e2).toString(),
