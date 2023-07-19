@@ -96,7 +96,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       authority: 'alice',
       usageMode,
       ports: 'auto',
-      enableLogging: true,
+      enableLogging: false,
     });
 
     charlieNode = await LocalTangle.start({
@@ -104,7 +104,7 @@ describe('Proposals (DKG <=> Relayer <=> SigBridge)', function () {
       authority: 'charlie',
       usageMode,
       ports: 'auto',
-      enableLogging: true,
+      enableLogging: false,
     });
 
     const api = await charlieNode.api();
