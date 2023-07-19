@@ -39,17 +39,28 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
     opts.ports = (await super.makePorts(opts)) as { rpc: number; p2p: number };
     const startArgs: string[] = [];
     const nodeKeyOrBootNodes: string[] = [];
+    const fixedIpArgs: string[] = [];
     if (opts.authority === 'alice') {
       opts.ports.p2p = 30333;
+      opts.ports.rpc = 9944;
+      fixedIpArgs.push('--ip=172.20.0.10');
       nodeKeyOrBootNodes.push(
         '--node-key=0000000000000000000000000000000000000000000000000000000000000001'
       );
     } else {
       nodeKeyOrBootNodes.push(
-        '--bootnodes=/ip4/127.0.0.1/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp'
+        `--bootnodes=/ip4/172.20.0.10/tcp/30333/p2p/12D3KooWEyoppNCUx8Yx66oV9fJnriXwCcXwDDUA2kj6vnc6iDEp`
       );
     }
     if (opts.usageMode.mode === 'docker') {
+      // Create a docker network if it doesn't exist
+      const args = ['network', 'create', '--subnet=172.20.0.0/16', 'tangle'];
+      const createNetworkProc = spawn('docker', args);
+      createNetworkProc.on('close', (code) => {
+        if (code !== 0) {
+          console.error(`docker ${args.join(' ')} exited with code ${code}`);
+        }
+      });
       LocalTangle.pullImage({
         forcePull: opts.usageMode.forcePullImage,
         image: TANGLE_DOCKER_IMAGE_URL,
@@ -59,10 +70,12 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         '--rm',
         '--name',
         `${opts.authority}-node-${opts.ports.rpc}`,
+        `--net=tangle`,
         '-p',
         `${opts.ports.rpc}:9944`,
         '-p',
         `${opts.ports.p2p}:30333`,
+        ...fixedIpArgs,
         TANGLE_DOCKER_IMAGE_URL,
         'tangle-standalone',
         '--tmp',
@@ -76,6 +89,7 @@ export class LocalTangle extends SubstrateNodeBase<TypedEvent> {
         ...startArgs,
         ...nodeKeyOrBootNodes,
       ];
+      console.log('docker', dockerArgs.join(' '));
       const proc = spawn('docker', dockerArgs);
       if (opts.enableLogging) {
         proc.stdout.on('data', (data: Buffer) => {
