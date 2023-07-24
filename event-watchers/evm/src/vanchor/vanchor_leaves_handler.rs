@@ -113,7 +113,7 @@ impl EventHandler for VAnchorLeavesHandler {
         _wrapper: &Self::Contract,
     ) -> webb_relayer_utils::Result<bool> {
         use VAnchorContractEvents::*;
-        let has_event = matches!(events, NewCommitmentFilter(_));
+        let has_event = matches!(events, InsertionFilter(_));
         Ok(has_event)
     }
 
@@ -132,9 +132,9 @@ impl EventHandler for VAnchorLeavesHandler {
         let mt_snapshot = mt.tree.clone();
 
         match event {
-            NewCommitmentFilter(event_data) => {
+            InsertionFilter(event_data) => {
                 let commitment: [u8; 32] = event_data.commitment.into();
-                let leaf_index = event_data.leaf_index.as_u32();
+                let leaf_index = event_data.leaf_index;
                 let value = (leaf_index, commitment.to_vec());
                 let target_system = TargetSystem::new_contract_address(
                     wrapper.contract.address().to_fixed_bytes(),
@@ -149,7 +149,7 @@ impl EventHandler for VAnchorLeavesHandler {
                 batch.insert(leaf_index, leaf);
                 mt.insert_batch(&batch, &self.hasher)?;
                 // If leaf index is even number then we don't need to verify commitment
-                if event_data.leaf_index.as_u32() % 2 == 0 {
+                if event_data.leaf_index % 2 == 0 {
                     tracing::debug!(
                         leaf_index = leaf_index,
                         commitment = hex::encode(commitment.as_slice()),
@@ -159,30 +159,32 @@ impl EventHandler for VAnchorLeavesHandler {
                     // We will verify commitment
                     let root_bytes = mt.root().into_repr().to_bytes_be();
                     let root = U256::from_big_endian(root_bytes.as_slice());
-                    let is_known_root = wrapper
-                        .contract
-                        .is_known_root(root)
-                        .block(log.block_number)
-                        .call()
-                        .await?;
+                    let valid = root.eq(&event_data.new_merkle_root);
 
                     tracing::debug!(
-                        leaf_index = leaf_index,
-                        root = hex::encode(root_bytes.as_slice()),
-                        is_known_root,
+                        %valid,
+                        %leaf_index,
+                        ?root,
+                        ?event_data.new_merkle_root,
                         "New commitment need to be verified",
                     );
 
-                    if !is_known_root {
+                    if !valid {
                         tracing::warn!(
-                            expected_root = ?root,
-                            "Invalid merkle root. Maybe invalid leaf or commitment"
+                            %leaf_index,
+                            ?root,
+                            ?event_data.new_merkle_root,
+                            "Invalid merkle root. Maybe invalid leaf?"
                         );
                         // Restore previous state of the tree.
                         mt.tree = mt_snapshot;
                         return Err(Error::InvalidMerkleRootError(leaf_index));
                     }
                 }
+                tracing::trace!(
+                    %log.block_number,
+                    "detected block number",
+                );
                 // 2. We will insert leaf and last deposit block number into store
                 store.insert_leaves_and_last_deposit_block_number(
                     history_store_key,
@@ -191,10 +193,6 @@ impl EventHandler for VAnchorLeavesHandler {
                 )?;
                 let events_bytes = serde_json::to_vec(&event_data)?;
                 store.store_event(&events_bytes)?;
-                tracing::trace!(
-                    %log.block_number,
-                    "detected block number",
-                );
                 tracing::event!(
                     target: webb_relayer_utils::probe::TARGET,
                     tracing::Level::DEBUG,
@@ -229,12 +227,11 @@ impl EventHandler for VAnchorLeavesHandler {
                     H256::from(&v.nullifier.into())
                 );
             }
-            InsertionFilter(v) => {
+            NewCommitmentFilter(v) => {
                 tracing::debug!(
-                    "Leaf {:?} inserted at index {} on time {}",
+                    "Leaf {:?} inserted at index {}",
                     H256::from(&v.commitment.into()),
                     v.leaf_index,
-                    v.timestamp
                 );
             }
             _ => {
