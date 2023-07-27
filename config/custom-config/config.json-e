@@ -1,0 +1,198 @@
+{
+  "features": {
+    "governance-relay": true,
+    "data-query": true,
+    "private-tx-relay": true
+  },
+  "assets": {
+    "tTNT": {
+      "name": "Test Tangle Token",
+      "decimals": 18,
+      "price": 10
+    },
+    "TNT": {
+      "name": "Tangle Token",
+      "decimals": 18,
+      "price": 10
+    }
+  },
+  "evm": {
+    "athena": {
+      "name": "athena",
+      "http-endpoint": "http://localhost:5002",
+      "ws-endpoint": "ws://localhost:5002",
+      "explorer": "https://athena-explorer.webb.tools",
+      "chain-id": 5002,
+      "block-confirmations": 0,
+      "private-key": "$ATHENA_PRIVATE_KEY",
+      "enabled": true,
+      "contracts": [
+        {
+          "contract": "VAnchor",
+          "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3",
+          "deployed-at": 1,
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          },
+          "withdraw-config": {
+            "withdraw-fee-percentage": 0,
+            "withdraw-gaslimit": "0x350000"
+          },
+          "linked-anchors": [
+            {
+              "type": "Evm",
+              "chain": "hermes",
+              "chain-id": 5001,
+              "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
+            },
+            {
+              "type": "Evm",
+              "chain": "demeter",
+              "chain-id": 5003,
+              "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
+            }
+          ],
+          "smart-anchor-updates": {
+            "enabled": true,
+            "max-time-delay": 10,
+            "min-time-delay": 5
+          },
+          "proposal-signing-backend": {
+            "type": "Mocked",
+            "private-key": "$GOVERNOR_PRIVATE_KEY"
+          }
+        },
+        {
+          "contract": "SignatureBridge",
+          "address": "0xab85034baF6D500b923191FA29962ae7fE67af7a",
+          "deployed-at": 1,
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          }
+        }
+      ]
+    },
+    "hermes": {
+      "name": "hermes",
+      "http-endpoint": "http://localhost:5001",
+      "ws-endpoint": "ws://localhost:5001",
+      "explorer": "https://hermes-explorer.webb.tools",
+      "chain-id": 5001,
+      "block-confirmations": 0,
+      "private-key": "$HERMES_PRIVATE_KEY",
+      "enabled": true,
+      "contracts": [
+        {
+          "contract": "VAnchor",
+          "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3",
+          "deployed-at": 1,
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          },
+          "withdraw-config": {
+            "withdraw-fee-percentage": 0,
+            "withdraw-gaslimit": "0x350000"
+          },
+          "linked-anchors": [
+            {
+              "type": "Evm",
+              "chain": "athena",
+              "chain-id": 5002,
+              "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
+            },
+            {
+              "type": "Evm",
+              "chain": "demeter",
+              "chain-id": 5003,
+              "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
+            }
+          ],
+          "smart-anchor-updates": {
+            "enabled": true,
+            "max-time-delay": 10,
+            "min-time-delay": 5
+          },
+          "proposal-signing-backend": {
+            "type": "Mocked",
+            "private-key": "$GOVERNOR_PRIVATE_KEY"
+          }
+        },
+        {
+          "contract": "SignatureBridge",
+          "address": "0xab85034baF6D500b923191FA29962ae7fE67af7a",
+          "deployed-at": 1,
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          }
+        }
+      ]
+    },
+    "demeter": {
+      "name": "demeter",
+      "http-endpoint": "http://localhost:5003",
+      "ws-endpoint": "ws://localhost:5003",
+      "explorer": "https://demeter-explorer.webb.tools",
+      "chain-id": 5003,
+      "block-confirmations": 0,
+      "private-key": "$DEMETER_PRIVATE_KEY",
+      "enabled": true,
+      "contracts": [
+        {
+          "contract": "VAnchor",
+          "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3",
+          "deployed-at": 1,
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          },
+          "withdraw-config": {
+            "withdraw-fee-percentage": 0,
+            "withdraw-gaslimit": "0x350000"
+          },
+          "linked-anchors": [
+            {
+              "type": "Evm",
+              "chain": "athena",
+              "chain-id": 5002,
+              "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
+            },
+            {
+              "type": "Evm",
+              "chain": "hermes",
+              "chain-id": 5001,
+              "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
+            }
+          ],
+          "smart-anchor-updates": {
+            "enabled": true,
+            "max-time-delay": 10,
+            "min-time-delay": 5
+          },
+          "proposal-signing-backend": {
+            "type": "Mocked",
+            "private-key": "$GOVERNOR_PRIVATE_KEY"
+          }
+        },
+        {
+          "contract": "SignatureBridge",
+          "address": "0xab85034baF6D500b923191FA29962ae7fE67af7a",
+          "deployed-at": 1,
+          "events-watcher": {
+            "enabled": true,
+            "polling-interval": 1000,
+            "print-progress-interval": 60000
+          }
+        }
+      ]
+    }
+  }
+}
