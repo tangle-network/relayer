@@ -2,6 +2,8 @@ use std::sync::Arc;
 
 use axum::routing::{get, post};
 use axum::Router;
+use tower_http::cors::CorsLayer;
+use tower_http::trace::TraceLayer;
 use webb::evm::ethers::prelude::TimeLag;
 use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
 use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
@@ -68,6 +70,8 @@ pub fn build_web_services() -> Router<Arc<RelayerContext>> {
             "/fee_info/evm/:chain_id/:vanchor/:gas_amount",
             get(handle_evm_fee_info),
         )
+        .layer(CorsLayer::permissive())
+        .layer(TraceLayer::new_for_http())
 }
 
 /// Fires up all background services for all EVM chains configured in the config file.

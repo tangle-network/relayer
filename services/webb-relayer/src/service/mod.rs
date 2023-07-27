@@ -27,7 +27,6 @@ use std::sync::Arc;
 
 use axum::routing::get;
 use axum::Router;
-use tower_http::cors::Any;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb_proposal_signing_backends::{
@@ -61,12 +60,12 @@ pub async fn build_web_services(ctx: RelayerContext) -> crate::Result<()> {
     let api = Router::new()
         .route("/ip", get(handle_socket_info))
         .route("/info", get(handle_relayer_info))
+        .layer(TraceLayer::new_for_http())
+        .layer(CorsLayer::permissive())
         .merge(evm::build_web_services());
 
     let app = Router::new()
         .nest("/api/v1", api)
-        .layer(CorsLayer::new().allow_origin(Any))
-        .layer(TraceLayer::new_for_http())
         .with_state(Arc::new(ctx))
         .into_make_service_with_connect_info::<SocketAddr>();
 
