@@ -14083,5 +14083,30 @@
         "standard": "eip3091"
       }
     ]
+  },
+  {
+    "name": "Tangle testnet",
+    "chain": "tangle",
+    "rpc": [
+      "https://tangle-standalone-archive.webb.tools"
+    ],
+    "faucets": [],
+    "nativeCurrency": {
+      "name": "Test Tangle Network Token",
+      "symbol": "tTNT",
+      "decimals": 18
+    },
+    "infoURL": "https://webb.tools",
+    "shortName": "tangle",
+    "chainId": 4006,
+    "networkId": 4006,
+    "status": "testnet",
+    "explorers": [
+      {
+        "name": "tangle explorer",
+        "url": "https://tangle-testnet-explorer.webb.tools",
+        "standard": "eip3091"
+      }
+    ]
   }
 ]
