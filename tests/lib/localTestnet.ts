@@ -42,7 +42,7 @@ import {
   ProposalSigningBackend,
   SmartAnchorUpdatesConfig,
   RelayerFeeConfig,
-} from './webbRelayer';
+} from './webbRelayer.js';
 import { ConvertToKebabCase } from './tsHacks';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { TokenConfig, VBridge, VBridgeInput } from '@webb-tools/vbridge';
@@ -563,7 +563,7 @@ export class LocalChain {
         'polling-interval': config.txQueue.pollingInterval,
       },
       'relayer-fee-config': {
-        'relayer-fee-percent': config.relayerFeeConfig.relayerFeePercent,
+        'relayer-profit-percent': config.relayerFeeConfig.relayerProfitPercent,
         'max-refund-amount': config.relayerFeeConfig.maxRefundAmount,
       },
       contracts: config.contracts.map(
@@ -618,7 +618,9 @@ export class LocalChain {
         [this.underlyingChainId]: convertedConfig,
       },
     };
+
     const configString = JSON.stringify(fullConfigFile, null, 2);
+    console.log(configString);
     fs.writeFileSync(path, configString);
   }
 

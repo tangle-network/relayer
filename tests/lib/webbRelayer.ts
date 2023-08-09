@@ -403,7 +403,7 @@ export interface EvmEtherscanConfig {
 }
 
 export interface RelayerFeeConfig {
-  relayerFeePercent: number;
+  relayerProfitPercent: number;
   maxRefundAmount: number;
 }
 
@@ -554,7 +554,7 @@ export interface EnabledContracts {
 // Default WithdrawlFeeConfig for the tx relaying.
 export const defaultRelayerFeeConfigValue: RelayerFeeConfig = {
   maxRefundAmount: 0,
-  relayerFeePercent: 0,
+  relayerProfitPercent: 0,
 };
 
 type ContractKind =
