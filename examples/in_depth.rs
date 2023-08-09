@@ -108,7 +108,7 @@ async fn main() -> anyhow::Result<()> {
                 block_poller: None,
                 block_confirmations: 0,
                 tx_queue: Default::default(),
-                relayer_fee_config: Default::default()
+                relayer_fee_config: Default::default(),
             },
         )]),
         ..Default::default()
