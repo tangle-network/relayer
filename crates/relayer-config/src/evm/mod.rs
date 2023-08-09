@@ -72,7 +72,7 @@ pub struct EvmChainConfig {
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
     /// Relayer fee configuration
-    #[serde(skip_serializing, default)]
+    #[serde(default)]
     pub relayer_fee_config: RelayerFeeConfig,
     /// Block poller/listening configuration
     #[serde(skip_serializing, default)]

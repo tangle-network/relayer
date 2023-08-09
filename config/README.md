@@ -483,7 +483,7 @@ The percentage of profit relayer will get from the transaction fee.
 - Default: `5`
 
 ##### max-refund-amount
-The maximum amount of native token that relayer will refund to the user.
+The maximum amount of native token that relayer will refund to the user in USD.
 
 - Type: `number`
 - Required: `false`

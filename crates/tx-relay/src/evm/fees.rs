@@ -260,9 +260,9 @@ fn calculate_transaction_fee(
     let tx_fee_usd = tx_fee_tokens * native_token_price;
     // Step 3: Calculate the profit that the relayer should make, and add it to the tx fee in USD.
     // This is the total amount of USD that the relayer should receive.
-    let relay_tx_fee =
+    let relay_tx_profit =
         (relayer_fee_config.relayer_profit_percent / 100.0) * tx_fee_usd;
-    let total_fee_with_profit_in_usd = tx_fee_usd + relay_tx_fee;
+    let total_fee_with_profit_in_usd = tx_fee_usd + relay_tx_profit;
     // Step 4: Convert the total fee to `wrappedToken` using the exchange rate for the underlying
     // wrapped token.
     // This is the total amount of `wrappedToken` that the relayer should receive.
