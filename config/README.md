@@ -33,6 +33,9 @@ following section we will describe the different configuration entries and how t
   - [beneficiary](#beneficiary)
   - [tx-queue](#tx-queue)
     - [max-sleep-interval](#max-sleep-interval)
+  - [relayer-fee-config](#relayer-fee-config)
+    - [relayer-profit-percent](#relayer-profit-percent)
+    - [max-refund-amount](#max-refund-amount)
   - [contracts](#contracts)
     - [contract](#contract)
     - [address](#address)
@@ -467,6 +470,29 @@ Example:
 
 ```toml
 tx-queue = { max-sleep-interval = 5000, polling-interval = 12000 }
+```
+
+#### Relayer fee Config
+This configuration is used to configure profit percentage margin for relayer and set maximum amount relayer can refund to user while withdrawing.
+
+##### relayer-profit-percent
+The percentage of profit relayer will get from the transaction fee.
+
+- Type: `number`
+- Required: `false`
+- Default: `5`
+
+##### max-refund-amount
+The maximum amount of native token that relayer will refund to the user.
+
+- Type: `number`
+- Required: `false`
+- Default: `5`
+
+Example:
+
+```toml
+relayer-fee-config = { relayer-profit-precent = 5, max-refund-amount = 5 }
 ```
 
 #### Contracts
