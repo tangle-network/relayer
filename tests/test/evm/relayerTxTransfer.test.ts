@@ -23,7 +23,7 @@ import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../../lib/localTestnet.js';
 import {
-  defaultWithdrawConfigValue,
+  defaultRelayerFeeConfigValue,
   EnabledContracts,
   EvmFeeInfo,
   EvmEtherscanConfig,
@@ -110,7 +110,7 @@ describe('Relayer transfer assets', function () {
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
-      withdrawConfig: defaultWithdrawConfigValue,
+      relayerFeeConfig: defaultRelayerFeeConfigValue,
       relayerWallet: relayerWallet1,
     });
 

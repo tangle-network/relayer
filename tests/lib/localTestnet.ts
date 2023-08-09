@@ -35,13 +35,13 @@ import {
 import {
   ChainInfo,
   Contract,
-  defaultWithdrawConfigValue,
+  defaultRelayerFeeConfigValue,
   EnabledContracts,
   EventsWatcher,
   LinkedAnchor,
   ProposalSigningBackend,
   SmartAnchorUpdatesConfig,
-  WithdrawFeeConfig,
+  RelayerFeeConfig,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
@@ -56,7 +56,7 @@ export type GanacheAccounts = {
 export type ExportedConfigOptions = {
   signatureVBridge?: VBridge<VAnchor>;
   proposalSigningBackend?: ProposalSigningBackend;
-  withdrawConfig?: WithdrawFeeConfig;
+  relayerFeeConfig?: RelayerFeeConfig;
   relayerWallet?: Wallet;
   linkedAnchors?: LinkedAnchor[];
   blockConfirmations?: number;
@@ -483,7 +483,7 @@ export class LocalChain {
       privateKey: (wallet as ethers.Wallet).privateKey,
       contracts: contracts,
       txQueue: opts.txQueueConfig ?? defaultEvmTxQueueConfig,
-      withdrawFeeConfig: opts.withdrawConfig ?? defaultWithdrawConfigValue,
+      relayerFeeConfig: opts.relayerFeeConfig ?? defaultRelayerFeeConfigValue,
     };
     return chainInfo;
   }
@@ -502,7 +502,7 @@ export class LocalChain {
       privateKey: opts.privateKey ?? '',
       contracts: [],
       txQueue: defaultEvmTxQueueConfig,
-      withdrawFeeConfig: defaultWithdrawConfigValue,
+      relayerFeeConfig: defaultRelayerFeeConfigValue,
     };
     for (const contract of this.opts.enabledContracts) {
       if (contract.contract == 'VAnchor') {
@@ -533,14 +533,14 @@ export class LocalChain {
       'smart-anchor-updates'?: ConvertToKebabCase<SmartAnchorUpdatesConfig>;
     };
     type ConvertedTxQueueConfig = ConvertToKebabCase<TxQueueConfig>;
-    type ConvertedWithdrawFeeConfig = ConvertToKebabCase<WithdrawFeeConfig>;
+    type ConvertedRelayerFeeConfig = ConvertToKebabCase<RelayerFeeConfig>;
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
-      'contracts' | 'tx-queue' | 'withdraw-fee-config'
+      'contracts' | 'tx-queue' | 'relayer-fee-config'
     > & {
       contracts: ConvertedContract[];
       'tx-queue': ConvertedTxQueueConfig;
-      'withdraw-fee-config'?: ConvertedWithdrawFeeConfig;
+      'relayer-fee-config'?: ConvertedRelayerFeeConfig;
     };
     type FullConfigFile = {
       evm: {
@@ -562,9 +562,9 @@ export class LocalChain {
         'max-sleep-interval': config.txQueue.maxSleepInterval,
         'polling-interval': config.txQueue.pollingInterval,
       },
-      'withdraw-fee-config': {
-        'relayer-fee-percent': config.withdrawFeeConfig.relayerFeePercent,
-        'max-refund-amount': config.withdrawFeeConfig.maxRefundAmount,
+      'relayer-fee-config': {
+        'relayer-fee-percent': config.relayerFeeConfig.relayerFeePercent,
+        'max-refund-amount': config.relayerFeeConfig.maxRefundAmount,
       },
       contracts: config.contracts.map(
         (contract): ConvertedContract => ({
@@ -686,7 +686,7 @@ export type FullChainInfo = ChainInfo & {
   privateKey: string;
   blockConfirmations: number;
   txQueue: TxQueueConfig;
-  withdrawFeeConfig: WithdrawFeeConfig;
+  relayerFeeConfig: RelayerFeeConfig;
 };
 
 export async function setupVanchorEvmTx(

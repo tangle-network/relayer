@@ -18,7 +18,7 @@ use webb::evm::ethers::utils::{format_units, parse_units};
 use webb_chains_info::chain_info_by_chain_id;
 use webb_price_oracle_backends::PriceBackend;
 use webb_proposals::TypedChainId;
-use webb_relayer_config::evm::WithdrawFeeConfig;
+use webb_relayer_config::evm::RelayerFeeConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::Result;
 
@@ -97,7 +97,7 @@ pub async fn get_evm_fee_info(
         // Need to recalculate estimated fee with the gas amount that was passed in. We use
         // cached exchange rate so that this matches calculation on the client.
         fee_info.estimated_fee = calculate_transaction_fee(
-            &chain_config.withdraw_fee_config,
+            &chain_config.relayer_fee_config,
             fee_info.gas_price,
             gas_amount,
             fee_info.native_token_price,
@@ -107,7 +107,7 @@ pub async fn get_evm_fee_info(
         // Recalculate max refund in case relayer balance changed.
         fee_info.max_refund = max_refund(
             chain_id,
-            &chain_config.withdraw_fee_config,
+            &chain_config.relayer_fee_config,
             fee_info.native_token_price,
             fee_info.native_token_decimals,
             ctx,
@@ -117,7 +117,7 @@ pub async fn get_evm_fee_info(
     } else {
         let fee_info = generate_fee_info(
             chain_id,
-            &chain_config.withdraw_fee_config,
+            &chain_config.relayer_fee_config,
             vanchor,
             gas_amount,
             ctx,
@@ -136,7 +136,7 @@ pub async fn get_evm_fee_info(
 /// Generate new fee info by fetching relevant data from remote APIs and doing calculations.
 async fn generate_fee_info(
     chain_id: TypedChainId,
-    withdraw_fee_config: &WithdrawFeeConfig,
+    relayer_fee_config: &RelayerFeeConfig,
     vanchor: Address,
     gas_amount: U256,
     ctx: &RelayerContext,
@@ -179,7 +179,7 @@ async fn generate_fee_info(
         .await?;
 
     let estimated_fee = calculate_transaction_fee(
-        withdraw_fee_config,
+        relayer_fee_config,
         gas_price,
         gas_amount,
         native_token_price,
@@ -200,7 +200,7 @@ async fn generate_fee_info(
         refund_exchange_rate,
         max_refund: max_refund(
             chain_id,
-            withdraw_fee_config,
+            relayer_fee_config,
             native_token_price,
             native_token_decimals,
             ctx,
@@ -216,7 +216,7 @@ async fn generate_fee_info(
 
 async fn max_refund(
     chain_id: TypedChainId,
-    withdraw_fee_config: &WithdrawFeeConfig,
+    relayer_fee_config: &RelayerFeeConfig,
     native_token_price: f64,
     native_token_decimals: u8,
     ctx: &RelayerContext,
@@ -226,7 +226,7 @@ async fn max_refund(
     let relayer_balance = provider.get_balance(wallet.address(), None).await?;
 
     // Get the maximum refund amount in USD from the config.
-    let max_refund_amount = withdraw_fee_config.max_refund_amount;
+    let max_refund_amount = relayer_fee_config.max_refund_amount;
 
     // Calculate the maximum refund amount per relay transaction in `nativeToken`.
     // Ensuring that refund <= relayer balance
@@ -243,7 +243,7 @@ async fn max_refund(
 ///
 /// The algorithm is explained at https://www.notion.so/hicommonwealth/Private-Tx-Relay-Support-v1-f5522b04d6a349aab1bbdb0dd83a7fb4#6bb2b4920e3f42d69988688c6fa54e6e
 fn calculate_transaction_fee(
-    withdraw_fee_config: &WithdrawFeeConfig,
+    relayer_fee_config: &RelayerFeeConfig,
     gas_price: U256,
     gas_amount: U256,
     native_token_price: f64,
@@ -261,7 +261,7 @@ fn calculate_transaction_fee(
     // Step 3: Calculate the profit that the relayer should make, and add it to the tx fee in USD.
     // This is the total amount of USD that the relayer should receive.
     let relay_tx_fee =
-        (withdraw_fee_config.relayer_profit_percent / 100.0) * tx_fee_usd;
+        (relayer_fee_config.relayer_profit_percent / 100.0) * tx_fee_usd;
     let total_fee_with_profit_in_usd = tx_fee_usd + relay_tx_fee;
     // Step 4: Convert the total fee to `wrappedToken` using the exchange rate for the underlying
     // wrapped token.
