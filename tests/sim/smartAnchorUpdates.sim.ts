@@ -46,7 +46,7 @@ import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain } from '../lib/localTestnet.js';
 import {
-  defaultWithdrawConfigValue,
+  defaultRelayerFeeConfigValue,
   EnabledContracts,
   LinkedAnchor,
   WebbRelayer,
@@ -184,7 +184,7 @@ describe('Smart Anchor Updates Simulation', function () {
       const path = `${tmpDirPath}/${chain.name}.json`;
       await chain.writeConfig(path, {
         signatureVBridge,
-        withdrawConfig: defaultWithdrawConfigValue,
+        relayerFeeConfig: defaultRelayerFeeConfigValue,
         relayerWallet: relayerWallet,
         linkedAnchors: myLinkedAnchors,
         smartAnchorUpdates: {
