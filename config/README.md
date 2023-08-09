@@ -492,7 +492,7 @@ The maximum amount of native token that relayer will refund to the user.
 Example:
 
 ```toml
-relayer-fee-config = { relayer-profit-precent = 5, max-refund-amount = 5 }
+relayer-fee-config = { relayer-profit-percent= 5, max-refund-amount = 5 }
 ```
 
 #### Contracts

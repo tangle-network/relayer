@@ -28,9 +28,9 @@ chain-id = 5001
 private-key = "$HERMES_PRIVATE_KEY"
 tx-queue = { max-sleep-interval = 1500, polling-interval = 12000 }
 # The relayer fee configuration for this chain.
-# relayer-profit-precent is percentage of profit relayer will get from the transaction fee.
+# relayer-profit-percentis percentage of profit relayer will get from the transaction fee.
 # max-refund-amount is the maximum amount of native token that relayer will refund to the user( in usd)
-relayer-fee-config = { relayer-profit-precent = 5, max-refund-amount = 5 }
+relayer-fee-config = { relayer-profit-percent= 5, max-refund-amount = 5 }
 # Value to indicate that the relayer should enable services for this chain
 enabled = true
 
