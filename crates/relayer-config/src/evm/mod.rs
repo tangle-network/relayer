@@ -71,9 +71,31 @@ pub struct EvmChainConfig {
     /// TxQueue configuration
     #[serde(skip_serializing, default)]
     pub tx_queue: TxQueueConfig,
+    /// TxWithdrawFee configuration
+    #[serde(skip_serializing, default)]
+    pub withdraw_fee_config: WithdrawFeeConfig,
     /// Block poller/listening configuration
     #[serde(skip_serializing, default)]
     pub block_poller: Option<BlockPollerConfig>,
+}
+
+/// Transaction withdraw fee configuration.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
+pub struct WithdrawFeeConfig {
+    /// Relayer profit percent per transaction fee for relaying
+    pub relayer_profit_percent: f64,
+    /// Maximum refund amount per transaction relaying
+    pub max_refund_amount: f64,
+}
+
+impl Default for WithdrawFeeConfig {
+    fn default() -> Self {
+        Self {
+            relayer_profit_percent: 5.,
+            max_refund_amount: 5.,
+        }
+    }
 }
 
 /// configuration for adding http endpoints.

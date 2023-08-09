@@ -402,9 +402,9 @@ export interface EvmEtherscanConfig {
   [key: string]: EtherscanApiConfig;
 }
 
-export interface WithdrawConfig {
-  withdrawFeePercentage: number;
-  withdrawGaslimit: `0x${string}`;
+export interface WithdrawFeeConfig {
+  relayerFeePercent: number;
+  maxRefundAmount: number;
 }
 
 export interface WebbRelayerInfo {
@@ -506,7 +506,6 @@ export interface Contract {
   deployedAt: number;
   eventsWatcher: EventsWatcher;
   size?: number;
-  withdrawConfig?: WithdrawConfig;
   proposalSigningBackend?: ProposalSigningBackend;
   linkedAnchors?: LinkedAnchor[];
   smartAnchorUpdates?: SmartAnchorUpdatesConfig;
@@ -552,10 +551,10 @@ export interface EnabledContracts {
   contract: ContractKind;
 }
 
-// Default WithdrawlConfig for the contracts.
-export const defaultWithdrawConfigValue: WithdrawConfig = {
-  withdrawGaslimit: '0x5B8D80',
-  withdrawFeePercentage: 0,
+// Default WithdrawlFeeConfig for the tx relaying.
+export const defaultWithdrawConfigValue: WithdrawFeeConfig = {
+  maxRefundAmount: 0,
+  relayerFeePercent: 0,
 };
 
 type ContractKind =

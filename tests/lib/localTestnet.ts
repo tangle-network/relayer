@@ -35,12 +35,13 @@ import {
 import {
   ChainInfo,
   Contract,
+  defaultWithdrawConfigValue,
   EnabledContracts,
   EventsWatcher,
   LinkedAnchor,
   ProposalSigningBackend,
   SmartAnchorUpdatesConfig,
-  WithdrawConfig,
+  WithdrawFeeConfig,
 } from './webbRelayer';
 import { ConvertToKebabCase } from './tsHacks';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
@@ -55,7 +56,7 @@ export type GanacheAccounts = {
 export type ExportedConfigOptions = {
   signatureVBridge?: VBridge<VAnchor>;
   proposalSigningBackend?: ProposalSigningBackend;
-  withdrawConfig?: WithdrawConfig;
+  withdrawConfig?: WithdrawFeeConfig;
   relayerWallet?: Wallet;
   linkedAnchors?: LinkedAnchor[];
   blockConfirmations?: number;
@@ -452,7 +453,6 @@ export class LocalChain {
         deployedAt: 1,
         size: 1, // Ethers
         proposalSigningBackend: opts.proposalSigningBackend,
-        withdrawConfig: opts.withdrawConfig,
         eventsWatcher: {
           enabled: true,
           pollingInterval: 1000,
@@ -483,6 +483,7 @@ export class LocalChain {
       privateKey: (wallet as ethers.Wallet).privateKey,
       contracts: contracts,
       txQueue: opts.txQueueConfig ?? defaultEvmTxQueueConfig,
+      withdrawFeeConfig: opts.withdrawConfig ?? defaultWithdrawConfigValue,
     };
     return chainInfo;
   }
@@ -501,6 +502,7 @@ export class LocalChain {
       privateKey: opts.privateKey ?? '',
       contracts: [],
       txQueue: defaultEvmTxQueueConfig,
+      withdrawFeeConfig: defaultWithdrawConfigValue,
     };
     for (const contract of this.opts.enabledContracts) {
       if (contract.contract == 'VAnchor') {
@@ -527,17 +529,18 @@ export class LocalChain {
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
       'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
-      'withdraw-config'?: ConvertToKebabCase<WithdrawConfig>;
       'linked-anchors'?: ConvertedLinkedAnchor[];
       'smart-anchor-updates'?: ConvertToKebabCase<SmartAnchorUpdatesConfig>;
     };
     type ConvertedTxQueueConfig = ConvertToKebabCase<TxQueueConfig>;
+    type ConvertedWithdrawFeeConfig = ConvertToKebabCase<WithdrawFeeConfig>;
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
-      'contracts' | 'tx-queue'
+      'contracts' | 'tx-queue' | 'withdraw-fee-config'
     > & {
       contracts: ConvertedContract[];
       'tx-queue': ConvertedTxQueueConfig;
+      'withdraw-fee-config'?: ConvertedWithdrawFeeConfig;
     };
     type FullConfigFile = {
       evm: {
@@ -558,6 +561,10 @@ export class LocalChain {
       'tx-queue': {
         'max-sleep-interval': config.txQueue.maxSleepInterval,
         'polling-interval': config.txQueue.pollingInterval,
+      },
+      'withdraw-fee-config': {
+        'relayer-fee-percent': config.withdrawFeeConfig.relayerFeePercent,
+        'max-refund-amount': config.withdrawFeeConfig.maxRefundAmount,
       },
       contracts: config.contracts.map(
         (contract): ConvertedContract => ({
@@ -679,6 +686,7 @@ export type FullChainInfo = ChainInfo & {
   privateKey: string;
   blockConfirmations: number;
   txQueue: TxQueueConfig;
+  withdrawFeeConfig: WithdrawFeeConfig;
 };
 
 export async function setupVanchorEvmTx(
