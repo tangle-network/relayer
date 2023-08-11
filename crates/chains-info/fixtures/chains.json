@@ -14085,6 +14085,45 @@
     ]
   },
   {
+    "name": "Athena Local",
+    "chain": "athena",
+    "rpc": ["http://localhost:5002"],
+    "faucets": [],
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
+    "infoURL": "https://webb.tools",
+    "shortName": "athena",
+    "chainId": 5002,
+    "networkId": 5002,
+    "status": "testnet",
+    "explorers": []
+  },
+  {
+    "name": "Hermes Local",
+    "chain": "hermes",
+    "rpc": ["http://localhost:5001"],
+    "faucets": [],
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
+    "infoURL": "https://webb.tools",
+    "shortName": "hermes",
+    "chainId": 5001,
+    "networkId": 5001,
+    "status": "testnet",
+    "explorers": []
+  },
+  {
+    "name": "Demeter Local",
+    "chain": "demeter",
+    "rpc": ["http://localhost:5003"],
+    "faucets": [],
+    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
+    "infoURL": "https://webb.tools",
+    "shortName": "demeter",
+    "chainId": 5003,
+    "networkId": 5003,
+    "status": "testnet",
+    "explorers": []
+  },
+  {
     "name": "Tangle testnet",
     "chain": "tangle",
     "rpc": [

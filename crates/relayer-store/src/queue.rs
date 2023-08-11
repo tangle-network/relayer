@@ -129,6 +129,11 @@ where
     ) -> crate::Result<Option<QueueItem<Item>>>;
     /// Check if the item is in the queue.
     fn has_item(&self, key: Self::Key) -> crate::Result<bool>;
+    /// Get item from the queue.
+    fn get_item(
+        &self,
+        key: Self::Key,
+    ) -> crate::Result<Option<QueueItem<Item>>>;
     /// Remove an item from the queue.
     fn remove_item(
         &self,
@@ -179,6 +184,10 @@ where
 
     fn has_item(&self, key: Self::Key) -> crate::Result<bool> {
         S::has_item(self, key)
+    }
+
+    fn get_item(&self, key: Self::Key) -> crate::Result<Option<QueueItem<T>>> {
+        S::get_item(self, key)
     }
 
     fn remove_item(

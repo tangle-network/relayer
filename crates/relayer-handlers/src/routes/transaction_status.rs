@@ -34,7 +34,7 @@ pub async fn handle_transaction_status_evm(
 ) -> Result<Json<TransactionStatusResponse>, HandlerError> {
     let store = ctx.store();
     let maybe_item: Option<QueueItem<TypedTransaction>> = store
-        .peek_item(SledQueueKey::from_evm_with_custom_key(chain_id, item_key.0))
+        .get_item(SledQueueKey::from_evm_with_custom_key(chain_id, item_key.0))
         .unwrap_or(None);
 
     if let Some(item) = maybe_item {

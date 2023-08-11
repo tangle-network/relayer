@@ -604,6 +604,23 @@ where
     }
 
     #[tracing::instrument(skip_all, fields(key = %key))]
+    fn get_item(&self, key: Self::Key) -> crate::Result<Option<QueueItem<T>>> {
+        let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
+        let inner_key = match key.item_key() {
+            Some(k) => k,
+            None => return Ok(None),
+        };
+        if let Some(item_key) = tree.get(&inner_key[..])? {
+            if let Some(item_bytes) = tree.get(&item_key[..])? {
+                let item = serde_json::from_slice(&item_bytes)?;
+                self.db.flush()?;
+                return Ok(Some(item));
+            }
+        }
+        Ok(None)
+    }
+
+    #[tracing::instrument(skip_all, fields(key = %key))]
     fn has_item(&self, key: Self::Key) -> crate::Result<bool> {
         let tree = self.db.open_tree(format!("queue_{}", key.queue_name()))?;
         if let Some(k) = key.item_key() {
@@ -1206,5 +1223,82 @@ mod tests {
         //sleep for 5 seconds
         std::thread::sleep(std::time::Duration::from_millis(100));
         assert!(!queue_item1.is_expired());
+    }
+
+    #[test]
+    fn test_get_item_works() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = SledStore::open(tmp.path()).unwrap();
+        let chain_id = 1u32;
+        // Step1. Add items to queue
+        for i in 1..=10 {
+            let tx1: TypedTransaction = TransactionRequest::pay(
+                types::Address::from_low_u64_be(i),
+                types::U256::one(),
+            )
+            .from(types::Address::from_low_u64_be(15))
+            .into();
+            let queue_item = QueueItem::new(tx1.clone());
+            store
+                .enqueue_item(
+                    SledQueueKey::from_evm_with_custom_key(
+                        chain_id,
+                        tx1.item_key(),
+                    ),
+                    queue_item,
+                )
+                .unwrap();
+        }
+        // Step2. update item state to processed.
+        for _ in 1..=10 {
+            let item: QueueItem<TypedTransaction> = store
+                .peek_item(SledQueueKey::from_evm_chain_id(chain_id))
+                .unwrap()
+                .unwrap();
+            // default state of item should be pending.
+            assert_eq!(item.state(), QueueItemState::Pending);
+            let tx_hash = item.clone().inner().sighash().0;
+            //  Update state as Processed and shift item to the end of queue.
+            store
+                .shift_item_to_end(
+                    SledQueueKey::from_evm_with_custom_key(
+                        chain_id,
+                        item.inner().item_key(),
+                    ),
+                    |item1: &mut QueueItem<TypedTransaction>| {
+                        let state = QueueItemState::Processed {
+                            tx_hash: tx_hash.into(),
+                        };
+                        item1.set_state(state);
+                        Ok(())
+                    },
+                )
+                .unwrap();
+        }
+
+        // Step3 get specific item from queue.
+        for i in 1..=10 {
+            let tx: TypedTransaction = TransactionRequest::pay(
+                types::Address::from_low_u64_be(i),
+                types::U256::one(),
+            )
+            .from(types::Address::from_low_u64_be(15))
+            .into();
+            let tx_item_key = tx.item_key();
+
+            let item: QueueItem<TypedTransaction> = store
+                .get_item(SledQueueKey::from_evm_with_custom_key(
+                    chain_id,
+                    tx.item_key(),
+                ))
+                .unwrap()
+                .unwrap();
+            let item_key_found = item.clone().inner().item_key();
+            assert_eq!(item_key_found, tx_item_key);
+            let expect_item_state = QueueItemState::Processed {
+                tx_hash: tx.sighash().0.into(),
+            };
+            assert_eq!(item.state(), expect_item_state);
+        }
     }
 }

@@ -15,6 +15,9 @@ chain-ids = [
     3884533461, # Athena Testnet
     3884533462, # Hermes Testnet
     3884533463, # Demeter Testnet
+    5001,# Athena Local Testnet
+    5002,# Athena Local Testnet
+    5003,# Athena Local Testnet
     4006, # Tangle EVM Testnet
 ]
 
