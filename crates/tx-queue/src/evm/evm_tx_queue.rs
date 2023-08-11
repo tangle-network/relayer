@@ -368,7 +368,8 @@ where
                             chain_id = %chain_id,
                             finalized = true,
                             raw_tx_hash = %tx_hash,
-                            signed_tx_hash = %receipt.transaction_hash,                        );
+                            signed_tx_hash = %receipt.transaction_hash,
+                        );
 
                         // update transaction progress as processed
                         store.shift_item_to_end(
