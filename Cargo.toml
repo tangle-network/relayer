@@ -1,6 +1,6 @@
 [workspace.package]
-version = "0.5.10-dev"
-authors = ["Webb Developers <drew@webb.tools>"]
+version = "0.5.11-dev"
+authors = ["Webb Developers <hello@webb.tools>"]
 license = "Apache-2.0"
 documentation = "https://docs.rs/webb-relayer"
 homepage = "https://webb.tools"
