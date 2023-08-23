@@ -15,7 +15,7 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use ethereum_types::{H256, U64};
+use ethereum_types::U64;
 use futures::TryFutureExt;
 use rand::Rng;
 use webb::evm::ethers::core::types::transaction::eip2718::TypedTransaction;
@@ -116,15 +116,13 @@ where
                 let maybe_item = store
                     .peek_item(SledQueueKey::from_evm_chain_id(chain_id))?;
                 let maybe_explorer = &chain_config.explorer;
-                let mut tx_hash: H256;
                 let Some(item) = maybe_item else {
                     tokio::time::sleep(Duration::from_millis(100)).await;
                     continue;
                 };
                 let mut raw_tx = item.clone().inner();
                 raw_tx.set_chain_id(U64::from(chain_id));
-                let my_tx_hash = raw_tx.sighash();
-                tx_hash = my_tx_hash;
+                let tx_hash = raw_tx.sighash();
 
                 let tx_item_key = item.clone().inner().item_key();
 
@@ -236,7 +234,7 @@ where
                 let pending_tx = client.send_transaction(raw_tx.clone(), None);
                 let tx = match pending_tx.await {
                     Ok(pending) => {
-                        tx_hash = *pending;
+                        let signed_tx_hash = *pending;
                         tracing::event!(
                             target: webb_relayer_utils::probe::TARGET,
                             tracing::Level::DEBUG,
@@ -244,10 +242,11 @@ where
                             ty = "EVM",
                             chain_id = %chain_id,
                             pending = true,
-                            %tx_hash,
+                            raw_tx_hash = %tx_hash,
+                            %signed_tx_hash,
                         );
 
-                        let tx_hash_string = format!("0x{tx_hash:x}");
+                        let tx_hash_string = format!("0x{signed_tx_hash:x}");
                         if let Some(mut url) = maybe_explorer.clone() {
                             url.set_path(&format!("tx/{tx_hash_string}"));
                             let clickable_link = ClickableLink::new(
@@ -309,7 +308,7 @@ where
                             ty = "EVM",
                             chain_id = %chain_id,
                             errored = true,
-                            %tx_hash,
+                            raw_tx_hash = %tx_hash,
                             error = %e,
                         );
 
@@ -368,7 +367,8 @@ where
                             ty = "EVM",
                             chain_id = %chain_id,
                             finalized = true,
-                            %tx_hash,
+                            raw_tx_hash = %tx_hash,
+                            signed_tx_hash = %receipt.transaction_hash,
                         );
 
                         // update transaction progress as processed

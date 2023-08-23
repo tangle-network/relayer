@@ -23,7 +23,7 @@ import { BigNumber, ethers } from 'ethers';
 import temp from 'temp';
 import { LocalChain, setupVanchorEvmTx } from '../../lib/localTestnet.js';
 import {
-  defaultWithdrawConfigValue,
+  defaultRelayerFeeConfigValue,
   EnabledContracts,
   EvmFeeInfo,
   EvmEtherscanConfig,
@@ -152,13 +152,13 @@ describe('Vanchor Private Tx relaying with mocked governor', function () {
     // save the chain configs.
     await localChain1.writeConfig(`${tmpDirPath}/${localChain1.name}.json`, {
       signatureVBridge,
-      withdrawConfig: defaultWithdrawConfigValue,
+      relayerFeeConfig: defaultRelayerFeeConfigValue,
       relayerWallet: relayerWallet1,
       txQueueConfig: { maxSleepInterval: 1500, pollingInterval: 7000 },
     });
     await localChain2.writeConfig(`${tmpDirPath}/${localChain2.name}.json`, {
       signatureVBridge,
-      withdrawConfig: defaultWithdrawConfigValue,
+      relayerFeeConfig: defaultRelayerFeeConfigValue,
       relayerWallet: relayerWallet2,
       txQueueConfig: { maxSleepInterval: 1500, pollingInterval: 7000 },
     });

@@ -35,13 +35,14 @@ import {
 import {
   ChainInfo,
   Contract,
+  defaultRelayerFeeConfigValue,
   EnabledContracts,
   EventsWatcher,
   LinkedAnchor,
   ProposalSigningBackend,
   SmartAnchorUpdatesConfig,
-  WithdrawConfig,
-} from './webbRelayer';
+  RelayerFeeConfig,
+} from './webbRelayer.js';
 import { ConvertToKebabCase } from './tsHacks';
 import { hexToU8a, u8aToHex } from '@polkadot/util';
 import { TokenConfig, VBridge, VBridgeInput } from '@webb-tools/vbridge';
@@ -55,7 +56,7 @@ export type GanacheAccounts = {
 export type ExportedConfigOptions = {
   signatureVBridge?: VBridge<VAnchor>;
   proposalSigningBackend?: ProposalSigningBackend;
-  withdrawConfig?: WithdrawConfig;
+  relayerFeeConfig?: RelayerFeeConfig;
   relayerWallet?: Wallet;
   linkedAnchors?: LinkedAnchor[];
   blockConfirmations?: number;
@@ -452,7 +453,6 @@ export class LocalChain {
         deployedAt: 1,
         size: 1, // Ethers
         proposalSigningBackend: opts.proposalSigningBackend,
-        withdrawConfig: opts.withdrawConfig,
         eventsWatcher: {
           enabled: true,
           pollingInterval: 1000,
@@ -483,6 +483,7 @@ export class LocalChain {
       privateKey: (wallet as ethers.Wallet).privateKey,
       contracts: contracts,
       txQueue: opts.txQueueConfig ?? defaultEvmTxQueueConfig,
+      relayerFeeConfig: opts.relayerFeeConfig ?? defaultRelayerFeeConfigValue,
     };
     return chainInfo;
   }
@@ -501,6 +502,7 @@ export class LocalChain {
       privateKey: opts.privateKey ?? '',
       contracts: [],
       txQueue: defaultEvmTxQueueConfig,
+      relayerFeeConfig: defaultRelayerFeeConfigValue,
     };
     for (const contract of this.opts.enabledContracts) {
       if (contract.contract == 'VAnchor') {
@@ -527,17 +529,18 @@ export class LocalChain {
     > & {
       'events-watcher': ConvertToKebabCase<EventsWatcher>;
       'proposal-signing-backend'?: ConvertToKebabCase<ProposalSigningBackend>;
-      'withdraw-config'?: ConvertToKebabCase<WithdrawConfig>;
       'linked-anchors'?: ConvertedLinkedAnchor[];
       'smart-anchor-updates'?: ConvertToKebabCase<SmartAnchorUpdatesConfig>;
     };
     type ConvertedTxQueueConfig = ConvertToKebabCase<TxQueueConfig>;
+    type ConvertedRelayerFeeConfig = ConvertToKebabCase<RelayerFeeConfig>;
     type ConvertedConfig = Omit<
       ConvertToKebabCase<typeof config>,
-      'contracts' | 'tx-queue'
+      'contracts' | 'tx-queue' | 'relayer-fee-config'
     > & {
       contracts: ConvertedContract[];
       'tx-queue': ConvertedTxQueueConfig;
+      'relayer-fee-config'?: ConvertedRelayerFeeConfig;
     };
     type FullConfigFile = {
       evm: {
@@ -558,6 +561,10 @@ export class LocalChain {
       'tx-queue': {
         'max-sleep-interval': config.txQueue.maxSleepInterval,
         'polling-interval': config.txQueue.pollingInterval,
+      },
+      'relayer-fee-config': {
+        'relayer-profit-percent': config.relayerFeeConfig.relayerProfitPercent,
+        'max-refund-amount': config.relayerFeeConfig.maxRefundAmount,
       },
       contracts: config.contracts.map(
         (contract): ConvertedContract => ({
@@ -611,7 +618,9 @@ export class LocalChain {
         [this.underlyingChainId]: convertedConfig,
       },
     };
+
     const configString = JSON.stringify(fullConfigFile, null, 2);
+    console.log(configString);
     fs.writeFileSync(path, configString);
   }
 
@@ -679,6 +688,7 @@ export type FullChainInfo = ChainInfo & {
   privateKey: string;
   blockConfirmations: number;
   txQueue: TxQueueConfig;
+  relayerFeeConfig: RelayerFeeConfig;
 };
 
 export async function setupVanchorEvmTx(
