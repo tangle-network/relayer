@@ -47,7 +47,7 @@ use ethers::types::*;
 impl WatchableContract for USDC {
   fn deployed_at(&self) -> U64 { U64::from(12740001) }
   fn polling_interval(&self) -> Duration { Duration::from_secs(12) }
-  fn fn max_blocks_per_step(&self) -> U64 { U64::from(1000) }
+  fn max_blocks_per_step(&self) -> U64 { U64::from(1000) }
   fn print_progress_interval(&self) -> Duration { Duration::from_secs(60) }
 }
 ```
