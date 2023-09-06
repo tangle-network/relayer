@@ -1,5 +1,5 @@
 [workspace.package]
-version = "0.5.11-dev"
+version = "0.5.12-dev"
 authors = ["Webb Developers <hello@webb.tools>"]
 license = "Apache-2.0"
 documentation = "https://docs.rs/webb-relayer"
@@ -47,7 +47,7 @@ sp-core = { version = "21.0.0", default-features = false }
 sp-runtime = { version = "24.0.0", default-features = false }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"] }
-webb-proposals = { version = "0.5.4", default-features = false, features = ["scale"] }
+webb-proposals = { git = "https://github.com/webb-tools/webb-rs", rev="a960eaf", default-features = false, features = ["scale"] }
 ethereum-types = "0.14.1"
 dotenv = "0.15.0"
 axum = { version = "0.6.12", features = ["ws"] }
