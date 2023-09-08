@@ -174,6 +174,7 @@ impl Metrics {
             TypedChainId::Cosmos(_) => "Cosmos",
             TypedChainId::Solana(_) => "Solana",
             TypedChainId::Ink(_) => "Ink",
+            _ => unimplemented!("Chain not supported"),
         }
     }
 
@@ -226,6 +227,7 @@ impl Metrics {
                         system.tree_id, system.pallet_index
                     ),
                 ),
+                _ => unimplemented!("Target system not supported"),
             };
         let labels = labels!(
             "chain_type" => Self::chain_name(resource_id.typed_chain_id()),

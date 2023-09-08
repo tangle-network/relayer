@@ -145,5 +145,6 @@ fn webb_proposals_typed_chain_converter(
         webb_proposals::TypedChainId::Cosmos(id) => TypedChainId::Cosmos(id),
         webb_proposals::TypedChainId::Solana(id) => TypedChainId::Solana(id),
         webb_proposals::TypedChainId::Ink(id) => TypedChainId::Ink(id),
+        _ => unimplemented!("Unsupported Chain"),
     }
 }
