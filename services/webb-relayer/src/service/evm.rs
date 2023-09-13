@@ -8,7 +8,8 @@ use webb::evm::ethers::prelude::TimeLag;
 use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
 use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
 use webb_event_watcher_traits::{
-    BridgeWatcher, EthersClient, EthersTimeLagClient, EVMEventWatcher as EventWatcher,
+    BridgeWatcher, EVMEventWatcher as EventWatcher, EthersClient,
+    EthersTimeLagClient,
 };
 
 use webb_ew_evm::signature_bridge_watcher::{

@@ -8283,7 +8283,7 @@ dependencies = [
 
 [[package]]
 name = "webb-bridge-registry-backends"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "async-trait",
  "ethereum-types",
@@ -8302,7 +8302,7 @@ dependencies = [
 
 [[package]]
 name = "webb-chains-info"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "anyhow",
  "prettyplease",
@@ -8341,7 +8341,7 @@ dependencies = [
 
 [[package]]
 name = "webb-event-watcher-traits"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "async-trait",
  "backoff",
@@ -8362,7 +8362,7 @@ dependencies = [
 
 [[package]]
 name = "webb-ew-dkg"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "async-trait",
  "ethereum-types",
@@ -8381,7 +8381,7 @@ dependencies = [
 
 [[package]]
 name = "webb-ew-evm"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "ark-bls12-381",
  "ark-bn254",
@@ -8411,7 +8411,7 @@ dependencies = [
 
 [[package]]
 name = "webb-price-oracle-backends"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "async-trait",
  "axum",
@@ -8451,7 +8451,7 @@ dependencies = [
 
 [[package]]
 name = "webb-proposal-signing-backends"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "async-trait",
  "ethereum-types",
@@ -8491,7 +8491,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "anyhow",
  "axum",
@@ -8525,7 +8525,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-config"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "anyhow",
  "config",
@@ -8551,7 +8551,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-context"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "http",
  "native-tls",
@@ -8570,7 +8570,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-handler-utils"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "native-tls",
  "serde",
@@ -8582,7 +8582,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-handlers"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "axum",
  "axum-client-ip",
@@ -8608,7 +8608,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-store"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "hex",
  "native-tls",
@@ -8625,7 +8625,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-tx-queue"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "backoff",
  "ethereum-types",
@@ -8649,7 +8649,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-tx-relay"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "chrono",
  "ethereum-types",
@@ -8673,7 +8673,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-tx-relay-utils"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "native-tls",
  "serde",
@@ -8681,7 +8681,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-types"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "ethereum-types",
  "native-tls",
@@ -8695,7 +8695,7 @@ dependencies = [
 
 [[package]]
 name = "webb-relayer-utils"
-version = "0.5.12-dev"
+version = "0.5.13-dev"
 dependencies = [
  "ark-std",
  "async-trait",

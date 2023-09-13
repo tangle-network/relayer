@@ -28,10 +28,10 @@
 pub mod evm;
 #[cfg(feature = "evm")]
 pub use evm::{
-    EthersClient, EthersTimeLagClient, EventHandler as EVMEventHandler,
+    BridgeWatcher, EthersClient, EthersTimeLagClient,
+    EventHandler as EVMEventHandler,
     EventHandlerWithRetry as EVMEventHandlerWithRetry,
     EventWatcher as EVMEventWatcher,
-    BridgeWatcher
 };
 
 #[cfg(feature = "substrate")]
