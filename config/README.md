@@ -66,8 +66,6 @@ following section we will describe the different configuration entries and how t
   - [enabled](#enabled-2)
   - [explorer](#explorer-1)
   - [suri](#suri)
-  - [beneficiary](#beneficiary-1)
-  - [runtime](#runtime)
   - [tx-queue](#tx-queue-1)
     - [max-sleep-interval](#max-sleep-interval-1)
   - [pallets](#pallets)
@@ -952,25 +950,6 @@ Example:
 ws-endpoint = "ws://localhost:9944"
 ```
 
-#### runtime
-
-The runtime of the running substrate node. These are predefined in the relayer, with each having
-different types of Options.
-
-- Type: `string`
-- Required: `true`
-- env: `WEBB_SUBSTRATE_<NODE_NAME>_RUNTIME`
-- Possible values:
-  - `DKG` (that is, `dkg-substrate`)
-  - `WebbProtocol` (also known as `protocol-substrate`)
-
-Example:
-
-```toml
-[substrate.tangle]
-runtime = "WebbProtocol"
-```
-
 #### enabled
 
 Whether the Substrate node is enabled or not. If it is not enabled, the relayer will not try to add
@@ -1050,23 +1029,6 @@ Example:
 ```toml
 [substrate.tangle]
 suri = "$TANGLE_SURI"
-```
-
-#### beneficiary
-
-The beneficiary is the address that will receive the fees from the transactions. This is optional,
-and will default to the address derived from the `suri` if not provided.
-
-- Type: `string`
-- Required: `false`
-- Default: `null`
-- env: `WEBB_SUBSTRATE_<NODE_NAME>_BENEFICIARY`
-
-Example:
-
-```toml
-[substrate.tangle]
-beneficiary = "5FZ2Wfjy5rZ7g5j7Y9Zwv5Z4Z3Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9Z9"
 ```
 
 #### Tx Queue

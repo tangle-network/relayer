@@ -1,7 +1,5 @@
-use sp_core::sr25519;
 use std::sync::Arc;
 use webb::substrate::subxt;
-use webb::substrate::subxt::config::ExtrinsicParams;
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_ew_dkg::{
     DKGMetadataWatcher, DKGProposalHandlerWatcher, DKGPublicKeyChangedHandler,
@@ -216,14 +214,6 @@ pub fn start_tx_queue<X>(
 ) -> crate::Result<()>
 where
     X: subxt::Config + Send + Sync,
-    <<X>::ExtrinsicParams as ExtrinsicParams<
-        <X>::Index,
-        <X>::Hash,
-    >>::OtherParams: Default + Send + Sync,
-    <X>::Signature: From<sr25519::Signature>,
-    <X>::Address: From<<X>::AccountId>,
-    <X as subxt::Config>::AccountId:
-        From<sp_runtime::AccountId32> + Send + Sync,
 {
     let mut shutdown_signal = ctx.shutdown_signal();
 

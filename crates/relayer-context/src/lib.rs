@@ -27,7 +27,7 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 
 #[cfg(feature = "substrate")]
-use sp_core::sr25519::Pair as Sr25519Pair;
+use subxt_signer::sr25519::Keypair as Sr25519Pair;
 use webb::evm::ethers::middleware::gas_oracle::{
     Cache as CachedGasOracle, Etherscan as EtherscanGasOracle,
     Median as GasOracleMedian, ProviderOracle,

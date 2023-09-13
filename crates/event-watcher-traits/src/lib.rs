@@ -27,12 +27,21 @@
 #[cfg(feature = "evm")]
 pub mod evm;
 #[cfg(feature = "evm")]
-pub use evm::*;
+pub use evm::{
+    BridgeWatcher, EthersClient, EthersTimeLagClient,
+    EventHandler as EVMEventHandler,
+    EventHandlerWithRetry as EVMEventHandlerWithRetry,
+    EventWatcher as EVMEventWatcher,
+};
 
 #[cfg(feature = "substrate")]
 pub mod substrate;
 #[cfg(feature = "substrate")]
-pub use substrate::*;
+pub use substrate::{
+    EventHandler as SubstrateEventHandler,
+    EventHandlerWithRetry as SubstrateEventHandlerWithRetry,
+    SubstrateEventWatcher,
+};
 
 #[cfg(test)]
 mod tests;

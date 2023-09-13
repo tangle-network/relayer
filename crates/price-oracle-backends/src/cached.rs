@@ -110,7 +110,8 @@ where
                             Default::default(),
                         )
                         .expect("Time went backwards");
-                        DateTime::<Utc>::from_utc(ts, Utc) < Utc::now()
+                        DateTime::<Utc>::from_naive_utc_and_offset(ts, Utc)
+                            < Utc::now()
                     });
                 // If the cache is expired, add the token to the list of tokens to fetch
                 if expired {
