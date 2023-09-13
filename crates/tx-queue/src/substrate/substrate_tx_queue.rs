@@ -16,7 +16,6 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
 use webb::substrate::subxt;
-use webb::substrate::subxt::config::ExtrinsicParams;
 use webb::substrate::subxt::rpc::types::DryRunResult;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::queue::QueueItem;
@@ -30,7 +29,6 @@ use webb_relayer_utils::TangleRuntimeConfig;
 use std::sync::Arc;
 use std::time::Duration;
 
-use sp_core::sr25519;
 use webb::substrate::subxt::tx::TxStatus as TransactionStatus;
 
 /// The SubstrateTxQueue stores transaction call params in bytes so the relayer can process them later.
@@ -74,10 +72,6 @@ where
     pub async fn run<X>(self) -> webb_relayer_utils::Result<()>
     where
         X: subxt::Config,
-        <<X>::ExtrinsicParams as ExtrinsicParams<<X>::Index, <X>::Hash>>::OtherParams:Default,
-        <X>::Signature: From<sr25519::Signature>,
-        <X>::Address: From<<X>::AccountId>,
-        <X as subxt::Config>::AccountId: From<sp_runtime::AccountId32>
     {
         let chain_config = self
             .ctx
@@ -121,8 +115,6 @@ where
                 }
             };
             let pair = self.ctx.substrate_wallet(chain_id).await?;
-            let signer =
-                subxt::tx::PairSigner::<TangleRuntimeConfig, _>::new(pair);
             loop {
                 let maybe_item = store.peek_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),
@@ -182,7 +174,7 @@ where
 
                 let signed_extrinsic = client
                     .tx()
-                    .create_signed(&payload, &signer, Default::default())
+                    .create_signed(&payload, &pair, Default::default())
                     .map_err(Into::into)
                     .map_err(backoff::Error::transient)
                     .await?;

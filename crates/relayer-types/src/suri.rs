@@ -1,6 +1,7 @@
+use std::str::FromStr;
+
 use serde::Deserialize;
-use sp_core::sr25519::Pair as Sr25519Pair;
-use sp_core::Pair;
+use subxt_signer::sr25519::Keypair as Sr25519Pair;
 
 /// [`Substrate Uri`](https://polkadot.js.org/docs/keyring/start/suri/)
 #[derive(Clone)]
@@ -57,25 +58,11 @@ impl<'de> Deserialize<'de> for Suri {
                             "error while loading this env {var}: {e}",
                         ))
                     })?;
-                    let maybe_pair =
-                        Sr25519Pair::from_string_with_seed(&val, None);
-                    match maybe_pair {
-                        Ok((pair, _)) => Ok(pair),
-                        Err(e) => {
-                            Err(serde::de::Error::custom(format!("{e:?}")))
-                        }
-                    }
+                    parse_suri(&val)
                 } else if value.starts_with('>') {
                     todo!("Implement command execution to extract the private key")
                 } else {
-                    let maybe_pair =
-                        Sr25519Pair::from_string_with_seed(value, None);
-                    match maybe_pair {
-                        Ok((pair, _)) => Ok(pair),
-                        Err(e) => {
-                            Err(serde::de::Error::custom(format!("{e:?}")))
-                        }
-                    }
+                    parse_suri(value)
                 }
             }
         }
@@ -83,4 +70,27 @@ impl<'de> Deserialize<'de> for Suri {
         let secret = deserializer.deserialize_str(PrivateKeyVistor)?;
         Ok(Self(secret))
     }
+}
+
+fn parse_suri<E>(val: &str) -> Result<Sr25519Pair, E>
+where
+    E: serde::de::Error,
+{
+    use subxt_signer::bip39::Mnemonic;
+    use subxt_signer::SecretUri;
+
+    let secret_uri = SecretUri::from_str(val);
+    if let Ok(secret_uri) = secret_uri {
+        return Sr25519Pair::from_uri(&secret_uri)
+            .map_err(|e| serde::de::Error::custom(e.to_string()));
+    }
+    let mnemonic = Mnemonic::from_str(val);
+    if let Ok(mnemonic) = mnemonic {
+        return Sr25519Pair::from_phrase(&mnemonic, None)
+            .map_err(|e| serde::de::Error::custom(e.to_string()));
+    }
+
+    Err(serde::de::Error::custom(format!(
+        "Failed to parse {val} as SURI or mnemonic"
+    )))
 }

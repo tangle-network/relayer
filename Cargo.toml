@@ -41,10 +41,9 @@ tokio = { version = "^1", features = ["full"] }
 config = { version = "0.13", default-features = false, features = ["toml", "json"] }
 serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0" }
-webb = { version = "0.7.3", default-features = false }
 # webb = { version = "0.5.24", git = "https://github.com/webb-tools/webb-rs", default-features = false, rev = "13390b9"}
-sp-core = { version = "21.0.0", default-features = false }
-sp-runtime = { version = "24.0.0", default-features = false }
+webb = { version = "0.8.0", default-features = false }
+subxt-signer = { version = "0.31", features = ["subxt"] }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"] }
 webb-proposals = { git = "https://github.com/webb-tools/webb-rs", rev="a960eaf", features = ["scale"] }
@@ -57,7 +56,7 @@ async-trait = "^0.1"
 futures = { version = "^0.3", default-features = false }
 parking_lot = "^0.12"
 rand = { version = "0.8", default-features = false, features = ["getrandom"] }
-typed-builder = "0.15.1"
+typed-builder = "0.16.0"
 backoff = { version = "0.4.0", features = ["tokio"] }
 hex = { version = "0.4", default-features = false }
 libsecp256k1 = "0.7.1"
@@ -65,12 +64,6 @@ serde = { version = "^1", default-features = false, features = ["derive"] }
 glob = "^0.3"
 serde_path_to_error = "0.1.9"
 serde_bytes = "0.11"
-
-# eth2 light client crates
-eth-rpc-client = { package = "eth_rpc_client", git = "https://github.com/webb-tools/pallet-eth2-light-client" }
-eth2-pallet-init = { git = "https://github.com/webb-tools/pallet-eth2-light-client" }
-eth2_to_substrate_relay = { git = "https://github.com/webb-tools/pallet-eth2-light-client" }
-eth-types = { git = "https://github.com/webb-tools/pallet-eth2-light-client" }
 
 [profile.release]
 strip = "symbols"

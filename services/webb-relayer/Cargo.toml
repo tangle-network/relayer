@@ -45,8 +45,7 @@ config = { workspace = true }
 serde_json = { workspace = true }
 paw = { workspace = true, optional = true }
 webb = { workspace = true }
-sp-core = { workspace = true, optional = true }
-sp-runtime = { workspace = true, optional = true }
+subxt-signer = { workspace = true, optional = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true, optional = true }
 webb-proposals = { workspace = true }
@@ -54,7 +53,7 @@ ethereum-types = { workspace = true }
 dotenv = { workspace = true }
 axum = { workspace = true }
 
-tower-http = { version = "0.3.5", features = ["cors", "trace"] }
+tower-http = { version = "0.4", features = ["cors", "trace"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
@@ -67,7 +66,6 @@ substrate-runtime = [
   "webb/substrate-runtime",
   "webb-proposals/substrate",
   "webb-relayer-tx-queue/substrate",
-  "sp-core",
-  "sp-runtime",
+  "subxt-signer",
 ]
 integration-tests = ["webb-relayer-config/integration-tests"]
