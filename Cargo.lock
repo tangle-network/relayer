@@ -3533,7 +3533,10 @@ dependencies = [
  "jsonrpsee-client-transport",
  "jsonrpsee-core",
  "jsonrpsee-http-client",
+ "jsonrpsee-proc-macros",
  "jsonrpsee-types",
+ "jsonrpsee-ws-client",
+ "tracing",
 ]
 
 [[package]]
@@ -3600,6 +3603,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsonrpsee-proc-macros"
+version = "0.16.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44e8ab85614a08792b9bff6c8feee23be78c98d0182d4c622c05256ab553892a"
+dependencies = [
+ "heck 0.4.1",
+ "proc-macro-crate",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "jsonrpsee-types"
 version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3611,6 +3627,18 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tracing",
+]
+
+[[package]]
+name = "jsonrpsee-ws-client"
+version = "0.16.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e1b3975ed5d73f456478681a417128597acd6a2487855fdb7b4a3d4d195bf5e"
+dependencies = [
+ "http",
+ "jsonrpsee-client-transport",
+ "jsonrpsee-core",
+ "jsonrpsee-types",
 ]
 
 [[package]]
@@ -8565,6 +8593,7 @@ dependencies = [
  "webb-price-oracle-backends",
  "webb-relayer-config",
  "webb-relayer-store",
+ "webb-relayer-types",
  "webb-relayer-utils",
 ]
 
@@ -8684,6 +8713,8 @@ name = "webb-relayer-types"
 version = "0.5.13-dev"
 dependencies = [
  "ethereum-types",
+ "http",
+ "jsonrpsee",
  "native-tls",
  "serde",
  "subxt-signer",
@@ -8691,6 +8722,7 @@ dependencies = [
  "tracing",
  "url",
  "webb",
+ "webb-relayer-utils",
 ]
 
 [[package]]

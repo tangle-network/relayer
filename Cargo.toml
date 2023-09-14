@@ -64,6 +64,7 @@ serde = { version = "^1", default-features = false, features = ["derive"] }
 glob = "^0.3"
 serde_path_to_error = "0.1.9"
 serde_bytes = "0.11"
+jsonrpsee = { version = "0.16.2" }
 
 [profile.release]
 strip = "symbols"
