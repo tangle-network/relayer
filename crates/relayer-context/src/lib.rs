@@ -244,7 +244,7 @@ impl RelayerContext {
                 webb_rpc_client.clone(),
             )
             .await?;
-            Ok(substrate_client.clone())
+            Ok(substrate_client)
         } else {
             let chain_id_string = chain_id.clone().to_string();
             Err(webb_relayer_utils::Error::ChainNotFound {
