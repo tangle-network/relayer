@@ -126,7 +126,7 @@ async fn main() -> anyhow::Result<()> {
     let store = webb_relayer_store::sled::SledStore::open("path/to/store")?;
 
     // finally, after loading the config files, we can build the relayer context.
-    let ctx = RelayerContext::new(config, store.clone())?;
+    let ctx = RelayerContext::new(config, store.clone()).await?;
     // or temporary store:
     let store = webb_relayer_store::sled::SledStore::temporary()?;
 

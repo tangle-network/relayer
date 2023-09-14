@@ -74,7 +74,7 @@ let client = Arc::new(TimeLag::new(client.clone(), block_confirmations));
 
 let config = /* ... */;
 let store = SledStore::temporary()?;
-let ctx = RelayerContext::new(config, store.clone())?;
+let ctx = RelayerContext::new(config, store.clone()).await?;
 ```
 
 Now after that boilerplate, we are ready to implemented our `EventWatcher` trait for `USDCContractWatcher`.
