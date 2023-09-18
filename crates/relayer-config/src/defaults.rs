@@ -40,5 +40,14 @@ pub fn unlisted_assets() -> HashMap<String, crate::UnlistedAssetConfig> {
                 price: 0.10,
             },
         ),
+        // Orbit Network
+        (
+            String::from("ORBt"),
+            crate::UnlistedAssetConfig {
+                name: String::from("Webb Orbit Network Token"),
+                decimals: 18,
+                price: 0.10,
+            },
+        )
     ])
 }
