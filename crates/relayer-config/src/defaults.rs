@@ -48,6 +48,6 @@ pub fn unlisted_assets() -> HashMap<String, crate::UnlistedAssetConfig> {
                 decimals: 18,
                 price: 0.10,
             },
-        )
+        ),
     ])
 }
