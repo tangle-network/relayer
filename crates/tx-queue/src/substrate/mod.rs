@@ -20,7 +20,7 @@ pub use substrate_tx_queue::*;
 mod tests {
     use std::{collections::HashMap, sync::Arc};
 
-    use sp_core::{sr25519::Pair as Sr25519Pair, Pair};
+    use subxt_signer::sr25519::dev;
     use webb::substrate::tangle_runtime::api as RuntimeApi;
     use webb_relayer_store::queue::{QueueItem, QueueStore};
     use webb_relayer_store::sled::SledQueueKey;
@@ -68,12 +68,7 @@ mod tests {
                         .into(),
                     explorer: None,
                     chain_id,
-                    suri: Some(Suri(
-                        Sr25519Pair::from_string_with_seed("//Alice", None)
-                            .unwrap()
-                            .0,
-                    )),
-                    beneficiary: None,
+                    suri: Some(Suri(dev::alice())),
                     pallets: Default::default(),
                     tx_queue: Default::default(),
                 },
@@ -82,7 +77,8 @@ mod tests {
         };
         let store = webb_relayer_store::SledStore::temporary()?;
         let context =
-            webb_relayer_context::RelayerContext::new(config, store.clone())?;
+            webb_relayer_context::RelayerContext::new(config, store.clone())
+                .await?;
         let client = context
             .substrate_provider::<TangleRuntimeConfig, _>(chain_id)
             .await?;

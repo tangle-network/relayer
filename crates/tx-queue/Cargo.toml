@@ -23,8 +23,7 @@ futures = { workspace = true }
 backoff = { workspace = true }
 tokio = { workspace = true }
 webb = { workspace = true }
-sp-core = { workspace = true, optional = true }
-sp-runtime = { workspace = true, optional = true }
+subxt-signer = { workspace = true, optional = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true, optional = true }
 ethereum-types = { workspace = true }
@@ -36,7 +35,7 @@ rand = { workspace = true, default-features = false, features = ["getrandom"] }
 default = ["std", "evm", "substrate"]
 std = []
 evm = ["webb-relayer-context/evm"]
-substrate = ["webb-relayer-context/substrate", "sp-core", "sp-runtime"]
+substrate = ["webb-relayer-context/substrate", "subxt-signer"]
 
 [dev-dependencies]
 webb-relayer-config = { workspace = true }

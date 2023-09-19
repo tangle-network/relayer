@@ -1,5 +1,4 @@
 use super::*;
-use sp_core::sr25519::Public;
 use webb_relayer_types::{rpc_url::RpcUrl, suri::Suri};
 
 use crate::event_watcher::EventsWatcherConfig;
@@ -58,8 +57,6 @@ pub struct SubstrateConfig {
     /// `None` is returned if no matches are found.
     #[serde(skip_serializing)]
     pub suri: Option<Suri>,
-    /// Optionally, a user can specify an account to receive rewards for relaying
-    pub beneficiary: Option<Public>,
     /// Supported pallets over this substrate node.
     #[serde(default)]
     pub pallets: Vec<Pallet>,

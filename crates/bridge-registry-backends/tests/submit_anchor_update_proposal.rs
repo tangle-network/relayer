@@ -1,9 +1,7 @@
 use futures::StreamExt;
-use sp_core::sr25519::Pair;
-use sp_core::Pair as _;
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
-use webb::substrate::subxt::tx::{PairSigner, TxProgress, TxStatus};
+use webb::substrate::subxt::tx::{TxProgress, TxStatus};
 use webb::substrate::subxt::OnlineClient;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::Proposal;
 use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::ProposalKind;
@@ -38,14 +36,11 @@ async fn submit_anchor_update_proposal() {
     println!("Source Resource ID: {}", hex::encode(src_resource_id.0));
 
     let tx_api = RuntimeApi::tx().dkg_proposals();
-    let sudo_account: PairSigner<TangleRuntimeConfig, Pair> =
-        PairSigner::new(Pair::from_string("//Alice", None).unwrap());
-    let account_nonce = api
-        .rpc()
-        .system_account_next_index(sudo_account.account_id())
-        .await
-        .unwrap();
-
+    let sudo_account = subxt_signer::sr25519::dev::alice();
+    // let account_nonce_payload = RuntimeApi::apis().account_nonce_api().account_nonce(Signer::account_id(&sudo_account));
+    // let account_nonce = api.runtime_api().at_latest().await.unwrap().call(account_nonce_payload).await.unwrap();
+    // FIXME: account nonce is not correct
+    let account_nonce = 0;
     // following code runs in a loop in original code
     {
         let proposal_header = ProposalHeader::new(

@@ -16863,7 +16863,11 @@
     "chain": "athena",
     "rpc": ["https://athena-testnet.webb.tools"],
     "faucets": [],
-    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
+    "nativeCurrency": {
+      "name": "Webb Orbit Token",
+      "symbol": "ORBt",
+      "decimals": 18
+    },
     "infoURL": "https://webb.tools",
     "shortName": "athena",
     "chainId": 3884533461,
@@ -16871,7 +16875,7 @@
     "status": "testnet",
     "explorers": [
       {
-        "name": "athena explorer",
+        "name": "Athena Explorer",
         "url": "https://athena-explorer.webb.tools",
         "standard": "eip3091"
       }
@@ -16882,7 +16886,11 @@
     "chain": "hermes",
     "rpc": ["https://hermes-testnet.webb.tools"],
     "faucets": [],
-    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
+    "nativeCurrency": {
+      "name": "Webb Orbit Token",
+      "symbol": "ORBt",
+      "decimals": 18
+    },
     "infoURL": "https://webb.tools",
     "shortName": "hermes",
     "chainId": 3884533462,
@@ -16890,7 +16898,7 @@
     "status": "testnet",
     "explorers": [
       {
-        "name": "hermes explorer",
+        "name": "Hermes Explorer",
         "url": "https://hermes-explorer.webb.tools",
         "standard": "eip3091"
       }
@@ -16901,7 +16909,11 @@
     "chain": "demeter",
     "rpc": ["https://demeter-testnet.webb.tools"],
     "faucets": [],
-    "nativeCurrency": { "name": "Ether", "symbol": "ETH", "decimals": 18 },
+    "nativeCurrency": {
+      "name": "Webb Orbit Token",
+      "symbol": "ORBt",
+      "decimals": 18
+    },
     "infoURL": "https://webb.tools",
     "shortName": "demeter",
     "chainId": 3884533463,
@@ -16909,7 +16921,7 @@
     "status": "testnet",
     "explorers": [
       {
-        "name": "demeter explorer",
+        "name": "Demeter Explorer",
         "url": "https://demeter-explorer.webb.tools",
         "standard": "eip3091"
       }
@@ -16957,22 +16969,22 @@
   {
     "name": "Tangle testnet",
     "chain": "tangle",
-    "rpc": ["https://tangle-standalone-archive.webb.tools"],
+    "rpc": ["https://rpc.tangle.tools"],
     "faucets": [],
     "nativeCurrency": {
       "name": "Test Tangle Network Token",
       "symbol": "tTNT",
       "decimals": 18
     },
-    "infoURL": "https://webb.tools",
+    "infoURL": "https://tangle.tools",
     "shortName": "tangle",
     "chainId": 4006,
     "networkId": 4006,
     "status": "testnet",
     "explorers": [
       {
-        "name": "tangle explorer",
-        "url": "https://tangle-testnet-explorer.webb.tools",
+        "name": "Tangle Explorer",
+        "url": "https://explorer.tangle.tools",
         "standard": "eip3091"
       }
     ]

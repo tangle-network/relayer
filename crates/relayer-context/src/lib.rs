@@ -19,6 +19,7 @@
 use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{broadcast, Mutex};
+use webb_relayer_types::rpc_client::WebbRpcClient;
 
 use webb::evm::ethers;
 #[cfg(feature = "evm")]
@@ -27,7 +28,7 @@ use webb::evm::ethers::core::k256::SecretKey;
 use webb::evm::ethers::prelude::*;
 
 #[cfg(feature = "substrate")]
-use sp_core::sr25519::Pair as Sr25519Pair;
+use subxt_signer::sr25519::Keypair as Sr25519Pair;
 use webb::evm::ethers::middleware::gas_oracle::{
     Cache as CachedGasOracle, Etherscan as EtherscanGasOracle,
     Median as GasOracleMedian, ProviderOracle,
@@ -71,11 +72,13 @@ pub struct RelayerContext {
 
     /// Evm Providers Cache.
     evm_providers: Arc<HashMap<types::U256, Arc<EthersClient>>>,
+    /// Substrate providers cache.
+    substrate_providers: Arc<HashMap<types::U256, Arc<WebbRpcClient>>>,
 }
 
 impl RelayerContext {
     /// Creates a new RelayerContext.
-    pub fn new(
+    pub async fn new(
         config: webb_relayer_config::WebbRelayerConfig,
         store: SledStore,
     ) -> webb_relayer_utils::Result<Self> {
@@ -148,6 +151,17 @@ impl RelayerContext {
                 .insert(chain_config.chain_id.into(), Arc::new(provider));
         }
 
+        // create hashmap for substrate providers
+        let mut substrate_providers = HashMap::new();
+        for (_, chain_config) in config.substrate.iter() {
+            let url = chain_config.ws_endpoint.to_string();
+            let webb_rpc_client = WebbRpcClient::new(url).await?;
+            substrate_providers.insert(
+                chain_config.chain_id.into(),
+                Arc::new(webb_rpc_client),
+            );
+        }
+
         Ok(Self {
             config,
             notify_shutdown,
@@ -156,6 +170,7 @@ impl RelayerContext {
             price_oracle,
             etherscan_clients: Arc::new(etherscan_clients),
             evm_providers: Arc::new(evm_providers),
+            substrate_providers: substrate_providers.into(),
         })
     }
     /// Returns a broadcast receiver handle for the shutdown signal.
@@ -224,18 +239,18 @@ impl RelayerContext {
         chain_id: I,
     ) -> webb_relayer_utils::Result<subxt::OnlineClient<C>> {
         let chain_id: types::U256 = chain_id.into();
-        let chain_name = chain_id.to_string();
-        let node_config =
-            self.config.substrate.get(&chain_name).ok_or_else(|| {
-                webb_relayer_utils::Error::NodeNotFound {
-                    chain_id: chain_id.to_string(),
-                }
-            })?;
-        let client = subxt::OnlineClient::<C>::from_url(
-            node_config.ws_endpoint.to_string(),
-        )
-        .await?;
-        Ok(client)
+        if let Some(webb_rpc_client) = self.substrate_providers.get(&chain_id) {
+            let substrate_client = subxt::OnlineClient::<C>::from_rpc_client(
+                webb_rpc_client.clone(),
+            )
+            .await?;
+            Ok(substrate_client)
+        } else {
+            let chain_id_string = chain_id.clone().to_string();
+            Err(webb_relayer_utils::Error::ChainNotFound {
+                chain_id: chain_id_string,
+            })
+        }
     }
     /// Sets up and returns a Substrate wallet for the relayer.
     ///

@@ -5,7 +5,6 @@ use std::sync::Arc;
 use webb_relayer_handler_utils::IpInformationResponse;
 
 use serde::Serialize;
-use sp_core::Pair;
 use webb::evm::ethers::{
     prelude::k256::SecretKey,
     signers::{LocalWallet, Signer},
@@ -63,18 +62,6 @@ pub async fn handle_relayer_info(
             let key = SecretKey::from_bytes(key.as_bytes().into())?;
             let wallet = LocalWallet::from(key);
             v.beneficiary = Some(wallet.address());
-            webb_relayer_utils::Result::Ok(())
-        });
-    let _ = config
-        .substrate
-        .values_mut()
-        .filter(|v| v.beneficiary.is_none())
-        .try_for_each(|v| {
-            let suri = v
-                .suri
-                .as_ref()
-                .ok_or(webb_relayer_utils::Error::MissingSecrets)?;
-            v.beneficiary = Some(suri.public());
             webb_relayer_utils::Result::Ok(())
         });
 
