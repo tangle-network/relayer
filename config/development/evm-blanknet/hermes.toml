@@ -41,7 +41,7 @@ enabled = true
 # - SignatureBridge
 contract = "VAnchor"
 # The address of the contract
-address = "0x6595b34ED0a270B10a586FC1EA22030A95386f1e"
+address = "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
 # The deployed block number of the contract. When a relayer does not have information for
 # this contract in its store, it will start to sync and query for relevant historical data
 # starting at this block number
@@ -53,8 +53,8 @@ events-watcher = { enabled = true, polling-interval = 1000, print-progress-inter
 # Entries for this anchor contract's connected edges.
 # These fields are used to determine the generation of AnchorUpdate proposals
 linked-anchors = [
-  { type = "Evm", chain = "athena", chain-id = 5002, address = "0x6595b34ED0a270B10a586FC1EA22030A95386f1e" },
-  { type = "Evm", chain = "demeter", chain-id = 5003, address = "0x6595b34ED0a270B10a586FC1EA22030A95386f1e" },
+  { type = "Evm", chain = "athena", chain-id = 5002, address = "0x91eB86019FD8D7c5a9E31143D422850A13F670A3" },
+  { type = "Evm", chain = "demeter", chain-id = 5003, address = "0x91eB86019FD8D7c5a9E31143D422850A13F670A3" },
 ]
 # Proposal signing backend can have a value of "Mocked" or the name of the DKG configuration.
 # When the type is "Mocked", the supplied private-key will sign any proposed updates and submit
@@ -64,6 +64,6 @@ proposal-signing-backend = { type = "Mocked", private-key = "$GOVERNOR_PRIVATE_K
 
 [[evm.hermes.contracts]]
 contract = "SignatureBridge"
-address = "0xf2e246bb76df876cef8b38ae84130f4f55de395b"
+address = "0x2946259E0334f33A064106302415aD3391BeD384"
 deployed-at = 1
 events-watcher = { enabled = true, polling-interval = 1000, print-progress-interval = 60000 }
