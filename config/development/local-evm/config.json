@@ -16,6 +16,37 @@
         "price": 10
       }
     },
+    "substrate": {
+      "tangle": {
+        "name": "tangle",
+        "enabled": false,
+        "http-endpoint": "$TANGLE_HTTP_URL",
+        "ws-endpoint": "$TANGLE_WSS_URL",
+        "runtime": "DKG",
+        "suri": "$TANGLE_WEBB_RELAYER_SURI",
+        "chain-id": "1080",
+        "pallets": [
+          {
+            "pallet": "DKG",
+            "events-watcher": {
+              "enabled": false,
+              "polling-interval": 12000,
+              "print-progress-interval": 60000,
+              "sync-blocks-from": 59500
+            }
+          },
+          {
+            "pallet": "DKGProposalHandler",
+            "events-watcher": {
+              "enabled": false,
+              "polling-interval": 12000,
+              "print-progress-interval": 60000,
+              "sync-blocks-from": 59500
+            }
+          }
+        ]
+      }
+    },
     "evm": {
       "athena": {
         "name": "athena",

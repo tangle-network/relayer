@@ -18,7 +18,7 @@
       "contracts": [
         {
           "contract": "VAnchor",
-          "address": "0x6595b34ED0a270B10a586FC1EA22030A95386f1e",
+          "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3",
           "deployed-at": 1,
           "events-watcher": {
             "enabled": true,
@@ -30,13 +30,13 @@
               "type": "Evm",
               "chain": "hermes",
               "chain-id": 5001,
-              "address": "0x6595b34ED0a270B10a586FC1EA22030A95386f1e"
+              "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
             },
             {
               "type": "Evm",
               "chain": "athena",
               "chain-id": 5002,
-              "address": "0x6595b34ED0a270B10a586FC1EA22030A95386f1e"
+              "address": "0x91eB86019FD8D7c5a9E31143D422850A13F670A3"
             }
           ],
           "proposal-signing-backend": {
@@ -46,7 +46,7 @@
         },
         {
           "contract": "SignatureBridge",
-          "address": "0xf2e246bb76df876cef8b38ae84130f4f55de395b",
+          "address": "0x2946259E0334f33A064106302415aD3391BeD384",
           "deployed-at": 1,
           "events-watcher": {
             "enabled": true,
