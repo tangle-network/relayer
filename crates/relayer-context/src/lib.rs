@@ -73,7 +73,7 @@ pub struct RelayerContext {
     /// Evm Providers Cache.
     evm_providers: Arc<HashMap<types::U256, Arc<EthersClient>>>,
     /// Substrate providers cache.
-    substrate_providers: Arc<HashMap<types::U256, Arc<WebbRpcClient>>>,
+    substrate_providers: Arc<Mutex<HashMap<types::U256, Arc<WebbRpcClient>>>>,
 }
 
 impl RelayerContext {
@@ -161,6 +161,7 @@ impl RelayerContext {
                 Arc::new(webb_rpc_client),
             );
         }
+        let substrate_providers = Arc::new(Mutex::new(substrate_providers));
 
         Ok(Self {
             config,
@@ -170,7 +171,7 @@ impl RelayerContext {
             price_oracle,
             etherscan_clients: Arc::new(etherscan_clients),
             evm_providers: Arc::new(evm_providers),
-            substrate_providers: substrate_providers.into(),
+            substrate_providers,
         })
     }
     /// Returns a broadcast receiver handle for the shutdown signal.
@@ -239,11 +240,28 @@ impl RelayerContext {
         chain_id: I,
     ) -> webb_relayer_utils::Result<subxt::OnlineClient<C>> {
         let chain_id: types::U256 = chain_id.into();
-        if let Some(webb_rpc_client) = self.substrate_providers.get(&chain_id) {
-            let substrate_client = subxt::OnlineClient::<C>::from_rpc_client(
-                webb_rpc_client.clone(),
-            )
-            .await?;
+        let chain_name = chain_id.to_string();
+        let node_config =
+            self.config.substrate.get(&chain_name).ok_or_else(|| {
+                webb_relayer_utils::Error::NodeNotFound {
+                    chain_id: chain_id.to_string(),
+                }
+            })?;
+        let mut substrate_providers = self.substrate_providers.lock().await;
+        if let Some(webb_rpc_client) = substrate_providers.get(&chain_id) {
+            // check if rpc is connected if not create a new connection and cache it
+            let substrate_client = if webb_rpc_client.0.is_connected() {
+                subxt::OnlineClient::<C>::from_rpc_client(
+                    webb_rpc_client.clone(),
+                )
+                .await?
+            } else {
+                let url = node_config.ws_endpoint.to_string();
+                let webb_rpc_client = Arc::new(WebbRpcClient::new(url).await?);
+                substrate_providers.insert(chain_id, webb_rpc_client.clone());
+                subxt::OnlineClient::<C>::from_rpc_client(webb_rpc_client)
+                    .await?
+            };
             Ok(substrate_client)
         } else {
             let chain_id_string = chain_id.clone().to_string();
