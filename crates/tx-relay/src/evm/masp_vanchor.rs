@@ -23,14 +23,14 @@ use webb_relayer_store::queue::{
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::TransactionRelayingError;
 
-/// Handler for VAnchor commands
+/// Handler for MASP VAnchor commands
 ///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `cmd` - The command to execute
 #[tracing::instrument(skip(ctx))]
-pub async fn handle_vanchor_relay_tx<'a>(
+pub async fn handle_masp_vanchor_relay_tx<'a>(
     ctx: Arc<RelayerContext>,
     chain_id: TypedChainId,
     contract: types::Address,

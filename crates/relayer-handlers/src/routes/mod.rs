@@ -21,6 +21,9 @@ pub mod transaction_status;
 /// Module for handling private tx withdraw API
 pub mod private_tx_withdraw;
 
+/// Module for handling masp private tx withdrawal API
+pub mod masp_tx_relaying;
+
 /// A (half-open) range bounded inclusively below and exclusively above
 /// (`start..end`).
 ///
