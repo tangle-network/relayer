@@ -23,6 +23,7 @@ pub mod transaction_status;
 pub mod private_tx_withdraw;
 
 /// Module for handling masp private tx withdrawal API
+#[cfg(feature = "masp-tx-relaying")]
 pub mod masp_tx_relaying;
 
 /// A (half-open) range bounded inclusively below and exclusively above
