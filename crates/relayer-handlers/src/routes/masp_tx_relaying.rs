@@ -1,44 +1,14 @@
+use super::*;
+use axum::extract::{Path, State};
 use std::sync::Arc;
 
-use axum::extract::{Path, State};
-
 use axum::Json;
-use ethereum_types::{Address, H512};
-use serde::Serialize;
+use ethereum_types::Address;
 use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::EvmVanchorCommand;
 use webb_relayer_tx_relay::evm::masp_vanchor::handle_masp_vanchor_relay_tx;
 use webb_relayer_utils::HandlerError;
-
-/// Success response for withdrawal tx API request.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WithdrawTxSuccessResponse {
-    status: String,
-    message: String,
-    item_key: H512,
-}
-
-/// Failure response for withdrawal tx API request.
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WithdrawTxFailureResponse {
-    status: String,
-    message: String,
-    reason: String,
-}
-
-/// Withdrawal transaction API request response
-#[derive(Debug, Serialize)]
-#[serde(untagged)]
-#[serde(rename_all = "camelCase")]
-pub enum WithdrawTxResponse {
-    /// Success response for withdrawal tx API request.
-    Success(WithdrawTxSuccessResponse),
-    /// Failure response for withdrawal tx API request.
-    Failure(WithdrawTxFailureResponse),
-}
 
 /// Handles MASP tx withdrawal relaying request for evm chains.
 ///
