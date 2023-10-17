@@ -299,28 +299,30 @@ export class WebbRelayer {
     extData: IVariableAnchorExtData
   ): WithdrawRequestPayloadEVM {
     return {
-      extData: {
-        recipient: extData.recipient,
-        relayer: extData.relayer,
-        extAmount: extData.extAmount.replace('0x', ''),
-        fee: extData.fee,
-        refund: extData.refund,
-        token: extData.token,
-        encryptedOutput1: extData.encryptedOutput1,
-        encryptedOutput2: extData.encryptedOutput2,
-      },
-      proofData: {
-        proof: publicInputs.proof,
-        extensionRoots: publicInputs.extensionRoots,
-        extDataHash: padHexString(publicInputs.extDataHash.toHexString()),
-        publicAmount: publicInputs.publicAmount,
-        roots: publicInputs.roots,
-        outputCommitments: publicInputs.outputCommitments.map((output) =>
-          padHexString(output.toHexString())
-        ),
-        inputNullifiers: publicInputs.inputNullifiers.map((nullifier) =>
-          padHexString(nullifier.toHexString())
-        ),
+      vAnchor: {
+        extData: {
+          recipient: extData.recipient,
+          relayer: extData.relayer,
+          extAmount: extData.extAmount.replace('0x', ''),
+          fee: extData.fee,
+          refund: extData.refund,
+          token: extData.token,
+          encryptedOutput1: extData.encryptedOutput1,
+          encryptedOutput2: extData.encryptedOutput2,
+        },
+        proofData: {
+          proof: publicInputs.proof,
+          extensionRoots: publicInputs.extensionRoots,
+          extDataHash: padHexString(publicInputs.extDataHash.toHexString()),
+          publicAmount: publicInputs.publicAmount,
+          roots: publicInputs.roots,
+          outputCommitments: publicInputs.outputCommitments.map((output) =>
+            padHexString(output.toHexString())
+          ),
+          inputNullifiers: publicInputs.inputNullifiers.map((nullifier) =>
+            padHexString(nullifier.toHexString())
+          ),
+        },
       },
     };
   }
@@ -447,24 +449,26 @@ export interface WithdrawTxFailureResponse {
 }
 
 export type WithdrawRequestPayloadEVM = {
-  extData: {
-    recipient: string;
-    relayer: string;
-    extAmount: string;
-    fee: string;
-    refund: string;
-    token: string;
-    encryptedOutput1: string;
-    encryptedOutput2: string;
-  };
-  proofData: {
-    proof: string;
-    extensionRoots: string;
-    extDataHash: string;
-    publicAmount: string;
-    roots: string;
-    outputCommitments: string[];
-    inputNullifiers: string[];
+  vAnchor: {
+    extData: {
+      recipient: string;
+      relayer: string;
+      extAmount: string;
+      fee: string;
+      refund: string;
+      token: string;
+      encryptedOutput1: string;
+      encryptedOutput2: string;
+    };
+    proofData: {
+      proof: string;
+      extensionRoots: string;
+      extDataHash: string;
+      publicAmount: string;
+      roots: string;
+      outputCommitments: string[];
+      inputNullifiers: string[];
+    };
   };
 };
 

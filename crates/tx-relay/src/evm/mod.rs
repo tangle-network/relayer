@@ -3,7 +3,10 @@ use webb::evm::ethers;
 
 /// For Fees calculation.
 pub mod fees;
-/// Variable Anchor transaction relayer.
+/// MASP vanchor transaction relaying.
+#[cfg(feature = "masp-tx-relaying")]
+pub mod masp_vanchor;
+/// Variable Anchor transaction relaying.
 pub mod vanchor;
 
 fn wei_to_gwei(wei: U256) -> f64 {

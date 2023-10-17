@@ -124,6 +124,7 @@ pub async fn ignite(
                     )
                     .await?;
                 }
+                Contract::MaspVanchor(_) => todo!(),
             }
         }
         // start the transaction queue after starting other tasks.

@@ -7,10 +7,10 @@ use ethereum_types::Address;
 use webb_proposals::TypedChainId;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_handler_utils::EvmVanchorCommand;
-use webb_relayer_tx_relay::evm::vanchor::handle_vanchor_relay_tx;
+use webb_relayer_tx_relay::evm::masp_vanchor::handle_masp_vanchor_relay_tx;
 use webb_relayer_utils::HandlerError;
 
-/// Handles private tx withdraw request for evm chains.
+/// Handles MASP tx withdrawal relaying request for evm chains.
 ///
 /// Returns a Result with the `WithdrawTxResponse`.
 ///
@@ -19,13 +19,13 @@ use webb_relayer_utils::HandlerError;
 /// * `chain_id` - An u32 representing the chain id of the chain.
 /// * `contract` - An address of the contract to submit transaction.
 /// * `payload` - An EvmVanchorCommand struct containing the command to execute.
-pub async fn handle_private_tx_withdraw_evm(
+pub async fn handle_masp_tx_relaying_evm(
     State(ctx): State<Arc<RelayerContext>>,
     Path((chain_id, contract)): Path<(u32, Address)>,
     Json(payload): Json<EvmVanchorCommand>,
 ) -> Result<Json<WithdrawTxResponse>, HandlerError> {
     tracing::debug!(%chain_id, %contract, ?payload, "Received withdrawal request");
-    let response = handle_vanchor_relay_tx(
+    let response = handle_masp_vanchor_relay_tx(
         ctx,
         TypedChainId::Evm(chain_id),
         contract,

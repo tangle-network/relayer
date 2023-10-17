@@ -9,8 +9,8 @@ use webb::evm::ethers::types;
 use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
 use webb::evm::ethers::utils::{format_units, hex, parse_ether};
 use webb::evm::{
-    contract::protocol_solidity::variable_anchor::{
-        CommonExtData, Encryptions, PublicInputs, VAnchorContract,
+    contract::protocol_solidity::masp_vanchor::{
+        CommonExtData, Encryptions, MultiAssetVAnchorContract, PublicInputs,
     },
     ethers::prelude::{Signer, SignerMiddleware},
 };
@@ -23,14 +23,14 @@ use webb_relayer_store::queue::{
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::TransactionRelayingError;
 
-/// Handler for VAnchor commands
+/// Handler for MASP VAnchor commands
 ///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
 /// * `cmd` - The command to execute
 #[tracing::instrument(skip(ctx))]
-pub async fn handle_vanchor_relay_tx<'a>(
+pub async fn handle_masp_vanchor_relay_tx<'a>(
     ctx: Arc<RelayerContext>,
     chain_id: TypedChainId,
     contract: types::Address,
@@ -52,7 +52,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
         .iter()
         .cloned()
         .filter_map(|c| match c {
-            webb_relayer_config::evm::Contract::VAnchor(c) => Some(c),
+            webb_relayer_config::evm::Contract::MaspVanchor(c) => Some(c),
             _ => None,
         })
         .map(|c| (c.common.address, c))
@@ -84,7 +84,7 @@ pub async fn handle_vanchor_relay_tx<'a>(
     })?;
 
     let client = Arc::new(SignerMiddleware::new(provider, wallet));
-    let contract = VAnchorContract::new(contract, client.clone());
+    let contract = MultiAssetVAnchorContract::new(contract, client.clone());
 
     let common_ext_data = CommonExtData {
         recipient: cmd.ext_data.recipient,

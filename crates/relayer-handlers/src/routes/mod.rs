@@ -1,3 +1,4 @@
+use ethereum_types::H512;
 use serde::{Deserialize, Serialize};
 
 /// Module for handling encrypted commitment leaves API
@@ -20,6 +21,10 @@ pub mod transaction_status;
 
 /// Module for handling private tx withdraw API
 pub mod private_tx_withdraw;
+
+/// Module for handling masp private tx withdrawal API
+#[cfg(feature = "masp-tx-relaying")]
+pub mod masp_tx_relaying;
 
 /// A (half-open) range bounded inclusively below and exclusively above
 /// (`start..end`).
@@ -67,4 +72,33 @@ const fn default_zero() -> Option<u32> {
 
 const fn default_u32_max() -> Option<u32> {
     Some(u32::MAX)
+}
+
+/// Success response for withdrawal tx relaying API request.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WithdrawTxSuccessResponse {
+    status: String,
+    message: String,
+    item_key: H512,
+}
+
+/// Failure response for withdrawal tx relaying API request.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WithdrawTxFailureResponse {
+    status: String,
+    message: String,
+    reason: String,
+}
+
+/// Withdrawal tx relaying API request response
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+#[serde(rename_all = "camelCase")]
+pub enum WithdrawTxResponse {
+    /// Success response for withdrawal tx API request.
+    Success(WithdrawTxSuccessResponse),
+    /// Failure response for withdrawal tx API request.
+    Failure(WithdrawTxFailureResponse),
 }

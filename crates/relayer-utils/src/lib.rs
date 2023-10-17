@@ -254,6 +254,9 @@ pub enum Error {
 /// Vanchor withdraw tx relaying errors.
 #[derive(thiserror::Error, Debug)]
 pub enum TransactionRelayingError {
+    /// Invalid Command
+    #[error("Invalid command")]
+    InvalidCommand,
     /// Unsupported chain
     #[error("Unsupported chain: {0}")]
     UnsupportedChain(u32),
