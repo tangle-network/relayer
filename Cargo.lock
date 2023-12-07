@@ -8277,8 +8277,7 @@ dependencies = [
 [[package]]
 name = "webb"
 version = "0.8.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75d7912a9586360097ba5bc53a55117960a5d5daba8a334a8645660093c08cf0"
+source = "git+https://github.com/webb-tools/webb-rs?branch=fix-ethers-version#3c8d6d2e44009f60e8e6e2d0bb17746ccc31bfac"
 dependencies = [
  "async-trait",
  "ethers",
