@@ -3,8 +3,8 @@ use std::sync::Arc;
 
 use webb_relayer_store::HistoryStore;
 
-use eth2_pallet_init::init_pallet::{get_typed_chain_id, init_pallet};
-use eth2_pallet_init::substrate_pallet_client::{setup_api, EthClientPallet};
+use webb_eth2_pallet_init::init_pallet::{get_typed_chain_id, init_pallet};
+use webb_eth2_pallet_init::substrate_pallet_client::{setup_api, EthClientPallet};
 use eth2_to_substrate_relay::config::Config;
 /// A trait that defines a handler for a specific set of event types.
 ///

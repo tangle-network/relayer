@@ -15,9 +15,9 @@ required-features = ["cli"]
 
 [dependencies]
 eth-types = { workspace = true }
-eth-rpc-client = { workspace = true }
-eth2-pallet-init = { workspace = true }
-eth2_to_substrate_relay = { workspace = true }
+webb-eth-rpc-client = { workspace = true }
+webb-eth2-pallet-init = { workspace = true }
+eth2-to-substrate-relay = { workspace = true }
 webb-proposal-signing-backends = { path = "../../crates/proposal-signing-backends" }
 webb-relayer-types = { path = "../../crates/relayer-types" }
 webb-relayer-tx-relay = { path = "../../crates/tx-relay" }
