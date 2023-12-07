@@ -45,7 +45,7 @@ webb = { git = "https://github.com/webb-tools/webb-rs", default-features = false
 subxt-signer = { version = "0.31", features = ["subxt"] }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"] }
-webb-proposals = { git = "https://github.com/webb-tools/webb-rs", rev="a960eaf", features = ["scale"] }
+webb-proposals = { git = "https://github.com/webb-tools/webb-rs", branch="polkadot-sdk-v1.0.0", features = ["scale"] }
 ethereum-types = "0.14.1"
 dotenv = "0.15.0"
 axum = { version = "0.6.12", features = ["ws"] }
