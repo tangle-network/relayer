@@ -30,7 +30,7 @@ use webb::evm::ethers::prelude::*;
 #[cfg(feature = "substrate")]
 use subxt_signer::sr25519::Keypair as Sr25519Pair;
 use webb::evm::ethers::middleware::gas_oracle::{
-    Cache as CachedGasOracle, Etherscan as EtherscanGasOracle,
+    Cache as CachedGasOracle, Etherchain as EtherscanGasOracle,
     Median as GasOracleMedian, ProviderOracle,
 };
 #[cfg(feature = "substrate")]
@@ -317,9 +317,8 @@ impl RelayerContext {
         // since it is not very accurate.
         gas_oracle.add_weighted(0.1, provider_gas_oracle);
         // Check if we have etherscan client for this chain
-        if let Some(etherscan_client) = self.etherscan_clients.get(&chain_id) {
-            let etherscan_gas_oracle =
-                EtherscanGasOracle::new(etherscan_client.clone());
+        if let Some(_etherscan_client) = self.etherscan_clients.get(&chain_id) {
+            let etherscan_gas_oracle = EtherscanGasOracle::new();
             let cached = CachedGasOracle::new(
                 // Cache for 5 minutes to avoid hitting etherscan rate limit
                 Duration::from_secs(5 * 60),
