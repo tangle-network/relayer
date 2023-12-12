@@ -41,7 +41,7 @@ tokio = { version = "^1", features = ["full"] }
 config = { version = "0.13", default-features = false, features = ["toml", "json"] }
 serde_json = { version = "^1", default-features = false }
 paw = { version = "^1.0" }
-webb = { git = "https://github.com/webb-tools/webb-rs", default-features = false, branch = "fix-ethers-version"}
+webb = { git = "https://github.com/webb-tools/webb-rs", default-features = false }
 subxt-signer = { version = "0.31", features = ["subxt"] }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"] }
