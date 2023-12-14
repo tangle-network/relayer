@@ -13,5 +13,31 @@
 // limitations under the License.
 
 mod evm_tx_queue;
+use std::sync::Arc;
+
+use ethereum_types::U256;
 #[doc(hidden)]
 pub use evm_tx_queue::*;
+
+use url::Url;
+use webb::evm::ethers::{providers::Middleware, signers::LocalWallet};
+use webb_relayer_utils::Result;
+
+// Tx queue trait
+#[async_trait::async_trait]
+pub trait EvmTxQueueConfig {
+    type EtherClient: Middleware;
+
+    fn max_sleep_interval(&self, chain_id: &U256) -> Result<u64>;
+
+    fn block_confirmations(&self, chain_id: &U256) -> Result<u8>;
+
+    fn explorer(&self, chain_id: &U256) -> Result<Option<Url>>;
+
+    async fn get_evm_provider(
+        &self,
+        chain_id: &U256,
+    ) -> Result<Arc<Self::EtherClient>>;
+
+    async fn get_evm_wallet(&self, chain_id: &U256) -> Result<LocalWallet>;
+}

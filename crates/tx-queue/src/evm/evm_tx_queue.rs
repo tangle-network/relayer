@@ -24,27 +24,33 @@ use webb::evm::ethers::prelude::TimeLag;
 use webb::evm::ethers::providers::Middleware;
 
 use webb::evm::ethers::types;
-use webb_relayer_context::RelayerContext;
 use webb_relayer_store::queue::{
     QueueItemState, QueueStore, TransactionQueueItemKey,
 };
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_utils::clickable_link::ClickableLink;
 
+use super::EvmTxQueueConfig;
+
 /// The TxQueue stores transaction requests so the relayer can process them later.
 /// This prevents issues such as creating transactions with the same nonce.
 /// Randomized sleep intervals are used to prevent relayers from submitting
 /// the same transaction.
 #[derive(Clone)]
-pub struct TxQueue<S: QueueStore<TypedTransaction>> {
-    ctx: RelayerContext,
+pub struct TxQueue<S, C>
+where
+    S: QueueStore<TypedTransaction>,
+    C: EvmTxQueueConfig,
+{
+    ctx: C,
     chain_id: types::U256,
     store: Arc<S>,
 }
 
-impl<S> TxQueue<S>
+impl<S, C> TxQueue<S, C>
 where
     S: QueueStore<TypedTransaction, Key = SledQueueKey>,
+    C: EvmTxQueueConfig,
 {
     /// Creates a new TxQueue instance.
     ///
@@ -55,11 +61,7 @@ where
     /// * `ctx` - RelayContext reference that holds the configuration
     /// * `chain_id` - The chainId that this queue is for
     /// * `store` - [Sled](https://sled.rs)-based database store
-    pub fn new(
-        ctx: RelayerContext,
-        chain_id: types::U256,
-        store: Arc<S>,
-    ) -> Self {
+    pub fn new(ctx: C, chain_id: types::U256, store: Arc<S>) -> Self {
         Self {
             ctx,
             chain_id,
@@ -71,22 +73,14 @@ where
     /// Returns a future that resolves `Ok(())` on success, otherwise returns an error.
     #[tracing::instrument(skip_all, fields(chain = %self.chain_id))]
     pub async fn run(self) -> webb_relayer_utils::Result<()> {
-        let provider = self.ctx.evm_provider(&self.chain_id).await?;
-        let wallet = self.ctx.evm_wallet(self.chain_id).await?;
+        let provider = self.ctx.get_evm_provider(&self.chain_id).await?;
+        let wallet = self.ctx.get_evm_wallet(&self.chain_id).await?;
         let signer_client = SignerMiddleware::new(provider, wallet);
-
-        let chain_config = self
-            .ctx
-            .config
-            .evm
-            .get(&self.chain_id.as_u64().to_string())
-            .ok_or_else(|| webb_relayer_utils::Error::ChainNotFound {
-                chain_id: self.chain_id.to_string(),
-            })?;
+        let block_confirmations =
+            self.ctx.block_confirmations(&self.chain_id)?;
 
         // TimeLag client
-        let client =
-            TimeLag::new(signer_client, chain_config.block_confirmations);
+        let client = TimeLag::new(signer_client, block_confirmations);
         let chain_id = client
             .get_chainid()
             .map_err(|_| {
@@ -110,12 +104,11 @@ where
             chain_id = %chain_id,
             starting = true,
         );
-        let metrics_clone = self.ctx.metrics.clone();
         let task = || async {
             loop {
                 let maybe_item = store
                     .peek_item(SledQueueKey::from_evm_chain_id(chain_id))?;
-                let maybe_explorer = &chain_config.explorer;
+                let maybe_explorer = self.ctx.explorer(&self.chain_id)?;
                 let Some(item) = maybe_item else {
                     tokio::time::sleep(Duration::from_millis(100)).await;
                     continue;
@@ -353,13 +346,7 @@ where
                         } else {
                             tracing::info!("Tx {} Finalized", tx_hash_string,);
                         }
-                        let gas_price = receipt.gas_used.unwrap_or_default();
-                        // metrics for  transaction processed by evm tx queue
-                        let metrics = metrics_clone.lock().await;
-                        metrics.proposals_processed_tx_queue.inc();
-                        metrics.proposals_processed_evm_tx_queue.inc();
-                        // gas spent metric
-                        metrics.gas_spent.inc_by(gas_price.as_u64() as f64);
+
                         tracing::event!(
                             target: webb_relayer_utils::probe::TARGET,
                             tracing::Level::DEBUG,
@@ -460,18 +447,14 @@ where
 
                 // sleep for a random amount of time.
                 let max_sleep_interval =
-                    chain_config.tx_queue.max_sleep_interval;
+                    self.ctx.max_sleep_interval(&self.chain_id)?;
                 let s =
                     rand::thread_rng().gen_range(1_000..=max_sleep_interval);
                 tracing::trace!("next queue round after {} ms", s);
                 tokio::time::sleep(Duration::from_millis(s)).await;
             }
         };
-        // transaction queue backoff metric
-        let metrics = self.ctx.metrics.lock().await;
-        metrics.transaction_queue_back_off.inc();
-        metrics.evm_transaction_queue_back_off.inc();
-        drop(metrics);
+
         backoff::future::retry::<(), _, _, _, _>(backoff, task).await?;
         Ok(())
     }
