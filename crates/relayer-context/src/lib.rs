@@ -399,6 +399,7 @@ impl EvmTxQueueConfig for RelayerContext {
     }
 }
 
+#[cfg(feature = "substrate")]
 #[async_trait::async_trait]
 impl SubstrateTxQueueConfig for RelayerContext {
     fn max_sleep_interval(

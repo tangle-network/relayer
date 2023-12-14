@@ -19,15 +19,26 @@ use subxt_signer::sr25519::Keypair as Sr25519Pair;
 use webb::substrate::subxt::{self, OnlineClient};
 use webb_relayer_utils::Result;
 
+/// Config trait for Substrate tx queue.
 #[async_trait::async_trait]
 pub trait SubstrateTxQueueConfig {
+    /// Maximum number of milliseconds to wait before dequeuing a transaction from
+    /// the queue.
     fn max_sleep_interval(&self, chain_id: u32) -> Result<u64>;
-
+    /// Returns a Substrate client.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_id` - A string representing the chain Id.
     async fn substrate_provider<C: subxt::Config>(
         &self,
         chain_id: u32,
     ) -> Result<OnlineClient<C>>;
-
+    /// Returns a Substrate wallet.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_id` - A string representing the chain Id.
     async fn substrate_wallet(&self, chain_id: u32) -> Result<Sr25519Pair>;
 }
 
