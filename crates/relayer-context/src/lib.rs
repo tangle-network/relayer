@@ -403,7 +403,7 @@ impl EvmTxQueueConfig for RelayerContext {
 impl SubstrateTxQueueConfig for RelayerContext {
     fn max_sleep_interval(
         &self,
-        chain_id: U256,
+        chain_id: u32,
     ) -> webb_relayer_utils::Result<u64> {
         let chain_config =
             self.config.substrate.get(&chain_id.to_string()).ok_or(
@@ -416,14 +416,14 @@ impl SubstrateTxQueueConfig for RelayerContext {
 
     async fn substrate_provider<C: subxt::Config>(
         &self,
-        chain_id: U256,
+        chain_id: u32,
     ) -> webb_relayer_utils::Result<OnlineClient<C>> {
         self.substrate_provider(chain_id).await
     }
 
     async fn substrate_wallet(
         &self,
-        chain_id: U256,
+        chain_id: u32,
     ) -> webb_relayer_utils::Result<Sr25519Pair> {
         self.substrate_wallet(chain_id).await
     }

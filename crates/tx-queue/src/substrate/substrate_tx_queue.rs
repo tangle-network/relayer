@@ -96,7 +96,7 @@ where
             //  Tangle node connection
             let maybe_client = self
                 .ctx
-                .substrate_provider::<TangleRuntimeConfig>(chain_id.into())
+                .substrate_provider::<TangleRuntimeConfig>(chain_id)
                 .await;
 
             let client = match maybe_client {
@@ -109,7 +109,7 @@ where
                     return Err(backoff::Error::transient(err));
                 }
             };
-            let pair = self.ctx.substrate_wallet(chain_id.into()).await?;
+            let pair = self.ctx.substrate_wallet(chain_id).await?;
             loop {
                 let maybe_item = store.peek_item(
                     SledQueueKey::from_substrate_chain_id(chain_id),
@@ -567,7 +567,7 @@ where
 
                 // sleep for a random amount of time.
                 let max_sleep_interval =
-                    self.ctx.max_sleep_interval(chain_id.into())?;
+                    self.ctx.max_sleep_interval(chain_id)?;
                 let s =
                     rand::thread_rng().gen_range(1_000..=max_sleep_interval);
                 tracing::trace!("next queue round after {} ms", s);

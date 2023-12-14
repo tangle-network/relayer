@@ -13,7 +13,6 @@
 // limitations under the License.
 
 mod substrate_tx_queue;
-use ethereum_types::U256;
 #[doc(hidden)]
 pub use substrate_tx_queue::*;
 use subxt_signer::sr25519::Keypair as Sr25519Pair;
@@ -22,14 +21,14 @@ use webb_relayer_utils::Result;
 
 #[async_trait::async_trait]
 pub trait SubstrateTxQueueConfig {
-    fn max_sleep_interval(&self, chain_id: U256) -> Result<u64>;
+    fn max_sleep_interval(&self, chain_id: u32) -> Result<u64>;
 
     async fn substrate_provider<C: subxt::Config>(
         &self,
-        chain_id: U256,
+        chain_id: u32,
     ) -> Result<OnlineClient<C>>;
 
-    async fn substrate_wallet(&self, chain_id: U256) -> Result<Sr25519Pair>;
+    async fn substrate_wallet(&self, chain_id: u32) -> Result<Sr25519Pair>;
 }
 
 #[cfg(test)]
@@ -68,20 +67,20 @@ mod tests {
 
     #[async_trait::async_trait]
     impl SubstrateTxQueueConfig for TxQueueContext {
-        fn max_sleep_interval(&self, _chain_id: U256) -> Result<u64> {
+        fn max_sleep_interval(&self, _chain_id: u32) -> Result<u64> {
             Ok(7000_u64)
         }
 
         async fn substrate_provider<C: subxt::Config>(
             &self,
-            _chain_id: U256,
+            _chain_id: u32,
         ) -> Result<OnlineClient<C>> {
             Ok(subxt::OnlineClient::<C>::new().await?)
         }
 
         async fn substrate_wallet(
             &self,
-            _chain_id: U256,
+            _chain_id: u32,
         ) -> Result<Sr25519Pair> {
             Ok(Suri(dev::alice()).into())
         }
@@ -96,7 +95,7 @@ mod tests {
         let context = TxQueueContext;
         let store = SledStore::temporary()?;
         let client = context
-            .substrate_provider::<TangleRuntimeConfig>(chain_id.into())
+            .substrate_provider::<TangleRuntimeConfig>(chain_id)
             .await?;
         let store = Arc::new(store);
         let tx_queue = SubstrateTxQueue::new(context, chain_id, store.clone());
