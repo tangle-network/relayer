@@ -17,7 +17,6 @@ use futures::TryFutureExt;
 use rand::Rng;
 use webb::substrate::subxt;
 use webb::substrate::subxt::rpc::types::DryRunResult;
-use webb_relayer_context::RelayerContext;
 use webb_relayer_store::queue::QueueItem;
 use webb_relayer_store::queue::QueueItemState;
 use webb_relayer_store::queue::QueueStore;
@@ -31,23 +30,27 @@ use std::time::Duration;
 
 use webb::substrate::subxt::tx::TxStatus as TransactionStatus;
 
+use super::SubstrateTxQueueConfig;
+
 /// The SubstrateTxQueue stores transaction call params in bytes so the relayer can process them later.
 /// This prevents issues such as creating transactions with the same nonce.
 /// Randomized sleep intervals are used to prevent relayers from submitting
 /// the same transaction.
 #[derive(Clone)]
-pub struct SubstrateTxQueue<S>
+pub struct SubstrateTxQueue<S, C>
 where
     S: QueueStore<TypeErasedStaticTxPayload, Key = SledQueueKey>,
+    C: SubstrateTxQueueConfig,
 {
-    ctx: RelayerContext,
+    ctx: C,
     chain_id: u32,
     store: Arc<S>,
 }
 
-impl<S> SubstrateTxQueue<S>
+impl<S, C> SubstrateTxQueue<S, C>
 where
     S: QueueStore<TypeErasedStaticTxPayload, Key = SledQueueKey>,
+    C: SubstrateTxQueueConfig,
 {
     /// Creates a new SubstrateTxQueue instance.
     ///
@@ -58,7 +61,7 @@ where
     /// * `ctx` - RelayContext reference that holds the configuration
     /// * `chain_name` - The name of the chain that this queue is for
     /// * `store` - [Sled](https://sled.rs)-based database store
-    pub fn new(ctx: RelayerContext, chain_id: u32, store: Arc<S>) -> Self {
+    pub fn new(ctx: C, chain_id: u32, store: Arc<S>) -> Self {
         Self {
             ctx,
             chain_id,
@@ -73,14 +76,6 @@ where
     where
         X: subxt::Config,
     {
-        let chain_config = self
-            .ctx
-            .config
-            .substrate
-            .get(&self.chain_id.to_string())
-            .ok_or(webb_relayer_utils::Error::NodeNotFound {
-                chain_id: self.chain_id.to_string(),
-            })?;
         let chain_id = self.chain_id;
         let store = self.store;
         let backoff = backoff::ExponentialBackoff {
@@ -97,13 +92,13 @@ where
             starting = true,
         );
 
-        let metrics_clone = self.ctx.metrics.clone();
         let task = || async {
             //  Tangle node connection
             let maybe_client = self
                 .ctx
-                .substrate_provider::<TangleRuntimeConfig, _>(chain_id)
+                .substrate_provider::<TangleRuntimeConfig>(chain_id)
                 .await;
+
             let client = match maybe_client {
                 Ok(client) => client,
                 Err(err) => {
@@ -532,13 +527,6 @@ where
                                     Ok(())
                                 },
                             )?;
-
-                            // metrics for proposal processed by substrate tx queue
-                            let metrics = metrics_clone.lock().await;
-                            metrics.proposals_processed_tx_queue.inc();
-                            metrics
-                                .proposals_processed_substrate_tx_queue
-                                .inc();
                         }
 
                         TransactionStatus::Usurped(_) => {
@@ -579,18 +567,13 @@ where
 
                 // sleep for a random amount of time.
                 let max_sleep_interval =
-                    chain_config.tx_queue.max_sleep_interval;
+                    self.ctx.max_sleep_interval(chain_id)?;
                 let s =
                     rand::thread_rng().gen_range(1_000..=max_sleep_interval);
                 tracing::trace!("next queue round after {} ms", s);
                 tokio::time::sleep(Duration::from_millis(s)).await;
             }
         };
-        // transaction queue backoff metric
-        let metrics = self.ctx.metrics.lock().await;
-        metrics.transaction_queue_back_off.inc();
-        metrics.substrate_transaction_queue_back_off.inc();
-        drop(metrics);
         backoff::future::retry::<(), _, _, _, _>(backoff, task).await?;
         Ok(())
     }

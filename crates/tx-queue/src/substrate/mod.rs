@@ -15,15 +15,42 @@
 mod substrate_tx_queue;
 #[doc(hidden)]
 pub use substrate_tx_queue::*;
+use subxt_signer::sr25519::Keypair as Sr25519Pair;
+use webb::substrate::subxt::{self, OnlineClient};
+use webb_relayer_utils::Result;
+
+/// Config trait for Substrate tx queue.
+#[async_trait::async_trait]
+pub trait SubstrateTxQueueConfig {
+    /// Maximum number of milliseconds to wait before dequeuing a transaction from
+    /// the queue.
+    fn max_sleep_interval(&self, chain_id: u32) -> Result<u64>;
+    /// Returns a Substrate client.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_id` - A string representing the chain Id.
+    async fn substrate_provider<C: subxt::Config>(
+        &self,
+        chain_id: u32,
+    ) -> Result<OnlineClient<C>>;
+    /// Returns a Substrate wallet.
+    ///
+    /// # Arguments
+    ///
+    /// * `chain_id` - A string representing the chain Id.
+    async fn substrate_wallet(&self, chain_id: u32) -> Result<Sr25519Pair>;
+}
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, sync::Arc};
+    use std::sync::Arc;
 
     use subxt_signer::sr25519::dev;
     use webb::substrate::tangle_runtime::api as RuntimeApi;
     use webb_relayer_store::queue::{QueueItem, QueueStore};
     use webb_relayer_store::sled::SledQueueKey;
+    use webb_relayer_store::SledStore;
     use webb_relayer_types::suri::Suri;
     use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
     use webb_relayer_utils::TangleRuntimeConfig;
@@ -47,40 +74,39 @@ mod tests {
         tracing::subscriber::set_default(s)
     }
 
+    pub struct TxQueueContext;
+
+    #[async_trait::async_trait]
+    impl SubstrateTxQueueConfig for TxQueueContext {
+        fn max_sleep_interval(&self, _chain_id: u32) -> Result<u64> {
+            Ok(7000_u64)
+        }
+
+        async fn substrate_provider<C: subxt::Config>(
+            &self,
+            _chain_id: u32,
+        ) -> Result<OnlineClient<C>> {
+            Ok(subxt::OnlineClient::<C>::new().await?)
+        }
+
+        async fn substrate_wallet(
+            &self,
+            _chain_id: u32,
+        ) -> Result<Sr25519Pair> {
+            Ok(Suri(dev::alice()).into())
+        }
+    }
+
     #[tokio::test]
     #[ignore = "needs substrate node"]
     async fn should_handle_many_txs() -> webb_relayer_utils::Result<()> {
         let _guard = setup_tracing();
         let chain_id = 1081u32;
-        let config = webb_relayer_config::WebbRelayerConfig {
-            substrate: HashMap::from([(
-                chain_id.to_string(),
-                webb_relayer_config::substrate::SubstrateConfig {
-                    name: String::from("tangle"),
-                    enabled: true,
-                    http_endpoint: "http://localhost:9933"
-                        .parse::<url::Url>()
-                        .unwrap()
-                        .into(),
-                    ws_endpoint: "ws://localhost:9944"
-                        .parse::<url::Url>()
-                        .unwrap()
-                        .into(),
-                    explorer: None,
-                    chain_id,
-                    suri: Some(Suri(dev::alice())),
-                    pallets: Default::default(),
-                    tx_queue: Default::default(),
-                },
-            )]),
-            ..Default::default()
-        };
-        let store = webb_relayer_store::SledStore::temporary()?;
-        let context =
-            webb_relayer_context::RelayerContext::new(config, store.clone())
-                .await?;
+
+        let context = TxQueueContext;
+        let store = SledStore::temporary()?;
         let client = context
-            .substrate_provider::<TangleRuntimeConfig, _>(chain_id)
+            .substrate_provider::<TangleRuntimeConfig>(chain_id)
             .await?;
         let store = Arc::new(store);
         let tx_queue = SubstrateTxQueue::new(context, chain_id, store.clone());

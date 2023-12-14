@@ -13,15 +13,16 @@ repository = { workspace = true }
 [dependencies]
 webb-relayer-types = { workspace = true }
 webb-relayer-store = { workspace = true }
-webb-relayer-context = { workspace = true }
 webb-relayer-utils = { workspace = true }
 
+async-trait = { workspace = true }
 tracing = { workspace = true }
 sled = { workspace = true }
 hex = { workspace = true }
 futures = { workspace = true }
 backoff = { workspace = true }
 tokio = { workspace = true }
+url = { workspace = true }
 webb = { workspace = true }
 subxt-signer = { workspace = true, optional = true }
 # Used by ethers (but we need it to be vendored with the lib).
@@ -34,8 +35,8 @@ rand = { workspace = true, default-features = false, features = ["getrandom"] }
 [features]
 default = ["std", "evm", "substrate"]
 std = []
-evm = ["webb-relayer-context/evm"]
-substrate = ["webb-relayer-context/substrate", "subxt-signer"]
+evm = []
+substrate = ["subxt-signer"]
 
 [dev-dependencies]
 webb-relayer-config = { workspace = true }

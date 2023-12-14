@@ -19,6 +19,9 @@
 use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::{broadcast, Mutex};
+use webb::substrate::subxt::OnlineClient;
+use webb_relayer_tx_queue::evm::EvmTxQueueConfig;
+use webb_relayer_tx_queue::substrate::SubstrateTxQueueConfig;
 use webb_relayer_types::rpc_client::WebbRpcClient;
 
 use webb::evm::ethers;
@@ -310,7 +313,7 @@ impl RelayerContext {
         chain_id: I,
     ) -> webb_relayer_utils::Result<GasOracleMedian> {
         let chain_id: types::U256 = chain_id.into();
-        let chain_provider = self.evm_provider(chain_id).await?;
+        let chain_provider = self.evm_provider(&chain_id).await?;
         let provider_gas_oracle = ProviderOracle::new(chain_provider);
         let mut gas_oracle = GasOracleMedian::new();
         // Give only 10% of the weight to the provider gas oracle
@@ -331,6 +334,99 @@ impl RelayerContext {
         // TODO: Add more gas oracles
 
         Ok(gas_oracle)
+    }
+}
+
+#[cfg(feature = "evm")]
+#[async_trait::async_trait]
+impl EvmTxQueueConfig for RelayerContext {
+    type EtherClient = EthersClient;
+
+    fn max_sleep_interval(
+        &self,
+        chain_id: &U256,
+    ) -> webb_relayer_utils::Result<u64> {
+        let chain_config = self
+            .config
+            .evm
+            .get(&chain_id.as_u64().to_string())
+            .ok_or_else(|| webb_relayer_utils::Error::ChainNotFound {
+                chain_id: chain_id.to_string(),
+            })?;
+        Ok(chain_config.tx_queue.max_sleep_interval)
+    }
+
+    fn block_confirmations(
+        &self,
+        chain_id: &U256,
+    ) -> webb_relayer_utils::Result<u8> {
+        let chain_config = self
+            .config
+            .evm
+            .get(&chain_id.as_u64().to_string())
+            .ok_or_else(|| webb_relayer_utils::Error::ChainNotFound {
+                chain_id: chain_id.to_string(),
+            })?;
+        Ok(chain_config.block_confirmations)
+    }
+
+    fn explorer(
+        &self,
+        chain_id: &U256,
+    ) -> webb_relayer_utils::Result<Option<url::Url>> {
+        let chain_config = self
+            .config
+            .evm
+            .get(&chain_id.as_u64().to_string())
+            .ok_or_else(|| webb_relayer_utils::Error::ChainNotFound {
+                chain_id: chain_id.to_string(),
+            })?;
+        Ok(chain_config.explorer.clone())
+    }
+
+    async fn get_evm_provider(
+        &self,
+        chain_id: &U256,
+    ) -> webb_relayer_utils::Result<Arc<Self::EtherClient>> {
+        self.evm_provider(chain_id).await
+    }
+
+    async fn get_evm_wallet(
+        &self,
+        chain_id: &U256,
+    ) -> webb_relayer_utils::Result<LocalWallet> {
+        self.evm_wallet(chain_id).await
+    }
+}
+
+#[cfg(feature = "substrate")]
+#[async_trait::async_trait]
+impl SubstrateTxQueueConfig for RelayerContext {
+    fn max_sleep_interval(
+        &self,
+        chain_id: u32,
+    ) -> webb_relayer_utils::Result<u64> {
+        let chain_config =
+            self.config.substrate.get(&chain_id.to_string()).ok_or(
+                webb_relayer_utils::Error::NodeNotFound {
+                    chain_id: chain_id.to_string(),
+                },
+            )?;
+        Ok(chain_config.tx_queue.max_sleep_interval)
+    }
+
+    async fn substrate_provider<C: subxt::Config>(
+        &self,
+        chain_id: u32,
+    ) -> webb_relayer_utils::Result<OnlineClient<C>> {
+        self.substrate_provider(chain_id).await
+    }
+
+    async fn substrate_wallet(
+        &self,
+        chain_id: u32,
+    ) -> webb_relayer_utils::Result<Sr25519Pair> {
+        self.substrate_wallet(chain_id).await
     }
 }
 
