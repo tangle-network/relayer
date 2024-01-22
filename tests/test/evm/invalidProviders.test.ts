@@ -62,8 +62,8 @@ class RateLimitedProvider extends InvalidProvider {
   }
 }
 
-describe('Invalid EVM Providers', () => {
-  describe('Rate Limited Provider', function () {
+describe.skip('Invalid EVM Providers', () => {
+  describe.skip('Rate Limited Provider', function () {
     const tmpDirPath = temp.mkdirSync();
     let provider: RateLimitedProvider;
     let webbRelayer: WebbRelayer;

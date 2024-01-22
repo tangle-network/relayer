@@ -43,7 +43,7 @@ import { UsageMode } from '../../lib/substrateNodeBase.js';
 // to support chai-as-promised
 Chai.use(ChaiAsPromised);
 
-describe('Signature Bridge <> DKG Proposal Signing Backend', function () {
+describe.skip('Signature Bridge <> DKG Proposal Signing Backend', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

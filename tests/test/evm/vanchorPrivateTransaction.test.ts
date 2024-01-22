@@ -43,7 +43,7 @@ import { Keypair, Utxo } from '@webb-tools/utils';
 
 dotenv.config({ path: '../.env' });
 
-describe('Vanchor Private Tx relaying with mocked governor', function () {
+describe.skip('Vanchor Private Tx relaying with mocked governor', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

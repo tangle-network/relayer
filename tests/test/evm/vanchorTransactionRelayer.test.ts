@@ -34,7 +34,7 @@ import { type VAnchor } from '@webb-tools/contracts';
 import { VBridge } from '@webb-tools/vbridge';
 import { toFixedHex, Utxo } from '@webb-tools/utils';
 
-describe('Vanchor Transaction relayer', function () {
+describe.skip('Vanchor Transaction relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;

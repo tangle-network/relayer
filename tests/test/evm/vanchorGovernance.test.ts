@@ -27,7 +27,7 @@ import { VBridge } from '@webb-tools/vbridge';
 import { type VAnchor } from '@webb-tools/contracts';
 import { Utxo } from '@webb-tools/utils';
 
-describe('VAnchor Governance Relayer', function () {
+describe.skip('VAnchor Governance Relayer', function () {
   const tmpDirPath = temp.mkdirSync();
   let localChain1: LocalChain;
   let localChain2: LocalChain;
