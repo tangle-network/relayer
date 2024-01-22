@@ -5,8 +5,6 @@ use axum::Router;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb::evm::ethers::prelude::TimeLag;
-use webb_bridge_registry_backends::dkg::DkgBridgeRegistryBackend;
-use webb_bridge_registry_backends::mocked::MockedBridgeRegistryBackend;
 use webb_event_watcher_traits::{
     BridgeWatcher, EVMEventWatcher as EventWatcher, EthersClient,
     EthersTimeLagClient,
@@ -249,12 +247,9 @@ async fn start_vanchor_events_watcher(
         let metrics = my_ctx.metrics.clone();
         match proposal_signing_backend {
             ProposalSigningBackendSelector::Dkg(backend) => {
-                let bridge_registry =
-                    DkgBridgeRegistryBackend::new(backend.client.clone());
                 let deposit_handler = VAnchorDepositHandler::builder()
                     .chain_id(chain_id)
                     .store(store.clone())
-                    .bridge_registry_backend(bridge_registry)
                     .proposals_queue(proposals_queue.clone())
                     .policy(enqueue_policy)
                     .build();
@@ -307,12 +302,9 @@ async fn start_vanchor_events_watcher(
                 }
             }
             ProposalSigningBackendSelector::Mocked(backend) => {
-                let bridge_registry =
-                    MockedBridgeRegistryBackend::builder().build();
                 let deposit_handler = VAnchorDepositHandler::builder()
                     .chain_id(chain_id)
                     .store(store.clone())
-                    .bridge_registry_backend(bridge_registry)
                     .proposals_queue(proposals_queue.clone())
                     .policy(enqueue_policy)
                     .build();

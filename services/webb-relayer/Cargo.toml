@@ -25,7 +25,6 @@ required-features = ["cli"]
 
 [dependencies]
 webb-proposal-signing-backends = { workspace = true }
-webb-bridge-registry-backends = { workspace = true }
 webb-relayer-tx-queue = { workspace = true }
 webb-relayer-handlers = { workspace = true }
 webb-relayer-store = { workspace = true }

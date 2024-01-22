@@ -3536,12 +3536,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
-name = "hex-literal"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6fe2267d4ed49bc07b63801559be28c718ea06c4738b7a03c94df7386d2cde46"
-
-[[package]]
 name = "hmac"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8809,25 +8803,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "webb-bridge-registry-backends"
-version = "0.5.15-dev"
-dependencies = [
- "async-trait",
- "ethereum-types",
- "futures",
- "hex",
- "hex-literal",
- "native-tls",
- "subxt-signer",
- "tokio",
- "typed-builder 0.16.2",
- "webb",
- "webb-proposals",
- "webb-relayer-config",
- "webb-relayer-utils",
-]
-
-[[package]]
 name = "webb-chains-info"
 version = "0.5.15-dev"
 dependencies = [
@@ -8927,7 +8902,6 @@ dependencies = [
  "tracing",
  "typed-builder 0.16.2",
  "webb",
- "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
  "webb-proposals",
@@ -9036,7 +9010,6 @@ dependencies = [
  "tracing",
  "url",
  "webb",
- "webb-bridge-registry-backends",
  "webb-event-watcher-traits",
  "webb-ew-dkg",
  "webb-ew-evm",
