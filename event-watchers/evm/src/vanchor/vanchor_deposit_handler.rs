@@ -19,7 +19,6 @@ use tokio::sync::Mutex;
 use webb::evm::contract::protocol_solidity::variable_anchor::VAnchorContractEvents;
 use webb::evm::ethers::prelude::LogMeta;
 use webb::evm::ethers::types;
-use webb_bridge_registry_backends::BridgeRegistryBackend;
 use webb_event_watcher_traits::evm::EventHandler;
 use webb_event_watcher_traits::EthersTimeLagClient;
 use webb_proposal_signing_backends::proposal_handler;
@@ -34,22 +33,20 @@ use webb_relayer_utils::metric;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
 #[derive(typed_builder::TypedBuilder)]
-pub struct VAnchorDepositHandler<Q, P, C> {
+pub struct VAnchorDepositHandler<Q, P> {
     #[builder(setter(into))]
     chain_id: types::U256,
     #[builder(setter(into))]
     store: Arc<SledStore>,
     proposals_queue: Q,
     policy: P,
-    bridge_registry_backend: C,
 }
 
 #[async_trait::async_trait]
-impl<Q, P, C> EventHandler for VAnchorDepositHandler<Q, P, C>
+impl<Q, P> EventHandler for VAnchorDepositHandler<Q, P>
 where
     Q: ProposalsQueue<Proposal = QueuedAnchorUpdateProposal> + Send + Sync,
     P: ProposalPolicy + Send + Sync + Clone,
-    C: BridgeRegistryBackend + Send + Sync,
 {
     type Contract = VAnchorContractWrapper<EthersTimeLagClient>;
 
@@ -145,13 +142,17 @@ where
         let src_resource_id =
             webb_proposals::ResourceId::new(src_target_system, src_chain_id);
 
-        let linked_anchors = self
-            .bridge_registry_backend
-            .config_or_dkg_bridges(
-                &wrapper.config.linked_anchors,
-                &src_resource_id,
-            )
-            .await?;
+        let linked_anchors = match &wrapper.config.linked_anchors {
+            Some(anchors) => anchors,
+            None => {
+                tracing::error!(
+                    "Linked anchors not configured for : ({})",
+                    self.chain_id
+                );
+                return Ok(());
+            }
+        };
+
         for linked_anchor in linked_anchors {
             let target_resource_id = match linked_anchor {
                 LinkedAnchorConfig::Raw(target) => {
