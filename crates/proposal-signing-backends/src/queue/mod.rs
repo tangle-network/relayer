@@ -260,6 +260,10 @@ impl ProposalTrait for QueuedAnchorUpdateProposal {
     fn to_vec(&self) -> Vec<u8> {
         self.inner.to_vec()
     }
+
+    fn function_sig(&self) -> webb_proposals::FunctionSignature {
+        self.inner.header().function_signature()
+    }
 }
 
 /// The `ProposalMetadata` trait is implemented by proposals that carry metadata.

@@ -15,8 +15,7 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::substrate::subxt::{self, OnlineClient};
-use webb::substrate::tangle_runtime::api::dkg;
-
+use webb::substrate::tangle_runtime::api::jobs::events::JobResultSubmitted;
 use webb_relayer_store::queue::{QueueItem, QueueStore};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::{BridgeCommand, BridgeKey};
@@ -27,18 +26,18 @@ use webb_event_watcher_traits::substrate::EventHandler;
 /// DKGPublicKeyChanged handler handles the `PublicKeySignatureChanged` event and then signals
 /// signature bridge watcher to update governor.
 #[derive(Clone, Debug)]
-pub struct DKGPublicKeyChangedHandler {
+pub struct JobResultHandler {
     webb_config: webb_relayer_config::WebbRelayerConfig,
 }
 
-impl DKGPublicKeyChangedHandler {
+impl JobResultHandler {
     pub fn new(webb_config: webb_relayer_config::WebbRelayerConfig) -> Self {
         Self { webb_config }
     }
 }
 
 #[async_trait::async_trait]
-impl EventHandler<TangleRuntimeConfig> for DKGPublicKeyChangedHandler {
+impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
     type Client = OnlineClient<TangleRuntimeConfig>;
 
     type Store = SledStore;
@@ -47,8 +46,7 @@ impl EventHandler<TangleRuntimeConfig> for DKGPublicKeyChangedHandler {
         &self,
         events: subxt::events::Events<TangleRuntimeConfig>,
     ) -> webb_relayer_utils::Result<bool> {
-        let has_event =
-            events.has::<dkg::events::PublicKeySignatureChanged>()?;
+        let has_event = events.has::<JobResultSubmitted>()?;
         Ok(has_event)
     }
 
@@ -65,20 +63,10 @@ impl EventHandler<TangleRuntimeConfig> for DKGPublicKeyChangedHandler {
         // we got that the signature of the DKG public key changed.
         // that means the DKG Public Key itself changed
         let pub_key_changed_events = events
-            .find::<dkg::events::PublicKeySignatureChanged>()
+            .find::<JobResultSubmitted>()
             .flatten()
             .collect::<Vec<_>>();
         for event in pub_key_changed_events {
-            tracing::debug!(
-                public_key = %hex::encode(&event.pub_key),
-                nonce = %event.nonce.0,
-                voter_merkle_root = %hex::encode(event.voter_merkle_root),
-                voter_count = %event.voter_count,
-                session_length = %event.session_length,
-                signature = %hex::encode(&event.signature),
-                %block_number,
-                "DKG Public Key Changed",
-            );
             let mut bridge_keys = Vec::new();
             // get evm bridges
             for (_, config) in self.webb_config.evm.iter() {
@@ -102,30 +90,8 @@ impl EventHandler<TangleRuntimeConfig> for DKGPublicKeyChangedHandler {
                     ?event,
                     "Signaling Signature Bridge to transfer ownership",
                 );
-                tracing::event!(
-                    target: webb_relayer_utils::probe::TARGET,
-                    tracing::Level::DEBUG,
-                    kind = %webb_relayer_utils::probe::Kind::SigningBackend,
-                    backend = "DKG",
-                    signal_bridge = %bridge_key,
-                    public_key = %hex::encode(&event.pub_key),
-                    nonce = %event.nonce.0,
-                    signature = %hex::encode(&event.signature),
-                );
 
-                let item = QueueItem::new(BridgeCommand::TransferOwnership {
-                    nonce: event.nonce.0,
-                    pub_key: event.pub_key.clone(),
-                    signature: event.signature.clone(),
-                    voter_count: event.voter_count,
-                    voter_merkle_root: event.voter_merkle_root,
-                    session_length: event.session_length,
-                });
-
-                store.enqueue_item(
-                    SledQueueKey::from_bridge_key(bridge_key),
-                    item,
-                )?;
+                // enqueue transfer ownership item into store
             }
         }
         Ok(())

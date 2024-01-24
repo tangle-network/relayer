@@ -12,42 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/// A module for listening on proposal events.
-mod proposal_signed_handler;
-#[doc(hidden)]
-pub use proposal_signed_handler::*;
 /// A module for listening on DKG Governor Changes event.
-mod public_key_changed_handler;
+mod job_result_handler;
 #[doc(hidden)]
-pub use public_key_changed_handler::*;
+pub use job_result_handler::*;
 use webb::substrate::subxt::events::StaticEvent;
-use webb::substrate::tangle_runtime::api::dkg::events::PublicKeySignatureChanged;
-use webb::substrate::tangle_runtime::api::dkg_proposal_handler::events::ProposalBatchSigned;
+use webb::substrate::tangle_runtime::api::jobs::events::JobResultSubmitted;
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_relayer_utils::TangleRuntimeConfig;
 
 /// The DKGMetadataWatcher watches for the events from Dkg Pallet.
 #[derive(Copy, Clone, Debug, Default)]
-pub struct DKGMetadataWatcher;
+pub struct JobResultWatcher;
 
 #[async_trait::async_trait]
-impl SubstrateEventWatcher<TangleRuntimeConfig> for DKGMetadataWatcher {
-    const TAG: &'static str = "DKG Pallet Event Watcher";
+impl SubstrateEventWatcher<TangleRuntimeConfig> for JobResultWatcher {
+    const TAG: &'static str = "Job Pallet Event Watcher";
 
-    const PALLET_NAME: &'static str = PublicKeySignatureChanged::PALLET;
-
-    type Store = webb_relayer_store::SledStore;
-}
-
-/// The DKGProposalHandlerWatcher watches for the events from Dkg Proposal Handler Pallet.
-#[derive(Copy, Clone, Debug, Default)]
-pub struct DKGProposalHandlerWatcher;
-
-#[async_trait::async_trait]
-impl SubstrateEventWatcher<TangleRuntimeConfig> for DKGProposalHandlerWatcher {
-    const TAG: &'static str = "DKG Proposal Handler Pallet Event Watcher";
-
-    const PALLET_NAME: &'static str = ProposalBatchSigned::PALLET;
+    const PALLET_NAME: &'static str = JobResultSubmitted::PALLET;
 
     type Store = webb_relayer_store::SledStore;
 }

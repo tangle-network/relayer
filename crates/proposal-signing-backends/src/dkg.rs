@@ -1,16 +1,16 @@
+use bounded_collections::BoundedVec;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::tangle_runtime::api::runtime_types::bounded_collections::bounded_vec::BoundedVec;
-use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::header::{TypedChainId, ResourceId};
 use webb::substrate::subxt::OnlineClient;
-use webb::substrate::tangle_runtime::api::runtime_types::webb_proposals::proposal::{Proposal, ProposalKind};
-use webb_proposals::ProposalTrait;
-use webb_relayer_store::queue::{QueueStore, QueueItem, TransactionQueueItemKey};
-use webb_relayer_utils::{metric, TangleRuntimeConfig};
 use webb::substrate::tangle_runtime::api as RuntimeApi;
-use webb_relayer_store::SledStore;
+use webb_proposals::{Proposal, ProposalKind, ProposalTrait, TypedChainId};
+use webb_relayer_store::queue::{
+    QueueItem, QueueStore, TransactionQueueItemKey,
+};
 use webb_relayer_store::sled::SledQueueKey;
+use webb_relayer_store::SledStore;
 use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
+use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
 type DkgClient = OnlineClient<TangleRuntimeConfig>;
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
@@ -25,7 +25,7 @@ pub struct DkgProposalSigningBackend {
     ///
     /// This used as the source chain id for the proposals.
     #[builder(setter(into))]
-    src_chain_id: webb_proposals::TypedChainId,
+    src_chain_id: TypedChainId,
 }
 
 //AnchorUpdateProposal for evm
@@ -35,42 +35,6 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         &self,
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> webb_relayer_utils::Result<bool> {
-        let header = proposal.header();
-        let resource_id = header.resource_id();
-        let src_chain_id =
-            webb_proposals_typed_chain_converter(self.src_chain_id);
-        let chain_nonce_addrs = RuntimeApi::storage()
-            .dkg_proposals()
-            .chain_nonces(&src_chain_id);
-        let maybe_whitelisted = self
-            .client
-            .storage()
-            .at_latest()
-            .await?
-            .fetch(&chain_nonce_addrs)
-            .await?;
-
-        if maybe_whitelisted.is_none() {
-            tracing::warn!(?src_chain_id, "chain is not whitelisted");
-            return Ok(false);
-        }
-        let resource_id_addrs = RuntimeApi::storage()
-            .dkg_proposals()
-            .resources(ResourceId(resource_id.into_bytes()));
-        let maybe_resource_id = self
-            .client
-            .storage()
-            .at_latest()
-            .await?
-            .fetch(&resource_id_addrs)
-            .await?;
-        if maybe_resource_id.is_none() {
-            tracing::warn!(
-                resource_id = %hex::encode(resource_id.into_bytes()),
-                "resource id doesn't exist!",
-            );
-            return Ok(false);
-        }
         // all is good!
         Ok(true)
     }
@@ -80,18 +44,6 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         proposal: &(impl ProposalTrait + Sync + Send + 'static),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        let my_chain_id_addr =
-            RuntimeApi::constants().dkg_proposals().chain_identifier();
-        let my_chain_id = self.client.constants().at(&my_chain_id_addr)?;
-        let my_chain_id = match my_chain_id {
-            TypedChainId::Substrate(chain_id) => chain_id,
-            TypedChainId::PolkadotParachain(chain_id) => chain_id,
-            TypedChainId::KusamaParachain(chain_id) => chain_id,
-            _ => return Err(webb_relayer_utils::Error::Generic(
-                "dkg proposal signing backend only supports substrate chains",
-            )),
-        };
-        let tx_api = RuntimeApi::tx().dkg_proposals();
         let resource_id = proposal.header().resource_id();
         let nonce = proposal.header().nonce();
         tracing::debug!(
@@ -102,24 +54,13 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             "sending proposal to DKG runtime"
         );
 
-        let unsigned_proposal = Proposal::Unsigned {
-            kind: ProposalKind::AnchorUpdate,
-            data: BoundedVec(proposal.to_vec()),
-        };
-        let acknowledge_proposal_tx =
-            tx_api.acknowledge_proposal(unsigned_proposal);
-        let metadata = self.client.metadata();
-        let tx = TypeErasedStaticTxPayload::try_from((
-            &metadata,
-            acknowledge_proposal_tx,
-        ))?;
-        let tx_key = SledQueueKey::from_substrate_with_custom_key(
-            my_chain_id,
-            tx.item_key(),
-        );
-        // Enqueue transaction in protocol-substrate transaction queue
-        let item = QueueItem::new(tx);
-        QueueStore::enqueue_item(&self.store, tx_key, item)?;
+        // let unsigned_proposal = Proposal::Unsigned {
+        //     kind: ProposalKind::AnchorUpdate,
+        //     data: BoundedVec::try_from(proposal.to_vec()).unwrap()
+        // };
+
+        // vote proposal for signing
+
         Ok(())
     }
 }
