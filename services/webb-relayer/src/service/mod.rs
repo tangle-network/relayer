@@ -29,6 +29,8 @@ use axum::routing::get;
 use axum::Router;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
+use webb::evm::ethers::prelude::TimeLag;
+use webb_proposal_signing_backends::SigningRulesContractWrapper;
 use webb_proposal_signing_backends::{
     DkgProposalSigningBackend, MockedProposalSigningBackend,
 };
@@ -109,7 +111,7 @@ pub enum ProposalSigningBackendSelector {
 pub async fn make_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
-    typed_chain_id: webb_proposals::TypedChainId,
+    chain_id: u32,
     linked_anchors: Option<Vec<LinkedAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> crate::Result<ProposalSigningBackendSelector> {
@@ -122,14 +124,17 @@ pub async fn make_proposal_signing_backend(
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
         Some(ProposalSigningBackendConfig::DkgNode(c)) => {
-            // if it is the dkg backend, we will need to connect to that node first,
-            // and then use the DkgProposalSigningBackend to sign the proposal.
-            let dkg_client = ctx
-                .substrate_provider::<TangleRuntimeConfig, _>(c.chain_id)
-                .await?;
+            // if it is the dkg backend, we will be submitting proposal
+            // to signing rules contract for voting.
+            let client = ctx.evm_provider(chain_id).await?;
+            let signing_contarct_config = ctx.config.signing_contract;
+            let wrapper = SigningRulesContractWrapper::new(
+                signing_contarct_config,
+                client,
+            );
             let backend = DkgProposalSigningBackend::builder()
-                .client(dkg_client)
-                .src_chain_id(typed_chain_id)
+                .wrapper(wrapper)
+                .src_chain_id(chain_id)
                 .store(store.clone())
                 .build();
             Ok(ProposalSigningBackendSelector::Dkg(backend))

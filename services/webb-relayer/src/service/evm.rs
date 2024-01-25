@@ -173,7 +173,7 @@ async fn start_vanchor_events_watcher(
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
-            TypedChainId::Evm(chain_id),
+            chain_id,
             my_config.linked_anchors,
             my_config.proposal_signing_backend,
         )

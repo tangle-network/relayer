@@ -1,23 +1,21 @@
 use crate::SigningRulesContractWrapper;
-use bounded_collections::BoundedVec;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::subxt::OnlineClient;
-use webb::substrate::tangle_runtime::api as RuntimeApi;
-use webb_proposals::{Proposal, ProposalKind, ProposalTrait, TypedChainId};
+use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
+use webb::evm::ethers::utils;
+use webb_proposals::ProposalTrait;
 use webb_relayer_store::queue::{
     QueueItem, QueueStore, TransactionQueueItemKey,
 };
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::SledStore;
-use webb_relayer_types::EthersTimeLagClient;
-use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
-use webb_relayer_utils::{metric, TangleRuntimeConfig};
+use webb_relayer_types::EthersClient;
+use webb_relayer_utils::metric;
 
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
 #[derive(typed_builder::TypedBuilder)]
 pub struct DkgProposalSigningBackend {
-    pub wrapper: SigningRulesContractWrapper<EthersTimeLagClient>,
+    wrapper: SigningRulesContractWrapper<EthersClient>,
     /// Something that implements the QueueStore trait.
     #[builder(setter(into))]
     store: Arc<SledStore>,
@@ -25,7 +23,7 @@ pub struct DkgProposalSigningBackend {
     ///
     /// This used as the source chain id for the proposals.
     #[builder(setter(into))]
-    src_chain_id: TypedChainId,
+    src_chain_id: u32,
 }
 
 //AnchorUpdateProposal for evm
@@ -51,51 +49,46 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             resource_id = hex::encode(resource_id.into_bytes()),
             src_chain_id = ?self.src_chain_id,
             proposal = format!("0x{}", hex::encode(proposal.to_vec())),
-            "sending proposal to DKG runtime"
+            "Sending proposal for voting though signing rules contract"
         );
-
-        let unsigned_proposal = Proposal::Unsigned {
-            kind: ProposalKind::AnchorUpdate,
-            data: BoundedVec::try_from(proposal.to_vec()).unwrap(),
-        };
 
         let phase1_job_id = self.wrapper.config.phase1_job_id;
         // TODO: Remove phase1 job details if not required, for now using dummy.
         let phase1_job_details = vec![1u8; 32];
-        let phase2_job_details = unsigned_proposal.as_bytes();
+        let phase2_job_details = proposal.to_vec();
         let call = self.wrapper.contract.vote_proposal(
             phase1_job_id,
             phase1_job_details.into(),
-            phase2_job_details,
+            phase2_job_details.into(),
         );
 
-        // vote proposal for signing
+        let typed_tx: TypedTransaction = call.tx;
+        let item = QueueItem::new(typed_tx.clone());
+        let tx_key = SledQueueKey::from_evm_with_custom_key(
+            self.src_chain_id,
+            typed_tx.item_key(),
+        );
+        let proposal_data_hash = utils::keccak256(&proposal.to_vec());
+        // check if we already have a queued tx for this proposal.
+        // if we do, we should not enqueue it again.
+        let qq = QueueStore::<TypedTransaction>::has_item(&self.store, tx_key)?;
+        if qq {
+            tracing::debug!(
+                proposal_data_hash = %hex::encode(proposal_data_hash),
+                "Skipping execution of this proposal: Already Exists in Queue",
+            );
+            return Ok(());
+        }
 
+        QueueStore::<TypedTransaction>::enqueue_item(
+            &self.store,
+            tx_key,
+            item,
+        )?;
+        tracing::debug!(
+            proposal_data_hash = %hex::encode(proposal_data_hash),
+            "Enqueued voting call for Anchor update proposal through evm tx queue",
+        );
         Ok(())
-    }
-}
-
-fn webb_proposals_typed_chain_converter(
-    v: webb_proposals::TypedChainId,
-) -> TypedChainId {
-    match v {
-        webb_proposals::TypedChainId::None => TypedChainId::None,
-        webb_proposals::TypedChainId::Evm(id) => TypedChainId::Evm(id),
-        webb_proposals::TypedChainId::Substrate(id) => {
-            TypedChainId::Substrate(id)
-        }
-        webb_proposals::TypedChainId::PolkadotParachain(id) => {
-            TypedChainId::PolkadotParachain(id)
-        }
-        webb_proposals::TypedChainId::KusamaParachain(id) => {
-            TypedChainId::KusamaParachain(id)
-        }
-        webb_proposals::TypedChainId::RococoParachain(id) => {
-            TypedChainId::RococoParachain(id)
-        }
-        webb_proposals::TypedChainId::Cosmos(id) => TypedChainId::Cosmos(id),
-        webb_proposals::TypedChainId::Solana(id) => TypedChainId::Solana(id),
-        webb_proposals::TypedChainId::Ink(id) => TypedChainId::Ink(id),
-        _ => unimplemented!("Unsupported Chain"),
     }
 }
