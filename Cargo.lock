@@ -8977,7 +8977,6 @@ name = "webb-proposal-signing-backends"
 version = "0.5.15-dev"
 dependencies = [
  "async-trait",
- "bounded-collections",
  "ethereum-types",
  "futures",
  "hex",

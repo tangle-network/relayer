@@ -34,7 +34,6 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
         &self,
         _proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> webb_relayer_utils::Result<bool> {
-
         Ok(true)
     }
 

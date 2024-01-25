@@ -22,7 +22,6 @@ sled = { workspace = true }
 futures = { workspace = true }
 tokio = { workspace = true }
 hex = { workspace = true }
-bounded-collections = { workspace = true }
 webb = { workspace = true }
 subxt-signer = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).

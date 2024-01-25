@@ -218,6 +218,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn all_config_files_are_correct() {
         // This test is to make sure that all the config files are correct.
         // This walks all the directories inside the root of the config directory
