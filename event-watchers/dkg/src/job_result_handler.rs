@@ -15,6 +15,9 @@
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use webb::substrate::subxt::{self, OnlineClient};use webb::substrate::tangle_runtime::api::jobs::events::JobResultSubmitted;
+use webb::substrate::tangle_runtime::api as RuntimeApi;
+use webb::substrate::tangle_runtime::api::runtime_types::tangle_primitives::jobs::JobResult;
+use webb::substrate::tangle_runtime::api::runtime_types::tangle_primitives::roles::RoleType;
 use webb_relayer_store::sled::SledStore;
 use webb_relayer_store::BridgeKey;
 use webb_relayer_utils::{metric, TangleRuntimeConfig};
@@ -44,27 +47,57 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
         &self,
         events: subxt::events::Events<TangleRuntimeConfig>,
     ) -> webb_relayer_utils::Result<bool> {
-        let has_event = events.has::<JobResultSubmitted>()?;
+        let has_event = events.find::<JobResultSubmitted>().any(|event| {
+            matches!(
+                event,
+                Ok(JobResultSubmitted {
+                    role_type: RoleType::Tss(_),
+                    ..
+                })
+            )
+        });
+
         Ok(has_event)
     }
 
     async fn handle_events(
         &self,
         _store: Arc<Self::Store>,
-        _client: Arc<Self::Client>,
+        client: Arc<Self::Client>,
         (events, _block_number): (
             subxt::events::Events<TangleRuntimeConfig>,
             u64,
         ),
         _metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
-        // we got that the signature of the DKG public key changed.
-        // that means the DKG Public Key itself changed
-        let pub_key_changed_events = events
+        // We go the job result submitted event
+        let job_result_submitted_events: Vec<_> = events
             .find::<JobResultSubmitted>()
             .flatten()
-            .collect::<Vec<_>>();
-        for event in pub_key_changed_events {
+            .filter(|event| {
+                matches!(
+                    event,
+                    JobResultSubmitted {
+                        role_type: RoleType::Tss(_),
+                        ..
+                    }
+                )
+            })
+            .collect();
+        for event in job_result_submitted_events {
+            // Fetch job result for DKG phase
+
+            let known_result_addrs = RuntimeApi::storage()
+                .jobs()
+                .known_results(event.clone().role_type, event.clone().job_id);
+
+            let maybe_result = client
+                .storage()
+                .at_latest()
+                .await?
+                .fetch(&known_result_addrs)
+                .await?;
+
             let mut bridge_keys = Vec::new();
             // get evm bridges
             for (_, config) in self.webb_config.evm.iter() {
@@ -73,23 +106,29 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                 let bridge_key = BridgeKey::new(typed_chain_id);
                 bridge_keys.push(bridge_key);
             }
-            // get substrate bridges
-            for (_, config) in self.webb_config.substrate.iter() {
-                let typed_chain_id =
-                    webb_proposals::TypedChainId::Substrate(config.chain_id);
-                let bridge_key = BridgeKey::new(typed_chain_id);
-                bridge_keys.push(bridge_key);
-            }
 
-            // now we just signal every signature bridge to transfer the ownership.
-            for bridge_key in bridge_keys {
-                tracing::debug!(
-                    %bridge_key,
-                    ?event,
-                    "Signaling Signature Bridge to transfer ownership",
-                );
+            if let Some(phase_result) = maybe_result {
+                if let JobResult::DKGPhaseTwo(result) = phase_result.result {
+                    for bridge_key in &bridge_keys {
+                        tracing::debug!(
+                            %bridge_key,
+                            ?result,
+                            "Signaling Signature Bridge to transfer ownership",
+                        );
 
-                // enqueue transfer ownership item into store
+                        tracing::event!(
+                            target: webb_relayer_utils::probe::TARGET,
+                            tracing::Level::DEBUG,
+                            kind = %webb_relayer_utils::probe::Kind::SigningBackend,
+                            backend = "DKG",
+                            signal_bridge = %bridge_key,
+                            public_key = %hex::encode(&result.data),
+                            signature = %hex::encode(&result.signature),
+                        );
+
+                        // Todo enqueue transfer ownership calls
+                    }
+                }
             }
         }
         Ok(())

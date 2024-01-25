@@ -45,8 +45,7 @@ webb = { version = "0.8.4", default-features = false }
 subxt-signer = { version = "0.31", features = ["subxt"] }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"] }
-# webb-proposals = { git = "https://github.com/webb-tools/webb-rs", features = ["scale"] }
-webb-proposals = { path="/Users/salman01zz/Webb-Tools/webb-rs/proposals", features = ["scale",] }
+webb-proposals = { git = "https://github.com/webb-tools/webb-rs", features = ["scale"] }
 ethereum-types = "0.14.1"
 dotenv = "0.15.0"
 bounded-collections = { version = "0.1.9", default-features = false, features = ["serde"] }
