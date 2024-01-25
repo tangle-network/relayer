@@ -12,24 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use super::*;
 use tokio::sync::Mutex;
 use webb::evm::ethers::prelude::TimeLag;
+use webb_relayer_types::{EthersClient, EthersTimeLagClient};
 use webb_relayer_utils::{multi_provider::MultiProvider, retry};
-
-use super::*;
-
-/// Ethereum client using Ethers, that includes a retry strategy.
-pub type EthersClient =
-    providers::Provider<providers::RetryClient<MultiProvider<providers::Http>>>;
-
-/// Ethereum TimeLag client using Ethers, that includes a retry strategy.
-pub type EthersTimeLagClient = TimeLag<
-    Arc<
-        providers::Provider<
-            providers::RetryClient<MultiProvider<providers::Http>>,
-        >,
-    >,
->;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {

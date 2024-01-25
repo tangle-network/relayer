@@ -15,6 +15,7 @@ webb-relayer-store = { path = "../relayer-store" }
 webb-relayer-config = { path = "../relayer-config" }
 webb-relayer-context = { path = "../relayer-context" }
 webb-relayer-utils = { path = "../relayer-utils" }
+webb-relayer-types = { path = "../relayer-types" }
 
 async-trait = { workspace = true }
 tracing = { workspace = true }

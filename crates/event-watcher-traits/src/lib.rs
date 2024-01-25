@@ -28,8 +28,7 @@
 pub mod evm;
 #[cfg(feature = "evm")]
 pub use evm::{
-    BridgeWatcher, EthersClient, EthersTimeLagClient,
-    EventHandler as EVMEventHandler,
+    BridgeWatcher, EventHandler as EVMEventHandler,
     EventHandlerWithRetry as EVMEventHandlerWithRetry,
     EventWatcher as EVMEventWatcher,
 };

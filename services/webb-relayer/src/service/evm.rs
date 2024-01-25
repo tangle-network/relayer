@@ -6,9 +6,9 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb::evm::ethers::prelude::TimeLag;
 use webb_event_watcher_traits::{
-    BridgeWatcher, EVMEventWatcher as EventWatcher, EthersClient,
-    EthersTimeLagClient,
+    BridgeWatcher, EVMEventWatcher as EventWatcher,
 };
+use webb_relayer_types::{EthersClient, EthersTimeLagClient};
 
 use webb_ew_evm::signature_bridge_watcher::{
     SignatureBridgeContractWatcher, SignatureBridgeContractWrapper,

@@ -20,7 +20,6 @@ use webb::evm::contract::protocol_solidity::variable_anchor::VAnchorContractEven
 use webb::evm::ethers::prelude::LogMeta;
 use webb::evm::ethers::types;
 use webb_event_watcher_traits::evm::EventHandler;
-use webb_event_watcher_traits::EthersTimeLagClient;
 use webb_proposal_signing_backends::proposal_handler;
 use webb_proposal_signing_backends::queue::policy::ProposalPolicy;
 use webb_proposal_signing_backends::queue::{
@@ -29,6 +28,7 @@ use webb_proposal_signing_backends::queue::{
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EventHashStore, HistoryStore};
+use webb_relayer_types::EthersTimeLagClient;
 use webb_relayer_utils::metric;
 
 /// Represents an VAnchor Contract Watcher which will use a configured signing backend for signing proposals.
