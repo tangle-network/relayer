@@ -47,6 +47,7 @@ pub mod substrate;
 /// Utils for processing configuration
 pub mod utils;
 
+use ethereum_types::Address;
 use evm::EvmChainConfig;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
@@ -96,6 +97,8 @@ pub struct WebbRelayerConfig {
     /// it is a simple map between the asset symbol and its configuration.
     #[serde(default = "defaults::unlisted_assets")]
     pub assets: HashMap<String, UnlistedAssetConfig>,
+    /// Signing rules contract config.
+    pub signing_contract: SigningRulesContractConfig,
 }
 
 impl WebbRelayerConfig {
@@ -186,6 +189,16 @@ impl Default for TxQueueConfig {
             polling_interval: 12_000,
         }
     }
+}
+
+/// Signing rules contract config
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, Default)]
+#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
+pub struct SigningRulesContractConfig {
+    /// The address of this contract on this chain.
+    pub address: Address,
+    /// Phase1 Job Id
+    pub phase1_job_id: [u8; 32],
 }
 
 /// UnlistedAssetConfig is the configuration for the assets that are not listed on any exchange.

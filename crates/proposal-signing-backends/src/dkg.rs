@@ -1,3 +1,4 @@
+use crate::SigningRulesContractWrapper;
 use bounded_collections::BoundedVec;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -9,15 +10,14 @@ use webb_relayer_store::queue::{
 };
 use webb_relayer_store::sled::SledQueueKey;
 use webb_relayer_store::SledStore;
+use webb_relayer_types::EthersTimeLagClient;
 use webb_relayer_utils::static_tx_payload::TypeErasedStaticTxPayload;
 use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
-type DkgClient = OnlineClient<TangleRuntimeConfig>;
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
 #[derive(typed_builder::TypedBuilder)]
 pub struct DkgProposalSigningBackend {
-    #[builder(setter(into))]
-    pub client: DkgClient,
+    pub wrapper: SigningRulesContractWrapper<EthersTimeLagClient>,
     /// Something that implements the QueueStore trait.
     #[builder(setter(into))]
     store: Arc<SledStore>,
@@ -54,10 +54,20 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             "sending proposal to DKG runtime"
         );
 
-        // let unsigned_proposal = Proposal::Unsigned {
-        //     kind: ProposalKind::AnchorUpdate,
-        //     data: BoundedVec::try_from(proposal.to_vec()).unwrap()
-        // };
+        let unsigned_proposal = Proposal::Unsigned {
+            kind: ProposalKind::AnchorUpdate,
+            data: BoundedVec::try_from(proposal.to_vec()).unwrap(),
+        };
+
+        let phase1_job_id = self.wrapper.config.phase1_job_id;
+        // TODO: Remove phase1 job details if not required, for now using dummy.
+        let phase1_job_details = vec![1u8; 32];
+        let phase2_job_details = unsigned_proposal.as_bytes();
+        let call = self.wrapper.contract.vote_proposal(
+            phase1_job_id,
+            phase1_job_details.into(),
+            phase2_job_details,
+        );
 
         // vote proposal for signing
 

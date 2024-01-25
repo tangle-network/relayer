@@ -8869,6 +8869,7 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
+ "webb-relayer-types",
  "webb-relayer-utils",
 ]
 
@@ -8917,6 +8918,7 @@ dependencies = [
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
+ "webb-relayer-types",
  "webb-relayer-utils",
 ]
 
@@ -8990,6 +8992,7 @@ dependencies = [
  "typed-builder 0.16.2",
  "webb",
  "webb-proposals",
+ "webb-relayer-config",
  "webb-relayer-store",
  "webb-relayer-types",
  "webb-relayer-utils",
@@ -9041,6 +9044,7 @@ dependencies = [
  "webb-relayer-handlers",
  "webb-relayer-store",
  "webb-relayer-tx-queue",
+ "webb-relayer-types",
  "webb-relayer-utils",
 ]
 
