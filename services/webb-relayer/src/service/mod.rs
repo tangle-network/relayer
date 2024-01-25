@@ -29,7 +29,6 @@ use axum::routing::get;
 use axum::Router;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
-use webb::evm::ethers::prelude::TimeLag;
 use webb_proposal_signing_backends::SigningRulesContractWrapper;
 use webb_proposal_signing_backends::{
     DkgProposalSigningBackend, MockedProposalSigningBackend,
@@ -41,7 +40,6 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::routes::info::handle_relayer_info;
 use webb_relayer_handlers::routes::info::handle_socket_info;
 use webb_relayer_store::SledStore;
-use webb_relayer_utils::TangleRuntimeConfig;
 
 /// EVM Specific Services
 pub mod evm;
@@ -123,7 +121,7 @@ pub async fn make_proposal_signing_backend(
 
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
-        Some(ProposalSigningBackendConfig::DkgNode(c)) => {
+        Some(ProposalSigningBackendConfig::DkgNode(_)) => {
             // if it is the dkg backend, we will be submitting proposal
             // to signing rules contract for voting.
             let client = ctx.evm_provider(chain_id).await?;

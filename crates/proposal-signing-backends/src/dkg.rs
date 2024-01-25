@@ -15,6 +15,7 @@ use webb_relayer_utils::metric;
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
 #[derive(typed_builder::TypedBuilder)]
 pub struct DkgProposalSigningBackend {
+    /// Signing rules contract
     wrapper: SigningRulesContractWrapper<EthersClient>,
     /// Something that implements the QueueStore trait.
     #[builder(setter(into))]
@@ -31,9 +32,9 @@ pub struct DkgProposalSigningBackend {
 impl super::ProposalSigningBackend for DkgProposalSigningBackend {
     async fn can_handle_proposal(
         &self,
-        proposal: &(impl ProposalTrait + Sync + Send + 'static),
+        _proposal: &(impl ProposalTrait + Sync + Send + 'static),
     ) -> webb_relayer_utils::Result<bool> {
-        // all is good!
+
         Ok(true)
     }
 
@@ -68,7 +69,7 @@ impl super::ProposalSigningBackend for DkgProposalSigningBackend {
             self.src_chain_id,
             typed_tx.item_key(),
         );
-        let proposal_data_hash = utils::keccak256(&proposal.to_vec());
+        let proposal_data_hash = utils::keccak256(proposal.to_vec());
         // check if we already have a queued tx for this proposal.
         // if we do, we should not enqueue it again.
         let qq = QueueStore::<TypedTransaction>::has_item(&self.store, tx_key)?;

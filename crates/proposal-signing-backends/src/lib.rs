@@ -73,13 +73,15 @@ pub trait ProposalSigningBackend {
     ) -> webb_relayer_utils::Result<()>;
 }
 
-// SigningRulesContractWrapper around SigningRulesContract
+/// SigningRulesContractWrapper around SigningRulesContract
 #[derive(Clone, Debug)]
 pub struct SigningRulesContractWrapper<M>
 where
     M: Middleware,
 {
+    /// Signing rules contract config.
     pub config: webb_relayer_config::SigningRulesContractConfig,
+    /// Contratc
     pub contract: SigningRulesContract<M>,
 }
 
@@ -87,6 +89,7 @@ impl<M> SigningRulesContractWrapper<M>
 where
     M: Middleware,
 {
+    /// Creates wrapper around SigningRulesContract.
     pub fn new(
         config: webb_relayer_config::SigningRulesContractConfig,
         client: Arc<M>,

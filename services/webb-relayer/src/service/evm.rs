@@ -19,7 +19,6 @@ use webb_ew_evm::vanchor::{
 };
 use webb_ew_evm::{VAnchorContractWatcher, VAnchorContractWrapper};
 use webb_proposal_signing_backends::queue::{self, policy};
-use webb_proposals::TypedChainId;
 use webb_relayer_config::evm::{
     Contract, SignatureBridgeContractConfig, SmartAnchorUpdatesConfig,
     VAnchorContractConfig,

@@ -14,9 +14,8 @@
 
 use super::*;
 use tokio::sync::Mutex;
-use webb::evm::ethers::prelude::TimeLag;
-use webb_relayer_types::{EthersClient, EthersTimeLagClient};
-use webb_relayer_utils::{multi_provider::MultiProvider, retry};
+use webb_relayer_types::EthersTimeLagClient;
+use webb_relayer_utils::retry;
 
 /// A watchable contract is a contract used in the [EventWatcher]
 pub trait WatchableContract: Send + Sync {

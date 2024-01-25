@@ -14,11 +14,9 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::subxt::{self, OnlineClient};
-use webb::substrate::tangle_runtime::api::jobs::events::JobResultSubmitted;
-use webb_relayer_store::queue::{QueueItem, QueueStore};
-use webb_relayer_store::sled::{SledQueueKey, SledStore};
-use webb_relayer_store::{BridgeCommand, BridgeKey};
+use webb::substrate::subxt::{self, OnlineClient};use webb::substrate::tangle_runtime::api::jobs::events::JobResultSubmitted;
+use webb_relayer_store::sled::SledStore;
+use webb_relayer_store::BridgeKey;
 use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
 use webb_event_watcher_traits::substrate::EventHandler;
@@ -52,9 +50,9 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
 
     async fn handle_events(
         &self,
-        store: Arc<Self::Store>,
+        _store: Arc<Self::Store>,
         _client: Arc<Self::Client>,
-        (events, block_number): (
+        (events, _block_number): (
             subxt::events::Events<TangleRuntimeConfig>,
             u64,
         ),

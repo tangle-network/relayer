@@ -21,10 +21,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use webb::evm::ethers::{
-    contract,
-    providers::{self, Middleware},
-    types,
-    types::transaction,
+    contract, providers::Middleware, types, types::transaction,
 };
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_context::RelayerContext;
