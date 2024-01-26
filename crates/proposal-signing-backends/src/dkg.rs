@@ -14,7 +14,7 @@ use webb_relayer_utils::metric;
 
 /// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
 #[derive(typed_builder::TypedBuilder)]
-pub struct DkgProposalSigningBackend {
+pub struct DkgProposalSigningRulesBackend {
     /// Signing rules contract
     wrapper: SigningRulesContractWrapper<EthersClient>,
     /// Something that implements the QueueStore trait.
@@ -29,7 +29,7 @@ pub struct DkgProposalSigningBackend {
 
 //AnchorUpdateProposal for evm
 #[async_trait::async_trait]
-impl super::ProposalSigningBackend for DkgProposalSigningBackend {
+impl super::ProposalSigningBackend for DkgProposalSigningRulesBackend {
     async fn can_handle_proposal(
         &self,
         _proposal: &(impl ProposalTrait + Sync + Send + 'static),

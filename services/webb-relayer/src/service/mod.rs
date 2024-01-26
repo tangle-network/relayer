@@ -31,7 +31,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb_proposal_signing_backends::SigningRulesContractWrapper;
 use webb_proposal_signing_backends::{
-    DkgProposalSigningBackend, MockedProposalSigningBackend,
+    DkgProposalSigningRulesBackend, MockedProposalSigningBackend,
 };
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 
@@ -103,7 +103,7 @@ pub enum ProposalSigningBackendSelector {
     /// Mocked
     Mocked(MockedProposalSigningBackend<SledStore>),
     /// Dkg
-    Dkg(DkgProposalSigningBackend),
+    Dkg(DkgProposalSigningRulesBackend),
 }
 /// utility to configure proposal signing backend
 pub async fn make_proposal_signing_backend(
@@ -121,16 +121,13 @@ pub async fn make_proposal_signing_backend(
 
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
-        Some(ProposalSigningBackendConfig::DkgNode(_)) => {
+        Some(ProposalSigningBackendConfig::Dkg(signing_rules_config)) => {
             // if it is the dkg backend, we will be submitting proposal
             // to signing rules contract for voting.
             let client = ctx.evm_provider(chain_id).await?;
-            let signing_contarct_config = ctx.config.signing_contract;
-            let wrapper = SigningRulesContractWrapper::new(
-                signing_contarct_config,
-                client,
-            );
-            let backend = DkgProposalSigningBackend::builder()
+            let wrapper =
+                SigningRulesContractWrapper::new(signing_rules_config, client);
+            let backend = DkgProposalSigningRulesBackend::builder()
                 .wrapper(wrapper)
                 .src_chain_id(chain_id)
                 .store(store.clone())
@@ -139,7 +136,7 @@ pub async fn make_proposal_signing_backend(
         }
         Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
-            // which is a bit simpler than the DkgProposalSigningBackend.
+            // which is a bit simpler than the DkgProposalSigningRulesBackend.
             // get only the linked chains to that anchor.
             let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
                 HashSet::new();

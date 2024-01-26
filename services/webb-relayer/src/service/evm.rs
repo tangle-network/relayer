@@ -174,7 +174,7 @@ async fn start_vanchor_events_watcher(
             store.clone(),
             chain_id,
             my_config.linked_anchors,
-            my_config.proposal_signing_backend,
+            my_ctx.config.proposal_signing_backend.clone(),
         )
         .await?;
         tracing::debug!(

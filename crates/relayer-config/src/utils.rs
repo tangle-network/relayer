@@ -187,14 +187,6 @@ pub fn postloading_process(
             }
             // validate config for governance relaying
             if config.features.governance_relay {
-                // check if proposal signing backend is configured
-                if anchor.proposal_signing_backend.is_none() {
-                    tracing::warn!(
-                        "!!WARNING!!: In order to enable governance relaying,
-                        proposal-signing-backend should be configured for ({})",
-                        anchor.common.address
-                    );
-                }
                 // check if event watchers is enabled
                 if !anchor.events_watcher.enabled {
                     tracing::warn!(
