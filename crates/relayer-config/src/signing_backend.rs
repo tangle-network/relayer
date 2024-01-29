@@ -7,15 +7,15 @@ use super::*;
 #[serde(tag = "type")]
 pub enum ProposalSigningBackendConfig {
     /// Uses signing rules contract to vote and submit proposals for signing.
-    Dkg(DkgSigningRulesConfig),
+    Dkg(DkgProposalSigningBackendConfig),
     /// Uses the Private Key of the current Governor to sign proposals.
     Mocked(MockedProposalSigningBackendConfig),
 }
 
-/// DkgSigningRulesConfig represents the configuration for the DKG signing backend.
+/// DkgProposalSigningBackendConfig represents the configuration for the DKG signing backend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
-pub struct DkgSigningRulesConfig {
+pub struct DkgProposalSigningBackendConfig {
     /// The address of this contract on this chain.
     pub address: Address,
     /// Phase1 Job Id

@@ -49,7 +49,7 @@ pub mod queue;
 pub use dkg::*;
 /// A module that Implements the Mocked Proposal Signing Backend.
 pub use mocked::*;
-use webb_relayer_config::signing_backend::DkgSigningRulesConfig;
+use webb_relayer_config::signing_backend::DkgProposalSigningBackendConfig;
 use webb_relayer_utils::metric;
 
 /// A Proposal Signing Backend is responsible for signing proposal `P` where `P` is anything really depending on the
@@ -81,7 +81,7 @@ where
     M: Middleware,
 {
     /// Signing rules contract config.
-    pub config: DkgSigningRulesConfig,
+    pub config: DkgProposalSigningBackendConfig,
     /// Contratc
     pub contract: SigningRulesContract<M>,
 }
@@ -91,7 +91,10 @@ where
     M: Middleware,
 {
     /// Creates wrapper around SigningRulesContract.
-    pub fn new(config: DkgSigningRulesConfig, client: Arc<M>) -> Self {
+    pub fn new(
+        config: DkgProposalSigningBackendConfig,
+        client: Arc<M>,
+    ) -> Self {
         Self {
             contract: SigningRulesContract::new(config.address, client),
             config,
