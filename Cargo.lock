@@ -8042,22 +8042,20 @@ dependencies = [
 
 [[package]]
 name = "typed-builder"
-version = "0.14.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "64cba322cb9b7bc6ca048de49e83918223f35e7a86311267013afff257004870"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "typed-builder"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34085c17941e36627a879208083e25d357243812c30e7d7387c3b954f30ade16"
 dependencies = [
- "typed-builder-macro",
+ "typed-builder-macro 0.16.2",
+]
+
+[[package]]
+name = "typed-builder"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "444d8748011b93cb168770e8092458cb0f8854f931ff82fdf6ddfbd72a9c933e"
+dependencies = [
+ "typed-builder-macro 0.18.1",
 ]
 
 [[package]]
@@ -8065,6 +8063,17 @@ name = "typed-builder-macro"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f03ca4cb38206e2bef0700092660bb74d696f808514dae47fa1467cbfe26e96e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.40",
+]
+
+[[package]]
+name = "typed-builder-macro"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "563b3b88238ec95680aef36bdece66896eaa7ce3c0f1b4f39d38fb2435261352"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -8785,8 +8794,9 @@ dependencies = [
 
 [[package]]
 name = "webb"
-version = "0.8.2"
-source = "git+https://github.com/webb-tools/webb-rs#80a94b3d6ea5b0b60cfc48ffed77f74269a2ef2d"
+version = "0.8.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cb8e659d1f8d68e6d7d97b364136b76f8484b22cbeb7c86f4d899403866cc293"
 dependencies = [
  "async-trait",
  "ethers",
@@ -8859,6 +8869,7 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
+ "webb-relayer-types",
  "webb-relayer-utils",
 ]
 
@@ -8907,6 +8918,7 @@ dependencies = [
  "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
+ "webb-relayer-types",
  "webb-relayer-utils",
 ]
 
@@ -8951,6 +8963,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb-proposal-derive"
+version = "0.1.0"
+source = "git+https://github.com/webb-tools/webb-rs#8a36d59110fad4861a1452330a61440137715a6f"
+dependencies = [
+ "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "quote",
+ "syn 2.0.40",
+]
+
+[[package]]
 name = "webb-proposal-signing-backends"
 version = "0.5.15-dev"
 dependencies = [
@@ -8970,6 +8992,7 @@ dependencies = [
  "typed-builder 0.16.2",
  "webb",
  "webb-proposals",
+ "webb-relayer-config",
  "webb-relayer-store",
  "webb-relayer-types",
  "webb-relayer-utils",
@@ -8977,8 +9000,8 @@ dependencies = [
 
 [[package]]
 name = "webb-proposals"
-version = "0.6.0"
-source = "git+https://github.com/webb-tools/webb-rs?branch=polkadot-sdk-v1.0.0#95c76d58779c273e3754f7626dc4766a3c7fec22"
+version = "0.8.0"
+source = "git+https://github.com/webb-tools/webb-rs#8a36d59110fad4861a1452330a61440137715a6f"
 dependencies = [
  "frame-support",
  "hex",
@@ -8986,8 +9009,10 @@ dependencies = [
  "parity-scale-codec",
  "scale-info",
  "serde",
+ "thiserror",
  "tiny-keccak",
- "typed-builder 0.14.0",
+ "typed-builder 0.18.1",
+ "webb-proposal-derive",
 ]
 
 [[package]]
@@ -9020,6 +9045,7 @@ dependencies = [
  "webb-relayer-handlers",
  "webb-relayer-store",
  "webb-relayer-tx-queue",
+ "webb-relayer-types",
  "webb-relayer-utils",
 ]
 

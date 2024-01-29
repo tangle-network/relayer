@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use tokio::sync::Mutex;
-
 use super::{event_watcher::EventWatcher, *};
+use tokio::sync::Mutex;
+use webb_relayer_types::EthersTimeLagClient;
 
 /// A Bridge Watcher is a trait for Bridge contracts that not specific for watching events from that contract,
 /// instead it watches for commands sent from other event watchers or services, it helps decouple the event watchers

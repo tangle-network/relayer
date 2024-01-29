@@ -20,10 +20,10 @@ use webb::evm::contract::protocol_solidity::variable_anchor::VAnchorContractEven
 use webb::evm::ethers::prelude::LogMeta;
 use webb::evm::ethers::types;
 use webb_event_watcher_traits::evm::EventHandler;
-use webb_event_watcher_traits::EthersTimeLagClient;
 use webb_proposals::{ResourceId, TargetSystem, TypedChainId};
 use webb_relayer_store::SledStore;
 use webb_relayer_store::{EncryptedOutputCacheStore, EventHashStore};
+use webb_relayer_types::EthersTimeLagClient;
 use webb_relayer_utils::metric;
 
 /// An Encrypted Output Handler that handles `NewCommitment` events and saves the encrypted_output to the store.

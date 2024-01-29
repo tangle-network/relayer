@@ -1,12 +1,9 @@
 use std::sync::Arc;
 use webb::substrate::subxt;
 use webb_event_watcher_traits::SubstrateEventWatcher;
-use webb_ew_dkg::{
-    DKGMetadataWatcher, DKGProposalHandlerWatcher, DKGPublicKeyChangedHandler,
-    ProposalSignedHandler,
-};
+use webb_ew_dkg::*;
 use webb_relayer_config::substrate::{
-    DKGPalletConfig, DKGProposalHandlerPalletConfig, Pallet, SubstrateConfig,
+    JobsPalletConfig, Pallet, SubstrateConfig,
 };
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::TangleRuntimeConfig;
@@ -45,25 +42,13 @@ async fn ignite_tangle_runtime(
     let chain_id = node_config.chain_id;
     for pallet in &node_config.pallets {
         match pallet {
-            Pallet::DKGProposalHandler(config) => {
-                start_dkg_proposal_handler(
+            Pallet::Jobs(config) => {
+                start_job_result_watcher(
                     ctx.clone(),
                     config,
                     chain_id,
                     store.clone(),
                 )?;
-            }
-            Pallet::Dkg(config) => {
-                start_dkg_pallet_watcher(
-                    ctx.clone(),
-                    config,
-                    chain_id,
-                    store.clone(),
-                )?;
-            }
-            Pallet::DKGProposals(_) => {
-                // TODO(@shekohex): start the dkg proposals service
-                unimplemented!()
             }
         }
     }
@@ -72,122 +57,56 @@ async fn ignite_tangle_runtime(
     Ok(())
 }
 
-/// Starts the event watcher for DKG proposal handler events.
+/// Starts the event watcher for JobResultSubmitted events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
 ///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
-/// * `config` - DKG proposal handler configuration
-/// * `client` - DKG client
+/// * `config` - Jobs Result handler configuration
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
-pub fn start_dkg_proposal_handler(
+pub fn start_job_result_watcher(
     ctx: RelayerContext,
-    config: &DKGProposalHandlerPalletConfig,
+    config: &JobsPalletConfig,
     chain_id: u32,
     store: Arc<super::Store>,
 ) -> crate::Result<()> {
     // check first if we should start the events watcher for this contract.
     if !config.events_watcher.enabled {
         tracing::warn!(
-            "DKG Proposal Handler events watcher is disabled for ({}).",
+            "Job Result events watcher is disabled for ({}).",
             chain_id,
         );
         return Ok(());
     }
-    tracing::debug!(
-        "DKG Proposal Handler events watcher for ({}) Started.",
-        chain_id,
-    );
+    tracing::debug!("Job Result events watcher for ({}) Started.", chain_id,);
     let mut shutdown_signal = ctx.shutdown_signal();
     let metrics = ctx.metrics.clone();
-    let my_config = config.clone();
-    let task = async move {
-        let proposal_handler_watcher = DKGProposalHandlerWatcher::default();
-        let proposal_signed_handler = ProposalSignedHandler::default();
-        let proposal_handler_watcher_task = proposal_handler_watcher.run(
-            chain_id,
-            ctx.clone(),
-            store,
-            my_config.events_watcher,
-            vec![Box::new(proposal_signed_handler)],
-            metrics,
-        );
-        tokio::select! {
-            _ = proposal_handler_watcher_task => {
-                tracing::warn!(
-                    "DKG Proposal Handler events watcher stopped for ({})",
-                    chain_id,
-                );
-            },
-            _ = shutdown_signal.recv() => {
-                tracing::trace!(
-                    "Stopping DKG Proposal Handler events watcher for ({})",
-                    chain_id,
-                );
-            },
-        }
-    };
-    // kick off the watcher.
-    tokio::task::spawn(task);
-    Ok(())
-}
-
-/// Starts the event watcher for DKG pallet events watcher.
-///
-/// Returns Ok(()) if successful, or an error if not.
-///
-/// # Arguments
-///
-/// * `ctx` - RelayContext reference that holds the configuration
-/// * `config` - DKG pallet configuration
-/// * `client` - DKG client
-/// * `chain_id` - An u32 representing the chain id of the chain
-/// * `store` -[Sled](https://sled.rs)-based database store
-pub fn start_dkg_pallet_watcher(
-    ctx: RelayerContext,
-    config: &DKGPalletConfig,
-    chain_id: u32,
-    store: Arc<super::Store>,
-) -> crate::Result<()> {
-    // check first if we should start the events watcher for this pallet.
-    if !config.events_watcher.enabled {
-        tracing::warn!(
-            "DKG Pallet events watcher is disabled for ({}).",
-            chain_id,
-        );
-        return Ok(());
-    }
-    tracing::debug!("DKG Pallet events watcher for ({}) Started.", chain_id,);
-    let mut shutdown_signal = ctx.shutdown_signal();
     let webb_config = ctx.config.clone();
-    let metrics = ctx.metrics.clone();
     let my_config = config.clone();
     let task = async move {
-        let dkg_event_watcher = DKGMetadataWatcher::default();
-        let public_key_changed_handler =
-            DKGPublicKeyChangedHandler::new(webb_config);
-
-        let dkg_event_watcher_task = dkg_event_watcher.run(
+        let job_result_watcher = JobResultWatcher::default();
+        let job_result_event_handler = JobResultHandler::new(webb_config);
+        let job_result_watcher_task = job_result_watcher.run(
             chain_id,
             ctx.clone(),
             store,
             my_config.events_watcher,
-            vec![Box::new(public_key_changed_handler)],
+            vec![Box::new(job_result_event_handler)],
             metrics,
         );
         tokio::select! {
-            _ = dkg_event_watcher_task => {
+            _ = job_result_watcher_task => {
                 tracing::warn!(
-                    "DKG Pallet events watcher stopped for ({})",
+                    "Job Result events watcher stopped for ({})",
                     chain_id,
                 );
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
-                    "Stopping DKG Pallet events watcher for ({})",
+                    "Stopping Job Result events watcher for ({})",
                     chain_id,
                 );
             },

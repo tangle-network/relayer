@@ -7,7 +7,6 @@ use webb_relayer_types::{private_key::PrivateKey, rpc_url::RpcUrl};
 use crate::{
     anchor::LinkedAnchorConfig, block_poller::BlockPollerConfig,
     event_watcher::EventsWatcherConfig,
-    signing_backend::ProposalSigningBackendConfig,
 };
 
 use super::*;
@@ -204,9 +203,6 @@ pub struct VAnchorContractConfig {
     pub common: CommonContractConfig,
     /// Controls the events watcher
     pub events_watcher: EventsWatcherConfig,
-    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,
@@ -235,9 +231,6 @@ pub struct MaspContractConfig {
     pub common: CommonContractConfig,
     /// Controls the events watcher
     pub events_watcher: EventsWatcherConfig,
-    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
-    #[serde(rename(serialize = "proposalSigningBackend"))]
-    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
     /// A List of linked Anchor Contracts (on other chains) to this contract.
     #[serde(default)]
     pub linked_anchors: Option<Vec<LinkedAnchorConfig>>,

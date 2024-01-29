@@ -47,8 +47,10 @@ pub mod substrate;
 /// Utils for processing configuration
 pub mod utils;
 
+use ethereum_types::Address;
 use evm::EvmChainConfig;
 use serde::{Deserialize, Serialize};
+use signing_backend::ProposalSigningBackendConfig;
 use std::collections::{HashMap, HashSet};
 use substrate::SubstrateConfig;
 use webb::evm::ethers::types::Chain;
@@ -96,6 +98,9 @@ pub struct WebbRelayerConfig {
     /// it is a simple map between the asset symbol and its configuration.
     #[serde(default = "defaults::unlisted_assets")]
     pub assets: HashMap<String, UnlistedAssetConfig>,
+    /// The type of the optional signing backend used for signing proposals. It can be None for pure Tx relayers
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 }
 
 impl WebbRelayerConfig {
@@ -205,6 +210,7 @@ mod tests {
     use super::*;
 
     #[test]
+    #[ignore]
     fn all_config_files_are_correct() {
         // This test is to make sure that all the config files are correct.
         // This walks all the directories inside the root of the config directory

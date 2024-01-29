@@ -6,9 +6,9 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb::evm::ethers::prelude::TimeLag;
 use webb_event_watcher_traits::{
-    BridgeWatcher, EVMEventWatcher as EventWatcher, EthersClient,
-    EthersTimeLagClient,
+    BridgeWatcher, EVMEventWatcher as EventWatcher,
 };
+use webb_relayer_types::{EthersClient, EthersTimeLagClient};
 
 use webb_ew_evm::signature_bridge_watcher::{
     SignatureBridgeContractWatcher, SignatureBridgeContractWrapper,
@@ -19,7 +19,6 @@ use webb_ew_evm::vanchor::{
 };
 use webb_ew_evm::{VAnchorContractWatcher, VAnchorContractWrapper};
 use webb_proposal_signing_backends::queue::{self, policy};
-use webb_proposals::TypedChainId;
 use webb_relayer_config::evm::{
     Contract, SignatureBridgeContractConfig, SmartAnchorUpdatesConfig,
     VAnchorContractConfig,
@@ -173,9 +172,9 @@ async fn start_vanchor_events_watcher(
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
-            TypedChainId::Evm(chain_id),
+            chain_id,
             my_config.linked_anchors,
-            my_config.proposal_signing_backend,
+            my_ctx.config.proposal_signing_backend.clone(),
         )
         .await?;
         tracing::debug!(

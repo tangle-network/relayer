@@ -14,6 +14,7 @@ repository = { workspace = true }
 webb-relayer-types = { workspace = true }
 webb-relayer-store = { workspace = true }
 webb-relayer-utils = { workspace = true }
+webb-relayer-config = { workspace = true }
 
 async-trait = { workspace = true }
 tracing = { workspace = true }

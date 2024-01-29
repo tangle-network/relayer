@@ -69,34 +69,14 @@ pub struct SubstrateConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "pallet")]
 pub enum Pallet {
-    /// `dkg-metadata` or as named in the runtime as `DKG` pallet.
-    #[serde(rename = "DKG")]
-    Dkg(DKGPalletConfig),
-    /// `dkg-proposals` or as named in the runtime as `DKGProposals` pallet.
-    DKGProposals(DKGProposalsPalletConfig),
-    /// `dkg-proposal-handler` or as named in the runtime as `DKGProposalHandler` pallet.
-    DKGProposalHandler(DKGProposalHandlerPalletConfig),
+    /// Jobs pallet
+    Jobs(JobsPalletConfig),
 }
 
-/// DKGProposalsPalletConfig represents the configuration for the DKGProposals pallet.
+/// JobsPalletConfig represents the configuration for the Jobs pallet.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
-pub struct DKGProposalsPalletConfig {
-    /// Controls the events watcher
-    pub events_watcher: EventsWatcherConfig,
-}
-
-/// DKGPalletConfig represents the configuration for the DKG pallet (dkg-metadata).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
-pub struct DKGPalletConfig {
-    /// Controls the events watcher
-    pub events_watcher: EventsWatcherConfig,
-}
-/// DKGProposalHandlerPalletConfig represents the configuration for the DKGProposalHandler pallet.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
-pub struct DKGProposalHandlerPalletConfig {
+pub struct JobsPalletConfig {
     /// Controls the events watcher
     pub events_watcher: EventsWatcherConfig,
 }

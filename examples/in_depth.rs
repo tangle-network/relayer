@@ -50,6 +50,11 @@ async fn main() -> anyhow::Result<()> {
             private_tx_relay: true,
             governance_relay: true,
         },
+        proposal_signing_backend: Some(ProposalSigningBackendConfig::Mocked(
+            MockedProposalSigningBackendConfig {
+                private_key: ethereum_types::Secret::random().into(),
+            },
+        )),
         evm: HashMap::from([(
             String::from("polygon"),
             EvmChainConfig {
@@ -79,14 +84,6 @@ async fn main() -> anyhow::Result<()> {
                             print_progress_interval: 60_000,
                             sync_blocks_from: None,
                         },
-                        proposal_signing_backend: Some(
-                            ProposalSigningBackendConfig::Mocked(
-                                MockedProposalSigningBackendConfig {
-                                    private_key:
-                                        ethereum_types::Secret::random().into(),
-                                },
-                            ),
-                        ),
                         linked_anchors: None,
                         smart_anchor_updates: Default::default(),
                     }),

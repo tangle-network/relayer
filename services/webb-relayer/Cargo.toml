@@ -31,6 +31,7 @@ webb-relayer-store = { workspace = true }
 webb-relayer-config = { workspace = true }
 webb-relayer-context = { workspace = true }
 webb-relayer-utils = { workspace = true }
+webb-relayer-types = { workspace = true }
 webb-event-watcher-traits = { workspace = true }
 webb-ew-dkg = { workspace = true }
 webb-ew-evm = { workspace = true }

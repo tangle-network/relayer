@@ -18,6 +18,7 @@ use std::time::Duration;
 use webb::evm::contract::protocol_solidity::variable_anchor::{
     VAnchorContract, VAnchorContractEvents,
 };
+
 use webb::evm::ethers::contract::Contract;
 use webb::evm::ethers::prelude::Middleware;
 use webb::evm::ethers::types;
@@ -32,8 +33,8 @@ pub mod vanchor;
 mod tests;
 
 use webb_event_watcher_traits::evm::{EventWatcher, WatchableContract};
-use webb_event_watcher_traits::EthersTimeLagClient;
 use webb_relayer_store::SledStore;
+use webb_relayer_types::EthersTimeLagClient;
 
 // VAnchorContractWrapper contains VAnchorContract contract along with configurations for Anchor contract, and Relayer.
 #[derive(Clone, Debug)]
@@ -97,11 +98,6 @@ where
         )
     }
 }
-
-/// An Anchor Contract Watcher that watches for the Anchor contract events and calls the event
-/// handlers.
-#[derive(Copy, Clone, Debug, Default)]
-pub struct AnchorContractWatcher;
 
 /// An VAnchor Contract Watcher that watches for the Anchor contract events and calls the event
 /// handlers.

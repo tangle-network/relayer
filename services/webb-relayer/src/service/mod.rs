@@ -29,8 +29,9 @@ use axum::routing::get;
 use axum::Router;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
+use webb_proposal_signing_backends::SigningRulesContractWrapper;
 use webb_proposal_signing_backends::{
-    DkgProposalSigningBackend, MockedProposalSigningBackend,
+    DkgProposalSigningRulesBackend, MockedProposalSigningBackend,
 };
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 
@@ -39,7 +40,6 @@ use webb_relayer_context::RelayerContext;
 use webb_relayer_handlers::routes::info::handle_relayer_info;
 use webb_relayer_handlers::routes::info::handle_socket_info;
 use webb_relayer_store::SledStore;
-use webb_relayer_utils::TangleRuntimeConfig;
 
 /// EVM Specific Services
 pub mod evm;
@@ -103,13 +103,13 @@ pub enum ProposalSigningBackendSelector {
     /// Mocked
     Mocked(MockedProposalSigningBackend<SledStore>),
     /// Dkg
-    Dkg(DkgProposalSigningBackend),
+    Dkg(DkgProposalSigningRulesBackend),
 }
 /// utility to configure proposal signing backend
 pub async fn make_proposal_signing_backend(
     ctx: &RelayerContext,
     store: Arc<Store>,
-    typed_chain_id: webb_proposals::TypedChainId,
+    chain_id: u32,
     linked_anchors: Option<Vec<LinkedAnchorConfig>>,
     proposal_signing_backend: Option<ProposalSigningBackendConfig>,
 ) -> crate::Result<ProposalSigningBackendSelector> {
@@ -121,22 +121,22 @@ pub async fn make_proposal_signing_backend(
 
     // we need to check/match on the proposal signing backend configured for this anchor.
     match proposal_signing_backend {
-        Some(ProposalSigningBackendConfig::DkgNode(c)) => {
-            // if it is the dkg backend, we will need to connect to that node first,
-            // and then use the DkgProposalSigningBackend to sign the proposal.
-            let dkg_client = ctx
-                .substrate_provider::<TangleRuntimeConfig, _>(c.chain_id)
-                .await?;
-            let backend = DkgProposalSigningBackend::builder()
-                .client(dkg_client)
-                .src_chain_id(typed_chain_id)
+        Some(ProposalSigningBackendConfig::Dkg(signing_rules_config)) => {
+            // if it is the dkg backend, we will be submitting proposal
+            // to signing rules contract for voting.
+            let client = ctx.evm_provider(chain_id).await?;
+            let wrapper =
+                SigningRulesContractWrapper::new(signing_rules_config, client);
+            let backend = DkgProposalSigningRulesBackend::builder()
+                .wrapper(wrapper)
+                .src_chain_id(chain_id)
                 .store(store.clone())
                 .build();
             Ok(ProposalSigningBackendSelector::Dkg(backend))
         }
         Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
-            // which is a bit simpler than the DkgProposalSigningBackend.
+            // which is a bit simpler than the DkgProposalSigningRulesBackend.
             // get only the linked chains to that anchor.
             let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
                 HashSet::new();

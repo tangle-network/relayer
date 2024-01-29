@@ -15,6 +15,7 @@ webb-proposal-signing-backends = { workspace = true }
 webb-event-watcher-traits = { workspace = true }
 webb-relayer-store = { workspace = true }
 webb-relayer-config = { workspace = true }
+webb-relayer-types = { workspace =true }
 webb-relayer-utils = { workspace = true }
 
 

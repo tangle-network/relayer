@@ -29,12 +29,12 @@ use webb::evm::ethers::utils;
 use webb_event_watcher_traits::evm::{
     BridgeWatcher, EventHandler, EventWatcher, WatchableContract,
 };
-use webb_event_watcher_traits::EthersTimeLagClient;
 use webb_relayer_store::queue::{
     QueueItem, QueueStore, TransactionQueueItemKey,
 };
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
 use webb_relayer_store::BridgeCommand;
+use webb_relayer_types::EthersTimeLagClient;
 use webb_relayer_utils::metric;
 
 /// A Wrapper around the `SignatureBridgeContract` contract.
