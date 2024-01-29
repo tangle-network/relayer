@@ -57,15 +57,14 @@ async fn ignite_tangle_runtime(
     Ok(())
 }
 
-/// Starts the event watcher for DKG proposal handler events.
+/// Starts the event watcher for JobResultSubmitted events.
 ///
 /// Returns Ok(()) if successful, or an error if not.
 ///
 /// # Arguments
 ///
 /// * `ctx` - RelayContext reference that holds the configuration
-/// * `config` - DKG proposal handler configuration
-/// * `client` - DKG client
+/// * `config` - Jobs Result handler configuration
 /// * `chain_id` - An u32 representing the chain id of the chain
 /// * `store` -[Sled](https://sled.rs)-based database store
 pub fn start_job_result_watcher(
@@ -107,7 +106,7 @@ pub fn start_job_result_watcher(
             },
             _ = shutdown_signal.recv() => {
                 tracing::trace!(
-                    "Stopping DKG Proposal Handler events watcher for ({})",
+                    "Stopping Job Result events watcher for ({})",
                     chain_id,
                 );
             },

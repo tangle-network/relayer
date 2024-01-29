@@ -12,7 +12,7 @@ use webb_relayer_store::SledStore;
 use webb_relayer_types::EthersClient;
 use webb_relayer_utils::metric;
 
-/// A ProposalSigningBackend that uses the DKG System for Signing Proposals.
+/// A ProposalSigningBackend that uses Signing Rules Contract for Signing Proposals.
 #[derive(typed_builder::TypedBuilder)]
 pub struct DkgProposalSigningRulesBackend {
     /// Signing rules contract
