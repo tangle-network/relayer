@@ -20,7 +20,6 @@ use multi_provider::MultiProvider;
 use webb::substrate::subxt::PolkadotConfig;
 use webb::{evm::ethers, substrate::subxt};
 use webb_proposals::ResourceId;
-
 pub mod clickable_link;
 
 /// Metrics functionality
