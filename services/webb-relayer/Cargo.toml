@@ -1,7 +1,7 @@
 [package]
 name = "webb-relayer"
 description = "The Webb Relayer toolkit"
-exclude = ["tests", "config", ".github", "ci", "assets", "docker"]
+exclude = ["config", ".github", "ci", "assets", "docker"]
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }
@@ -22,6 +22,12 @@ required-features = ["cli"]
 name = "in-depth"
 path = "../../examples/in_depth.rs"
 required-features = ["cli"]
+
+[[test]]
+name = "tx-relaying"
+path = "../../relayer-tests/tests/tx_relaying.rs"
+
+
 
 [dependencies]
 webb-proposal-signing-backends = { workspace = true }
@@ -57,6 +63,13 @@ tower-http = { version = "0.4", features = ["cors", "trace"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+webb-evm-test-utils = { workspace = true }
+ark-ff = { version = "^0.3.0", default-features = false }
+reqwest = { workspace = true }
+webb-relayer-handler-utils = { workspace = true }
+webb-relayer-tx-relay-utils = { workspace = true }
+
+
 
 [features]
 default = ["evm-runtime", "substrate-runtime"]

@@ -26,6 +26,7 @@ webb-ew-dkg = { path = "event-watchers/dkg" }
 webb-ew-evm = { path = "event-watchers/evm" }
 
 webb-relayer-handler-utils = { path = "crates/relayer-handler-utils" }
+webb-relayer-tx-relay-utils = { path = "crates/tx-relay-utils" }
 webb-relayer-types = { path = "crates/relayer-types" }
 webb-relayer = { path = "services/webb-relayer" }
 webb-proof-generation = { path = "crates/proof-generation" }
@@ -41,7 +42,8 @@ tokio = { version = "^1", features = ["full"] }
 config = { version = "0.13", default-features = false, features = ["toml", "json"] }
 serde_json = {   version = "^1", default-features = false }
 paw = { version = "^1.0" }
-webb = { version = "0.8.4", default-features = false }
+webb = {  git = "https://github.com/webb-tools/webb-rs", default-features = false }
+webb-evm-test-utils = {  path = "/Users/salman01zz/Webb-Tools/webb-rs/evm-test-utils", default-features = false }
 subxt-signer = { version = "0.31", features = ["subxt"] }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"] }
