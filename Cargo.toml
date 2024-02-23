@@ -43,7 +43,7 @@ config = { version = "0.13", default-features = false, features = ["toml", "json
 serde_json = {   version = "^1", default-features = false }
 paw = { version = "^1.0" }
 webb = {  git = "https://github.com/webb-tools/webb-rs", default-features = false }
-webb-evm-test-utils = {  path = "/Users/salman01zz/Webb-Tools/webb-rs/evm-test-utils", default-features = false }
+webb-evm-test-utils = {  git = "https://github.com/webb-tools/webb-rs", default-features = false }
 subxt-signer = { version = "0.31", features = ["subxt"] }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"] }

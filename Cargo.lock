@@ -199,7 +199,7 @@ dependencies = [
  "cfg-if",
  "color-eyre 0.5.11",
  "criterion",
- "ethers-core 2.0.11 (git+https://github.com/gakonst/ethers-rs)",
+ "ethers-core 2.0.11",
  "fnv",
  "hex",
  "num",
@@ -1467,6 +1467,7 @@ dependencies = [
 [[package]]
 name = "circom-proving"
 version = "0.1.0"
+source = "git+https://github.com/webb-tools/webb-rs#33f65ddea4478923c8e27042265928b6f6715cd9"
 dependencies = [
  "ark-bn254",
  "ark-circom",
@@ -1487,7 +1488,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "wasmer",
- "webb 0.8.4",
+ "webb",
 ]
 
 [[package]]
@@ -2613,13 +2614,13 @@ dependencies = [
 
 [[package]]
 name = "ethers"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1a5344eea9b20effb5efeaad29418215c4d27017639fd1f908260f59cbbd226e"
+checksum = "6c7cd562832e2ff584fa844cd2f6e5d4f35bbe11b28c7c9b8df957b2e1d0c701"
 dependencies = [
  "ethers-addressbook",
  "ethers-contract",
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "ethers-etherscan",
  "ethers-middleware",
  "ethers-providers",
@@ -2629,11 +2630,11 @@ dependencies = [
 
 [[package]]
 name = "ethers-addressbook"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8c405f24ea3a517899ba7985385c43dc4a7eb1209af3b1e0a1a32d7dcc7f8d09"
+checksum = "35dc9a249c066d17e8947ff52a4116406163cf92c7f0763cb8c001760b26403f"
 dependencies = [
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "once_cell",
  "serde",
  "serde_json",
@@ -2641,14 +2642,14 @@ dependencies = [
 
 [[package]]
 name = "ethers-contract"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0111ead599d17a7bff6985fd5756f39ca7033edc79a31b23026a8d5d64fa95cd"
+checksum = "43304317c7f776876e47f2f637859f6d0701c1ec7930a150f169d5fbe7d76f5a"
 dependencies = [
  "const-hex",
  "ethers-contract-abigen",
  "ethers-contract-derive",
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "ethers-providers",
  "futures-util",
  "once_cell",
@@ -2660,14 +2661,14 @@ dependencies = [
 
 [[package]]
 name = "ethers-contract-abigen"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "51258120c6b47ea9d9bec0d90f9e8af71c977fbefbef8213c91bfed385fe45eb"
+checksum = "f9f96502317bf34f6d71a3e3d270defaa9485d754d789e15a8e04a84161c95eb"
 dependencies = [
  "Inflector",
  "const-hex",
  "dunce",
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "eyre",
  "prettyplease",
  "proc-macro2",
@@ -2682,48 +2683,18 @@ dependencies = [
 
 [[package]]
 name = "ethers-contract-derive"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "936e7a0f1197cee2b62dc89f63eff3201dbf87c283ff7e18d86d38f83b845483"
+checksum = "452ff6b0a64507ce8d67ffd48b1da3b42f03680dcf5382244e9c93822cbbf5de"
 dependencies = [
  "Inflector",
  "const-hex",
  "ethers-contract-abigen",
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "proc-macro2",
  "quote",
  "serde_json",
  "syn 2.0.40",
-]
-
-[[package]]
-name = "ethers-core"
-version = "2.0.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2f03e0bdc216eeb9e355b90cf610ef6c5bb8aca631f97b5ae9980ce34ea7878d"
-dependencies = [
- "arrayvec 0.7.4",
- "bytes",
- "cargo_metadata",
- "chrono",
- "const-hex",
- "elliptic-curve",
- "ethabi",
- "generic-array 0.14.7",
- "k256",
- "num_enum",
- "once_cell",
- "open-fastrlp",
- "rand 0.8.5",
- "rlp",
- "serde",
- "serde_json",
- "strum",
- "syn 2.0.40",
- "tempfile",
- "thiserror",
- "tiny-keccak",
- "unicode-xid",
 ]
 
 [[package]]
@@ -2753,13 +2724,43 @@ dependencies = [
 ]
 
 [[package]]
-name = "ethers-etherscan"
-version = "2.0.11"
+name = "ethers-core"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abbac2c890bdbe0f1b8e549a53b00e2c4c1de86bb077c1094d1f38cdf9381a56"
+checksum = "aab3cef6cc1c9fd7f787043c81ad3052eff2b96a3878ef1526aa446311bdbfc9"
+dependencies = [
+ "arrayvec 0.7.4",
+ "bytes",
+ "cargo_metadata",
+ "chrono",
+ "const-hex",
+ "elliptic-curve",
+ "ethabi",
+ "generic-array 0.14.7",
+ "k256",
+ "num_enum",
+ "once_cell",
+ "open-fastrlp",
+ "rand 0.8.5",
+ "rlp",
+ "serde",
+ "serde_json",
+ "strum",
+ "syn 2.0.40",
+ "tempfile",
+ "thiserror",
+ "tiny-keccak",
+ "unicode-xid",
+]
+
+[[package]]
+name = "ethers-etherscan"
+version = "2.0.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "16d45b981f5fa769e1d0343ebc2a44cfa88c9bc312eb681b676318b40cef6fb1"
 dependencies = [
  "chrono",
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "ethers-solc",
  "reqwest",
  "semver 1.0.20",
@@ -2771,14 +2772,14 @@ dependencies = [
 
 [[package]]
 name = "ethers-middleware"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "681ece6eb1d10f7cf4f873059a77c04ff1de4f35c63dd7bccde8f438374fcb93"
+checksum = "145211f34342487ef83a597c1e69f0d3e01512217a7c72cc8a25931854c7dca0"
 dependencies = [
  "async-trait",
  "auto_impl",
  "ethers-contract",
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "ethers-etherscan",
  "ethers-providers",
  "ethers-signers",
@@ -2798,9 +2799,9 @@ dependencies = [
 
 [[package]]
 name = "ethers-providers"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25d6c0c9455d93d4990c06e049abf9b30daf148cf461ee939c11d88907c60816"
+checksum = "fb6b15393996e3b8a78ef1332d6483c11d839042c17be58decc92fa8b1c3508a"
 dependencies = [
  "async-trait",
  "auto_impl",
@@ -2808,7 +2809,7 @@ dependencies = [
  "bytes",
  "const-hex",
  "enr",
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "futures-core",
  "futures-timer",
  "futures-util",
@@ -2834,9 +2835,9 @@ dependencies = [
 
 [[package]]
 name = "ethers-signers"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0cb1b714e227bbd2d8c53528adb580b203009728b17d0d0e4119353aa9bc5532"
+checksum = "b3b125a103b56aef008af5d5fb48191984aa326b50bfd2557d231dc499833de3"
 dependencies = [
  "async-trait",
  "coins-bip32",
@@ -2844,7 +2845,7 @@ dependencies = [
  "const-hex",
  "elliptic-curve",
  "eth-keystore",
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "rand 0.8.5",
  "sha2 0.10.8",
  "thiserror",
@@ -2853,15 +2854,15 @@ dependencies = [
 
 [[package]]
 name = "ethers-solc"
-version = "2.0.11"
+version = "2.0.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a64f710586d147864cff66540a6d64518b9ff37d73ef827fee430538265b595f"
+checksum = "d21df08582e0a43005018a858cc9b465c5fff9cf4056651be64f844e57d1f55f"
 dependencies = [
  "cfg-if",
  "const-hex",
  "dirs",
  "dunce",
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "glob",
  "home",
  "md-5",
@@ -8853,22 +8854,7 @@ dependencies = [
 [[package]]
 name = "webb"
 version = "0.8.4"
-dependencies = [
- "async-trait",
- "ethers",
- "hex",
- "prettyplease",
- "rand 0.8.5",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror",
-]
-
-[[package]]
-name = "webb"
-version = "0.8.4"
-source = "git+https://github.com/webb-tools/webb-rs#a19d65bfa4218f5809feafca6a101cab5f3a4e0d"
+source = "git+https://github.com/webb-tools/webb-rs#33f65ddea4478923c8e27042265928b6f6715cd9"
 dependencies = [
  "async-trait",
  "ethers",
@@ -8936,8 +8922,8 @@ dependencies = [
  "tokio",
  "tracing",
  "tracing-test",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
+ "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-store",
@@ -8948,6 +8934,7 @@ dependencies = [
 [[package]]
 name = "webb-evm-test-utils"
 version = "0.1.0"
+source = "git+https://github.com/webb-tools/webb-rs#33f65ddea4478923c8e27042265928b6f6715cd9"
 dependencies = [
  "ark-bls12-381 0.3.0",
  "ark-bn254",
@@ -8979,8 +8966,8 @@ dependencies = [
  "tokio",
  "typed-builder 0.15.2",
  "wasmer",
- "webb 0.8.4",
- "webb-proposals 0.8.0",
+ "webb",
+ "webb-proposals",
 ]
 
 [[package]]
@@ -8994,9 +8981,9 @@ dependencies = [
  "sled",
  "tokio",
  "tracing",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-event-watcher-traits",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
  "webb-relayer-utils",
@@ -9022,10 +9009,10 @@ dependencies = [
  "tokio",
  "tracing",
  "typed-builder 0.16.2",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-event-watcher-traits",
  "webb-proposal-signing-backends",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
  "webb-relayer-types",
@@ -9045,7 +9032,7 @@ dependencies = [
  "serde",
  "tokio",
  "typed-builder 0.16.2",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-chains-info",
  "webb-relayer-store",
  "webb-relayer-utils",
@@ -9068,25 +9055,16 @@ dependencies = [
  "serde",
  "serde_json",
  "wasmer",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-circom-proving",
 ]
 
 [[package]]
 name = "webb-proposal-derive"
 version = "0.1.0"
+source = "git+https://github.com/webb-tools/webb-rs#33f65ddea4478923c8e27042265928b6f6715cd9"
 dependencies = [
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
- "quote",
- "syn 2.0.40",
-]
-
-[[package]]
-name = "webb-proposal-derive"
-version = "0.1.0"
-source = "git+https://github.com/webb-tools/webb-rs#a19d65bfa4218f5809feafca6a101cab5f3a4e0d"
-dependencies = [
- "ethers-core 2.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ethers-core 2.0.13",
  "quote",
  "syn 2.0.40",
 ]
@@ -9109,8 +9087,8 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.18",
  "typed-builder 0.16.2",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
+ "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-store",
  "webb-relayer-types",
@@ -9120,22 +9098,7 @@ dependencies = [
 [[package]]
 name = "webb-proposals"
 version = "0.8.0"
-dependencies = [
- "frame-support",
- "hex",
- "num-traits",
- "parity-scale-codec",
- "scale-info",
- "serde",
- "thiserror",
- "tiny-keccak",
- "webb-proposal-derive 0.1.0",
-]
-
-[[package]]
-name = "webb-proposals"
-version = "0.8.0"
-source = "git+https://github.com/webb-tools/webb-rs#a19d65bfa4218f5809feafca6a101cab5f3a4e0d"
+source = "git+https://github.com/webb-tools/webb-rs#33f65ddea4478923c8e27042265928b6f6715cd9"
 dependencies = [
  "frame-support",
  "hex",
@@ -9146,7 +9109,7 @@ dependencies = [
  "thiserror",
  "tiny-keccak",
  "typed-builder 0.18.1",
- "webb-proposal-derive 0.1.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb-proposal-derive",
 ]
 
 [[package]]
@@ -9170,13 +9133,13 @@ dependencies = [
  "tower-http",
  "tracing",
  "url",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-event-watcher-traits",
  "webb-evm-test-utils",
  "webb-ew-dkg",
  "webb-ew-evm",
  "webb-proposal-signing-backends",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-handler-utils",
@@ -9207,8 +9170,8 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.18",
  "url",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
+ "webb-proposals",
  "webb-relayer-store",
  "webb-relayer-types",
  "webb-relayer-utils",
@@ -9228,7 +9191,7 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-price-oracle-backends",
  "webb-relayer-config",
  "webb-relayer-store",
@@ -9244,7 +9207,7 @@ dependencies = [
  "native-tls",
  "serde",
  "tokio",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-relayer-store",
  "webb-relayer-tx-relay-utils",
 ]
@@ -9265,8 +9228,8 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
+ "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-handler-utils",
@@ -9287,8 +9250,8 @@ dependencies = [
  "sled",
  "tempfile",
  "tracing",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
+ "webb-proposals",
  "webb-relayer-utils",
 ]
 
@@ -9309,7 +9272,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.18",
  "url",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-relayer-config",
  "webb-relayer-store",
  "webb-relayer-types",
@@ -9329,10 +9292,10 @@ dependencies = [
  "subxt-signer",
  "tokio",
  "tracing",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-chains-info",
  "webb-price-oracle-backends",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb-proposals",
  "webb-relayer-config",
  "webb-relayer-context",
  "webb-relayer-handler-utils",
@@ -9361,7 +9324,7 @@ dependencies = [
  "tiny-bip39",
  "tracing",
  "url",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
  "webb-relayer-utils",
 ]
 
@@ -9391,8 +9354,8 @@ dependencies = [
  "thiserror",
  "tokio",
  "url",
- "webb 0.8.4 (git+https://github.com/webb-tools/webb-rs)",
- "webb-proposals 0.8.0 (git+https://github.com/webb-tools/webb-rs)",
+ "webb",
+ "webb-proposals",
 ]
 
 [[package]]
