@@ -57,7 +57,7 @@ pub struct ExtData<E, I, B, A, T> {
 }
 
 /// Contains data that is relayed to the VAnchors
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct VAnchorRelayTransaction<P, R, E, I, B, A, T> {
     /// The zero-knowledge proof data structure for VAnchor transactions
@@ -105,7 +105,7 @@ pub struct MaspProofData<P, R, E> {
 }
 
 /// Contains data that is relayed to masp vanchors.
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MaspRelayTransaction<P, R, E, I, B, A, T> {
     /// The zero-knowledge proof data structure for Masp VAnchor transactions

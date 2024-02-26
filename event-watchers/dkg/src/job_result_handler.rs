@@ -122,8 +122,8 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                             kind = %webb_relayer_utils::probe::Kind::SigningBackend,
                             backend = "DKG",
                             signal_bridge = %bridge_key,
-                            public_key = %hex::encode(&result.data),
-                            signature = %hex::encode(&result.signature),
+                            public_key = %hex::encode(&result.data.0),
+                            signature = %hex::encode(&result.signature.0),
                         );
 
                         // Todo enqueue transfer ownership calls

@@ -97,24 +97,15 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let public_inputs = PublicInputs {
         roots: roots.into(),
         extension_roots: cmd.proof_data.extension_roots,
-        input_nullifiers: cmd
-            .proof_data
-            .input_nullifiers
-            .iter()
-            .map(|v| v.to_fixed_bytes().into())
-            .collect(),
+        input_nullifiers: cmd.proof_data.input_nullifiers,
+
         output_commitments: cmd
             .proof_data
             .output_commitments
-            .into_iter()
-            .map(|c| U256::from(c.to_fixed_bytes()))
-            .collect::<Vec<_>>()
             .try_into()
             .unwrap_or_default(),
-        public_amount: U256::from_big_endian(
-            &cmd.proof_data.public_amount.to_fixed_bytes(),
-        ),
-        ext_data_hash: cmd.proof_data.ext_data_hash.to_fixed_bytes().into(),
+        public_amount: cmd.proof_data.public_amount,
+        ext_data_hash: cmd.proof_data.ext_data_hash,
     };
 
     let encryptions = Encryptions {

@@ -20,7 +20,7 @@ use webb::evm::ethers::abi::Address;
 use webb::evm::ethers::prelude::I256;
 
 use webb::evm::ethers::types::Bytes;
-use webb::evm::ethers::types::{H256, U256};
+use webb::evm::ethers::types::U256;
 
 use webb_relayer_tx_relay_utils::{
     MaspRelayTransaction, VAnchorRelayTransaction,
@@ -74,7 +74,7 @@ impl<'de> Deserialize<'de> for WebbI128 {
 pub type EvmVanchorCommand = EvmCommandType<
     Bytes,    // Proof bytes
     Bytes,    // Roots format
-    H256,     // Element type
+    U256,     // Element type
     Address,  // Account identifier
     U256,     // Balance type
     WebbI256, // Signed amount type
@@ -82,7 +82,7 @@ pub type EvmVanchorCommand = EvmCommandType<
 >;
 
 /// Enumerates the supported protocols for relaying transactions
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum EvmCommandType<P, R, E, I, B, A, T> {
     VAnchor(VAnchorRelayTransaction<P, R, E, I, B, A, T>),
