@@ -16,14 +16,9 @@
 
 #[cfg(test)]
 mod tests {
-
     use webb::evm::contract::protocol_solidity::fungible_token_wrapper::FungibleTokenWrapperContract;
-    use webb::evm::contract::protocol_solidity::variable_anchor_tree::{
-        CommonExtData, Encryptions, PublicInputs,
-    };
     use webb::evm::ethers::core::rand::thread_rng;
-    use webb::evm::ethers::utils::{keccak256, parse_ether};
-    use webb_evm_test_utils::LocalEvmChain;
+    use webb::evm::ethers::utils::parse_ether;
     use webb_relayer_handler_utils::{
         EvmCommandType, EvmVanchorCommand, WebbI256,
     };
@@ -40,49 +35,25 @@ mod tests {
 
     use crate::utils::{
         get_git_root_path, get_hermes_bridge_info, send_evm_tx,
-    };
-    use ark_ff::fields::PrimeField;
-    use ark_ff::BigInteger;
-    use webb_evm_test_utils::circom_proving::types::Proof as SolidityProof;
-    use webb_evm_test_utils::types::{ExtData, IntoAbiToken};
-    use webb_evm_test_utils::utils::{
-        copy_saved_state, deconstruct_public_inputs_el, setup_utxos,
-        setup_vanchor_circuit, vanchor_2_2_fixtures,
+        start_hermes_chain, vanchor_deposit_setup, vanchor_withdraw_setup,
     };
     use webb_relayer::service::build_web_services;
     use webb_relayer_context::RelayerContext;
 
     #[tokio::test]
-    async fn test_vanchor_deposit_and_withdraw() {
+    async fn test_tx_relaying() {
         dotenv::dotenv().unwrap();
-        // Get fixtures
         let git_root_path = get_git_root_path();
-        let fixture_path =
-            git_root_path.join("relayer-tests/solidity-fixtures");
-        let (params_2_2, wc_2_2) = vanchor_2_2_fixtures(&fixture_path);
 
-        // Get saved chain state with deployed contracts for testing.
-        let source = git_root_path
-            .join("relayer-tests/chain/hermes/chain-state/state.json");
-        let tmp_dir = tempfile::TempDir::with_prefix("hermes").unwrap();
-        let hermes_chain_state = tmp_dir.path();
-        copy_saved_state(&source, hermes_chain_state);
-
-        // Deploy Hermes chain.
-        let hermes_chain = LocalEvmChain::new_with_chain_state(
-            5001,
-            String::from("Hermes"),
-            hermes_chain_state,
-            Some(8545u16),
-        );
+        // start hermes chain
+        let hermes_chain = start_hermes_chain();
+        let hermes_bridge = get_hermes_bridge_info();
 
         let secret_key = hermes_chain.keys()[0].clone();
         let deployer_wallet1 =
             LocalWallet::from(secret_key.clone()).with_chain_id(5001u32);
 
-        let hermes_bridge = get_hermes_bridge_info();
-
-        // start relayer
+        // Start the relayer
         let config_path =
             git_root_path.join("relayer-tests/chain/relayer-configs");
         let config = webb_relayer_config::utils::load(config_path).unwrap();
@@ -98,19 +69,16 @@ mod tests {
             hermes_bridge.vanchor,
             hermes_chain.client(),
         );
-
         let fungible_token_wrapper = FungibleTokenWrapperContract::new(
             hermes_bridge.fungible_token_wrapper,
             hermes_chain.client(),
         );
-
         // Approve token spending on vanchor.
         fungible_token_wrapper
             .approve(vanchor.address(), parse_ether(1000).unwrap())
             .send()
             .await
             .unwrap();
-
         // Mint tokens on wallet.
         fungible_token_wrapper
             .mint(deployer_wallet1.address(), parse_ether(1000).unwrap())
@@ -123,119 +91,29 @@ mod tests {
         let relayer_wallet =
             LocalWallet::new(&mut thread_rng()).with_chain_id(5001u32);
 
-        let recipient = recipient_wallet.address();
-        let relayer = relayer_wallet.address();
-        let typed_source_chain_id = hermes_chain.typed_chain_id();
-        let types_target_chain_id = hermes_chain.typed_chain_id();
-        let ext_amount = 10_i128;
-        let public_amount = 10_i128;
-        let fee = 0_i128;
-        let refund = 0_i128.into();
-        let token = hermes_bridge.fungible_token_wrapper;
-
-        let input_chain_ids = [typed_source_chain_id, types_target_chain_id];
-        let input_amounts = [0, 0];
-        let input_indices = [0, 1];
-        let output_chain_ids = [typed_source_chain_id, types_target_chain_id];
-        let output_amount = [10, 0];
-        let output_indices = [0, 0];
-
-        let input_utxos =
-            setup_utxos(input_chain_ids, input_amounts, Some(input_indices));
-        let output_utxos =
-            setup_utxos(output_chain_ids, output_amount, Some(output_indices));
-
-        let encrypted_output1 =
-            output_utxos[0].commitment.into_repr().to_bytes_be();
-        let encrypted_output2 =
-            output_utxos[1].commitment.into_repr().to_bytes_be();
-
-        let leaf0 = input_utxos[0].commitment.into_repr().to_bytes_be();
-        let leaf1 = input_utxos[1].commitment.into_repr().to_bytes_be();
-
-        let leaves: Vec<Vec<u8>> = vec![leaf0, leaf1];
-
-        let ext_data = ExtData::builder()
-            .recipient(recipient)
-            .relayer(relayer)
-            .ext_amount(ext_amount)
-            .fee(fee.into())
-            .refund(refund)
-            .token(token)
-            .encrypted_output1(encrypted_output1.clone())
-            .encrypted_output2(encrypted_output2.clone())
-            .build();
-
-        let ext_data_hash = keccak256(ext_data.encode_abi_token());
         let root = vanchor.get_last_root().call().await.unwrap();
         let neighbor_roots =
             vanchor.get_latest_neighbor_roots().call().await.unwrap();
+        let typed_source_chain_id = hermes_chain.typed_chain_id();
+        let types_target_chain_id = hermes_chain.typed_chain_id();
 
-        let (proof, public_inputs) = setup_vanchor_circuit(
-            public_amount,
+        let vanchor_tx_setup = vanchor_deposit_setup(
             typed_source_chain_id,
-            ext_data_hash.to_vec(),
-            input_utxos,
-            output_utxos.clone(),
+            types_target_chain_id,
+            relayer_wallet.address(),
+            recipient_wallet.address(),
+            hermes_bridge.fungible_token_wrapper,
             root,
-            [neighbor_roots[0]],
-            leaves,
-            &params_2_2,
-            wc_2_2,
+            neighbor_roots,
         );
-
-        let solidity_proof = SolidityProof::try_from(proof).unwrap();
-        let proof_bytes = solidity_proof.encode().unwrap();
-
-        let common_ext_data = CommonExtData {
-            recipient,
-            ext_amount: ext_data.ext_amount.into(),
-            relayer,
-            fee: ext_data.fee.into(),
-            refund,
-            token,
-        };
-
-        // Deconstructing public inputs
-        let (
-            _chain_id,
-            public_amount,
-            root_set,
-            nullifiers,
-            commitments,
-            ext_data_hash,
-        ) = deconstruct_public_inputs_el(&public_inputs);
-
-        let flattened_root: Vec<u8> = root_set
-            .iter()
-            .flat_map(|x| {
-                let mut be_bytes = [0u8; 32];
-                x.to_big_endian(&mut be_bytes);
-                be_bytes
-            })
-            .collect();
-        let public_inputs = PublicInputs {
-            roots: flattened_root.into(),
-            extension_roots: b"0x".to_vec().into(),
-            input_nullifiers: nullifiers,
-            output_commitments: commitments,
-            public_amount,
-            ext_data_hash,
-        };
-
-        let encryptions = Encryptions {
-            encrypted_output_1: encrypted_output1.into(),
-            encrypted_output_2: encrypted_output2.into(),
-        };
-
+        let proof_bytes = vanchor_tx_setup.proof.encode().unwrap();
         let tx = vanchor.transact(
             proof_bytes.into(),
             [0u8; 32].into(),
-            common_ext_data,
-            public_inputs.clone(),
-            encryptions,
+            vanchor_tx_setup.common_ext_data,
+            vanchor_tx_setup.public_inputs.clone(),
+            vanchor_tx_setup.encryptions,
         );
-
         tx.send()
             .await
             .map_err(|e| e.decode_revert::<String>())
@@ -244,84 +122,24 @@ mod tests {
         println!(" Deposit successful");
 
         // Withdraw tokens on hermes chain.
-
-        let ext_amount = -10_i128;
-        let public_amount = -10_i128;
-        let fee = 0_i128;
-        let refund = 0_i128;
-
-        let output_chain_ids = [typed_source_chain_id, types_target_chain_id];
-        let output_amount = [0, 0];
-        let output_indices = [0, 0];
-        let input_utxos = output_utxos; // Use the output utxos from the previous transaction as input utxos.
-
-        let output_utxos =
-            setup_utxos(output_chain_ids, output_amount, Some(output_indices));
-
-        let encrypted_output1 =
-            output_utxos[0].commitment.into_repr().to_bytes_be();
-        let encrypted_output2 =
-            output_utxos[1].commitment.into_repr().to_bytes_be();
-
-        let leaf0 = input_utxos[0].commitment.into_repr().to_bytes_be();
-        let leaf1 = input_utxos[1].commitment.into_repr().to_bytes_be();
-
-        let leaves: Vec<Vec<u8>> = vec![leaf0, leaf1];
-
-        let ext_data = ExtData::builder()
-            .recipient(recipient)
-            .relayer(relayer)
-            .ext_amount(ext_amount)
-            .fee(fee.into())
-            .refund(refund.into())
-            .token(token)
-            .encrypted_output1(encrypted_output1.clone())
-            .encrypted_output2(encrypted_output2.clone())
-            .build();
-
-        let ext_data_hash_bytes = keccak256(ext_data.encode_abi_token());
         let root = vanchor.get_last_root().call().await.unwrap();
         let neighbor_roots =
             vanchor.get_latest_neighbor_roots().call().await.unwrap();
-
-        let (proof, public_inputs) = setup_vanchor_circuit(
-            public_amount,
+        let vanchor_withdraw_setup = vanchor_withdraw_setup(
             typed_source_chain_id,
-            ext_data_hash_bytes.to_vec(),
-            input_utxos,
-            output_utxos.clone(),
+            types_target_chain_id,
+            relayer_wallet.address(),
+            recipient_wallet.address(),
+            hermes_bridge.fungible_token_wrapper,
             root,
-            [neighbor_roots[0]],
-            leaves,
-            &params_2_2,
-            wc_2_2,
+            neighbor_roots,
+            vanchor_tx_setup.output_utxos, // output_utxos from deposit
         );
-
-        let solidity_proof = SolidityProof::try_from(proof).unwrap();
-        let proof_bytes = solidity_proof.encode().unwrap();
-
-        // Deconstructing public inputs
-        let (
-            _chain_id,
-            public_amount,
-            root_set,
-            nullifiers,
-            commitments,
-            ext_data_hash,
-        ) = deconstruct_public_inputs_el(&public_inputs);
-
-        let flattened_root: Vec<u8> = root_set
-            .iter()
-            .flat_map(|x| {
-                let mut be_bytes = [0u8; 32];
-                x.to_big_endian(&mut be_bytes);
-                be_bytes
-            })
-            .collect();
+        let proof_bytes = vanchor_withdraw_setup.proof.encode().unwrap();
 
         // Check recipient balance before withdrawal should be 0.
         let balance_before = fungible_token_wrapper
-            .balance_of(recipient)
+            .balance_of(recipient_wallet.address())
             .call()
             .await
             .unwrap();
@@ -332,22 +150,44 @@ mod tests {
         let vanchor_cmd = VAnchorRelayTransaction {
             proof_data: RelayerProodData {
                 proof: Bytes(proof_bytes.clone().into()),
-                roots: Bytes(flattened_root.clone().into()),
+                roots: vanchor_withdraw_setup
+                    .public_inputs
+                    .roots
+                    .clone()
+                    .into(),
                 extension_roots: Bytes(b"0x".to_vec().into()),
-                input_nullifiers: nullifiers.clone(),
-                output_commitments: commitments.to_vec(),
-                public_amount,
-                ext_data_hash,
+                input_nullifiers: vanchor_withdraw_setup
+                    .public_inputs
+                    .input_nullifiers
+                    .clone(),
+                output_commitments: vanchor_withdraw_setup
+                    .public_inputs
+                    .output_commitments
+                    .to_vec(),
+                public_amount: vanchor_withdraw_setup
+                    .public_inputs
+                    .public_amount
+                    .into(),
+                ext_data_hash: vanchor_withdraw_setup
+                    .public_inputs
+                    .ext_data_hash
+                    .into(),
             },
             ext_data: RelayerExtData {
-                recipient: ext_data.recipient,
-                relayer: ext_data.relayer,
-                ext_amount: WebbI256(ext_data.ext_amount.into()),
-                fee: ext_data.fee.into(),
-                refund: ext_data.refund.into(),
-                token: ext_data.token,
-                encrypted_output1: Bytes(ext_data.encrypted_output1.into()),
-                encrypted_output2: Bytes(ext_data.encrypted_output2.into()),
+                recipient: vanchor_withdraw_setup.common_ext_data.recipient,
+                relayer: vanchor_withdraw_setup.common_ext_data.relayer,
+                ext_amount: WebbI256(
+                    vanchor_withdraw_setup.common_ext_data.ext_amount.into(),
+                ),
+                fee: vanchor_withdraw_setup.common_ext_data.fee.into(),
+                refund: vanchor_withdraw_setup.common_ext_data.refund.into(),
+                token: vanchor_withdraw_setup.common_ext_data.token,
+                encrypted_output1: vanchor_withdraw_setup
+                    .encryptions
+                    .encrypted_output_1,
+                encrypted_output2: vanchor_withdraw_setup
+                    .encryptions
+                    .encrypted_output_2,
             },
         };
         let evm_cmd: EvmVanchorCommand = EvmCommandType::VAnchor(vanchor_cmd);
@@ -366,11 +206,134 @@ mod tests {
 
         // Check recipient balance after withdrawal should be 10.
         let balance = fungible_token_wrapper
-            .balance_of(recipient)
+            .balance_of(recipient_wallet.address())
             .call()
             .await
             .unwrap();
         assert_eq!(balance, U256::from(10));
+
+        // Shutdown chains.
+        hermes_chain.shutdown();
+        // Shutdown relayer
+        ctx.shutdown();
+        server_handle.abort();
+    }
+
+    #[tokio::test]
+    async fn test_submit_invalid_proof() {
+        dotenv::dotenv().unwrap();
+        let git_root_path = get_git_root_path();
+
+        // start hermes chain
+        let hermes_chain = start_hermes_chain();
+        let hermes_bridge = get_hermes_bridge_info();
+
+        let secret_key = hermes_chain.keys()[0].clone();
+        let deployer_wallet1 =
+            LocalWallet::from(secret_key.clone()).with_chain_id(5001u32);
+
+        // Start the relayer
+        let config_path =
+            git_root_path.join("relayer-tests/chain/relayer-configs");
+        let config = webb_relayer_config::utils::load(config_path).unwrap();
+        let store = webb_relayer_store::sled::SledStore::temporary().unwrap();
+        let ctx = RelayerContext::new(config, store.clone()).await.unwrap();
+        let server_handle = tokio::spawn(build_web_services(ctx.clone()));
+        webb_relayer::service::ignite(ctx.clone(), std::sync::Arc::new(store))
+            .await
+            .unwrap();
+
+        // Vanchor instance on hermes chain
+        let vanchor = VAnchorTreeContract::new(
+            hermes_bridge.vanchor,
+            hermes_chain.client(),
+        );
+        let fungible_token_wrapper = FungibleTokenWrapperContract::new(
+            hermes_bridge.fungible_token_wrapper,
+            hermes_chain.client(),
+        );
+        // Approve token spending on vanchor.
+        fungible_token_wrapper
+            .approve(vanchor.address(), parse_ether(1000).unwrap())
+            .send()
+            .await
+            .unwrap();
+        // Mint tokens on wallet.
+        fungible_token_wrapper
+            .mint(deployer_wallet1.address(), parse_ether(1000).unwrap())
+            .send()
+            .await
+            .unwrap();
+
+        let recipient_wallet =
+            LocalWallet::new(&mut thread_rng()).with_chain_id(5002u32);
+        let relayer_wallet =
+            LocalWallet::new(&mut thread_rng()).with_chain_id(5001u32);
+
+        let root = vanchor.get_last_root().call().await.unwrap();
+        let neighbor_roots =
+            vanchor.get_latest_neighbor_roots().call().await.unwrap();
+        let typed_source_chain_id = hermes_chain.typed_chain_id();
+        let types_target_chain_id = hermes_chain.typed_chain_id();
+
+        let vanchor_tx_setup = vanchor_deposit_setup(
+            typed_source_chain_id,
+            types_target_chain_id,
+            relayer_wallet.address(),
+            recipient_wallet.address(),
+            hermes_bridge.fungible_token_wrapper,
+            root,
+            neighbor_roots,
+        );
+        let proof_bytes = vanchor_tx_setup.proof.encode().unwrap();
+        let tx = vanchor.transact(
+            proof_bytes.into(),
+            [0u8; 32].into(),
+            vanchor_tx_setup.common_ext_data,
+            vanchor_tx_setup.public_inputs.clone(),
+            vanchor_tx_setup.encryptions,
+        );
+        tx.send()
+            .await
+            .map_err(|e| e.decode_revert::<String>())
+            .unwrap();
+
+        println!(" Deposit successful");
+
+        // Withdraw tokens on hermes chain.
+        let root = vanchor.get_last_root().call().await.unwrap();
+        let neighbor_roots =
+            vanchor.get_latest_neighbor_roots().call().await.unwrap();
+        let vanchor_withdraw_setup = vanchor_withdraw_setup(
+            typed_source_chain_id,
+            types_target_chain_id,
+            relayer_wallet.address(),
+            recipient_wallet.address(),
+            hermes_bridge.fungible_token_wrapper,
+            root,
+            neighbor_roots,
+            vanchor_tx_setup.output_utxos, // output_utxos from deposit
+        );
+        let proof_bytes = vanchor_withdraw_setup.proof.encode().unwrap();
+        let mut proof_input = vanchor_withdraw_setup.public_inputs.clone();
+        proof_input.input_nullifiers[0] = U256::zero();
+        let tx = vanchor.transact(
+            proof_bytes.into(),
+            [0u8; 32].into(),
+            vanchor_withdraw_setup.common_ext_data,
+            proof_input,
+            vanchor_withdraw_setup.encryptions,
+        );
+        let maybe_res = tx.send().await;
+        match maybe_res {
+            Ok(_) => {}
+            Err(e) => {
+                assert_eq!(
+                    "Invalid withdraw proof".to_string(),
+                    e.decode_revert::<String>().unwrap()
+                );
+            }
+        }
 
         // Shutdown chains.
         hermes_chain.shutdown();

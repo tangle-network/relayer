@@ -16,11 +16,12 @@ tokio = { workspace = true }
 serde_json = { workspace = true }
 webb = { workspace = true }
 tempfile = { workspace = true }
-ark-ff = { version = "^0.3.0", default-features = false }
+hex = { workspace = true }
 reqwest = { workspace = true }
 futures = { workspace = true }
 dotenv = { workspace = true }
 anyhow = { workspace = true }
+
 # Webb relayer dependencies
 webb-relayer = { workspace = true }
 webb-evm-test-utils = { workspace = true }
@@ -30,10 +31,13 @@ webb-relayer-store = { workspace = true }
 webb-relayer-config = { workspace = true }
 webb-relayer-context = { workspace = true }
 
-# Webb gadget dependencies
-webb-gadget-test-utils = { package = "test-utils", path = "/Users/salman01zz/Webb-Tools/gadget/test-utils" }
-dfns-cggmp21-protocol =  { path = "/Users/salman01zz/Webb-Tools/gadget/protocols/dfns-cggmp21" }
-tangle-primitives = { git = "https://github.com/webb-tools/tangle/" }
+ark-ff = { version = "^0.3.0", default-features = false }
+ark-bn254 = { version = "^0.3.0", default-features = false, features = ["curve"] }
+arkworks-setups = { version = "1.2.1", features = ["r1cs"], default-features = false }
+
+
+
+
 
 
 
