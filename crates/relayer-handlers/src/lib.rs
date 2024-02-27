@@ -13,7 +13,6 @@
 // You should receive a copy of the GNU General Public License
 // If not, see <http://www.gnu.org/licenses/>.
 
-
 //! Relayer handlers for HTTP calls.
 
 /// Module handles relayer API

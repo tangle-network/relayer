@@ -13,7 +13,6 @@
 // You should receive a copy of the GNU General Public License
 // If not, see <http://www.gnu.org/licenses/>.
 
-
 //! Webb Relayer Binary.
 #![deny(unsafe_code)]
 #![warn(missing_docs)]

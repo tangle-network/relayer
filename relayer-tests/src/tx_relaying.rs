@@ -13,7 +13,6 @@
 // You should receive a copy of the GNU General Public License
 // If not, see <http://www.gnu.org/licenses/>.
 
-
 //! In this example we will show how to use the webb relayer in depth.
 
 #[cfg(test)]

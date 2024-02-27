@@ -13,7 +13,6 @@
 // You should receive a copy of the GNU General Public License
 // If not, see <http://www.gnu.org/licenses/>.
 
-
 //! # Relayer Service Module 🕸️
 //!
 //! A module for starting long-running tasks for event watching.
@@ -33,7 +32,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb_proposal_signing_backends::SigningRulesContractWrapper;
 use webb_proposal_signing_backends::{
-    DkgProposalSigningRulesBackend, MockedProposalSigningBackend,
+    MockedProposalSigningBackend, SigningRulesBackend,
 };
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 
@@ -105,7 +104,7 @@ pub enum ProposalSigningBackendSelector {
     /// Mocked
     Mocked(MockedProposalSigningBackend<SledStore>),
     /// Dkg
-    Dkg(DkgProposalSigningRulesBackend),
+    Dkg(SigningRulesBackend),
 }
 /// utility to configure proposal signing backend
 pub async fn make_proposal_signing_backend(
@@ -129,7 +128,7 @@ pub async fn make_proposal_signing_backend(
             let client = ctx.evm_provider(chain_id).await?;
             let wrapper =
                 SigningRulesContractWrapper::new(signing_rules_config, client);
-            let backend = DkgProposalSigningRulesBackend::builder()
+            let backend = SigningRulesBackend::builder()
                 .wrapper(wrapper)
                 .src_chain_id(chain_id)
                 .store(store.clone())
@@ -138,7 +137,7 @@ pub async fn make_proposal_signing_backend(
         }
         Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
-            // which is a bit simpler than the DkgProposalSigningRulesBackend.
+            // which is a bit simpler than the SigningRulesBackend.
             // get only the linked chains to that anchor.
             let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
                 HashSet::new();

@@ -13,7 +13,6 @@
 // You should receive a copy of the GNU General Public License
 // If not, see <http://www.gnu.org/licenses/>.
 
-
 use super::*;
 use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 use crate::TransactionItemKey;

@@ -13,7 +13,6 @@
 // You should receive a copy of the GNU General Public License
 // If not, see <http://www.gnu.org/licenses/>.
 
-
 use webb_relayer_types::private_key::PrivateKey;
 
 use super::*;

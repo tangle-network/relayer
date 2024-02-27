@@ -22,7 +22,7 @@ webb-relayer-context = { path = "crates/relayer-context" }
 webb-relayer-utils = { path = "crates/relayer-utils" }
 webb-chains-info = { path = "crates/chains-info" }
 webb-event-watcher-traits = { path = "crates/event-watcher-traits" }
-webb-ew-dkg = { path = "event-watchers/dkg" }
+webb-ew-tangle = { path = "event-watchers/tangle" }
 webb-ew-evm = { path = "event-watchers/evm" }
 
 webb-relayer-handler-utils = { path = "crates/relayer-handler-utils" }

@@ -1,5 +1,5 @@
 [package]
-name = "webb-ew-dkg"
+name = "webb-ew-tangle"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }

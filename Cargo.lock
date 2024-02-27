@@ -8997,25 +8997,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "webb-ew-dkg"
-version = "0.5.15-dev"
-dependencies = [
- "async-trait",
- "ethereum-types",
- "hex",
- "native-tls",
- "sled",
- "tokio",
- "tracing",
- "webb",
- "webb-event-watcher-traits",
- "webb-proposals",
- "webb-relayer-config",
- "webb-relayer-store",
- "webb-relayer-utils",
-]
-
-[[package]]
 name = "webb-ew-evm"
 version = "0.5.15-dev"
 dependencies = [
@@ -9042,6 +9023,25 @@ dependencies = [
  "webb-relayer-config",
  "webb-relayer-store",
  "webb-relayer-types",
+ "webb-relayer-utils",
+]
+
+[[package]]
+name = "webb-ew-tangle"
+version = "0.5.15-dev"
+dependencies = [
+ "async-trait",
+ "ethereum-types",
+ "hex",
+ "native-tls",
+ "sled",
+ "tokio",
+ "tracing",
+ "webb",
+ "webb-event-watcher-traits",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-store",
  "webb-relayer-utils",
 ]
 
@@ -9158,8 +9158,8 @@ dependencies = [
  "url",
  "webb",
  "webb-event-watcher-traits",
- "webb-ew-dkg",
  "webb-ew-evm",
+ "webb-ew-tangle",
  "webb-proposal-signing-backends",
  "webb-proposals",
  "webb-relayer-config",
