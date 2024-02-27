@@ -25,7 +25,7 @@ use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
 use webb_event_watcher_traits::substrate::EventHandler;
 
-/// DKGPublicKeyChanged handler handles the `PublicKeySignatureChanged` event and then signals
+/// JobResultHandler  handles the `JobResultSubmitted` event and then signals
 /// signature bridge watcher to update governor.
 #[derive(Clone, Debug)]
 pub struct JobResultHandler {
@@ -86,8 +86,7 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
             })
             .collect();
         for event in job_result_submitted_events {
-            // Fetch job result for DKG phase
-
+            // Fetch job result for the event job id.
             let known_result_addrs = RuntimeApi::storage()
                 .jobs()
                 .known_results(event.clone().role_type, event.clone().job_id);
@@ -121,7 +120,7 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                             target: webb_relayer_utils::probe::TARGET,
                             tracing::Level::DEBUG,
                             kind = %webb_relayer_utils::probe::Kind::SigningBackend,
-                            backend = "DKG",
+                            backend = "SigningRules",
                             signal_bridge = %bridge_key,
                             public_key = %hex::encode(&result.data.0),
                             signature = %hex::encode(&result.signature.0),

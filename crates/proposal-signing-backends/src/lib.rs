@@ -38,7 +38,7 @@ use webb_proposals::ProposalTrait;
 pub mod proposal_handler;
 
 #[doc(hidden)]
-pub mod dkg;
+pub mod signing_rules;
 
 #[doc(hidden)]
 pub mod mocked;
@@ -46,10 +46,10 @@ pub mod mocked;
 /// A module to handle the queue of proposals
 pub mod queue;
 
-/// A module that Implements the DKG Proposal Signing Backend.
-pub use dkg::*;
 /// A module that Implements the Mocked Proposal Signing Backend.
 pub use mocked::*;
+/// A module that Implements the DKG Proposal Signing Backend.
+pub use signing_rules::*;
 use webb_relayer_config::signing_backend::DkgProposalSigningBackendConfig;
 use webb_relayer_utils::metric;
 

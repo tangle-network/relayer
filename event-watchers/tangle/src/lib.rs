@@ -13,7 +13,7 @@
 // You should receive a copy of the GNU General Public License
 // If not, see <http://www.gnu.org/licenses/>.
 
-/// A module for listening on DKG Governor Changes event.
+/// A module for listening on JobResult Submissions event.
 mod job_result_handler;
 #[doc(hidden)]
 pub use job_result_handler::*;
@@ -22,7 +22,7 @@ use webb::substrate::tangle_runtime::api::jobs::events::JobResultSubmitted;
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_relayer_utils::TangleRuntimeConfig;
 
-/// The DKGMetadataWatcher watches for the events from Dkg Pallet.
+/// The JobResultWatcher watches for the events from Jobs Pallet.
 #[derive(Copy, Clone, Debug, Default)]
 pub struct JobResultWatcher;
 
