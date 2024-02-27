@@ -213,7 +213,7 @@ pub fn vanchor_deposit_setup(
         recipient,
         ext_amount: ext_data.ext_amount.into(),
         relayer,
-        fee: ext_data.fee.into(),
+        fee: ext_data.fee,
         refund,
         token,
     };
@@ -260,6 +260,7 @@ pub fn vanchor_deposit_setup(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn vanchor_withdraw_setup(
     typed_source_chain_id: u64,
     types_target_chain_id: u64,
@@ -348,8 +349,8 @@ pub fn vanchor_withdraw_setup(
         recipient,
         ext_amount: ext_data.ext_amount.into(),
         relayer,
-        fee: ext_data.fee.into(),
-        refund: ext_data.refund.into(),
+        fee: ext_data.fee,
+        refund: ext_data.refund,
         token,
     };
 
