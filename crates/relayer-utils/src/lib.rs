@@ -20,7 +20,6 @@ use axum::response::{IntoResponse, Response};
 use multi_provider::MultiProvider;
 use webb::substrate::subxt::PolkadotConfig;
 use webb::{evm::ethers, substrate::subxt};
-use webb_proposals::ResourceId;
 pub mod clickable_link;
 
 /// Metrics functionality
@@ -224,8 +223,6 @@ pub enum Error {
         /// The chain id of the node.
         chain_id: String,
     },
-    #[error("No bridge registered with DKG for resource id {:?}", _0)]
-    BridgeNotRegistered(ResourceId),
     #[error("Failed to fetch token price for token: {token}")]
     FetchTokenPriceError { token: String },
     #[error("Failed to read a value from substrate storage")]
