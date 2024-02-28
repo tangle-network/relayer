@@ -13,6 +13,8 @@
 // You should receive a copy of the GNU General Public License
 // If not, see <http://www.gnu.org/licenses/>.
 
+#![allow(clippy::unwrap_used, clippy::indexing_slicing)]
+
 use ark_ff::{BigInteger, PrimeField};
 use arkworks_setups::utxo::Utxo;
 use reqwest::Response;

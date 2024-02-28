@@ -151,11 +151,7 @@ mod tests {
         let vanchor_cmd = VAnchorRelayTransaction {
             proof_data: RelayerProodData {
                 proof: Bytes(proof_bytes.clone().into()),
-                roots: vanchor_withdraw_setup
-                    .public_inputs
-                    .roots
-                    .clone()
-                    .into(),
+                roots: vanchor_withdraw_setup.public_inputs.roots.clone(),
                 extension_roots: Bytes(b"0x".to_vec().into()),
                 input_nullifiers: vanchor_withdraw_setup
                     .public_inputs
@@ -167,21 +163,19 @@ mod tests {
                     .to_vec(),
                 public_amount: vanchor_withdraw_setup
                     .public_inputs
-                    .public_amount
-                    .into(),
+                    .public_amount,
                 ext_data_hash: vanchor_withdraw_setup
                     .public_inputs
-                    .ext_data_hash
-                    .into(),
+                    .ext_data_hash,
             },
             ext_data: RelayerExtData {
                 recipient: vanchor_withdraw_setup.common_ext_data.recipient,
                 relayer: vanchor_withdraw_setup.common_ext_data.relayer,
                 ext_amount: WebbI256(
-                    vanchor_withdraw_setup.common_ext_data.ext_amount.into(),
+                    vanchor_withdraw_setup.common_ext_data.ext_amount,
                 ),
-                fee: vanchor_withdraw_setup.common_ext_data.fee.into(),
-                refund: vanchor_withdraw_setup.common_ext_data.refund.into(),
+                fee: vanchor_withdraw_setup.common_ext_data.fee,
+                refund: vanchor_withdraw_setup.common_ext_data.refund,
                 token: vanchor_withdraw_setup.common_ext_data.token,
                 encrypted_output1: vanchor_withdraw_setup
                     .encryptions
@@ -192,18 +186,10 @@ mod tests {
             },
         };
         let evm_cmd: EvmVanchorCommand = EvmCommandType::VAnchor(vanchor_cmd);
-        let response =
+        let _response =
             send_evm_tx(hermes_chain.chain_id(), vanchor.address(), evm_cmd)
-                .await;
-        match response {
-            Ok(response) => {
-                let status = response.status();
-                assert_eq!(status, 200);
-            }
-            Err(_) => {
-                assert!(false);
-            }
-        }
+                .await
+                .unwrap();
 
         // Check recipient balance after withdrawal should be 10.
         let balance = fungible_token_wrapper
