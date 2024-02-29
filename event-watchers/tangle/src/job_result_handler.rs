@@ -1,16 +1,17 @@
-// Copyright 2022 Webb Technologies Inc.
+// Copyright (C) 2022-2024 Webb Technologies Inc.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Tangle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// Tangle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// You should receive a copy of the GNU General Public License
+// If not, see <http://www.gnu.org/licenses/>.
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -24,7 +25,7 @@ use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
 use webb_event_watcher_traits::substrate::EventHandler;
 
-/// DKGPublicKeyChanged handler handles the `PublicKeySignatureChanged` event and then signals
+/// JobResultHandler  handles the `JobResultSubmitted` event and then signals
 /// signature bridge watcher to update governor.
 #[derive(Clone, Debug)]
 pub struct JobResultHandler {
@@ -85,8 +86,7 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
             })
             .collect();
         for event in job_result_submitted_events {
-            // Fetch job result for DKG phase
-
+            // Fetch job result for the event job id.
             let known_result_addrs = RuntimeApi::storage()
                 .jobs()
                 .known_results(event.clone().role_type, event.clone().job_id);
@@ -120,10 +120,10 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                             target: webb_relayer_utils::probe::TARGET,
                             tracing::Level::DEBUG,
                             kind = %webb_relayer_utils::probe::Kind::SigningBackend,
-                            backend = "DKG",
+                            backend = "SigningRules",
                             signal_bridge = %bridge_key,
-                            public_key = %hex::encode(&result.data),
-                            signature = %hex::encode(&result.signature),
+                            public_key = %hex::encode(&result.data.0),
+                            signature = %hex::encode(&result.signature.0),
                         );
 
                         // Todo enqueue transfer ownership calls

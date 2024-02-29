@@ -1,16 +1,17 @@
-// Copyright 2022 Webb Technologies Inc.
+// Copyright (C) 2022-2024 Webb Technologies Inc.
 //
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
+// Tangle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
 //
-// http://www.apache.org/licenses/LICENSE-2.0
+// Tangle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
 //
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// You should receive a copy of the GNU General Public License
+// If not, see <http://www.gnu.org/licenses/>.
 
 //! # Relayer Service Module 🕸️
 //!
@@ -31,7 +32,7 @@ use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use webb_proposal_signing_backends::SigningRulesContractWrapper;
 use webb_proposal_signing_backends::{
-    DkgProposalSigningRulesBackend, MockedProposalSigningBackend,
+    MockedProposalSigningBackend, SigningRulesBackend,
 };
 use webb_relayer_config::anchor::LinkedAnchorConfig;
 
@@ -103,7 +104,7 @@ pub enum ProposalSigningBackendSelector {
     /// Mocked
     Mocked(MockedProposalSigningBackend<SledStore>),
     /// Dkg
-    Dkg(DkgProposalSigningRulesBackend),
+    Dkg(SigningRulesBackend),
 }
 /// utility to configure proposal signing backend
 pub async fn make_proposal_signing_backend(
@@ -127,7 +128,7 @@ pub async fn make_proposal_signing_backend(
             let client = ctx.evm_provider(chain_id).await?;
             let wrapper =
                 SigningRulesContractWrapper::new(signing_rules_config, client);
-            let backend = DkgProposalSigningRulesBackend::builder()
+            let backend = SigningRulesBackend::builder()
                 .wrapper(wrapper)
                 .src_chain_id(chain_id)
                 .store(store.clone())
@@ -136,7 +137,7 @@ pub async fn make_proposal_signing_backend(
         }
         Some(ProposalSigningBackendConfig::Mocked(mocked)) => {
             // if it is the mocked backend, we will use the MockedProposalSigningBackend to sign the proposal.
-            // which is a bit simpler than the DkgProposalSigningRulesBackend.
+            // which is a bit simpler than the SigningRulesBackend.
             // get only the linked chains to that anchor.
             let mut signature_bridges: HashSet<webb_proposals::ResourceId> =
                 HashSet::new();

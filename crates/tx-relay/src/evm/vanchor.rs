@@ -1,3 +1,18 @@
+// Copyright (C) 2022-2024 Webb Technologies Inc.
+//
+// Tangle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Tangle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should receive a copy of the GNU General Public License
+// If not, see <http://www.gnu.org/licenses/>.
+
 use super::*;
 use crate::evm::fees::{get_evm_fee_info, EvmFeeInfo};
 use crate::TransactionItemKey;
@@ -97,24 +112,15 @@ pub async fn handle_vanchor_relay_tx<'a>(
     let public_inputs = PublicInputs {
         roots: roots.into(),
         extension_roots: cmd.proof_data.extension_roots,
-        input_nullifiers: cmd
-            .proof_data
-            .input_nullifiers
-            .iter()
-            .map(|v| v.to_fixed_bytes().into())
-            .collect(),
+        input_nullifiers: cmd.proof_data.input_nullifiers,
+
         output_commitments: cmd
             .proof_data
             .output_commitments
-            .into_iter()
-            .map(|c| U256::from(c.to_fixed_bytes()))
-            .collect::<Vec<_>>()
             .try_into()
             .unwrap_or_default(),
-        public_amount: U256::from_big_endian(
-            &cmd.proof_data.public_amount.to_fixed_bytes(),
-        ),
-        ext_data_hash: cmd.proof_data.ext_data_hash.to_fixed_bytes().into(),
+        public_amount: cmd.proof_data.public_amount,
+        ext_data_hash: cmd.proof_data.ext_data_hash,
     };
 
     let encryptions = Encryptions {

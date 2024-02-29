@@ -1,7 +1,22 @@
+// Copyright (C) 2022-2024 Webb Technologies Inc.
+//
+// Tangle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Tangle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should receive a copy of the GNU General Public License
+// If not, see <http://www.gnu.org/licenses/>.
+
 use std::sync::Arc;
 use webb::substrate::subxt;
 use webb_event_watcher_traits::SubstrateEventWatcher;
-use webb_ew_dkg::*;
+use webb_ew_tangle::*;
 use webb_relayer_config::substrate::{
     JobsPalletConfig, Pallet, SubstrateConfig,
 };
@@ -52,7 +67,7 @@ async fn ignite_tangle_runtime(
             }
         }
     }
-    // start the transaction queue for dkg-substrate extrinsics after starting other tasks.
+    // start the transaction queue for tangle based extrinsics after starting other tasks.
     start_tx_queue::<TangleRuntimeConfig>(ctx, chain_id, store)?;
     Ok(())
 }

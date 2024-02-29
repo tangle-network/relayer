@@ -1,3 +1,18 @@
+// Copyright (C) 2022-2024 Webb Technologies Inc.
+//
+// Tangle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Tangle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should receive a copy of the GNU General Public License
+// If not, see <http://www.gnu.org/licenses/>.
+
 use crate::SigningRulesContractWrapper;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -14,7 +29,7 @@ use webb_relayer_utils::metric;
 
 /// A ProposalSigningBackend that uses Signing Rules Contract for Signing Proposals.
 #[derive(typed_builder::TypedBuilder)]
-pub struct DkgProposalSigningRulesBackend {
+pub struct SigningRulesBackend {
     /// Signing rules contract
     wrapper: SigningRulesContractWrapper<EthersClient>,
     /// Something that implements the QueueStore trait.
@@ -29,7 +44,7 @@ pub struct DkgProposalSigningRulesBackend {
 
 //AnchorUpdateProposal for evm
 #[async_trait::async_trait]
-impl super::ProposalSigningBackend for DkgProposalSigningRulesBackend {
+impl super::ProposalSigningBackend for SigningRulesBackend {
     async fn can_handle_proposal(
         &self,
         _proposal: &(impl ProposalTrait + Sync + Send + 'static),

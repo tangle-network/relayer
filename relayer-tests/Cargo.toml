@@ -1,0 +1,43 @@
+
+[package]
+name = "relayer-integration-tests"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+documentation = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+
+
+[dependencies]
+tracing = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+webb = { workspace = true }
+tempfile = { workspace = true }
+hex = { workspace = true }
+reqwest = { workspace = true }
+futures = { workspace = true }
+dotenv = { workspace = true }
+anyhow = { workspace = true }
+
+# Webb relayer dependencies
+webb-relayer = { workspace = true }
+webb-evm-test-utils = { workspace = true }
+webb-relayer-handler-utils = { workspace = true }
+webb-relayer-tx-relay-utils = { workspace = true }
+webb-relayer-store = { workspace = true }
+webb-relayer-config = { workspace = true }
+webb-relayer-context = { workspace = true }
+
+ark-ff = { version = "^0.3.0", default-features = false }
+ark-bn254 = { version = "^0.3.0", default-features = false, features = ["curve"] }
+arkworks-setups = { version = "1.2.1", features = ["r1cs"], default-features = false }
+
+
+
+
+
+
+

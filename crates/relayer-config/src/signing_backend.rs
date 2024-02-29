@@ -1,3 +1,18 @@
+// Copyright (C) 2022-2024 Webb Technologies Inc.
+//
+// Tangle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Tangle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should receive a copy of the GNU General Public License
+// If not, see <http://www.gnu.org/licenses/>.
+
 use webb_relayer_types::private_key::PrivateKey;
 
 use super::*;
@@ -7,15 +22,15 @@ use super::*;
 #[serde(tag = "type")]
 pub enum ProposalSigningBackendConfig {
     /// Uses signing rules contract to vote and submit proposals for signing.
-    Dkg(DkgProposalSigningBackendConfig),
+    Dkg(SigningRulesBackendConfig),
     /// Uses the Private Key of the current Governor to sign proposals.
     Mocked(MockedProposalSigningBackendConfig),
 }
 
-/// DkgProposalSigningBackendConfig represents the configuration for the DKG signing backend.
+/// SigningRulesBackendConfig represents the configuration for the DKG signing backend.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all(serialize = "camelCase", deserialize = "kebab-case"))]
-pub struct DkgProposalSigningBackendConfig {
+pub struct SigningRulesBackendConfig {
     /// The address of this contract on this chain.
     pub address: Address,
     /// Phase1 Job Id

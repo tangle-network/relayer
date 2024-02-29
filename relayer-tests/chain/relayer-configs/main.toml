@@ -1,0 +1,20 @@
+port = 9955
+
+[experimental]
+smart-anchor-updates = false
+smart-anchor-updates-retries = 3
+
+[features]
+governance-relay = false
+data-query = true
+private-tx-relay = true
+
+# etherscan api key
+[evm-etherscan.mainnet]
+chain-id = 5001
+api-key = "YI7KXQGB98UKGZJ5595E6Q7ZH2PGU32BG7"
+
+# The following is the default configuration for Unlisted Assets
+[assets]
+tTNT = { name = "Test Tangle Token", decimals = 18, price = 0.10 }
+TNT = { name = "Tangle Token", decimals = 18, price = 0.10 }
