@@ -86,7 +86,7 @@ pub struct WebbRelayerConfig {
     pub substrate: HashMap<String, SubstrateConfig>,
     /// Configuration for running relayer
     ///
-    /// by deafult all features are enabled
+    /// by default all features are enabled
     /// Features:
     /// 1. Data quering for leafs
     /// 2. Governance relaying
