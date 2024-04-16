@@ -245,7 +245,7 @@ async fn start_vanchor_events_watcher(
 
         let metrics = my_ctx.metrics.clone();
         match proposal_signing_backend {
-            ProposalSigningBackendSelector::Dkg(backend) => {
+            ProposalSigningBackendSelector::Contract(backend) => {
                 let deposit_handler = VAnchorDepositHandler::builder()
                     .chain_id(chain_id)
                     .store(store.clone())
