@@ -8923,6 +8923,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "webb-ew-tangle"
+version = "0.5.15-dev"
+dependencies = [
+ "async-trait",
+ "ethereum-types",
+ "hex",
+ "native-tls",
+ "sled",
+ "tokio",
+ "tracing",
+ "webb",
+ "webb-event-watcher-traits",
+ "webb-proposals",
+ "webb-relayer-config",
+ "webb-relayer-store",
+ "webb-relayer-utils",
+]
+
+[[package]]
 name = "webb-price-oracle-backends"
 version = "0.5.15-dev"
 dependencies = [
