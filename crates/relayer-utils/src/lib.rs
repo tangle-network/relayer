@@ -249,6 +249,9 @@ pub enum Error {
     /// Invalid Proposals batch.
     #[error("Invalid proposals batch")]
     InvalidProposalsBatch,
+    /// Deserialization error.
+    #[error(transparent)]
+    DeserializationError(#[from] webb_proposals::DeserializationError),
 }
 
 /// Vanchor withdraw tx relaying errors.

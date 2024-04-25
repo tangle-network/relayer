@@ -18,22 +18,24 @@ use webb::substrate::subxt::{self, OnlineClient};use webb::substrate::tangle_run
 use webb::substrate::tangle_runtime::api as RuntimeApi;
 use webb::substrate::tangle_runtime::api::runtime_types::tangle_primitives::jobs::JobResult;
 use webb::substrate::tangle_runtime::api::runtime_types::tangle_primitives::roles::RoleType;
-use webb_relayer_store::sled::SledStore;
-use webb_relayer_store::BridgeKey;
+use webb_proposals::evm::AnchorUpdateProposal;
+use webb_relayer_store::queue::{QueueItem, QueueStore};
+use webb_relayer_store::sled::{SledQueueKey, SledStore};
+use webb_relayer_store::{BridgeCommand, BridgeKey};
 use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
 use webb_event_watcher_traits::substrate::EventHandler;
 
-/// JobResultHandler  handles the `JobResultSubmitted` event and then signals
-/// signature bridge watcher to update governor.
+/// JobResultHandler  handles the `JobResultSubmitted` event.
+/// It fetches
 #[derive(Clone, Debug)]
 pub struct JobResultHandler {
-    webb_config: webb_relayer_config::WebbRelayerConfig,
+    relayer_config: webb_relayer_config::WebbRelayerConfig,
 }
 
 impl JobResultHandler {
-    pub fn new(webb_config: webb_relayer_config::WebbRelayerConfig) -> Self {
-        Self { webb_config }
+    pub fn new(relayer_config: webb_relayer_config::WebbRelayerConfig) -> Self {
+        Self { relayer_config }
     }
 }
 
@@ -62,13 +64,13 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
 
     async fn handle_events(
         &self,
-        _store: Arc<Self::Store>,
+        store: Arc<Self::Store>,
         client: Arc<Self::Client>,
         (events, _block_number): (
             subxt::events::Events<TangleRuntimeConfig>,
             u64,
         ),
-        _metrics: Arc<Mutex<metric::Metrics>>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // We go the job result submitted event
         let job_result_submitted_events: Vec<_> = events
@@ -85,7 +87,7 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
             })
             .collect();
         for event in job_result_submitted_events {
-            // Fetch job result for DKG phase
+            // Fetch submitted job result
 
             let known_result_addrs = RuntimeApi::storage()
                 .jobs()
@@ -98,36 +100,29 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                 .fetch(&known_result_addrs)
                 .await?;
 
-            let mut bridge_keys = Vec::new();
-            // get evm bridges
-            for (_, config) in self.webb_config.evm.iter() {
-                let typed_chain_id =
-                    webb_proposals::TypedChainId::Evm(config.chain_id);
-                let bridge_key = BridgeKey::new(typed_chain_id);
-                bridge_keys.push(bridge_key);
-            }
 
             if let Some(phase_result) = maybe_result {
                 if let JobResult::DKGPhaseTwo(result) = phase_result.result {
-                    for bridge_key in &bridge_keys {
-                        tracing::debug!(
-                            %bridge_key,
-                            ?result,
-                            "Signaling Signature Bridge to transfer ownership",
-                        );
+                    let anchor_update_proposal = webb_proposals::from_slice::<AnchorUpdateProposal>(&result.data)?;
+                    let destination_resource_id = anchor_update_proposal.header().resource_id();
+                    let bridge_key = BridgeKey::new(destination_resource_id.typed_chain_id());
 
-                        tracing::event!(
-                            target: webb_relayer_utils::probe::TARGET,
-                            tracing::Level::DEBUG,
-                            kind = %webb_relayer_utils::probe::Kind::SigningBackend,
-                            backend = "DKG",
-                            signal_bridge = %bridge_key,
-                            public_key = %hex::encode(&result.data),
-                            signature = %hex::encode(&result.signature),
-                        );
-
-                        // Todo enqueue transfer ownership calls
-                    }
+                    tracing::debug!(
+                        %bridge_key,
+                        proposal = ?anchor_update_proposal,
+                        "Signaling Signature Bridge to execute proposal",
+                    );
+                    metrics.lock().await.proposals_signed.inc();
+                    let item = QueueItem::new(
+                        BridgeCommand::ExecuteProposalWithSignature {
+                            data: result.data.clone(),
+                            signature: result.signature,
+                        }
+                    );
+                    store.enqueue_item(
+                        SledQueueKey::from_bridge_key(bridge_key),
+                        item,
+                    )?;
                 }
             }
         }
