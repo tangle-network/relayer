@@ -14,10 +14,10 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::subxt::{self, OnlineClient};use webb::substrate::tangle_runtime::api::jobs::events::JobResultSubmitted;
-use webb::substrate::tangle_runtime::api as RuntimeApi;
-use webb::substrate::tangle_runtime::api::runtime_types::tangle_primitives::jobs::JobResult;
-use webb::substrate::tangle_runtime::api::runtime_types::tangle_primitives::roles::RoleType;
+use tangle_subxt::subxt::{self, OnlineClient};use tangle_subxt::tangle_testnet_runtime::api::jobs::events::JobResultSubmitted;
+use tangle_subxt::tangle_testnet_runtime::api as RuntimeApi;
+use tangle_subxt::tangle_testnet_runtime::api::runtime_types::tangle_primitives::jobs::JobResult;
+use tangle_subxt::tangle_testnet_runtime::api::runtime_types::tangle_primitives::roles::RoleType;
 use webb_proposals::evm::AnchorUpdateProposal;
 use webb_relayer_store::queue::{QueueItem, QueueStore};
 use webb_relayer_store::sled::{SledQueueKey, SledStore};
@@ -100,12 +100,17 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                 .fetch(&known_result_addrs)
                 .await?;
 
-
             if let Some(phase_result) = maybe_result {
                 if let JobResult::DKGPhaseTwo(result) = phase_result.result {
-                    let anchor_update_proposal = webb_proposals::from_slice::<AnchorUpdateProposal>(&result.data)?;
-                    let destination_resource_id = anchor_update_proposal.header().resource_id();
-                    let bridge_key = BridgeKey::new(destination_resource_id.typed_chain_id());
+                    let anchor_update_proposal =
+                        webb_proposals::from_slice::<AnchorUpdateProposal>(
+                            &result.data.0,
+                        )?;
+                    let destination_resource_id =
+                        anchor_update_proposal.header().resource_id();
+                    let bridge_key = BridgeKey::new(
+                        destination_resource_id.typed_chain_id(),
+                    );
 
                     tracing::debug!(
                         %bridge_key,
@@ -115,9 +120,9 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                     metrics.lock().await.proposals_signed.inc();
                     let item = QueueItem::new(
                         BridgeCommand::ExecuteProposalWithSignature {
-                            data: result.data.clone(),
-                            signature: result.signature,
-                        }
+                            data: result.data.0,
+                            signature: result.signature.0,
+                        },
                     );
                     store.enqueue_item(
                         SledQueueKey::from_bridge_key(bridge_key),

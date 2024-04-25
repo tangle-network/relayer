@@ -1,6 +1,6 @@
 use core::fmt;
 
-use webb::substrate::subxt::{
+use tangle_subxt::subxt::{
     self,
     ext::scale_encode::EncodeAsFields,
     tx::{Payload, TxPayload},
@@ -71,7 +71,7 @@ impl TxPayload for TypeErasedStaticTxPayload {
         &self,
         _metadata: &subxt::Metadata,
         out: &mut Vec<u8>,
-    ) -> Result<(), webb::substrate::subxt::Error> {
+    ) -> Result<(), tangle_subxt::subxt::Error> {
         *out = self.tx_data.clone();
         Ok(())
     }

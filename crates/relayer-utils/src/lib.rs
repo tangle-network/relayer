@@ -17,8 +17,9 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use multi_provider::MultiProvider;
-use webb::substrate::subxt::PolkadotConfig;
-use webb::{evm::ethers, substrate::subxt};
+use tangle_subxt::subxt;
+use tangle_subxt::subxt::PolkadotConfig;
+use webb::evm::ethers;
 use webb_proposals::ResourceId;
 
 pub mod clickable_link;
@@ -252,6 +253,9 @@ pub enum Error {
     /// Deserialization error.
     #[error(transparent)]
     DeserializationError(#[from] webb_proposals::DeserializationError),
+    /// Jsonrpsee Error
+    #[error(transparent)]
+    JsonrpseeError(#[from] jsonrpsee::core::Error),
 }
 
 /// Vanchor withdraw tx relaying errors.

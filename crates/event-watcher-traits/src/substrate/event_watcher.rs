@@ -12,8 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use tangle_subxt::subxt::{
+    backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
+    config::Header,
+    OnlineClient,
+};
 use tokio::sync::Mutex;
-use webb::substrate::subxt::{config::Header, OnlineClient};
 use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_utils::{metric, retry};
@@ -168,10 +172,24 @@ where
                     return Err(backoff::Error::transient(err));
                 }
             };
+
+            let maybe_rpc_client = ctx.get_ws_client::<_>(chain_id).await;
+            let rpc = match maybe_rpc_client {
+                Ok(ws_client) => {
+                    let rpc_client = RpcClient::new(ws_client);
+                    LegacyRpcMethods::<RuntimeConfig>::new(rpc_client.clone())
+                }
+                Err(err) => {
+                    tracing::error!(
+                        "Failed to connect with substrate rpc client for chain_id: {}, retrying...!",
+                        chain_id
+                    );
+                    return Err(backoff::Error::transient(err));
+                }
+            };
             let client = Arc::new(client);
             let mut instant = std::time::Instant::now();
             let step = 1u64;
-            let rpc = client.rpc();
             // get pallet index
             let pallet_index = {
                 let metadata = client.metadata();
@@ -196,13 +214,13 @@ where
                 // now we start polling for new events.
                 // get the current latest block number.
                 let latest_head = rpc
-                    .finalized_head()
+                    .chain_get_finalized_head()
                     .map_err(Into::into)
                     .map_err(backoff::Error::transient)
                     .await?;
 
                 let maybe_latest_header = rpc
-                    .header(Some(latest_head))
+                    .chain_get_header(Some(latest_head))
                     .map_err(Into::into)
                     .map_err(backoff::Error::transient)
                     .await?;
@@ -243,7 +261,7 @@ where
                     // range [block, dest_block].
                     // so first we get the hash of the block we want to start from.
                     let maybe_from = rpc
-                        .block_hash(Some(dest_block.into()))
+                        .chain_get_block_hash(Some(dest_block.into()))
                         .map_err(Into::into)
                         .map_err(backoff::Error::transient)
                         .await?;

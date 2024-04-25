@@ -18,8 +18,8 @@
 //! A module for managing the context of the relayer.
 use std::time::Duration;
 use std::{collections::HashMap, sync::Arc};
+use tangle_subxt::subxt::OnlineClient;
 use tokio::sync::{broadcast, Mutex};
-use webb::substrate::subxt::OnlineClient;
 use webb_relayer_tx_queue::evm::EvmTxQueueConfig;
 use webb_relayer_tx_queue::substrate::SubstrateTxQueueConfig;
 use webb_relayer_types::rpc_client::WebbRpcClient;
@@ -32,12 +32,12 @@ use webb::evm::ethers::prelude::*;
 
 #[cfg(feature = "substrate")]
 use subxt_signer::sr25519::Keypair as Sr25519Pair;
+#[cfg(feature = "substrate")]
+use tangle_subxt::subxt;
 use webb::evm::ethers::middleware::gas_oracle::{
     Cache as CachedGasOracle, Etherchain as EtherscanGasOracle,
     Median as GasOracleMedian, ProviderOracle,
 };
-#[cfg(feature = "substrate")]
-use webb::substrate::subxt;
 
 use webb_price_oracle_backends::{
     CachedPriceBackend, CoinGeckoBackend, DummyPriceBackend, PriceOracleMerger,
@@ -232,6 +232,21 @@ impl RelayerContext {
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
     }
+
+    /// Returns a Substrate ws client for the given chain.
+    #[cfg(feature = "substrate")]
+    pub async fn get_ws_client<I: Into<types::U256>>(
+        &self,
+        chain_id: I,
+    ) -> webb_relayer_utils::Result<Arc<WebbRpcClient>> {
+        let substrate_ws_clients = self.substrate_providers.lock().await;
+        substrate_ws_clients
+            .get(&chain_id.into())
+            .cloned()
+            .ok_or_else(|| {
+                webb_relayer_utils::Error::Generic("Ws client not found")
+            })
+    }
     /// Sets up and returns a Substrate client for the relayer.
     ///
     /// # Arguments
@@ -242,6 +257,10 @@ impl RelayerContext {
         &self,
         chain_id: I,
     ) -> webb_relayer_utils::Result<subxt::OnlineClient<C>> {
+        use tangle_subxt::subxt::backend::{
+            legacy::LegacyBackend, rpc::RpcClient,
+        };
+
         let chain_id: types::U256 = chain_id.into();
         let chain_name = chain_id.to_string();
         let node_config =
@@ -254,15 +273,17 @@ impl RelayerContext {
         if let Some(webb_rpc_client) = substrate_providers.get(&chain_id) {
             // check if rpc is connected if not create a new connection and cache it
             let substrate_client = if webb_rpc_client.0.is_connected() {
-                subxt::OnlineClient::<C>::from_rpc_client(
-                    webb_rpc_client.clone(),
-                )
-                .await?
+                let legacy_baclend =
+                    LegacyBackend::new(RpcClient::new(webb_rpc_client.clone()));
+                subxt::OnlineClient::<C>::from_backend(legacy_baclend.into())
+                    .await?
             } else {
                 let url = node_config.ws_endpoint.to_string();
                 let webb_rpc_client = Arc::new(WebbRpcClient::new(url).await?);
                 substrate_providers.insert(chain_id, webb_rpc_client.clone());
-                subxt::OnlineClient::<C>::from_rpc_client(webb_rpc_client)
+                let legacy_baclend =
+                    LegacyBackend::new(RpcClient::new(webb_rpc_client.clone()));
+                subxt::OnlineClient::<C>::from_backend(legacy_baclend.into())
                     .await?
             };
             Ok(substrate_client)

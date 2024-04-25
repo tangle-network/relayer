@@ -142,7 +142,9 @@ impl RetryPolicy<ProviderError> for WebbHttpRetryPolicy {
                 if let Some(data) = &json_rpc_error.data {
                     // if daily rate limit exceeded, infura returns the requested backoff in the error
                     // response
-                    let Some(backoff_seconds) = data.get("rate").and_then(|v| v.get("backoff_seconds")) else {
+                    let Some(backoff_seconds) =
+                        data.get("rate").and_then(|v| v.get("backoff_seconds"))
+                    else {
                         return Some(DEFAULT_BACKOFF);
                     };
                     // infura rate limit error

@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use webb::substrate::subxt;
+use tangle_subxt::subxt;
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_ew_tangle::*;
 use webb_relayer_config::substrate::{

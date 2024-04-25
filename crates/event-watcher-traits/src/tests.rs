@@ -13,9 +13,9 @@
 // limitations under the License.
 
 use std::sync::Arc;
+use tangle_subxt::subxt::{self, Config, OnlineClient};
+use tangle_subxt::tangle_testnet_runtime::api::system;
 use tokio::sync::Mutex;
-use webb::substrate::subxt::{self, Config, OnlineClient};
-use webb::substrate::tangle_runtime::api::system;
 use webb_relayer_config::event_watcher::EventsWatcherConfig;
 use webb_relayer_context::RelayerContext;
 use webb_relayer_store::sled::SledStore;

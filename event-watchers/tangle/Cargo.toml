@@ -26,3 +26,4 @@ webb = { workspace = true }
 native-tls = { workspace = true, optional = true }
 webb-proposals = { workspace = true }
 ethereum-types = { workspace = true }
+tangle-subxt = { workspace = true }

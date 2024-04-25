@@ -16,8 +16,8 @@
 mod job_result_handler;
 #[doc(hidden)]
 pub use job_result_handler::*;
-use webb::substrate::subxt::events::StaticEvent;
-use webb::substrate::tangle_runtime::api::jobs::events::JobResultSubmitted;
+use tangle_subxt::subxt::events::StaticEvent;
+use tangle_subxt::tangle_testnet_runtime::api::jobs::events::JobResultSubmitted;
 use webb_event_watcher_traits::SubstrateEventWatcher;
 use webb_relayer_utils::TangleRuntimeConfig;
 

@@ -52,7 +52,7 @@ webb-proposals = { workspace = true }
 ethereum-types = { workspace = true }
 dotenv = { workspace = true }
 axum = { workspace = true }
-
+tangle-subxt = { workspace = true }
 tower-http = { version = "0.4", features = ["cors", "trace"] }
 
 [dev-dependencies]
