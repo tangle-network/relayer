@@ -18,8 +18,8 @@ pub enum ProposalSigningBackendConfig {
 pub struct SigningRulesBackendConfig {
     /// The address of this contract on this chain.
     pub address: Address,
-    /// Phase1 Job Id
-    pub phase1_job_id: [u8; 32],
+    /// Phase one Job Id
+    pub phase_one_job_id: [u8; 32],
 }
 
 /// MockedSigningBackendConfig represents the configuration for the Mocked signing backend.

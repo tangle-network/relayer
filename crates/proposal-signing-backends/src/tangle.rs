@@ -52,12 +52,12 @@ impl super::ProposalSigningBackend for SigningRulesBackend {
             "Sending proposal for voting though signing rules contract"
         );
 
-        let phase1_job_id = self.wrapper.config.phase1_job_id;
+        let phase_one_job_id = self.wrapper.config.phase_one_job_id;
         // TODO: Remove phase1 job details if not required, for now using dummy.
         let phase1_job_details = vec![1u8; 32];
         let phase2_job_details = proposal.to_vec();
         let call = self.wrapper.contract.vote_proposal(
-            phase1_job_id,
+            phase_one_job_id,
             phase1_job_details.into(),
             phase2_job_details.into(),
         );
