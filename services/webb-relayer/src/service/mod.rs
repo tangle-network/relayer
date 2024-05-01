@@ -125,12 +125,15 @@ pub async fn make_proposal_signing_backend(
             // if it is uses contract as backend, we will be submitting proposal
             // to signing rules contract for voting.
             let client = ctx.evm_provider(chain_id).await?;
-            let wrapper =
-                SigningRulesContractWrapper::new(signing_rules_config, client);
+            let wrapper = SigningRulesContractWrapper::new(
+                signing_rules_config.clone(),
+                client,
+            );
             let backend = SigningRulesBackend::builder()
+                .ctx(ctx.clone())
                 .wrapper(wrapper)
                 .src_chain_id(chain_id)
-                .store(store.clone())
+                .tangle_chain_id(signing_rules_config.chain_id)
                 .build();
             Ok(ProposalSigningBackendSelector::Contract(backend))
         }

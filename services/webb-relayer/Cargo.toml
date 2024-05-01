@@ -63,8 +63,6 @@ default = ["evm-runtime", "substrate-runtime"]
 cli = ["evm-runtime", "substrate-runtime", "anyhow", "paw", "webb-relayer-config/cli"]
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
 substrate-runtime = [
-  "webb/substrate-runtime",
-  "webb-proposals/substrate",
   "webb-relayer-tx-queue/substrate",
   "subxt-signer",
 ]

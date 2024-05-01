@@ -42,6 +42,5 @@ tangle-subxt = { workspace = true }
 jsonrpsee = { workspace = true }
 
 [features]
-default = ["evm-runtime", "substrate-runtime"]
+default = ["evm-runtime"]
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
-substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]

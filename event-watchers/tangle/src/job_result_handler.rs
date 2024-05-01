@@ -49,7 +49,7 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
         &self,
         events: subxt::events::Events<TangleRuntimeConfig>,
     ) -> webb_relayer_utils::Result<bool> {
-        let has_event = events.find::<JobResultSubmitted>().any(|event| {
+                let has_event = events.find::<JobResultSubmitted>().any(|event| {
             matches!(
                 event,
                 Ok(JobResultSubmitted {
@@ -101,8 +101,8 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                 .await?;
 
             if let Some(phase_result) = maybe_result {
-                if let JobResult::DKGPhaseTwo(result) = phase_result.result {
-                    let anchor_update_proposal =
+                    if let JobResult::DKGPhaseTwo(result) = phase_result.result {
+                        let anchor_update_proposal =
                         webb_proposals::from_slice::<AnchorUpdateProposal>(
                             &result.data.0,
                         )?;
@@ -112,16 +112,25 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                         destination_resource_id.typed_chain_id(),
                     );
 
+                    metrics.lock().await.proposals_signed.inc();
+
+                    let signature = if result.signature.0.len() == 64 {
+                        let mut sig = result.signature.0.clone();
+                        sig.push(28);
+                        sig
+                    } else {
+                        result.signature.0.clone()
+                    };
                     tracing::debug!(
                         %bridge_key,
                         proposal = ?anchor_update_proposal,
+                        signature = ?signature,
                         "Signaling Signature Bridge to execute proposal",
                     );
-                    metrics.lock().await.proposals_signed.inc();
                     let item = QueueItem::new(
                         BridgeCommand::ExecuteProposalWithSignature {
                             data: result.data.0,
-                            signature: result.signature.0,
+                            signature,
                         },
                     );
                     store.enqueue_item(

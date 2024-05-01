@@ -28,7 +28,7 @@ use std::{ops, sync::Arc};
 use tokio::sync::Mutex;
 use webb::evm::ethers::contract::Contract;
 use webb::evm::{
-    contract::protocol_dkg::signing_rules::SigningRulesContract,
+    contract::tangle::votable_signing_rules::SigningRulesContract,
     ethers::providers::Middleware,
 };
 use webb_proposals::ProposalTrait;

@@ -237,9 +237,8 @@ where
                     "Latest block number: #{}",
                     current_block_number
                 );
-                let sync_blocks_from: u64 = event_watcher_config
-                    .sync_blocks_from
-                    .unwrap_or(current_block_number);
+                let sync_blocks_from: u64 =
+                    event_watcher_config.sync_blocks_from.unwrap_or(0);
                 // get latest saved block number
                 let block = store
                     .get_last_block_number(history_store_key, sync_blocks_from)

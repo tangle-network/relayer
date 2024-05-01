@@ -146,10 +146,6 @@ pub enum Error {
             ethers::middleware::timelag::TimeLag<Arc<RetryClientProvider>>,
         >,
     ),
-
-    /// SCALE Codec error.
-    #[error(transparent)]
-    ScaleCodec(#[from] webb::substrate::scale::Error),
     /// Sled database error.
     #[error(transparent)]
     Sled(#[from] sled::Error),

@@ -96,7 +96,6 @@ impl RelayerContext {
                 .collect();
             DummyPriceBackend::new(price_map)
         };
-        // **chef's kiss** this is so beautiful
         let cached_coingecko_backend = CachedPriceBackend::builder()
             .backend(CoinGeckoBackend::builder().build())
             .store(store.clone())
@@ -229,6 +228,33 @@ impl RelayerContext {
             .ok_or(webb_relayer_utils::Error::MissingSecrets)?;
         let key = SecretKey::from_bytes(private_key.as_bytes().into())?;
         let chain_id = chain_config.chain_id;
+        let wallet = LocalWallet::from(key).with_chain_id(chain_id);
+        Ok(wallet)
+    }
+
+    /// Return evm wallet for evm based substrate chains
+    /// # Arguments
+    /// * `chain_id` - A string representing the chain id.
+    ///
+    /// # Returns
+    #[cfg(feature = "substrate")]
+    pub async fn evm_wallet_substrate_chain<I: Into<types::U256>>(
+        &self,
+        chain_id: I,
+    ) -> webb_relayer_utils::Result<LocalWallet> {
+        let chain_id: types::U256 = chain_id.into();
+        let chain_name = chain_id.to_string();
+        let node_config =
+            self.config.substrate.get(&chain_name).cloned().ok_or_else(
+                || webb_relayer_utils::Error::NodeNotFound {
+                    chain_id: chain_id.to_string(),
+                },
+            )?;
+        let private_key = node_config
+            .private_key
+            .ok_or(webb_relayer_utils::Error::MissingSecrets)?;
+        let key = SecretKey::from_bytes(private_key.as_bytes().into())?;
+        let chain_id = node_config.chain_id;
         let wallet = LocalWallet::from(key).with_chain_id(chain_id);
         Ok(wallet)
     }

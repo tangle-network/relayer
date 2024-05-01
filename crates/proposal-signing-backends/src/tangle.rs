@@ -1,30 +1,30 @@
 use crate::SigningRulesContractWrapper;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::evm::ethers::types::transaction::eip2718::TypedTransaction;
-use webb::evm::ethers::utils;
+use webb::evm::ethers::middleware::SignerMiddleware;
+use webb::evm::ethers::providers::Middleware;
 use webb_proposals::ProposalTrait;
-use webb_relayer_store::queue::{
-    QueueItem, QueueStore, TransactionQueueItemKey,
-};
-use webb_relayer_store::sled::SledQueueKey;
-use webb_relayer_store::SledStore;
+use webb_relayer_context::RelayerContext;
 use webb_relayer_types::EthersClient;
 use webb_relayer_utils::metric;
 
 /// A ProposalSigningBackend that uses Signing Rules Contract for Signing Proposals.
 #[derive(typed_builder::TypedBuilder)]
 pub struct SigningRulesBackend {
+    /// Relayer context
+    #[builder(setter(into))]
+    ctx: RelayerContext,
     /// Signing rules contract
     wrapper: SigningRulesContractWrapper<EthersClient>,
-    /// Something that implements the QueueStore trait.
-    #[builder(setter(into))]
-    store: Arc<SledStore>,
     /// The chain id of the chain that this backend is running on.
     ///
     /// This used as the source chain id for the proposals.
     #[builder(setter(into))]
     src_chain_id: u32,
+    /// The tangle chain id where the signing rules contract is deployed.
+    /// This is where the proposals will be sent for voting.
+    #[builder(setter(into))]
+    tangle_chain_id: u32,
 }
 
 //AnchorUpdateProposal for evm
@@ -49,46 +49,40 @@ impl super::ProposalSigningBackend for SigningRulesBackend {
             resource_id = hex::encode(resource_id.into_bytes()),
             src_chain_id = ?self.src_chain_id,
             proposal = format!("0x{}", hex::encode(proposal.to_vec())),
-            "Sending proposal for voting though signing rules contract"
+            "Sending proposal for voting on signing rules contract"
         );
 
         let phase_one_job_id = self.wrapper.config.phase_one_job_id;
-        // TODO: Remove phase1 job details if not required, for now using dummy.
-        let phase1_job_details = vec![1u8; 32];
         let phase2_job_details = proposal.to_vec();
-        let call = self.wrapper.contract.vote_proposal(
-            phase_one_job_id,
-            phase1_job_details.into(),
-            phase2_job_details.into(),
-        );
+        let vote_proposal_fn_call = self
+            .wrapper
+            .contract
+            .vote_proposal(phase_one_job_id, phase2_job_details.into());
+        let provider = self.ctx.evm_provider(self.tangle_chain_id).await?;
+        let wallet = self.ctx.evm_wallet(self.tangle_chain_id).await?;
+        let signer_client = SignerMiddleware::new(provider.clone(), wallet);
+        let maybe_result = signer_client
+            .send_transaction(vote_proposal_fn_call.clone().tx, None)
+            .await;
 
-        let typed_tx: TypedTransaction = call.tx;
-        let item = QueueItem::new(typed_tx.clone());
-        let tx_key = SledQueueKey::from_evm_with_custom_key(
-            self.src_chain_id,
-            typed_tx.item_key(),
-        );
-        let proposal_data_hash = utils::keccak256(proposal.to_vec());
-        // check if we already have a queued tx for this proposal.
-        // if we do, we should not enqueue it again.
-        let qq = QueueStore::<TypedTransaction>::has_item(&self.store, tx_key)?;
-        if qq {
-            tracing::debug!(
-                proposal_data_hash = %hex::encode(proposal_data_hash),
-                "Skipping execution of this proposal: Already Exists in Queue",
-            );
-            return Ok(());
-        }
+        match maybe_result {
+            Ok(tx_hash) => {
+                let tx_hash = *tx_hash;
+                tracing::info!(
+                    tx_hash = tx_hash.to_string(),
+                    proposal = format!("0x{}", hex::encode(proposal.to_vec())),
+                    src_chain_id = ?self.src_chain_id,
+                    "Vote proposal transaction sent successfully"
+                );
+            }
+            Err(e) => {
+                tracing::error!(
+                    error = ?e,
+                    "Error sending vote proposal transaction"
+                );
+            }
+        };
 
-        QueueStore::<TypedTransaction>::enqueue_item(
-            &self.store,
-            tx_key,
-            item,
-        )?;
-        tracing::debug!(
-            proposal_data_hash = %hex::encode(proposal_data_hash),
-            "Enqueued voting call for Anchor update proposal through evm tx queue",
-        );
         Ok(())
     }
 }
