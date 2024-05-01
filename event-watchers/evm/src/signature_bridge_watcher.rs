@@ -379,7 +379,7 @@ where
 
         let chain_id = contract.get_chain_id().call().await?;
         let new_governor_address =
-            eth_address_from_uncompressed_public_key(&public_key);
+            eth_address_from_compressed_public_key(&public_key)?;
         let tx_key = SledQueueKey::from_evm_with_custom_key(
             chain_id.as_u32(),
             make_transfer_ownership_key(new_governor_address.to_fixed_bytes()),
@@ -730,33 +730,51 @@ fn make_transfer_ownership_key(new_owner_address: [u8; 20]) -> [u8; 64] {
 }
 
 /// Get the Ethereum address from the uncompressed EcDSA public key.
-fn eth_address_from_uncompressed_public_key(pub_key: &[u8]) -> Address {
+fn eth_address_from_compressed_public_key(
+    pub_key: &[u8],
+) -> webb_relayer_utils::Result<Address> {
+    let result = libsecp256k1::PublicKey::parse_slice(
+        &pub_key,
+        Some(libsecp256k1::PublicKeyFormat::Compressed),
+    )
+    .map(|pk| pk.serialize())
+    .map_err(|_| {
+        webb_relayer_utils::Error::Generic("Invalid compressed public key")
+    })?;
+    let uncompressed_key = {
+        if result.len() == 65 {
+            // remove the 0x04 prefix
+            result[1..].to_vec()
+        } else {
+            result.to_vec()
+        }
+    };
     // hash the public key.
-    let pub_key_hash = utils::keccak256(pub_key);
+    let pub_key_hash = utils::keccak256(uncompressed_key);
     // take the last 20 bytes of the hash.
     let mut address_bytes = [0u8; 20];
     address_bytes.copy_from_slice(&pub_key_hash[12..32]);
-    Address::from(address_bytes)
+    Ok(Address::from(address_bytes))
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::signature_bridge_watcher::eth_address_from_uncompressed_public_key;
+    use crate::signature_bridge_watcher::eth_address_from_compressed_public_key;
 
     #[test]
     fn should_get_the_correct_eth_address_from_public_key() {
         // given
-        let public_key_uncompressed_hex = hex::decode(
-            "58eb6e2a1901baead22a6f021454638c2abeb8e179400879098f327cebdecf44823ec88239a198b00622768b8461e66c7531a6b22be417db0069be28abe1bdf3",
+        let public_key_compressed = hex::decode(
+            "02531fe6068134503d2723133227c867ac8fa6c83c537e9a44c3c5bdbdcb1fe337",
         ).unwrap();
-        // when
-        let address = eth_address_from_uncompressed_public_key(
-            &public_key_uncompressed_hex,
-        );
-        // then
+
+        let address =
+            eth_address_from_compressed_public_key(&public_key_compressed)
+                .unwrap();
+
         assert_eq!(
             address,
-            "0x9dD0de7Ff10D3eB77F0488039591498f32a23c8A"
+            "0x3325a78425f17a7e487eb5666b2bfd93abb06c70"
                 .parse()
                 .unwrap()
         );

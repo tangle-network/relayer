@@ -39,3 +39,4 @@ native-tls = { workspace = true }
 webb-proposals ={ workspace = true }
 ethereum-types = { workspace = true }
 typed-builder = { workspace = true }
+libsecp256k1 = { workspace = true }
