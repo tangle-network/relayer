@@ -7104,6 +7104,8 @@ dependencies = [
 [[package]]
 name = "webb"
 version = "0.8.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ca5741c27f380e4ac74b2ecd2a1b8d226282808dcc309ad1cd4e4057c876ada"
 dependencies = [
  "async-trait",
  "ethers",
@@ -7272,6 +7274,7 @@ dependencies = [
 [[package]]
 name = "webb-proposal-derive"
 version = "0.1.0"
+source = "git+https://github.com/webb-tools/webb-rs#580cced1c6516ac06bdce85ef072b34ed0bb00a0"
 dependencies = [
  "ethers-core 2.0.14",
  "quote",
@@ -7308,6 +7311,7 @@ dependencies = [
 [[package]]
 name = "webb-proposals"
 version = "0.8.1"
+source = "git+https://github.com/webb-tools/webb-rs#580cced1c6516ac06bdce85ef072b34ed0bb00a0"
 dependencies = [
  "hex",
  "num-traits",
