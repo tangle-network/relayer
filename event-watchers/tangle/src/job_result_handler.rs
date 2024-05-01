@@ -49,7 +49,7 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
         &self,
         events: subxt::events::Events<TangleRuntimeConfig>,
     ) -> webb_relayer_utils::Result<bool> {
-                let has_event = events.find::<JobResultSubmitted>().any(|event| {
+        let has_event = events.find::<JobResultSubmitted>().any(|event| {
             matches!(
                 event,
                 Ok(JobResultSubmitted {
@@ -101,8 +101,8 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                 .await?;
 
             if let Some(phase_result) = maybe_result {
-                    if let JobResult::DKGPhaseTwo(result) = phase_result.result {
-                        let anchor_update_proposal =
+                if let JobResult::DKGPhaseTwo(result) = phase_result.result {
+                    let anchor_update_proposal =
                         webb_proposals::from_slice::<AnchorUpdateProposal>(
                             &result.data.0,
                         )?;
