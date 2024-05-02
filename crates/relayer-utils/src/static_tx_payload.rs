@@ -72,7 +72,7 @@ impl TxPayload for TypeErasedStaticTxPayload {
         _metadata: &subxt::Metadata,
         out: &mut Vec<u8>,
     ) -> Result<(), tangle_subxt::subxt::Error> {
-        *out = self.tx_data.clone();
+        out.clone_from(&self.tx_data);
         Ok(())
     }
 }
