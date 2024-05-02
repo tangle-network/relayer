@@ -86,8 +86,8 @@ pub fn start_job_result_watcher(
     let metrics = ctx.metrics.clone();
     let my_config = config.clone();
     let task = async move {
-        let job_result_watcher = JobResultWatcher::default();
-        let job_result_event_handler = JobResultHandler::default();
+        let job_result_watcher = JobResultWatcher;
+        let job_result_event_handler = JobResultHandler;
         let job_result_watcher_task = job_result_watcher.run(
             chain_id,
             ctx.clone(),

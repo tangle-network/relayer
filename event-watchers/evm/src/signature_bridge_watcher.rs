@@ -734,7 +734,7 @@ fn eth_address_from_compressed_public_key(
     pub_key: &[u8],
 ) -> webb_relayer_utils::Result<Address> {
     let result = libsecp256k1::PublicKey::parse_slice(
-        &pub_key,
+        pub_key,
         Some(libsecp256k1::PublicKeyFormat::Compressed),
     )
     .map(|pk| pk.serialize())
