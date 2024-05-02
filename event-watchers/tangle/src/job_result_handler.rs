@@ -27,17 +27,8 @@ use webb_relayer_utils::{metric, TangleRuntimeConfig};
 use webb_event_watcher_traits::substrate::EventHandler;
 
 /// JobResultHandler  handles the `JobResultSubmitted` event.
-/// It fetches
-#[derive(Clone, Debug)]
-pub struct JobResultHandler {
-    relayer_config: webb_relayer_config::WebbRelayerConfig,
-}
-
-impl JobResultHandler {
-    pub fn new(relayer_config: webb_relayer_config::WebbRelayerConfig) -> Self {
-        Self { relayer_config }
-    }
-}
+#[derive(Copy, Clone, Debug, Default)]
+pub struct JobResultHandler;
 
 #[async_trait::async_trait]
 impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
@@ -88,7 +79,6 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
             .collect();
         for event in job_result_submitted_events {
             // Fetch submitted job result
-
             let known_result_addrs = RuntimeApi::storage()
                 .jobs()
                 .known_results(event.clone().role_type, event.clone().job_id);
@@ -101,45 +91,49 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                 .await?;
 
             if let Some(phase_result) = maybe_result {
-                if let JobResult::DKGPhaseTwo(result) = phase_result.result {
-                    let anchor_update_proposal =
-                        webb_proposals::from_slice::<AnchorUpdateProposal>(
-                            &result.data.0,
+                match phase_result.result {
+                    JobResult::DKGPhaseTwo(result) => {
+                        let anchor_update_proposal =
+                            webb_proposals::from_slice::<AnchorUpdateProposal>(
+                                &result.data.0,
+                            )?;
+                        let destination_resource_id =
+                            anchor_update_proposal.header().resource_id();
+                        let bridge_key = BridgeKey::new(
+                            destination_resource_id.typed_chain_id(),
+                        );
+
+                        metrics.lock().await.proposals_signed.inc();
+
+                        let signature = if result.signature.0.len() == 64 {
+                            let mut sig = result.signature.0.clone();
+                            sig.push(28);
+                            sig
+                        } else {
+                            result.signature.0.clone()
+                        };
+                        tracing::debug!(
+                            %bridge_key,
+                            proposal = ?anchor_update_proposal,
+                            signature = ?signature,
+                            "Signaling Signature Bridge to execute proposal",
+                        );
+                        let item = QueueItem::new(
+                            BridgeCommand::ExecuteProposalWithSignature {
+                                data: result.data.0,
+                                signature,
+                            },
+                        );
+                        store.enqueue_item(
+                            SledQueueKey::from_bridge_key(bridge_key),
+                            item,
                         )?;
-                    let destination_resource_id =
-                        anchor_update_proposal.header().resource_id();
-                    let bridge_key = BridgeKey::new(
-                        destination_resource_id.typed_chain_id(),
-                    );
-
-                    metrics.lock().await.proposals_signed.inc();
-
-                    let signature = if result.signature.0.len() == 64 {
-                        let mut sig = result.signature.0.clone();
-                        sig.push(28);
-                        sig
-                    } else {
-                        result.signature.0.clone()
-                    };
-                    tracing::debug!(
-                        %bridge_key,
-                        proposal = ?anchor_update_proposal,
-                        signature = ?signature,
-                        "Signaling Signature Bridge to execute proposal",
-                    );
-                    let item = QueueItem::new(
-                        BridgeCommand::ExecuteProposalWithSignature {
-                            data: result.data.0,
-                            signature,
-                        },
-                    );
-                    store.enqueue_item(
-                        SledQueueKey::from_bridge_key(bridge_key),
-                        item,
-                    )?;
+                    }
+                    _ => unimplemented!("Phase results not supported"),
                 }
             }
         }
+
         Ok(())
     }
 }

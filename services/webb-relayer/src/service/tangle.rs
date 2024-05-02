@@ -84,11 +84,10 @@ pub fn start_job_result_watcher(
     tracing::debug!("Job Result events watcher for ({}) Started.", chain_id,);
     let mut shutdown_signal = ctx.shutdown_signal();
     let metrics = ctx.metrics.clone();
-    let webb_config = ctx.config.clone();
     let my_config = config.clone();
     let task = async move {
         let job_result_watcher = JobResultWatcher::default();
-        let job_result_event_handler = JobResultHandler::new(webb_config);
+        let job_result_event_handler = JobResultHandler::default();
         let job_result_watcher_task = job_result_watcher.run(
             chain_id,
             ctx.clone(),
