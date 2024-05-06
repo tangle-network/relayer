@@ -62,7 +62,7 @@ impl VAnchorLeavesHandler {
         let poseidon = Poseidon::<Bn254Fr>::new(params);
         let empty_leaf_scalar: Vec<Bn254Fr> = bytes_vec_to_f(&vec![empty_leaf]);
         let empty_leaf_vec = empty_leaf_scalar
-            .get(0)
+            .first()
             .map(|d| d.into_repr().to_bytes_be())
             .ok_or(webb_relayer_utils::Error::ConvertLeafScalarError)?;
 

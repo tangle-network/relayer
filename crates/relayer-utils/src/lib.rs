@@ -17,8 +17,9 @@ use std::sync::Arc;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use multi_provider::MultiProvider;
-use webb::substrate::subxt::PolkadotConfig;
-use webb::{evm::ethers, substrate::subxt};
+use tangle_subxt::subxt;
+use tangle_subxt::subxt::PolkadotConfig;
+use webb::evm::ethers;
 use webb_proposals::ResourceId;
 
 pub mod clickable_link;
@@ -145,10 +146,6 @@ pub enum Error {
             ethers::middleware::timelag::TimeLag<Arc<RetryClientProvider>>,
         >,
     ),
-
-    /// SCALE Codec error.
-    #[error(transparent)]
-    ScaleCodec(#[from] webb::substrate::scale::Error),
     /// Sled database error.
     #[error(transparent)]
     Sled(#[from] sled::Error),
@@ -249,6 +246,12 @@ pub enum Error {
     /// Invalid Proposals batch.
     #[error("Invalid proposals batch")]
     InvalidProposalsBatch,
+    /// Deserialization error.
+    #[error(transparent)]
+    DeserializationError(#[from] webb_proposals::DeserializationError),
+    /// Jsonrpsee Error
+    #[error(transparent)]
+    JsonrpseeError(#[from] jsonrpsee::core::Error),
 }
 
 /// Vanchor withdraw tx relaying errors.

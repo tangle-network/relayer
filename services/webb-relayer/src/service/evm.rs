@@ -168,7 +168,7 @@ async fn start_vanchor_events_watcher(
             "VAnchor events watcher for ({}) Started.",
             contract_address,
         );
-        let contract_watcher = VAnchorContractWatcher::default();
+        let contract_watcher = VAnchorContractWatcher;
         let proposal_signing_backend = make_proposal_signing_backend(
             &my_ctx,
             store.clone(),
@@ -245,7 +245,7 @@ async fn start_vanchor_events_watcher(
 
         let metrics = my_ctx.metrics.clone();
         match proposal_signing_backend {
-            ProposalSigningBackendSelector::Dkg(backend) => {
+            ProposalSigningBackendSelector::Contract(backend) => {
                 let deposit_handler = VAnchorDepositHandler::builder()
                     .chain_id(chain_id)
                     .store(store.clone())
@@ -424,9 +424,9 @@ pub async fn start_signature_bridge_events_watcher(
             "Signature Bridge watcher for ({}) Started.",
             contract_address
         );
-        let bridge_contract_watcher = SignatureBridgeContractWatcher::default();
+        let bridge_contract_watcher = SignatureBridgeContractWatcher;
         let governance_transfer_handler =
-            SignatureBridgeGovernanceOwnershipTransferredHandler::default();
+            SignatureBridgeGovernanceOwnershipTransferredHandler;
         let events_watcher_task = EventWatcher::run(
             &bridge_contract_watcher,
             client.clone(),

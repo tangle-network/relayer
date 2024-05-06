@@ -22,7 +22,7 @@ webb-relayer-context = { path = "crates/relayer-context" }
 webb-relayer-utils = { path = "crates/relayer-utils" }
 webb-chains-info = { path = "crates/chains-info" }
 webb-event-watcher-traits = { path = "crates/event-watcher-traits" }
-webb-ew-dkg = { path = "event-watchers/dkg" }
+webb-ew-tangle = { path = "event-watchers/tangle" }
 webb-ew-evm = { path = "event-watchers/evm" }
 
 webb-relayer-handler-utils = { path = "crates/relayer-handler-utils" }
@@ -30,6 +30,8 @@ webb-relayer-types = { path = "crates/relayer-types" }
 webb-relayer = { path = "services/webb-relayer" }
 webb-proof-generation = { path = "crates/proof-generation" }
 webb-circom-proving = { path = "crates/circom-proving" }
+
+tangle-subxt = { git = "https://github.com/webb-tools/tangle", default-features = false, branch = "main" }
 
 thiserror = "^1"
 anyhow = "^1"
@@ -39,10 +41,10 @@ url = { version = "^2.3", features = ["serde"] }
 sled = "^0.34"
 tokio = { version = "^1", features = ["full"] }
 config = { version = "0.13", default-features = false, features = ["toml", "json"] }
-serde_json = {   version = "^1", default-features = false }
+serde_json = {   version = "^1", default-features = false, features = ["raw_value"] }
 paw = { version = "^1.0" }
-webb = { version = "0.8.4", default-features = false }
-subxt-signer = { version = "0.31", features = ["subxt"] }
+webb = { version = "0.8.5", default-features = false }
+subxt-signer = { version = "0.34", features = ["subxt"] }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { version = "^0.2", features = ["vendored"] }
 webb-proposals = { git = "https://github.com/webb-tools/webb-rs", features = ["scale"] }
@@ -64,7 +66,7 @@ serde = { version = "^1", default-features = false, features = ["derive"] }
 glob = "^0.3"
 serde_path_to_error = "0.1.9"
 serde_bytes = "0.11"
-jsonrpsee = { version = "0.16.2" }
+jsonrpsee = { version = "0.20.3" }
 
 [profile.release]
 strip = "symbols"

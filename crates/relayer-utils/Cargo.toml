@@ -38,8 +38,9 @@ ark-std = { version = "^0.3.0", default-features = false }
 derive_more = { version = "0.99", default-features = false, features = ["display"] }
 prometheus = { version = "0.13.0", default-features = false }
 hyper = "0.14.24"
+tangle-subxt = { workspace = true }
+jsonrpsee = { workspace = true }
 
 [features]
-default = ["evm-runtime", "substrate-runtime"]
+default = ["evm-runtime"]
 evm-runtime = ["webb/evm-runtime", "webb-proposals/evm"]
-substrate-runtime = ["webb/substrate-runtime", "webb-proposals/substrate"]

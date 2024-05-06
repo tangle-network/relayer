@@ -71,7 +71,7 @@ pub fn parse_from_files(
             // merge in all of the contracts into the config
             for (network_name, network_chain) in c.evm.iter_mut() {
                 if let Some(stored_contracts) = contracts.get(network_name) {
-                    network_chain.contracts = stored_contracts.clone();
+                    network_chain.contracts.clone_from(stored_contracts)
                 }
             }
 

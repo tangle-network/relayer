@@ -28,6 +28,7 @@ subxt-signer = { workspace = true, optional = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true, optional = true }
 ethereum-types = { workspace = true }
+tangle-subxt = { workspace = true }
 
 rand = { workspace = true, default-features = false, features = ["getrandom"] }
 

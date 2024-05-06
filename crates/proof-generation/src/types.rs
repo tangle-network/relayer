@@ -5,7 +5,7 @@ pub enum ProofGenerationError {
     JsonDecodeError,
 }
 
-///
+/// Proof inputs for Masp proof delegation.
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MaspDelegatedProofInputsJson {

@@ -23,6 +23,7 @@ url = { workspace = true }
 tracing = { workspace = true }
 tokio = { workspace = true }
 webb = { workspace = true }
+webb-proposals = { workspace = true }
 subxt-signer = { workspace = true }
 # Used by ethers (but we need it to be vendored with the lib).
 native-tls = { workspace = true }
@@ -30,6 +31,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 http = "0.2.9"
 regex = { version = "1" }
+tangle-subxt = { workspace = true }
 
 [features]
 default = ["std", "evm", "substrate"]

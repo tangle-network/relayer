@@ -16,7 +16,7 @@ mod substrate_tx_queue;
 #[doc(hidden)]
 pub use substrate_tx_queue::*;
 use subxt_signer::sr25519::Keypair as Sr25519Pair;
-use webb::substrate::subxt::{self, OnlineClient};
+use tangle_subxt::subxt::{self, OnlineClient};
 use webb_relayer_utils::Result;
 
 /// Config trait for Substrate tx queue.
@@ -47,7 +47,7 @@ mod tests {
     use std::sync::Arc;
 
     use subxt_signer::sr25519::dev;
-    use webb::substrate::tangle_runtime::api as RuntimeApi;
+    use tangle_subxt::tangle_testnet_runtime::api as RuntimeApi;
     use webb_relayer_store::queue::{QueueItem, QueueStore};
     use webb_relayer_store::sled::SledQueueKey;
     use webb_relayer_store::SledStore;

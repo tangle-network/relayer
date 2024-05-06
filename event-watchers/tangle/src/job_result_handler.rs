@@ -14,28 +14,21 @@
 
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use webb::substrate::subxt::{self, OnlineClient};use webb::substrate::tangle_runtime::api::jobs::events::JobResultSubmitted;
-use webb::substrate::tangle_runtime::api as RuntimeApi;
-use webb::substrate::tangle_runtime::api::runtime_types::tangle_primitives::jobs::JobResult;
-use webb::substrate::tangle_runtime::api::runtime_types::tangle_primitives::roles::RoleType;
-use webb_relayer_store::sled::SledStore;
-use webb_relayer_store::BridgeKey;
+use tangle_subxt::subxt::{self, OnlineClient};use tangle_subxt::tangle_testnet_runtime::api::jobs::events::JobResultSubmitted;
+use tangle_subxt::tangle_testnet_runtime::api as RuntimeApi;
+use tangle_subxt::tangle_testnet_runtime::api::runtime_types::tangle_primitives::jobs::JobResult;
+use tangle_subxt::tangle_testnet_runtime::api::runtime_types::tangle_primitives::roles::RoleType;
+use webb_proposals::evm::AnchorUpdateProposal;
+use webb_relayer_store::queue::{QueueItem, QueueStore};
+use webb_relayer_store::sled::{SledQueueKey, SledStore};
+use webb_relayer_store::{BridgeCommand, BridgeKey};
 use webb_relayer_utils::{metric, TangleRuntimeConfig};
 
 use webb_event_watcher_traits::substrate::EventHandler;
 
-/// DKGPublicKeyChanged handler handles the `PublicKeySignatureChanged` event and then signals
-/// signature bridge watcher to update governor.
-#[derive(Clone, Debug)]
-pub struct JobResultHandler {
-    webb_config: webb_relayer_config::WebbRelayerConfig,
-}
-
-impl JobResultHandler {
-    pub fn new(webb_config: webb_relayer_config::WebbRelayerConfig) -> Self {
-        Self { webb_config }
-    }
-}
+/// JobResultHandler  handles the `JobResultSubmitted` event.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct JobResultHandler;
 
 #[async_trait::async_trait]
 impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
@@ -62,13 +55,13 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
 
     async fn handle_events(
         &self,
-        _store: Arc<Self::Store>,
+        store: Arc<Self::Store>,
         client: Arc<Self::Client>,
         (events, _block_number): (
             subxt::events::Events<TangleRuntimeConfig>,
             u64,
         ),
-        _metrics: Arc<Mutex<metric::Metrics>>,
+        metrics: Arc<Mutex<metric::Metrics>>,
     ) -> webb_relayer_utils::Result<()> {
         // We go the job result submitted event
         let job_result_submitted_events: Vec<_> = events
@@ -85,8 +78,7 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
             })
             .collect();
         for event in job_result_submitted_events {
-            // Fetch job result for DKG phase
-
+            // Fetch submitted job result
             let known_result_addrs = RuntimeApi::storage()
                 .jobs()
                 .known_results(event.clone().role_type, event.clone().job_id);
@@ -98,39 +90,50 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                 .fetch(&known_result_addrs)
                 .await?;
 
-            let mut bridge_keys = Vec::new();
-            // get evm bridges
-            for (_, config) in self.webb_config.evm.iter() {
-                let typed_chain_id =
-                    webb_proposals::TypedChainId::Evm(config.chain_id);
-                let bridge_key = BridgeKey::new(typed_chain_id);
-                bridge_keys.push(bridge_key);
-            }
-
             if let Some(phase_result) = maybe_result {
-                if let JobResult::DKGPhaseTwo(result) = phase_result.result {
-                    for bridge_key in &bridge_keys {
+                match phase_result.result {
+                    JobResult::DKGPhaseTwo(result) => {
+                        let anchor_update_proposal =
+                            webb_proposals::from_slice::<AnchorUpdateProposal>(
+                                &result.data.0,
+                            )?;
+                        let destination_resource_id =
+                            anchor_update_proposal.header().resource_id();
+                        let bridge_key = BridgeKey::new(
+                            destination_resource_id.typed_chain_id(),
+                        );
+
+                        metrics.lock().await.proposals_signed.inc();
+
+                        let signature = if result.signature.0.len() == 64 {
+                            let mut sig = result.signature.0.clone();
+                            sig.push(28);
+                            sig
+                        } else {
+                            result.signature.0.clone()
+                        };
                         tracing::debug!(
                             %bridge_key,
-                            ?result,
-                            "Signaling Signature Bridge to transfer ownership",
+                            proposal = ?anchor_update_proposal,
+                            signature = ?signature,
+                            "Signaling Signature Bridge to execute proposal",
                         );
-
-                        tracing::event!(
-                            target: webb_relayer_utils::probe::TARGET,
-                            tracing::Level::DEBUG,
-                            kind = %webb_relayer_utils::probe::Kind::SigningBackend,
-                            backend = "DKG",
-                            signal_bridge = %bridge_key,
-                            public_key = %hex::encode(&result.data),
-                            signature = %hex::encode(&result.signature),
+                        let item = QueueItem::new(
+                            BridgeCommand::ExecuteProposalWithSignature {
+                                data: result.data.0,
+                                signature,
+                            },
                         );
-
-                        // Todo enqueue transfer ownership calls
+                        store.enqueue_item(
+                            SledQueueKey::from_bridge_key(bridge_key),
+                            item,
+                        )?;
                     }
+                    _ => unimplemented!("Phase results not supported"),
                 }
             }
         }
+
         Ok(())
     }
 }

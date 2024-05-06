@@ -28,6 +28,7 @@ native-tls = { workspace = true }
 webb-proposals = { workspace = true }
 sled = { version = "^0.34" }
 subxt-signer = { workspace = true }
+tangle-subxt = { workspace = true }
 
 [dev-dependencies]
 tracing-test = "0.2"

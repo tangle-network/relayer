@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use futures::StreamExt;
 use futures::TryFutureExt;
 use rand::Rng;
-use webb::substrate::subxt;
-use webb::substrate::subxt::rpc::types::DryRunResult;
+use tangle_subxt::subxt;
+
+use tangle_subxt::subxt::tx::ValidationResult;
 use webb_relayer_store::queue::QueueItem;
 use webb_relayer_store::queue::QueueItemState;
 use webb_relayer_store::queue::QueueStore;
@@ -28,7 +28,7 @@ use webb_relayer_utils::TangleRuntimeConfig;
 use std::sync::Arc;
 use std::time::Duration;
 
-use webb::substrate::subxt::tx::TxStatus as TransactionStatus;
+use tangle_subxt::subxt::tx::TxStatus as TransactionStatus;
 
 use super::SubstrateTxQueueConfig;
 
@@ -174,9 +174,9 @@ where
                     .map_err(backoff::Error::transient)
                     .await?;
                 // dry run test
-                let dry_run_outcome = signed_extrinsic.dry_run(None).await;
+                let dry_run_outcome = signed_extrinsic.validate().await;
                 match dry_run_outcome {
-                    Ok(DryRunResult::Success) => {
+                    Ok(ValidationResult::Valid(..)) => {
                         tracing::event!(
                             target: webb_relayer_utils::probe::TARGET,
                             tracing::Level::DEBUG,
@@ -204,7 +204,7 @@ where
                             },
                         )?;
                     }
-                    Ok(DryRunResult::TransactionValidityError) => {
+                    Ok(ValidationResult::Invalid(..)) => {
                         // This kinda bugged in Substrate, as it returns this error
                         // in multiple scenarios, like when the transaction is mostly will
                         // exhaust the resources. However, the transaction may still be valid
@@ -221,10 +221,10 @@ where
                             errored = true,
                             error = "The transaction could not be included in the block.",
                             signed_extrinsic = %hex::encode(signed_extrinsic.encoded()),
-                            dry_run = "transaction_validity_error"
+                            dry_run = "transaction_invalid"
                         );
                     }
-                    Ok(DryRunResult::DispatchError(err)) => {
+                    Ok(ValidationResult::Unknown(..)) => {
                         tracing::event!(
                             target: webb_relayer_utils::probe::TARGET,
                             tracing::Level::ERROR,
@@ -233,9 +233,8 @@ where
                             chain_id = %chain_id,
                             tx = %payload,
                             errored = true,
-                            error = %err,
                             signed_extrinsic = %hex::encode(signed_extrinsic.encoded()),
-                            dry_run = "dispatch_error",
+                            dry_run = "dispatch_error unknown",
                         );
                         // update transaction status as Failed and re insert into queue.
                         store.shift_item_to_end(
@@ -247,7 +246,8 @@ where
                                 TypeErasedStaticTxPayload,
                             >| {
                                 let state = QueueItemState::Failed {
-                                    reason: err.to_string(),
+                                    reason: "dispatch_error unknown"
+                                        .to_string(),
                                 };
                                 item.set_state(state);
                                 Ok(())
@@ -374,7 +374,7 @@ where
                     };
 
                     match e {
-                        TransactionStatus::Future => {
+                        TransactionStatus::Validated => {
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -382,7 +382,7 @@ where
                                 ty = "SUBSTRATE",
                                 tx = %payload,
                                 chain_id = %chain_id,
-                                status = "Future",
+                                status = "Validated",
                             );
                             store.update_item(
                                 SledQueueKey::from_substrate_with_custom_key(
@@ -391,7 +391,7 @@ where
                                 ),
                                 |item| {
                                     let state = QueueItemState::Processing {
-                                        step: "Transaction status: Future"
+                                        step: "Transaction status: Validated"
                                             .to_string(),
                                         progress: Some(0.5),
                                     };
@@ -400,7 +400,8 @@ where
                                 },
                             )?;
                         }
-                        TransactionStatus::Ready => {
+
+                        TransactionStatus::Broadcasted { .. } => {
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -408,7 +409,7 @@ where
                                 ty = "SUBSTRATE",
                                 tx = %payload,
                                 chain_id = %chain_id,
-                                status = "Ready",
+                                status = "Broadcasted",
                             );
                             store.update_item(
                                 SledQueueKey::from_substrate_with_custom_key(
@@ -417,33 +418,7 @@ where
                                 ),
                                 |item| {
                                     let state = QueueItemState::Processing {
-                                        step: "Transaction status: Ready"
-                                            .to_string(),
-                                        progress: Some(0.6),
-                                    };
-                                    item.set_state(state);
-                                    Ok(())
-                                },
-                            )?;
-                        }
-                        TransactionStatus::Broadcast(_) => {
-                            tracing::event!(
-                                target: webb_relayer_utils::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
-                                ty = "SUBSTRATE",
-                                tx = %payload,
-                                chain_id = %chain_id,
-                                status = "Broadcast",
-                            );
-                            store.update_item(
-                                SledQueueKey::from_substrate_with_custom_key(
-                                    chain_id,
-                                    tx_item_key,
-                                ),
-                                |item| {
-                                    let state = QueueItemState::Processing {
-                                        step: "Transaction status: Broadcast"
+                                        step: "Transaction status: Broadcasted"
                                             .to_string(),
                                         progress: Some(0.7),
                                     };
@@ -452,7 +427,7 @@ where
                                 },
                             )?;
                         }
-                        TransactionStatus::InBlock(data) => {
+                        TransactionStatus::InBestBlock(block) => {
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -460,8 +435,8 @@ where
                                 ty = "SUBSTRATE",
                                 tx = %payload,
                                 chain_id = %chain_id,
-                                block_hash = ?data.block_hash(),
-                                status = "InBlock",
+                                status = "InBestBlock",
+                                block_hash = %block.block_hash(),
                             );
                             store.update_item(
                                 SledQueueKey::from_substrate_with_custom_key(
@@ -470,7 +445,7 @@ where
                                 ),
                                 |item| {
                                     let state = QueueItemState::Processing {
-                                        step: "Transaction status: InBlock"
+                                        step: "Transaction status: InBestBlock"
                                             .to_string(),
                                         progress: Some(0.8),
                                     };
@@ -479,7 +454,7 @@ where
                                 },
                             )?;
                         }
-                        TransactionStatus::Retracted(_) => {
+                        TransactionStatus::NoLongerInBestBlock => {
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -487,21 +462,10 @@ where
                                 tx = %payload,
                                 ty = "SUBSTRATE",
                                 chain_id = %chain_id,
-                                status = "Retracted",
+                                status = "NoLongerInBestBlock",
                             );
                         }
-                        TransactionStatus::FinalityTimeout(_) => {
-                            tracing::event!(
-                                target: webb_relayer_utils::probe::TARGET,
-                                tracing::Level::DEBUG,
-                                kind = %webb_relayer_utils::probe::Kind::TxQueue,
-                                tx = %payload,
-                                ty = "SUBSTRATE",
-                                chain_id = %chain_id,
-                                status = "FinalityTimeout",
-                            );
-                        }
-                        TransactionStatus::Finalized(_) => {
+                        TransactionStatus::InFinalizedBlock { .. } => {
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -509,7 +473,7 @@ where
                                 ty = "SUBSTRATE",
                                 tx = %payload,
                                 chain_id = %chain_id,
-                                status = "Finalized",
+                                status = "InFinalizedBlock",
                                 finalized = true,
                             );
                             store.update_item(
@@ -529,18 +493,38 @@ where
                             )?;
                         }
 
-                        TransactionStatus::Usurped(_) => {
+                        TransactionStatus::Error { message } => {
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
                                 kind = %webb_relayer_utils::probe::Kind::TxQueue,
                                 ty = "SUBSTRATE",
-                                tx = %payload,
                                 chain_id = %chain_id,
-                                status = "Usurped",
+                                tx = %payload,
+                                errored = true,
+                                error = message,
+                                signed_extrinsic = %hex::encode(signed_extrinsic.encoded()),
+                                status = "Failed"
                             );
+                            // update transaction status as Failed and re insert into queue.
+                            store.shift_item_to_end(
+                                SledQueueKey::from_substrate_with_custom_key(
+                                    chain_id,
+                                    tx_item_key,
+                                ),
+                                |item: &mut QueueItem<
+                                    TypeErasedStaticTxPayload,
+                                >| {
+                                    let state = QueueItemState::Failed {
+                                        reason: message.to_string(),
+                                    };
+                                    item.set_state(state);
+                                    Ok(())
+                                },
+                            )?;
                         }
-                        TransactionStatus::Dropped => {
+
+                        TransactionStatus::Dropped { message } => {
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
@@ -548,10 +532,11 @@ where
                                 ty = "SUBSTRATE",
                                 tx = %payload,
                                 chain_id = %chain_id,
+                                error = message,
                                 status = "Dropped",
                             );
                         }
-                        TransactionStatus::Invalid => {
+                        TransactionStatus::Invalid { .. } => {
                             tracing::event!(
                                 target: webb_relayer_utils::probe::TARGET,
                                 tracing::Level::DEBUG,
