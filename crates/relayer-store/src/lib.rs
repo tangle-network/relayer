@@ -356,12 +356,9 @@ pub enum BridgeCommand {
     },
     /// A Command sent to the Signature Bridge to transfer the ownership of the bridge
     TransferOwnership {
-        voter_merkle_root: [u8; 32],
-        session_length: u64,
-        voter_count: u32,
-        nonce: u32,
+        job_id: u64,
         pub_key: Vec<u8>,
-        /// The signature of the hash of the nonce+public key, Signed by the proposal signing
+        /// The signature of the hash of the public key, Signed by the proposal signing
         /// backend.
         signature: Vec<u8>,
     },

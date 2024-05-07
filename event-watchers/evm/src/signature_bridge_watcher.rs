@@ -191,24 +191,14 @@ impl BridgeWatcher for SignatureBridgeContractWatcher {
                 .await?;
             }
             TransferOwnership {
+                job_id,
                 pub_key,
-                nonce,
-                voter_merkle_root,
-                voter_count,
-                session_length,
                 signature,
             } => {
                 self.transfer_ownership_with_signature(
                     store,
                     &wrapper.contract,
-                    (
-                        pub_key,
-                        nonce,
-                        voter_merkle_root,
-                        voter_count,
-                        session_length,
-                        signature,
-                    ),
+                    (job_id, pub_key, signature),
                 )
                 .await?
             }
@@ -364,14 +354,7 @@ where
         &self,
         store: Arc<<Self as EventWatcher>::Store>,
         contract: &SignatureBridgeContract<EthersTimeLagClient>,
-        (
-            public_key,
-            nonce,
-            voter_merkle_root,
-            voter_count,
-            session_length,
-            signature,
-        ): (Vec<u8>, u32, [u8; 32], u32, u64, Vec<u8>),
+        (job_id, public_key, signature): (u64, Vec<u8>, Vec<u8>),
     ) -> webb_relayer_utils::Result<()> {
         // before doing anything, we need to do just two things:
         // 1. check if we already have this transaction in the queue.
@@ -396,7 +379,7 @@ where
         }
         // we need to do some checks here:
         // 1. convert the public key to address and check it is not the same as the current governor.
-        // 2. check if the nonce is greater than the current nonce.
+        // 2. check if the job_id of new governor is greater than the current.
         // 3. ~check if the signature is valid.~
         let current_governor_address = contract.governor().call().await?;
         if new_governor_address == current_governor_address {
@@ -404,37 +387,27 @@ where
                 %new_governor_address,
                 %current_governor_address,
                 public_key = %hex::encode(&public_key),
-                %nonce,
+                %job_id,
                 signature = %hex::encode(&signature),
                 "Skipping transfer ownership since the new governor is the same as the current one",
             );
             return Ok(());
         }
+        // JobId of the current governor
+        let current_job_id = contract.job_id().call().await?;
 
-        let refresh_nonce = contract.refresh_nonce().call().await?;
-
-        // require(refreshNonce < nonce, "Invalid nonce")
-        if nonce < refresh_nonce {
+        // require( job_id > current_job_id, "Invalid Job Id")
+        if job_id < current_job_id {
             tracing::warn!(
-                %refresh_nonce,
-                %nonce,
+                %current_job_id,
+                %job_id,
                 public_key = %hex::encode(&public_key),
                 signature = %hex::encode(&signature),
-                "Skipping transfer ownership since the nonce is less than the refresh nonce",
+                "Skipping transfer ownership since new job id is less than the current one",
             );
             return Ok(());
         }
-        // require(nonce <= refreshNonce + 1, "Nonce must increment by 1");
-        if nonce != refresh_nonce + 1 {
-            tracing::warn!(
-                %refresh_nonce,
-                %nonce,
-                public_key = %hex::encode(&public_key),
-                signature = %hex::encode(&signature),
-                "Skipping transfer ownership since the nonce must increment by 1",
-            );
-            return Ok(());
-        }
+
         tracing::event!(
             target: webb_relayer_utils::probe::TARGET,
             tracing::Level::DEBUG,
@@ -442,19 +415,13 @@ where
             call = "transfer_ownership_with_signature",
             chain_id = %chain_id.as_u64(),
             public_key = %hex::encode(&public_key),
-            %nonce,
-            voter_merkle_root = %hex::encode(voter_merkle_root),
-            %voter_count,
-            %session_length,
+            %job_id,
             signature = %hex::encode(&signature),
         );
         // estimated gas
         let estimate_gas = contract
             .transfer_ownership_with_signature(
-                voter_merkle_root,
-                session_length,
-                voter_count,
-                nonce,
+                job_id.clone(),
                 public_key.clone().into(),
                 signature.clone().into(),
             )
@@ -464,10 +431,7 @@ where
         // get the current governor nonce.
         let call = contract
             .transfer_ownership_with_signature(
-                voter_merkle_root,
-                session_length,
-                voter_count,
-                nonce,
+                job_id.clone(),
                 public_key.into(),
                 signature.into(),
             )

@@ -27,8 +27,16 @@ use webb_relayer_utils::{metric, TangleRuntimeConfig};
 use webb_event_watcher_traits::substrate::EventHandler;
 
 /// JobResultHandler  handles the `JobResultSubmitted` event.
-#[derive(Copy, Clone, Debug, Default)]
-pub struct JobResultHandler;
+#[derive(Clone, Debug)]
+pub struct JobResultHandler {
+    relayer_config: webb_relayer_config::WebbRelayerConfig,
+}
+
+impl JobResultHandler {
+    pub fn new(relayer_config: webb_relayer_config::WebbRelayerConfig) -> Self {
+        Self { relayer_config }
+    }
+}
 
 #[async_trait::async_trait]
 impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
@@ -79,9 +87,10 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
             .collect();
         for event in job_result_submitted_events {
             // Fetch submitted job result
+            let job_id = event.clone().job_id;
             let known_result_addrs = RuntimeApi::storage()
                 .jobs()
-                .known_results(event.clone().role_type, event.clone().job_id);
+                .known_results(event.clone().role_type, job_id.clone());
 
             let maybe_result = client
                 .storage()
@@ -128,6 +137,52 @@ impl EventHandler<TangleRuntimeConfig> for JobResultHandler {
                             SledQueueKey::from_bridge_key(bridge_key),
                             item,
                         )?;
+                    }
+
+                    JobResult::DKGPhaseFour(result) => {
+                        tracing::debug!("DKG Phase Four result received");
+                        let mut bridge_keys = Vec::new();
+                        for (_, config) in self.relayer_config.evm.iter() {
+                            let typed_chain_id =
+                                webb_proposals::TypedChainId::Evm(
+                                    config.chain_id,
+                                );
+                            let bridge_key = BridgeKey::new(typed_chain_id);
+                            bridge_keys.push(bridge_key);
+                        }
+
+                        // Now we just signal every signature bridge to transfer the ownership.
+                        for bridge_key in bridge_keys {
+                            tracing::debug!(
+                                %bridge_key,
+                                ?event,
+                                "Signaling Signature Bridge to transfer ownership",
+                            );
+                            tracing::event!(
+                                target: webb_relayer_utils::probe::TARGET,
+                                tracing::Level::DEBUG,
+                                kind = %webb_relayer_utils::probe::Kind::SigningBackend,
+                                backend = "DKG",
+                                signal_bridge = %bridge_key,
+                                public_key = %hex::encode(&result.key.clone().0),
+                                previoud_job_id = %result.phase_one_id,
+                                new_job_id = %result.new_phase_one_id,
+                                signature = %hex::encode(&result.signature.clone().0),
+                            );
+
+                            let item = QueueItem::new(
+                                BridgeCommand::TransferOwnership {
+                                    job_id: result.new_phase_one_id,
+                                    pub_key: result.key.clone().0,
+                                    signature: result.signature.clone().0,
+                                },
+                            );
+
+                            store.enqueue_item(
+                                SledQueueKey::from_bridge_key(bridge_key),
+                                item,
+                            )?;
+                        }
                     }
                     _ => unimplemented!("Phase results not supported"),
                 }
